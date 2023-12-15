@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+group = "nl.qunit.bpmnmeister"

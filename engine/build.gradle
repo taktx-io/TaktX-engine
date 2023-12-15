@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-kafka-streams'
+    implementation 'io.quarkus:quarkus-resteasy-reactive-jackson'
+    implementation 'io.quarkus:quarkus-arc'
+    implementation project("nl.qunit.bpmnmeister:shared")
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+}
+
+group 'org.acme'
+version '1.0.0-SNAPSHOT'
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}

@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    mavenLocal()
+}
+
+dependencies {
+    implementation project(':shared')
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
+    implementation 'io.quarkus:quarkus-arc'
+    testImplementation 'io.quarkus:quarkus-junit5'
+}
+
+group 'org.acme'
+version '1.0.0-SNAPSHOT'
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}
