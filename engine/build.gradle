@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'io.quarkus'
+    id "com.diffplug.spotless" version "6.23.3"
 }
 
 repositories {
@@ -12,16 +13,28 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-kafka-streams'
     implementation 'io.quarkus:quarkus-resteasy-reactive-jackson'
+    implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
     implementation 'io.quarkus:quarkus-arc'
+    implementation 'nl.qunit.bpmnmeister:shared:1.0.0-SNAPSHOT'
 
     testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
 
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
 }
 
-group 'org.acme'
+
+spotless {
+    java {
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+
+group = "nl.qunit.bpmnmeister"
 version '1.0.0-SNAPSHOT'
 
 test {

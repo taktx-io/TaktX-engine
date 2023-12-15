@@ -10,4 +10,4 @@ pluginManagement {
 }
 rootProject.name='engine'
 
-includeBuild('../shared')
+includeBuild '../shared'

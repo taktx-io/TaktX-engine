@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "com.diffplug.spotless" version "6.23.3"
 }
 
 dependencies {
@@ -12,4 +13,13 @@ repositories {
     mavenLocal()
 }
 
+
+spotless {
+    java {
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
 group = "nl.qunit.bpmnmeister"
+version '1.0.0-SNAPSHOT'

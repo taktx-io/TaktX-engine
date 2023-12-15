@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'io.quarkus'
+    id "com.diffplug.spotless" version "6.23.3"
 }
 
 repositories {
@@ -10,11 +11,19 @@ repositories {
 }
 
 dependencies {
-    implementation project(':shared')
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
     implementation 'io.quarkus:quarkus-arc'
     testImplementation 'io.quarkus:quarkus-junit5'
+    implementation 'nl.qunit.bpmnmeister:shared:1.0.0-SNAPSHOT'
+}
+
+
+spotless {
+    java {
+        removeUnusedImports()
+        googleJavaFormat()
+    }
 }
 
 group 'org.acme'
