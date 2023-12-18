@@ -12,8 +12,9 @@ import nl.qunit.bpmnmeister.model.processinstance.TriggerResult;
 @ApplicationScoped
 public class ProcessInstanceProcessor {
 
-  public Set<Trigger> trigger(
+  public void trigger(
       ProcessDefinition processDefinition, ProcessInstance processInstance, Trigger trigger) {
+
     BpmnElement bpmnElement = processDefinition.bpmnElements().get(trigger.elementId());
     BpmnElementState elementState =
         processInstance
@@ -22,16 +23,22 @@ public class ProcessInstanceProcessor {
     TriggerResult triggerResult = elementState.trigger(trigger, bpmnElement);
 
     Set<Trigger> newTriggers = new HashSet<>();
-    processInstance.elementStates().put(trigger.elementId(), triggerResult.newState());
+    processInstance.elementStates().put(trigger.elementId(), triggerResult.newElementState());
+    //    triggerResult
+    //        .externalTasks()
+    //        .forEach(
+    //            task ->
+    //                externalTaskCOmmandEmitter.send(
+    //                    new ExternalTaskCommand(task, processInstance.id())));
     triggerResult
         .newActiveFlows()
         .forEach(
             flowId -> {
-              BpmnFlow flow = processDefinition.flows().get(flowId);
+              SequenceFlow flow = processDefinition.flows().get(flowId);
               if (flow.condition().test(processInstance)) {
                 newTriggers.add(new Trigger(flow.target(), flow.id()));
               }
             });
-    return newTriggers;
+    newTriggers.forEach(trigger1 -> trigger(processDefinition, processInstance, trigger1));
   }
 }

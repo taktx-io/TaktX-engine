@@ -1,9 +1,12 @@
 plugins {
     id 'java'
     id "com.diffplug.spotless" version "6.23.3"
+    id 'com.github.bjornvester.xjc' version "1.8.1"
+
 }
 
 dependencies {
+    implementation 'javax.xml.bind:jaxb-api:2.2.4'
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }
@@ -13,9 +16,15 @@ repositories {
     mavenLocal()
 }
 
+xjc {
+    markGenerated.set(true)
+    defaultPackage.set("nl.qunit.bpmnmeister.bpmn")
+
+}
 
 spotless {
     java {
+        targetExclude("build/generated/**/*.java")
         removeUnusedImports()
         googleJavaFormat()
     }

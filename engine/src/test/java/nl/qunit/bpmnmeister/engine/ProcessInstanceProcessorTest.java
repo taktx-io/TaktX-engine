@@ -8,9 +8,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import nl.qunit.bpmnmeister.model.processdefinition.*;
-import nl.qunit.bpmnmeister.model.processinstance.ProcessInstance;
-import nl.qunit.bpmnmeister.model.processinstance.TaskState;
-import nl.qunit.bpmnmeister.model.processinstance.Trigger;
+import nl.qunit.bpmnmeister.model.processinstance.*;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 
 class ProcessInstanceProcessorTest {
@@ -33,30 +32,34 @@ class ProcessInstanceProcessorTest {
           START_EVENT_ID, START_EVENT,
           TASK_1_ID, TASK_1,
           TASK_2_ID, TASK_2);
-  private static final Map<String, BpmnFlow> FLOWS =
+  private static final Map<String, SequenceFlow> FLOWS =
       Map.of(
-          FLOW_ID_START_TASK_1, new BpmnFlow(FLOW_ID_START_TASK_1, TASK_1_ID, PREDICATE_TRUE),
-          FLOW_ID_TASK_1_TASK_2, new BpmnFlow(FLOW_ID_TASK_1_TASK_2, TASK_2_ID, PREDICATE_TRUE),
-          FLOW_ID_TASK_2_END, new BpmnFlow(FLOW_ID_TASK_2_END, TASK_END_ID, PREDICATE_TRUE));
+          FLOW_ID_START_TASK_1, new SequenceFlow(FLOW_ID_START_TASK_1, TASK_1_ID, PREDICATE_TRUE),
+          FLOW_ID_TASK_1_TASK_2, new SequenceFlow(FLOW_ID_TASK_1_TASK_2, TASK_2_ID, PREDICATE_TRUE),
+          FLOW_ID_TASK_2_END, new SequenceFlow(FLOW_ID_TASK_2_END, TASK_END_ID, PREDICATE_TRUE));
   private static final ProcessDefinition PROCESS_DEFINITION =
       new ProcessDefinition(PD_ID, BPMN_ELEMENTS, FLOWS);
   private static final UUID PROCESS_INSTANCE_ID = UUID.randomUUID();
 
   @Test
   void testStartEvent() {
+
+    //    Emitter<ExternalTaskCommand> emitter = Mockito.mock(Emitter.class);
     ProcessInstanceProcessor processor = new ProcessInstanceProcessor();
     ProcessInstance processInstance = new ProcessInstance(PROCESS_INSTANCE_ID, new HashMap<>());
-    Set<Trigger> trigger =
-        processor.trigger(PROCESS_DEFINITION, processInstance, new Trigger("start", "start"));
-    assertThat(trigger).containsExactly(new Trigger(TASK_1_ID, FLOW_ID_START_TASK_1));
-
-    Set<Trigger> trigger2 =
-        processor.trigger(PROCESS_DEFINITION, processInstance, trigger.iterator().next());
-    assertThat(trigger2).containsExactly(new Trigger(TASK_2_ID, FLOW_ID_TASK_1_TASK_2));
-    assertThat(processInstance.elementStates().get(TASK_1_ID)).isInstanceOf(TaskState.class);
-
-    Set<Trigger> trigger3 =
-        processor.trigger(PROCESS_DEFINITION, processInstance, trigger2.iterator().next());
-    assertThat(trigger3).isEmpty();
+    processor.trigger(PROCESS_DEFINITION, processInstance, new Trigger("start", "start"));
+    assertThat(processInstance.elementStates().get(START_EVENT_ID))
+        .asInstanceOf(InstanceOfAssertFactories.type(StartEventState.class))
+        .extracting(StartEventState::state)
+        .isEqualTo(StateEnum.FINISHED);
+    assertThat(processInstance.elementStates().get(TASK_1_ID))
+        .asInstanceOf(InstanceOfAssertFactories.type(TaskState.class))
+        .extracting(TaskState::state)
+        .isEqualTo(StateEnum.FINISHED);
+    assertThat(processInstance.elementStates().get(TASK_2_ID))
+        .asInstanceOf(InstanceOfAssertFactories.type(ServiceTaskState.class))
+        .extracting(ServiceTaskState::state)
+        .isEqualTo(StateEnum.WAITING);
+    //    Mockito.verify(emitter).send(new ExternalTaskCommand(TASK_2_ID, PROCESS_INSTANCE_ID));
   }
 }

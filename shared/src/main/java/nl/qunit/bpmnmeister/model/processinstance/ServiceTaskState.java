@@ -4,20 +4,20 @@ import java.util.HashSet;
 import java.util.Set;
 import nl.qunit.bpmnmeister.model.processdefinition.BpmnElement;
 
-public record ServiceTaskState(ServiceTaskStateEnum state) implements BpmnElementState {
+public record ServiceTaskState(StateEnum state) implements BpmnElementState {
 
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
-    ServiceTaskStateEnum newState = state;
+    StateEnum newState = state;
     Set<String> newActiveFlows = new HashSet<>();
     Set<String> externalTasks = new HashSet<>();
 
-    if (state == ServiceTaskStateEnum.INIT) {
-      newState = ServiceTaskStateEnum.WAITING;
+    if (state == StateEnum.INIT) {
+      newState = StateEnum.WAITING;
       externalTasks.add(bpmnElement.id());
-    } else if (state == ServiceTaskStateEnum.WAITING) {
+    } else if (state == StateEnum.WAITING) {
       newActiveFlows.addAll(bpmnElement.outputFlows());
-      newState = ServiceTaskStateEnum.FINISHED;
+      newState = StateEnum.FINISHED;
     }
 
     return new TriggerResult(new ServiceTaskState(newState), newActiveFlows, externalTasks);

@@ -5,4 +5,4 @@ import lombok.Builder;
 
 @Builder
 public record ProcessDefinition(
-    String id, Map<String, BpmnElement> bpmnElements, Map<String, BpmnFlow> flows) {}
+    String id, Map<String, BpmnElement> bpmnElements, Map<String, SequenceFlow> flows) {}
