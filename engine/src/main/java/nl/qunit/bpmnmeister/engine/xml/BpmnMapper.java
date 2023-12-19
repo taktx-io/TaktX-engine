@@ -1,9 +1,8 @@
 package nl.qunit.bpmnmeister.engine.xml;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.*;
-
 import jakarta.xml.bind.JAXBElement;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.bpmn.*;
 import nl.qunit.bpmnmeister.model.processdefinition.BpmnElement;

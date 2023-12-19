@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import nl.qunit.bpmnmeister.model.processdefinition.BpmnElement;
 
-public record ServiceTaskState(StateEnum state) implements BpmnElementState {
+public record ServiceTaskState(StateEnum state, int cnt) implements BpmnElementState {
 
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
@@ -20,6 +20,7 @@ public record ServiceTaskState(StateEnum state) implements BpmnElementState {
       newState = StateEnum.FINISHED;
     }
 
-    return new TriggerResult(new ServiceTaskState(newState), newActiveFlows, externalTasks);
+    return new TriggerResult(
+        new ServiceTaskState(newState, cnt + 1), newActiveFlows, externalTasks);
   }
 }

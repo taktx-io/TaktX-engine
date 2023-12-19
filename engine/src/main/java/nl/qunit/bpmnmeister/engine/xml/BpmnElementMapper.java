@@ -19,6 +19,9 @@ public class BpmnElementMapper {
       return Optional.of(new Task(flowElement.getId(), mapOutgoing(ttask)));
     } else if (flowElement instanceof TEndEvent) {
       return Optional.of(new EndEvent(flowElement.getId(), Set.of()));
+    } else if (flowElement instanceof TExclusiveGateway exclusiveGateway) {
+      return Optional.of(
+          new ExclusiveGateway(exclusiveGateway.getId(), mapOutgoing(exclusiveGateway)));
     }
     return Optional.empty();
   }

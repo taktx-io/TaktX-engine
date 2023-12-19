@@ -3,10 +3,9 @@ package nl.qunit.bpmnmeister.model.processinstance;
 import java.util.Set;
 import nl.qunit.bpmnmeister.model.processdefinition.BpmnElement;
 
-public record TaskState(StateEnum state, int cnt) implements BpmnElementState {
+public record ExclusiveGatewayState() implements BpmnElementState {
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
-    return new TriggerResult(
-        new TaskState(StateEnum.FINISHED, cnt + 1), bpmnElement.outputFlows(), Set.of());
+    return new TriggerResult(new ExclusiveGatewayState(), bpmnElement.outputFlows(), Set.of());
   }
 }

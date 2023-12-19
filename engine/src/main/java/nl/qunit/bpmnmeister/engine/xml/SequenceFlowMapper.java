@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.xml;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Optional;
+import nl.qunit.bpmnmeister.bpmn.TBaseElement;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
 import nl.qunit.bpmnmeister.model.processdefinition.SequenceFlow;
@@ -13,7 +14,7 @@ public class SequenceFlowMapper {
       return Optional.of(
           new SequenceFlow(
               sequenceFlow.getId(),
-              sequenceFlow.getTargetRef().toString(),
+              ((TBaseElement) (sequenceFlow.getTargetRef())).getId(),
               processInstance -> true));
     }
     return Optional.empty();

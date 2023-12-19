@@ -8,6 +8,6 @@ import nl.qunit.bpmnmeister.model.processinstance.TaskState;
 public record Task(String id, Set<String> outputFlows) implements BpmnElement {
   @Override
   public BpmnElementState createState() {
-    return new TaskState(StateEnum.INIT);
+    return new TaskState(StateEnum.INIT, 0);
   }
 }

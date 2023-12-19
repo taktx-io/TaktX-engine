@@ -8,6 +8,6 @@ import nl.qunit.bpmnmeister.model.processinstance.StateEnum;
 public record ServiceTask(String id, Set<String> outputFlows) implements BpmnElement {
   @Override
   public BpmnElementState createState() {
-    return new ServiceTaskState(StateEnum.INIT);
+    return new ServiceTaskState(StateEnum.INIT, 0);
   }
 }
