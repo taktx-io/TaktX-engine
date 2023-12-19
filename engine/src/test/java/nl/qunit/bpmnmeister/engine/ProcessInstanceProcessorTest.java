@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class ProcessInstanceProcessorTest {
 
-  private static final String PD_ID = "pd-id";
+  private static final String PD_ID = "pd-processInstanceId";
   public static final String FLOW_ID_START_TASK_1 = "start_task1";
   public static final String FLOW_ID_TASK_1_TASK_2 = "task1_task2";
   public static final String FLOW_ID_TASK_2_END = "task2_end";
@@ -47,7 +47,8 @@ class ProcessInstanceProcessorTest {
     //    Emitter<ExternalTaskCommand> emitter = Mockito.mock(Emitter.class);
     ProcessInstanceProcessor processor = new ProcessInstanceProcessor();
     ProcessInstance processInstance = new ProcessInstance(PROCESS_INSTANCE_ID, new HashMap<>());
-    processor.trigger(PROCESS_DEFINITION, processInstance, new Trigger("start", "start"));
+    processor.trigger(
+        PROCESS_DEFINITION, processInstance, new Trigger(UUID.randomUUID(), "start", "start"));
     assertThat(processInstance.elementStates().get(START_EVENT_ID))
         .asInstanceOf(InstanceOfAssertFactories.type(StartEventState.class))
         .extracting(StartEventState::state)

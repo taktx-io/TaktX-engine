@@ -1,3 +1,5 @@
 package nl.qunit.bpmnmeister.model.processinstance;
 
-public record Trigger(String elementId, String inputFlowId) {}
+import java.util.UUID;
+
+public record Trigger(UUID processInstanceId, String elementId, String inputFlowId) {}

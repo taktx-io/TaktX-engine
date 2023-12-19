@@ -1,4 +1,5 @@
-name: kafka
+version: "3.8"
+name: bpmnmeister
 
 services:
 
@@ -36,8 +37,6 @@ services:
     image: provectuslabs/kafka-ui
     ports:
       - "9095:8080"
-    depends_on:
-      - kafka
     restart: always
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
@@ -45,6 +44,56 @@ services:
       - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
     networks:
       - dev
+
+  mongo-1:
+    image: mongo:4.4.11
+    container_name: mongo-1
+    command: --replSet rs0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=testdb
+    volumes:
+      - data:/data
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/admin --quiet
+      interval: 2s
+      timeout: 3s
+      retries: 5
+
+  # copied from https://stackoverflow.com/a/52944387/4185106
+  mongo-init:
+    image: mongo:4.4.11
+    container_name: mongo_init
+    restart: "no"
+    depends_on:
+      mongo-1:
+        condition: service_healthy
+    command: >
+      mongo --host mongo-1:27017 --eval
+      '
+      rs.initiate( {
+         _id : "rs0",
+         members: [
+            { _id: 0, host: "mongo-1:27017" }
+         ]
+      })
+      '
+
+  mongo-express:
+    image: mongo-express
+    hostname: mongo-express
+    restart: always
+    depends_on:
+      mongo-1:
+        condition: service_healthy
+    ports:
+      - 8091:8081
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo-1
+
+volumes:
+  data: {}
 
 networks:
   dev:

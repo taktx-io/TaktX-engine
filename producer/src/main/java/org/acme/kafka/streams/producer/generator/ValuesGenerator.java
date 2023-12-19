@@ -3,9 +3,11 @@ package org.acme.kafka.streams.producer.generator;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import nl.qunit.bpmnmeister.model.processdefinition.ProcessDefinition;
+import java.util.UUID;
+import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.jboss.logging.Logger;
 
 /**
  * A bean producing random temperature data every second. The values are written to a Kafka topic
@@ -14,11 +16,18 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
  */
 @ApplicationScoped
 public class ValuesGenerator {
+  Logger LOG = Logger.getLogger(ValuesGenerator.class);
 
   @Inject
-  @Channel("process-definition-input")
-  Emitter<ProcessDefinition> emitter;
+  @Channel("trigger-outgoing")
+  Emitter<Trigger> emitter;
 
   @Startup
-  void init() {}
+  void init() {
+    for (int i = 0; i < 2; i++) {
+      UUID processInstanceId = UUID.randomUUID();
+      LOG.info("Sending trigger " + processInstanceId);
+      emitter.send(new Trigger(processInstanceId, "StartEvent_1", null));
+    }
+  }
 }

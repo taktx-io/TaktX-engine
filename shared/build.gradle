@@ -5,16 +5,18 @@ plugins {
 
 }
 
-dependencies {
-    implementation 'javax.xml.bind:jaxb-api:2.2.4'
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
-}
-
 repositories {
     mavenCentral()
     mavenLocal()
 }
+
+dependencies {
+    implementation 'javax.xml.bind:jaxb-api:2.2.4'
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+}
+
 
 xjc {
     markGenerated.set(true)
