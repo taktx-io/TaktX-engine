@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 import nl.qunit.bpmnmeister.bpmn.*;
-import nl.qunit.bpmnmeister.model.processdefinition.*;
+import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
 
 @ApplicationScoped
 public class BpmnElementMapper {

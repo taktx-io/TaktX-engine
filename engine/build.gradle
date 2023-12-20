@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'io.quarkus'
     id "com.diffplug.spotless" version "6.23.3"
+    id 'com.github.bjornvester.xjc' version "1.8.1"
+
 }
 
 repositories {
@@ -40,6 +42,11 @@ spotless {
 
 group = "nl.qunit.bpmnmeister"
 version '1.0.0-SNAPSHOT'
+
+xjc {
+    markGenerated.set(true)
+    defaultPackage.set("nl.qunit.bpmnmeister.bpmn")
+}
 
 test {
     systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"

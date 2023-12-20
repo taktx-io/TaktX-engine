@@ -5,7 +5,7 @@ import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
-import nl.qunit.bpmnmeister.model.processdefinition.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.persistence.processdefinition.SequenceFlow;
 
 @ApplicationScoped
 public class SequenceFlowMapper {
@@ -15,7 +15,7 @@ public class SequenceFlowMapper {
           new SequenceFlow(
               sequenceFlow.getId(),
               ((TBaseElement) (sequenceFlow.getTargetRef())).getId(),
-              processInstance -> true));
+              "true"));
     }
     return Optional.empty();
   }
