@@ -3,48 +3,68 @@ package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import jakarta.xml.bind.JAXBException;
+import java.util.List;
 import java.util.Optional;
 import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
 
 @ApplicationScoped
 public class ProcessDefinitionService {
-  private static final String QUERY = "processDefinitionId = :pdid and hash = :hash";
+  private static final String QUERY_HASH = "processDefinitionId = :pdid and hash = :hash";
+  private static final String QUERY_PROCESSDEFINITION_VERSION =
+      "processDefinitionId = :pdid and version = :version";
 
   @Inject ProcessDefinitionRepository processDefinitionRepository;
   @Inject ProcessDefinitionXmlRepository processDefinitionXmlRepository;
   @Inject BpmnParser bpmnParser;
 
-  @Transactional
-  public void persistProcessDefinition(String xml) throws JAXBException {
+  public ProcessDefinition persistProcessDefinition(String xml) throws JAXBException {
     int xmlHash = xml.hashCode();
     ProcessDefinition parsedProcessDefinition = bpmnParser.parse(xml);
 
     String processDefinitionId = parsedProcessDefinition.processDefinitionId;
     Optional<ProcessDefinitionXml> optXmlEntity =
         processDefinitionXmlRepository
-            .find(QUERY, Parameters.with("pdid", processDefinitionId).and("hash", xmlHash))
+            .find(QUERY_HASH, Parameters.with("pdid", processDefinitionId).and("hash", xmlHash))
             .firstResultOptional();
     if (optXmlEntity.isEmpty()) {
       // Non-existing process definition, persist it
       ProcessDefinitionXml xmlEntity =
-          ProcessDefinitionXml.builder()
-              .processDefinitionId(processDefinitionId)
-              .xml(xml)
-              .hash(xmlHash)
-              .build();
+          new ProcessDefinitionXml(null, processDefinitionId, xml, xmlHash);
       processDefinitionXmlRepository.persist(xmlEntity);
       long newVersion = processDefinitionXmlRepository.count();
       ProcessDefinition newProcessDefinitionToPersist =
-          ProcessDefinition.builder()
-              .xmlObjectId(xmlEntity.id)
-              .processDefinitionId(processDefinitionId)
-              .version(newVersion)
-              .bpmnElements(parsedProcessDefinition.bpmnElements)
-              .flows(parsedProcessDefinition.flows)
-              .build();
+          new ProcessDefinition(
+              null,
+              xmlEntity.id,
+              processDefinitionId,
+              newVersion,
+              parsedProcessDefinition.bpmnElements,
+              parsedProcessDefinition.flows);
       processDefinitionRepository.persist(newProcessDefinitionToPersist);
+      return newProcessDefinitionToPersist;
+    } else {
+      throw new WebApplicationException("Resource already exists", Response.Status.CONFLICT);
     }
+  }
+
+  public ProcessDefinition getProcessDefinition(String processDefinitionId, long version) {
+    Optional<ProcessDefinition> processDefinition =
+        processDefinitionRepository
+            .find(
+                QUERY_PROCESSDEFINITION_VERSION,
+                Parameters.with("pdid", processDefinitionId).and("version", version))
+            .firstResultOptional();
+    return processDefinition.orElseThrow(
+        () ->
+            new NotFoundException(
+                "Process definition not found: " + processDefinitionId + " version: " + version));
+  }
+
+  public List<ProcessDefinition> getProcessDefinitions() {
+    return processDefinitionRepository.listAll();
   }
 }

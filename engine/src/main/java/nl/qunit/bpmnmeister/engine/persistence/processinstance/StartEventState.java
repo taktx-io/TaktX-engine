@@ -7,6 +7,6 @@ public record StartEventState(StateEnum state) implements BpmnElementState {
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
     return new TriggerResult(
-        new StartEventState(StateEnum.FINISHED), bpmnElement.outputFlows(), Set.of());
+        new StartEventState(StateEnum.FINISHED), bpmnElement.getOutputFlows(), Set.of());
   }
 }

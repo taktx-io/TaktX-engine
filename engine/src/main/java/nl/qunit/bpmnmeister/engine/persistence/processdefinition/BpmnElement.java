@@ -1,12 +1,25 @@
 package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
+import java.io.Serializable;
 import java.util.Set;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
-public interface BpmnElement {
-  String id();
+@BsonDiscriminator
+@Data
+@EqualsAndHashCode
+public abstract class BpmnElement implements Serializable {
+  private String id;
+  private Set<String> outputFlows;
 
-  Set<String> outputFlows();
+  protected BpmnElement() {}
 
-  BpmnElementState createState();
+  protected BpmnElement(String id, Set<String> outputFlows) {
+    this.id = id;
+    this.outputFlows = outputFlows;
+  }
+
+  public abstract BpmnElementState createState();
 }

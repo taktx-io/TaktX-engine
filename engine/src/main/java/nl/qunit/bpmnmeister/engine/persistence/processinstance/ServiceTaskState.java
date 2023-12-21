@@ -14,9 +14,9 @@ public record ServiceTaskState(StateEnum state, int cnt) implements BpmnElementS
 
     if (state == StateEnum.INIT) {
       newState = StateEnum.WAITING;
-      externalTasks.add(bpmnElement.id());
+      externalTasks.add(bpmnElement.getId());
     } else if (state == StateEnum.WAITING) {
-      newActiveFlows.addAll(bpmnElement.outputFlows());
+      newActiveFlows.addAll(bpmnElement.getOutputFlows());
       newState = StateEnum.FINISHED;
     }
 

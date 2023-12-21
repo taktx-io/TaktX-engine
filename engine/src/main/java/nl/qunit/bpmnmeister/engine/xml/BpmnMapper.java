@@ -26,17 +26,14 @@ public class BpmnMapper {
         for (JAXBElement<? extends TFlowElement> element : process.getFlowElement()) {
           TFlowElement flowElement = element.getValue();
           Optional<BpmnElement> optBpmnElement = elementMapper.map(flowElement);
-          optBpmnElement.ifPresent(bpmnElement -> bpmnElements.put(bpmnElement.id(), bpmnElement));
+          optBpmnElement.ifPresent(
+              bpmnElement -> bpmnElements.put(bpmnElement.getId(), bpmnElement));
           Optional<SequenceFlow> optSequenceFlow = sequenceFlowMapper.map(flowElement);
-          optSequenceFlow.ifPresent(sequenceFlow -> flows.put(sequenceFlow.id(), sequenceFlow));
+          optSequenceFlow.ifPresent(sequenceFlow -> flows.put(sequenceFlow.getId(), sequenceFlow));
         }
       }
     }
 
-    return ProcessDefinition.builder()
-        .processDefinitionId(id)
-        .bpmnElements(bpmnElements)
-        .flows(flows)
-        .build();
+    return new ProcessDefinition(null, null, id, -1, bpmnElements, flows);
   }
 }

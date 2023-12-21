@@ -7,6 +7,6 @@ public record TaskState(StateEnum state, int cnt) implements BpmnElementState {
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
     return new TriggerResult(
-        new TaskState(StateEnum.FINISHED, cnt + 1), bpmnElement.outputFlows(), Set.of());
+        new TaskState(StateEnum.FINISHED, cnt + 1), bpmnElement.getOutputFlows(), Set.of());
   }
 }

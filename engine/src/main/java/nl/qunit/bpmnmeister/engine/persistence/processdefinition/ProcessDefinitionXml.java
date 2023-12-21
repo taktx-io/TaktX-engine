@@ -5,7 +5,9 @@ import lombok.*;
 import org.bson.types.ObjectId;
 
 @MongoEntity(collection = "ProcessDefinitionXml")
-@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
 public class ProcessDefinitionXml {
   public ObjectId id;
   public String processDefinitionId;

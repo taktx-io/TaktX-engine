@@ -37,9 +37,10 @@ public class ProcessInstanceProcessor {
         .forEach(
             flowId -> {
               SequenceFlow flow = processDefinition.flows.get(flowId);
-              if (Boolean.parseBoolean(flow.condition())) {
+              if (Boolean.parseBoolean(flow.getCondition())) {
                 newTriggers.add(
-                    new Trigger(processInstance.processInstanceId(), flow.target(), flow.id()));
+                    new Trigger(
+                        processInstance.processInstanceId(), flow.getTarget(), flow.getId()));
               }
             });
     return newTriggers;

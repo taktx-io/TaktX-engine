@@ -12,9 +12,9 @@ public record ParallelGatewayState(Set<String> triggeredFlows) implements BpmnEl
     newTriggeredFlows.add(trigger.inputFlowId());
     final Set<String> outputFlows = new HashSet<>();
     if (bpmnElement instanceof ParallelGateway parallelGateway
-        && (parallelGateway.inputFlows().equals(newTriggeredFlows))) {
+        && (parallelGateway.getInputFlows().equals(newTriggeredFlows))) {
       newTriggeredFlows.clear();
-      outputFlows.addAll(parallelGateway.outputFlows());
+      outputFlows.addAll(parallelGateway.getOutputFlows());
     }
     return new TriggerResult(new ParallelGatewayState(newTriggeredFlows), outputFlows, Set.of());
   }

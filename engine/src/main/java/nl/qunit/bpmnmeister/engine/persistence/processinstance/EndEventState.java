@@ -6,6 +6,6 @@ import nl.qunit.bpmnmeister.engine.persistence.processdefinition.BpmnElement;
 public record EndEventState() implements BpmnElementState {
   @Override
   public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
-    return new TriggerResult(new EndEventState(), bpmnElement.outputFlows(), Set.of());
+    return new TriggerResult(new EndEventState(), bpmnElement.getOutputFlows(), Set.of());
   }
 }

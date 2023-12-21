@@ -5,6 +5,7 @@
       <bpmn:incoming>Flow_1dmgpia</bpmn:incoming>
       <bpmn:outgoing>Flow_1qt4l9s</bpmn:outgoing>
     </bpmn:task>
+
     <bpmn:sequenceFlow id="Flow_1dmgpia" sourceRef="StartEvent_1" targetRef="Activity_1brbvir" />
     <bpmn:exclusiveGateway id="Gateway_1lrge8r" default="Flow_15mcn1d">
       <bpmn:incoming>Flow_1qt4l9s</bpmn:incoming>
