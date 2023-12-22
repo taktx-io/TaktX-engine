@@ -6,7 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ParallelGatewayState;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
+@BsonDiscriminator
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class ParallelGateway extends BpmnElement {

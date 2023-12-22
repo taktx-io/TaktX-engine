@@ -6,12 +6,16 @@ import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TaskState;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
+@BsonDiscriminator
 public class Task extends BpmnElement {
 
-  public Task() {}
+  public Task() {
+    super();
+  }
 
   public Task(String id, Set<String> outputFlows) {
     super(id, outputFlows);

@@ -6,7 +6,9 @@ import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StartEventState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
+@BsonDiscriminator
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class EndEvent extends BpmnElement {

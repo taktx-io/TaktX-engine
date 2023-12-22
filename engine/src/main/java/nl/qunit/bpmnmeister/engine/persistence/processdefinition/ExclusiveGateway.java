@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ExclusiveGatewayState;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
+@BsonDiscriminator
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class ExclusiveGateway extends BpmnElement {

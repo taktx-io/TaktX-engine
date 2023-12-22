@@ -6,9 +6,11 @@ import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ServiceTaskState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
+@BsonDiscriminator
 public class ServiceTask extends BpmnElement {
   public ServiceTask() {
     super();

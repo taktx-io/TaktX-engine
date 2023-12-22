@@ -10,7 +10,7 @@ import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 @BsonDiscriminator
 @Data
 @EqualsAndHashCode
-public abstract class BpmnElement implements Serializable {
+public class BpmnElement implements Serializable {
   private String id;
   private Set<String> outputFlows;
 
@@ -21,5 +21,7 @@ public abstract class BpmnElement implements Serializable {
     this.outputFlows = outputFlows;
   }
 
-  public abstract BpmnElementState createState();
+  public BpmnElementState createState() {
+    return null;
+  }
 }

@@ -21,7 +21,6 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-mongodb-panache'
-    implementation 'nl.qunit.bpmnmeister:shared:1.0.0-SNAPSHOT'
 
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'org.assertj:assertj-core:3.24.2'

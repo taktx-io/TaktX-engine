@@ -4,8 +4,10 @@ import io.quarkus.mongodb.panache.common.MongoEntity;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 import org.bson.types.ObjectId;
 
+@BsonDiscriminator
 @MongoEntity(collection = "ProcessDefinition")
 @NoArgsConstructor
 @AllArgsConstructor
