@@ -4,6 +4,7 @@ import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.EndEventState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StartEventState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
@@ -20,6 +21,6 @@ public class EndEvent extends BpmnElement {
 
   @Override
   public BpmnElementState createState() {
-    return new StartEventState(StateEnum.INIT);
+    return new EndEventState();
   }
 }

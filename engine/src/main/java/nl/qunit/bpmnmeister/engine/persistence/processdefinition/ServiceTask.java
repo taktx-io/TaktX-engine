@@ -22,6 +22,6 @@ public class ServiceTask extends BpmnElement {
 
   @Override
   public BpmnElementState createState() {
-    return new ServiceTaskState(StateEnum.INIT, 0);
+    return new ServiceTaskState();
   }
 }

@@ -23,6 +23,6 @@ public class Task extends BpmnElement {
 
   @Override
   public BpmnElementState createState() {
-    return new TaskState(StateEnum.INIT, 0);
+    return new TaskState();
   }
 }

@@ -22,6 +22,6 @@ public class StartEvent extends BpmnElement {
 
   @Override
   public BpmnElementState createState() {
-    return new StartEventState(StateEnum.INIT);
+    return new StartEventState();
   }
 }

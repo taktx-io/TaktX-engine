@@ -22,6 +22,6 @@ public class BpmnElement implements Serializable {
   }
 
   public BpmnElementState createState() {
-    return null;
+    throw new IllegalStateException("Not implemented");
   }
 }

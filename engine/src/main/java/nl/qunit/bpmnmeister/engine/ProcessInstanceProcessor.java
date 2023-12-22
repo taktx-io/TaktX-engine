@@ -19,13 +19,12 @@ public class ProcessInstanceProcessor {
 
     BpmnElement bpmnElement = processDefinition.bpmnElements.get(trigger.elementId());
     BpmnElementState elementState =
-        processInstance
-            .elementStates()
-            .computeIfAbsent(trigger.elementId(), id -> bpmnElement.createState());
+        processInstance.elementStates.computeIfAbsent(
+            trigger.elementId(), id -> bpmnElement.createState());
     TriggerResult triggerResult = elementState.trigger(trigger, bpmnElement);
 
     Set<Trigger> newTriggers = new HashSet<>();
-    processInstance.elementStates().put(trigger.elementId(), triggerResult.newElementState());
+    processInstance.elementStates.put(trigger.elementId(), triggerResult.newElementState());
     //    triggerResult
     //        .externalTasks()
     //        .forEach(
@@ -39,8 +38,7 @@ public class ProcessInstanceProcessor {
               SequenceFlow flow = processDefinition.flows.get(flowId);
               if (Boolean.parseBoolean(flow.getCondition())) {
                 newTriggers.add(
-                    new Trigger(
-                        processInstance.processInstanceId(), flow.getTarget(), flow.getId()));
+                    new Trigger(processInstance.processInstanceId, flow.getTarget(), flow.getId()));
               }
             });
     return newTriggers;

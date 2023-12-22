@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ParallelGatewayState;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @BsonDiscriminator
@@ -25,6 +26,6 @@ public class ParallelGateway extends BpmnElement {
 
   @Override
   public BpmnElementState createState() {
-    return new ParallelGatewayState(new HashSet<>());
+    return new ParallelGatewayState();
   }
 }

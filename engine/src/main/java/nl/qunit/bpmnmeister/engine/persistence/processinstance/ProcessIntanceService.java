@@ -1,11 +1,9 @@
 package nl.qunit.bpmnmeister.engine.persistence.processinstance;
 
+import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.HashMap;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import nl.qunit.bpmnmeister.engine.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
 import org.eclipse.microprofile.reactive.messaging.Channel;
@@ -13,9 +11,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
 
 @ApplicationScoped
 public class ProcessIntanceService {
-  private static final String QUERY_HASH = "processDefinitionId = :pdid and hash = :hash";
-  private static final String QUERY_PROCESSDEFINITION_VERSION =
-      "processDefinitionId = :pdid and version = :version";
+  private static final String QUERY_PROCESSINSTANCE = "processInstanceId = :pid";
   @Inject ProcessInstanceProcessor processInstanceProcessor;
 
   @Inject
@@ -23,7 +19,6 @@ public class ProcessIntanceService {
   Emitter<Trigger> triggerEmitter;
 
   @Inject ProcessDefinitionService processDefinitionService;
-  @Inject ProcessDefinitionRepository processDefinitionRepository;
   @Inject ProcessInstanceRepository processInstanceRepository;
 
   public void startNewProcessInstance(String processDefinitionId, long version, String startevent) {
@@ -31,7 +26,11 @@ public class ProcessIntanceService {
         processDefinitionService.getProcessDefinition(processDefinitionId, version);
     ProcessInstance processInstance =
         new ProcessInstance(
-            UUID.randomUUID(), processDefinitionId, processDefinition.version, new HashMap<>());
+            null,
+            UUID.randomUUID(),
+            processDefinitionId,
+            processDefinition.version,
+            new HashMap<>());
     processInstanceRepository.persist(processInstance);
 
     String startElementId;
@@ -51,20 +50,21 @@ public class ProcessIntanceService {
       }
     }
     triggerProcess(
-        new Trigger(processInstance.processInstanceId(), startElementId, null),
+        new Trigger(processInstance.processInstanceId, startElementId, null),
         processDefinition,
         processInstance);
   }
 
   public void consumeTrigger(Trigger trigger) {
+    Parameters queryparameters = Parameters.with("pid", trigger.processInstanceId());
+
     ProcessInstance pi =
         processInstanceRepository
-            .find("processInstanceId", trigger.processInstanceId())
-            .firstResult();
+            .find(QUERY_PROCESSINSTANCE, queryparameters)
+            .firstResultOptional()
+            .orElseThrow();
     ProcessDefinition pd =
-        processDefinitionRepository
-            .find("processDefinitionId", pi.processDefinitionId())
-            .firstResult();
+        processDefinitionService.getProcessDefinition(pi.processDefinitionId, pi.version);
 
     triggerProcess(trigger, pd, pi);
   }
@@ -72,7 +72,7 @@ public class ProcessIntanceService {
   private void triggerProcess(Trigger trigger, ProcessDefinition pd, ProcessInstance pi) {
     Set<Trigger> newTriggers = processInstanceProcessor.trigger(pd, pi, trigger);
 
-    processInstanceRepository.persist(pi);
+    processInstanceRepository.persistOrUpdate(pi);
 
     newTriggers.forEach(triggerEmitter::send);
   }
