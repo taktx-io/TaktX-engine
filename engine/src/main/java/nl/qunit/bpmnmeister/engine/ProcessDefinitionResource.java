@@ -8,16 +8,14 @@ import jakarta.xml.bind.JAXBException;
 import java.util.List;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinition;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionService;
-import org.bson.codecs.pojo.PojoCodecProvider;
 
 @Path("/process-definitions")
 public class ProcessDefinitionResource {
   @Inject ProcessDefinitionService processDefinitionService;
 
   @Startup
-  void init() {
+  void init() {}
 
-  }
   @POST
   @Consumes(MediaType.APPLICATION_XML)
   @Produces(MediaType.APPLICATION_JSON)
