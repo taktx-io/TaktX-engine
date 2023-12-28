@@ -1,26 +1,28 @@
 package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.EndEventState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.StartEventState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.*;
+import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
+import org.bson.codecs.pojo.annotations.BsonId;
+import org.bson.codecs.pojo.annotations.BsonProperty;
 
 @BsonDiscriminator
-@Data
-@EqualsAndHashCode(callSuper = true)
-public class EndEvent extends BpmnElement {
-  public EndEvent() {}
-
-  public EndEvent(String id, Set<String> outputFlows) {
-    super(id, outputFlows);
+@Getter
+@SuperBuilder
+public class EndEvent extends ThrowEvent {
+  @BsonCreator
+  public EndEvent(
+      @BsonId String id,
+      @BsonProperty("incoming") Set<String> incoming,
+      @BsonProperty("outgoing") Set<String> outgoing) {
+    super(id, incoming, outgoing);
   }
 
   @Override
-  public BpmnElementState createState() {
-    return new EndEventState();
+  public TriggerResult trigger(Trigger trigger, BpmnElementState oldState) {
+    return new TriggerResult(EndEventState.builder().build(), getOutgoing(), Set.of());
   }
 }

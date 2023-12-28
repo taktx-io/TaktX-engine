@@ -22,27 +22,23 @@ public class ProcessIntanceService {
   @Inject ProcessInstanceRepository processInstanceRepository;
 
   public void startNewProcessInstance(String processDefinitionId, long version, String startevent) {
-    ProcessDefinition processDefinition =
+    Definitions processDefinition =
         processDefinitionService.getProcessDefinition(processDefinitionId, version);
     ProcessInstance processInstance =
-        new ProcessInstance(
-            null,
-            UUID.randomUUID(),
-            processDefinitionId,
-            processDefinition.version,
-            new HashMap<>());
+        ProcessInstance.builder()
+            .processInstanceId(UUID.randomUUID())
+            .processDefinitionId(processDefinitionId)
+            .version(version)
+            .elementStates(new HashMap<>())
+            .build();
     processInstanceRepository.persist(processInstance);
 
     String startElementId;
     if (startevent == null) {
       startElementId =
-          processDefinition.bpmnElements.values().stream()
-              .filter(StartEvent.class::isInstance)
-              .findFirst()
-              .orElseThrow()
-              .getId();
+          processDefinition.getStartEvents().stream().findFirst().orElseThrow().getId();
     } else {
-      if (processDefinition.bpmnElements.containsKey(startevent)) {
+      if (processDefinition.getElements().containsKey(startevent)) {
         startElementId = startevent;
       } else {
         throw new NoSuchElementException(
@@ -63,13 +59,13 @@ public class ProcessIntanceService {
             .find(QUERY_PROCESSINSTANCE, queryparameters)
             .firstResultOptional()
             .orElseThrow();
-    ProcessDefinition pd =
+    Definitions pd =
         processDefinitionService.getProcessDefinition(pi.processDefinitionId, pi.version);
 
     triggerProcess(trigger, pd, pi);
   }
 
-  private void triggerProcess(Trigger trigger, ProcessDefinition pd, ProcessInstance pi) {
+  private void triggerProcess(Trigger trigger, Definitions pd, ProcessInstance pi) {
     Set<Trigger> newTriggers = processInstanceProcessor.trigger(pd, pi, trigger);
 
     processInstanceRepository.persistOrUpdate(pi);

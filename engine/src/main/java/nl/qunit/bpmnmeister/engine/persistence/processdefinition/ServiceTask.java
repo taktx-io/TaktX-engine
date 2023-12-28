@@ -1,27 +1,31 @@
 package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
+import java.util.HashSet;
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.ServiceTaskState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.*;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
-@Data
-@EqualsAndHashCode(callSuper = true)
+@Getter
 @BsonDiscriminator
-public class ServiceTask extends BpmnElement {
-  public ServiceTask() {
-    super();
-  }
-
-  public ServiceTask(String id, Set<String> outputFlows) {
-    super(id, outputFlows);
-  }
+@SuperBuilder
+public class ServiceTask extends Task {
 
   @Override
-  public BpmnElementState createState() {
-    return new ServiceTaskState();
+  public TriggerResult trigger(Trigger trigger, BpmnElementState bpmnElementState) {
+    Set<String> newActiveFlows = new HashSet<>();
+    Set<String> externalTasks = new HashSet<>();
+    ServiceTaskState serviceTaskState = (ServiceTaskState) bpmnElementState;
+    if (serviceTaskState.getState() == StateEnum.INIT) {
+      externalTasks.add(getId());
+    } else if (serviceTaskState.getState() == StateEnum.WAITING) {
+      newActiveFlows.addAll(getOutgoing());
+    }
+
+    return new TriggerResult(
+        ServiceTaskState.builder().cnt(serviceTaskState.getCnt() + 1).build(),
+        newActiveFlows,
+        externalTasks);
   }
 }

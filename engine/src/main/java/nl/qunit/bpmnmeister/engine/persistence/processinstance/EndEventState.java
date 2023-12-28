@@ -1,25 +1,10 @@
 package nl.qunit.bpmnmeister.engine.persistence.processinstance;
 
-import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.engine.persistence.processdefinition.BpmnElement;
+import lombok.experimental.SuperBuilder;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @BsonDiscriminator
-@Data
-@EqualsAndHashCode(callSuper = true)
-public class EndEventState extends BpmnElementState {
-  public EndEventState() {
-  }
-
-  public EndEventState(StateEnum state) {
-    super(state);
-  }
-
-  @Override
-  public TriggerResult trigger(Trigger trigger, BpmnElement bpmnElement) {
-    return new TriggerResult(new EndEventState(StateEnum.FINISHED), bpmnElement.getOutputFlows(), Set.of());
-  }
-}
+@Getter
+@SuperBuilder
+public class EndEventState extends BpmnElementState {}

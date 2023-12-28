@@ -2,30 +2,31 @@ package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
 import java.util.HashSet;
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.ParallelGatewayState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.*;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @BsonDiscriminator
-@Data
-@EqualsAndHashCode(callSuper = true)
-public class ParallelGateway extends BpmnElement {
-  private Set<String> inputFlows;
-
-  public ParallelGateway() {
-    super();
-  }
-
-  public ParallelGateway(String id, Set<String> outputFlows, Set<String> inputFlows) {
-    super(id, outputFlows);
-    this.inputFlows = inputFlows;
-  }
+@Getter
+@SuperBuilder
+public class ParallelGateway extends Gateway {
 
   @Override
-  public BpmnElementState createState() {
-    return new ParallelGatewayState();
+  public TriggerResult trigger(Trigger trigger, BpmnElementState oldState) {
+    ParallelGatewayState parallelGatewayState = (ParallelGatewayState) oldState;
+    Set<String> newTriggeredFlows = new HashSet<>(parallelGatewayState.getTriggeredFlows());
+    newTriggeredFlows.add(trigger.inputFlowId());
+    final Set<String> outputFlows = new HashSet<>();
+    StateEnum newState = StateEnum.ACTIVE;
+    if (getOutgoing().equals(newTriggeredFlows)) {
+      newState = StateEnum.FINISHED;
+      newTriggeredFlows.clear();
+      outputFlows.addAll(getOutgoing());
+    }
+    return new TriggerResult(
+        ParallelGatewayState.builder().triggeredFlows(newTriggeredFlows).state(newState).build(),
+        outputFlows,
+        Set.of());
   }
 }

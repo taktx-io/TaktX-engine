@@ -1,28 +1,28 @@
 package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.StateEnum;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.TaskState;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.*;
+import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
+import org.bson.codecs.pojo.annotations.BsonId;
+import org.bson.codecs.pojo.annotations.BsonProperty;
 
-@Data
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@SuperBuilder
 @BsonDiscriminator
-public class Task extends BpmnElement {
-
-  public Task() {
-    super();
-  }
-
-  public Task(String id, Set<String> outputFlows) {
-    super(id, outputFlows);
+public class Task extends Activity {
+  @BsonCreator
+  public Task(
+      @BsonId String id,
+      @BsonProperty("incoming") Set<String> incoming,
+      @BsonProperty("outgoing") Set<String> outgoing) {
+    super(id, incoming, outgoing);
   }
 
   @Override
-  public BpmnElementState createState() {
-    return new TaskState();
+  public TriggerResult trigger(Trigger trigger, BpmnElementState bpmnElementState) {
+    return new TriggerResult(TaskState.builder().build(), getOutgoing(), Set.of());
   }
 }

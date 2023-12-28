@@ -6,4 +6,4 @@ import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 
 @ApplicationScoped
 @BsonDiscriminator
-public class ProcessDefinitionRepository implements PanacheMongoRepository<ProcessDefinition> {}
+public class ProcessDefinitionRepository implements PanacheMongoRepository<Definitions> {}

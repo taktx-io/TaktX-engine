@@ -5,35 +5,25 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.bpmn.*;
-import nl.qunit.bpmnmeister.engine.persistence.processdefinition.BpmnElement;
-import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinition;
-import nl.qunit.bpmnmeister.engine.persistence.processdefinition.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
 
 @ApplicationScoped
 @RequiredArgsConstructor
 public class BpmnMapper {
-  private final BpmnElementMapper elementMapper;
-  private final SequenceFlowMapper sequenceFlowMapper;
+  private final RootElementMapper rootElementMapper;
 
-  public ProcessDefinition map(TDefinitions definitions) {
-    Map<String, BpmnElement> bpmnElements = new HashMap<>();
-    Map<String, SequenceFlow> flows = new HashMap<>();
+  public Definitions map(TDefinitions definitions) {
     String id = "unknown";
+    Map<String, BaseElement> elements = new HashMap<>();
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
-      TRootElement rootElement = jaxbElement.getValue();
-      if (rootElement instanceof TProcess process) {
-        id = process.getId();
-        for (JAXBElement<? extends TFlowElement> element : process.getFlowElement()) {
-          TFlowElement flowElement = element.getValue();
-          Optional<BpmnElement> optBpmnElement = elementMapper.map(flowElement);
-          optBpmnElement.ifPresent(
-              bpmnElement -> bpmnElements.put(bpmnElement.getId(), bpmnElement));
-          Optional<SequenceFlow> optSequenceFlow = sequenceFlowMapper.map(flowElement);
-          optSequenceFlow.ifPresent(sequenceFlow -> flows.put(sequenceFlow.getId(), sequenceFlow));
-        }
+      TRootElement tRootElement = jaxbElement.getValue();
+      RootElement rootElement = rootElementMapper.map(tRootElement);
+      if (rootElement != null) {
+        id = rootElement.getId();
+        elements.put(id, rootElement);
       }
     }
 
-    return new ProcessDefinition(null, null, id, -1, bpmnElements, flows);
+    return Definitions.builder().processDefinitionId(id).elements(elements).build();
   }
 }
