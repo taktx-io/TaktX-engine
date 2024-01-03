@@ -8,9 +8,8 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.xml.bind.JAXBException;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessIntanceService;
 import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
 
 @ApplicationScoped
@@ -24,18 +23,20 @@ public class ProcessDefinitionService {
   @Inject ProcessDefinitionXmlRepository processDefinitionXmlRepository;
   @Inject BpmnParser bpmnParser;
 
+  @Inject ProcessIntanceService processIntanceService;
+
   @Transactional
   public Definitions persistProcessDefinition(String xml) throws JAXBException {
     int xmlHash = xml.hashCode();
     Definitions parsedProcessDefinition = bpmnParser.parse(xml);
 
-    String processDefinitionId = parsedProcessDefinition.processDefinitionId;
+    String processDefinitionId = parsedProcessDefinition.getProcessDefinitionId();
 
     List<Integer> hashes =
         processDefinitionXmlRepository
             .find(QUERY_PID, Parameters.with("pdid", processDefinitionId))
             .stream()
-            .map(pd -> pd.hash)
+            .map(ProcessDefinitionXml::getHash)
             .toList();
     boolean anyMatchingHash = hashes.contains(xmlHash);
     if (!anyMatchingHash) {
@@ -46,16 +47,29 @@ public class ProcessDefinitionService {
       int newVersion = hashes.size() + 1;
       Definitions newProcessDefinitionToPersist =
           Definitions.builder()
-              .xmlObjectId(xmlEntity.id)
+              .xmlObjectId(xmlEntity.getId())
               .processDefinitionId(processDefinitionId)
               .version(newVersion)
               .elements(parsedProcessDefinition.getElements())
               .build();
       processDefinitionRepository.persist(newProcessDefinitionToPersist);
+      startNewSchedules(newProcessDefinitionToPersist);
       return newProcessDefinitionToPersist;
     } else {
       throw new WebApplicationException("Resource already exists", Response.Status.CONFLICT);
     }
+  }
+
+  private void startNewSchedules(Definitions processDefinition) {
+    processDefinition
+        .getStartEvents()
+        .forEach(
+            se ->
+                se.getTimerEventDefinitions()
+                    .forEach(
+                        ted ->
+                            processIntanceService.startNewProcessInstance(
+                                processDefinition, se.getId())));
   }
 
   public Definitions getProcessDefinition(String processDefinitionId, long version) {
@@ -68,7 +82,7 @@ public class ProcessDefinitionService {
 
     Optional<Definitions> processDefinition =
         processDefinitionRepository.find(query, queryparameters).stream()
-            .max(Comparator.comparingLong(pd -> pd.version));
+            .max(Comparator.comparingLong(Definitions::getVersion));
     return processDefinition.orElseThrow(
         () ->
             new NotFoundException(

@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 import java.util.*;
 import nl.qunit.bpmnmeister.engine.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
+import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -21,32 +22,40 @@ public class ProcessIntanceService {
   @Inject ProcessDefinitionService processDefinitionService;
   @Inject ProcessInstanceRepository processInstanceRepository;
 
-  public void startNewProcessInstance(String processDefinitionId, long version, String startevent) {
+  public void startNewProcessInstance(
+      String processDefinitionId, long version, String startElement) {
     Definitions processDefinition =
         processDefinitionService.getProcessDefinition(processDefinitionId, version);
+    startNewProcessInstance(processDefinition, startElement);
+  }
+
+  public void startNewProcessInstance(Definitions processDefinition, String startElement) {
     ProcessInstance processInstance =
         ProcessInstance.builder()
             .processInstanceId(UUID.randomUUID())
-            .processDefinitionId(processDefinitionId)
-            .version(version)
+            .processDefinitionId(processDefinition.getProcessDefinitionId())
+            .version(processDefinition.getVersion())
             .elementStates(new HashMap<>())
             .build();
     processInstanceRepository.persist(processInstance);
 
     String startElementId;
-    if (startevent == null) {
+    if (startElement == null) {
       startElementId =
           processDefinition.getStartEvents().stream().findFirst().orElseThrow().getId();
     } else {
-      if (processDefinition.getElements().containsKey(startevent)) {
-        startElementId = startevent;
+      if (processDefinition.getFlowElement(startElement).isPresent()) {
+        startElementId = startElement;
       } else {
         throw new NoSuchElementException(
-            "Startevent " + startevent + " not found in process definition " + processDefinitionId);
+            "Startevent "
+                + startElement
+                + " not found in process definition "
+                + processDefinition.getProcessDefinitionId());
       }
     }
     triggerProcess(
-        new Trigger(processInstance.processInstanceId, startElementId, null),
+        new Trigger(processInstance.getProcessInstanceId(), startElementId, null),
         processDefinition,
         processInstance);
   }
@@ -60,7 +69,7 @@ public class ProcessIntanceService {
             .firstResultOptional()
             .orElseThrow();
     Definitions pd =
-        processDefinitionService.getProcessDefinition(pi.processDefinitionId, pi.version);
+        processDefinitionService.getProcessDefinition(pi.getProcessDefinitionId(), pi.getVersion());
 
     triggerProcess(trigger, pd, pi);
   }

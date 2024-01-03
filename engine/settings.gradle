@@ -8,4 +8,6 @@ pluginManagement {
         id "${quarkusPluginId}" version "${quarkusPluginVersion}"
     }
 }
+includeBuild('../shared')
+
 rootProject.name='engine'

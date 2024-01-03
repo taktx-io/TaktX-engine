@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 import org.bson.codecs.pojo.annotations.BsonId;
@@ -17,10 +18,10 @@ import org.bson.types.ObjectId;
 @Builder
 @Getter
 public class Definitions {
-  @BsonId public ObjectId id;
-  public ObjectId xmlObjectId;
-  public String processDefinitionId;
-  public long version;
+  @Setter private ObjectId id;
+  private ObjectId xmlObjectId;
+  private String processDefinitionId;
+  private long version;
   private Map<String, BaseElement> elements;
 
   @BsonCreator
@@ -39,7 +40,7 @@ public class Definitions {
 
   public List<StartEvent> getStartEvents() {
     return elements.values().stream()
-        .filter(element -> element instanceof Process)
+        .filter(Process.class::isInstance)
         .map(Process.class::cast)
         .flatMap(process -> process.getFlowElements().values().stream())
         .filter(StartEvent.class::isInstance)
@@ -49,7 +50,7 @@ public class Definitions {
 
   public Optional<FlowElement> getFlowElement(String id) {
     return elements.values().stream()
-        .filter(element -> element instanceof Process)
+        .filter(Process.class::isInstance)
         .map(Process.class::cast)
         .flatMap(process -> process.getFlowElements().values().stream())
         .filter(flowElement -> id.equals(flowElement.getId()))

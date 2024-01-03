@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+    id "com.diffplug.spotless" version "6.23.3"
+
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'org.apache.camel.quarkus:camel-quarkus-stax'
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:quarkus-camel-bom:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
+    implementation 'io.quarkus:quarkus-jaxb'
+    implementation 'io.quarkus:quarkus-resteasy-jackson'
+    implementation 'io.quarkus:quarkus-smallrye-openapi'
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-arc'
+    implementation 'nl.qunit.bpmnmeister:shared'
+    implementation 'io.quarkus:quarkus-scheduler'
+    implementation 'nl.qunit.bpmnmeister:shared'
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+    testImplementation 'org.mockito:mockito-core:3.12.4'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+}
+
+
+spotless {
+    java {
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+
+group = "nl.qunit.bpmnmeister"
+version '1.0.0-SNAPSHOT'
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}

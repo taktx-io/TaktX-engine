@@ -2,9 +2,6 @@ package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.BpmnElementState;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.Trigger;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
 import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 import org.bson.codecs.pojo.annotations.BsonId;
@@ -30,8 +27,11 @@ public class SequenceFlow extends FlowElement {
     this.condition = condition;
   }
 
-  @Override
-  public TriggerResult trigger(Trigger trigger, BpmnElementState oldState) {
-    return null;
+  public boolean testCondition() {
+    if (condition == null) {
+      return true;
+    } else {
+      return Boolean.parseBoolean(condition);
+    }
   }
 }

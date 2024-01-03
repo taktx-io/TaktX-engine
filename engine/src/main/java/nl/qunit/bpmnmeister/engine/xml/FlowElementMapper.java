@@ -5,11 +5,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
+import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.bpmn.*;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class FlowElementMapper {
+  private final EventDefinitionMapper eventDefinitionMapper;
+
   public FlowElement map(TFlowElement tFlowElement) {
     if (tFlowElement instanceof TSequenceFlow tSequenceFlow) {
       return SequenceFlow.builder()
@@ -50,6 +54,7 @@ public class FlowElementMapper {
           .id(startEvent.getId())
           .incoming(mapQNameList(startEvent.getIncoming()))
           .outgoing(mapQNameList(startEvent.getOutgoing()))
+          .eventDefinitions(eventDefinitionMapper.map(startEvent.getEventDefinition()))
           .build();
     } else if (tFlowElement instanceof TEndEvent endEvent) {
       return EndEvent.builder()
