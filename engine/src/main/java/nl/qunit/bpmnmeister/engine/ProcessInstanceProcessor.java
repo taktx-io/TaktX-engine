@@ -1,10 +1,11 @@
 package nl.qunit.bpmnmeister.engine;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+
+import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.FlowElement;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.SequenceFlow;
@@ -16,8 +17,9 @@ import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.BpmnElement
 import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class ProcessInstanceProcessor {
-  @Inject ProcessorProvider processorProvider;
+  final ProcessorProvider processorProvider;
 
   public Set<Trigger> trigger(
       Definitions processDefinition, ProcessInstance processInstance, Trigger trigger) {
@@ -42,7 +44,7 @@ public class ProcessInstanceProcessor {
                 if (flow.testCondition()) {
                   newTriggers.add(
                       new Trigger(
-                          processInstance.getProcessInstanceId(), flow.getTarget(), flow.getId()));
+                          processInstance.getProcessInstanceId(), flow.getTarget(), flow.getId(), null));
                 }
               });
     }

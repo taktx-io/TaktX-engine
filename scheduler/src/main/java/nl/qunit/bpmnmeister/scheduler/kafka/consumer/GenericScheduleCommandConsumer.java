@@ -91,7 +91,7 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
 
   private void scheduleRecord(ConsumerRecord<String, T> consumerRecord) {
     try {
-      log.info("Scheduling command: {}", consumerRecord.key());
+      log.info("Scheduling command: {}", consumerRecord.value());
       var id = schedule(consumerRecord);
       this.scheduledCommandsByPartitionByCommandId
           .get(consumerRecord.partition())
@@ -222,7 +222,7 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
   @Override
   public void commandCompleted(ScheduleCommand command) {
     for (var scheduledTasksByKey : this.scheduledCommandsByPartitionByCommandId.values()) {
-      scheduledTasksByKey.remove(command.id());
+      scheduledTasksByKey.remove(command.id().toString());
     }
   }
 }

@@ -2,28 +2,29 @@ package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.xml.bind.JAXBException;
 import java.util.*;
+
+import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessIntanceService;
 import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class ProcessDefinitionService {
   private static final String QUERY_PID = "processDefinitionId = :pdid";
   private static final String QUERY_PROCESSDEFINITION_NOVERSION = "processDefinitionId = :pdid";
   private static final String QUERY_PROCESSDEFINITION_VERSION =
       "processDefinitionId = :pdid and version = :version";
 
-  @Inject ProcessDefinitionRepository processDefinitionRepository;
-  @Inject ProcessDefinitionXmlRepository processDefinitionXmlRepository;
-  @Inject BpmnParser bpmnParser;
-
-  @Inject ProcessIntanceService processIntanceService;
+  final ProcessDefinitionRepository processDefinitionRepository;
+  final ProcessDefinitionXmlRepository processDefinitionXmlRepository;
+  final BpmnParser bpmnParser;
+  final ProcessIntanceService processIntanceService;
 
   @Transactional
   public Definitions persistProcessDefinition(String xml) throws JAXBException {
@@ -40,7 +41,7 @@ public class ProcessDefinitionService {
             .toList();
     boolean anyMatchingHash = hashes.contains(xmlHash);
     if (!anyMatchingHash) {
-      // Non-existing process definition, persist it
+      // Non-existing process timeCycle, persist it
       ProcessDefinitionXml xmlEntity =
           new ProcessDefinitionXml(null, processDefinitionId, xml, xmlHash);
       processDefinitionXmlRepository.persist(xmlEntity);
@@ -86,7 +87,7 @@ public class ProcessDefinitionService {
     return processDefinition.orElseThrow(
         () ->
             new NotFoundException(
-                "Process definition not found: " + processDefinitionId + " version: " + version));
+                "Process timeCycle not found: " + processDefinitionId + " version: " + version));
   }
 
   public List<Definitions> getProcessDefinitions() {

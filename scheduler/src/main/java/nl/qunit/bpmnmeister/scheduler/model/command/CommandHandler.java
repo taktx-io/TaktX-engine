@@ -1,14 +1,16 @@
 package nl.qunit.bpmnmeister.scheduler.model.command;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.model.scheduler.ScheduleCommand;
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.ReplyProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class CommandHandler {
 
-  ReplyProducer replyProducer;
+  final ReplyProducer replyProducer;
 
   /**
    * Send the payload/command which was defined in the ScheduleCommand to the topic which was
@@ -17,6 +19,9 @@ public class CommandHandler {
   public void sendCommand(ScheduleCommand command) {
     command
         .triggers()
-        .forEach(trigger -> replyProducer.send(new ProducerRecord<>(command.id(), trigger)));
+        .forEach(
+            trigger ->
+                replyProducer.send(
+                    new ProducerRecord<>("trigger-topic", command.id().toString(), trigger)));
   }
 }

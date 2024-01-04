@@ -1,9 +1,17 @@
 package nl.qunit.bpmnmeister.scheduler.model.recurring;
 
+import static com.cronutils.model.CronType.QUARTZ;
+
+import com.cronutils.model.Cron;
+import com.cronutils.model.definition.CronDefinition;
+import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.parser.CronParser;
 import io.quarkus.scheduler.Scheduler;
 import io.quarkus.scheduler.Trigger;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import nl.qunit.bpmnmeister.model.scheduler.RecurringCommand;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandScheduler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandHandler;
@@ -19,13 +27,46 @@ public class RecurringCommandScheduler extends AbstractCommandScheduler
   }
 
   public String schedule(RecurringCommand command) {
+    String cron;
+    String interval;
+    if (isValidInterval(command.timeCycle())) {
+      cron = "";
+      interval = command.timeCycle();
+    } else if (isValidCronExpression(command.timeCycle())) {
+      cron = command.timeCycle();
+      interval = "";
+    } else {
+      throw new IllegalArgumentException("Invalid timeCycle expression");
+    }
     Trigger trigger =
         scheduler
-            .newJob(command.id())
-            .setCron(command.cron())
+            .newJob(command.id().toString())
+            .setCron(cron)
+            .setInterval(interval)
             .setTask(scheduledExecution -> commandHandler.sendCommand(command))
             .schedule();
 
     return trigger.getId();
+  }
+
+  private boolean isValidInterval(String potentialIntervalExpression) {
+    try {
+      Duration.parse(potentialIntervalExpression);
+      return true;
+    } catch (DateTimeParseException e) {
+      return false;
+    }
+  }
+
+  public boolean isValidCronExpression(String potentialCtronExpression) {
+    try {
+      CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
+      CronParser parser = new CronParser(cronDefinition);
+      Cron cron = parser.parse(potentialCtronExpression);
+      cron.validate();
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
   }
 }

@@ -12,8 +12,12 @@ import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 public class TaskProcessor extends StateProcessor<Task, TaskState> {
 
   @Override
-  public TriggerResult doTrigger(
-      Trigger trigger, Definitions processDefinition, Task element, TaskState oldState) {
+  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, Task element, TaskState oldState) {
+    return new TriggerResult(TaskState.builder().build(), element.getOutgoing());
+  }
+
+  @Override
+  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, Task element, TaskState oldState) {
     return new TriggerResult(TaskState.builder().build(), element.getOutgoing());
   }
 

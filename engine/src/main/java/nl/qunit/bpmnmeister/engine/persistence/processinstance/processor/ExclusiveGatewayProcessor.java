@@ -11,12 +11,14 @@ import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 @ApplicationScoped
 public class ExclusiveGatewayProcessor
     extends StateProcessor<ExclusiveGateway, ExclusiveGatewayState> {
+
   @Override
-  public TriggerResult doTrigger(
-      Trigger trigger,
-      Definitions processDefinition,
-      ExclusiveGateway element,
-      ExclusiveGatewayState oldState) {
+  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, ExclusiveGateway element, ExclusiveGatewayState oldState) {
+    return new TriggerResult(ExclusiveGatewayState.builder().build(), element.getOutgoing());
+  }
+
+  @Override
+  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, ExclusiveGateway element, ExclusiveGatewayState oldState) {
     return new TriggerResult(ExclusiveGatewayState.builder().build(), element.getOutgoing());
   }
 

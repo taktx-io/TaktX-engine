@@ -1,8 +1,6 @@
 package nl.qunit.bpmnmeister.engine.persistence.processinstance.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.HashSet;
-import java.util.Set;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ServiceTask;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
@@ -13,20 +11,16 @@ import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 @ApplicationScoped
 public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTaskState> {
   @Override
-  public TriggerResult doTrigger(
-      Trigger trigger,
-      Definitions processDefinition,
-      ServiceTask element,
-      ServiceTaskState oldState) {
-    Set<String> newActiveFlows = new HashSet<>();
-    if (oldState.getState() == StateEnum.INIT) {
-    } else if (oldState.getState() == StateEnum.WAITING) {
-      newActiveFlows.addAll(element.getOutgoing());
-    }
-
+  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, ServiceTask element, ServiceTaskState oldState) {
     return new TriggerResult(
-        ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), newActiveFlows);
+            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
   }
+  @Override
+  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, ServiceTask element, ServiceTaskState oldState) {
+    return new TriggerResult(
+            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
+  }
+
 
   @Override
   public ServiceTaskState initialState() {

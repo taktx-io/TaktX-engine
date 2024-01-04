@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.scheduler.kafka.producer;
 import io.smallrye.reactive.messaging.kafka.KafkaClientService;
 import io.smallrye.reactive.messaging.kafka.KafkaProducer;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 import org.apache.kafka.clients.producer.Producer;
@@ -13,6 +14,7 @@ public class ReplyProducer {
 
   KafkaProducer<String, Trigger> producer;
 
+  @Inject
   public ReplyProducer(KafkaClientService kafkaClientService) {
     this.producer = kafkaClientService.getProducer("outgoing");
   }

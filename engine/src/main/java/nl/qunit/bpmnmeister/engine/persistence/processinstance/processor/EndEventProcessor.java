@@ -8,13 +8,24 @@ import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.EndEventSta
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.StateEnum;
 import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 
+import java.util.Set;
+
 @ApplicationScoped
 public class EndEventProcessor extends StateProcessor<EndEvent, EndEventState> {
+
   @Override
-  public TriggerResult doTrigger(
-      Trigger trigger, Definitions processDefinition, EndEvent element, EndEventState oldState) {
-    return new TriggerResult(EndEventState.builder().build(), element.getOutgoing());
+  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, EndEvent element, EndEventState oldState) {
+    return new TriggerResult(EndEventState.builder()
+            .state(StateEnum.FINISHED)
+            .build(), Set.of());
   }
+  @Override
+  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, EndEvent element, EndEventState oldState) {
+    return new TriggerResult(EndEventState.builder()
+            .state(StateEnum.FINISHED)
+            .build(), Set.of());
+  }
+
 
   @Override
   public EndEventState initialState() {
