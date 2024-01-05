@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.scheduler.kafka.consumer;
 import io.smallrye.reactive.messaging.kafka.KafkaConsumerRebalanceListener;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.model.scheduler.ScheduleCommand;
@@ -166,7 +167,7 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
       this.scheduledCommandsByPartitionByCommandId.put(partition.partition(), new HashMap<>());
       this.pendingConsumerRecordsByPartitionByKey.put(partition.partition(), new HashMap<>());
       log.info("Setting partition {} to offset zero.", partition.partition());
-      consumer.seek(partition, 0);
+      consumer.seekToBeginning(List.of());
     }
   }
 

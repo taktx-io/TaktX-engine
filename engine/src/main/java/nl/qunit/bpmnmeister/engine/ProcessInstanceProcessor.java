@@ -4,7 +4,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.FlowElement;
@@ -44,7 +43,10 @@ public class ProcessInstanceProcessor {
                 if (flow.testCondition()) {
                   newTriggers.add(
                       new Trigger(
-                          processInstance.getProcessInstanceId(), flow.getTarget(), flow.getId(), null));
+                          processInstance.getProcessInstanceId(),
+                          flow.getTarget(),
+                          flow.getId(),
+                          null));
                 }
               });
     }

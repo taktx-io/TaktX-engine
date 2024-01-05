@@ -13,12 +13,20 @@ public class ExclusiveGatewayProcessor
     extends StateProcessor<ExclusiveGateway, ExclusiveGatewayState> {
 
   @Override
-  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, ExclusiveGateway element, ExclusiveGatewayState oldState) {
+  protected TriggerResult triggerWhenActive(
+      Trigger trigger,
+      Definitions processDefinition,
+      ExclusiveGateway element,
+      ExclusiveGatewayState oldState) {
     return new TriggerResult(ExclusiveGatewayState.builder().build(), element.getOutgoing());
   }
 
   @Override
-  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, ExclusiveGateway element, ExclusiveGatewayState oldState) {
+  protected TriggerResult triggerWhenInit(
+      Trigger trigger,
+      Definitions processDefinition,
+      ExclusiveGateway element,
+      ExclusiveGatewayState oldState) {
     return new TriggerResult(ExclusiveGatewayState.builder().build(), element.getOutgoing());
   }
 

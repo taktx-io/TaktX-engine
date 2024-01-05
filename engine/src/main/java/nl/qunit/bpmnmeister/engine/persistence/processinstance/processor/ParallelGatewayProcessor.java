@@ -15,16 +15,25 @@ public class ParallelGatewayProcessor
     extends StateProcessor<ParallelGateway, ParallelGatewayState> {
 
   @Override
-  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, ParallelGateway element, ParallelGatewayState oldState) {
+  protected TriggerResult triggerWhenActive(
+      Trigger trigger,
+      Definitions processDefinition,
+      ParallelGateway element,
+      ParallelGatewayState oldState) {
     return getTriggerResult(trigger, element, oldState);
   }
 
   @Override
-  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, ParallelGateway element, ParallelGatewayState oldState) {
+  protected TriggerResult triggerWhenInit(
+      Trigger trigger,
+      Definitions processDefinition,
+      ParallelGateway element,
+      ParallelGatewayState oldState) {
     return getTriggerResult(trigger, element, oldState);
   }
 
-  private static TriggerResult getTriggerResult(Trigger trigger, ParallelGateway element, ParallelGatewayState oldState) {
+  private static TriggerResult getTriggerResult(
+      Trigger trigger, ParallelGateway element, ParallelGatewayState oldState) {
     Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.inputFlowId());
     final Set<String> outputFlows = new HashSet<>();
@@ -35,8 +44,8 @@ public class ParallelGatewayProcessor
       outputFlows.addAll(element.getOutgoing());
     }
     return new TriggerResult(
-            ParallelGatewayState.builder().triggeredFlows(newTriggeredFlows).state(newState).build(),
-            outputFlows);
+        ParallelGatewayState.builder().triggeredFlows(newTriggeredFlows).state(newState).build(),
+        outputFlows);
   }
 
   @Override

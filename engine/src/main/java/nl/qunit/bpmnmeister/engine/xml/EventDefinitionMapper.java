@@ -23,15 +23,21 @@ public class EventDefinitionMapper {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
       String duration =
           timerEventDefinition.getTimeDuration() != null
-              ? timerEventDefinition.getTimeDuration().getContent().toString()
+              ? timerEventDefinition.getTimeDuration().getContent().stream()
+                  .map(Object::toString)
+                  .collect(Collectors.joining(""))
               : null;
       String cycle =
           timerEventDefinition.getTimeCycle() != null
-              ? timerEventDefinition.getTimeCycle().getContent().toString()
+              ? timerEventDefinition.getTimeCycle().getContent().stream()
+                  .map(Object::toString)
+                  .collect(Collectors.joining(""))
               : null;
       String timeDate =
           timerEventDefinition.getTimeDate() != null
-              ? timerEventDefinition.getTimeDate().getContent().toString()
+              ? timerEventDefinition.getTimeDate().getContent().stream()
+                  .map(Object::toString)
+                  .collect(Collectors.joining(""))
               : null;
       return TimerEventDefinition.builder()
           .id(timerEventDefinition.getId())

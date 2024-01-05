@@ -12,16 +12,18 @@ public abstract class StateProcessor<E extends BaseElement, S extends BpmnElemen
       Definitions processDefinition,
       BaseElement element,
       BpmnElementState oldState) {
-      return switch (oldState.getState()) {
-          case INIT -> triggerWhenInit(trigger, processDefinition, (E) element, (S) oldState);
-          case ACTIVE -> triggerWhenActive(trigger, processDefinition, (E) element, (S) oldState);
-          default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
-      };
+    return switch (oldState.getState()) {
+      case INIT -> triggerWhenInit(trigger, processDefinition, (E) element, (S) oldState);
+      case ACTIVE -> triggerWhenActive(trigger, processDefinition, (E) element, (S) oldState);
+      default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
+    };
   }
 
-  protected abstract TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, E element, S oldState);
+  protected abstract TriggerResult triggerWhenActive(
+      Trigger trigger, Definitions processDefinition, E element, S oldState);
 
-  protected abstract TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, E element, S oldState);
+  protected abstract TriggerResult triggerWhenInit(
+      Trigger trigger, Definitions processDefinition, E element, S oldState);
 
   public abstract S initialState();
 }

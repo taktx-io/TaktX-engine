@@ -3,12 +3,10 @@ package nl.qunit.bpmnmeister.engine.persistence.processdefinition;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.xml.bind.JAXBException;
 import java.util.*;
-
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessIntanceService;
 import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
@@ -73,7 +71,7 @@ public class ProcessDefinitionService {
                                 processDefinition, se.getId())));
   }
 
-  public Definitions getProcessDefinition(String processDefinitionId, long version) {
+  public Optional<Definitions> getProcessDefinition(String processDefinitionId, long version) {
     Parameters queryparameters = Parameters.with("pdid", processDefinitionId);
     String query = QUERY_PROCESSDEFINITION_NOVERSION;
     if (version > 0) {
@@ -81,13 +79,8 @@ public class ProcessDefinitionService {
       query = QUERY_PROCESSDEFINITION_VERSION;
     }
 
-    Optional<Definitions> processDefinition =
-        processDefinitionRepository.find(query, queryparameters).stream()
-            .max(Comparator.comparingLong(Definitions::getVersion));
-    return processDefinition.orElseThrow(
-        () ->
-            new NotFoundException(
-                "Process timeCycle not found: " + processDefinitionId + " version: " + version));
+    return processDefinitionRepository.find(query, queryparameters).stream()
+        .max(Comparator.comparingLong(Definitions::getVersion));
   }
 
   public List<Definitions> getProcessDefinitions() {

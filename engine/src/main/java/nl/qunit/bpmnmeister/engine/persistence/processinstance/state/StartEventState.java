@@ -2,7 +2,6 @@ package nl.qunit.bpmnmeister.engine.persistence.processinstance.state;
 
 import java.util.Set;
 import java.util.UUID;
-
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 import org.bson.codecs.pojo.annotations.BsonCreator;

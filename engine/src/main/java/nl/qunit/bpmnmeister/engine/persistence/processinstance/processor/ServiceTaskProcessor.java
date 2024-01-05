@@ -11,16 +11,24 @@ import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 @ApplicationScoped
 public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTaskState> {
   @Override
-  protected TriggerResult triggerWhenInit(Trigger trigger, Definitions processDefinition, ServiceTask element, ServiceTaskState oldState) {
+  protected TriggerResult triggerWhenInit(
+      Trigger trigger,
+      Definitions processDefinition,
+      ServiceTask element,
+      ServiceTaskState oldState) {
     return new TriggerResult(
-            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
-  }
-  @Override
-  protected TriggerResult triggerWhenActive(Trigger trigger, Definitions processDefinition, ServiceTask element, ServiceTaskState oldState) {
-    return new TriggerResult(
-            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
+        ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
   }
 
+  @Override
+  protected TriggerResult triggerWhenActive(
+      Trigger trigger,
+      Definitions processDefinition,
+      ServiceTask element,
+      ServiceTaskState oldState) {
+    return new TriggerResult(
+        ServiceTaskState.builder().cnt(oldState.getCnt() + 1).build(), element.getOutgoing());
+  }
 
   @Override
   public ServiceTaskState initialState() {

@@ -1,18 +1,15 @@
 package nl.qunit.bpmnmeister.engine.persistence.processinstance;
 
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.*;
 import nl.qunit.bpmnmeister.engine.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionService;
 import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
-
-import java.util.HashMap;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
 
 @ApplicationScoped
 public class ProcessIntanceService {
@@ -24,9 +21,11 @@ public class ProcessIntanceService {
   final ProcessDefinitionService processDefinitionService;
   final ProcessInstanceRepository processInstanceRepository;
 
-  public ProcessIntanceService(ProcessInstanceProcessor processInstanceProcessor,
-                               @Channel("trigger-outgoing")
-  Emitter<Trigger> triggerEmitter, ProcessDefinitionService processDefinitionService, ProcessInstanceRepository processInstanceRepository) {
+  public ProcessIntanceService(
+      ProcessInstanceProcessor processInstanceProcessor,
+      @Channel("trigger-outgoing") Emitter<Trigger> triggerEmitter,
+      ProcessDefinitionService processDefinitionService,
+      ProcessInstanceRepository processInstanceRepository) {
     this.processInstanceProcessor = processInstanceProcessor;
     this.triggerEmitter = triggerEmitter;
     this.processDefinitionService = processDefinitionService;
@@ -34,55 +33,67 @@ public class ProcessIntanceService {
   }
 
   public void startNewProcessInstance(
-          String processDefinitionId, long version, String startElement) {
-    Definitions processDefinition =
-            processDefinitionService.getProcessDefinition(processDefinitionId, version);
-    startNewProcessInstance(processDefinition, startElement);
+      String processDefinitionId, long version, String startElement) {
+    Optional<Definitions> processDefinition =
+        processDefinitionService.getProcessDefinition(processDefinitionId, version);
+    if (processDefinition.isPresent()) {
+      startNewProcessInstance(processDefinition.get(), startElement);
+    }
   }
 
   public void startNewProcessInstance(Definitions processDefinition, String startElement) {
     ProcessInstance processInstance =
-            ProcessInstance.builder()
-                    .processInstanceId(UUID.randomUUID())
-                    .processDefinitionId(processDefinition.getProcessDefinitionId())
-                    .version(processDefinition.getVersion())
-                    .elementStates(new HashMap<>())
-                    .build();
+        ProcessInstance.builder()
+            .processInstanceId(UUID.randomUUID())
+            .processDefinitionId(processDefinition.getProcessDefinitionId())
+            .version(processDefinition.getVersion())
+            .elementStates(new HashMap<>())
+            .build();
     processInstanceRepository.persist(processInstance);
 
     String startElementId;
     if (startElement == null) {
       startElementId =
-              processDefinition.getStartEvents().stream().findFirst().orElseThrow().getId();
+          processDefinition.getStartEvents().stream().findFirst().orElseThrow().getId();
     } else {
       if (processDefinition.getFlowElement(startElement).isPresent()) {
         startElementId = startElement;
       } else {
         throw new NoSuchElementException(
-                "Startevent "
-                        + startElement
-                        + " not found in process timeCycle "
-                        + processDefinition.getProcessDefinitionId());
+            "Startevent "
+                + startElement
+                + " not found in process timeCycle "
+                + processDefinition.getProcessDefinitionId());
       }
     }
     triggerProcess(
-            new Trigger(processInstance.getProcessInstanceId(), startElementId, null, null),
-            processDefinition,
-            processInstance);
+        new Trigger(processInstance.getProcessInstanceId(), startElementId, null, null),
+        processDefinition,
+        processInstance);
   }
 
   public void consumeTrigger(Trigger trigger) {
     Parameters queryparameters = Parameters.with("pid", trigger.processInstanceId());
 
-    ProcessInstance pi =
-            processInstanceRepository
-                    .find(QUERY_PROCESSINSTANCE, queryparameters)
-                    .firstResultOptional()
-                    .orElseThrow();
-    Definitions pd =
-            processDefinitionService.getProcessDefinition(pi.getProcessDefinitionId(), pi.getVersion());
-
-    triggerProcess(trigger, pd, pi);
+    Optional<ProcessInstance> opi =
+        processInstanceRepository
+            .find(QUERY_PROCESSINSTANCE, queryparameters)
+            .firstResultOptional();
+    if (opi.isPresent()) {
+      ProcessInstance pi = opi.get();
+      Optional<Definitions> pd =
+          processDefinitionService.getProcessDefinition(
+              pi.getProcessDefinitionId(), pi.getVersion());
+      if (pd.isPresent()) {
+        triggerProcess(trigger, pd.get(), pi);
+      } else {
+        Log.errorf(
+            "Process definition %s version %d not found",
+            pi.getProcessDefinitionId(), pi.getVersion());
+      }
+    } else {
+      Log.errorf("Process instance %s not found", trigger.processInstanceId());
+    }
   }
 
   private void triggerProcess(Trigger trigger, Definitions pd, ProcessInstance pi) {

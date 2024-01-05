@@ -6,6 +6,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.xml.bind.JAXBException;
 import java.util.List;
+import java.util.Optional;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionService;
 
@@ -33,6 +34,12 @@ public class ProcessDefinitionResource {
   public Definitions get(
       @PathParam("processDefinition") String processDefinition,
       @PathParam("version") long version) {
-    return processDefinitionService.getProcessDefinition(processDefinition, version);
+    Optional<Definitions> optProcessDefinition =
+        processDefinitionService.getProcessDefinition(processDefinition, version);
+    if (optProcessDefinition.isPresent()) {
+      return optProcessDefinition.get();
+    } else {
+      throw new NotFoundException();
+    }
   }
 }
