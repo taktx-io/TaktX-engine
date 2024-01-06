@@ -3,27 +3,25 @@ package nl.qunit.bpmnmeister.scheduler.kafka.producer;
 import io.smallrye.reactive.messaging.kafka.KafkaClientService;
 import io.smallrye.reactive.messaging.kafka.KafkaProducer;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.util.UUID;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.model.processinstance.Trigger;
+import nl.qunit.bpmnmeister.model.scheduler.FixedRateCommand;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 @ApplicationScoped
-public class ReplyProducer {
+public class FixedRateCommandUpdateProducer {
 
-  KafkaProducer<UUID, Trigger> producer;
+  KafkaProducer<UUID, FixedRateCommand> producer;
 
-  @Inject
-  public ReplyProducer(KafkaClientService kafkaClientService) {
-    this.producer = kafkaClientService.getProducer("outgoing");
+  public FixedRateCommandUpdateProducer(KafkaClientService kafkaClientService) {
+    this.producer = kafkaClientService.getProducer("fixed-rate-out");
   }
 
-  public void send(ProducerRecord<UUID, Trigger> producerRecord) {
+  public void send(ProducerRecord<UUID, FixedRateCommand> producerRecord) {
     producer
         .runOnSendingThread(
-            (Consumer<Producer<UUID, Trigger>>) client -> client.send(producerRecord))
+            (Consumer<Producer<UUID, FixedRateCommand>>) client -> client.send(producerRecord))
         .await()
         .indefinitely();
   }

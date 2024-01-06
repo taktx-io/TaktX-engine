@@ -10,51 +10,32 @@ import io.quarkus.scheduler.Scheduler;
 import io.quarkus.scheduler.Trigger;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
-import java.time.Duration;
-import java.time.format.DateTimeParseException;
 import nl.qunit.bpmnmeister.model.scheduler.RecurringCommand;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandScheduler;
-import nl.qunit.bpmnmeister.scheduler.model.command.CommandHandler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandScheduler;
 
 @Dependent
-public class RecurringCommandScheduler extends AbstractCommandScheduler
+public class RecurringCommandScheduler extends AbstractCommandScheduler<RecurringCommand>
     implements CommandScheduler<RecurringCommand> {
 
   @Inject
-  public RecurringCommandScheduler(Scheduler jobRequestScheduler, CommandHandler commandHandler) {
-    super(jobRequestScheduler, commandHandler);
+  public RecurringCommandScheduler(Scheduler scheduler, RecurringCommandHandler commandHandler) {
+    super(scheduler, commandHandler);
   }
 
+  @Override
   public String schedule(RecurringCommand command) {
-    String cron;
-    String interval;
-    if (isValidInterval(command.timeCycle())) {
-      cron = "";
-      interval = command.timeCycle();
-    } else if (isValidCronExpression(command.timeCycle())) {
-      cron = command.timeCycle();
-      interval = "";
+    if (isValidCronExpression(command.cron())) {
+      Trigger trigger =
+          scheduler
+              .newJob(command.id().toString())
+              .setCron(command.cron())
+              .setTask(scheduledExecution -> commandHandler.run(command))
+              .schedule();
+
+      return trigger.getId();
     } else {
       throw new IllegalArgumentException("Invalid timeCycle expression");
-    }
-    Trigger trigger =
-        scheduler
-            .newJob(command.id().toString())
-            .setCron(cron)
-            .setInterval(interval)
-            .setTask(scheduledExecution -> commandHandler.sendCommand(command))
-            .schedule();
-
-    return trigger.getId();
-  }
-
-  private boolean isValidInterval(String potentialIntervalExpression) {
-    try {
-      Duration.parse(potentialIntervalExpression);
-      return true;
-    } catch (DateTimeParseException e) {
-      return false;
     }
   }
 

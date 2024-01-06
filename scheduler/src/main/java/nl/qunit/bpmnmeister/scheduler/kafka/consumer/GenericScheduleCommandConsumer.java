@@ -68,7 +68,8 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
     // Have we already seen all the messages for this partition that where there when we started?
     if (isPartitionCaughtUp(consumerRecord)) {
       // Schedule all the pending tasks once and the current task directly
-      scheduleAllTasksForPartition(consumerRecord.partition());
+      // except the one for the current key
+      scheduleAllTasksForPartitionExcept(consumerRecord.partition(), consumerRecord.key());
       scheduleRecord(consumerRecord);
     } else {
       // If not store it to be scheduled later
@@ -79,24 +80,28 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
     }
   }
 
-  private void scheduleAllTasksForPartition(Integer partitionId) {
+  private void scheduleAllTasksForPartitionExcept(Integer partitionId, String except) {
     var map = pendingConsumerRecordsByPartitionByKey.get(partitionId);
     if (!map.isEmpty()) {
       log.info("Scheduling all pending commands for partition {}", partitionId);
       for (var entrySet : map.entrySet()) {
-        scheduleRecord(entrySet.getValue());
-        map.remove(entrySet.getKey());
+        if (!entrySet.getKey().equals(except)) {
+          scheduleRecord(entrySet.getValue());
+          map.remove(entrySet.getKey());
+        }
       }
     }
   }
 
   private void scheduleRecord(ConsumerRecord<String, T> consumerRecord) {
     try {
-      log.info("Scheduling command: {}", consumerRecord.value());
-      var id = schedule(consumerRecord);
-      this.scheduledCommandsByPartitionByCommandId
-          .get(consumerRecord.partition())
-          .put(consumerRecord.key(), id);
+      if (this.scheduledCommandsByPartitionByCommandId
+              .get(consumerRecord.partition())
+              .put(consumerRecord.key(), consumerRecord.key())
+          == null) {
+        log.info("Scheduling command: {}", consumerRecord.value());
+        schedule(consumerRecord);
+      }
     } catch (Exception exception) {
       log.error("Could not schedule the command", exception);
     }
@@ -137,7 +142,7 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
       }
     }
     if (isPartitionCaughtUp(consumerRecord)) {
-      scheduleAllTasksForPartition(consumerRecord.partition());
+      scheduleAllTasksForPartitionExcept(consumerRecord.partition(), consumerRecord.key());
     }
   }
 

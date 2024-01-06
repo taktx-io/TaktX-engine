@@ -55,7 +55,7 @@
     <bpmn:startEvent id="TimerStartCycleISO8601">
       <bpmn:outgoing>Flow_10sv72m</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerEventDefinition_01ql4p9">
-        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R5/PT10S</bpmn:timeCycle>
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R5/PT60S</bpmn:timeCycle>
       </bpmn:timerEventDefinition>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="Flow_10sv72m" sourceRef="TimerStartCycleISO8601" targetRef="Activity_1brbvir" />
@@ -102,6 +102,17 @@
         <di:waypoint x="209" y="140" />
         <di:waypoint x="270" y="140" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10rkgyb_di" bpmnElement="Flow_10rkgyb">
+        <di:waypoint x="148" y="280" />
+        <di:waypoint x="230" y="280" />
+        <di:waypoint x="230" y="170" />
+        <di:waypoint x="281" y="157" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10sv72m_di" bpmnElement="Flow_10sv72m">
+        <di:waypoint x="148" y="350" />
+        <di:waypoint x="320" y="350" />
+        <di:waypoint x="320" y="157" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1qt4l9s_di" bpmnElement="Flow_1qt4l9s">
         <di:waypoint x="370" y="117" />
         <di:waypoint x="425" y="117" />
@@ -127,17 +138,6 @@
         <di:waypoint x="630" y="230" />
         <di:waypoint x="710" y="230" />
         <di:waypoint x="710" y="142" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_10rkgyb_di" bpmnElement="Flow_10rkgyb">
-        <di:waypoint x="148" y="280" />
-        <di:waypoint x="230" y="280" />
-        <di:waypoint x="230" y="170" />
-        <di:waypoint x="281" y="157" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_10sv72m_di" bpmnElement="Flow_10sv72m">
-        <di:waypoint x="148" y="350" />
-        <di:waypoint x="320" y="350" />
-        <di:waypoint x="320" y="157" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -8,7 +8,6 @@ import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 @Getter
 @BsonDiscriminator
 public class TimerEventDefinition extends EventDefinition {
-
   private final String timeDate;
   private final String timeDuration;
   private final String timeCycle;

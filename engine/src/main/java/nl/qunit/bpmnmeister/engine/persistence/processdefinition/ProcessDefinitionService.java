@@ -9,6 +9,7 @@ import jakarta.xml.bind.JAXBException;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessIntanceService;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.TimerDefinitionScheduler;
 import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
 
 @ApplicationScoped
@@ -23,6 +24,7 @@ public class ProcessDefinitionService {
   final ProcessDefinitionXmlRepository processDefinitionXmlRepository;
   final BpmnParser bpmnParser;
   final ProcessIntanceService processIntanceService;
+  final TimerDefinitionScheduler timerDefinitionScheduler;
 
   @Transactional
   public Definitions persistProcessDefinition(String xml) throws JAXBException {
@@ -60,15 +62,11 @@ public class ProcessDefinitionService {
   }
 
   private void startNewSchedules(Definitions processDefinition) {
-    processDefinition
-        .getStartEvents()
-        .forEach(
-            se ->
-                se.getTimerEventDefinitions()
-                    .forEach(
-                        ted ->
-                            processIntanceService.startNewProcessInstance(
-                                processDefinition, se.getId())));
+    for (StartEvent se : processDefinition.getStartEvents()) {
+      for (TimerEventDefinition timerEventDefinition : se.getTimerEventDefinitions()) {
+        timerDefinitionScheduler.schedule(processDefinition, se, timerEventDefinition);
+      }
+    }
   }
 
   public Optional<Definitions> getProcessDefinition(String processDefinitionId, long version) {

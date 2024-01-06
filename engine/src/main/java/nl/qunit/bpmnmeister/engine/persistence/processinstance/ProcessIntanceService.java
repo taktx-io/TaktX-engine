@@ -67,7 +67,13 @@ public class ProcessIntanceService {
       }
     }
     triggerProcess(
-        new Trigger(processInstance.getProcessInstanceId(), startElementId, null, null),
+        new Trigger(
+            processInstance.getProcessInstanceId(),
+            processDefinition.getProcessDefinitionId(),
+            processDefinition.getVersion(),
+            startElementId,
+            null,
+            null),
         processDefinition,
         processInstance);
   }

@@ -44,6 +44,8 @@ public class ProcessInstanceProcessor {
                   newTriggers.add(
                       new Trigger(
                           processInstance.getProcessInstanceId(),
+                          processDefinition.getProcessDefinitionId(),
+                          processDefinition.getVersion(),
                           flow.getTarget(),
                           flow.getId(),
                           null));
