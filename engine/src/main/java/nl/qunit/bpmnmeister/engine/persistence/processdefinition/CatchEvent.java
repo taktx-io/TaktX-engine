@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
+import org.bson.codecs.pojo.annotations.BsonIgnore;
 
 @SuperBuilder
 @BsonDiscriminator
@@ -21,6 +22,7 @@ public abstract class CatchEvent extends Event {
     this.eventDefinitions = eventDefinitions;
   }
 
+  @BsonIgnore
   public Set<TimerEventDefinition> getTimerEventDefinitions() {
     return eventDefinitions.stream()
         .filter(TimerEventDefinition.class::isInstance)

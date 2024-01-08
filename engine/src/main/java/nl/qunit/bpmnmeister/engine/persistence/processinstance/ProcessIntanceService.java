@@ -1,5 +1,7 @@
 package nl.qunit.bpmnmeister.engine.persistence.processinstance;
 
+import static nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionState.ACTIVE;
+
 import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -7,7 +9,6 @@ import java.util.*;
 import nl.qunit.bpmnmeister.engine.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionService;
-import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -16,14 +17,14 @@ public class ProcessIntanceService {
   private static final String QUERY_PROCESSINSTANCE = "processInstanceId = :pid";
   final ProcessInstanceProcessor processInstanceProcessor;
 
-  final Emitter<Trigger> triggerEmitter;
+  final Emitter<ProcessInstanceTrigger> triggerEmitter;
 
   final ProcessDefinitionService processDefinitionService;
   final ProcessInstanceRepository processInstanceRepository;
 
   public ProcessIntanceService(
       ProcessInstanceProcessor processInstanceProcessor,
-      @Channel("trigger-outgoing") Emitter<Trigger> triggerEmitter,
+      @Channel("trigger-outgoing") Emitter<ProcessInstanceTrigger> triggerEmitter,
       ProcessDefinitionService processDefinitionService,
       ProcessInstanceRepository processInstanceRepository) {
     this.processInstanceProcessor = processInstanceProcessor;
@@ -36,20 +37,18 @@ public class ProcessIntanceService {
       String processDefinitionId, long version, String startElement) {
     Optional<Definitions> processDefinition =
         processDefinitionService.getProcessDefinition(processDefinitionId, version);
-    if (processDefinition.isPresent()) {
-      startNewProcessInstance(processDefinition.get(), startElement);
-    }
+    processDefinition.ifPresent(
+        definitions -> {
+          if (definitions.getState() == ACTIVE) {
+            startNewProcessInstance(definitions, startElement);
+          }
+        });
   }
 
   public void startNewProcessInstance(Definitions processDefinition, String startElement) {
-    ProcessInstance processInstance =
-        ProcessInstance.builder()
-            .processInstanceId(UUID.randomUUID())
-            .processDefinitionId(processDefinition.getProcessDefinitionId())
-            .version(processDefinition.getVersion())
-            .elementStates(new HashMap<>())
-            .build();
-    processInstanceRepository.persist(processInstance);
+    Log.infof(
+        "Starting new process instance processdefinition %s, version %d, startelement %s",
+        processDefinition.getProcessDefinitionId(), processDefinition.getVersion(), startElement);
 
     String startElementId;
     if (startElement == null) {
@@ -66,21 +65,38 @@ public class ProcessIntanceService {
                 + processDefinition.getProcessDefinitionId());
       }
     }
+
+    ProcessInstance processInstance =
+        ProcessInstance.builder()
+            .processInstanceId(UUID.randomUUID())
+            .processDefinitionId(processDefinition.getProcessDefinitionId())
+            .version(processDefinition.getVersion())
+            .elementStates(new HashMap<>())
+            .build();
+    processInstanceRepository.persist(processInstance);
+
     triggerProcess(
-        new Trigger(
+        new ProcessInstanceTrigger(
             processInstance.getProcessInstanceId(),
             processDefinition.getProcessDefinitionId(),
             processDefinition.getVersion(),
             startElementId,
-            null,
             null),
         processDefinition,
         processInstance);
   }
 
-  public void consumeTrigger(Trigger trigger) {
-    Parameters queryparameters = Parameters.with("pid", trigger.processInstanceId());
+  public void consumeTrigger(ProcessInstanceTrigger trigger) {
+    if (trigger.processInstanceId() == null) {
+      startNewProcessInstance(
+          trigger.processDefinitionId(), trigger.version(), trigger.elementId());
+    } else {
+      triggerExistingProcessInstance(trigger);
+    }
+  }
 
+  private void triggerExistingProcessInstance(ProcessInstanceTrigger trigger) {
+    Parameters queryparameters = Parameters.with("pid", trigger.processInstanceId());
     Optional<ProcessInstance> opi =
         processInstanceRepository
             .find(QUERY_PROCESSINSTANCE, queryparameters)
@@ -102,8 +118,8 @@ public class ProcessIntanceService {
     }
   }
 
-  private void triggerProcess(Trigger trigger, Definitions pd, ProcessInstance pi) {
-    Set<Trigger> newTriggers = processInstanceProcessor.trigger(pd, pi, trigger);
+  private void triggerProcess(ProcessInstanceTrigger trigger, Definitions pd, ProcessInstance pi) {
+    Set<ProcessInstanceTrigger> newTriggers = processInstanceProcessor.trigger(pd, pi, trigger);
 
     processInstanceRepository.persistOrUpdate(pi);
 

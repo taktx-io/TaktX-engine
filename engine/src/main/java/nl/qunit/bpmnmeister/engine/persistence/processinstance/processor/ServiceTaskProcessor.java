@@ -3,16 +3,16 @@ package nl.qunit.bpmnmeister.engine.persistence.processinstance.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ServiceTask;
+import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.StateEnum;
-import nl.qunit.bpmnmeister.model.processinstance.Trigger;
 
 @ApplicationScoped
 public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTaskState> {
   @Override
   protected TriggerResult triggerWhenInit(
-      Trigger trigger,
+      ProcessInstanceTrigger trigger,
       Definitions processDefinition,
       ServiceTask element,
       ServiceTaskState oldState) {
@@ -22,7 +22,7 @@ public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTas
 
   @Override
   protected TriggerResult triggerWhenActive(
-      Trigger trigger,
+      ProcessInstanceTrigger trigger,
       Definitions processDefinition,
       ServiceTask element,
       ServiceTaskState oldState) {

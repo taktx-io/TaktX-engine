@@ -16,6 +16,7 @@ import nl.qunit.bpmnmeister.engine.xml.BpmnParser;
 @RequiredArgsConstructor
 public class ProcessDefinitionService {
   private static final String QUERY_PID = "processDefinitionId = :pdid";
+  private static final String QUERY_PID_STATE = "processDefinitionId = :pdid and state = :state";
   private static final String QUERY_PROCESSDEFINITION_NOVERSION = "processDefinitionId = :pdid";
   private static final String QUERY_PROCESSDEFINITION_VERSION =
       "processDefinitionId = :pdid and version = :version";
@@ -41,24 +42,73 @@ public class ProcessDefinitionService {
             .toList();
     boolean anyMatchingHash = hashes.contains(xmlHash);
     if (!anyMatchingHash) {
-      // Non-existing process timeCycle, persist it
+      // new process definition, persist it
       ProcessDefinitionXml xmlEntity =
           new ProcessDefinitionXml(null, processDefinitionId, xml, xmlHash);
       processDefinitionXmlRepository.persist(xmlEntity);
+
+      deactiveActiveProcessDefinitions(processDefinitionId);
+
       int newVersion = hashes.size() + 1;
       Definitions newProcessDefinitionToPersist =
-          Definitions.builder()
-              .xmlObjectId(xmlEntity.getId())
-              .processDefinitionId(processDefinitionId)
-              .version(newVersion)
-              .elements(parsedProcessDefinition.getElements())
-              .build();
-      processDefinitionRepository.persist(newProcessDefinitionToPersist);
+          persistNewProcessDefinition(
+              xmlEntity, processDefinitionId, newVersion, parsedProcessDefinition);
       startNewSchedules(newProcessDefinitionToPersist);
+
       return newProcessDefinitionToPersist;
     } else {
       throw new WebApplicationException("Resource already exists", Response.Status.CONFLICT);
     }
+  }
+
+  private void deactiveActiveProcessDefinitions(String processDefinitionId) {
+    processDefinitionRepository
+        .find(
+            QUERY_PID_STATE,
+            Parameters.with("pdid", processDefinitionId)
+                .and("state", ProcessDefinitionState.ACTIVE))
+        .stream()
+        .forEach(
+            def -> {
+              cancelActiveSchedules(def);
+              processDefinitionRepository.update(
+                  new Definitions(
+                      def.getId(),
+                      ProcessDefinitionState.INACTIVE,
+                      def.getXmlObjectId(),
+                      def.getProcessDefinitionId(),
+                      def.getVersion(),
+                      def.getElements()));
+            });
+  }
+
+  private void cancelActiveSchedules(Definitions def) {
+    def.getStartEvents().stream()
+        .filter(se -> !se.getTimerEventDefinitions().isEmpty())
+        .forEach(
+            se -> {
+              for (TimerEventDefinition timerEventDefinition : se.getTimerEventDefinitions()) {
+                timerDefinitionScheduler.cancel(def, se, timerEventDefinition);
+              }
+            });
+  }
+
+  private Definitions persistNewProcessDefinition(
+      ProcessDefinitionXml xmlEntity,
+      String processDefinitionId,
+      int newVersion,
+      Definitions parsedProcessDefinition) {
+    Definitions newProcessDefinitionToPersist =
+        Definitions.builder()
+            .xmlObjectId(xmlEntity.getId())
+            .state(ProcessDefinitionState.ACTIVE)
+            .processDefinitionId(processDefinitionId)
+            .version(newVersion)
+            .elements(parsedProcessDefinition.getElements())
+            .build();
+
+    processDefinitionRepository.persist(newProcessDefinitionToPersist);
+    return newProcessDefinitionToPersist;
   }
 
   private void startNewSchedules(Definitions processDefinition) {

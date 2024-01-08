@@ -9,13 +9,11 @@ import io.smallrye.reactive.messaging.kafka.KafkaRecord;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.RepeatDuration;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
-import nl.qunit.bpmnmeister.model.processinstance.Trigger;
-import nl.qunit.bpmnmeister.model.scheduler.FixedRateCommand;
-import nl.qunit.bpmnmeister.model.scheduler.OneTimeCommand;
-import nl.qunit.bpmnmeister.model.scheduler.RecurringCommand;
+import nl.qunit.bpmnmeister.scheduler.model.command.FixedRateCommand;
+import nl.qunit.bpmnmeister.scheduler.model.command.OneTimeCommand;
+import nl.qunit.bpmnmeister.scheduler.model.command.RecurringCommand;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -41,15 +39,91 @@ public class TimerDefinitionScheduler {
     if (timerEventDefinition.getTimeCycle() != null) {
       scheduleCycle(processDefinition, startEvent, timerEventDefinition);
     } else if (timerEventDefinition.getTimeDate() != null) {
-      scheduleOneTime(timerEventDefinition);
+      scheduleOneTime(processDefinition, startEvent, timerEventDefinition);
     } else if (timerEventDefinition.getTimeDuration() != null) {
       scheduleDuration(timerEventDefinition);
     }
   }
 
+  public void cancel(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    if (timerEventDefinition.getTimeCycle() != null) {
+      cancelCycle(processDefinition, startEvent, timerEventDefinition);
+    } else if (timerEventDefinition.getTimeDate() != null) {
+      cancelOneTime(processDefinition, startEvent, timerEventDefinition);
+    } else if (timerEventDefinition.getTimeDuration() != null) {
+      cancelDuration(timerEventDefinition);
+    }
+  }
+
+  private void cancelDuration(TimerEventDefinition timerEventDefinition) {}
+
+  private void cancelOneTime(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    String timerId = getTimerId(processDefinition, startEvent, timerEventDefinition);
+    oneTimeCommandEmitter.send(KafkaRecord.of(timerId, null));
+  }
+
+  private void cancelCycle(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    if (isValidCron(timerEventDefinition.getTimeCycle())) {
+      cancelCron(processDefinition, startEvent, timerEventDefinition);
+    } else {
+      cancelFixedRate(processDefinition, startEvent, timerEventDefinition);
+    }
+  }
+
+  private void cancelFixedRate(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    String timerId = getTimerId(processDefinition, startEvent, timerEventDefinition);
+    fixedRateCommandEmitter.send(KafkaRecord.of(timerId, null));
+  }
+
+  private void cancelCron(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    String timerId = getTimerId(processDefinition, startEvent, timerEventDefinition);
+    recurringCommandEmitter.send(KafkaRecord.of(timerId, null));
+  }
+
   private void scheduleDuration(TimerEventDefinition timerEventDefinition) {}
 
-  private void scheduleOneTime(TimerEventDefinition timerEventDefinition) {}
+  private void scheduleOneTime(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    List<ProcessInstanceTrigger> triggers =
+        getTriggers(processDefinition, startEvent, timerEventDefinition);
+
+    OneTimeCommand fixedRateCommand =
+        new OneTimeCommand(
+            getTimerId(processDefinition, startEvent, timerEventDefinition),
+            triggers,
+            timerEventDefinition.getTimeDate());
+    oneTimeCommandEmitter.send(KafkaRecord.of(fixedRateCommand.id(), fixedRateCommand));
+  }
+
+  private String getTimerId(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    return processDefinition.getProcessDefinitionId()
+        + "-"
+        + processDefinition.getVersion()
+        + '-'
+        + startEvent.getId()
+        + '-'
+        + timerEventDefinition.getId();
+  }
 
   private void scheduleCycle(
       Definitions processDefinition,
@@ -66,11 +140,12 @@ public class TimerDefinitionScheduler {
       Definitions processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<Trigger> triggers = getTriggers(processDefinition, startEvent);
+    List<ProcessInstanceTrigger> triggers =
+        getTriggers(processDefinition, startEvent, timerEventDefinition);
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
     FixedRateCommand fixedRateCommand =
         new FixedRateCommand(
-            UUID.randomUUID(),
+            getTimerId(processDefinition, startEvent, timerEventDefinition),
             triggers,
             repeatDuration.getDuration(),
             repeatDuration.getRepetitions(),
@@ -82,25 +157,31 @@ public class TimerDefinitionScheduler {
       Definitions processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<Trigger> triggers = getTriggers(processDefinition, startEvent);
+    List<ProcessInstanceTrigger> triggers =
+        getTriggers(processDefinition, startEvent, timerEventDefinition);
     RecurringCommand recurringCommand =
-        new RecurringCommand(UUID.randomUUID(), triggers, timerEventDefinition.getTimeCycle());
+        new RecurringCommand(
+            getTimerId(processDefinition, startEvent, timerEventDefinition),
+            triggers,
+            timerEventDefinition.getTimeCycle());
     recurringCommandEmitter.send(KafkaRecord.of(recurringCommand.id(), recurringCommand));
   }
 
-  private static List<Trigger> getTriggers(Definitions processDefinition, StartEvent startEvent) {
-    List<Trigger> triggers = new ArrayList<>();
+  private static List<ProcessInstanceTrigger> getTriggers(
+      Definitions processDefinition,
+      StartEvent startEvent,
+      TimerEventDefinition timerEventDefinition) {
+    List<ProcessInstanceTrigger> triggers = new ArrayList<>();
     for (String outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow) processDefinition.getFlowElement(outgoingFlowId).orElseThrow();
       triggers.add(
-          new Trigger(
+          new ProcessInstanceTrigger(
               null,
               processDefinition.getProcessDefinitionId(),
               processDefinition.getVersion(),
               sequenceFlow.getTarget(),
-              sequenceFlow.getId(),
-              null));
+              sequenceFlow.getId()));
     }
     return triggers;
   }

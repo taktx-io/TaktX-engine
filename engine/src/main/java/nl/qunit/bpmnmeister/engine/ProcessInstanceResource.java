@@ -11,28 +11,10 @@ public class ProcessInstanceResource {
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  @Path("/{processDefinition}/{version}/{startevent}")
+  @Path("/{processDefinition}/{startevent}")
   public void startNewProcessInstanceVersion(
       @PathParam("processDefinition") String processDefinition,
-      @PathParam("version") long version,
       @PathParam("startevent") String startevent) {
-    processInstanceService.startNewProcessInstance(processDefinition, version, startevent);
-  }
-
-  @POST
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Path("/{processDefinition}/{version}")
-  public void startNewProcessInstanceVersion(
-      @PathParam("processDefinition") String processDefinition,
-      @PathParam("version") long version) {
-    processInstanceService.startNewProcessInstance(processDefinition, version, null);
-  }
-
-  @POST
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Path("/{processDefinition}")
-  public void startNewProcessInstanceLatest(
-      @PathParam("processDefinition") String processDefinition) {
-    processInstanceService.startNewProcessInstance(processDefinition, 0, null);
+    processInstanceService.startNewProcessInstance(processDefinition, 0, startevent);
   }
 }

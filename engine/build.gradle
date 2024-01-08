@@ -18,6 +18,7 @@ dependencies {
     implementation 'io.quarkus:quarkus-jaxb'
     implementation 'io.quarkus:quarkus-resteasy-jackson'
     implementation 'io.quarkus:quarkus-smallrye-openapi'
+    implementation 'io.quarkus:quarkus-scheduler'
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-mongodb-panache'
@@ -38,6 +39,10 @@ dependencies {
 
 spotless {
     java {
+        target fileTree('src/main/java') {
+            include '**/*.java'
+            exclude '**/generated/**'
+        }
         removeUnusedImports()
         googleJavaFormat()
     }

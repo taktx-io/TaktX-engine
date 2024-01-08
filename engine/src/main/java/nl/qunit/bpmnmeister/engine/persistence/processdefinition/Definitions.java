@@ -7,10 +7,7 @@ import java.util.Optional;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.bson.codecs.pojo.annotations.BsonCreator;
-import org.bson.codecs.pojo.annotations.BsonDiscriminator;
-import org.bson.codecs.pojo.annotations.BsonId;
-import org.bson.codecs.pojo.annotations.BsonProperty;
+import org.bson.codecs.pojo.annotations.*;
 import org.bson.types.ObjectId;
 
 @BsonDiscriminator
@@ -19,6 +16,7 @@ import org.bson.types.ObjectId;
 @Getter
 public class Definitions {
   @Setter private ObjectId id;
+  private ProcessDefinitionState state;
   private ObjectId xmlObjectId;
   private String processDefinitionId;
   private long version;
@@ -27,17 +25,20 @@ public class Definitions {
   @BsonCreator
   public Definitions(
       @BsonId ObjectId id,
+      @BsonProperty("state") ProcessDefinitionState state,
       @BsonProperty("xmlObjectId") ObjectId xmlObjectId,
       @BsonProperty("processDefinitionId") String processDefinitionId,
       @BsonProperty("version") long version,
       @BsonProperty("elements") Map<String, BaseElement> elements) {
     this.id = id;
+    this.state = state;
     this.xmlObjectId = xmlObjectId;
     this.processDefinitionId = processDefinitionId;
     this.version = version;
     this.elements = elements;
   }
 
+  @BsonIgnore
   public List<StartEvent> getStartEvents() {
     return elements.values().stream()
         .filter(Process.class::isInstance)
@@ -48,6 +49,7 @@ public class Definitions {
         .toList();
   }
 
+  @BsonIgnore
   public Optional<FlowElement> getFlowElement(String id) {
     return elements.values().stream()
         .filter(Process.class::isInstance)
