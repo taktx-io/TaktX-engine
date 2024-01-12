@@ -45,8 +45,8 @@ public class ProcessDefinitionConsumer {
         return KafkaRecord.of(definitions.getProcessDefinitionId(), processDefinition);
       } else {
         LOG.info("Process definition already exists");
+        return KafkaRecord.of(definitions.getProcessDefinitionId(), hashCodeMap.get(definitions.getHash()));
       }
-      LOG.info("Parsed process definition: " + definitions);
     } catch (JAXBException e) {
       LOG.error("Failed to parse process definition XML", e);
     } catch (NoSuchAlgorithmException e) {
