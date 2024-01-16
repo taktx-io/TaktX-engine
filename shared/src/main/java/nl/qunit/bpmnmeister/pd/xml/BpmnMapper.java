@@ -16,7 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.RootElement;
 public class BpmnMapper {
   private final RootElementMapper rootElementMapper;
 
-  public Definitions map(TDefinitions definitions, String hash) {
+  public Definitions map(TDefinitions definitions, String hash, String generation) {
     String id = "unknown";
     Map<String, BaseElement> elements = new HashMap<>();
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
@@ -28,6 +28,11 @@ public class BpmnMapper {
       }
     }
 
-    return Definitions.builder().processDefinitionId(id).hash(hash).elements(elements).build();
+    return Definitions.builder()
+        .processDefinitionId(id)
+        .generation(generation)
+        .hash(hash)
+        .elements(elements)
+        .build();
   }
 }

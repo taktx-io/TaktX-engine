@@ -119,6 +119,8 @@
         <di:waypoint x="710" y="230"/>
         <di:waypoint x="710" y="142"/>
       </bpmndi:BPMNEdge>
+
+
       <bpmndi:BPMNEdge id="Flow_10rkgyb_di" bpmnElement="Flow_10rkgyb">
         <di:waypoint x="148" y="280"/>
         <di:waypoint x="230" y="280"/>

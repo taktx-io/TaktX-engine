@@ -1,24 +1,36 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import io.smallrye.reactive.messaging.kafka.KafkaConsumerRebalanceListener;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-public class ProcessDefinitionConsumer implements KafkaConsumerRebalanceListener {
+
+@ApplicationScoped
+public class ProcessDefinitionConsumer {
+  @Inject
+  Deployer deployer;
 
   @Incoming("process-definition-parsed-incoming")
   public void consumeParsedProcessDefinition(ProcessDefinition processDefinition) {
-    System.out.println("Received process definition: " + processDefinition);
+    String receivedProcessDefinitionId = processDefinition.getDefinitions().getProcessDefinitionId();
+    String generation = processDefinition.getDefinitions().getGeneration();
+    Map<String, String> genMap = deployer.getDefinitionMap().getOrDefault(receivedProcessDefinitionId, new HashMap<>());
+    String filenameMatchingReceivedProcessDefinition = genMap.get(generation);
+    if (filenameMatchingReceivedProcessDefinition != null) {
 
-    // Checck if the process definition id, with matching hashcode is present in this client
-    // instance. If so, subscribe to the topics corresponding to the process definition id and version.
-    // If not, ignore the message, maybe another instance of the client is able to handle it.
+//      Properties propserties = new Properties();
+//      KafkaConsumer<String, String> consumer = new KafkaConsumer<>(propserties);
+//
+//      // Create consumer for this process definition and generation
+//      consumer.subscribe(Collections.singletonList("my-topic"));
+    }
   }
-
 }

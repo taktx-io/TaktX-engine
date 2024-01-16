@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0ccmj80" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.12.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
+  <bpmn:process id="Process_0y9mu8p" isExecutable="true">
+    <bpmn:documentation>R5/PT5S</bpmn:documentation>
+    <bpmn:task id="Activity_1brbvir">
+      <bpmn:incoming>Flow_1dmgpia</bpmn:incoming>
+      <bpmn:incoming>Flow_10rkgyb</bpmn:incoming>
+      <bpmn:outgoing>Flow_1qt4l9s</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1dmgpia" sourceRef="StartEvent_1" targetRef="Activity_1brbvir"/>
+    <bpmn:exclusiveGateway id="Gateway_1lrge8r" default="Flow_15mcn1d">
+      <bpmn:incoming>Flow_1qt4l9s</bpmn:incoming>
+      <bpmn:outgoing>Flow_15mcn1d</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0jwn2uv</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1qt4l9s" sourceRef="Activity_1brbvir" targetRef="Gateway_1lrge8r"/>
+    <bpmn:endEvent id="Event_0s0uwc2">
+      <bpmn:incoming>Flow_0cbaluc</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="MultiInstanceParallelTask">
+      <bpmn:extensionElements/>
+      <bpmn:incoming>Flow_15mcn1d</bpmn:incoming>
+      <bpmn:outgoing>Flow_10m06g7</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:loopDataInputRef>inputcollection</bpmn:loopDataInputRef>
+        <bpmn:inputDataItem>inputelement</bpmn:inputDataItem>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=inputcollection" inputElement="inputelement" outputCollection="outputcollection" outputElement="=outputelement"/>
+        </bpmn:extensionElements>
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=true</bpmn:completionCondition>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_15mcn1d" sourceRef="Gateway_1lrge8r" targetRef="MultiInstanceParallelTask"/>
+    <bpmn:task id="MultiInstanceSequentialTask">
+      <bpmn:incoming>Flow_0jwn2uv</bpmn:incoming>
+      <bpmn:outgoing>Flow_1nuk6tx</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true">
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=inputCollection" inputElement="inputElement" outputCollection="outputCollection" outputElement="=outputElement"/>
+        </bpmn:extensionElements>
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=true</bpmn:completionCondition>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0jwn2uv" sourceRef="Gateway_1lrge8r" targetRef="MultiInstanceSequentialTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="Gateway_1ilg8ai">
+      <bpmn:incoming>Flow_10m06g7</bpmn:incoming>
+      <bpmn:incoming>Flow_1nuk6tx</bpmn:incoming>
+      <bpmn:outgoing>Flow_0cbaluc</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_10m06g7" sourceRef="MultiInstanceParallelTask" targetRef="Gateway_1ilg8ai"/>
+    <bpmn:sequenceFlow id="Flow_0cbaluc" sourceRef="Gateway_1ilg8ai" targetRef="Event_0s0uwc2"/>
+    <bpmn:sequenceFlow id="Flow_1nuk6tx" sourceRef="MultiInstanceSequentialTask" targetRef="Gateway_1ilg8ai"/>
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1dmgpia</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="TimerStartCycleFixedRate">
+      <bpmn:outgoing>Flow_10rkgyb</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_0ndqyst">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R5/PT5S</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_10rkgyb" sourceRef="TimerStartCycleFixedRate" targetRef="Activity_1brbvir"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_0y9mu8p">
+      <bpmndi:BPMNShape id="Activity_1brbvir_di" bpmnElement="Activity_1brbvir">
+        <dc:Bounds x="270" y="77" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1lrge8r_di" bpmnElement="Gateway_1lrge8r" isMarkerVisible="true">
+        <dc:Bounds x="425" y="92" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0s0uwc2_di" bpmnElement="Event_0s0uwc2">
+        <dc:Bounds x="812" y="99" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0xazb2t_di" bpmnElement="MultiInstanceParallelTask">
+        <dc:Bounds x="530.0" y="77.0" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1hr22id_di" bpmnElement="MultiInstanceSequentialTask">
+        <dc:Bounds x="530" y="190" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1ilg8ai_di" bpmnElement="Gateway_1ilg8ai" isMarkerVisible="true">
+        <dc:Bounds x="685" y="92" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0df4v0d_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="112" y="99" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0g378tj" bpmnElement="TimerStartCycleFixedRate">
+        <dc:Bounds x="112" y="262" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1dmgpia_di" bpmnElement="Flow_1dmgpia">
+        <di:waypoint x="148" y="117"/>
+        <di:waypoint x="270" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1qt4l9s_di" bpmnElement="Flow_1qt4l9s">
+        <di:waypoint x="370" y="117"/>
+        <di:waypoint x="425" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15mcn1d_di" bpmnElement="Flow_15mcn1d">
+        <di:waypoint x="475" y="117"/>
+        <di:waypoint x="530.0" y="117.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jwn2uv_di" bpmnElement="Flow_0jwn2uv">
+        <di:waypoint x="450" y="142"/>
+        <di:waypoint x="450" y="230"/>
+        <di:waypoint x="530" y="230"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10m06g7_di" bpmnElement="Flow_10m06g7">
+        <di:waypoint x="630.0" y="117.0"/>
+        <di:waypoint x="685" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0cbaluc_di" bpmnElement="Flow_0cbaluc">
+        <di:waypoint x="735" y="117"/>
+        <di:waypoint x="812" y="117"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1nuk6tx_di" bpmnElement="Flow_1nuk6tx">
+        <di:waypoint x="630" y="230"/>
+        <di:waypoint x="710" y="230"/>
+        <di:waypoint x="710" y="142"/>
+      </bpmndi:BPMNEdge>
+
+
+      <bpmndi:BPMNEdge id="Flow_10rkgyb_di" bpmnElement="Flow_10rkgyb">
+        <di:waypoint x="148" y="280"/>
+        <di:waypoint x="230" y="280"/>
+        <di:waypoint x="230" y="147"/>
+        <di:waypoint x="270" y="147"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

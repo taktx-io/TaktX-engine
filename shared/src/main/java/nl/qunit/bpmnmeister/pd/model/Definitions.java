@@ -8,6 +8,7 @@ import lombok.Getter;
 @Getter
 public class Definitions {
   private String processDefinitionId;
+  private String generation;
   private String hash;
   private Map<String, BaseElement> elements;
 
@@ -17,8 +18,14 @@ public class Definitions {
         + "processDefinitionId='"
         + processDefinitionId
         + '\''
+        + ", generation='"
+        + generation
+        + '\''
         + ", hash='"
         + hash
+        + '\''
+        + ", elements="
+        + elements
         + '}';
   }
 }

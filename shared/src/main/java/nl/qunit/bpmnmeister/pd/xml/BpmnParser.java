@@ -18,12 +18,13 @@ public class BpmnParser {
   private final BpmnMapper bpmnMapper;
   private final SHA256 sha256;
 
-  public Definitions parse(String xml) throws JAXBException, NoSuchAlgorithmException {
+  public Definitions parse(String xml, String generation)
+      throws JAXBException, NoSuchAlgorithmException {
     JAXBContext context = JAXBContext.newInstance(TDefinitions.class);
     Unmarshaller un = context.createUnmarshaller();
-    Object unmarshal = un.unmarshal(new StringReader(xml));
-    JAXBElement<TDefinitions> definitions = (JAXBElement<TDefinitions>) unmarshal;
+    JAXBElement<TDefinitions> definitions =
+        (JAXBElement<TDefinitions>) un.unmarshal(new StringReader(xml));
     String hash = sha256.getHash(xml);
-    return bpmnMapper.map(definitions.getValue(), hash);
+    return bpmnMapper.map(definitions.getValue(), hash, generation);
   }
 }
