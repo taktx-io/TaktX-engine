@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandCompletionHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.ScheduleCommand;
+import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -228,7 +228,7 @@ public abstract class GenericScheduleCommandConsumer<T extends ScheduleCommand>
   @Override
   public void commandCompleted(ScheduleCommand command) {
     for (var scheduledTasksByKey : this.scheduledCommandsByPartitionByCommandId.values()) {
-      scheduledTasksByKey.remove(command.id().toString());
+      scheduledTasksByKey.remove(command.scheduleKey().toString());
     }
   }
 }

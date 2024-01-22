@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.engine.persistence.processinstance.processor;
 
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.BaseElement;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.BpmnElementState;
 

@@ -6,7 +6,7 @@ import nl.qunit.bpmnmeister.scheduler.kafka.producer.OneTimeCommandDeletionProdu
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.ReplyProducer;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandHandler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandCompletionHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.OneTimeCommand;
+import nl.qunit.bpmnmeister.scheduler.OneTimeCommand;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -48,8 +48,8 @@ public class OneTimeCommandHandler extends AbstractCommandHandler<OneTimeCommand
   /** Send a tombstone message deleting the ScheduleCommand from the topic. */
   private void deleteScheduleCommand(OneTimeCommand command) {
     ProducerRecord<String, Void> scheduleCommandDeletionProducerRecord =
-        new ProducerRecord<>(oneTimeSchedulerTopic, command.id(), null);
-    log.info("Deleting ScheduleCommand: {}", command.id());
+        new ProducerRecord<>(oneTimeSchedulerTopic, command.scheduleKey(), null);
+    log.info("Deleting ScheduleCommand: {}", command.scheduleKey());
     this.commandDeletionProducer.send(scheduleCommandDeletionProducerRecord);
   }
 }

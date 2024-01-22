@@ -1,4 +1,4 @@
-package nl.qunit.bpmnmeister.engine.pd;
+package nl.qunit.bpmnmeister.pd.model;
 
 /**
  * INITIAL: Initial state, not doing anything, cannot be triggered in any way INITIAL -> ACTIVE:

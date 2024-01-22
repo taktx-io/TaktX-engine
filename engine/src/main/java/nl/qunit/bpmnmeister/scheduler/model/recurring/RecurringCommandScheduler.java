@@ -12,7 +12,7 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandScheduler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandScheduler;
-import nl.qunit.bpmnmeister.scheduler.model.command.RecurringCommand;
+import nl.qunit.bpmnmeister.scheduler.RecurringCommand;
 
 @Dependent
 public class RecurringCommandScheduler extends AbstractCommandScheduler<RecurringCommand>
@@ -28,7 +28,7 @@ public class RecurringCommandScheduler extends AbstractCommandScheduler<Recurrin
     if (isValidCronExpression(command.cron())) {
       Trigger trigger =
           scheduler
-              .newJob(command.id().toString())
+              .newJob(command.scheduleKey().toString())
               .setCron(command.cron())
               .setTask(scheduledExecution -> commandHandler.run(command))
               .schedule();

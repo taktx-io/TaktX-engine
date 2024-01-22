@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.engine.persistence.processinstance.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ServiceTask;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.state.StateEnum;

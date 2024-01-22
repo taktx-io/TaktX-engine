@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,7 +38,9 @@ public class Deployer {
     void init() throws IOException {
         URL url = Thread.currentThread().getContextClassLoader().getResource("bpmn");
         Path bpmnPath = Paths.get(url.getPath());
-        Files.walk(bpmnPath).filter(Files::isRegularFile).forEach(
+        Files.walk(bpmnPath).filter(path -> Files.isRegularFile(path) && !Files.isDirectory(path))
+                .sorted(Comparator.comparing(Path::getFileName))
+                .forEach(
                 file -> {
                     try {
                         String xml = Files.readString(file);
@@ -47,6 +50,7 @@ public class Deployer {
 
                         Map<String, String> genMap = definitionMap.computeIfAbsent(definitions.getProcessDefinitionId(), k -> new HashMap<>());
                         genMap.put(generation, filename);
+                        System.out.println("Deploying " + filename);
                         triggerEmitter.send(KafkaRecord.of(filename, xml));
                     } catch (IOException e) {
                         e.printStackTrace();

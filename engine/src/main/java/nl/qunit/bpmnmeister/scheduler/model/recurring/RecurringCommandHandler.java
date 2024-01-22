@@ -4,7 +4,7 @@ import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.Dependent;
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.ReplyProducer;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.RecurringCommand;
+import nl.qunit.bpmnmeister.scheduler.RecurringCommand;
 
 @Dependent
 @Unremovable

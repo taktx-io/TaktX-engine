@@ -9,7 +9,7 @@ import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.FlowElement;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.SequenceFlow;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessInstance;
-import nl.qunit.bpmnmeister.engine.persistence.processinstance.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.TriggerResult;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.persistence.processinstance.processor.StateProcessor;

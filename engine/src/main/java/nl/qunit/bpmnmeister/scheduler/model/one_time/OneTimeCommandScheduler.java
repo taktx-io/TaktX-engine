@@ -6,7 +6,7 @@ import jakarta.enterprise.context.Dependent;
 import java.time.ZonedDateTime;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandScheduler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandScheduler;
-import nl.qunit.bpmnmeister.scheduler.model.command.OneTimeCommand;
+import nl.qunit.bpmnmeister.scheduler.OneTimeCommand;
 
 @Dependent
 public class OneTimeCommandScheduler extends AbstractCommandScheduler<OneTimeCommand>
@@ -20,7 +20,7 @@ public class OneTimeCommandScheduler extends AbstractCommandScheduler<OneTimeCom
 
     Trigger trigger =
         scheduler
-            .newJob(command.id().toString())
+            .newJob(command.scheduleKey().toString())
             .setCron(convertToCronExpression(command.when()))
             .setTask(scheduledExecution -> commandHandler.run(command))
             .schedule();

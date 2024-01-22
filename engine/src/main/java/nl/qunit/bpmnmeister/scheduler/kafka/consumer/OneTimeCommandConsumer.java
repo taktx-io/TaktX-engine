@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Default;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandCompletionHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.OneTimeCommand;
+import nl.qunit.bpmnmeister.scheduler.OneTimeCommand;
 import nl.qunit.bpmnmeister.scheduler.model.one_time.OneTimeCommandScheduler;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.eclipse.microprofile.reactive.messaging.Incoming;

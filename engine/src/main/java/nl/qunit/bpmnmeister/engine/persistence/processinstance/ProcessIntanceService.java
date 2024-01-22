@@ -9,6 +9,7 @@ import java.util.*;
 import nl.qunit.bpmnmeister.engine.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.Definitions;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.ProcessDefinitionService;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 

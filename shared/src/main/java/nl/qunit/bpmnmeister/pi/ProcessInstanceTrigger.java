@@ -1,4 +1,4 @@
-package nl.qunit.bpmnmeister.engine.persistence.processinstance;
+package nl.qunit.bpmnmeister.pi;
 
 import java.util.UUID;
 

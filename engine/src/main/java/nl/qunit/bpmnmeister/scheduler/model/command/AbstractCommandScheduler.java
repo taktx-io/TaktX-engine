@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.scheduler.model.command;
 
 import io.quarkus.scheduler.Scheduler;
+import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 
 public abstract class AbstractCommandScheduler<C extends ScheduleCommand> {
 

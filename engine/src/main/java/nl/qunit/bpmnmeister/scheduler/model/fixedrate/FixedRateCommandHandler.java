@@ -4,11 +4,13 @@ import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.Dependent;
 import java.util.HashMap;
 import java.util.Map;
+
+import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.FixedRateCommandDeletionProducer;
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.FixedRateCommandUpdateProducer;
 import nl.qunit.bpmnmeister.scheduler.kafka.producer.ReplyProducer;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.FixedRateCommand;
+import nl.qunit.bpmnmeister.scheduler.FixedRateCommand;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -20,7 +22,7 @@ public class FixedRateCommandHandler extends AbstractCommandHandler<FixedRateCom
   private final FixedRateCommandUpdateProducer fixedRateCommandUpdateProducer;
   private final String fixedRateSchedulerTopic;
 
-  private Map<String, Integer> repeatedCntMap = new HashMap<>();
+  private Map<ScheduleKey, Integer> repeatedCntMap = new HashMap<>();
 
   protected FixedRateCommandHandler(
       ReplyProducer replyProducer,
@@ -36,11 +38,11 @@ public class FixedRateCommandHandler extends AbstractCommandHandler<FixedRateCom
 
   @Override
   public void run(FixedRateCommand command) {
-    int repeatedCnt = repeatedCntMap.getOrDefault(command.id(), command.repeatedCnt());
+    int repeatedCnt = repeatedCntMap.getOrDefault(command.scheduleKey(), command.repeatedCnt());
 
     FixedRateCommand updatedCommand =
         new FixedRateCommand(
-            command.id(),
+            command.scheduleKey(),
             command.triggers(),
             command.period(),
             command.repetitions(),
@@ -55,16 +57,16 @@ public class FixedRateCommandHandler extends AbstractCommandHandler<FixedRateCom
 
   /** Send a tombstone message deleting the ScheduleCommand from the topic. */
   private void deleteScheduleCommand(FixedRateCommand command) {
-    ProducerRecord<String, Void> scheduleCommandDeletionProducerRecord =
-        new ProducerRecord<>(fixedRateSchedulerTopic, command.id(), null);
+    ProducerRecord<ScheduleKey, Void> scheduleCommandDeletionProducerRecord =
+        new ProducerRecord<>(fixedRateSchedulerTopic, command.scheduleKey(), null);
     this.commandDeletionProducer.send(scheduleCommandDeletionProducerRecord);
   }
 
   /** Send a update message updating the repetitioncount. */
   private void updateScheduleCommand(FixedRateCommand command) {
-    this.repeatedCntMap.put(command.id(), command.repeatedCnt());
-    ProducerRecord<String, FixedRateCommand> scheduleCommandDeletionProducerRecord =
-        new ProducerRecord<>(fixedRateSchedulerTopic, command.id(), command);
+    this.repeatedCntMap.put(command.scheduleKey(), command.repeatedCnt());
+    ProducerRecord<ScheduleKey, FixedRateCommand> scheduleCommandDeletionProducerRecord =
+        new ProducerRecord<>(fixedRateSchedulerTopic, command.scheduleKey(), command);
     this.fixedRateCommandUpdateProducer.send(scheduleCommandDeletionProducerRecord);
   }
 }

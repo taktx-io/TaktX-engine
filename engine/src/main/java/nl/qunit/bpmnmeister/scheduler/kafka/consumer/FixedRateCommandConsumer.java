@@ -4,7 +4,7 @@ import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandCompletionHandler;
-import nl.qunit.bpmnmeister.scheduler.model.command.FixedRateCommand;
+import nl.qunit.bpmnmeister.scheduler.FixedRateCommand;
 import nl.qunit.bpmnmeister.scheduler.model.fixedrate.FixedRateCommandScheduler;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.eclipse.microprofile.reactive.messaging.Incoming;

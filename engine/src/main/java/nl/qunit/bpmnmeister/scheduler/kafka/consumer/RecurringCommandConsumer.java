@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.scheduler.kafka.consumer;
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import nl.qunit.bpmnmeister.scheduler.model.command.RecurringCommand;
+import nl.qunit.bpmnmeister.scheduler.RecurringCommand;
 import nl.qunit.bpmnmeister.scheduler.model.recurring.RecurringCommandScheduler;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.eclipse.microprofile.reactive.messaging.Incoming;

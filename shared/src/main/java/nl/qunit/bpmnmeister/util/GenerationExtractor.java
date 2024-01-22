@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 @ApplicationScoped
 public class GenerationExtractor {
-  private static final Pattern PATTERN = Pattern.compile("Gen(\\d+)");
+  private static final Pattern PATTERN = Pattern.compile("[gG]en(\\d+)");
 
   public Optional<String> getGenerationFromString(String input) {
     Matcher matcher = PATTERN.matcher(input);

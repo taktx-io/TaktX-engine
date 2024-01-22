@@ -15,7 +15,7 @@ class StoreDefinitionsProcessor implements Processor<String, Definitions, String
   private KeyValueStore<String, Definitions> stateStore;
 
   @Override
-  public void init(ProcessorContext context) {
+  public void init(ProcessorContext<String, Definitions> context) {
     // Access the state store
     this.stateStore = context.getStateStore(UNIQUE_KEY_DEFINITIONS_STORE_NAME);
     this.context = context;

@@ -6,7 +6,7 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.scheduler.model.command.AbstractCommandScheduler;
 import nl.qunit.bpmnmeister.scheduler.model.command.CommandScheduler;
-import nl.qunit.bpmnmeister.scheduler.model.command.FixedRateCommand;
+import nl.qunit.bpmnmeister.scheduler.FixedRateCommand;
 
 @Dependent
 public class FixedRateCommandScheduler extends AbstractCommandScheduler<FixedRateCommand>
@@ -20,7 +20,7 @@ public class FixedRateCommandScheduler extends AbstractCommandScheduler<FixedRat
   public String schedule(FixedRateCommand command) {
     Trigger trigger =
         scheduler
-            .newJob(command.id().toString())
+            .newJob(command.scheduleKey().toString())
             .setInterval(command.period())
             .setTask(scheduledExecution -> commandHandler.run(command))
             .schedule();

@@ -9,11 +9,12 @@ import io.smallrye.reactive.messaging.kafka.KafkaRecord;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.List;
-import nl.qunit.bpmnmeister.engine.RepeatDuration;
+import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 import nl.qunit.bpmnmeister.engine.persistence.processdefinition.*;
-import nl.qunit.bpmnmeister.scheduler.model.command.FixedRateCommand;
-import nl.qunit.bpmnmeister.scheduler.model.command.OneTimeCommand;
-import nl.qunit.bpmnmeister.scheduler.model.command.RecurringCommand;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.scheduler.FixedRateCommand;
+import nl.qunit.bpmnmeister.scheduler.OneTimeCommand;
+import nl.qunit.bpmnmeister.scheduler.RecurringCommand;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -109,7 +110,7 @@ public class TimerDefinitionScheduler {
             getTimerId(processDefinition, startEvent, timerEventDefinition),
             triggers,
             timerEventDefinition.getTimeDate());
-    oneTimeCommandEmitter.send(KafkaRecord.of(fixedRateCommand.id(), fixedRateCommand));
+    oneTimeCommandEmitter.send(KafkaRecord.of(fixedRateCommand.scheduleKey(), fixedRateCommand));
   }
 
   private String getTimerId(
@@ -150,7 +151,7 @@ public class TimerDefinitionScheduler {
             repeatDuration.getDuration(),
             repeatDuration.getRepetitions(),
             0);
-    fixedRateCommandEmitter.send(KafkaRecord.of(fixedRateCommand.id(), fixedRateCommand));
+    fixedRateCommandEmitter.send(KafkaRecord.of(fixedRateCommand.scheduleKey(), fixedRateCommand));
   }
 
   private void scheduleCron(
@@ -164,7 +165,7 @@ public class TimerDefinitionScheduler {
             getTimerId(processDefinition, startEvent, timerEventDefinition),
             triggers,
             timerEventDefinition.getTimeCycle());
-    recurringCommandEmitter.send(KafkaRecord.of(recurringCommand.id(), recurringCommand));
+    recurringCommandEmitter.send(KafkaRecord.of(recurringCommand.scheduleKey(), recurringCommand));
   }
 
   private static List<ProcessInstanceTrigger> getTriggers(
