@@ -13,4 +13,14 @@ public class ScheduleKey {
     private final ScheduleType scheduleType;
     private final String elementId;
     private final String timerEventDefinitionId;
+
+    @Override
+    public String toString() {
+        return String.format(
+                "%s-%s-%s-%s",
+                processDefinitionKey,
+                scheduleType,
+                elementId,
+                timerEventDefinitionId);
+    }
 }

@@ -18,6 +18,8 @@ dependencies {
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-resteasy-jackson'
     implementation 'nl.qunit.bpmnmeister:shared'
+    implementation 'io.quarkus:quarkus-scheduler'
+
     implementation 'com.cronutils:cron-utils:9.2.1'
 
     testImplementation 'io.quarkus:quarkus-junit5'

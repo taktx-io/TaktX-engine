@@ -18,9 +18,9 @@ public class StoreProcessActivationProcessor
     implements Processor<ProcessDefinitionKey, ProcessActivation, ScheduleKey, ScheduleCommand> {
 
   private ProcessorContext<ScheduleKey, ScheduleCommand> context;
-  private TimerDefinitionScheduler timerDefinitionScheduler;
+  private final ScheduleCommandFactory timerDefinitionScheduler;
 
-  public StoreProcessActivationProcessor(TimerDefinitionScheduler timerDefinitionScheduler) {
+  public StoreProcessActivationProcessor(ScheduleCommandFactory timerDefinitionScheduler) {
     this.timerDefinitionScheduler = timerDefinitionScheduler;
   }
 
@@ -56,10 +56,7 @@ public class StoreProcessActivationProcessor
                               new Record<>(
                                   scheduleKey,
                                   timerDefinitionScheduler.schedule(
-                                      scheduleKey,
-                                      processDefinition,
-                                      startEvent,
-                                      timerEventDefinition),
+                                      processDefinition, startEvent, timerEventDefinition),
                                   processActivationRecord.timestamp()));
                         });
               });

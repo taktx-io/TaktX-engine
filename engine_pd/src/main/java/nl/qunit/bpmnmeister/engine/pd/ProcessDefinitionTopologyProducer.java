@@ -9,12 +9,15 @@ import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
+import java.time.Clock;
 import nl.qunit.bpmnmeister.engine.Topics;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ProcessActivation;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.scheduler.*;
 import nl.qunit.bpmnmeister.util.GenerationExtractor;
 import org.apache.kafka.common.serialization.Serdes;
@@ -36,9 +39,15 @@ public class ProcessDefinitionTopologyProducer {
   public static final ObjectMapperSerde<Definitions> DEFINITIONS_SERDE =
       new ObjectMapperSerde<>(Definitions.class);
 
+  private static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceKey.class);
+  private static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
+
   @Inject BpmnParser bpmnParser;
   @Inject GenerationExtractor generationExtractor;
-  @Inject TimerDefinitionScheduler timerDefinitionScheduler;
+  @Inject ScheduleCommandFactory scheduleCommandFactory;
+  @Inject Clock clock;
 
   @Produces
   public Topology buildTopology() {
@@ -48,7 +57,28 @@ public class ProcessDefinitionTopologyProducer {
 
     setupActivationStream(builder);
 
-    return builder.build();
+    setupScheduleCommandStream(builder);
+
+    Topology topologu = builder.build();
+
+    return topologu;
+  }
+
+  private void setupScheduleCommandStream(StreamsBuilder builder) {
+    StreamsBuilder stateStore =
+        builder.addStateStore(
+            keyValueStoreBuilder(
+                persistentKeyValueStore(SCHEDULES_STORE_NAME),
+                SCHEDULE_KEY_SERDE,
+                SCHEDULE_COMMAND_SERDE));
+
+    KStream<ScheduleKey, ScheduleCommand> scheduleCommandStream =
+        stateStore.stream(
+            Topics.SCHEDULE_COMMANDS, Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
+    KStream<ProcessInstanceKey, ProcessInstanceTrigger> processStream =
+        scheduleCommandStream.process(() -> new ScheduleProcessor(clock), SCHEDULES_STORE_NAME);
+    processStream.to(
+        Topics.TRIGGER_TOPIC, Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_SERDE));
   }
 
   private void setupDefinitionStream(StreamsBuilder builder) {
@@ -119,25 +149,10 @@ public class ProcessDefinitionTopologyProducer {
 
     KStream<ScheduleKey, ScheduleCommand> scheduleStream =
         activationStreamIn.process(
-            () -> new StoreProcessActivationProcessor(timerDefinitionScheduler),
+            () -> new StoreProcessActivationProcessor(scheduleCommandFactory),
             PROCESS_ACTIVATION_STORE_NAME);
 
-    // Branch the scheduleStream based on the type of ScheduleCommand
-    KStream<ScheduleKey, ScheduleCommand>[] branches =
-        scheduleStream.branch(
-            // Predicate for OneTimeCommand
-            (key, value) -> key.getScheduleType() == ScheduleType.ONE_TIME,
-            // Predicate for FixedRateCommand
-            (key, value) -> key.getScheduleType() == ScheduleType.FIXED_RATE,
-            // Predicate for RecurringCommand
-            (key, value) -> key.getScheduleType() == ScheduleType.RECURRING);
-
-    //    // Output to different topics based on the type of ScheduleCommand
-
-    Produced<ScheduleKey, ScheduleCommand> with =
-        Produced.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE);
-    branches[0].to(Topics.SCHEDULE_COMMANDS_ONE_TIME, with);
-    branches[1].to(Topics.SCHEDULE_COMMANDS_FIXED_RATE, with);
-    branches[2].to(Topics.SCHEDULE_COMMANDS_RECURRING, with);
+    scheduleStream.to(
+        Topics.SCHEDULE_COMMANDS, Produced.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
   }
 }
