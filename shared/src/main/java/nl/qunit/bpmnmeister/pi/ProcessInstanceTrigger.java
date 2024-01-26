@@ -2,34 +2,25 @@ package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
-import java.util.UUID;
-
-@Builder
 @Getter
 public class ProcessInstanceTrigger {
-    private final UUID processInstanceId;
-    private final String processDefinitionId;
-    private final String generation;
-    private final long version;
-    private final String elementId;
-    private final String inputFlowId;
+  private final ProcessInstanceKey processInstanceKey;
+  private final ProcessDefinition processDefinition;
+  private final String elementId;
+  private final String inputFlowId;
 
-    @JsonCreator
-    public ProcessInstanceTrigger(
-            @JsonProperty("processInstanceId") UUID processInstanceId,
-            @JsonProperty("processDefinitionId") String processDefinitionId,
-            @JsonProperty("generation") String generation,
-            @JsonProperty("version") long version,
-            @JsonProperty("elementId") String elementId,
-            @JsonProperty("inputFlowId") String inputFlowId) {
-        this.processInstanceId = processInstanceId;
-        this.processDefinitionId = processDefinitionId;
-        this.generation = generation;
-        this.version = version;
-        this.elementId = elementId;
-        this.inputFlowId = inputFlowId;
-    }
+  @JsonCreator
+  public ProcessInstanceTrigger(
+      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("processDefinition") ProcessDefinition processDefinition,
+      @JsonProperty("elementId") String elementId,
+      @JsonProperty("inputFlowId") String inputFlowId) {
+    this.processInstanceKey = processInstanceKey;
+    this.processDefinition = processDefinition;
+    this.elementId = elementId;
+    this.inputFlowId = inputFlowId;
+  }
 }

@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.Objects;
-
 @Builder
 @Getter
 @EqualsAndHashCode
@@ -26,4 +24,24 @@ public class ProcessDefinitionKey {
     this.version = version;
   }
 
+  public static ProcessDefinitionKey of(ProcessDefinition processDefinition) {
+    return new ProcessDefinitionKey(
+        processDefinition.getDefinitions().getProcessDefinitionId(),
+        processDefinition.getDefinitions().getGeneration(),
+        processDefinition.getVersion());
+  }
+
+  @Override
+  public String toString() {
+    return "ProcessDefinitionKey{"
+        + "processDefinitionId='"
+        + processDefinitionId
+        + '\''
+        + ", generation='"
+        + generation
+        + '\''
+        + ", version="
+        + version
+        + '}';
+  }
 }

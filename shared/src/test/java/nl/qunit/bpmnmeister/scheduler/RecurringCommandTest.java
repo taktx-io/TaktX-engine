@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.scheduler;
 
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class RecurringCommandTest {
@@ -21,45 +21,43 @@ class RecurringCommandTest {
 
     @Test
     void test() {
-        ProcessInstanceTrigger trigger1 = mock(ProcessInstanceTrigger.class);
-        RecurringCommand recurringCommand = new RecurringCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        ProcessInstanceStartCommand trigger1 = mock(ProcessInstanceStartCommand.class);
+        RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
-        List<ProcessInstanceTrigger> triggersReceived = new ArrayList<>();
-        RecurringCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggers -> {
-            triggersReceived.addAll(triggers);
-        });
+        List<ProcessInstanceStartCommand> triggersReceived = new ArrayList<>();
+        RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggersReceived::addAll);
 
         assertThat(triggersReceived).isEmpty();
         assertThat(newCommand.getInstantiation()).isEqualTo("2021-01-01T00:00:30Z");
-        assertThat(newCommand.getTriggers()).containsExactly(trigger1);
+        assertThat(newCommand.getStartCommands()).containsExactly(trigger1);
         assertThat(newCommand.getCron()).isEqualTo(recurringCommand.getCron());
     }
     @Test
     void testAfter() {
-        ProcessInstanceTrigger trigger1 = mock(ProcessInstanceTrigger.class);
-        RecurringCommand recurringCommand = new RecurringCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        ProcessInstanceStartCommand trigger1 = mock(ProcessInstanceStartCommand.class);
+        RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
-        List<ProcessInstanceTrigger> triggersReceived = new ArrayList<>();
-        RecurringCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);
+        List<ProcessInstanceStartCommand> triggersReceived = new ArrayList<>();
+        RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);
 
         assertThat(triggersReceived).containsExactly(trigger1);
         assertThat(newCommand.getInstantiation()).isEqualTo("2021-01-01T00:01Z");
-        assertThat(newCommand.getTriggers()).containsExactly(trigger1);
+        assertThat(newCommand.getStartCommands()).containsExactly(trigger1);
         assertThat(newCommand.getCron()).isEqualTo(recurringCommand.getCron());
 
         triggersReceived.clear();
-        RecurringCommand newCommand2 = newCommand.evaluate(Instant.now(CLOCK_AFTER2), triggersReceived::addAll);
+        RecurringStartCommand newCommand2 = newCommand.evaluate(Instant.now(CLOCK_AFTER2), triggersReceived::addAll);
 
         assertThat(triggersReceived).isEmpty();
         assertThat(newCommand2.getInstantiation()).isEqualTo("2021-01-01T00:01Z");
-        assertThat(newCommand2.getTriggers()).containsExactly(trigger1);
+        assertThat(newCommand2.getStartCommands()).containsExactly(trigger1);
         assertThat(newCommand2.getCron()).isEqualTo(recurringCommand.getCron());
 
-        RecurringCommand newCommand3 = newCommand.evaluate(Instant.now(CLOCK_AFTER3), triggersReceived::addAll);
+        RecurringStartCommand newCommand3 = newCommand.evaluate(Instant.now(CLOCK_AFTER3), triggersReceived::addAll);
 
         assertThat(triggersReceived).containsExactly(trigger1);
         assertThat(newCommand3.getInstantiation()).isEqualTo("2021-01-01T00:02Z");
-        assertThat(newCommand3.getTriggers()).containsExactly(trigger1);
+        assertThat(newCommand3.getStartCommands()).containsExactly(trigger1);
         assertThat(newCommand3.getCron()).isEqualTo(recurringCommand.getCron());
 
     }

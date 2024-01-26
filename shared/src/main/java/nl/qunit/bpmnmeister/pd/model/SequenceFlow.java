@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
@@ -22,5 +23,10 @@ public class SequenceFlow extends FlowElement {
     this.source = source;
     this.target = target;
     this.condition = condition;
+  }
+
+  @JsonIgnore
+  public boolean testCondition() {
+    return true;
   }
 }

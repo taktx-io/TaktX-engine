@@ -3,10 +3,10 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -14,8 +14,9 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ScheduleProcessor
-    implements Processor<ScheduleKey, ScheduleCommand, ProcessInstanceKey, ProcessInstanceTrigger> {
-  private ProcessorContext<ProcessInstanceKey, ProcessInstanceTrigger> context;
+    implements Processor<
+        ScheduleKey, ScheduleStartCommand, ProcessDefinitionKey, ProcessInstanceStartCommand> {
+  private ProcessorContext<ProcessDefinitionKey, ProcessInstanceStartCommand> context;
   private Clock clock;
 
   public ScheduleProcessor(Clock clock) {
@@ -23,31 +24,32 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void init(ProcessorContext<ProcessInstanceKey, ProcessInstanceTrigger> context) {
+  public void init(ProcessorContext<ProcessDefinitionKey, ProcessInstanceStartCommand> context) {
     this.context = context;
     context.schedule(
         Duration.ofSeconds(1),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
-          KeyValueStore<ScheduleKey, ScheduleCommand> scheduleStore =
+          KeyValueStore<ScheduleKey, ScheduleStartCommand> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
           scheduleStore
               .all()
               .forEachRemaining(
                   scheduleKeyValue -> {
                     ScheduleKey scheduleKey = scheduleKeyValue.key;
-                    ScheduleCommand scheduleCommand = scheduleKeyValue.value;
+                    ScheduleStartCommand scheduleCommand = scheduleKeyValue.value;
                     if (scheduleCommand != null) {
-                      ScheduleCommand updatedScheduleCommand =
+                      ScheduleStartCommand updatedScheduleCommand =
                           scheduleCommand.evaluate(
                               Instant.now(clock),
-                              triggers ->
-                                  triggers.forEach(
-                                      trigger ->
+                              processInstanceStartCommands ->
+                                  processInstanceStartCommands.forEach(
+                                      processInstanceStartCommand ->
                                           context.forward(
                                               new Record<>(
-                                                  new ProcessInstanceKey(null),
-                                                  trigger,
+                                                  processInstanceStartCommand
+                                                      .getProcessDefinitionKey(),
+                                                  processInstanceStartCommand,
                                                   Instant.now(clock).toEpochMilli()))));
                       if (updatedScheduleCommand != null) {
                         scheduleStore.put(scheduleKey, updatedScheduleCommand);
@@ -60,8 +62,8 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduleKey, ScheduleCommand> record) {
-    KeyValueStore<ScheduleKey, ScheduleCommand> stateStore =
+  public void process(Record<ScheduleKey, ScheduleStartCommand> record) {
+    KeyValueStore<ScheduleKey, ScheduleStartCommand> stateStore =
         context.getStateStore(Stores.SCHEDULES_STORE_NAME);
     if (record.value() != null) {
       stateStore.put(record.key(), record.value());

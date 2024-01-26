@@ -12,14 +12,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import nl.qunit.bpmnmeister.pd.model.*;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.scheduler.*;
 
 @ApplicationScoped
 public class ScheduleCommandFactory {
   @Inject Clock clock;
 
-  public ScheduleCommand schedule(
+  public ScheduleStartCommand schedule(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
@@ -33,20 +33,21 @@ public class ScheduleCommandFactory {
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
 
-  private ScheduleCommand scheduleDuration(TimerEventDefinition timerEventDefinition) {
+  private ScheduleStartCommand scheduleDuration(TimerEventDefinition timerEventDefinition) {
     return null;
   }
 
-  private ScheduleCommand scheduleOneTime(
+  private ScheduleStartCommand scheduleOneTime(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceTrigger> triggers = getTriggers(processDefinition, startEvent);
+    List<ProcessInstanceStartCommand> startCommands =
+        getStartCommands(processDefinition, startEvent);
 
-    return new OneTimeCommand(triggers, timerEventDefinition.getTimeDate());
+    return new OneTimeStartCommand(startCommands, timerEventDefinition.getTimeDate());
   }
 
-  private ScheduleCommand scheduleCycle(
+  private ScheduleStartCommand scheduleCycle(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
@@ -57,13 +58,13 @@ public class ScheduleCommandFactory {
     }
   }
 
-  private ScheduleCommand scheduleFixedRate(
+  private ScheduleStartCommand scheduleFixedRate(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceTrigger> triggers = getTriggers(processDefinition, startEvent);
+    List<ProcessInstanceStartCommand> triggers = getStartCommands(processDefinition, startEvent);
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
-    return new FixedRateCommand(
+    return new FixedRateStartCommand(
         triggers,
         repeatDuration.getDuration(),
         repeatDuration.getRepetitions(),
@@ -71,31 +72,27 @@ public class ScheduleCommandFactory {
         Instant.now(clock).toString());
   }
 
-  private ScheduleCommand scheduleCron(
+  private ScheduleStartCommand scheduleCron(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceTrigger> triggers = getTriggers(processDefinition, startEvent);
-    return new RecurringCommand(
-        triggers, timerEventDefinition.getTimeCycle(), Instant.now(clock).toString());
+    List<ProcessInstanceStartCommand> startCommands =
+        getStartCommands(processDefinition, startEvent);
+    return new RecurringStartCommand(
+        startCommands, timerEventDefinition.getTimeCycle(), Instant.now(clock).toString());
   }
 
-  private static List<ProcessInstanceTrigger> getTriggers(
+  private static List<ProcessInstanceStartCommand> getStartCommands(
       ProcessDefinition processDefinition, StartEvent startEvent) {
-    List<ProcessInstanceTrigger> triggers = new ArrayList<>();
+    List<ProcessInstanceStartCommand> processInstanceStartCommand = new ArrayList<>();
     for (String outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow) processDefinition.getFlowElement(outgoingFlowId).orElseThrow();
-      triggers.add(
-          new ProcessInstanceTrigger(
-              null,
-              processDefinition.getDefinitions().getProcessDefinitionId(),
-              processDefinition.getDefinitions().getGeneration(),
-              processDefinition.getVersion(),
-              sequenceFlow.getTarget(),
-              sequenceFlow.getId()));
+      processInstanceStartCommand.add(
+          new ProcessInstanceStartCommand(
+              ProcessDefinitionKey.of(processDefinition), sequenceFlow.getTarget()));
     }
-    return triggers;
+    return processInstanceStartCommand;
   }
 
   private boolean isValidCron(String timeCycle) {

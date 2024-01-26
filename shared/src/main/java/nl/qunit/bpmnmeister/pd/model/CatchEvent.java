@@ -1,9 +1,8 @@
 package nl.qunit.bpmnmeister.pd.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
@@ -21,12 +20,11 @@ public abstract class CatchEvent extends Event {
     this.eventDefinitions = eventDefinitions;
   }
 
-
   @JsonIgnore
   public Set<TimerEventDefinition> getTimerEventDefinitions() {
     return eventDefinitions.stream()
-            .filter(TimerEventDefinition.class::isInstance)
-            .map(TimerEventDefinition.class::cast)
-            .collect(Collectors.toSet());
+        .filter(TimerEventDefinition.class::isInstance)
+        .map(TimerEventDefinition.class::cast)
+        .collect(Collectors.toSet());
   }
 }
