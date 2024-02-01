@@ -1,7 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -27,7 +26,27 @@ public class EndEventProcessor extends StateProcessor<EndEvent, EndEventState> {
             + processDefinition
             + " in process instance"
             + trigger.getProcessInstanceKey());
-    return new TriggerResult(EndEventState.builder().state(StateEnum.FINISHED).build(), Set.of());
+    return TriggerResult.builder()
+        .newElementState(EndEventState.builder().state(StateEnum.INIT).build())
+        .build();
+  }
+
+  @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      EndEvent element,
+      EndEventState oldState) {
+    throw new IllegalStateException("EndEvent cannot be in finished state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      EndEvent element,
+      EndEventState oldState) {
+    throw new IllegalStateException("EndEvent cannot be in waiting state");
   }
 
   @Override
@@ -36,14 +55,7 @@ public class EndEventProcessor extends StateProcessor<EndEvent, EndEventState> {
       ProcessDefinition processDefinition,
       EndEvent element,
       EndEventState oldState) {
-    LOG.info(
-        "Triggering EndEvent in active state "
-            + element.getId()
-            + " for process definition "
-            + processDefinition
-            + " in process instance"
-            + trigger.getProcessInstanceKey());
-    return new TriggerResult(EndEventState.builder().state(StateEnum.FINISHED).build(), Set.of());
+    throw new IllegalStateException("EndEvent cannot be in active state");
   }
 
   @Override

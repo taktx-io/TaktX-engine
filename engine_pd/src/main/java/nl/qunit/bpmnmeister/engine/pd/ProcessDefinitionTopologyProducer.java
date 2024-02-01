@@ -16,10 +16,9 @@ import nl.qunit.bpmnmeister.engine.pi.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.*;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.scheduler.*;
-import nl.qunit.bpmnmeister.util.GenerationExtractor;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
@@ -44,12 +43,12 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(Definitions.class);
   private static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstance.class);
+  private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(ExternalTaskTrigger.class);
   private static final ObjectMapperSerde<ProcessInstanceStartCommand>
       PROCESS_INSTANCE_START_COMMAND_SERDE =
           new ObjectMapperSerde<>(ProcessInstanceStartCommand.class);
 
-  @Inject BpmnParser bpmnParser;
-  @Inject GenerationExtractor generationExtractor;
   @Inject ScheduleCommandFactory scheduleCommandFactory;
   @Inject Clock clock;
   @Inject ProcessorProvider processorProvider;
@@ -95,7 +94,9 @@ public class ProcessDefinitionTopologyProducer {
                 Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE))
             .process(
                 () -> new ProcessInstanceProcessor(processorProvider), PROCESS_INSTANCE_STORE_NAME)
-            .branch((key, value) -> value instanceof ProcessInstanceTrigger);
+            .branch(
+                (key, value) -> value instanceof ProcessInstanceTrigger,
+                (key, value) -> value instanceof ExternalTaskTrigger);
 
     branches[0]
         .map(
@@ -103,6 +104,11 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE));
+    branches[1]
+        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
+        .to(
+            EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {
@@ -140,7 +146,7 @@ public class ProcessDefinitionTopologyProducer {
         builder.stream(XML_TOPIC.getTopicName(), Consumed.with(Serdes.String(), Serdes.String()));
 
     KStream<String, Definitions> generatedKeyDefinitionStream =
-        xmlStream.map(new UniqueXmlKeyMapper(generationExtractor, bpmnParser));
+        xmlStream.map(new UniqueXmlKeyMapper());
 
     KStream<ProcessDefinitionKey, ProcessDefinition> processDefinitionStream =
         generatedKeyDefinitionStream

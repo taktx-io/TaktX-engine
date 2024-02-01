@@ -2,10 +2,13 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -45,25 +48,36 @@ public class ProcessInstanceProcessor
           new ProcessInstance(
               processInstanceTrigger.getProcessInstanceKey(),
               processInstanceTrigger.getProcessDefinition(),
+              new HashMap<>(),
               new HashMap<>());
     }
-    Set<ProcessInstanceTrigger> triggers = trigger(processInstance, processInstanceTrigger);
-    processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstance);
-    triggers.forEach(
+    trigger(
+        processInstance,
+        processInstanceTrigger,
         trigger -> {
           context.forward(
               new Record<>(trigger.getProcessInstanceKey(), trigger, Instant.now().toEpochMilli()));
+        },
+        externalTask -> {
+          context.forward(
+              new Record<>(
+                  externalTask.getProcessInstanceKey(),
+                  externalTask,
+                  Instant.now().toEpochMilli()));
         });
+    processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstance);
     Instant end = Instant.now();
     LOG.info("Processing took " + (end.toEpochMilli() - start.toEpochMilli()) + " ms");
   }
 
-  public Set<ProcessInstanceTrigger> trigger(
-      ProcessInstance processInstance, ProcessInstanceTrigger trigger) {
+  public void trigger(
+      ProcessInstance processInstance,
+      ProcessInstanceTrigger trigger,
+      Consumer<ProcessInstanceTrigger> processInstanceTriggerConsumer,
+      Consumer<ExternalTaskTrigger> externalTaskTriggerConsumer) {
 
     Optional<FlowElement> optFlowElement =
         processInstance.getProcessDefinition().getFlowElement(trigger.getElementId());
-    Set<ProcessInstanceTrigger> newTriggers = new HashSet<>();
     if (optFlowElement.isPresent()) {
       FlowElement flowElement = optFlowElement.get();
       StateProcessor<?, ?> processor = processorProvider.getProcessor(flowElement);
@@ -79,6 +93,17 @@ public class ProcessInstanceProcessor
           .getElementStates()
           .put(trigger.getElementId(), triggerResult.getNewElementState());
       triggerResult
+          .getExternalTasks()
+          .forEach(
+              externalTaskId -> {
+                externalTaskTriggerConsumer.accept(
+                    new ExternalTaskTrigger(
+                        processInstance.getProcessInstanceKey(),
+                        ProcessDefinitionKey.of(processInstance.getProcessDefinition()),
+                        externalTaskId,
+                        processInstance.getVariables()));
+              });
+      triggerResult
           .getNewActiveFlows()
           .forEach(
               flowId -> {
@@ -86,15 +111,15 @@ public class ProcessInstanceProcessor
                     (SequenceFlow)
                         processInstance.getProcessDefinition().getFlowElement(flowId).orElseThrow();
                 if (flow.testCondition()) {
-                  newTriggers.add(
+                  processInstanceTriggerConsumer.accept(
                       new ProcessInstanceTrigger(
                           processInstance.getProcessInstanceKey(),
                           null,
                           flow.getTarget(),
-                          flow.getId()));
+                          flow.getId(),
+                          processInstance.getVariables()));
                 }
               });
     }
-    return newTriggers;
   }
 }

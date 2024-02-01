@@ -30,25 +30,37 @@ public class StartEventProcessor extends StateProcessor<StartEvent, StartEventSt
   }
 
   @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      StartEvent element,
+      StartEventState oldState) {
+    throw new IllegalStateException("StartEvent cannot be in active state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      StartEvent element,
+      StartEventState oldState) {
+    throw new IllegalStateException("StartEvent cannot be in active state");
+  }
+
+  @Override
   protected TriggerResult triggerWhenActive(
       ProcessInstanceTrigger trigger,
       ProcessDefinition processDefinition,
       StartEvent element,
       StartEventState oldState) {
-    LOG.info(
-        "Triggering start event in Active state "
-            + element.getId()
-            + " for process definition "
-            + processDefinition
-            + " in process instance"
-            + trigger.getProcessInstanceKey());
-
-    return trigger(trigger, element);
+    throw new IllegalStateException("StartEvent cannot be in active state");
   }
 
   private static TriggerResult trigger(ProcessInstanceTrigger trigger, StartEvent element) {
-    return new TriggerResult(
-        StartEventState.builder().state(StateEnum.ACTIVE).build(), element.getOutgoing());
+    return TriggerResult.builder()
+        .newElementState(StartEventState.builder().state(StateEnum.FINISHED).build())
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   @Override

@@ -1,6 +1,5 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.xml.bind.JAXBElement;
 import java.util.List;
 import java.util.Set;
@@ -10,16 +9,16 @@ import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
-@ApplicationScoped
 public class EventDefinitionMapper {
-  public Set<EventDefinition> map(List<JAXBElement<? extends TEventDefinition>> eventDefinition) {
+  public static Set<EventDefinition> map(
+      List<JAXBElement<? extends TEventDefinition>> eventDefinition) {
     return eventDefinition.stream()
         .map(JAXBElement::getValue)
-        .map(this::mapEventDefinition)
+        .map(EventDefinitionMapper::mapEventDefinition)
         .collect(Collectors.toSet());
   }
 
-  private EventDefinition mapEventDefinition(TEventDefinition ed) {
+  private static EventDefinition mapEventDefinition(TEventDefinition ed) {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
       String duration =
           timerEventDefinition.getTimeDuration() != null

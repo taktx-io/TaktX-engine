@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 public class Definitions {
   private String processDefinitionId;
-  private String generation;
+  private Integer generation;
   private String hash;
   private Map<String, BaseElement> elements;
 

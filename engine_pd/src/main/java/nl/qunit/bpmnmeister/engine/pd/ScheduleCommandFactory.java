@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.*;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.scheduler.*;
@@ -90,7 +91,7 @@ public class ScheduleCommandFactory {
           (SequenceFlow) processDefinition.getFlowElement(outgoingFlowId).orElseThrow();
       processInstanceStartCommand.add(
           new ProcessInstanceStartCommand(
-              ProcessDefinitionKey.of(processDefinition), sequenceFlow.getTarget()));
+              ProcessDefinitionKey.of(processDefinition), sequenceFlow.getTarget(), Map.of()));
     }
     return processInstanceStartCommand;
   }

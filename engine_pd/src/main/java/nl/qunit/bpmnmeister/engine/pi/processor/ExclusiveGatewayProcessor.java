@@ -15,6 +15,24 @@ public class ExclusiveGatewayProcessor
   private static final Logger LOG = Logger.getLogger(ExclusiveGatewayProcessor.class);
 
   @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ExclusiveGateway element,
+      ExclusiveGatewayState oldState) {
+    throw new IllegalStateException("ExclusiveGateway cannot be in finished state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ExclusiveGateway element,
+      ExclusiveGatewayState oldState) {
+    throw new IllegalStateException("ExclusiveGateway cannot be in waiting state");
+  }
+
+  @Override
   protected TriggerResult triggerWhenActive(
       ProcessInstanceTrigger trigger,
       ProcessDefinition processDefinition,
@@ -27,8 +45,10 @@ public class ExclusiveGatewayProcessor
             + processDefinition
             + " in process instance"
             + trigger.getProcessInstanceKey());
-    return new TriggerResult(
-        ExclusiveGatewayState.builder().state(StateEnum.FINISHED).build(), element.getOutgoing());
+    return TriggerResult.builder()
+        .newElementState(ExclusiveGatewayState.builder().state(StateEnum.FINISHED).build())
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   @Override
@@ -44,8 +64,10 @@ public class ExclusiveGatewayProcessor
             + processDefinition
             + " in process instance"
             + trigger.getProcessInstanceKey());
-    return new TriggerResult(
-        ExclusiveGatewayState.builder().state(StateEnum.ACTIVE).build(), element.getOutgoing());
+    return TriggerResult.builder()
+        .newElementState(ExclusiveGatewayState.builder().state(StateEnum.ACTIVE).build())
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   @Override

@@ -17,6 +17,24 @@ public class ParallelGatewayProcessor
   private static final Logger LOG = Logger.getLogger(ParallelGatewayProcessor.class);
 
   @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ParallelGateway element,
+      ParallelGatewayState oldState) {
+    throw new IllegalStateException("ParallelGateway cannot be in waiting state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ParallelGateway element,
+      ParallelGatewayState oldState) {
+    throw new IllegalStateException("ParallelGateway cannot be in waiting state");
+  }
+
+  @Override
   protected TriggerResult triggerWhenActive(
       ProcessInstanceTrigger trigger,
       ProcessDefinition processDefinition,
@@ -59,9 +77,14 @@ public class ParallelGatewayProcessor
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
     }
-    return new TriggerResult(
-        ParallelGatewayState.builder().triggeredFlows(newTriggeredFlows).state(newState).build(),
-        outputFlows);
+    return TriggerResult.builder()
+        .newElementState(
+            ParallelGatewayState.builder()
+                .triggeredFlows(newTriggeredFlows)
+                .state(newState)
+                .build())
+        .newActiveFlows(outputFlows)
+        .build();
   }
 
   @Override

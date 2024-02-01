@@ -1,20 +1,16 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
-import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.bpmn.*;
 import nl.qunit.bpmnmeister.pd.model.*;
 
-@ApplicationScoped
-@RequiredArgsConstructor
 public class FlowElementMapper {
-  private final EventDefinitionMapper eventDefinitionMapper;
+  private FlowElementMapper() {}
 
-  public FlowElement map(TFlowElement tFlowElement) {
+  public static FlowElement map(TFlowElement tFlowElement) {
     if (tFlowElement instanceof TSequenceFlow tSequenceFlow) {
       return SequenceFlow.builder()
           .id(tSequenceFlow.getId())
@@ -30,6 +26,7 @@ public class FlowElementMapper {
           .id(serviceTask.getId())
           .incoming(mapQNameList(serviceTask.getIncoming()))
           .outgoing(mapQNameList(serviceTask.getOutgoing()))
+          .implementation(serviceTask.getImplementation())
           .build();
     } else if (tFlowElement instanceof TTask task) {
       return Task.builder()
@@ -54,7 +51,7 @@ public class FlowElementMapper {
           .id(startEvent.getId())
           .incoming(mapQNameList(startEvent.getIncoming()))
           .outgoing(mapQNameList(startEvent.getOutgoing()))
-          .eventDefinitions(eventDefinitionMapper.map(startEvent.getEventDefinition()))
+          .eventDefinitions(EventDefinitionMapper.map(startEvent.getEventDefinition()))
           .build();
     } else if (tFlowElement instanceof TEndEvent endEvent) {
       return EndEvent.builder()
@@ -67,7 +64,7 @@ public class FlowElementMapper {
     throw new RuntimeException("Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
-  private Set<String> mapQNameList(List<QName> incoming) {
+  private static Set<String> mapQNameList(List<QName> incoming) {
     return incoming.stream().map(QName::toString).collect(Collectors.toSet());
   }
 }

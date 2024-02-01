@@ -2,9 +2,7 @@ package nl.qunit.bpmnmeister.scheduler;
 
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
-import lombok.Getter;
 
-@Getter
 public class RepeatDuration {
   private final int repetitions;
   private final String duration;
@@ -12,6 +10,14 @@ public class RepeatDuration {
   public RepeatDuration(int repetitions, String duration) {
     this.repetitions = repetitions;
     this.duration = duration;
+  }
+
+  public int getRepetitions() {
+    return repetitions;
+  }
+
+  public String getDuration() {
+    return duration;
   }
 
   public static RepeatDuration parse(String text) {

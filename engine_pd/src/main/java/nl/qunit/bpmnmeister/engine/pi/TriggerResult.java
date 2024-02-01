@@ -11,13 +11,16 @@ import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 @Builder
 public class TriggerResult {
   private final BpmnElementState newElementState;
-  private final Set<String> newActiveFlows;
+  @Builder.Default private Set<String> newActiveFlows = Set.of();
+  @Builder.Default private Set<String> externalTasks = Set.of();
 
   @JsonCreator
   public TriggerResult(
       @JsonProperty("newElementState") BpmnElementState newElementState,
-      @JsonProperty("newActiveFlows") Set<String> newActiveFlows) {
+      @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
+      @JsonProperty("externalTasks") Set<String> externalTasks) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;
+    this.externalTasks = externalTasks;
   }
 }

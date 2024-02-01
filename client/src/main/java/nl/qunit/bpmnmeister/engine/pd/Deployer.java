@@ -30,7 +30,7 @@ public class Deployer {
   @Channel("process-definition-xml-outgoing")
   Emitter<String> triggerEmitter;
 
-  private final Map<String, Map<String, String>> definitionMap = new HashMap<>();
+  private final Map<String, Map<Integer, String>> definitionMap = new HashMap<>();
 
   @PostConstruct
   void init() throws IOException {
@@ -44,11 +44,11 @@ public class Deployer {
               try {
                 String xml = Files.readString(file);
                 String filename = file.getFileName().toString();
-                String generation =
+                Integer generation =
                     generationExtractor.getGenerationFromString(filename).orElseThrow();
                 Definitions definitions = bpmnParser.parse(xml, generation);
 
-                Map<String, String> genMap =
+                Map<Integer, String> genMap =
                     definitionMap.computeIfAbsent(
                         definitions.getProcessDefinitionId(), k -> new HashMap<>());
                 genMap.put(generation, filename);
@@ -64,7 +64,7 @@ public class Deployer {
             });
   }
 
-  public Map<String, Map<String, String>> getDefinitionMap() {
+  public Map<String, Map<Integer, String>> getDefinitionMap() {
     return definitionMap;
   }
 }

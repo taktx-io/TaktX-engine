@@ -3,26 +3,27 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
+import lombok.Builder;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
+@Builder
 @Getter
-public class ProcessInstance {
+public class ExternalTaskTrigger {
   private final ProcessInstanceKey processInstanceKey;
-  private final ProcessDefinition processDefinition;
-  private final Map<String, BpmnElementState> elementStates;
+  private final ProcessDefinitionKey processDefinitionKey;
+  private final String externalTaskId;
   private final Map<String, Object> variables;
 
   @JsonCreator
-  public ProcessInstance(
+  public ExternalTaskTrigger(
       @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
-      @JsonProperty("processDefinition") ProcessDefinition processDefinition,
-      @JsonProperty("elementStates") Map<String, BpmnElementState> elementStates,
+      @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @JsonProperty("externalTaskId") String externalTaskId,
       @JsonProperty("variables") Map<String, Object> variables) {
     this.processInstanceKey = processInstanceKey;
-    this.processDefinition = processDefinition;
-    this.elementStates = elementStates;
+    this.processDefinitionKey = processDefinitionKey;
+    this.externalTaskId = externalTaskId;
     this.variables = variables;
   }
 }

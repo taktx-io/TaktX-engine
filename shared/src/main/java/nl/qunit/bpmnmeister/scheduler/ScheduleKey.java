@@ -2,12 +2,8 @@ package nl.qunit.bpmnmeister.scheduler;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
-@Getter
-@EqualsAndHashCode
 public class ScheduleKey {
   private final ProcessDefinitionKey processDefinitionKey;
   private final ScheduleType scheduleType;

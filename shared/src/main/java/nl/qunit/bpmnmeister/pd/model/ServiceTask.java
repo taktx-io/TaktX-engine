@@ -10,11 +10,15 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class ServiceTask extends Task {
 
+  private final String implementation;
+
   @JsonCreator
   public ServiceTask(
       @JsonProperty("id") String id,
       @JsonProperty("incoming") Set<String> incoming,
-      @JsonProperty("outgoing") Set<String> outgoing) {
+      @JsonProperty("outgoing") Set<String> outgoing,
+      @JsonProperty("implementation") String implementation) {
     super(id, incoming, outgoing);
+    this.implementation = implementation;
   }
 }

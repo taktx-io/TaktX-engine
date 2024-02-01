@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
@@ -16,9 +17,33 @@ public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTas
       ProcessDefinition processDefinition,
       ServiceTask element,
       ServiceTaskState oldState) {
-    return new TriggerResult(
-        ServiceTaskState.builder().cnt(oldState.getCnt() + 1).state(StateEnum.ACTIVE).build(),
-        element.getOutgoing());
+    return TriggerResult.builder()
+        .newElementState(
+            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).state(StateEnum.WAITING).build())
+        .externalTasks(Set.of(element.getId()))
+        .build();
+  }
+
+  @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ServiceTask element,
+      ServiceTaskState oldState) {
+    throw new IllegalStateException("ServiceTask cannot be in finished state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      ServiceTask element,
+      ServiceTaskState oldState) {
+    return TriggerResult.builder()
+        .newElementState(
+            ServiceTaskState.builder().cnt(oldState.getCnt() + 1).state(StateEnum.INIT).build())
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   @Override
@@ -27,9 +52,7 @@ public class ServiceTaskProcessor extends StateProcessor<ServiceTask, ServiceTas
       ProcessDefinition processDefinition,
       ServiceTask element,
       ServiceTaskState oldState) {
-    return new TriggerResult(
-        ServiceTaskState.builder().cnt(oldState.getCnt() + 1).state(StateEnum.FINISHED).build(),
-        element.getOutgoing());
+    throw new IllegalStateException("ServiceTask cannot be in active state");
   }
 
   @Override

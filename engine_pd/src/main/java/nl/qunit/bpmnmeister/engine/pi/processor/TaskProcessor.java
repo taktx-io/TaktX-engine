@@ -14,15 +14,30 @@ public class TaskProcessor extends StateProcessor<Task, TaskState> {
   private static final Logger LOG = Logger.getLogger(StartEventProcessor.class);
 
   @Override
+  protected TriggerResult triggerWhenFinished(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      Task element,
+      TaskState oldState) {
+    throw new IllegalStateException("Task cannot be in finished state");
+  }
+
+  @Override
+  protected TriggerResult triggerWhenWaiting(
+      ProcessInstanceTrigger trigger,
+      ProcessDefinition processDefinition,
+      Task element,
+      TaskState oldState) {
+    throw new IllegalStateException("Task cannot be in waiting state");
+  }
+
+  @Override
   protected TriggerResult triggerWhenActive(
       ProcessInstanceTrigger trigger,
       ProcessDefinition processDefinition,
       Task element,
       TaskState oldState) {
-    //    LOG.info("Triggering Task in Active state " + element.getId() + " for process definition "
-    // + processDefinition + " in process instance" + trigger.getProcessInstanceKey());
-    return new TriggerResult(
-        TaskState.builder().state(StateEnum.FINISHED).build(), element.getOutgoing());
+    throw new IllegalStateException("Task cannot be in active state");
   }
 
   @Override
@@ -33,8 +48,10 @@ public class TaskProcessor extends StateProcessor<Task, TaskState> {
       TaskState oldState) {
     //    LOG.info("Triggering Task event in Init state " + element.getId() + " for process
     // definition " + processDefinition + " in process instance" + trigger.getProcessInstanceKey());
-    return new TriggerResult(
-        TaskState.builder().state(StateEnum.ACTIVE).build(), element.getOutgoing());
+    return TriggerResult.builder()
+        .newElementState(TaskState.builder().state(StateEnum.INIT).build())
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   @Override

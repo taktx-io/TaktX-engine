@@ -44,7 +44,8 @@ public class ProcessInstanceStartCommandProcessor
               processInstanceKey,
               processDefinitionActivation.getProcessDefinition(),
               record.value().getElementId(),
-              null);
+              null,
+              record.value().getVariables());
       context.forward(new Record<>(processInstanceKey, processInstanceTrigger, record.timestamp()));
     } else {
       throw new IllegalStateException("Process definition is not active: " + record.key());

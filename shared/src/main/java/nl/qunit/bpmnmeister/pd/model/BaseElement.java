@@ -18,6 +18,7 @@ import lombok.experimental.SuperBuilder;
   @JsonSubTypes.Type(value = SequenceFlow.class, name = "SequenceFlow"),
   @JsonSubTypes.Type(value = StartEvent.class, name = "StartEvent"),
   @JsonSubTypes.Type(value = Task.class, name = "Task"),
+  @JsonSubTypes.Type(value = ServiceTask.class, name = "ServiceTask"),
   @JsonSubTypes.Type(value = TimerEventDefinition.class, name = "TimerEventDefinition")
 })
 public abstract class BaseElement {
