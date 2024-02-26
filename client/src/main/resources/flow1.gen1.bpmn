@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_16ph8fg" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_16ph8fg" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
   <bpmn:process id="Process_1sh1hwi" isExecutable="true">
     <bpmn:task id="Activity_1brbvir">
       <bpmn:incoming>Flow_1dmgpia</bpmn:incoming>
@@ -27,7 +27,17 @@
       <bpmn:incoming>Flow_1nuk6tx</bpmn:incoming>
       <bpmn:outgoing>Flow_0cbaluc</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:startEvent id="Event_03xi629">
+    <bpmn:startEvent id="Event_03xi629" name="start event name">
+      <bpmn:documentation>Documentation</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:properties>
+          <zeebe:property name="extension1" value="asdasdas" />
+          <zeebe:property name="camundaModeler:exampleOutputJson" value="&#34;example data&#34;" />
+        </zeebe:properties>
+        <zeebe:ioMapping>
+          <zeebe:output source="=abc" target="OutputVariable_013e81s" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
       <bpmn:outgoing>Flow_1dmgpia</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:startEvent id="TimerStartCycleFixedRate">
@@ -69,6 +79,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0df4v0d_di" bpmnElement="Event_03xi629">
         <dc:Bounds x="152" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="131" y="145" width="82" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_0g378tj" bpmnElement="TimerStartCycleFixedRate">
         <dc:Bounds x="152" y="265" width="36" height="36" />

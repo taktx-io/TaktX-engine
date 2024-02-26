@@ -11,6 +11,7 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import nl.qunit.bpmnmeister.Topics;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
@@ -35,6 +36,8 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ScheduleStartCommand.class);
   static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_COMMAND_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
+  static final ObjectMapperSerde<ProcessInstanceMigrationTrigger> PROCESS_INSTANCE_MIGRATION_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
   static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinition.class);
   static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
@@ -67,6 +70,8 @@ public class ProcessDefinitionTopologyProducer {
 
     setupProcessInstanceStream(builder);
 
+    setupProcessInstanceMigrationStream(builder);
+
     return builder.build();
   }
 
@@ -79,6 +84,15 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE));
+  }
+
+  private void setupProcessInstanceMigrationStream(StreamsBuilder builder) {
+    builder.stream(
+            PROCESS_INSTANCE_MIGRATION_TOPIC.getTopicName(),
+            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_MIGRATION_SERDE))
+        .process(
+            () -> new ProcessInstanceMigrationProcessor(processorProvider),
+            PROCESS_INSTANCE_STORE_NAME);
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {

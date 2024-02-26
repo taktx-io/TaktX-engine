@@ -42,15 +42,6 @@ public class ProcessInstanceProcessor
     ProcessInstanceTrigger processInstanceTrigger = record.value();
     ProcessInstance processInstance =
         processInstanceStore.get(processInstanceTrigger.getProcessInstanceKey());
-    if (processInstance == null) {
-      // new Process instance, the trigger is expected to contain the process definition
-      processInstance =
-          new ProcessInstance(
-              processInstanceTrigger.getProcessInstanceKey(),
-              processInstanceTrigger.getProcessDefinition(),
-              new HashMap<>(),
-              new HashMap<>());
-    }
     trigger(
         processInstance,
         processInstanceTrigger,
@@ -114,7 +105,6 @@ public class ProcessInstanceProcessor
                   processInstanceTriggerConsumer.accept(
                       new ProcessInstanceTrigger(
                           processInstance.getProcessInstanceKey(),
-                          null,
                           flow.getTarget(),
                           flow.getId(),
                           processInstance.getVariables()));

@@ -7,7 +7,8 @@ public enum Topics {
   XML_TOPIC("process-definition-xml-topic"),
   SCHEDULE_COMMANDS("schedule-commands"),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger-topic"),
-  EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger-topic");
+  EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger-topic"),
+  PROCESS_INSTANCE_MIGRATION_TOPIC("process-migration-topic");
 
   private final String topicName;
 

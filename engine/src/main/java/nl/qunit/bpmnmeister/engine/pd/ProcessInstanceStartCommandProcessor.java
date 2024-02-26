@@ -42,7 +42,6 @@ public class ProcessInstanceStartCommandProcessor
       ProcessInstanceTrigger processInstanceTrigger =
           new ProcessInstanceTrigger(
               processInstanceKey,
-              processDefinitionActivation.getProcessDefinition(),
               record.value().getElementId(),
               null,
               record.value().getVariables());
