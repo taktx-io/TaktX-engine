@@ -32,7 +32,7 @@ public class ProcessInstanceStartCommandProcessor
   @Override
   public void process(Record<ProcessDefinitionKey, ProcessInstanceStartCommand> record) {
     ProcessDefinitionActivation processDefinitionActivation =
-        this.processDefintionActivationStore.get(record.key());
+        this.processDefintionActivationStore.get(record.value().getProcessDefinitionKey());
     if (processDefinitionActivation == null) {
       throw new IllegalStateException(
           "Process definition activation not found for key: " + record.key());
@@ -42,6 +42,7 @@ public class ProcessInstanceStartCommandProcessor
       ProcessInstanceTrigger processInstanceTrigger =
           new ProcessInstanceTrigger(
               processInstanceKey,
+                processDefinitionActivation.getProcessDefinition(),
               record.value().getElementId(),
               null,
               record.value().getVariables());

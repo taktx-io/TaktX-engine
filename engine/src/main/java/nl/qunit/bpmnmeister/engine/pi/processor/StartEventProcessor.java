@@ -19,13 +19,6 @@ public class StartEventProcessor extends StateProcessor<StartEvent, StartEventSt
       ProcessDefinition processDefinition,
       StartEvent element,
       StartEventState oldState) {
-    LOG.info(
-        "Triggering start event in Init state "
-            + element.getId()
-            + " for process definition "
-            + processDefinition
-            + " in process instance"
-            + trigger.getProcessInstanceKey());
     return trigger(trigger, element);
   }
 

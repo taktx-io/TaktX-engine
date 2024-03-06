@@ -40,8 +40,20 @@ public class ProcessInstanceProcessor
   public void process(Record<ProcessInstanceKey, ProcessInstanceTrigger> record) {
     Instant start = Instant.now();
     ProcessInstanceTrigger processInstanceTrigger = record.value();
-    ProcessInstance processInstance =
-        processInstanceStore.get(processInstanceTrigger.getProcessInstanceKey());
+    ProcessInstance processInstance;
+    if (processInstanceTrigger.getProcessDefinition() != null) {
+        processInstance =
+            new ProcessInstance(
+                processInstanceTrigger.getProcessInstanceKey(),
+                processInstanceTrigger.getProcessDefinition(),
+                new HashMap<>(),
+                processInstanceTrigger.getVariables());
+        processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstance);
+    }
+     else {
+      processInstance =
+              processInstanceStore.get(processInstanceTrigger.getProcessInstanceKey());
+    }
     trigger(
         processInstance,
         processInstanceTrigger,
@@ -105,6 +117,7 @@ public class ProcessInstanceProcessor
                   processInstanceTriggerConsumer.accept(
                       new ProcessInstanceTrigger(
                           processInstance.getProcessInstanceKey(),
+                          null,
                           flow.getTarget(),
                           flow.getId(),
                           processInstance.getVariables()));

@@ -15,6 +15,7 @@ import nl.qunit.bpmnmeister.pd.model.*;
   @JsonSubTypes.Type(value = ParallelGatewayState.class, name = "ParallelGatewayState"),
   @JsonSubTypes.Type(value = StartEventState.class, name = "StartEventState"),
   @JsonSubTypes.Type(value = TaskState.class, name = "TaskState"),
+  @JsonSubTypes.Type(value = ServiceTaskState.class, name = "ServiceTaskState"),
 })
 public abstract class BpmnElementState {
   StateEnum state;
