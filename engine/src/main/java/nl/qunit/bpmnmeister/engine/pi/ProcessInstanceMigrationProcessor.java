@@ -10,6 +10,7 @@ import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
@@ -78,7 +79,7 @@ public class ProcessInstanceMigrationProcessor
             processInstance.getParentProcessInstanceKey(),
             processInstance.getProcessInstanceKey(),
             newProcessDefinition,
-            newElementStates,
+            new ElementStates(newElementStates),
             processInstance.getVariables());
 
     processInstanceStore.put(triggerRecord.key(), newProcessInstance);

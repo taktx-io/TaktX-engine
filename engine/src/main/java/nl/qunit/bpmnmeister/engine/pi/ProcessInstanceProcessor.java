@@ -1,18 +1,16 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -54,7 +52,7 @@ public class ProcessInstanceProcessor
               processInstanceTrigger.getParentProcessInstanceKey(),
               processInstanceTrigger.getProcessInstanceKey(),
               processInstanceTrigger.getProcessDefinition(),
-              new HashMap<>(),
+              ElementStates.EMPTY,
               processInstanceTrigger.getVariables());
       processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstance);
     } else {
@@ -97,9 +95,7 @@ public class ProcessInstanceProcessor
             .getElements()
             .getFlowElement(trigger.getElementId());
     if (optFlowElement.isPresent()) {
-      Map<BaseElementId, BpmnElementState> newElementStates =
-          new HashMap<>(processInstance.getElementStates());
-      LOG.info("Element states: " + newElementStates);
+      LOG.info("Element states: " + processInstance.getElementStates());
 
       // Merge the variables from the process instance with the variables from the trigger
       Variables mergedVariables = processInstance.getVariables().merge(trigger.getVariables());
@@ -108,7 +104,8 @@ public class ProcessInstanceProcessor
       BaseElement flowElement = optFlowElement.get();
       StateProcessor<? extends BaseElement, ? extends BpmnElementState> processor =
           processorProvider.getProcessor(flowElement);
-      BpmnElementState elementState = newElementStates.get(trigger.getElementId());
+      BpmnElementState elementState =
+          processInstance.getElementStates().get(trigger.getElementId());
       if (elementState == null) {
         elementState = processor.initialState();
       }
@@ -117,7 +114,10 @@ public class ProcessInstanceProcessor
           processor.trigger(trigger, processInstance, flowElement, elementState, mergedVariables);
       LOG.info("Trigger processor result: " + triggerResult);
 
-      newElementStates.put(trigger.getElementId(), triggerResult.getNewElementState());
+      ElementStates newElementStates =
+          processInstance
+              .getElementStates()
+              .put(trigger.getElementId(), triggerResult.getNewElementState());
 
       Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 

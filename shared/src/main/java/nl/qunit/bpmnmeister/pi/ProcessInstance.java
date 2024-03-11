@@ -3,18 +3,15 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Map;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
 public class ProcessInstance {
   private final ProcessInstanceKey parentProcessInstanceKey;
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessDefinition processDefinition;
-  private final Map<BaseElementId, BpmnElementState> elementStates;
+  private final ElementStates elementStates;
   private final Variables variables;
 
   @JsonCreator
@@ -23,7 +20,7 @@ public class ProcessInstance {
           ProcessInstanceKey parentProcessInstanceKey,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("processDefinition") ProcessDefinition processDefinition,
-      @Nonnull @JsonProperty("elementStates") Map<BaseElementId, BpmnElementState> elementStates,
+      @Nonnull @JsonProperty("elementStates") ElementStates elementStates,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.processInstanceKey = processInstanceKey;
