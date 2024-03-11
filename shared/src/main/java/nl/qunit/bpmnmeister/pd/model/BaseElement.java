@@ -2,10 +2,9 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
-@SuperBuilder
 @Getter
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -22,9 +21,11 @@ import lombok.experimental.SuperBuilder;
   @JsonSubTypes.Type(value = TimerEventDefinition.class, name = "TimerEventDefinition")
 })
 public abstract class BaseElement {
-  private final String id;
+  private final BaseElementId id;
+  private final BaseElementId parentId;
 
-  protected BaseElement(String id) {
+  protected BaseElement(@Nonnull BaseElementId id, @Nonnull BaseElementId parentId) {
     this.id = id;
+    this.parentId = parentId;
   }
 }

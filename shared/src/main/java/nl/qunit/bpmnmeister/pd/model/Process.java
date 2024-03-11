@@ -5,17 +5,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
 public class Process extends RootElement {
-  private Map<String, FlowElement> flowElements;
+  private Map<BaseElementId, FlowElement> flowElements;
 
   @JsonCreator
   public Process(
-      @JsonProperty("id") String id,
-      @JsonProperty("flowElements") Map<String, FlowElement> flowElements) {
-    super(id);
+      @JsonProperty("id") BaseElementId id,
+      @JsonProperty("parentId") BaseElementId parentId,
+      @JsonProperty("flowElements") Map<BaseElementId, FlowElement> flowElements) {
+    super(id, parentId);
     this.flowElements = flowElements;
   }
 
-  public Map<String, FlowElement> getFlowElements() {
+  public Map<BaseElementId, FlowElement> getFlowElements() {
     return flowElements;
   }
 }

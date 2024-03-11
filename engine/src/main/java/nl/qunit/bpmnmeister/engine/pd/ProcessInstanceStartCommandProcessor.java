@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.UUID;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
@@ -30,25 +31,31 @@ public class ProcessInstanceStartCommandProcessor
   }
 
   @Override
-  public void process(Record<ProcessDefinitionKey, ProcessInstanceStartCommand> record) {
+  public void process(
+      Record<ProcessDefinitionKey, ProcessInstanceStartCommand> startCommandRecord) {
     ProcessDefinitionActivation processDefinitionActivation =
-        this.processDefintionActivationStore.get(record.value().getProcessDefinitionKey());
+        this.processDefintionActivationStore.get(
+            startCommandRecord.value().getProcessDefinitionKey());
     if (processDefinitionActivation == null) {
       throw new IllegalStateException(
-          "Process definition activation not found for key: " + record.key());
+          "Process definition activation not found for key: " + startCommandRecord.key());
     }
     if (processDefinitionActivation.getState() == ProcessDefinitionStateEnum.ACTIVE) {
       ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
       ProcessInstanceTrigger processInstanceTrigger =
           new ProcessInstanceTrigger(
               processInstanceKey,
-                processDefinitionActivation.getProcessDefinition(),
-              record.value().getElementId(),
-              null,
-              record.value().getVariables());
-      context.forward(new Record<>(processInstanceKey, processInstanceTrigger, record.timestamp()));
+              ProcessInstanceKey.NULL,
+              processDefinitionActivation.getProcessDefinition(),
+              startCommandRecord.value().getElementId(),
+              false,
+              BaseElementId.NULL,
+              startCommandRecord.value().getVariables());
+      context.forward(
+          new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));
     } else {
-      throw new IllegalStateException("Process definition is not active: " + record.key());
+      throw new IllegalStateException(
+          "Process definition is not active: " + startCommandRecord.key());
     }
   }
 }

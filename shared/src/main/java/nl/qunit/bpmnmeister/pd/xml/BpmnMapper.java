@@ -6,14 +6,16 @@ import java.util.Map;
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.RootElement;
 
 public class BpmnMapper {
+  private BpmnMapper() {}
 
   public static Definitions map(TDefinitions definitions, String hash, Integer generation) {
-    String id = "unknown";
-    Map<String, BaseElement> elements = new HashMap<>();
+    BaseElementId id = BaseElementId.NULL;
+    Map<BaseElementId, BaseElement> elements = new HashMap<>();
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
       RootElement rootElement = RootElementMapper.map(tRootElement);
@@ -23,11 +25,6 @@ public class BpmnMapper {
       }
     }
 
-    return Definitions.builder()
-        .processDefinitionId(id)
-        .generation(generation)
-        .hash(hash)
-        .elements(elements)
-        .build();
+    return new Definitions(id, generation, hash, elements);
   }
 }

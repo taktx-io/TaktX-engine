@@ -2,12 +2,10 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.util.UUID;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.pd.model.*;
 
 @Getter
-@SuperBuilder
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = EndEventState.class, name = "EndEventState"),
@@ -19,8 +17,24 @@ import nl.qunit.bpmnmeister.pd.model.*;
 })
 public abstract class BpmnElementState {
   StateEnum state;
+  UUID elementInstanceId;
 
-  protected BpmnElementState(StateEnum state) {
+  protected BpmnElementState(StateEnum state, UUID elementInstanceId) {
     this.state = state;
+    this.elementInstanceId = elementInstanceId;
+  }
+
+  public BpmnElementState terminate() {
+    return null;
+  }
+
+  @Override
+  public String toString() {
+    return "BpmnElementState{"
+        + "state="
+        + state
+        + ", elementInstanceId="
+        + elementInstanceId
+        + '}';
   }
 }

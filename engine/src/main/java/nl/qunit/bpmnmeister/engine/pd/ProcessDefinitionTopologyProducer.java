@@ -1,7 +1,16 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
-import static nl.qunit.bpmnmeister.Topics.*;
-import static nl.qunit.bpmnmeister.engine.pd.Stores.*;
+import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_START_COMMAND_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_ACTIVATION_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_PARSED_STORE;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.UNIQUE_KEY_DEFINITIONS_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
@@ -13,16 +22,30 @@ import java.time.Clock;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
-import nl.qunit.bpmnmeister.engine.pi.ProcessorProvider;
+import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.*;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.scheduler.*;
+import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Aggregator;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.Initializer;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 
 @ApplicationScoped
 public class ProcessDefinitionTopologyProducer {

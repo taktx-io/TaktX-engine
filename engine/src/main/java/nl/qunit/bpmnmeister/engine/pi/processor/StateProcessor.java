@@ -1,48 +1,23 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
-import org.jboss.logging.Logger;
 
 public abstract class StateProcessor<E extends BaseElement, S extends BpmnElementState> {
-  private static final Logger LOG = Logger.getLogger(StateProcessor.class);
 
-  public TriggerResult trigger(
+  public abstract TriggerResult trigger(
       ProcessInstanceTrigger trigger,
-      ProcessDefinition processDefinition,
+      ProcessInstance processInstance,
       BaseElement element,
-      BpmnElementState oldState) {
-    LOG.info(
-            "Triggering " + element.getClass() + " in " + oldState + " state "
-                    + element.getId()
-                    + " for process definition "
-                    + processDefinition
-                    + " in process instance"
-                    + trigger.getProcessInstanceKey());
-
-    return switch (oldState.getState()) {
-      case INIT -> triggerWhenInit(trigger, processDefinition, (E) element, (S) oldState);
-      case ACTIVE -> triggerWhenActive(trigger, processDefinition, (E) element, (S) oldState);
-      case WAITING -> triggerWhenWaiting(trigger, processDefinition, (E) element, (S) oldState);
-      case FINISHED -> triggerWhenFinished(trigger, processDefinition, (E) element, (S) oldState);
-      default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
-    };
-  }
-
-  protected abstract TriggerResult triggerWhenFinished(
-      ProcessInstanceTrigger trigger, ProcessDefinition processDefinition, E element, S oldState);
-
-  protected abstract TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger, ProcessDefinition processDefinition, E element, S oldState);
-
-  protected abstract TriggerResult triggerWhenActive(
-      ProcessInstanceTrigger trigger, ProcessDefinition processDefinition, E element, S oldState);
-
-  protected abstract TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger, ProcessDefinition processDefinition, E element, S oldState);
+      BpmnElementState oldState,
+      Map<String, JsonNode> variables);
 
   public abstract S initialState();
+
+  public abstract S terminate(S oldState);
 }

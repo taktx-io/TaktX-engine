@@ -2,25 +2,52 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
 @Builder
 public class TriggerResult {
   private final BpmnElementState newElementState;
-  @Builder.Default private Set<String> newActiveFlows = Set.of();
-  @Builder.Default private Set<String> externalTasks = Set.of();
+  @Builder.Default private Set<BaseElementId> newActiveFlows = Set.of();
+  @Builder.Default private Set<BaseElementId> externalTasks = Set.of();
+  @Builder.Default private Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
+  @Builder.Default private Map<String, JsonNode> variables = Map.of();
 
   @JsonCreator
   public TriggerResult(
       @JsonProperty("newElementState") BpmnElementState newElementState,
-      @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
-      @JsonProperty("externalTasks") Set<String> externalTasks) {
+      @JsonProperty("newActiveFlows") Set<BaseElementId> newActiveFlows,
+      @JsonProperty("externalTasks") Set<BaseElementId> externalTasks,
+      @JsonProperty("newProcessInstanceTriggers")
+          Set<ProcessInstanceTrigger> newProcessInstanceTriggers,
+      @JsonProperty("variables") Map<String, JsonNode> variables) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;
     this.externalTasks = externalTasks;
+    this.newProcessInstanceTriggers = newProcessInstanceTriggers;
+    this.variables = variables;
+  }
+
+  @Override
+  public String toString() {
+    return "TriggerResult{"
+        + "newElementState="
+        + newElementState
+        + ", newActiveFlows="
+        + newActiveFlows
+        + ", externalTasks="
+        + externalTasks
+        + ", newProcessInstanceTriggers="
+        + newProcessInstanceTriggers
+        + ", variables="
+        + variables
+        + '}';
   }
 }

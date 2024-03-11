@@ -3,9 +3,11 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
@@ -13,64 +15,18 @@ import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ParallelGatewayProcessor
-    extends StateProcessor<ParallelGateway, ParallelGatewayState> {
+    extends GatewayProcessor<ParallelGateway, ParallelGatewayState> {
   private static final Logger LOG = Logger.getLogger(ParallelGatewayProcessor.class);
 
   @Override
-  protected TriggerResult triggerWhenFinished(
+  protected TriggerResult triggerDecision(
       ProcessInstanceTrigger trigger,
-      ProcessDefinition processDefinition,
+      ProcessInstance processInstance,
       ParallelGateway element,
       ParallelGatewayState oldState) {
-    throw new IllegalStateException("ParallelGateway cannot be in waiting state");
-  }
-
-  @Override
-  protected TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger,
-      ProcessDefinition processDefinition,
-      ParallelGateway element,
-      ParallelGatewayState oldState) {
-    throw new IllegalStateException("ParallelGateway cannot be in waiting state");
-  }
-
-  @Override
-  protected TriggerResult triggerWhenActive(
-      ProcessInstanceTrigger trigger,
-      ProcessDefinition processDefinition,
-      ParallelGateway element,
-      ParallelGatewayState oldState) {
-    LOG.info(
-        "Triggering ParallelGateway in Active state "
-            + element.getId()
-            + " for process definition "
-            + processDefinition
-            + " in process instance"
-            + trigger.getProcessInstanceKey());
-    return getTriggerResult(trigger, element, oldState);
-  }
-
-  @Override
-  protected TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger,
-      ProcessDefinition processDefinition,
-      ParallelGateway element,
-      ParallelGatewayState oldState) {
-    LOG.info(
-        "Triggering ParallelGateway in Init state "
-            + element.getId()
-            + " for process definition "
-            + processDefinition
-            + " in process instance"
-            + trigger.getProcessInstanceKey());
-    return getTriggerResult(trigger, element, oldState);
-  }
-
-  private static TriggerResult getTriggerResult(
-      ProcessInstanceTrigger trigger, ParallelGateway element, ParallelGatewayState oldState) {
-    Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
+    Set<BaseElementId> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());
-    final Set<String> outputFlows = new HashSet<>();
+    final Set<BaseElementId> outputFlows = new HashSet<>();
     StateEnum newState = StateEnum.ACTIVE;
     if (element.getOutgoing().equals(newTriggeredFlows)) {
       newState = StateEnum.INIT;
@@ -79,19 +35,19 @@ public class ParallelGatewayProcessor
     }
     return TriggerResult.builder()
         .newElementState(
-            ParallelGatewayState.builder()
-                .triggeredFlows(newTriggeredFlows)
-                .state(newState)
-                .build())
+            new ParallelGatewayState(newState, oldState.getElementInstanceId(), newTriggeredFlows))
         .newActiveFlows(outputFlows)
         .build();
   }
 
   @Override
   public ParallelGatewayState initialState() {
-    return ParallelGatewayState.builder()
-        .state(StateEnum.INIT)
-        .triggeredFlows(new HashSet<>())
-        .build();
+    return new ParallelGatewayState(StateEnum.INIT, UUID.randomUUID(), new HashSet<>());
+  }
+
+  @Override
+  public ParallelGatewayState terminate(ParallelGatewayState oldState) {
+    return new ParallelGatewayState(
+        StateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getTriggeredFlows());
   }
 }

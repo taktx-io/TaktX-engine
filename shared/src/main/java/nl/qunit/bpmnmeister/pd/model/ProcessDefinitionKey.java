@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -10,15 +11,15 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public class ProcessDefinitionKey {
-  private final String processDefinitionId;
+  private final BaseElementId processDefinitionId;
   private final Integer generation;
   private final Integer version;
 
   @JsonCreator
   public ProcessDefinitionKey(
-      @JsonProperty("processDefinitionId") String processDefinitionId,
-      @JsonProperty("generation") Integer generation,
-      @JsonProperty("version") Integer version) {
+      @Nonnull @JsonProperty("processDefinitionId") BaseElementId processDefinitionId,
+      @Nonnull @JsonProperty("generation") Integer generation,
+      @Nonnull @JsonProperty("version") Integer version) {
     this.processDefinitionId = processDefinitionId;
     this.generation = generation;
     this.version = version;

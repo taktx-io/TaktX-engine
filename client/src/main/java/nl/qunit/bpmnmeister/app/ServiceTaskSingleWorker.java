@@ -8,14 +8,14 @@ import nl.qunit.bpmnmeister.client.BpmnDeployment;
 import nl.qunit.bpmnmeister.client.ExternalTask;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 
-@BpmnDeployment(resource = "bpmn/servicetask.gen1.bpmn")
+@BpmnDeployment(resource = "bpmn/servicetask-single.gen1.bpmn")
 @ApplicationScoped
 @Startup
-public class ExampleWorker {
-  @ExternalTask(element = "ServiceTaskId")
-  public ServiceTaskResults doWork(ExternalTaskTrigger trigger, String var1) {
-    System.out.println("ExampleWorker.doWork() called with var1: " + var1);
-    return new ServiceTaskResults("Hello from ExampleWorker " + var1);
+public class ServiceTaskSingleWorker {
+  @ExternalTask(element = "service-task-id")
+  public ServiceTaskResults doWork(ExternalTaskTrigger trigger, String inputVariable) {
+    System.out.println("ExampleWorker.doWork() called with var1: " + inputVariable);
+    return new ServiceTaskResults("Hello from ExampleWorker " + inputVariable);
   }
 
   @RequiredArgsConstructor

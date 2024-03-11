@@ -2,23 +2,36 @@ package nl.qunit.bpmnmeister.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.smallrye.reactive.messaging.kafka.KafkaRecord;
 import jakarta.enterprise.context.ApplicationScoped;
-
+import jakarta.inject.Inject;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ExternalTriggerConsumer {
+  private static final Logger LOG = Logger.getLogger(ExternalTriggerConsumer.class);
+
   Deployer deployer;
 
   ObjectMapper objectMapper;
+
+  @Inject
+  @Channel("process-instance-trigger-outgoing")
+  Emitter<ProcessInstanceTrigger> processInstanceTriggerEmitter;
 
   public ExternalTriggerConsumer(Deployer deployer, ObjectMapper objectMapper) {
     this.deployer = deployer;
@@ -28,10 +41,11 @@ public class ExternalTriggerConsumer {
   @Incoming("external-task-trigger-incoming")
   public void consume(ExternalTaskTrigger externalTaskTrigger)
       throws InvocationTargetException, IllegalAccessException {
-    String processDefinitionId =
+    LOG.info("Received external task trigger: " + externalTaskTrigger);
+    BaseElementId processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
     Integer generation = externalTaskTrigger.getProcessDefinitionKey().getGeneration();
-    String externalTaskId = externalTaskTrigger.getExternalTaskId();
+    BaseElementId externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId).get(generation);
 
     // Get method from workerInstance which has matching annotation
@@ -40,6 +54,21 @@ public class ExternalTriggerConsumer {
     if (optMethod.isPresent()) {
       Method method = optMethod.get();
       Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
+      // Convert the result object to a map of variables with JsonNode values
+      Map<String, JsonNode> variablesMap = objectMapper.convertValue(result, LinkedHashMap.class);
+      ProcessInstanceTrigger processInstanceTrigger =
+          new ProcessInstanceTrigger(
+              externalTaskTrigger.getProcessInstanceKey(),
+              ProcessInstanceKey.NULL,
+              ProcessDefinition.NULL,
+              externalTaskId,
+              false,
+              BaseElementId.NULL,
+              variablesMap);
+      LOG.info("Returning process instance trigger: " + processInstanceTrigger);
+      processInstanceTriggerEmitter.send(
+          KafkaRecord.of(externalTaskTrigger.getProcessInstanceKey(), processInstanceTrigger));
+
     } else {
       throw new IllegalStateException("No method found for external task " + externalTaskId);
     }
@@ -67,11 +96,12 @@ public class ExternalTriggerConsumer {
     return args;
   }
 
-  private Optional<Method> findMatchingMethod(Class<?> aClass, String externalTaskId) throws IllegalAccessException, InvocationTargetException {
+  private Optional<Method> findMatchingMethod(Class<?> aClass, BaseElementId externalTaskId)
+      throws IllegalAccessException, InvocationTargetException {
     for (Method method : aClass.getDeclaredMethods()) {
       ExternalTask externalTaskAnnotation = method.getAnnotation(ExternalTask.class);
       if (externalTaskAnnotation != null
-              && externalTaskAnnotation.element().equals(externalTaskId)) {
+          && externalTaskAnnotation.element().equals(externalTaskId.getId())) {
         return Optional.of(method);
       }
     }

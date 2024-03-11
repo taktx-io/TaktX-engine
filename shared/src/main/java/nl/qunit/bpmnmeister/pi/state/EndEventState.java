@@ -2,14 +2,15 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.UUID;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
 @Getter
-@SuperBuilder
-public class EndEventState extends BpmnElementState {
+public class EndEventState extends EventState {
   @JsonCreator
-  public EndEventState(@JsonProperty("state") StateEnum state) {
-    super(state);
+  public EndEventState(
+      @JsonProperty("state") StateEnum state,
+      @JsonProperty("elementInstanceId") UUID elementInstanceId) {
+    super(state, elementInstanceId);
   }
 }

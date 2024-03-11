@@ -4,5 +4,6 @@ public enum StateEnum {
   INIT,
   WAITING,
   ACTIVE,
+  TERMINATED,
   FINISHED
 }

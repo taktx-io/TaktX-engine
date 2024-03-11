@@ -3,19 +3,20 @@ package nl.qunit.bpmnmeister.pi.state;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 
 @Getter
-@SuperBuilder
-public class ParallelGatewayState extends BpmnElementState {
-  Set<String> triggeredFlows;
+public class ParallelGatewayState extends GatewayState {
+  Set<BaseElementId> triggeredFlows;
 
   @JsonCreator
   public ParallelGatewayState(
       @JsonProperty("state") StateEnum state,
-      @JsonProperty("triggeredFlows") Set<String> triggeredFlows) {
-    super(state);
+      @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("triggeredFlows") Set<BaseElementId> triggeredFlows) {
+    super(state, elementInstanceId);
     this.triggeredFlows = triggeredFlows;
   }
 }

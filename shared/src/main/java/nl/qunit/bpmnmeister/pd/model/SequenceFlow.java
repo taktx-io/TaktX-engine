@@ -3,23 +3,23 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
-@SuperBuilder
 @Getter
 public class SequenceFlow extends FlowElement {
-  String source;
-  String target;
-  String condition;
+  BaseElementId source;
+  BaseElementId target;
+  FlowCondition condition;
 
   @JsonCreator
   public SequenceFlow(
-      @JsonProperty("id") String id,
-      @JsonProperty("source") String source,
-      @JsonProperty("target") String target,
-      @JsonProperty("condition") String condition) {
-    super(id);
+      @Nonnull @JsonProperty("id") BaseElementId id,
+      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
+      @Nonnull @JsonProperty("source") BaseElementId source,
+      @Nonnull @JsonProperty("target") BaseElementId target,
+      @Nonnull @JsonProperty("condition") FlowCondition condition) {
+    super(id, parentId);
     this.source = source;
     this.target = target;
     this.condition = condition;

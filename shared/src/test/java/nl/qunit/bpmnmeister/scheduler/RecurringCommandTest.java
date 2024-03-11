@@ -1,16 +1,14 @@
 package nl.qunit.bpmnmeister.scheduler;
 
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import org.junit.jupiter.api.Test;
 
 class RecurringCommandTest {
 

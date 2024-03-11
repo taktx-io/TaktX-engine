@@ -2,18 +2,18 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
 @Getter
-@SuperBuilder
 public class EndEvent extends ThrowEvent {
   @JsonCreator
   public EndEvent(
-      @JsonProperty("id") String id,
-      @JsonProperty("incoming") Set<String> incoming,
-      @JsonProperty("outgoing") Set<String> outgoing) {
-    super(id, incoming, outgoing);
+      @Nonnull @JsonProperty("id") BaseElementId id,
+      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
+      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing) {
+    super(id, parentId, incoming, outgoing);
   }
 }

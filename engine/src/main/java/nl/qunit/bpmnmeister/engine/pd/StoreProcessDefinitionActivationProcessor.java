@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
-import static nl.qunit.bpmnmeister.engine.pd.Stores.*;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_ACTIVATION_STORE_NAME;
 
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -41,48 +41,49 @@ public class StoreProcessDefinitionActivationProcessor
       ProcessDefinitionActivation processActivation = stateStore.get(processActivationRecord.key());
       ProcessDefinition processDefinition = processActivation.getProcessDefinition();
       processDefinition
+          .getDefinitions()
           .getStartEvents()
           .forEach(
-              startEvent -> {
-                startEvent
-                    .getTimerEventDefinitions()
-                    .forEach(
-                        timerEventDefinition -> {
-                          ScheduleKey scheduleKey =
-                              new ScheduleKey(
-                                  processActivationRecord.key(),
-                                  ScheduleType.from(timerEventDefinition),
-                                  startEvent.getId(),
-                                  timerEventDefinition.getId());
-                          context.forward(
-                              new Record<>(
-                                  scheduleKey,
-                                  timerDefinitionScheduler.schedule(
-                                      processDefinition, startEvent, timerEventDefinition),
-                                  processActivationRecord.timestamp()));
-                        });
-              });
+              startEvent ->
+                  startEvent
+                      .getTimerEventDefinitions()
+                      .forEach(
+                          timerEventDefinition -> {
+                            ScheduleKey scheduleKey =
+                                new ScheduleKey(
+                                    processActivationRecord.key(),
+                                    ScheduleType.from(timerEventDefinition),
+                                    startEvent.getId(),
+                                    timerEventDefinition.getId());
+                            context.forward(
+                                new Record<>(
+                                    scheduleKey,
+                                    timerDefinitionScheduler.schedule(
+                                        processDefinition, startEvent, timerEventDefinition),
+                                    processActivationRecord.timestamp()));
+                          }));
     } else if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.INACTIVE) {
       ProcessDefinitionActivation processActivation = stateStore.get(processActivationRecord.key());
       ProcessDefinition processDefinition = processActivation.getProcessDefinition();
       processDefinition
+          .getDefinitions()
           .getStartEvents()
           .forEach(
-              startEvent -> {
-                startEvent
-                    .getTimerEventDefinitions()
-                    .forEach(
-                        timerEventDefinition -> {
-                          ScheduleKey scheduleKey =
-                              new ScheduleKey(
-                                  processActivationRecord.key(),
-                                  ScheduleType.from(timerEventDefinition),
-                                  startEvent.getId(),
-                                  timerEventDefinition.getId());
-                          context.forward(
-                              new Record<>(scheduleKey, null, processActivationRecord.timestamp()));
-                        });
-              });
+              startEvent ->
+                  startEvent
+                      .getTimerEventDefinitions()
+                      .forEach(
+                          timerEventDefinition -> {
+                            ScheduleKey scheduleKey =
+                                new ScheduleKey(
+                                    processActivationRecord.key(),
+                                    ScheduleType.from(timerEventDefinition),
+                                    startEvent.getId(),
+                                    timerEventDefinition.getId());
+                            context.forward(
+                                new Record<>(
+                                    scheduleKey, null, processActivationRecord.timestamp()));
+                          }));
     }
   }
 }

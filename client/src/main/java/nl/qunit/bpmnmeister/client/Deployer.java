@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import nl.qunit.bpmnmeister.client.BpmnDeployment;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.util.GenerationExtractor;
@@ -35,7 +35,7 @@ public class Deployer {
   @Channel("process-definition-xml-outgoing")
   Emitter<String> definitionEmitter;
 
-  private final Map<String, Map<Integer, Object>> definitionMap = new HashMap<>();
+  private final Map<BaseElementId, Map<Integer, Object>> definitionMap = new HashMap<>();
 
   @PostConstruct
   void init() throws IOException {
@@ -63,7 +63,7 @@ public class Deployer {
         }
       }
     } catch (JAXBException | NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 
@@ -71,7 +71,7 @@ public class Deployer {
     return CDI.current().select(beanClass).get();
   }
 
-  public Map<String, Map<Integer, Object>> getDefinitionMap() {
+  public Map<BaseElementId, Map<Integer, Object>> getDefinitionMap() {
     return definitionMap;
   }
 }

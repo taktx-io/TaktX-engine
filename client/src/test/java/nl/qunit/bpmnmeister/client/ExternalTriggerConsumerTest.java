@@ -1,21 +1,21 @@
 package nl.qunit.bpmnmeister.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
+import java.util.UUID;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @QuarkusTest
 class ExternalTriggerConsumerTest {
@@ -27,14 +27,14 @@ class ExternalTriggerConsumerTest {
     @Test
     void testConsume() throws InvocationTargetException, IllegalAccessException {
         ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey("processDefinitionId", 1, 1);
-        String externalTaskId = "externalTaskId";
+        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new BaseElementId("processDefinitionId"), 1, 1);
+        BaseElementId externalTaskId = new BaseElementId("externalTaskId");
         JsonNode jsonNode = new TextNode("testvalue");
         Map<String, JsonNode> variables = Map.of("variable1", jsonNode);
         ExternalTaskTrigger mockExternalTaskTrigger = new ExternalTaskTrigger(processInstanceKey, processDefinitionKey, externalTaskId, variables);
 
         TestWorker testWorker = new TestWorker();
-        when(deployer.getDefinitionMap()).thenReturn(Map.of("processDefinitionId", Map.of(1, testWorker)));
+        when(deployer.getDefinitionMap()).thenReturn(Map.of(new BaseElementId("processDefinitionId"), Map.of(1, testWorker)));
 
         // Call the method to test
         externalTriggerConsumer.consume(mockExternalTaskTrigger);

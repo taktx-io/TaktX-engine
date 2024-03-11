@@ -2,20 +2,22 @@ package nl.qunit.bpmnmeister.scheduler;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 public class ScheduleKey {
   private final ProcessDefinitionKey processDefinitionKey;
   private final ScheduleType scheduleType;
-  private final String elementId;
-  private final String timerEventDefinitionId;
+  private final BaseElementId elementId;
+  private final BaseElementId timerEventDefinitionId;
 
   @JsonCreator
   public ScheduleKey(
-      @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("scheduleType") ScheduleType scheduleType,
-      @JsonProperty("elementId") String elementId,
-      @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId) {
+      @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @Nonnull @JsonProperty("scheduleType") ScheduleType scheduleType,
+      @Nonnull @JsonProperty("elementId") BaseElementId elementId,
+      @Nonnull @JsonProperty("timerEventDefinitionId") BaseElementId timerEventDefinitionId) {
     this.processDefinitionKey = processDefinitionKey;
     this.scheduleType = scheduleType;
     this.elementId = elementId;

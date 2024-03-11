@@ -1,9 +1,14 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
+import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -28,23 +33,24 @@ public class ProcessInstanceMigrationProcessor
   }
 
   @Override
-  public void process(Record<ProcessInstanceKey, ProcessInstanceMigrationTrigger> record) {
-    ProcessInstance processInstance = processInstanceStore.get(record.key());
+  public void process(Record<ProcessInstanceKey, ProcessInstanceMigrationTrigger> triggerRecord) {
+    ProcessInstance processInstance = processInstanceStore.get(triggerRecord.key());
     ProcessDefinition oldProcessDefinition = processInstance.getProcessDefinition();
-    ProcessDefinition newProcessDefinition = record.value().getNewProcessDefinition();
+    ProcessDefinition newProcessDefinition = triggerRecord.value().getNewProcessDefinition();
 
-    Set<String> existingIds = oldProcessDefinition.getDefinitions().getElements().keySet();
-    Set<String> newDefinitionIds = newProcessDefinition.getDefinitions().getElements().keySet();
+    Set<BaseElementId> existingIds = oldProcessDefinition.getDefinitions().getElements().keySet();
+    Set<BaseElementId> newDefinitionIds =
+        newProcessDefinition.getDefinitions().getElements().keySet();
 
-    Set<String> updatedIds = new HashSet<>(existingIds);
+    Set<BaseElementId> updatedIds = new HashSet<>(existingIds);
     updatedIds.retainAll(newDefinitionIds);
 
-    Set<String> newIds = new HashSet<>(newDefinitionIds);
+    Set<BaseElementId> newIds = new HashSet<>(newDefinitionIds);
     newIds.removeAll(existingIds);
 
-    Map<String, BpmnElementState> newElementStates = new HashMap<>();
+    Map<BaseElementId, BpmnElementState> newElementStates = new HashMap<>();
     updatedIds.forEach(
-        (updatedId) -> {
+        updatedId -> {
           BaseElement oldElement =
               oldProcessDefinition.getDefinitions().getElements().get(updatedId);
           BaseElement newElement =
@@ -60,7 +66,7 @@ public class ProcessInstanceMigrationProcessor
         });
 
     newIds.forEach(
-        (newId) -> {
+        newId -> {
           BaseElement newElement = newProcessDefinition.getDefinitions().getElements().get(newId);
           BpmnElementState newElementState =
               processorProvider.getProcessor(newElement).initialState();
@@ -69,11 +75,12 @@ public class ProcessInstanceMigrationProcessor
 
     ProcessInstance newProcessInstance =
         new ProcessInstance(
+            processInstance.getParentProcessInstanceKey(),
             processInstance.getProcessInstanceKey(),
             newProcessDefinition,
             newElementStates,
             processInstance.getVariables());
 
-    processInstanceStore.put(record.key(), newProcessInstance);
+    processInstanceStore.put(triggerRecord.key(), newProcessInstance);
   }
 }

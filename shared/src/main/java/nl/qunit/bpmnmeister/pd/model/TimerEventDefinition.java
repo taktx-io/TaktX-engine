@@ -2,10 +2,9 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
-@SuperBuilder
 @Getter
 public class TimerEventDefinition extends EventDefinition {
   private final String timeDate;
@@ -14,11 +13,12 @@ public class TimerEventDefinition extends EventDefinition {
 
   @JsonCreator
   public TimerEventDefinition(
-      @JsonProperty("id") String id,
-      @JsonProperty("timeDate") String timeDate,
-      @JsonProperty("timeDuration") String timeDuration,
-      @JsonProperty("timeCycle") String timeCycle) {
-    super(id);
+      @Nonnull @JsonProperty("id") BaseElementId id,
+      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
+      @Nonnull @JsonProperty("timeDate") String timeDate,
+      @Nonnull @JsonProperty("timeDuration") String timeDuration,
+      @Nonnull @JsonProperty("timeCycle") String timeCycle) {
+    super(id, parentId);
     this.timeDate = timeDate;
     this.timeDuration = timeDuration;
     this.timeCycle = timeCycle;
