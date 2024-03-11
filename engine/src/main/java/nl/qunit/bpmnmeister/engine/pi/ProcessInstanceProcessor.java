@@ -1,6 +1,5 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +10,6 @@ import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -19,6 +17,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -91,10 +90,11 @@ public class ProcessInstanceProcessor
             + processInstance.getProcessInstanceKey()
             + " with trigger "
             + trigger);
-    Optional<FlowElement> optFlowElement =
+    Optional<BaseElement> optFlowElement =
         processInstance
             .getProcessDefinition()
             .getDefinitions()
+            .getElements()
             .getFlowElement(trigger.getElementId());
     if (optFlowElement.isPresent()) {
       Map<BaseElementId, BpmnElementState> newElementStates =
@@ -102,14 +102,8 @@ public class ProcessInstanceProcessor
       LOG.info("Element states: " + newElementStates);
 
       // Merge the variables from the process instance with the variables from the trigger
-      Map<String, JsonNode> newVariables = new HashMap<>();
-      if (processInstance.getVariables() != null) {
-        newVariables.putAll(processInstance.getVariables());
-      }
-      if (trigger.getVariables() != null) {
-        newVariables.putAll(trigger.getVariables());
-      }
-      LOG.info("Variables: " + newElementStates);
+      Variables mergedVariables = processInstance.getVariables().merge(trigger.getVariables());
+      LOG.info("Variables: " + mergedVariables);
 
       BaseElement flowElement = optFlowElement.get();
       StateProcessor<? extends BaseElement, ? extends BpmnElementState> processor =
@@ -120,11 +114,12 @@ public class ProcessInstanceProcessor
       }
       LOG.info("Trigger processor: " + processor);
       TriggerResult triggerResult =
-          processor.trigger(trigger, processInstance, flowElement, elementState, newVariables);
+          processor.trigger(trigger, processInstance, flowElement, elementState, mergedVariables);
       LOG.info("Trigger processor result: " + triggerResult);
 
       newElementStates.put(trigger.getElementId(), triggerResult.getNewElementState());
-      newVariables.putAll(triggerResult.getVariables());
+
+      Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 
       triggerResult
           .getExternalTasks()
@@ -136,7 +131,7 @@ public class ProcessInstanceProcessor
                         processInstance.getProcessInstanceKey(),
                         ProcessDefinitionKey.of(processInstance.getProcessDefinition()),
                         externalTaskId,
-                        processInstance.getVariables()));
+                        variablesWithTriggerResult));
               });
 
       triggerResult
@@ -149,6 +144,7 @@ public class ProcessInstanceProcessor
                         processInstance
                             .getProcessDefinition()
                             .getDefinitions()
+                            .getElements()
                             .getFlowElement(flowId)
                             .orElseThrow();
                 if (flow.testCondition()) {
@@ -156,12 +152,12 @@ public class ProcessInstanceProcessor
                   processInstanceTriggerConsumer.accept(
                       new ProcessInstanceTrigger(
                           processInstance.getProcessInstanceKey(),
-                          ProcessInstanceKey.NULL,
-                          ProcessDefinition.NULL,
+                          ProcessInstanceKey.NONE,
+                          ProcessDefinition.NONE,
                           flow.getTarget(),
                           false,
                           flow.getId(),
-                          processInstance.getVariables()));
+                          variablesWithTriggerResult));
                 }
               });
 
@@ -174,11 +170,11 @@ public class ProcessInstanceProcessor
               });
 
       return new ProcessInstance(
-          ProcessInstanceKey.NULL,
+          ProcessInstanceKey.NONE,
           processInstance.getProcessInstanceKey(),
           processInstance.getProcessDefinition(),
           newElementStates,
-          newVariables);
+          variablesWithTriggerResult);
     } else {
       LOG.error("Flow element not found: " + trigger.getElementId());
     }

@@ -2,7 +2,6 @@ package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import lombok.Getter;
@@ -16,7 +15,7 @@ public class ProcessInstance {
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessDefinition processDefinition;
   private final Map<BaseElementId, BpmnElementState> elementStates;
-  private final Map<String, JsonNode> variables;
+  private final Variables variables;
 
   @JsonCreator
   public ProcessInstance(
@@ -25,7 +24,7 @@ public class ProcessInstance {
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("processDefinition") ProcessDefinition processDefinition,
       @Nonnull @JsonProperty("elementStates") Map<BaseElementId, BpmnElementState> elementStates,
-      @Nonnull @JsonProperty("variables") Map<String, JsonNode> variables) {
+      @Nonnull @JsonProperty("variables") Variables variables) {
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.processDefinition = processDefinition;

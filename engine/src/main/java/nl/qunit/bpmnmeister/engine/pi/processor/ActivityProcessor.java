@@ -1,12 +1,11 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import java.util.Map;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import org.jboss.logging.Logger;
 
@@ -19,9 +18,10 @@ public abstract class ActivityProcessor<E extends BaseElement, S extends BpmnEle
       ProcessInstance processInstance,
       BaseElement element,
       BpmnElementState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     if (trigger.isTerminate()) {
-      return new TriggerResult(terminate((S) oldState), Set.of(), Set.of(), Set.of(), Map.of());
+      return new TriggerResult(
+          terminate((S) oldState), Set.of(), Set.of(), Set.of(), Variables.EMPTY);
     }
 
     return switch (oldState.getState()) {
@@ -41,24 +41,24 @@ public abstract class ActivityProcessor<E extends BaseElement, S extends BpmnEle
       ProcessInstance processInstance,
       E element,
       S oldState,
-      Map<String, JsonNode> variables);
+      Variables variables);
 
   protected abstract TriggerResult triggerWhenWaiting(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       E element,
       S oldState,
-      Map<String, JsonNode> variables);
+      Variables variables);
 
   protected TriggerResult triggerWhenTerminated(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       E element,
       S oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     LOG.error("Triggering terminated activity: " + element.getId());
 
-    return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Map.of());
+    return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Variables.EMPTY);
   }
 
   protected TriggerResult triggerWhenFinished(
@@ -66,8 +66,8 @@ public abstract class ActivityProcessor<E extends BaseElement, S extends BpmnEle
       ProcessInstance processInstance,
       E element,
       S oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     LOG.error("Triggering finished activity: " + element.getId());
-    return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Map.of());
+    return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Variables.EMPTY);
   }
 }

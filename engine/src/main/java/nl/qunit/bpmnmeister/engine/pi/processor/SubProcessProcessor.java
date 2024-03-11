@@ -1,9 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
@@ -14,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import org.jboss.logging.Logger;
@@ -29,7 +28,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       ProcessInstance processInstance,
       SubProcess element,
       SubProcessState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
     ProcessDefinition subProcessDefinition =
         getSubProcessDefinition(processInstance.getProcessDefinition(), element);
@@ -42,7 +41,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             subProcessDefinition,
             startElement,
             false,
-            null,
+            BaseElementId.NONE,
             trigger.getVariables());
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
@@ -59,7 +58,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       ProcessInstance processInstance,
       SubProcess element,
       SubProcessState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     SubProcessState newSubProcessState =
         new SubProcessState(StateEnum.FINISHED, oldState.getElementInstanceId());
     return TriggerResult.builder()
@@ -85,11 +84,11 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     return new ProcessDefinition(definitions, processDefinition.getVersion());
   }
 
-  private BaseElementId getStartEvent(SubProcess element) {
-    if (!element.getStartEvents().isEmpty()) {
-      return element.getStartEvents().get(0).getId();
+  private BaseElementId getStartEvent(SubProcess subProcess) {
+    if (!subProcess.getElements().getStartEvents().isEmpty()) {
+      return subProcess.getElements().getStartEvents().get(0).getId();
     } else {
-      return element.getElements().get(0).getId();
+      return subProcess.getElements().values().get(0).getId();
     }
   }
 

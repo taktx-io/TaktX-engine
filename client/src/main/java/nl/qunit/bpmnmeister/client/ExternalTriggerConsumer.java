@@ -16,6 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
@@ -56,15 +57,16 @@ public class ExternalTriggerConsumer {
       Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
       // Convert the result object to a map of variables with JsonNode values
       Map<String, JsonNode> variablesMap = objectMapper.convertValue(result, LinkedHashMap.class);
+
       ProcessInstanceTrigger processInstanceTrigger =
           new ProcessInstanceTrigger(
               externalTaskTrigger.getProcessInstanceKey(),
-              ProcessInstanceKey.NULL,
-              ProcessDefinition.NULL,
+              ProcessInstanceKey.NONE,
+              ProcessDefinition.NONE,
               externalTaskId,
               false,
-              BaseElementId.NULL,
-              variablesMap);
+              BaseElementId.NONE,
+              new Variables(variablesMap));
       LOG.info("Returning process instance trigger: " + processInstanceTrigger);
       processInstanceTriggerEmitter.send(
           KafkaRecord.of(externalTaskTrigger.getProcessInstanceKey(), processInstanceTrigger));
@@ -78,7 +80,7 @@ public class ExternalTriggerConsumer {
     // This method has the matching annotation
     Parameter[] parameters = method.getParameters();
     Object[] args = new Object[parameters.length];
-    Map<String, JsonNode> variables = externalTaskTrigger.getVariables();
+    Variables variables = externalTaskTrigger.getVariables();
     for (int i = 0; i < parameters.length; i++) {
       if (parameters[i].getType().equals(ExternalTaskTrigger.class)) {
         args[i] = externalTaskTrigger;
@@ -96,8 +98,7 @@ public class ExternalTriggerConsumer {
     return args;
   }
 
-  private Optional<Method> findMatchingMethod(Class<?> aClass, BaseElementId externalTaskId)
-      throws IllegalAccessException, InvocationTargetException {
+  private Optional<Method> findMatchingMethod(Class<?> aClass, BaseElementId externalTaskId) {
     for (Method method : aClass.getDeclaredMethods()) {
       ExternalTask externalTaskAnnotation = method.getAnnotation(ExternalTask.class);
       if (externalTaskAnnotation != null

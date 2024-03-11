@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -19,6 +18,7 @@ import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.scheduler.FixedRateStartCommand;
 import nl.qunit.bpmnmeister.scheduler.OneTimeStartCommand;
 import nl.qunit.bpmnmeister.scheduler.RecurringStartCommand;
@@ -98,10 +98,16 @@ public class ScheduleCommandFactory {
     for (BaseElementId outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow)
-              processDefinition.getDefinitions().getFlowElement(outgoingFlowId).orElseThrow();
+              processDefinition
+                  .getDefinitions()
+                  .getElements()
+                  .getFlowElement(outgoingFlowId)
+                  .orElseThrow();
       processInstanceStartCommand.add(
           new ProcessInstanceStartCommand(
-              ProcessDefinitionKey.of(processDefinition), sequenceFlow.getTarget(), Map.of()));
+              ProcessDefinitionKey.of(processDefinition),
+              sequenceFlow.getTarget(),
+              Variables.EMPTY));
     }
     return processInstanceStartCommand;
   }

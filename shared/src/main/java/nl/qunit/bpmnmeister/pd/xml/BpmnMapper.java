@@ -8,13 +8,14 @@ import nl.qunit.bpmnmeister.bpmn.TRootElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.RootElement;
 
 public class BpmnMapper {
   private BpmnMapper() {}
 
   public static Definitions map(TDefinitions definitions, String hash, Integer generation) {
-    BaseElementId id = BaseElementId.NULL;
+    BaseElementId id = BaseElementId.NONE;
     Map<BaseElementId, BaseElement> elements = new HashMap<>();
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
@@ -25,6 +26,6 @@ public class BpmnMapper {
       }
     }
 
-    return new Definitions(id, generation, hash, elements);
+    return new Definitions(id, generation, hash, new FlowElements(elements));
   }
 }

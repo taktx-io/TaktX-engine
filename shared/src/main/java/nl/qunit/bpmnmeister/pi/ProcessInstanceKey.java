@@ -8,7 +8,7 @@ import lombok.Getter;
 
 @Getter
 public class ProcessInstanceKey {
-  public static final ProcessInstanceKey NULL =
+  public static final ProcessInstanceKey NONE =
       new ProcessInstanceKey(UUID.fromString("00000000-0000-0000-0000-000000000000"));
 
   private final UUID processInstanceId;

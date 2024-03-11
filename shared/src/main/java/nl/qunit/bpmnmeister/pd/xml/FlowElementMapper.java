@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -16,11 +17,13 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
+import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -64,6 +67,13 @@ public class FlowElementMapper {
                 mapQNameList(task.getOutgoing()),
                 loopCharacteristics);
       } else if (activity instanceof TSubProcess subProcess) {
+        Map<BaseElementId, BaseElement> elements =
+            subProcess.getFlowElement().stream()
+                .map(
+                    flowElement ->
+                        FlowElementMapper.map(flowElement.getValue(), tFlowElement.getId()))
+                .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
+
         activityFlowElement =
             new SubProcess(
                 new BaseElementId(tFlowElement.getId()),
@@ -71,12 +81,7 @@ public class FlowElementMapper {
                 mapQNameList(subProcess.getIncoming()),
                 mapQNameList(subProcess.getOutgoing()),
                 loopCharacteristics,
-                ((TSubProcess) tFlowElement)
-                    .getFlowElement().stream()
-                        .map(
-                            flowElement ->
-                                FlowElementMapper.map(flowElement.getValue(), tFlowElement.getId()))
-                        .collect(Collectors.toMap(FlowElement::getId, Function.identity())));
+                new FlowElements(elements));
       }
       return activityFlowElement;
     } else if (tFlowElement instanceof TParallelGateway parallelGateway) {
@@ -106,7 +111,8 @@ public class FlowElementMapper {
           mapQNameList(endEvent.getOutgoing()));
     }
 
-    throw new IllegalStateException("Unknown flow element type: " + tFlowElement.getClass().getName());
+    throw new IllegalStateException(
+        "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
   private static Set<BaseElementId> mapQNameList(List<QName> incoming) {

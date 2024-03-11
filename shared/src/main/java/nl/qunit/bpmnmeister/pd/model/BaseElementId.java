@@ -7,7 +7,7 @@ import lombok.Getter;
 
 @Getter
 public class BaseElementId {
-  public static final BaseElementId NULL = new BaseElementId("");
+  public static final BaseElementId NONE = new BaseElementId("");
 
   private final String id;
 

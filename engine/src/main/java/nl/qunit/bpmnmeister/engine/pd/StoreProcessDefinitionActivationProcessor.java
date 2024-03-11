@@ -42,6 +42,7 @@ public class StoreProcessDefinitionActivationProcessor
       ProcessDefinition processDefinition = processActivation.getProcessDefinition();
       processDefinition
           .getDefinitions()
+          .getElements()
           .getStartEvents()
           .forEach(
               startEvent ->
@@ -67,6 +68,7 @@ public class StoreProcessDefinitionActivationProcessor
       ProcessDefinition processDefinition = processActivation.getProcessDefinition();
       processDefinition
           .getDefinitions()
+          .getElements()
           .getStartEvents()
           .forEach(
               startEvent ->

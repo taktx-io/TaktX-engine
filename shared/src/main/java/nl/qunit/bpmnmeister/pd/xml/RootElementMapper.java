@@ -7,8 +7,10 @@ import java.util.Map;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
+import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.Process;
 import nl.qunit.bpmnmeister.pd.model.RootElement;
 
@@ -23,14 +25,14 @@ public class RootElementMapper {
     return null;
   }
 
-  private static Map<BaseElementId, FlowElement> mapFlowElements(
+  private static FlowElements mapFlowElements(
       List<JAXBElement<? extends TFlowElement>> jaxbFlowElementList) {
-    Map<BaseElementId, FlowElement> flowElements = new HashMap<>();
+    Map<BaseElementId, BaseElement> flowElements = new HashMap<>();
     for (JAXBElement<? extends TFlowElement> jaxbFlowElement : jaxbFlowElementList) {
       TFlowElement tFlowElement = jaxbFlowElement.getValue();
       FlowElement flowElement = FlowElementMapper.map(tFlowElement, null);
       flowElements.put(flowElement.getId(), flowElement);
     }
-    return flowElements;
+    return new FlowElements(flowElements);
   }
 }

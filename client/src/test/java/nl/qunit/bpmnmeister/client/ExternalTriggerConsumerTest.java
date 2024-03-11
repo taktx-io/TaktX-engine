@@ -15,6 +15,7 @@ import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.Variables;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -30,7 +31,7 @@ class ExternalTriggerConsumerTest {
         ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new BaseElementId("processDefinitionId"), 1, 1);
         BaseElementId externalTaskId = new BaseElementId("externalTaskId");
         JsonNode jsonNode = new TextNode("testvalue");
-        Map<String, JsonNode> variables = Map.of("variable1", jsonNode);
+        Variables variables = new Variables(Map.of("variable1", jsonNode));
         ExternalTaskTrigger mockExternalTaskTrigger = new ExternalTaskTrigger(processInstanceKey, processDefinitionKey, externalTaskId, variables);
 
         TestWorker testWorker = new TestWorker();

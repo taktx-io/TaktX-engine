@@ -45,11 +45,11 @@ public class ProcessInstanceStartCommandProcessor
       ProcessInstanceTrigger processInstanceTrigger =
           new ProcessInstanceTrigger(
               processInstanceKey,
-              ProcessInstanceKey.NULL,
+              ProcessInstanceKey.NONE,
               processDefinitionActivation.getProcessDefinition(),
               startCommandRecord.value().getElementId(),
               false,
-              BaseElementId.NULL,
+              BaseElementId.NONE,
               startCommandRecord.value().getVariables());
       context.forward(
           new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));

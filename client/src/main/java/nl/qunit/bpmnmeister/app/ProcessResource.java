@@ -13,6 +13,7 @@ import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.Variables;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.jboss.resteasy.reactive.RestPath;
@@ -45,7 +46,7 @@ public class ProcessResource {
         new ProcessDefinitionKey(new BaseElementId(processId), gen, version);
     ProcessInstanceStartCommand startCommand =
         new ProcessInstanceStartCommand(
-            processDefinitionKey, new BaseElementId(elementId), variablesMap);
+            processDefinitionKey, new BaseElementId(elementId), new Variables(variablesMap));
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey, startCommand));
   }
 }

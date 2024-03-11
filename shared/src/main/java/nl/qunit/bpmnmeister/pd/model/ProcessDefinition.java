@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public class ProcessDefinition {
-  public static final ProcessDefinition NULL = new ProcessDefinition(Definitions.NULL, -1);
+  public static final ProcessDefinition NONE = new ProcessDefinition(Definitions.NONE, -1);
   private final Definitions definitions;
   private final Integer version;
 

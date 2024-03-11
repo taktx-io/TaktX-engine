@@ -24,12 +24,13 @@ public class Task extends Activity {
   @JsonIgnore
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
-    Map<BaseElementId, FlowElement> elements = new HashMap<>();
+    Map<BaseElementId, BaseElement> elements = new HashMap<>();
     elements.put(getId(), withoutLoopCharacteristics());
     BaseElementId sequenceFlowId = new BaseElementId(getId() + "-to-end");
     BaseElementId endEventId = new BaseElementId(getId() + "-end");
     elements.put(
-        sequenceFlowId, new SequenceFlow(sequenceFlowId, getParentId(), getId(), endEventId, FlowCondition.NONE));
+        sequenceFlowId,
+        new SequenceFlow(sequenceFlowId, getParentId(), getId(), endEventId, FlowCondition.NONE));
     elements.put(
         endEventId, new EndEvent(endEventId, getParentId(), Set.of(sequenceFlowId), Set.of()));
 
@@ -39,14 +40,15 @@ public class Task extends Activity {
         parentProcessDefinition.getDefinitions().getProcessDefinitionId();
     processElements.put(
         parentProcessDefinitionId,
-        new Process(parentProcessDefinitionId, parentProcessDefinitionId, elements));
+        new Process(
+            parentProcessDefinitionId, parentProcessDefinitionId, new FlowElements(elements)));
 
     Definitions definitions =
         new Definitions(
             parentProcessDefinition.getDefinitions().getProcessDefinitionId(),
             parentProcessDefinition.getDefinitions().getGeneration(),
             parentProcessDefinition.getDefinitions().getHash(),
-            processElements);
+            new FlowElements(processElements));
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version);

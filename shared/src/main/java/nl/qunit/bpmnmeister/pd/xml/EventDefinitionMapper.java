@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
 public class EventDefinitionMapper {
   private EventDefinitionMapper() {}
+
   public static Set<EventDefinition> map(
       List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId) {
     return eventDefinition.stream()

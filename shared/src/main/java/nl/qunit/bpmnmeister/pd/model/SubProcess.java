@@ -4,14 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 
 @Getter
-public class SubProcess extends Activity implements WithElements {
+public class SubProcess extends Activity {
 
-  private final Map<BaseElementId, BaseElement> elements;
+  private final FlowElements elements;
 
   @JsonCreator
   public SubProcess(
@@ -20,7 +19,7 @@ public class SubProcess extends Activity implements WithElements {
       @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
       @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("elements") Map<BaseElementId, BaseElement> elements) {
+      @Nonnull @JsonProperty("elements") FlowElements elements) {
 
     super(id, parentId, incoming, outgoing, loopCharacteristics);
     this.elements = elements;

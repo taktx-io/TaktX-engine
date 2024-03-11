@@ -21,5 +21,4 @@ public class LoopCharacteristics {
     this.inputCollection = inputCollection;
     this.inputElement = inputElement;
   }
-
 }

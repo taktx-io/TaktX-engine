@@ -1,14 +1,13 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
@@ -20,7 +19,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ProcessInstance processInstance,
       ServiceTask element,
       ServiceTaskState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     return TriggerResult.builder()
         .newElementState(new ServiceTaskState(StateEnum.WAITING, oldState.getElementInstanceId()))
         .externalTasks(Set.of(element.getId()))
@@ -33,7 +32,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ProcessInstance processInstance,
       ServiceTask element,
       ServiceTaskState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
 
     return TriggerResult.builder()
         .newElementState(new ServiceTaskState(StateEnum.FINISHED, oldState.getElementInstanceId()))

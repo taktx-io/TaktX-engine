@@ -3,9 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
@@ -14,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
@@ -27,11 +26,11 @@ public class ParallelMultiInstanceProcessor
       ProcessInstance processInstance,
       BaseElement element,
       BpmnElementState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
 
     if (trigger.isTerminate()) {
       return new TriggerResult(
-          terminate((MultiInstanceState) oldState), Set.of(), Set.of(), Set.of(), Map.of());
+          terminate((MultiInstanceState) oldState), Set.of(), Set.of(), Set.of(), Variables.EMPTY);
     }
 
     return switch (oldState.getState()) {
@@ -48,15 +47,16 @@ public class ParallelMultiInstanceProcessor
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
     for (int i = 0; i < inputCollection.size(); i++) {
-      Map<String, JsonNode> activityVariables = new HashMap<>(variables);
-      activityVariables.remove(element.getLoopCharacteristics().getInputCollection());
-      activityVariables.put("loopCnt", new IntNode(i));
+      Variables updatedVariables =
+          variables.remove(element.getLoopCharacteristics().getInputCollection());
+      updatedVariables = updatedVariables.put("loopCnt", new IntNode(i));
       JsonNode inputElement = inputCollection.get(i);
-      activityVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
+      updatedVariables =
+          updatedVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
       subProcessTriggers.add(
           new ProcessInstanceTrigger(
@@ -66,14 +66,14 @@ public class ParallelMultiInstanceProcessor
               element.getId(),
               false,
               trigger.getInputFlowId(),
-              activityVariables));
+              updatedVariables));
     }
     return new TriggerResult(
         new MultiInstanceState(StateEnum.WAITING, oldState.getElementInstanceId(), 0),
         Set.of(),
         Set.of(),
         subProcessTriggers,
-        Map.of());
+        Variables.EMPTY);
   }
 
   private TriggerResult triggerWhenWaiting(
@@ -81,7 +81,7 @@ public class ParallelMultiInstanceProcessor
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
     int loopsReceived = oldState.getLoopCnt() + 1;
     if (loopsReceived < inputCollection.size()) {
@@ -90,7 +90,7 @@ public class ParallelMultiInstanceProcessor
           Set.of(),
           Set.of(),
           Set.of(),
-          Map.of());
+          Variables.EMPTY);
     } else {
       return new TriggerResult(
           new MultiInstanceState(
@@ -98,7 +98,7 @@ public class ParallelMultiInstanceProcessor
           element.getOutgoing(),
           Set.of(),
           Set.of(),
-          Map.of());
+          Variables.EMPTY);
     }
   }
 

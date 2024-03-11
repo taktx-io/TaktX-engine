@@ -1,13 +1,12 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Map;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
@@ -22,7 +21,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
       ProcessInstance processInstance,
       Task element,
       TaskState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     return TriggerResult.builder()
         .newElementState(new TaskState(StateEnum.FINISHED, UUID.randomUUID()))
         .newActiveFlows(element.getOutgoing())
@@ -35,7 +34,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
       ProcessInstance processInstance,
       Task element,
       TaskState oldState,
-      Map<String, JsonNode> variables) {
+      Variables variables) {
     // Should not happen
     throw new IllegalStateException("Task should not be in waiting state");
   }

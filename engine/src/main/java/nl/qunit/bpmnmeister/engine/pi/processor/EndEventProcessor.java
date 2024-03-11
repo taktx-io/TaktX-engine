@@ -29,11 +29,11 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
       parentProcessInstanceTriggers.add(
           new ProcessInstanceTrigger(
               processInstance.getParentProcessInstanceKey(),
-              ProcessInstanceKey.NULL,
-              ProcessDefinition.NULL,
+              ProcessInstanceKey.NONE,
+              ProcessDefinition.NONE,
               element.getParentId(),
               false,
-              BaseElementId.NULL,
+              BaseElementId.NONE,
               processInstance.getVariables()));
     }
     return TriggerResult.builder()
