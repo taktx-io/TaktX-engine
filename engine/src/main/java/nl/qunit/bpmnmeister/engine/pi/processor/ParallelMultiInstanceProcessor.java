@@ -17,8 +17,7 @@ import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
 @ApplicationScoped
-public class ParallelMultiInstanceProcessor
-    extends StateProcessor<MultiInstance, MultiInstanceState> {
+public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, MultiInstanceState> {
 
   @Override
   public TriggerResult trigger(

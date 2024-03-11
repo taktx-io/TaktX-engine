@@ -14,14 +14,14 @@ public class EventDefinitionMapper {
   private EventDefinitionMapper() {}
 
   public static Set<EventDefinition> map(
-      List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId) {
+      List<JAXBElement<? extends TEventDefinition>> eventDefinition, BaseElementId parentId) {
     return eventDefinition.stream()
         .map(JAXBElement::getValue)
         .map(ed -> mapEventDefinition(ed, parentId))
         .collect(Collectors.toSet());
   }
 
-  private static EventDefinition mapEventDefinition(TEventDefinition ed, String parentId) {
+  private static EventDefinition mapEventDefinition(TEventDefinition ed, BaseElementId parentId) {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
       String duration =
           timerEventDefinition.getTimeDuration() != null
@@ -43,7 +43,7 @@ public class EventDefinitionMapper {
               : "";
       return new TimerEventDefinition(
           new BaseElementId(timerEventDefinition.getId()),
-          new BaseElementId(parentId),
+          parentId,
           duration,
           cycle,
           timeDate);

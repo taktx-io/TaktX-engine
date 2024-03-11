@@ -7,6 +7,7 @@ import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -45,8 +46,8 @@ public class ProcessInstanceProcessor
     Instant start = Instant.now();
     ProcessInstanceTrigger processInstanceTrigger = triggerRecord.value();
     ProcessInstance processInstance;
-    if (processInstanceTrigger.getProcessDefinition() != null) {
-      // When processDefinition is not null we need to instantiate a new process instance
+    if (!processInstanceTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
+      // When processDefinition is not none  need to instantiate a new process instance
       processInstance =
           new ProcessInstance(
               processInstanceTrigger.getParentProcessInstanceKey(),
@@ -88,11 +89,12 @@ public class ProcessInstanceProcessor
             + processInstance.getProcessInstanceKey()
             + " with trigger "
             + trigger);
-    Optional<BaseElement> optFlowElement =
+    Optional<FlowElement> optFlowElement =
         processInstance
             .getProcessDefinition()
             .getDefinitions()
-            .getElements()
+            .getRootProcess()
+            .getFlowElements()
             .getFlowElement(trigger.getElementId());
     if (optFlowElement.isPresent()) {
       LOG.info("Element states: " + processInstance.getElementStates());
@@ -144,7 +146,8 @@ public class ProcessInstanceProcessor
                         processInstance
                             .getProcessDefinition()
                             .getDefinitions()
-                            .getElements()
+                            .getRootProcess()
+                            .getFlowElements()
                             .getFlowElement(flowId)
                             .orElseThrow();
                 if (flow.testCondition()) {

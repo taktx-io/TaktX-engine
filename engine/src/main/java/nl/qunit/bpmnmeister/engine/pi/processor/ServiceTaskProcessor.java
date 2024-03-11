@@ -20,10 +20,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
-    return TriggerResult.builder()
-        .newElementState(new ServiceTaskState(StateEnum.WAITING, oldState.getElementInstanceId()))
-        .externalTasks(Set.of(element.getId()))
-        .build();
+    return new TriggerResult(
+        new ServiceTaskState(StateEnum.WAITING, oldState.getElementInstanceId()),
+        Set.of(element.getId()),
+        Set.of(),
+        Set.of(),
+        Variables.EMPTY);
   }
 
   @Override
@@ -33,12 +35,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
-
-    return TriggerResult.builder()
-        .newElementState(new ServiceTaskState(StateEnum.FINISHED, oldState.getElementInstanceId()))
-        .newActiveFlows(element.getOutgoing())
-        .variables(trigger.getVariables())
-        .build();
+    return new TriggerResult(
+        new ServiceTaskState(StateEnum.FINISHED, oldState.getElementInstanceId()),
+        element.getOutgoing(),
+        Set.of(),
+        Set.of(),
+        trigger.getVariables());
   }
 
   @Override

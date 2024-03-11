@@ -39,9 +39,10 @@ public class ProcessInstanceMigrationProcessor
     ProcessDefinition oldProcessDefinition = processInstance.getProcessDefinition();
     ProcessDefinition newProcessDefinition = triggerRecord.value().getNewProcessDefinition();
 
-    Set<BaseElementId> existingIds = oldProcessDefinition.getDefinitions().getElements().keySet();
+    Set<BaseElementId> existingIds =
+        oldProcessDefinition.getDefinitions().getRootProcess().getFlowElements().keySet();
     Set<BaseElementId> newDefinitionIds =
-        newProcessDefinition.getDefinitions().getElements().keySet();
+        newProcessDefinition.getDefinitions().getRootProcess().getFlowElements().keySet();
 
     Set<BaseElementId> updatedIds = new HashSet<>(existingIds);
     updatedIds.retainAll(newDefinitionIds);
@@ -53,9 +54,17 @@ public class ProcessInstanceMigrationProcessor
     updatedIds.forEach(
         updatedId -> {
           BaseElement oldElement =
-              oldProcessDefinition.getDefinitions().getElements().get(updatedId);
+              oldProcessDefinition
+                  .getDefinitions()
+                  .getRootProcess()
+                  .getFlowElements()
+                  .get(updatedId);
           BaseElement newElement =
-              newProcessDefinition.getDefinitions().getElements().get(updatedId);
+              newProcessDefinition
+                  .getDefinitions()
+                  .getRootProcess()
+                  .getFlowElements()
+                  .get(updatedId);
           BpmnElementState oldState = processInstance.getElementStates().get(updatedId);
           if (oldElement.getClass().equals(newElement.getClass())) {
             newElementStates.put(updatedId, oldState);
@@ -68,7 +77,8 @@ public class ProcessInstanceMigrationProcessor
 
     newIds.forEach(
         newId -> {
-          BaseElement newElement = newProcessDefinition.getDefinitions().getElements().get(newId);
+          BaseElement newElement =
+              newProcessDefinition.getDefinitions().getRootProcess().getFlowElements().get(newId);
           BpmnElementState newElementState =
               processorProvider.getProcessor(newElement).initialState();
           newElementStates.put(newId, newElementState);

@@ -168,7 +168,7 @@ public class ProcessDefinitionTopologyProducer {
   }
 
   private void setupDefinitionStream(StreamsBuilder builder) {
-    Initializer<ProcessDefinition> initializer = () -> new ProcessDefinition(null, 0);
+    Initializer<ProcessDefinition> initializer = () -> new ProcessDefinition(Definitions.NONE, 0);
 
     Aggregator<String, Definitions, ProcessDefinition> aggregator =
         (key, value, aggregation) -> new ProcessDefinition(value, aggregation.getVersion() + 1);

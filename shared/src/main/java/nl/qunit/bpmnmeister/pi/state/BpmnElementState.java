@@ -24,10 +24,6 @@ public abstract class BpmnElementState {
     this.elementInstanceId = elementInstanceId;
   }
 
-  public BpmnElementState terminate() {
-    return null;
-  }
-
   @Override
   public String toString() {
     return "BpmnElementState{"

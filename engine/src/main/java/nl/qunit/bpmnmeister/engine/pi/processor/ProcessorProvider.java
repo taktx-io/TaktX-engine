@@ -6,6 +6,7 @@ import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
@@ -52,7 +53,7 @@ public class ProcessorProvider {
     } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
     }
-    if (activity.getLoopCharacteristics() != null) {
+    if (!activity.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       if (activity.getLoopCharacteristics().isSequential()) {
         return sequentialMultiInstanceProcessor;
       } else {

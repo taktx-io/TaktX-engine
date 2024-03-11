@@ -26,6 +26,6 @@ public class LoopCharacteristicsMapper {
                 .getName());
       }
     }
-    return null;
+    return LoopCharacteristics.NONE;
   }
 }

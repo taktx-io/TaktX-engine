@@ -17,8 +17,7 @@ import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
-public class SequentialMultiInstanceProcessor
-    extends StateProcessor<MultiInstance, MultiInstanceState> {
+public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, MultiInstanceState> {
   private static final Logger LOG = Logger.getLogger(SequentialMultiInstanceProcessor.class);
 
   @Override

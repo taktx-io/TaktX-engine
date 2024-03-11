@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.Getter;
 
@@ -21,5 +22,22 @@ public class ProcessInstanceKey {
   @Override
   public String toString() {
     return "ProcessInstanceKey{" + "processInstanceId=" + processInstanceId + '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ProcessInstanceKey that = (ProcessInstanceKey) o;
+    return Objects.equals(processInstanceId, that.processInstanceId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(processInstanceId);
   }
 }

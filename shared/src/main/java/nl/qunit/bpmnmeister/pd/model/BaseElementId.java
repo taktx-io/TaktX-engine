@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.pd.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
@@ -7,17 +8,19 @@ import lombok.Getter;
 
 @Getter
 public class BaseElementId {
-  public static final BaseElementId NONE = new BaseElementId("");
+  public static final BaseElementId NONE = new BaseElementId("_");
 
   private final String id;
 
-  public BaseElementId(@JsonProperty("id") @Nonnull String id) {
+  @JsonCreator
+  public BaseElementId(
+      @Nonnull @JsonProperty("id") String id) {
     this.id = id;
   }
 
   @Override
   public String toString() {
-    return "SequenceFlowId{" + "id='" + id + '\'' + '}';
+    return "BaseElementId{" + "id='" + id + '\'' + '}';
   }
 
   @Override

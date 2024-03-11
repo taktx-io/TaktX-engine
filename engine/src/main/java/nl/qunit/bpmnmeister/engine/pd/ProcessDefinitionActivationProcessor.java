@@ -27,13 +27,12 @@ public class ProcessDefinitionActivationProcessor
     ProcessDefinition processDefinition = incoming.value();
     if (key.getVersion() > 1) {
       ProcessDefinitionKey previousVersionKey =
-          ProcessDefinitionKey.builder()
-              .processDefinitionId(key.getProcessDefinitionId())
-              .generation(key.getGeneration())
-              .version(key.getVersion() - 1)
-              .build();
+          new ProcessDefinitionKey(
+              key.getProcessDefinitionId(),
+              key.getGeneration(),
+              key.getVersion() - 1);
       ProcessDefinitionActivation deActivation =
-          new ProcessDefinitionActivation(null, ProcessDefinitionStateEnum.INACTIVE);
+          new ProcessDefinitionActivation(ProcessDefinition.NONE, ProcessDefinitionStateEnum.INACTIVE);
       context.forward(new Record<>(previousVersionKey, deActivation, incoming.timestamp()));
     }
     ProcessDefinitionActivation activation =

@@ -9,6 +9,7 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.Process;
 import nl.qunit.bpmnmeister.pd.model.RootElement;
 
 public class BpmnMapper {
@@ -19,13 +20,10 @@ public class BpmnMapper {
     Map<BaseElementId, BaseElement> elements = new HashMap<>();
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
-      RootElement rootElement = RootElementMapper.map(tRootElement);
-      if (rootElement != null) {
-        id = rootElement.getId();
-        elements.put(id, rootElement);
-      }
+      Process rootElement = RootElementMapper.map(tRootElement);
+      return new Definitions(id, generation, hash, rootElement);
     }
 
-    return new Definitions(id, generation, hash, new FlowElements(elements));
+    return Definitions.NONE;
   }
 }

@@ -6,8 +6,6 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
-import nl.qunit.bpmnmeister.pd.model.Definitions;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -30,15 +28,13 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcessState oldState,
       Variables variables) {
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
-    ProcessDefinition subProcessDefinition =
-        getSubProcessDefinition(processInstance.getProcessDefinition(), element);
     BaseElementId startElement = getStartEvent(element);
 
     ProcessInstanceTrigger subProcessTrigger =
         new ProcessInstanceTrigger(
             new ProcessInstanceKey(UUID.randomUUID()),
             processInstance.getProcessInstanceKey(),
-            subProcessDefinition,
+            element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             startElement,
             false,
             BaseElementId.NONE,
@@ -46,10 +42,12 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
         new SubProcessState(StateEnum.WAITING, oldState.getElementInstanceId());
-    return TriggerResult.builder()
-        .newElementState(newSubProcessState)
-        .newProcessInstanceTriggers(subProcessTriggers)
-        .build();
+    return new TriggerResult(
+        newSubProcessState,
+        Set.of(),
+        Set.of(),
+        subProcessTriggers,
+        Variables.EMPTY);
   }
 
   @Override
@@ -61,27 +59,13 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       Variables variables) {
     SubProcessState newSubProcessState =
         new SubProcessState(StateEnum.FINISHED, oldState.getElementInstanceId());
-    return TriggerResult.builder()
-        .newElementState(newSubProcessState)
-        .newActiveFlows(element.getOutgoing())
-        .variables(variables)
-        .build();
-  }
 
-  private static ProcessDefinition getSubProcessDefinition(
-      ProcessDefinition processDefinition, SubProcess element) {
-    BaseElementId subProcessDefinitionId =
-        new BaseElementId(
-            processDefinition.getDefinitions().getProcessDefinitionId().getId()
-                + "-"
-                + element.getId().getId());
-    Definitions definitions =
-        new Definitions(
-            subProcessDefinitionId,
-            processDefinition.getDefinitions().getGeneration(),
-            processDefinition.getDefinitions().getHash(),
-            element.getElements());
-    return new ProcessDefinition(definitions, processDefinition.getVersion());
+    return new TriggerResult(
+        newSubProcessState,
+        element.getOutgoing(),
+        Set.of(),
+        Set.of(),
+        variables);
   }
 
   private BaseElementId getStartEvent(SubProcess subProcess) {

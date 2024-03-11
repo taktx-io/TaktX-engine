@@ -100,7 +100,8 @@ public class ScheduleCommandFactory {
           (SequenceFlow)
               processDefinition
                   .getDefinitions()
-                  .getElements()
+                  .getRootProcess()
+                  .getFlowElements()
                   .getFlowElement(outgoingFlowId)
                   .orElseThrow();
       processInstanceStartCommand.add(

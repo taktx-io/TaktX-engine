@@ -10,8 +10,10 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
+import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -25,7 +27,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
       EndEvent element,
       EndEventState oldState) {
     Set<ProcessInstanceTrigger> parentProcessInstanceTriggers = Set.of();
-    if (processInstance.getParentProcessInstanceKey() != null) {
+    if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
       parentProcessInstanceTriggers.add(
           new ProcessInstanceTrigger(
               processInstance.getParentProcessInstanceKey(),
@@ -36,10 +38,12 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
               BaseElementId.NONE,
               processInstance.getVariables()));
     }
-    return TriggerResult.builder()
-        .newElementState(new EndEventState(StateEnum.FINISHED, oldState.getElementInstanceId()))
-        .newProcessInstanceTriggers(parentProcessInstanceTriggers)
-        .build();
+    return new TriggerResult(
+        new EndEventState(StateEnum.FINISHED, UUID.randomUUID()),
+        element.getOutgoing(),
+        Set.of(),
+        Set.of(),
+        Variables.EMPTY);
   }
 
   @Override

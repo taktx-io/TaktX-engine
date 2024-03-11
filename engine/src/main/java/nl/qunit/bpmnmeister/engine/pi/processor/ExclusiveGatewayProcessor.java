@@ -1,13 +1,16 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
+import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -21,11 +24,12 @@ public class ExclusiveGatewayProcessor
       ProcessInstance processInstance,
       ExclusiveGateway element,
       ExclusiveGatewayState oldState) {
-    return TriggerResult.builder()
-        .newElementState(
-            new ExclusiveGatewayState(StateEnum.FINISHED, oldState.getElementInstanceId()))
-        .newActiveFlows(element.getOutgoing())
-        .build();
+    return new TriggerResult(
+        new ExclusiveGatewayState(StateEnum.FINISHED, UUID.randomUUID()),
+        element.getOutgoing(),
+        Set.of(),
+        Set.of(),
+        Variables.EMPTY);
   }
 
   @Override

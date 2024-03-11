@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Task;
@@ -22,10 +23,12 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
       Task element,
       TaskState oldState,
       Variables variables) {
-    return TriggerResult.builder()
-        .newElementState(new TaskState(StateEnum.FINISHED, UUID.randomUUID()))
-        .newActiveFlows(element.getOutgoing())
-        .build();
+    return new TriggerResult(
+        new TaskState(StateEnum.FINISHED, UUID.randomUUID()),
+        element.getOutgoing(),
+        Set.of(),
+        Set.of(),
+        Variables.EMPTY);
   }
 
   @Override

@@ -2,18 +2,23 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.Getter;
 
+@Getter
 public class FlowElements {
   public static FlowElements EMPTY = new FlowElements(Map.of());
 
-  private final Map<BaseElementId, BaseElement> elements;
+  private final Map<BaseElementId, FlowElement> elements;
 
   @JsonCreator
-  public FlowElements(Map<BaseElementId, BaseElement> elements) {
+  public FlowElements(
+      @Nonnull @JsonProperty("elements") Map<BaseElementId, FlowElement> elements) {
     this.elements = elements;
   }
 
@@ -28,27 +33,21 @@ public class FlowElements {
   }
 
   @JsonIgnore
-  public BaseElement get(BaseElementId id) {
+  public FlowElement get(BaseElementId id) {
     return elements.get(id);
   }
 
   @JsonIgnore
   public List<StartEvent> getStartEvents() {
     return elements.values().stream()
-        .filter(Process.class::isInstance)
-        .map(Process.class::cast)
-        .flatMap(process -> process.getFlowElements().values().stream())
         .filter(StartEvent.class::isInstance)
         .map(StartEvent.class::cast)
         .toList();
   }
 
   @JsonIgnore
-  public Optional<BaseElement> getFlowElement(BaseElementId id) {
+  public Optional<FlowElement> getFlowElement(BaseElementId id) {
     return elements.values().stream()
-        .filter(Process.class::isInstance)
-        .map(Process.class::cast)
-        .flatMap(process -> process.getFlowElements().values().stream())
         .filter(flowElement -> id.equals(flowElement.getId()))
         .findFirst();
   }
