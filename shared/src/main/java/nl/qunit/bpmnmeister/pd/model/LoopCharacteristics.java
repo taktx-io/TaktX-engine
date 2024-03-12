@@ -32,8 +32,9 @@ public class LoopCharacteristics {
       return false;
     }
     LoopCharacteristics that = (LoopCharacteristics) o;
-    return isSequential == that.isSequential && Objects.equals(inputCollection,
-        that.inputCollection) && Objects.equals(inputElement, that.inputElement);
+    return isSequential == that.isSequential
+        && Objects.equals(inputCollection, that.inputCollection)
+        && Objects.equals(inputElement, that.inputElement);
   }
 
   @Override

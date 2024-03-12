@@ -10,7 +10,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
-import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -24,7 +23,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
       StartEvent element,
       StartEventState oldState) {
     return new TriggerResult(
-    new StartEventState(StateEnum.FINISHED, oldState.getElementInstanceId()),
+        new StartEventState(StateEnum.FINISHED, oldState.getElementInstanceId()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),

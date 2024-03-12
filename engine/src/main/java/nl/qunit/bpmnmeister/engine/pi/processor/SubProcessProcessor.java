@@ -43,11 +43,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     SubProcessState newSubProcessState =
         new SubProcessState(StateEnum.WAITING, oldState.getElementInstanceId());
     return new TriggerResult(
-        newSubProcessState,
-        Set.of(),
-        Set.of(),
-        subProcessTriggers,
-        Variables.EMPTY);
+        newSubProcessState, Set.of(), Set.of(), subProcessTriggers, Variables.EMPTY);
   }
 
   @Override
@@ -61,11 +57,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
         new SubProcessState(StateEnum.FINISHED, oldState.getElementInstanceId());
 
     return new TriggerResult(
-        newSubProcessState,
-        element.getOutgoing(),
-        Set.of(),
-        Set.of(),
-        variables);
+        newSubProcessState, element.getOutgoing(), Set.of(), Set.of(), variables);
   }
 
   private BaseElementId getStartEvent(SubProcess subProcess) {

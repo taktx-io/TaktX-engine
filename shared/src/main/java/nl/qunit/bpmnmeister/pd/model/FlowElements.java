@@ -6,19 +6,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.Getter;
 
 @Getter
 public class FlowElements {
-  public static FlowElements EMPTY = new FlowElements(Map.of());
+  public static final FlowElements EMPTY = new FlowElements(Map.of());
 
   private final Map<BaseElementId, FlowElement> elements;
 
   @JsonCreator
-  public FlowElements(
-      @Nonnull @JsonProperty("elements") Map<BaseElementId, FlowElement> elements) {
+  public FlowElements(@Nonnull @JsonProperty("elements") Map<BaseElementId, FlowElement> elements) {
     this.elements = elements;
   }
 
@@ -50,5 +50,22 @@ public class FlowElements {
     return elements.values().stream()
         .filter(flowElement -> id.equals(flowElement.getId()))
         .findFirst();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    FlowElements that = (FlowElements) o;
+    return Objects.equals(elements, that.elements);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(elements);
   }
 }

@@ -22,8 +22,8 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       Variables variables) {
     return new TriggerResult(
         new ServiceTaskState(StateEnum.WAITING, oldState.getElementInstanceId()),
-        Set.of(element.getId()),
         Set.of(),
+        Set.of(element.getId()),
         Set.of(),
         Variables.EMPTY);
   }

@@ -13,14 +13,13 @@ public class BaseElementId {
   private final String id;
 
   @JsonCreator
-  public BaseElementId(
-      @Nonnull @JsonProperty("id") String id) {
+  public BaseElementId(@Nonnull @JsonProperty("id") String id) {
     this.id = id;
   }
 
   @Override
   public String toString() {
-    return "BaseElementId{" + "id='" + id + '\'' + '}';
+    return id;
   }
 
   @Override

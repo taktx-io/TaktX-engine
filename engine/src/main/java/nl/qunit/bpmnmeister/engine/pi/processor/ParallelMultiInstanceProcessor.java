@@ -14,6 +14,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
 @ApplicationScoped

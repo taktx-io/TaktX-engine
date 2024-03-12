@@ -47,7 +47,7 @@ public class ProcessInstanceProcessor
     ProcessInstanceTrigger processInstanceTrigger = triggerRecord.value();
     ProcessInstance processInstance;
     if (!processInstanceTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
-      // When processDefinition is not none  need to instantiate a new process instance
+      // When processDefinition is not none we need to instantiate a new process instance
       processInstance =
           new ProcessInstance(
               processInstanceTrigger.getParentProcessInstanceKey(),
@@ -55,7 +55,6 @@ public class ProcessInstanceProcessor
               processInstanceTrigger.getProcessDefinition(),
               ElementStates.EMPTY,
               processInstanceTrigger.getVariables());
-      processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstance);
     } else {
       // processDefinition is null, we expect the process instance in the store
       processInstance = processInstanceStore.get(processInstanceTrigger.getProcessInstanceKey());
@@ -173,7 +172,7 @@ public class ProcessInstanceProcessor
               });
 
       return new ProcessInstance(
-          ProcessInstanceKey.NONE,
+          processInstance.getParentProcessInstanceKey(),
           processInstance.getProcessInstanceKey(),
           processInstance.getProcessDefinition(),
           newElementStates,

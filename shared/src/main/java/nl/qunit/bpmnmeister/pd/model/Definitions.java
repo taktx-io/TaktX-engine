@@ -8,8 +8,7 @@ import lombok.Getter;
 
 @Getter
 public class Definitions {
-  public static final Definitions NONE =
-      new Definitions(BaseElementId.NONE, 0, "", Process.NONE);
+  public static final Definitions NONE = new Definitions(BaseElementId.NONE, 0, "", Process.NONE);
 
   private final BaseElementId processDefinitionId;
   private final Integer generation;
@@ -55,8 +54,9 @@ public class Definitions {
     }
     Definitions that = (Definitions) o;
     return Objects.equals(processDefinitionId, that.processDefinitionId)
-        && Objects.equals(generation, that.generation) && Objects.equals(hash,
-        that.hash) && Objects.equals(rootProcess, that.rootProcess);
+        && Objects.equals(generation, that.generation)
+        && Objects.equals(hash, that.hash)
+        && Objects.equals(rootProcess, that.rootProcess);
   }
 
   @Override

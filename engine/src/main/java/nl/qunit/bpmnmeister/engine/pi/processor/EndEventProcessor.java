@@ -13,7 +13,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.StateEnum;
-import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped

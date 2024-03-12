@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 

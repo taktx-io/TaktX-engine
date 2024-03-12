@@ -17,7 +17,6 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
@@ -71,7 +70,8 @@ public class FlowElementMapper {
             subProcess.getFlowElement().stream()
                 .map(
                     flowElement ->
-                        FlowElementMapper.map(flowElement.getValue(), new BaseElementId(tFlowElement.getId())))
+                        FlowElementMapper.map(
+                            flowElement.getValue(), new BaseElementId(tFlowElement.getId())))
                 .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
 
         activityFlowElement =

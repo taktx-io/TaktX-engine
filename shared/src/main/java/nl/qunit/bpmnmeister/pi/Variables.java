@@ -6,11 +6,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Getter;
 
+@Getter
 public class Variables {
 
-  public static final Variables EMPTY = new Variables(Map.of());
-  private Map<String, JsonNode> variables;
+  public static final Variables EMPTY = new Variables(java.util.Map.of());
+  private final Map<String, JsonNode> variables;
 
   @JsonCreator
   public Variables(@Nonnull @JsonProperty("variables") Map<String, JsonNode> variables) {
@@ -37,5 +39,10 @@ public class Variables {
     Map<String, JsonNode> variables = new HashMap<>(this.variables);
     variables.putAll(variablesToMerge.variables);
     return new Variables(Map.copyOf(variables));
+  }
+
+  @Override
+  public String toString() {
+    return "Variables{" + "variables=" + variables + '}';
   }
 }

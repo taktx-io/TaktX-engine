@@ -25,9 +25,7 @@ public abstract class BaseElement {
   private final BaseElementId id;
   private final BaseElementId parentId;
 
-  protected BaseElement(
-      @Nonnull BaseElementId id,
-      @Nonnull BaseElementId parentId) {
+  protected BaseElement(@Nonnull BaseElementId id, @Nonnull BaseElementId parentId) {
     this.id = id;
     this.parentId = parentId;
   }

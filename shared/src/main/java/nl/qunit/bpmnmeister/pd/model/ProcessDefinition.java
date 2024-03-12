@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
@@ -37,8 +35,7 @@ public class ProcessDefinition {
       return false;
     }
     ProcessDefinition that = (ProcessDefinition) o;
-    return Objects.equals(definitions, that.definitions) && Objects.equals(
-        version, that.version);
+    return Objects.equals(definitions, that.definitions) && Objects.equals(version, that.version);
   }
 
   @Override

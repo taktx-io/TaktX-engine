@@ -31,8 +31,7 @@ public class SubProcess extends Activity {
     Integer version = parentProcessDefinition.getVersion();
     BaseElementId parentProcessDefinitionId =
         parentProcessDefinition.getDefinitions().getProcessDefinitionId();
-    Process process = new Process(
-        parentProcessDefinitionId, parentProcessDefinitionId, elements);
+    Process process = new Process(parentProcessDefinitionId, parentProcessDefinitionId, elements);
     Definitions definitions =
         new Definitions(
             new BaseElementId(

@@ -2,18 +2,20 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = EndEventState.class, name = "EndEventState"),
-  @JsonSubTypes.Type(value = ExclusiveGatewayState.class, name = "ExclusiveGatewayState"),
-  @JsonSubTypes.Type(value = ParallelGatewayState.class, name = "ParallelGatewayState"),
-  @JsonSubTypes.Type(value = StartEventState.class, name = "StartEventState"),
-  @JsonSubTypes.Type(value = TaskState.class, name = "TaskState"),
-  @JsonSubTypes.Type(value = ServiceTaskState.class, name = "ServiceTaskState"),
+  @JsonSubTypes.Type(value = EndEventState.class),
+  @JsonSubTypes.Type(value = ExclusiveGatewayState.class),
+  @JsonSubTypes.Type(value = ParallelGatewayState.class),
+  @JsonSubTypes.Type(value = StartEventState.class),
+  @JsonSubTypes.Type(value = TaskState.class),
+  @JsonSubTypes.Type(value = ServiceTaskState.class),
+  @JsonSubTypes.Type(value = MultiInstanceState.class),
 })
 public abstract class BpmnElementState {
   StateEnum state;

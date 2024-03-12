@@ -42,11 +42,7 @@ public class EventDefinitionMapper {
                   .collect(Collectors.joining(""))
               : "";
       return new TimerEventDefinition(
-          new BaseElementId(timerEventDefinition.getId()),
-          parentId,
-          duration,
-          cycle,
-          timeDate);
+          new BaseElementId(timerEventDefinition.getId()), parentId, duration, cycle, timeDate);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }
