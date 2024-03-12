@@ -16,6 +16,7 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = TaskState.class),
   @JsonSubTypes.Type(value = ServiceTaskState.class),
   @JsonSubTypes.Type(value = MultiInstanceState.class),
+  @JsonSubTypes.Type(value = SubProcessState.class),
 })
 public abstract class BpmnElementState {
   StateEnum state;

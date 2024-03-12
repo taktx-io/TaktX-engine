@@ -6,9 +6,9 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class EventState extends BpmnElementState {
+public abstract class EventState extends BpmnElementState {
   @JsonCreator
-  public EventState(
+  protected EventState(
       @JsonProperty("state") StateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId) {
     super(state, elementInstanceId);

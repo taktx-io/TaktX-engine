@@ -6,11 +6,11 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class ActivityState extends BpmnElementState {
+public abstract class ActivityState extends BpmnElementState {
   int loopCnt;
 
   @JsonCreator
-  public ActivityState(
+  protected ActivityState(
       @JsonProperty("state") StateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("loopCnt") int loopCnt) {
