@@ -8,7 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
@@ -24,7 +24,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
       TaskState oldState,
       Variables variables) {
     return new TriggerResult(
-        new TaskState(StateEnum.FINISHED, UUID.randomUUID()),
+        new TaskState(ActivityStateEnum.FINISHED, UUID.randomUUID()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -44,11 +44,11 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
 
   @Override
   public TaskState initialState() {
-    return new TaskState(StateEnum.INIT, UUID.randomUUID());
+    return new TaskState(ActivityStateEnum.READY, UUID.randomUUID());
   }
 
   @Override
   public TaskState terminate(TaskState taskState) {
-    return new TaskState(StateEnum.TERMINATED, taskState.getElementInstanceId());
+    return new TaskState(ActivityStateEnum.TERMINATED, taskState.getElementInstanceId());
   }
 }

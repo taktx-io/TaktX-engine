@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public abstract class GatewayState extends BpmnElementState {
 
-  protected GatewayState(StateEnum state, UUID elementInstanceId) {
-    super(state, elementInstanceId);
+  protected GatewayState(UUID elementInstanceId) {
+    super(elementInstanceId);
   }
 }

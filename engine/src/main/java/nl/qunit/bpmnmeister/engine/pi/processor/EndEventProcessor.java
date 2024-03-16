@@ -12,7 +12,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -38,7 +37,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
               processInstance.getVariables()));
     }
     return new TriggerResult(
-        new EndEventState(StateEnum.FINISHED, UUID.randomUUID()),
+        new EndEventState(UUID.randomUUID()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -47,11 +46,11 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
 
   @Override
   public EndEventState initialState() {
-    return new EndEventState(StateEnum.INIT, UUID.randomUUID());
+    return new EndEventState(UUID.randomUUID());
   }
 
   @Override
   public EndEventState terminate(EndEventState oldState) {
-    return new EndEventState(StateEnum.TERMINATED, oldState.getElementInstanceId());
+    return new EndEventState(oldState.getElementInstanceId());
   }
 }

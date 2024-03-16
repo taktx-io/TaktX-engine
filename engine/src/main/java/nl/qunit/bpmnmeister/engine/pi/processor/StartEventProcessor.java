@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -23,7 +22,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
       StartEvent element,
       StartEventState oldState) {
     return new TriggerResult(
-        new StartEventState(StateEnum.FINISHED, oldState.getElementInstanceId()),
+        new StartEventState(oldState.getElementInstanceId()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -32,11 +31,11 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
 
   @Override
   public StartEventState initialState() {
-    return new StartEventState(StateEnum.INIT, UUID.randomUUID());
+    return new StartEventState(UUID.randomUUID());
   }
 
   @Override
   public StartEventState terminate(StartEventState oldState) {
-    return new StartEventState(StateEnum.TERMINATED, oldState.getElementInstanceId());
+    return new StartEventState(oldState.getElementInstanceId());
   }
 }

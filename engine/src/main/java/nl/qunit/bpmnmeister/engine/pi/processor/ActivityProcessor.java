@@ -2,22 +2,22 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import org.jboss.logging.Logger;
 
-public abstract class ActivityProcessor<E extends BaseElement, S extends BpmnElementState>
+public abstract class ActivityProcessor<E extends Activity, S extends ActivityState>
     extends StateProcessor<E, S> {
   private static final Logger LOG = Logger.getLogger(ActivityProcessor.class);
 
-  public TriggerResult trigger(
+  public TriggerResult dotrigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      BaseElement element,
-      BpmnElementState oldState,
+      E element,
+      S oldState,
       Variables variables) {
     if (trigger.isTerminate()) {
       return new TriggerResult(
@@ -25,8 +25,8 @@ public abstract class ActivityProcessor<E extends BaseElement, S extends BpmnEle
     }
 
     return switch (oldState.getState()) {
-      case INIT -> triggerWhenInit(trigger, processInstance, (E) element, (S) oldState, variables);
-      case WAITING -> triggerWhenWaiting(
+      case READY -> triggerWhenInit(trigger, processInstance, (E) element, (S) oldState, variables);
+      case ACTIVE -> triggerWhenWaiting(
           trigger, processInstance, (E) element, (S) oldState, variables);
       case FINISHED -> triggerWhenFinished(
           trigger, processInstance, (E) element, (S) oldState, variables);

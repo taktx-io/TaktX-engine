@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -24,7 +23,7 @@ public class ExclusiveGatewayProcessor
       ExclusiveGateway element,
       ExclusiveGatewayState oldState) {
     return new TriggerResult(
-        new ExclusiveGatewayState(StateEnum.FINISHED, UUID.randomUUID()),
+        new ExclusiveGatewayState(UUID.randomUUID()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -33,11 +32,11 @@ public class ExclusiveGatewayProcessor
 
   @Override
   public ExclusiveGatewayState initialState() {
-    return new ExclusiveGatewayState(StateEnum.INIT, UUID.randomUUID());
+    return new ExclusiveGatewayState(UUID.randomUUID());
   }
 
   @Override
   public ExclusiveGatewayState terminate(ExclusiveGatewayState oldState) {
-    return new ExclusiveGatewayState(StateEnum.TERMINATED, oldState.getElementInstanceId());
+    return new ExclusiveGatewayState(oldState.getElementInstanceId());
   }
 }

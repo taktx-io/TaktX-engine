@@ -8,24 +8,22 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
 @ApplicationScoped
 public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, MultiInstanceState> {
 
   @Override
-  public TriggerResult trigger(
+  public TriggerResult dotrigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      BaseElement element,
-      BpmnElementState oldState,
+      Activity element,
+      MultiInstanceState oldState,
       Variables variables) {
 
     if (trigger.isTerminate()) {
@@ -34,9 +32,9 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
     }
 
     return switch (oldState.getState()) {
-      case INIT -> triggerWhenInit(
+      case READY -> triggerWhenInit(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
-      case WAITING -> triggerWhenWaiting(
+      case ACTIVE -> triggerWhenWaiting(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
       default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
     };
@@ -69,7 +67,7 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
               updatedVariables));
     }
     return new TriggerResult(
-        new MultiInstanceState(StateEnum.WAITING, oldState.getElementInstanceId(), 0),
+        new MultiInstanceState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), 0),
         Set.of(),
         Set.of(),
         subProcessTriggers,
@@ -86,7 +84,8 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
     int loopsReceived = oldState.getLoopCnt() + 1;
     if (loopsReceived < inputCollection.size()) {
       return new TriggerResult(
-          new MultiInstanceState(StateEnum.WAITING, oldState.getElementInstanceId(), loopsReceived),
+          new MultiInstanceState(
+              ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), loopsReceived),
           Set.of(),
           Set.of(),
           Set.of(),
@@ -94,7 +93,7 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
     } else {
       return new TriggerResult(
           new MultiInstanceState(
-              StateEnum.FINISHED, oldState.getElementInstanceId(), loopsReceived),
+              ActivityStateEnum.FINISHED, oldState.getElementInstanceId(), loopsReceived),
           element.getOutgoing(),
           Set.of(),
           Set.of(),
@@ -104,12 +103,12 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
 
   @Override
   public MultiInstanceState initialState() {
-    return new MultiInstanceState(StateEnum.INIT, UUID.randomUUID(), 0);
+    return new MultiInstanceState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
   }
 
   @Override
   public MultiInstanceState terminate(MultiInstanceState oldState) {
     return new MultiInstanceState(
-        StateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getLoopCnt());
+        ActivityStateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getLoopCnt());
   }
 }

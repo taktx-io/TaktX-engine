@@ -7,11 +7,11 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class SubProcessState extends BpmnElementState {
+public class SubProcessState extends ActivityState {
 
   @JsonCreator
   public SubProcessState(
-      @Nonnull @JsonProperty("state") StateEnum state,
+      @Nonnull @JsonProperty("state") ActivityStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId) {
     super(state, elementInstanceId);
   }

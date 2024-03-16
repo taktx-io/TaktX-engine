@@ -8,9 +8,7 @@ import lombok.Getter;
 @Getter
 public abstract class EventState extends BpmnElementState {
   @JsonCreator
-  protected EventState(
-      @JsonProperty("state") StateEnum state,
-      @JsonProperty("elementInstanceId") UUID elementInstanceId) {
-    super(state, elementInstanceId);
+  protected EventState(@JsonProperty("elementInstanceId") UUID elementInstanceId) {
+    super(elementInstanceId);
   }
 }

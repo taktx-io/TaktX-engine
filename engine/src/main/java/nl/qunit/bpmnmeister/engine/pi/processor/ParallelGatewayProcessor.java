@@ -10,8 +10,8 @@ import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -28,14 +28,12 @@ public class ParallelGatewayProcessor
     Set<BaseElementId> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());
     final Set<BaseElementId> outputFlows = new HashSet<>();
-    StateEnum newState = StateEnum.ACTIVE;
     if (element.getOutgoing().equals(newTriggeredFlows)) {
-      newState = StateEnum.INIT;
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
     }
     return new TriggerResult(
-        new ParallelGatewayState(newState, UUID.randomUUID(), newTriggeredFlows),
+        new ParallelGatewayState(UUID.randomUUID(), newTriggeredFlows),
         outputFlows,
         Set.of(),
         Set.of(),
@@ -44,12 +42,11 @@ public class ParallelGatewayProcessor
 
   @Override
   public ParallelGatewayState initialState() {
-    return new ParallelGatewayState(StateEnum.INIT, UUID.randomUUID(), new HashSet<>());
+    return new ParallelGatewayState(UUID.randomUUID(), new HashSet<>());
   }
 
   @Override
   public ParallelGatewayState terminate(ParallelGatewayState oldState) {
-    return new ParallelGatewayState(
-        StateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getTriggeredFlows());
+    return new ParallelGatewayState(oldState.getElementInstanceId(), oldState.getTriggeredFlows());
   }
 }

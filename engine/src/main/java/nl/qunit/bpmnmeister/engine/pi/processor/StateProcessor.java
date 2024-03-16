@@ -9,11 +9,20 @@ import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 public abstract class StateProcessor<E extends BaseElement, S extends BpmnElementState> {
 
-  public abstract TriggerResult trigger(
+  public final TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       BaseElement element,
       BpmnElementState oldState,
+      Variables variables) {
+    return dotrigger(trigger, processInstance, (E) element, (S) oldState, variables);
+  }
+
+  protected abstract TriggerResult dotrigger(
+      ProcessInstanceTrigger trigger,
+      ProcessInstance processInstance,
+      E element,
+      S oldState,
       Variables variables);
 
   public abstract S initialState();

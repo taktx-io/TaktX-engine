@@ -8,8 +8,8 @@ import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
 
 @ApplicationScoped
 public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, ServiceTaskState> {
@@ -21,7 +21,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTaskState oldState,
       Variables variables) {
     return new TriggerResult(
-        new ServiceTaskState(StateEnum.WAITING, oldState.getElementInstanceId()),
+        new ServiceTaskState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId()),
         Set.of(),
         Set.of(element.getId()),
         Set.of(),
@@ -36,7 +36,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTaskState oldState,
       Variables variables) {
     return new TriggerResult(
-        new ServiceTaskState(StateEnum.FINISHED, oldState.getElementInstanceId()),
+        new ServiceTaskState(ActivityStateEnum.FINISHED, oldState.getElementInstanceId()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -45,11 +45,11 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
 
   @Override
   public ServiceTaskState initialState() {
-    return new ServiceTaskState(StateEnum.INIT, UUID.randomUUID());
+    return new ServiceTaskState(ActivityStateEnum.READY, UUID.randomUUID());
   }
 
   @Override
   public ServiceTaskState terminate(ServiceTaskState oldState) {
-    return new ServiceTaskState(StateEnum.TERMINATED, oldState.getElementInstanceId());
+    return new ServiceTaskState(ActivityStateEnum.TERMINATED, oldState.getElementInstanceId());
   }
 }

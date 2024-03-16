@@ -7,14 +7,14 @@ import lombok.Getter;
 
 @Getter
 public abstract class ActivityState extends BpmnElementState {
-  int loopCnt;
+
+  private final ActivityStateEnum state;
 
   @JsonCreator
   protected ActivityState(
-      @JsonProperty("state") StateEnum state,
-      @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("loopCnt") int loopCnt) {
-    super(state, elementInstanceId);
-    this.loopCnt = loopCnt;
+      @JsonProperty("state") ActivityStateEnum state,
+      @JsonProperty("elementInstanceId") UUID elementInstanceId) {
+    super(elementInstanceId);
+    this.state = state;
   }
 }

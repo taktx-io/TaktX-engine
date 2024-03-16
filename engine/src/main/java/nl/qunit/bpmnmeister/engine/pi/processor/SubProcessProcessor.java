@@ -11,7 +11,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.StateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import org.jboss.logging.Logger;
 
@@ -41,7 +41,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             trigger.getVariables());
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
-        new SubProcessState(StateEnum.WAITING, oldState.getElementInstanceId());
+        new SubProcessState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId());
     return new TriggerResult(
         newSubProcessState, Set.of(), Set.of(), subProcessTriggers, Variables.EMPTY);
   }
@@ -54,7 +54,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcessState oldState,
       Variables variables) {
     SubProcessState newSubProcessState =
-        new SubProcessState(StateEnum.FINISHED, oldState.getElementInstanceId());
+        new SubProcessState(ActivityStateEnum.FINISHED, oldState.getElementInstanceId());
 
     return new TriggerResult(
         newSubProcessState, element.getOutgoing(), Set.of(), Set.of(), variables);
@@ -70,11 +70,11 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
   @Override
   public SubProcessState initialState() {
-    return new SubProcessState(StateEnum.INIT, UUID.randomUUID());
+    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID());
   }
 
   @Override
   public SubProcessState terminate(SubProcessState oldState) {
-    return new SubProcessState(StateEnum.TERMINATED, oldState.getElementInstanceId());
+    return new SubProcessState(ActivityStateEnum.TERMINATED, oldState.getElementInstanceId());
   }
 }
