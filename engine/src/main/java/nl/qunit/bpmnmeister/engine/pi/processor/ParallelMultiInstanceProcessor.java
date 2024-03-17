@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -31,7 +31,7 @@ public class ParallelMultiInstanceProcessor
     return switch (oldState.getState()) {
       case READY -> triggerWhenReady(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
-      case ACTIVE -> triggerWhenWaiting(
+      case ACTIVE -> triggerWhenActive(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
       default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
     };
@@ -54,11 +54,12 @@ public class ParallelMultiInstanceProcessor
           updatedVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
       subProcessTriggers.add(
-          new FlowElementNewProcessInstanceTrigger(
+          new FlowElementTrigger(
               new ProcessInstanceKey(UUID.randomUUID()),
               processInstance.getProcessInstanceKey(),
               element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
               element.getId(),
+              BaseElementId.NONE,
               updatedVariables));
     }
     return new TriggerResult(
@@ -69,30 +70,29 @@ public class ParallelMultiInstanceProcessor
         Variables.EMPTY);
   }
 
-  private TriggerResult triggerWhenWaiting(
+  private TriggerResult triggerWhenActive(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
-    int loopsReceived = oldState.getLoopCnt() + 1;
+    int loopsReceived = oldState.getLoopCnt();
     if (loopsReceived < inputCollection.size()) {
       return new TriggerResult(
           new MultiInstanceState(
-              ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), loopsReceived),
+              ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), loopsReceived + 1),
           Set.of(),
           Set.of(),
           Set.of(),
           Variables.EMPTY);
     } else {
-      return new TriggerResult(
+      MultiInstanceState newState =
           new MultiInstanceState(
-              ActivityStateEnum.FINISHED, oldState.getElementInstanceId(), loopsReceived),
-          element.getOutgoing(),
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+              ActivityStateEnum.FINISHED, oldState.getElementInstanceId(), loopsReceived + 1);
+
+      // all responses received. Finish the multi instance activity
+      return finishActivity(processInstance, element, newState);
     }
   }
 

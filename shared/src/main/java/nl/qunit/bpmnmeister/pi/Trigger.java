@@ -3,14 +3,13 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import java.util.function.Supplier;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = FlowElementTrigger.class),
-  @JsonSubTypes.Type(value = FlowElementNewProcessInstanceTrigger.class),
-  @JsonSubTypes.Type(value = ExternalTaskTrigger.class)
+  @JsonSubTypes.Type(value = ExternalTaskResponseTrigger.class)
 })
 public abstract class Trigger {
 
@@ -20,6 +19,11 @@ public abstract class Trigger {
 
   public abstract ProcessInstanceKey getProcessInstanceKey();
 
-  public abstract ProcessInstance getProcessInstance(
-      Supplier<ProcessInstance> processInstanceSupplier);
+  public ProcessInstanceKey getParentProcessInstanceKey() {
+    return ProcessInstanceKey.NONE;
+  }
+
+  public ProcessDefinition getProcessDefinition() {
+    return ProcessDefinition.NONE;
+  }
 }

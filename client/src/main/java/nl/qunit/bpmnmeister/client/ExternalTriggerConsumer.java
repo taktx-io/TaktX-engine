@@ -54,8 +54,8 @@ public class ExternalTriggerConsumer {
     if (optMethod.isPresent()) {
       Method method = optMethod.get();
       Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
-      // Convert the result object to a map of variables with JsonNode values
-      Map<String, JsonNode> variablesMap = objectMapper.convertValue(result, LinkedHashMap.class);
+      Map<String, JsonNode> variablesMap =
+          result == null ? Map.of() : objectMapper.convertValue(result, LinkedHashMap.class);
 
       ExternalTaskResponseResult externalTaskResponseResult =
           new ExternalTaskResponseResult(true, null);

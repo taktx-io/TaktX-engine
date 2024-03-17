@@ -1,9 +1,10 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.UUID;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
-import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
@@ -40,11 +41,12 @@ public class ProcessInstanceStartCommandProcessor
     if (processDefinitionActivation.getState() == ProcessDefinitionStateEnum.ACTIVE) {
       ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
       Trigger processInstanceTrigger =
-          new FlowElementNewProcessInstanceTrigger(
+          new FlowElementTrigger(
               processInstanceKey,
               ProcessInstanceKey.NONE,
               processDefinitionActivation.getProcessDefinition(),
               startCommandRecord.value().getElementId(),
+              BaseElementId.NONE,
               startCommandRecord.value().getVariables());
       context.forward(
           new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));

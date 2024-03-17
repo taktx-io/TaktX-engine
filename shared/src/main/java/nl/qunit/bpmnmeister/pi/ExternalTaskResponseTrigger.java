@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.function.Supplier;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 
@@ -43,10 +42,5 @@ public class ExternalTaskResponseTrigger extends Trigger {
         + ", variables="
         + variables
         + '}';
-  }
-
-  @Override
-  public ProcessInstance getProcessInstance(Supplier<ProcessInstance> processInstanceSupplier) {
-    return processInstanceSupplier.get();
   }
 }

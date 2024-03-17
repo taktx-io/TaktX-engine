@@ -24,13 +24,8 @@ public class ServiceTask extends Task {
   }
 
   @Override
-  protected FlowElement withoutLoopCharacteristics() {
+  protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
     return new ServiceTask(
-        getId(),
-        getParentId(),
-        getIncoming(),
-        getOutgoing(),
-        getImplementation(),
-        LoopCharacteristics.NONE);
+        getId(), getId(), getIncoming(), outgoing, getImplementation(), LoopCharacteristics.NONE);
   }
 }

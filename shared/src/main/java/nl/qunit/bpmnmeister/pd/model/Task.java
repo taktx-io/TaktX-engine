@@ -25,14 +25,13 @@ public class Task extends Activity {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<BaseElementId, FlowElement> elements = new HashMap<>();
-    elements.put(getId(), withoutLoopCharacteristics());
     BaseElementId sequenceFlowId = new BaseElementId(getId().getId() + "-to-end");
+    elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
     BaseElementId endEventId = new BaseElementId(getId().getId() + "-end");
     elements.put(
         sequenceFlowId,
-        new SequenceFlow(sequenceFlowId, getParentId(), getId(), endEventId, FlowCondition.NONE));
-    elements.put(
-        endEventId, new EndEvent(endEventId, getParentId(), Set.of(sequenceFlowId), Set.of()));
+        new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
+    elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of()));
 
     // Wrap in Process element
     BaseElementId parentProcessDefinitionId =
@@ -52,7 +51,7 @@ public class Task extends Activity {
     return new ProcessDefinition(definitions, version);
   }
 
-  protected FlowElement withoutLoopCharacteristics() {
-    return new Task(getId(), getParentId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE);
+  protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
+    return new Task(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
   }
 }

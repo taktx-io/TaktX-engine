@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -80,14 +80,7 @@ public class SequentialMultiInstanceProcessor
       return triggerIteration(
           trigger, processInstance, element, oldState, variables, loopCnt, inputCollection);
     } else {
-      // Finished iterating collection just go to finished state
-      return new TriggerResult(
-          new MultiInstanceState(
-              ActivityStateEnum.FINISHED, oldState.getElementInstanceId(), loopCnt),
-          element.getOutgoing(),
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return finishActivity(processInstance, element, oldState);
     }
   }
 
@@ -104,12 +97,13 @@ public class SequentialMultiInstanceProcessor
     activityVariables =
         activityVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
-    FlowElementNewProcessInstanceTrigger newProcessInstanceTrigger =
-        new FlowElementNewProcessInstanceTrigger(
+    FlowElementTrigger newProcessInstanceTrigger =
+        new FlowElementTrigger(
             new ProcessInstanceKey(UUID.randomUUID()),
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             element.getId(),
+            BaseElementId.NONE,
             activityVariables);
 
     return new TriggerResult(

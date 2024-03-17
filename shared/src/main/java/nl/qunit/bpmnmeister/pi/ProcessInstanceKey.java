@@ -21,7 +21,7 @@ public class ProcessInstanceKey {
 
   @Override
   public String toString() {
-    return "ProcessInstanceKey{" + "processInstanceId=" + processInstanceId + '}';
+    return processInstanceId.toString();
   }
 
   @Override

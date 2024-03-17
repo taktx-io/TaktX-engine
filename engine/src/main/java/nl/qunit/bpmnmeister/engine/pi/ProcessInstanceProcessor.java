@@ -8,6 +8,7 @@ import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ElementStates;
@@ -46,8 +47,18 @@ public class ProcessInstanceProcessor
     Instant start = Instant.now();
     Trigger trigger = triggerRecord.value();
 
-    ProcessInstance processInstance =
-        trigger.getProcessInstance(() -> processInstanceStore.get(trigger.getProcessInstanceKey()));
+    ProcessInstance processInstance;
+    if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
+      processInstance = processInstanceStore.get(trigger.getProcessInstanceKey());
+    } else {
+      processInstance =
+          new ProcessInstance(
+              trigger.getParentProcessInstanceKey(),
+              trigger.getProcessInstanceKey(),
+              trigger.getProcessDefinition(),
+              ElementStates.EMPTY,
+              trigger.getVariables());
+    }
 
     ProcessInstance updatedProcessInstance =
         trigger(
@@ -146,7 +157,8 @@ public class ProcessInstanceProcessor
                   processInstanceTriggerConsumer.accept(
                       new FlowElementTrigger(
                           processInstance.getProcessInstanceKey(),
-                          ProcessInstanceKey.NONE,
+                          processInstance.getParentProcessInstanceKey(),
+                          ProcessDefinition.NONE,
                           flow.getTarget(),
                           flow.getId(),
                           variablesWithTriggerResult));
