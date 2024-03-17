@@ -27,12 +27,13 @@ import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import org.apache.kafka.common.serialization.Serdes;
@@ -57,8 +58,7 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
   static final ObjectMapperSerde<ScheduleStartCommand> SCHEDULE_COMMAND_SERDE =
       new ObjectMapperSerde<>(ScheduleStartCommand.class);
-  static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_COMMAND_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
+  static final ObjectMapperSerde<Trigger> TRIGGER_SERDE = new ObjectMapperSerde<>(Trigger.class);
   static final ObjectMapperSerde<ProcessInstanceMigrationTrigger> PROCESS_INSTANCE_MIGRATION_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
   static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
@@ -106,7 +106,7 @@ public class ProcessDefinitionTopologyProducer {
             ProcessInstanceStartCommandProcessor::new, PROCESS_DEFINITION_ACTIVATION_STORE_NAME)
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE));
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
   }
 
   private void setupProcessInstanceMigrationStream(StreamsBuilder builder) {
@@ -128,19 +128,18 @@ public class ProcessDefinitionTopologyProducer {
     KStream<Object, Object>[] branches =
         builder.stream(
                 PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-                Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE))
+                Consumed.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE))
             .process(
                 () -> new ProcessInstanceProcessor(processorProvider), PROCESS_INSTANCE_STORE_NAME)
             .branch(
-                (key, value) -> value instanceof ProcessInstanceTrigger,
+                (key, value) -> value instanceof FlowElementTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger);
 
     branches[0]
-        .map(
-            (key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (Trigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_COMMAND_SERDE));
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
     branches[1]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
         .to(

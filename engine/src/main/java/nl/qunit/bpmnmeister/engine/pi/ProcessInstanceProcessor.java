@@ -8,14 +8,14 @@ import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -25,7 +25,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.jboss.logging.Logger;
 
 public class ProcessInstanceProcessor
-    implements Processor<ProcessInstanceKey, ProcessInstanceTrigger, Object, Object> {
+    implements Processor<ProcessInstanceKey, Trigger, Object, Object> {
   private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessor.class);
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
@@ -42,36 +42,28 @@ public class ProcessInstanceProcessor
   }
 
   @Override
-  public void process(Record<ProcessInstanceKey, ProcessInstanceTrigger> triggerRecord) {
+  public void process(Record<ProcessInstanceKey, Trigger> triggerRecord) {
     Instant start = Instant.now();
-    ProcessInstanceTrigger processInstanceTrigger = triggerRecord.value();
-    ProcessInstance processInstance;
-    if (!processInstanceTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
-      // When processDefinition is not none we need to instantiate a new process instance
-      processInstance =
-          new ProcessInstance(
-              processInstanceTrigger.getParentProcessInstanceKey(),
-              processInstanceTrigger.getProcessInstanceKey(),
-              processInstanceTrigger.getProcessDefinition(),
-              ElementStates.EMPTY,
-              processInstanceTrigger.getVariables());
-    } else {
-      // processDefinition is null, we expect the process instance in the store
-      processInstance = processInstanceStore.get(processInstanceTrigger.getProcessInstanceKey());
-    }
+    Trigger trigger = triggerRecord.value();
+
+    ProcessInstance processInstance =
+        trigger.getProcessInstance(() -> processInstanceStore.get(trigger.getProcessInstanceKey()));
+
     ProcessInstance updatedProcessInstance =
         trigger(
             processInstance,
-            processInstanceTrigger,
-            trigger ->
+            trigger,
+            flowElementTrigger ->
                 context.forward(
                     new Record<>(
-                        trigger.getProcessInstanceKey(), trigger, Instant.now().toEpochMilli())),
-            externalTask ->
+                        flowElementTrigger.getProcessInstanceKey(),
+                        flowElementTrigger,
+                        Instant.now().toEpochMilli())),
+            externalTaskTrigger ->
                 context.forward(
                     new Record<>(
-                        externalTask.getProcessInstanceKey(),
-                        externalTask,
+                        externalTaskTrigger.getProcessInstanceKey(),
+                        externalTaskTrigger,
                         Instant.now().toEpochMilli())));
     processInstanceStore.put(processInstance.getProcessInstanceKey(), updatedProcessInstance);
     Instant end = Instant.now();
@@ -80,8 +72,8 @@ public class ProcessInstanceProcessor
 
   public ProcessInstance trigger(
       ProcessInstance processInstance,
-      ProcessInstanceTrigger trigger,
-      Consumer<ProcessInstanceTrigger> processInstanceTriggerConsumer,
+      Trigger trigger,
+      Consumer<Trigger> processInstanceTriggerConsumer,
       Consumer<ExternalTaskTrigger> externalTaskTriggerConsumer) {
     LOG.info(
         "Triggering process instance "
@@ -152,12 +144,10 @@ public class ProcessInstanceProcessor
                 if (flow.testCondition()) {
                   LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
                   processInstanceTriggerConsumer.accept(
-                      new ProcessInstanceTrigger(
+                      new FlowElementTrigger(
                           processInstance.getProcessInstanceKey(),
                           ProcessInstanceKey.NONE,
-                          ProcessDefinition.NONE,
                           flow.getTarget(),
-                          false,
                           flow.getId(),
                           variablesWithTriggerResult));
                 }

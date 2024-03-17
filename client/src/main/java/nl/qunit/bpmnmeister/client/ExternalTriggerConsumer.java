@@ -12,10 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
@@ -31,8 +30,8 @@ public class ExternalTriggerConsumer {
   ObjectMapper objectMapper;
 
   @Inject
-  @Channel("process-instance-trigger-outgoing")
-  Emitter<ProcessInstanceTrigger> processInstanceTriggerEmitter;
+  @Channel("external-task-response-outgoing")
+  Emitter<ExternalTaskResponseTrigger> externalTaskResponseResultEmitter;
 
   public ExternalTriggerConsumer(Deployer deployer, ObjectMapper objectMapper) {
     this.deployer = deployer;
@@ -46,7 +45,7 @@ public class ExternalTriggerConsumer {
     BaseElementId processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
     Integer generation = externalTaskTrigger.getProcessDefinitionKey().getGeneration();
-    BaseElementId externalTaskId = externalTaskTrigger.getExternalTaskId();
+    BaseElementId externalTaskId = externalTaskTrigger.getElementId();
     Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId).get(generation);
 
     // Get method from workerInstance which has matching annotation
@@ -58,17 +57,16 @@ public class ExternalTriggerConsumer {
       // Convert the result object to a map of variables with JsonNode values
       Map<String, JsonNode> variablesMap = objectMapper.convertValue(result, LinkedHashMap.class);
 
-      ProcessInstanceTrigger processInstanceTrigger =
-          new ProcessInstanceTrigger(
+      ExternalTaskResponseResult externalTaskResponseResult =
+          new ExternalTaskResponseResult(true, null);
+      ExternalTaskResponseTrigger processInstanceTrigger =
+          new ExternalTaskResponseTrigger(
               externalTaskTrigger.getProcessInstanceKey(),
-              ProcessInstanceKey.NONE,
-              ProcessDefinition.NONE,
               externalTaskId,
-              false,
-              BaseElementId.NONE,
+              externalTaskResponseResult,
               new Variables(variablesMap));
       LOG.info("Returning process instance trigger: " + processInstanceTrigger);
-      processInstanceTriggerEmitter.send(
+      externalTaskResponseResultEmitter.send(
           KafkaRecord.of(externalTaskTrigger.getProcessInstanceKey(), processInstanceTrigger));
 
     } else {

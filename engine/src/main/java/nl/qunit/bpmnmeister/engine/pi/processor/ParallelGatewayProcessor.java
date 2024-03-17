@@ -7,10 +7,9 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 import org.jboss.logging.Logger;
 
@@ -21,7 +20,7 @@ public class ParallelGatewayProcessor
 
   @Override
   protected TriggerResult triggerDecision(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ParallelGateway element,
       ParallelGatewayState oldState) {
@@ -43,10 +42,5 @@ public class ParallelGatewayProcessor
   @Override
   public ParallelGatewayState initialState() {
     return new ParallelGatewayState(UUID.randomUUID(), new HashSet<>());
-  }
-
-  @Override
-  public ParallelGatewayState terminate(ParallelGatewayState oldState) {
-    return new ParallelGatewayState(oldState.getElementInstanceId(), oldState.getTriggeredFlows());
   }
 }

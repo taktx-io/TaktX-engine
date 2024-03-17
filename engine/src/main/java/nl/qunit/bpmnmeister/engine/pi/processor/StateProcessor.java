@@ -2,30 +2,46 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 public abstract class StateProcessor<E extends BaseElement, S extends BpmnElementState> {
 
   public final TriggerResult trigger(
-      ProcessInstanceTrigger trigger,
+      Trigger trigger,
       ProcessInstance processInstance,
       BaseElement element,
       BpmnElementState oldState,
       Variables variables) {
-    return dotrigger(trigger, processInstance, (E) element, (S) oldState, variables);
+    if (trigger instanceof FlowElementTrigger flowElementTrigger) {
+      return triggerFlowElement(
+          flowElementTrigger, processInstance, (E) element, (S) oldState, variables);
+    } else if (trigger instanceof ExternalTaskResponseTrigger externalTaskResponse) {
+      return triggerExternalTaskResponse(
+          externalTaskResponse, processInstance, (E) element, (S) oldState, variables);
+    }
+    throw new IllegalStateException("Unknown trigger type: " + trigger);
   }
 
-  protected abstract TriggerResult dotrigger(
-      ProcessInstanceTrigger trigger,
+  protected abstract TriggerResult triggerFlowElement(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       E element,
       S oldState,
       Variables variables);
 
-  public abstract S initialState();
+  protected TriggerResult triggerExternalTaskResponse(
+      ExternalTaskResponseTrigger trigger,
+      ProcessInstance processInstance,
+      E element,
+      S oldState,
+      Variables variables) {
+    throw new IllegalStateException("External task response not supported: " + trigger);
+  }
 
-  public abstract S terminate(S oldState);
+  public abstract S initialState();
 }

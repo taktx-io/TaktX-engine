@@ -8,31 +8,28 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 
 @ApplicationScoped
-public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, MultiInstanceState> {
-
+public class ParallelMultiInstanceProcessor
+    extends ActivityProcessor<Activity, MultiInstanceState> {
   @Override
-  public TriggerResult dotrigger(
-      ProcessInstanceTrigger trigger,
+  public TriggerResult triggerFlowElement(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
 
-    if (trigger.isTerminate()) {
-      return new TriggerResult(
-          terminate((MultiInstanceState) oldState), Set.of(), Set.of(), Set.of(), Variables.EMPTY);
-    }
-
     return switch (oldState.getState()) {
-      case READY -> triggerWhenInit(
+      case READY -> triggerWhenReady(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
       case ACTIVE -> triggerWhenWaiting(
           trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
@@ -40,14 +37,14 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
     };
   }
 
-  private TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger,
+  private TriggerResult triggerWhenReady(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
-    Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
+    Set<Trigger> subProcessTriggers = new HashSet<>();
     for (int i = 0; i < inputCollection.size(); i++) {
       Variables updatedVariables =
           variables.remove(element.getLoopCharacteristics().getInputCollection());
@@ -57,13 +54,11 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
           updatedVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
       subProcessTriggers.add(
-          new ProcessInstanceTrigger(
+          new FlowElementNewProcessInstanceTrigger(
               new ProcessInstanceKey(UUID.randomUUID()),
               processInstance.getProcessInstanceKey(),
               element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
               element.getId(),
-              false,
-              trigger.getInputFlowId(),
               updatedVariables));
     }
     return new TriggerResult(
@@ -75,7 +70,7 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
   }
 
   private TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
@@ -104,11 +99,5 @@ public class ParallelMultiInstanceProcessor extends StateProcessor<Activity, Mul
   @Override
   public MultiInstanceState initialState() {
     return new MultiInstanceState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
-  }
-
-  @Override
-  public MultiInstanceState terminate(MultiInstanceState oldState) {
-    return new MultiInstanceState(
-        ActivityStateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getLoopCnt());
   }
 }

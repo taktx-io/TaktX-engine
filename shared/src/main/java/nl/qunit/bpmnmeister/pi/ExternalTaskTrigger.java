@@ -10,18 +10,18 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 public class ExternalTaskTrigger {
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
-  private final BaseElementId externalTaskId;
+  private final BaseElementId elementId;
   private final Variables variables;
 
   @JsonCreator
   public ExternalTaskTrigger(
       @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("externalTaskId") BaseElementId externalTaskId,
+      @JsonProperty("externalTaskId") BaseElementId elementId,
       @JsonProperty("variables") Variables variables) {
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
-    this.externalTaskId = externalTaskId;
+    this.elementId = elementId;
     this.variables = variables;
   }
 
@@ -33,7 +33,7 @@ public class ExternalTaskTrigger {
         + ", processDefinitionKey="
         + processDefinitionKey
         + ", externalTaskId='"
-        + externalTaskId
+        + elementId
         + '\''
         + ", variables="
         + variables

@@ -7,7 +7,7 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class ServiceTaskState extends ActivityState {
+public class ServiceTaskState extends TaskState {
 
   @JsonCreator
   public ServiceTaskState(

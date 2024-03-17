@@ -7,9 +7,11 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
@@ -21,24 +23,38 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   private static final Logger LOG = Logger.getLogger(SubProcessProcessor.class);
 
   @Override
-  protected TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerFlowElement(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       SubProcess element,
       SubProcessState oldState,
       Variables variables) {
-    Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
+    if (oldState.getState() == ActivityStateEnum.READY) {
+      return triggerWhenReady(trigger, processInstance, element, oldState, variables);
+    } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
+      return triggerWhenActive(trigger, processInstance, element, oldState, variables);
+    } else {
+      LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
+      return null;
+    }
+  }
+
+  protected TriggerResult triggerWhenReady(
+      FlowElementTrigger trigger,
+      ProcessInstance processInstance,
+      SubProcess element,
+      SubProcessState oldState,
+      Variables variables) {
+    Set<Trigger> subProcessTriggers = new HashSet<>();
     BaseElementId startElement = getStartEvent(element);
 
-    ProcessInstanceTrigger subProcessTrigger =
-        new ProcessInstanceTrigger(
+    FlowElementNewProcessInstanceTrigger subProcessTrigger =
+        new FlowElementNewProcessInstanceTrigger(
             new ProcessInstanceKey(UUID.randomUUID()),
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             startElement,
-            false,
-            BaseElementId.NONE,
-            trigger.getVariables());
+            variables);
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
         new SubProcessState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId());
@@ -46,9 +62,8 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
         newSubProcessState, Set.of(), Set.of(), subProcessTriggers, Variables.EMPTY);
   }
 
-  @Override
-  protected TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerWhenActive(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       SubProcess element,
       SubProcessState oldState,
@@ -71,10 +86,5 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   @Override
   public SubProcessState initialState() {
     return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID());
-  }
-
-  @Override
-  public SubProcessState terminate(SubProcessState oldState) {
-    return new SubProcessState(ActivityStateEnum.TERMINATED, oldState.getElementInstanceId());
   }
 }

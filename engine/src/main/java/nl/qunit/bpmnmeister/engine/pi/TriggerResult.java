@@ -6,16 +6,17 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
 public class TriggerResult {
+
   private final BpmnElementState newElementState;
   private final Set<BaseElementId> newActiveFlows;
   private final Set<BaseElementId> externalTasks;
-  private final Set<ProcessInstanceTrigger> newProcessInstanceTriggers;
+  private final Set<Trigger> newProcessInstanceTriggers;
   private final Variables variables;
 
   @JsonCreator
@@ -23,8 +24,7 @@ public class TriggerResult {
       @Nonnull @JsonProperty("newElementState") BpmnElementState newElementState,
       @Nonnull @JsonProperty("newActiveFlows") Set<BaseElementId> newActiveFlows,
       @Nonnull @JsonProperty("externalTasks") Set<BaseElementId> externalTasks,
-      @Nonnull @JsonProperty("newProcessInstanceTriggers")
-          Set<ProcessInstanceTrigger> newProcessInstanceTriggers,
+      @Nonnull @JsonProperty("newProcessInstanceTriggers") Set<Trigger> newProcessInstanceTriggers,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;

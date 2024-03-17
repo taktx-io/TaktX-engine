@@ -5,8 +5,8 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 import org.jboss.logging.Logger;
@@ -17,7 +17,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
 
   @Override
   protected TriggerResult triggerEvent(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       StartEvent element,
       StartEventState oldState) {
@@ -32,10 +32,5 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
   @Override
   public StartEventState initialState() {
     return new StartEventState(UUID.randomUUID());
-  }
-
-  @Override
-  public StartEventState terminate(StartEventState oldState) {
-    return new StartEventState(oldState.getElementInstanceId());
   }
 }

@@ -5,21 +5,26 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 
 @ApplicationScoped
 public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, ServiceTaskState> {
+
   @Override
-  protected TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerFlowElement(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
+    if (oldState.getState() != ActivityStateEnum.READY) {
+      return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Variables.EMPTY);
+    }
     return new TriggerResult(
         new ServiceTaskState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId()),
         Set.of(),
@@ -29,12 +34,16 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   }
 
   @Override
-  protected TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerExternalTaskResponse(
+      ExternalTaskResponseTrigger trigger,
       ProcessInstance processInstance,
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
+    if (oldState.getState() != ActivityStateEnum.ACTIVE) {
+      return new TriggerResult(oldState, Set.of(), Set.of(), Set.of(), Variables.EMPTY);
+    }
+
     return new TriggerResult(
         new ServiceTaskState(ActivityStateEnum.FINISHED, oldState.getElementInstanceId()),
         element.getOutgoing(),
@@ -46,10 +55,5 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   @Override
   public ServiceTaskState initialState() {
     return new ServiceTaskState(ActivityStateEnum.READY, UUID.randomUUID());
-  }
-
-  @Override
-  public ServiceTaskState terminate(ServiceTaskState oldState) {
-    return new ServiceTaskState(ActivityStateEnum.TERMINATED, oldState.getElementInstanceId());
   }
 }

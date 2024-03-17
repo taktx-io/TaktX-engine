@@ -7,9 +7,10 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pi.FlowElementNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
@@ -21,33 +22,27 @@ public class SequentialMultiInstanceProcessor
   private static final Logger LOG = Logger.getLogger(SequentialMultiInstanceProcessor.class);
 
   @Override
-  public TriggerResult dotrigger(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerFlowElement(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
-
-    if (trigger.isTerminate()) {
-      return new TriggerResult(
-          terminate((MultiInstanceState) oldState), Set.of(), Set.of(), Set.of(), Variables.EMPTY);
+    if (oldState.getState() == ActivityStateEnum.READY) {
+      return triggerFlowElementReady(trigger, processInstance, element, oldState, variables);
+    } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
+      return triggerFlowElementActive(trigger, processInstance, element, oldState, variables);
     }
-
-    return switch (oldState.getState()) {
-      case READY -> triggerWhenInit(
-          trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
-      case ACTIVE -> triggerWhenWaiting(
-          trigger, processInstance, (Activity) element, (MultiInstanceState) oldState, variables);
-      default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
-    };
+    return null;
   }
 
-  protected TriggerResult triggerWhenInit(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerFlowElementReady(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
+
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
 
     if (!inputCollection.isEmpty()) {
@@ -71,8 +66,8 @@ public class SequentialMultiInstanceProcessor
     }
   }
 
-  protected TriggerResult triggerWhenWaiting(
-      ProcessInstanceTrigger trigger,
+  protected TriggerResult triggerFlowElementActive(
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
@@ -97,7 +92,7 @@ public class SequentialMultiInstanceProcessor
   }
 
   private static TriggerResult triggerIteration(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       Activity element,
       MultiInstanceState oldState,
@@ -109,14 +104,12 @@ public class SequentialMultiInstanceProcessor
     activityVariables =
         activityVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
-    ProcessInstanceTrigger newProcessInstanceTrigger =
-        new ProcessInstanceTrigger(
+    FlowElementNewProcessInstanceTrigger newProcessInstanceTrigger =
+        new FlowElementNewProcessInstanceTrigger(
             new ProcessInstanceKey(UUID.randomUUID()),
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             element.getId(),
-            false,
-            trigger.getInputFlowId(),
             activityVariables);
 
     return new TriggerResult(
@@ -130,11 +123,5 @@ public class SequentialMultiInstanceProcessor
   @Override
   public MultiInstanceState initialState() {
     return new MultiInstanceState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
-  }
-
-  @Override
-  public MultiInstanceState terminate(MultiInstanceState oldState) {
-    return new MultiInstanceState(
-        ActivityStateEnum.TERMINATED, oldState.getElementInstanceId(), oldState.getLoopCnt());
   }
 }

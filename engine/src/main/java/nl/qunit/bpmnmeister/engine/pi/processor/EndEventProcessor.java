@@ -1,15 +1,16 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import org.jboss.logging.Logger;
@@ -20,37 +21,30 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
 
   @Override
   protected TriggerResult triggerEvent(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       EndEvent element,
       EndEventState oldState) {
-    Set<ProcessInstanceTrigger> parentProcessInstanceTriggers = Set.of();
+    Set<Trigger> parentProcessInstanceTriggers = new HashSet<>();
     if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
       parentProcessInstanceTriggers.add(
-          new ProcessInstanceTrigger(
+          new FlowElementTrigger(
               processInstance.getParentProcessInstanceKey(),
               ProcessInstanceKey.NONE,
-              ProcessDefinition.NONE,
               element.getParentId(),
-              false,
               BaseElementId.NONE,
               processInstance.getVariables()));
     }
     return new TriggerResult(
         new EndEventState(UUID.randomUUID()),
-        element.getOutgoing(),
         Set.of(),
         Set.of(),
+        parentProcessInstanceTriggers,
         Variables.EMPTY);
   }
 
   @Override
   public EndEventState initialState() {
     return new EndEventState(UUID.randomUUID());
-  }
-
-  @Override
-  public EndEventState terminate(EndEventState oldState) {
-    return new EndEventState(oldState.getElementInstanceId());
   }
 }

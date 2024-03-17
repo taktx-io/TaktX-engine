@@ -5,8 +5,8 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 import org.jboss.logging.Logger;
@@ -18,7 +18,7 @@ public class ExclusiveGatewayProcessor
 
   @Override
   protected TriggerResult triggerDecision(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ExclusiveGateway element,
       ExclusiveGatewayState oldState) {
@@ -33,10 +33,5 @@ public class ExclusiveGatewayProcessor
   @Override
   public ExclusiveGatewayState initialState() {
     return new ExclusiveGatewayState(UUID.randomUUID());
-  }
-
-  @Override
-  public ExclusiveGatewayState terminate(ExclusiveGatewayState oldState) {
-    return new ExclusiveGatewayState(oldState.getElementInstanceId());
   }
 }
