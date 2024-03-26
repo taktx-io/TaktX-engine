@@ -14,16 +14,13 @@ public class LoopCharacteristicsMapper {
       JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
     if (loopCharacteristics != null) {
       TLoopCharacteristics tLoopCharacteristics = loopCharacteristics.getValue();
-      if (tLoopCharacteristics
-          instanceof TMultiInstanceLoopCharacteristics multiInstanceLoopCharacteristics) {
+      if (tLoopCharacteristics instanceof TMultiInstanceLoopCharacteristics tLoopCharacteristics1) {
         return new LoopCharacteristics(
-            multiInstanceLoopCharacteristics.isIsSequential(),
-            ((TMultiInstanceLoopCharacteristics) tLoopCharacteristics)
-                .getLoopDataInputRef()
-                .toString(),
-            ((TMultiInstanceLoopCharacteristics) tLoopCharacteristics)
-                .getInputDataItem()
-                .getName());
+            tLoopCharacteristics1.isIsSequential(),
+            tLoopCharacteristics1.getLoopDataInputRef().toString(),
+            tLoopCharacteristics1.getInputDataItem().getName(),
+            tLoopCharacteristics1.getLoopDataOutputRef().toString(),
+            tLoopCharacteristics1.getOutputDataItem().getName());
       }
     }
     return LoopCharacteristics.NONE;

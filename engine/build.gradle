@@ -22,9 +22,11 @@ dependencies {
     implementation 'com.cronutils:cron-utils:9.2.1'
 
     testImplementation 'io.quarkus:quarkus-junit5'
-
+    testImplementation 'io.quarkus:quarkus-junit5-mockito'
     testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.mockito:mockito-core:3.12.4'
+    testImplementation 'org.testcontainers:testcontainers:1.19.7'
+    testImplementation 'org.testcontainers:kafka:1.19.7'
+    testImplementation 'org.awaitility:awaitility:4.2.1'
 
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'

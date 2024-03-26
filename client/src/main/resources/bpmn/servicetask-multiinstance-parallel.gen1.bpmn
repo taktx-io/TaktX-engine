@@ -7,6 +7,7 @@
   xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt"
   targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0"
   modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+
   <bpmn:process id="service-task-multiinstance-parallel" isExecutable="true">
     <bpmn:ioSpecification>
       <bpmn:dataInput id="inputCollection" name="inputCollection" />
@@ -32,6 +33,8 @@
       <bpmn:multiInstanceLoopCharacteristics isSequential="false">
         <bpmn:loopDataInputRef>inputCollection</bpmn:loopDataInputRef>
         <bpmn:inputDataItem name="inputElement"/>
+        <bpmn:outputDataItem name="outputElement"/>
+        <bpmn:loopDataOutputRef>outputCollection</bpmn:loopDataOutputRef>
       </bpmn:multiInstanceLoopCharacteristics>
     </bpmn:serviceTask>
     <bpmn:serviceTask id="create-collection-id" name="Create Collection">

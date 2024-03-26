@@ -4,6 +4,7 @@ import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_START_COMMAND_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_ACTIVATION_STORE_NAME;
@@ -78,6 +79,7 @@ public class ProcessDefinitionTopologyProducer {
   @Inject ScheduleCommandFactory scheduleCommandFactory;
   @Inject Clock clock;
   @Inject ProcessorProvider processorProvider;
+  @Inject KeyValueStoreSupplier keyValueStoreSupplier;
 
   @Produces
   public Topology buildTopology() {
@@ -121,7 +123,7 @@ public class ProcessDefinitionTopologyProducer {
   private void setupProcessInstanceStream(StreamsBuilder builder) {
     builder.addStateStore(
         keyValueStoreBuilder(
-            persistentKeyValueStore(PROCESS_INSTANCE_STORE_NAME),
+            keyValueStoreSupplier.get(PROCESS_INSTANCE_STORE_NAME),
             PROCESS_INSTANCE_KEY_SERDE,
             PROCESS_INSTANCE_SERDE));
 
@@ -132,15 +134,21 @@ public class ProcessDefinitionTopologyProducer {
             .process(
                 () -> new ProcessInstanceProcessor(processorProvider), PROCESS_INSTANCE_STORE_NAME)
             .branch(
+                (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger);
 
     branches[0]
+        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
+        .to(
+            PROCESS_INSTANCE_TOPIC.getTopicName(),
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_SERDE));
+    branches[1]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (Trigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
-    branches[1]
+    branches[2]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
         .to(
             EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
@@ -151,7 +159,7 @@ public class ProcessDefinitionTopologyProducer {
     StreamsBuilder stateStore =
         builder.addStateStore(
             keyValueStoreBuilder(
-                persistentKeyValueStore(SCHEDULES_STORE_NAME),
+                keyValueStoreSupplier.get(SCHEDULES_STORE_NAME),
                 SCHEDULE_KEY_SERDE,
                 SCHEDULE_COMMAND_SERDE));
 
@@ -174,7 +182,7 @@ public class ProcessDefinitionTopologyProducer {
 
     builder.addStateStore(
         keyValueStoreBuilder(
-            persistentKeyValueStore(UNIQUE_KEY_DEFINITIONS_STORE_NAME),
+            keyValueStoreSupplier.get(UNIQUE_KEY_DEFINITIONS_STORE_NAME),
             Serdes.String(),
             DEFINITIONS_SERDE));
 
@@ -223,7 +231,7 @@ public class ProcessDefinitionTopologyProducer {
   private void setupActivationStream(StreamsBuilder builder) {
     builder.addStateStore(
         keyValueStoreBuilder(
-            persistentKeyValueStore(PROCESS_DEFINITION_ACTIVATION_STORE_NAME),
+            keyValueStoreSupplier.get(PROCESS_DEFINITION_ACTIVATION_STORE_NAME),
             PROCESS_DEFINITION_KEY_SERDE,
             PROCESS_ACTIVATION_SERDE));
 

@@ -19,14 +19,11 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = SubProcessState.class),
 })
 public abstract class BpmnElementState {
-  UUID elementInstanceId;
+  private final UUID elementInstanceId;
+  private final int passedCnt;
 
-  protected BpmnElementState(UUID elementInstanceId) {
+  protected BpmnElementState(UUID elementInstanceId, int passedCnt) {
     this.elementInstanceId = elementInstanceId;
-  }
-
-  @Override
-  public String toString() {
-    return "BpmnElementState{" + "elementInstanceId=" + elementInstanceId + '}';
+    this.passedCnt = passedCnt;
   }
 }

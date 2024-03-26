@@ -7,6 +7,7 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
@@ -24,15 +25,19 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
       TaskState oldState,
       Variables variables) {
     return new TriggerResult(
-        new TaskState(ActivityStateEnum.FINISHED, oldState.getElementInstanceId()),
+        new TaskState(
+            ActivityStateEnum.FINISHED,
+            oldState.getElementInstanceId(),
+            oldState.getPassedCnt() + 1),
+        element.getOutgoing(),
         Set.of(),
         Set.of(),
-        Set.of(),
+        ThrowingEvent.NOOP,
         Variables.EMPTY);
   }
 
   @Override
   public TaskState initialState() {
-    return new TaskState(ActivityStateEnum.READY, UUID.randomUUID());
+    return new TaskState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
   }
 }

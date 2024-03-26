@@ -9,7 +9,9 @@ import lombok.Getter;
 @Getter
 public class EndEventState extends EventState {
   @JsonCreator
-  public EndEventState(@Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId) {
-    super(elementInstanceId);
+  public EndEventState(
+      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("passedCnt") int passedCnt) {
+    super(elementInstanceId, passedCnt);
   }
 }

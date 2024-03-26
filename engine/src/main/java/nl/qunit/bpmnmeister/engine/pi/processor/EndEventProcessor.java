@@ -8,9 +8,11 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
@@ -37,12 +39,20 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
               BaseElementId.NONE,
               processInstance.getVariables()));
     }
+    EndEventState newState =
+        new EndEventState(oldState.getElementInstanceId(), oldState.getPassedCnt() + 1);
+    ThrowingEvent endEvent = new EndThrowingEvent();
     return new TriggerResult(
-        oldState, Set.of(), Set.of(), processInstanceTriggers, Variables.EMPTY);
+        newState,
+        Set.of(),
+        Set.of(),
+        processInstanceTriggers,
+        new EndThrowingEvent(),
+        Variables.EMPTY);
   }
 
   @Override
   public EndEventState initialState() {
-    return new EndEventState(UUID.randomUUID());
+    return new EndEventState(UUID.randomUUID(), 0);
   }
 }

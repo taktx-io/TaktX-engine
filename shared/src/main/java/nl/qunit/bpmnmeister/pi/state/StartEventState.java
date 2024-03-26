@@ -9,7 +9,8 @@ import lombok.Getter;
 public class StartEventState extends EventState {
   @JsonCreator
   public StartEventState(
-      @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId) {
-    super(elementInstanceId);
+      @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId,
+      @JsonProperty("passedCnt") int passedCnt) {
+    super(elementInstanceId, passedCnt);
   }
 }

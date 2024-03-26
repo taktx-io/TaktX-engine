@@ -90,7 +90,8 @@ public class ProcessInstanceMigrationProcessor
             processInstance.getProcessInstanceKey(),
             newProcessDefinition,
             new ElementStates(newElementStates),
-            processInstance.getVariables());
+            processInstance.getVariables(),
+            processInstance.getProcessInstanceState());
 
     processInstanceStore.put(triggerRecord.key(), newProcessInstance);
   }

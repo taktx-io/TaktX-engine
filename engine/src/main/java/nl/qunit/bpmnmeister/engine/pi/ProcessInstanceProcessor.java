@@ -16,6 +16,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
@@ -27,6 +28,7 @@ import org.jboss.logging.Logger;
 
 public class ProcessInstanceProcessor
     implements Processor<ProcessInstanceKey, Trigger, Object, Object> {
+
   private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessor.class);
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
@@ -57,7 +59,8 @@ public class ProcessInstanceProcessor
               trigger.getProcessInstanceKey(),
               trigger.getProcessDefinition(),
               ElementStates.EMPTY,
-              trigger.getVariables());
+              trigger.getVariables(),
+              ProcessInstanceState.START);
     }
 
     ProcessInstance updatedProcessInstance =
@@ -76,7 +79,15 @@ public class ProcessInstanceProcessor
                         externalTaskTrigger.getProcessInstanceKey(),
                         externalTaskTrigger,
                         Instant.now().toEpochMilli())));
-    processInstanceStore.put(processInstance.getProcessInstanceKey(), updatedProcessInstance);
+    processInstanceStore.put(
+        updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
+
+    context.forward(
+        new Record<>(
+            updatedProcessInstance.getProcessInstanceKey(),
+            updatedProcessInstance,
+            Instant.now().toEpochMilli()));
+
     Instant end = Instant.now();
     LOG.info("Processing took " + (end.toEpochMilli() - start.toEpochMilli()) + " ms");
   }
@@ -124,6 +135,9 @@ public class ProcessInstanceProcessor
               .put(trigger.getElementId(), triggerResult.getNewElementState());
 
       Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
+
+      ProcessInstanceState newProcessInstanceState =
+          triggerResult.getThrowingEvent().process(processInstance);
 
       triggerResult
           .getExternalTasks()
@@ -178,7 +192,8 @@ public class ProcessInstanceProcessor
           processInstance.getProcessInstanceKey(),
           processInstance.getProcessDefinition(),
           newElementStates,
-          variablesWithTriggerResult);
+          variablesWithTriggerResult,
+          newProcessInstanceState);
     } else {
       LOG.error("Flow element not found: " + trigger.getElementId());
     }

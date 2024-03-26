@@ -14,8 +14,9 @@ public class MultiInstanceState extends ActivityState {
   public MultiInstanceState(
       @JsonProperty("state") ActivityStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("loopCnt") int loopCnt) {
-    super(state, elementInstanceId);
+      @JsonProperty("loopCnt") int loopCnt,
+      @JsonProperty("passedCnt") int passedCnt) {
+    super(state, elementInstanceId, passedCnt);
     this.loopCnt = loopCnt;
   }
 }

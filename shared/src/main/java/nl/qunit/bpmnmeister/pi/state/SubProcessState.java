@@ -12,7 +12,8 @@ public class SubProcessState extends ActivityState {
   @JsonCreator
   public SubProcessState(
       @Nonnull @JsonProperty("state") ActivityStateEnum state,
-      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId) {
-    super(state, elementInstanceId);
+      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("passedCnt") int passedCnt) {
+    super(state, elementInstanceId, passedCnt);
   }
 }

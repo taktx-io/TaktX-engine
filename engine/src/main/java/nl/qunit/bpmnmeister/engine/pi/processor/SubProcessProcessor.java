@@ -10,6 +10,7 @@ import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
@@ -56,9 +57,15 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             variables);
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
-        new SubProcessState(ActivityStateEnum.ACTIVE, oldState.getElementInstanceId());
+        new SubProcessState(
+            ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), oldState.getPassedCnt());
     return new TriggerResult(
-        newSubProcessState, Set.of(), Set.of(), subProcessTriggers, Variables.EMPTY);
+        newSubProcessState,
+        Set.of(),
+        Set.of(),
+        subProcessTriggers,
+        ThrowingEvent.NOOP,
+        Variables.EMPTY);
   }
 
   protected TriggerResult triggerWhenActive(
@@ -67,8 +74,11 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcessState oldState,
       Variables variables) {
     SubProcessState newSubProcessState =
-        new SubProcessState(ActivityStateEnum.FINISHED, oldState.getElementInstanceId());
-    return finishActivity(processInstance, element, newSubProcessState);
+        new SubProcessState(
+            ActivityStateEnum.FINISHED,
+            oldState.getElementInstanceId(),
+            oldState.getPassedCnt() + 1);
+    return finishActivity(processInstance, element, newSubProcessState, Variables.EMPTY);
   }
 
   private BaseElementId getStartEvent(SubProcess subProcess) {
@@ -81,6 +91,6 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
   @Override
   public SubProcessState initialState() {
-    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID());
+    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
   }
 }

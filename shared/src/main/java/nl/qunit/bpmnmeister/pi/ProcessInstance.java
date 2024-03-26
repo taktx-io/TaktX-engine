@@ -13,6 +13,7 @@ public class ProcessInstance {
   private final ProcessDefinition processDefinition;
   private final ElementStates elementStates;
   private final Variables variables;
+  private final ProcessInstanceState processInstanceState;
 
   @JsonCreator
   public ProcessInstance(
@@ -21,11 +22,31 @@ public class ProcessInstance {
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("processDefinition") ProcessDefinition processDefinition,
       @Nonnull @JsonProperty("elementStates") ElementStates elementStates,
-      @Nonnull @JsonProperty("variables") Variables variables) {
+      @Nonnull @JsonProperty("variables") Variables variables,
+      @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState) {
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.processDefinition = processDefinition;
     this.elementStates = elementStates;
     this.variables = variables;
+    this.processInstanceState = processInstanceState;
+  }
+
+  @Override
+  public String toString() {
+    return "ProcessInstance{"
+        + "parentProcessInstanceKey="
+        + parentProcessInstanceKey
+        + ", processInstanceKey="
+        + processInstanceKey
+        + ", processDefinition="
+        + processDefinition
+        + ", elementStates="
+        + elementStates
+        + ", variables="
+        + variables
+        + ", processInstanceState="
+        + processInstanceState
+        + '}';
   }
 }

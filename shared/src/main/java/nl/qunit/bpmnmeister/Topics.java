@@ -6,6 +6,7 @@ public enum Topics {
   PROCESS_INSTANCE_START_COMMAND_TOPIC("process-instance-start-command-topic"),
   XML_TOPIC("process-definition-xml-topic"),
   SCHEDULE_COMMANDS("schedule-commands"),
+  PROCESS_INSTANCE_TOPIC("process-instance-topic"),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger-topic"),
   EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger-topic"),
   PROCESS_INSTANCE_MIGRATION_TOPIC("process-migration-topic");

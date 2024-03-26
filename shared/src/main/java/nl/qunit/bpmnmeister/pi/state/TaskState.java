@@ -10,7 +10,20 @@ public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
       @JsonProperty("state") ActivityStateEnum state,
-      @JsonProperty("elementInstanceId") UUID elementInstanceId) {
-    super(state, elementInstanceId);
+      @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("passedCnt") int passedCnt) {
+    super(state, elementInstanceId, passedCnt);
+  }
+
+  @Override
+  public String toString() {
+    return "TaskState{"
+        + "elementInstanceId="
+        + getElementInstanceId()
+        + ", state="
+        + getState()
+        + ", passedCnt="
+        + getPassedCnt()
+        + '}';
   }
 }

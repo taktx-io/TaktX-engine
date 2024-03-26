@@ -8,6 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import org.jboss.logging.Logger;
@@ -17,7 +18,10 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   private static final Logger LOG = Logger.getLogger(ActivityProcessor.class);
 
   protected TriggerResult finishActivity(
-      ProcessInstance processInstance, Activity element, ActivityState newState) {
+      ProcessInstance processInstance,
+      Activity element,
+      ActivityState newState,
+      Variables returnVariables) {
     if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
       return new TriggerResult(
           newState,
@@ -31,10 +35,11 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                   element.getParentId(),
                   BaseElementId.NONE,
                   processInstance.getVariables())),
-          Variables.EMPTY);
+          ThrowingEvent.NOOP,
+          returnVariables);
     } else {
       return new TriggerResult(
-          newState, element.getOutgoing(), Set.of(), Set.of(), Variables.EMPTY);
+          newState, element.getOutgoing(), Set.of(), Set.of(), ThrowingEvent.NOOP, returnVariables);
     }
   }
 }

@@ -1,10 +1,12 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
+import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
@@ -40,7 +42,8 @@ public abstract class StateProcessor<E extends BaseElement, S extends BpmnElemen
       E element,
       S oldState,
       Variables variables) {
-    throw new IllegalStateException("External task response not supported: " + trigger);
+    return new TriggerResult(
+        oldState, Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
   }
 
   public abstract S initialState();
