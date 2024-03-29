@@ -1,4 +1,4 @@
-package nl.qunit.bpmnmeister.engine.pi;
+package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;

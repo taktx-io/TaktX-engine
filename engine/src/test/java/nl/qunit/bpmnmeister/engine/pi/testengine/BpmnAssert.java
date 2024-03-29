@@ -1,7 +1,6 @@
-package nl.qunit.bpmnmeister.engine.pi;
+package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 
 public class BpmnAssert {
 

@@ -1,4 +1,4 @@
-package nl.qunit.bpmnmeister.engine.pi;
+package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;

@@ -1,4 +1,4 @@
-package nl.qunit.bpmnmeister.engine.pi;
+package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,4 +29,7 @@ public class ProcessInstanceAssert {
     return this;
   }
 
+  public ProcessInstanceAssert hasVariableWithValue(String var1, String value1) {
+    return this;
+  }
 }

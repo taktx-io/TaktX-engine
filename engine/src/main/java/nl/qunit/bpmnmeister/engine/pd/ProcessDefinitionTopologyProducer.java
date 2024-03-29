@@ -204,7 +204,7 @@ public class ProcessDefinitionTopologyProducer {
                 initializer,
                 aggregator,
                 Materialized.<String, ProcessDefinition>as(
-                        persistentKeyValueStore(PROCESS_DEFINITION_PARSED_STORE))
+                    keyValueStoreSupplier.get(PROCESS_DEFINITION_PARSED_STORE))
                     .withKeySerde(Serdes.String())
                     .withValueSerde(PROCESS_DEFINITION_SERDE))
             .toStream()

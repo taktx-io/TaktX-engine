@@ -6,5 +6,9 @@ public enum ProcessInstanceState {
   SUSPENDED,
   COMPLETED,
   TERMINATED,
-  FAILED
+  FAILED;
+
+  public boolean isFinished() {
+    return this == COMPLETED || this == TERMINATED || this == FAILED;
+  }
 }

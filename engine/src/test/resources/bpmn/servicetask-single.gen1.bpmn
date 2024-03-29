@@ -1,22 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt"
-  targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0"
-  modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
   <bpmn:process id="service-task-single" isExecutable="true">
     <bpmn:documentation>documen</bpmn:documentation>
-    <bpmn:startEvent id="StartEvent_1">
+    <bpmn:startEvent id="StartEvent_2">
       <bpmn:outgoing>Flow_0v3edbs</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:sequenceFlow id="Flow_0v3edbs" sourceRef="StartEvent_1" targetRef="service-task-id" />
-    <bpmn:endEvent id="Event_0gfxmm9">
+    <bpmn:sequenceFlow id="Flow_0v3edbs" sourceRef="StartEvent_2" targetRef="service-task-id" />
+    <bpmn:endEvent id="EndEvent_2">
       <bpmn:incoming>Flow_00uez6y</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="service-task-id" targetRef="Event_0gfxmm9" />
+    <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="service-task-id" targetRef="EndEvent_2" />
     <bpmn:serviceTask id="service-task-id" name="ServiceTask">
       <bpmn:extensionElements>
         <zeebe:taskDefinition />
@@ -30,10 +23,10 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="service-task-single">
-      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_2">
         <dc:Bounds x="179" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0gfxmm9_di" bpmnElement="Event_0gfxmm9">
+      <bpmndi:BPMNShape id="Event_0gfxmm9_di" bpmnElement="EndEvent_2">
         <dc:Bounds x="642" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_131f5e1_di" bpmnElement="service-task-id">
@@ -51,5 +44,3 @@
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
-
-
