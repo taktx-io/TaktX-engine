@@ -240,8 +240,13 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilCompleted() {
+    return waitUntilCompleted(DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilCompleted(Duration duration) {
 
     activeProcessInstance = Awaitility.await()
+        .atMost(duration)
         .until(() -> {
           ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
               activeProcessInstance.getProcessInstanceKey());

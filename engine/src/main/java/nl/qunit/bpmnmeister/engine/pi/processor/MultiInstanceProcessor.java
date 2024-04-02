@@ -3,10 +3,12 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import jakarta.inject.Inject;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -15,9 +17,13 @@ import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
+import org.camunda.feel.api.EvaluationResult;
 
 public abstract class MultiInstanceProcessor
     extends ActivityProcessor<Activity, MultiInstanceState> {
+
+  @Inject FeelExpressionHandler feelExpressionHandler;
+
   @Override
   public TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
@@ -85,16 +91,30 @@ public abstract class MultiInstanceProcessor
     // Store the output element in the output collection
     ArrayNode outputCollection =
         (ArrayNode) variables.get(element.getLoopCharacteristics().getOutputCollection());
-    int loopsReceived = oldState.getLoopCnt();
 
-    JsonNode outputElement = variables.get(element.getLoopCharacteristics().getOutputElement());
-    if (outputElement != null) {
-      outputCollection.add(outputElement);
+    String outputElement = element.getLoopCharacteristics().getOutputElement().trim();
+    JsonNode outputElementNode;
+    if (outputElement.startsWith("=")) {
+      EvaluationResult evaluationResult =
+          feelExpressionHandler.processFeelExpression(outputElement.substring(1), variables);
+      if (evaluationResult.isSuccess()) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        outputElementNode = objectMapper.valueToTree(evaluationResult.result());
+      } else {
+        outputElementNode = null;
+      }
+    } else {
+      outputElementNode = variables.get(outputElement);
+    }
+    if (outputElementNode != null) {
+      outputCollection.add(outputElementNode);
     }
 
     Variables returnVariables =
         new Variables(Map.of())
             .put(element.getLoopCharacteristics().getOutputCollection(), outputCollection);
+
+    int loopsReceived = oldState.getLoopCnt() + 1;
 
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
     if (loopsReceived < inputCollection.size()) {
@@ -106,7 +126,7 @@ public abstract class MultiInstanceProcessor
           new MultiInstanceState(
               ActivityStateEnum.ACTIVE,
               oldState.getElementInstanceId(),
-              loopsReceived + 1,
+              loopsReceived,
               oldState.getPassedCnt() + 1),
           Set.of(),
           Set.of(),
@@ -118,7 +138,7 @@ public abstract class MultiInstanceProcessor
           new MultiInstanceState(
               ActivityStateEnum.FINISHED,
               oldState.getElementInstanceId(),
-              loopsReceived + 1,
+              loopsReceived,
               oldState.getPassedCnt() + 1);
       return finishActivity(processInstance, element, newState, returnVariables);
     }

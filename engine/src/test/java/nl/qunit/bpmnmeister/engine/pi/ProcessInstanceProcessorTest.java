@@ -1,10 +1,16 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
+import static org.mockito.Mockito.times;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -30,7 +36,7 @@ class ProcessInstanceProcessorTest {
     bpmnTestEngine.clear();
   }
 
-  @Test @Order(2)
+  @Test
   void testProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
     bpmnTestEngine
@@ -43,7 +49,7 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1");
   }
 
-  @Test @Order(3)
+  @Test
   void testSubProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
     LOG.info("testSubProcessTaskSingle");
@@ -68,7 +74,7 @@ class ProcessInstanceProcessorTest {
   }
 
 
-  @Test @Order(1)
+  @Test
   void testProcessServiceTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
 
@@ -84,4 +90,20 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("service-task-id")
         .hasPassedElement("EndEvent_2");
   }
+
+  @Test
+  void testProcessTaskMultiInstanceParallel()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinition("/bpmn/task-multiinstance-parallel.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", new String[]{"a", "b", "c"}))
+        .waitUntilCompleted(Duration.ofSeconds(120))
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx", "bxxx", "cxxx"))
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("task-id", 3)
+        .hasPassedElement("EndEvent_1");
+  }
+
 }

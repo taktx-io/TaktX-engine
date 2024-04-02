@@ -17,7 +17,6 @@ import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 
 @ApplicationScoped
 public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
-
   @Override
   protected Set<Trigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
