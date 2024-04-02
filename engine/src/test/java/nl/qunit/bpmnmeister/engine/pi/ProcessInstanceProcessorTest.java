@@ -9,9 +9,14 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 @QuarkusContainerKafkaTest
+@TestMethodOrder(OrderAnnotation.class)
 class ProcessInstanceProcessorTest {
 
   private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessorTest.class);
@@ -25,7 +30,7 @@ class ProcessInstanceProcessorTest {
     bpmnTestEngine.clear();
   }
 
-  @Test
+  @Test @Order(2)
   void testProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
     bpmnTestEngine
@@ -38,7 +43,32 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1");
   }
 
-  @Test
+  @Test @Order(3)
+  void testSubProcessTaskSingle()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+    LOG.info("testSubProcessTaskSingle");
+    bpmnTestEngine
+        .deployProcessDefinition("/bpmn/subprocess-single.gen1.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilChildProcessIsStarted()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("SubStartEvent_1")
+        .hasPassedElement("SubTask_1")
+        .hasPassedElement("SubEndEvent_1")
+        .toProcessLevel()
+        .assertThatParentProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasNotPassedElement("EndEvent_1")
+        .toProcessLevel()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("SubProcess_1")
+        .hasPassedElement("EndEvent_1");
+  }
+
+
+  @Test @Order(1)
   void testProcessServiceTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
 
@@ -54,5 +84,4 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("service-task-id")
         .hasPassedElement("EndEvent_2");
   }
-
 }

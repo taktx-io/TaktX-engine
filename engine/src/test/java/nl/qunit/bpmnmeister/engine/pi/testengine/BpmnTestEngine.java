@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import nl.qunit.bpmnmeister.Topics;
@@ -62,12 +63,12 @@ public class BpmnTestEngine {
   @Channel("process-instance-start-command-outgoing")
   Emitter<ProcessInstanceStartCommand> startCommandEmitter;
 
-  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ProcessDefinition> processDefinitionMap  = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<FlowElementTrigger>> definitionToInstancesMap = new HashMap<>();
+  private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<Trigger>> definitionToInstancesMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
-  private ProcessInstanceKey activeProcessInstanceKey;
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
 
@@ -81,21 +82,21 @@ public class BpmnTestEngine {
   }
 
   @Incoming("process-instance-trigger-incoming")
-  public void consume(FlowElementTrigger flowElementTrigger) {
-    LOG.info("Received flow element trigger: " + flowElementTrigger);
-    if (!flowElementTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
+  public void consume(Trigger trigger) {
+    LOG.info("Received flow element trigger: " + trigger);
+    if (!trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
       ProcessDefinitionKey ProcessDefinitionKey = nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
-          flowElementTrigger.getProcessDefinition());
-      ConcurrentLinkedQueue<FlowElementTrigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
+          trigger.getProcessDefinition());
+      ConcurrentLinkedQueue<Trigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
           ProcessDefinitionKey, k -> new ConcurrentLinkedQueue<>());
-      processInstanceKeyList.add(flowElementTrigger);
+      processInstanceKeyList.add(trigger);
     }
   }
 
   @Incoming("external-task-trigger-incoming")
   public void consume(ExternalTaskTrigger externalTaskTrigger) {
     LOG.info("Received external task trigger: " + externalTaskTrigger);
-    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerMap.computeIfAbsent(
+    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.computeIfAbsent(
         externalTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     externalTaskTriggers.add(externalTaskTrigger);
   }
@@ -103,9 +104,10 @@ public class BpmnTestEngine {
   @Incoming("process-instance-incoming")
   public void consume(ProcessInstance processInstance) {
     LOG.info("Received process instance: " + processInstance);
-    ConcurrentLinkedQueue<ProcessInstance> processInstances1 = processInstanceMap.computeIfAbsent(
+    ConcurrentLinkedQueue<ProcessInstance> processInstances1 = processInstanceQueueMap.computeIfAbsent(
         processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     processInstances1.add(processInstance);
+    processInstanceMap.put(processInstance.getProcessInstanceKey(), processInstance);
   }
 
   @Incoming("process-definition-parsed-incoming")
@@ -123,7 +125,7 @@ public class BpmnTestEngine {
   }
 
   public ExternalTaskTrigger pollExternalTask(String elementId) {
-    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerMap.get(activeProcessInstanceKey);
+    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.get(activeProcessInstance.getProcessInstanceKey());
     if (externalTaskTriggers == null) {
       return null;
     }
@@ -141,6 +143,7 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine deployProcessDefinition(String filename)
       throws JAXBException, NoSuchAlgorithmException, IOException {
+    LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     Integer generation = GenerationExtractor.getGenerationFromString(filename).orElseThrow();
     Definitions definitions = BpmnParser.parse(xml, generation);
@@ -168,14 +171,14 @@ public class BpmnTestEngine {
         processDefinitionKey, startEventId, variables);
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey, startCommand));
 
-    activeProcessInstanceKey = Awaitility.await()
+    ProcessInstanceKey activeProcessInstanceKey = Awaitility.await()
         .until(() -> {
-          ConcurrentLinkedQueue<FlowElementTrigger> flowElementTriggers = definitionToInstancesMap.get(
+          ConcurrentLinkedQueue<Trigger> flowElementTriggers = definitionToInstancesMap.get(
               processDefinitionKey);
           if (flowElementTriggers == null || flowElementTriggers.isEmpty()) {
             return null;
           }
-          FlowElementTrigger poll = flowElementTriggers.poll();
+          Trigger poll = flowElementTriggers.poll();
           if (poll != null && poll.getProcessDefinition() != null && ProcessDefinitionKey.of(poll.getProcessDefinition()).equals(processDefinitionKey)) {
             return poll.getProcessInstanceKey();
           }
@@ -184,7 +187,7 @@ public class BpmnTestEngine {
 
     activeProcessInstance = Awaitility.await()
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceMap.get(
+          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
               activeProcessInstanceKey);
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
@@ -207,6 +210,30 @@ public class BpmnTestEngine {
                 .getId().equals(elementId));
     return this;
   }
+
+
+  public BpmnTestEngine waitUntilChildProcessIsStarted() {
+    activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
+        .until(() -> {
+          Optional<ProcessInstanceKey> first = processInstanceQueueMap.keySet().stream()
+              .filter(k -> k.getParentProcessInstanceId().equals(activeProcessInstance.getProcessInstanceKey()))
+              .findFirst();
+          if (first.isEmpty()) {
+            return null;
+          }
+          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(first.get());
+          if (processInstances == null || processInstances.isEmpty()) {
+            return null;
+          }
+          ProcessInstance poll = processInstances.poll();
+          if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceState().isStarted()) {
+            return poll;
+          }
+          return null;
+        }, Objects::nonNull);
+    return this;
+  }
+
   public BpmnTestEngine andRespondWithSuccess(Variables of) {
     triggerExternalTaskResponse(activeExternalTaskTrigger, new ExternalTaskResponseResult(true, ""), of);
     return this;
@@ -216,14 +243,14 @@ public class BpmnTestEngine {
 
     activeProcessInstance = Awaitility.await()
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceMap.get(
-              activeProcessInstanceKey);
+          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
+              activeProcessInstance.getProcessInstanceKey());
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
           ProcessInstance poll = processInstances.poll();
           if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-              .equals(activeProcessInstanceKey) && poll.getProcessInstanceState().isFinished()) {
+              .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getProcessInstanceState().isFinished()) {
             return poll;
           }
           return null;
@@ -232,13 +259,24 @@ public class BpmnTestEngine {
   }
 
   public ProcessInstanceAssert assertThatProcess() {
-    return new ProcessInstanceAssert(activeProcessInstance);
+    return new ProcessInstanceAssert(activeProcessInstance, this);
   }
 
   public void clear() {
-    processInstanceMap.clear();
-    externalTaskTriggerMap.clear();
+    processInstanceQueueMap.clear();
+    externalTaskTriggerQueueMap.clear();
     processDefinitionMap.clear();
     definitionToInstancesMap.clear();
+    processInstanceMap.clear();
+    activeProcessDefintion = null;
+    activeProcessInstance = null;
+    activeExternalTaskTrigger = null;
+  }
+
+  public ProcessInstanceAssert assertThatParentProcess() {
+    ProcessInstance parentProcessInstance = processInstanceMap.get(
+        activeProcessInstance.getParentProcessInstanceKey());
+    activeProcessInstance = parentProcessInstance;
+    return new ProcessInstanceAssert(parentProcessInstance, this);
   }
 }

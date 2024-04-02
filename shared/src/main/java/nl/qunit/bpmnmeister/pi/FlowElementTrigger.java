@@ -17,12 +17,8 @@ public class FlowElementTrigger extends Trigger {
           BaseElementId.NONE,
           BaseElementId.NONE,
           Variables.EMPTY);
-  private final ProcessInstanceKey parentProcessInstanceKey;
-  private final ProcessInstanceKey processInstanceKey;
-  private final ProcessDefinition processDefinition;
-  private final BaseElementId elementId;
+
   private final BaseElementId inputFlowId;
-  private final Variables variables;
 
   @JsonCreator
   public FlowElementTrigger(
@@ -33,11 +29,7 @@ public class FlowElementTrigger extends Trigger {
       @JsonProperty("elementId") @Nonnull BaseElementId elementId,
       @JsonProperty("inputFlowId") @Nonnull BaseElementId inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
-    this.processInstanceKey = processInstanceKey;
-    this.parentProcessInstanceKey = parentProcessInstanceKey;
-    this.processDefinition = processDefinition;
-    this.elementId = elementId;
+    super(processInstanceKey, parentProcessInstanceKey, processDefinition, elementId, variables);
     this.inputFlowId = inputFlowId;
-    this.variables = variables;
   }
 }

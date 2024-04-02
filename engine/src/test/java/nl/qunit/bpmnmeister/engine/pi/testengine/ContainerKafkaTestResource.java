@@ -1,13 +1,10 @@
 package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.utility.DockerImageName;
 
 public class ContainerKafkaTestResource implements QuarkusTestResourceLifecycleManager {
 

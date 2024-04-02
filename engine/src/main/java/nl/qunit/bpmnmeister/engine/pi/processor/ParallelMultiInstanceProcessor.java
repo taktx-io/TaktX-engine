@@ -39,7 +39,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
           subProcessVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
       subProcessTriggers.add(
           new FlowElementTrigger(
-              new ProcessInstanceKey(UUID.randomUUID()),
+              new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
               processInstance.getProcessInstanceKey(),
               subProcessDefinition,
               element.getId(),

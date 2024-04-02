@@ -12,7 +12,6 @@ import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
@@ -41,7 +40,6 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
     }
     EndEventState newState =
         new EndEventState(oldState.getElementInstanceId(), oldState.getPassedCnt() + 1);
-    ThrowingEvent endEvent = new EndThrowingEvent();
     return new TriggerResult(
         newState,
         Set.of(),

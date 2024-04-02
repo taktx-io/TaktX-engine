@@ -13,7 +13,6 @@ import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.UNIQUE_KEY_DEFINITIONS_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
-import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -204,7 +203,7 @@ public class ProcessDefinitionTopologyProducer {
                 initializer,
                 aggregator,
                 Materialized.<String, ProcessDefinition>as(
-                    keyValueStoreSupplier.get(PROCESS_DEFINITION_PARSED_STORE))
+                        keyValueStoreSupplier.get(PROCESS_DEFINITION_PARSED_STORE))
                     .withKeySerde(Serdes.String())
                     .withValueSerde(PROCESS_DEFINITION_SERDE))
             .toStream()

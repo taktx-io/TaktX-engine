@@ -11,4 +11,8 @@ public enum ProcessInstanceState {
   public boolean isFinished() {
     return this == COMPLETED || this == TERMINATED || this == FAILED;
   }
+
+  public boolean isStarted() {
+    return this == ACTIVE;
+  }
 }

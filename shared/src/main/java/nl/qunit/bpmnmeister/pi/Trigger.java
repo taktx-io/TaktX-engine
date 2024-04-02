@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
@@ -11,19 +12,25 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
   @JsonSubTypes.Type(value = FlowElementTrigger.class),
   @JsonSubTypes.Type(value = ExternalTaskResponseTrigger.class)
 })
+@Getter
 public abstract class Trigger {
 
-  public abstract BaseElementId getElementId();
+  private final ProcessInstanceKey processInstanceKey;
+  private final ProcessInstanceKey parentProcessInstanceKey;
+  private final ProcessDefinition processDefinition;
+  private final BaseElementId elementId;
+  private final Variables variables;
 
-  public abstract Variables getVariables();
-
-  public abstract ProcessInstanceKey getProcessInstanceKey();
-
-  public ProcessInstanceKey getParentProcessInstanceKey() {
-    return ProcessInstanceKey.NONE;
-  }
-
-  public ProcessDefinition getProcessDefinition() {
-    return ProcessDefinition.NONE;
+  protected Trigger(
+      ProcessInstanceKey processInstanceKey,
+      ProcessInstanceKey parentProcessInstanceKey,
+      ProcessDefinition processDefinition,
+      BaseElementId elementId,
+      Variables variables) {
+    this.processInstanceKey = processInstanceKey;
+    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.processDefinition = processDefinition;
+    this.elementId = elementId;
+    this.variables = variables;
   }
 }

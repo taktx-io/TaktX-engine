@@ -49,7 +49,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
     FlowElementTrigger subProcessTrigger =
         new FlowElementTrigger(
-            new ProcessInstanceKey(UUID.randomUUID()),
+            new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             startElement,

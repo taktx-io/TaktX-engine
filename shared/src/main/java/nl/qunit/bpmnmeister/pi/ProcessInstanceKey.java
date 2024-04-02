@@ -14,9 +14,19 @@ public class ProcessInstanceKey {
 
   private final UUID processInstanceId;
 
+  private final ProcessInstanceKey parentProcessInstanceId;
+
   @JsonCreator
-  public ProcessInstanceKey(@JsonProperty("processInstanceId") @Nonnull UUID processInstanceId) {
+  public ProcessInstanceKey(
+      @JsonProperty("processInstanceId") @Nonnull UUID processInstanceId,
+      @JsonProperty("parentProcessInstanceId") @Nonnull
+          ProcessInstanceKey parentProcessInstanceId) {
     this.processInstanceId = processInstanceId;
+    this.parentProcessInstanceId = parentProcessInstanceId;
+  }
+
+  public ProcessInstanceKey(@JsonProperty("processInstanceId") @Nonnull UUID processInstanceId) {
+    this(processInstanceId, ProcessInstanceKey.NONE);
   }
 
   @Override
