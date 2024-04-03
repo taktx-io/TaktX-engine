@@ -38,8 +38,11 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
   }
 
   private static Set<Trigger> getSubProcessTrigger(
-      ProcessInstance processInstance, Activity element, Variables variables,
-      JsonNode inputCollection, int loopCnt) {
+      ProcessInstance processInstance,
+      Activity element,
+      Variables variables,
+      JsonNode inputCollection,
+      int loopCnt) {
     Variables updatedVariables = variables.put("loopCnt", new IntNode(loopCnt));
     JsonNode inputElement = inputCollection.get(loopCnt);
     updatedVariables =
