@@ -48,23 +48,32 @@ class ProcessInstanceProcessorTest {
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 
-    ProcessDefinition processDefinition2 = bpmnTestEngine
+    processDefinition = bpmnTestEngine
         .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition2.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
-    assertThat(processDefinition2.getDefinitions().getGeneration()).isEqualTo(1);
-    assertThat(processDefinition2.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
-    assertThat(processDefinition2.getVersion()).isEqualTo(2);
+    assertThat(processDefinition.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition.getVersion()).isEqualTo(2);
 
-    ProcessDefinition processDefinition3 = bpmnTestEngine
+    processDefinition = bpmnTestEngine
         .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition2.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
-    assertThat(processDefinition2.getDefinitions().getGeneration()).isEqualTo(1);
-    assertThat(processDefinition2.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
-    assertThat(processDefinition2.getVersion()).isEqualTo(2);
+    assertThat(processDefinition.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition.getVersion()).isEqualTo(2);
+
+    processDefinition = bpmnTestEngine
+        .deployProcessDefinition("/bpmn/task-single.gen1.bpmn")
+        .waitForProcessDeployment()
+        .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition.getVersion()).isEqualTo(1);
 
   }
 

@@ -65,9 +65,9 @@ public class BpmnTestEngine {
 
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
-  private final ConcurrentLinkedQueue<ProcessDefinition> processDefinitionQueue = new ConcurrentLinkedQueue<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<Trigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
+  private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
@@ -114,7 +114,7 @@ public class BpmnTestEngine {
   @Incoming("process-definition-parsed-incoming")
   public void consume(ProcessDefinition processDefinition) {
     LOG.info("Received process definition: " + processDefinition);
-    processDefinitionQueue.add(processDefinition);
+    hashToDefinitionMap.put(processDefinition.getDefinitions().getHash(), processDefinition);
   }
 
   public BpmnTestEngine triggerNewProcessInstance(String elementId) {
@@ -155,11 +155,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitForProcessDeployment() {
     activeProcessDefintion = Awaitility.await()
         .until(() -> {
-          ProcessDefinition poll = processDefinitionQueue.poll();
-          if (poll != null && poll.getDefinitions() != null && poll.getDefinitions().equals(definitionsBeingDeployed)) {
-            return poll;
-          }
-          return null;
+          return hashToDefinitionMap.get(definitionsBeingDeployed.getHash());
         }, Objects::nonNull);
 
     return this;
@@ -282,7 +278,6 @@ public class BpmnTestEngine {
   public void clear() {
     processInstanceQueueMap.clear();
     externalTaskTriggerQueueMap.clear();
-    processDefinitionQueue.clear();
     definitionToInstancesMap.clear();
     processInstanceMap.clear();
     activeProcessDefintion = null;
