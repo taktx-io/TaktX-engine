@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 
@@ -27,5 +28,25 @@ public class ServiceTask extends Task {
   protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
     return new ServiceTask(
         getId(), getId(), getIncoming(), outgoing, getImplementation(), LoopCharacteristics.NONE);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    ServiceTask that = (ServiceTask) o;
+    return Objects.equals(implementation, that.implementation);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), implementation);
   }
 }

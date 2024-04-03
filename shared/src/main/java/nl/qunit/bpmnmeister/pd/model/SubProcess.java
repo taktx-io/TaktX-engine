@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 
@@ -42,5 +43,25 @@ public class SubProcess extends Activity {
             parentProcessDefinition.getDefinitions().getHash(),
             process);
     return new ProcessDefinition(definitions, version);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    SubProcess that = (SubProcess) o;
+    return Objects.equals(elements, that.elements);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), elements);
   }
 }

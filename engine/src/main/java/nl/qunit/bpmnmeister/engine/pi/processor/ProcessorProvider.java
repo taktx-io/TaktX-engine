@@ -54,7 +54,7 @@ public class ProcessorProvider {
       processor = subProcessProcessor;
     }
     if (!activity.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
-      if (activity.getLoopCharacteristics().isSequential()) {
+      if (activity.getLoopCharacteristics().getIsSequential()) {
         return sequentialMultiInstanceProcessor;
       } else {
         return parallelMultiInstanceProcessor;

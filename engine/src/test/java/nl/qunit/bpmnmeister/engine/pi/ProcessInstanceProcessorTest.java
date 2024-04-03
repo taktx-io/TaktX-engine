@@ -2,7 +2,6 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
-import static org.mockito.Mockito.times;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
@@ -11,13 +10,14 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
@@ -37,10 +37,42 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
+  void testDeploy()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+    ProcessDefinition processDefinition = bpmnTestEngine
+        .deployProcessDefinition("/bpmn/task-single.gen1.bpmn")
+        .waitForProcessDeployment()
+        .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition.getVersion()).isEqualTo(1);
+
+    ProcessDefinition processDefinition2 = bpmnTestEngine
+        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
+        .waitForProcessDeployment()
+        .deployedProcessDefinition();
+    assertThat(processDefinition2.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition2.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition2.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition2.getVersion()).isEqualTo(2);
+
+    ProcessDefinition processDefinition3 = bpmnTestEngine
+        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
+        .waitForProcessDeployment()
+        .deployedProcessDefinition();
+    assertThat(processDefinition2.getDefinitions().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition2.getDefinitions().getGeneration()).isEqualTo(1);
+    assertThat(processDefinition2.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    assertThat(processDefinition2.getVersion()).isEqualTo(2);
+
+  }
+
+  @Test
   void testProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
     bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/task-single.gen1.bpmn")
         .startProcessInstance(Variables.EMPTY)
         .waitUntilCompleted()
         .assertThatProcess()
@@ -54,7 +86,7 @@ class ProcessInstanceProcessorTest {
       throws IOException, JAXBException, NoSuchAlgorithmException {
     LOG.info("testSubProcessTaskSingle");
     bpmnTestEngine
-        .deployProcessDefinition("/bpmn/subprocess-single.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-single.gen1.bpmn")
         .startProcessInstance(Variables.EMPTY)
         .waitUntilChildProcessIsStarted()
         .waitUntilCompleted()
@@ -79,7 +111,7 @@ class ProcessInstanceProcessorTest {
       throws IOException, JAXBException, NoSuchAlgorithmException {
 
     bpmnTestEngine
-        .deployProcessDefinition("/bpmn/servicetask-single.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
         .startProcessInstance(Variables.EMPTY)
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(Variables.of("var1", "value1"))
@@ -96,9 +128,9 @@ class ProcessInstanceProcessorTest {
       throws IOException, JAXBException, NoSuchAlgorithmException {
 
     bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-multiinstance-parallel.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", new String[]{"a", "b", "c"}))
-        .waitUntilCompleted(Duration.ofSeconds(120))
+        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx", "bxxx", "cxxx"))
         .hasPassedElement("StartEvent_1")
@@ -106,4 +138,36 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1");
   }
 
+  @Test
+  void testProcessTaskMultiInstanceParallelMay()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", IntStream.range(0, 1000)
+            .mapToObj(Integer::toString)
+            .collect(Collectors.toList())))
+        .waitUntilCompleted(Duration.ofSeconds(120))
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("task-id", 1000)
+        .hasPassedElement("EndEvent_1");
+  }
+
+
+  @Test
+  void testProcessTaskMultiInstanceSequential()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx", "bxxx", "cxxx"))
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("task-id", 3)
+        .hasPassedElement("EndEvent_1");
+  }
 }

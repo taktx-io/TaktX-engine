@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import jakarta.annotation.Nonnull;
+import java.util.Objects;
 import lombok.Getter;
 
 @Getter
@@ -28,5 +29,22 @@ public abstract class BaseElement {
   protected BaseElement(@Nonnull BaseElementId id, @Nonnull BaseElementId parentId) {
     this.id = id;
     this.parentId = parentId;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BaseElement that = (BaseElement) o;
+    return Objects.equals(id, that.id) && Objects.equals(parentId, that.parentId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, parentId);
   }
 }

@@ -24,7 +24,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    return getSubProcessTrigger(processInstance, element, variables, loopCnt);
+    return getSubProcessTrigger(processInstance, element, variables, inputCollection, loopCnt);
   }
 
   @Override
@@ -34,12 +34,16 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    return getSubProcessTrigger(processInstance, element, variables, loopCnt);
+    return getSubProcessTrigger(processInstance, element, variables, inputCollection, loopCnt);
   }
 
   private static Set<Trigger> getSubProcessTrigger(
-      ProcessInstance processInstance, Activity element, Variables variables, int loopCnt) {
+      ProcessInstance processInstance, Activity element, Variables variables,
+      JsonNode inputCollection, int loopCnt) {
     Variables updatedVariables = variables.put("loopCnt", new IntNode(loopCnt));
+    JsonNode inputElement = inputCollection.get(loopCnt);
+    updatedVariables =
+        updatedVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
     return Set.of(
         new FlowElementTrigger(

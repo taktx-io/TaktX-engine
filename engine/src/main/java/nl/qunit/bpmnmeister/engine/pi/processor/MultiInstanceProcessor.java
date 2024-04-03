@@ -120,7 +120,7 @@ public abstract class MultiInstanceProcessor
     if (loopsReceived < inputCollection.size()) {
       Set<Trigger> subProcessTriggers =
           getSubProcessTriggersWhenActive(
-              processInstance, element, variables, inputCollection, loopsReceived + 1);
+              processInstance, element, variables, inputCollection, loopsReceived);
 
       return new TriggerResult(
           new MultiInstanceState(

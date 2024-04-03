@@ -61,7 +61,7 @@ public class FlowElements {
       return false;
     }
     FlowElements that = (FlowElements) o;
-    return Objects.equals(elements, that.elements);
+    return elements.values().containsAll(that.elements.values());
   }
 
   @Override

@@ -29,12 +29,15 @@ public class Process extends RootElement {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     Process process = (Process) o;
     return Objects.equals(flowElements, process.flowElements);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(flowElements);
+    return Objects.hash(super.hashCode(), flowElements);
   }
 }

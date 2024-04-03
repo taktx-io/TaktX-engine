@@ -65,12 +65,13 @@ public class BpmnTestEngine {
 
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ProcessDefinition> processDefinitionMap  = new HashMap<>();
+  private final ConcurrentLinkedQueue<ProcessDefinition> processDefinitionQueue = new ConcurrentLinkedQueue<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<Trigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
+  private Definitions definitionsBeingDeployed;
 
 
   @PostConstruct
@@ -113,7 +114,7 @@ public class BpmnTestEngine {
   @Incoming("process-definition-parsed-incoming")
   public void consume(ProcessDefinition processDefinition) {
     LOG.info("Received process definition: " + processDefinition);
-    processDefinitionMap.put(ProcessDefinitionKey.of(processDefinition), processDefinition);
+    processDefinitionQueue.add(processDefinition);
   }
 
   public BpmnTestEngine triggerNewProcessInstance(String elementId) {
@@ -146,20 +147,28 @@ public class BpmnTestEngine {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     Integer generation = GenerationExtractor.getGenerationFromString(filename).orElseThrow();
-    Definitions definitions = BpmnParser.parse(xml, generation);
+    definitionsBeingDeployed = BpmnParser.parse(xml, generation);
     xmlEmitter.send(KafkaRecord.of(filename, xml));
+    return this;
+  }
 
+  public BpmnTestEngine waitForProcessDeployment() {
     activeProcessDefintion = Awaitility.await()
         .until(() -> {
-          for (ProcessDefinitionKey key : processDefinitionMap.keySet()) {
-            if (key.getProcessDefinitionId().equals(definitions.getProcessDefinitionId())
-                && key.getGeneration().equals(generation)) {
-              return processDefinitionMap.get(key);
-            }
+          ProcessDefinition poll = processDefinitionQueue.poll();
+          if (poll != null && poll.getDefinitions() != null && poll.getDefinitions().equals(definitionsBeingDeployed)) {
+            return poll;
           }
           return null;
         }, Objects::nonNull);
 
+    return this;
+  }
+
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
+      throws JAXBException, NoSuchAlgorithmException, IOException {
+    deployProcessDefinition(filename);
+    waitForProcessDeployment();
     return this;
   }
 
@@ -253,11 +262,14 @@ public class BpmnTestEngine {
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstance poll = processInstances.poll();
-          if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-              .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getProcessInstanceState().isFinished()) {
-            return poll;
-          }
+          ProcessInstance poll = null;
+          do {
+            poll = processInstances.poll();
+            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
+                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getProcessInstanceState().isFinished()) {
+              return poll;
+            }
+          } while (poll != null);
           return null;
         }, Objects::nonNull);
     return this;
@@ -270,7 +282,7 @@ public class BpmnTestEngine {
   public void clear() {
     processInstanceQueueMap.clear();
     externalTaskTriggerQueueMap.clear();
-    processDefinitionMap.clear();
+    processDefinitionQueue.clear();
     definitionToInstancesMap.clear();
     processInstanceMap.clear();
     activeProcessDefintion = null;
@@ -283,5 +295,9 @@ public class BpmnTestEngine {
         activeProcessInstance.getParentProcessInstanceKey());
     activeProcessInstance = parentProcessInstance;
     return new ProcessInstanceAssert(parentProcessInstance, this);
+  }
+
+  public ProcessDefinition deployedProcessDefinition() {
+    return activeProcessDefintion;
   }
 }

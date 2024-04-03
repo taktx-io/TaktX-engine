@@ -9,7 +9,7 @@ import lombok.Getter;
 @Getter
 public class LoopCharacteristics {
   public static final LoopCharacteristics NONE = new LoopCharacteristics(false, "", "", "", "");
-  private final boolean isSequential;
+  private final Boolean isSequential;
   private final String inputCollection;
   private final String inputElement;
   private final String outputCollection;
@@ -17,7 +17,7 @@ public class LoopCharacteristics {
 
   @JsonCreator
   public LoopCharacteristics(
-      @JsonProperty("isSequential") boolean isSequential,
+      @JsonProperty("isSequential") Boolean isSequential,
       @Nonnull @JsonProperty("inputCollection") String inputCollection,
       @Nonnull @JsonProperty("inputElement") String inputElement,
       @Nonnull @JsonProperty("outputCollection") String outputCollection,
