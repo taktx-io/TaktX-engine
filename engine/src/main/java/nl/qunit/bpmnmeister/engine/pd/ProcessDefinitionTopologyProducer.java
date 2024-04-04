@@ -14,6 +14,8 @@ import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.UNIQUE_KEY_DEFINITIONS_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
+import io.quarkus.cache.Cache;
+import io.quarkus.cache.CacheName;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -80,6 +82,10 @@ public class ProcessDefinitionTopologyProducer {
   @Inject ProcessorProvider processorProvider;
   @Inject KeyValueStoreSupplier keyValueStoreSupplier;
 
+  @Inject
+  @CacheName("process-instance-cache")
+  Cache processInstanceCache;
+
   @Produces
   public Topology buildTopology() {
     StreamsBuilder builder = new StreamsBuilder();
@@ -131,7 +137,8 @@ public class ProcessDefinitionTopologyProducer {
                 PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                 Consumed.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE))
             .process(
-                () -> new ProcessInstanceProcessor(processorProvider), PROCESS_INSTANCE_STORE_NAME)
+                () -> new ProcessInstanceProcessor(processorProvider, processInstanceCache),
+                PROCESS_INSTANCE_STORE_NAME)
             .branch(
                 (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,

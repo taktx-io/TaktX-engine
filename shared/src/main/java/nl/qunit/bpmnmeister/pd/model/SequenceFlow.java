@@ -43,8 +43,9 @@ public class SequenceFlow extends FlowElement {
       return false;
     }
     SequenceFlow that = (SequenceFlow) o;
-    return Objects.equals(source, that.source) && Objects.equals(target,
-        that.target) && Objects.equals(condition, that.condition);
+    return Objects.equals(source, that.source)
+        && Objects.equals(target, that.target)
+        && Objects.equals(condition, that.condition);
   }
 
   @Override

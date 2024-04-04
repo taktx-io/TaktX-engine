@@ -32,8 +32,8 @@ public abstract class FlowNode extends FlowElement {
       return false;
     }
     FlowNode flowNode = (FlowNode) o;
-    return Objects.equals(incoming, flowNode.incoming) && Objects.equals(outgoing,
-        flowNode.outgoing);
+    return Objects.equals(incoming, flowNode.incoming)
+        && Objects.equals(outgoing, flowNode.outgoing);
   }
 
   @Override

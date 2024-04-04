@@ -54,5 +54,4 @@ public class Task extends Activity {
   protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
     return new Task(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
   }
-
 }

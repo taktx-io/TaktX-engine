@@ -1,11 +1,17 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
+import io.quarkus.cache.Cache;
+import io.quarkus.cache.CacheResult;
+import io.quarkus.cache.CaffeineCache;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
+import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -33,9 +39,11 @@ public class ProcessInstanceProcessor
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
+  private final Cache processInstanceCache;
 
-  public ProcessInstanceProcessor(ProcessorProvider processorProvider) {
+  public ProcessInstanceProcessor(ProcessorProvider processorProvider, Cache processInstanceCache) {
     this.processorProvider = processorProvider;
+    this.processInstanceCache = processInstanceCache;
   }
 
   @Override
@@ -51,7 +59,7 @@ public class ProcessInstanceProcessor
 
     ProcessInstance processInstance;
     if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
-      processInstance = processInstanceStore.get(trigger.getProcessInstanceKey());
+      processInstance = getProcessInstance(trigger.getProcessInstanceKey());
     } else {
       processInstance =
           new ProcessInstance(
@@ -63,24 +71,8 @@ public class ProcessInstanceProcessor
               ProcessInstanceState.START);
     }
 
-    ProcessInstance updatedProcessInstance =
-        trigger(
-            processInstance,
-            trigger,
-            flowElementTrigger ->
-                context.forward(
-                    new Record<>(
-                        flowElementTrigger.getProcessInstanceKey(),
-                        flowElementTrigger,
-                        Instant.now().toEpochMilli())),
-            externalTaskTrigger ->
-                context.forward(
-                    new Record<>(
-                        externalTaskTrigger.getProcessInstanceKey(),
-                        externalTaskTrigger,
-                        Instant.now().toEpochMilli())));
-    processInstanceStore.put(
-        updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
+    ProcessInstance updatedProcessInstance = trigger(processInstance, trigger);
+    storeProcessInstance(updatedProcessInstance);
 
     context.forward(
         new Record<>(
@@ -92,11 +84,24 @@ public class ProcessInstanceProcessor
     LOG.info("Processing took " + (end.toEpochMilli() - start.toEpochMilli()) + " ms");
   }
 
-  public ProcessInstance trigger(
-      ProcessInstance processInstance,
-      Trigger trigger,
-      Consumer<Trigger> processInstanceTriggerConsumer,
-      Consumer<ExternalTaskTrigger> externalTaskTriggerConsumer) {
+  private void storeProcessInstance(ProcessInstance updatedProcessInstance) {
+    processInstanceCache
+        .as(CaffeineCache.class)
+        .put(
+            updatedProcessInstance.getProcessInstanceKey(),
+            CompletableFuture.completedFuture(updatedProcessInstance));
+    processInstanceStore.put(
+        updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
+  }
+
+  @CacheResult(cacheName = "process-instance-cache")
+  ProcessInstance getProcessInstance(ProcessInstanceKey key) {
+    return processInstanceStore.get(key);
+  }
+
+  public ProcessInstance trigger(ProcessInstance processInstance, Trigger trigger) {
+    ProcessInstance newProcessInstance = processInstance;
+
     LOG.info(
         "Triggering process instance "
             + processInstance.getProcessInstanceKey()
@@ -137,21 +142,27 @@ public class ProcessInstanceProcessor
       Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 
       ProcessInstanceState newProcessInstanceState =
-          triggerResult.getThrowingEvent().process(processInstance);
+          determineNewProcessInstanceState(processInstance, triggerResult);
 
       triggerResult
           .getExternalTasks()
           .forEach(
               externalTaskId -> {
                 LOG.info("Trigger external task: " + externalTaskId);
-                externalTaskTriggerConsumer.accept(
+                ExternalTaskTrigger newExternalTaskTrigger =
                     new ExternalTaskTrigger(
                         processInstance.getProcessInstanceKey(),
                         ProcessDefinitionKey.of(processInstance.getProcessDefinition()),
                         externalTaskId,
-                        variablesWithTriggerResult));
+                        variablesWithTriggerResult);
+                context.forward(
+                    new Record<>(
+                        newExternalTaskTrigger.getProcessInstanceKey(),
+                        newExternalTaskTrigger,
+                        Instant.now().toEpochMilli()));
               });
 
+      List<Trigger> nextTriggers = new ArrayList<>();
       triggerResult
           .getNewActiveFlows()
           .forEach(
@@ -168,14 +179,15 @@ public class ProcessInstanceProcessor
                             .orElseThrow();
                 if (flow.testCondition()) {
                   LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
-                  processInstanceTriggerConsumer.accept(
+                  FlowElementTrigger newTrigger =
                       new FlowElementTrigger(
                           processInstance.getProcessInstanceKey(),
                           processInstance.getParentProcessInstanceKey(),
                           ProcessDefinition.NONE,
                           flow.getTarget(),
                           flow.getId(),
-                          variablesWithTriggerResult));
+                          variablesWithTriggerResult);
+                  nextTriggers.add(newTrigger);
                 }
               });
 
@@ -184,19 +196,52 @@ public class ProcessInstanceProcessor
           .forEach(
               newProcessInstanceTrigger -> {
                 LOG.info("Trigger new process instance: " + newProcessInstanceTrigger);
-                processInstanceTriggerConsumer.accept(newProcessInstanceTrigger);
+                nextTriggers.add(newProcessInstanceTrigger);
               });
 
-      return new ProcessInstance(
-          processInstance.getParentProcessInstanceKey(),
-          processInstance.getProcessInstanceKey(),
-          processInstance.getProcessDefinition(),
-          newElementStates,
-          variablesWithTriggerResult,
-          newProcessInstanceState);
+      newProcessInstance =
+          new ProcessInstance(
+              processInstance.getParentProcessInstanceKey(),
+              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessDefinition(),
+              newElementStates,
+              variablesWithTriggerResult,
+              newProcessInstanceState);
+
+      for (Trigger nextTrigger : nextTriggers) {
+
+        if (!nextTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)
+            || processInstance
+                    .getProcessDefinition()
+                    .getDefinitions()
+                    .getRootProcess()
+                    .getFlowElements()
+                    .getFlowElement(nextTrigger.getElementId())
+                    .orElse(null)
+                instanceof Activity
+            || !nextTrigger
+                .getProcessInstanceKey()
+                .equals(newProcessInstance.getProcessInstanceKey())) {
+          context.forward(
+              new Record<>(
+                  nextTrigger.getProcessInstanceKey(), nextTrigger, Instant.now().toEpochMilli()));
+        } else {
+          newProcessInstance = trigger(newProcessInstance, nextTrigger);
+        }
+      }
     } else {
       LOG.error("Flow element not found: " + trigger.getElementId());
     }
-    return processInstance;
+    return newProcessInstance;
+  }
+
+  private ProcessInstanceState determineNewProcessInstanceState(
+      ProcessInstance processInstance, TriggerResult triggerResult) {
+    ProcessInstanceState newProcessInstanceState =
+        triggerResult.getThrowingEvent().process(processInstance);
+    if (newProcessInstanceState.isFinished()) {
+      processInstanceCache.invalidate(processInstance.getProcessInstanceKey());
+    }
+    return newProcessInstanceState;
   }
 }

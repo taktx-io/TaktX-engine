@@ -37,8 +37,9 @@ public class TimerEventDefinition extends EventDefinition {
       return false;
     }
     TimerEventDefinition that = (TimerEventDefinition) o;
-    return Objects.equals(timeDate, that.timeDate) && Objects.equals(timeDuration,
-        that.timeDuration) && Objects.equals(timeCycle, that.timeCycle);
+    return Objects.equals(timeDate, that.timeDate)
+        && Objects.equals(timeDuration, that.timeDuration)
+        && Objects.equals(timeCycle, that.timeCycle);
   }
 
   @Override
