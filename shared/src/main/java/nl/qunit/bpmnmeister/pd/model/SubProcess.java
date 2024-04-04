@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
@@ -43,6 +44,15 @@ public class SubProcess extends Activity {
             parentProcessDefinition.getDefinitions().getHash(),
             process);
     return new ProcessDefinition(definitions, version);
+  }
+
+  @Override
+  public BaseElementId getAsSubProcessStartElementId() {
+    List<StartEvent> startEvents = elements.getStartEvents();
+    if (startEvents.size() != 1) {
+      throw new IllegalStateException("SubProcess must have exactly one start event");
+    }
+    return startEvents.get(0).getId();
   }
 
   @Override

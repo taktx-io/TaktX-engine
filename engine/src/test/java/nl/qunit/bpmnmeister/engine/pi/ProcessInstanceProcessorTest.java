@@ -179,4 +179,19 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("task-id", 3)
         .hasPassedElement("EndEvent_1");
   }
+
+  @Test
+  void testProcessSubTaskMultiInstanceSequential()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("task-id", 3)
+        .hasPassedElement("EndEvent_1");
+  }
 }

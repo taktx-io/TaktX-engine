@@ -53,7 +53,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
             new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
-            element.getId(),
+            element.getAsSubProcessStartElementId(),
             BaseElementId.NONE,
             updatedVariables));
   }

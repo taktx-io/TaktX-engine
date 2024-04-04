@@ -51,6 +51,11 @@ public class Task extends Activity {
     return new ProcessDefinition(definitions, version);
   }
 
+  @Override
+  public BaseElementId getAsSubProcessStartElementId() {
+    return getId();
+  }
+
   protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
     return new Task(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
   }

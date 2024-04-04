@@ -41,4 +41,6 @@ public abstract class Activity extends FlowNode {
 
   public abstract ProcessDefinition getAsSubProcessDefinition(
       ProcessDefinition parentProcessDefinition);
+
+  public abstract BaseElementId getAsSubProcessStartElementId();
 }

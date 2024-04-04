@@ -56,7 +56,7 @@ public class ProcessInstanceProcessor
   public void process(Record<ProcessInstanceKey, Trigger> triggerRecord) {
     Instant start = Instant.now();
     Trigger trigger = triggerRecord.value();
-
+    LOG.info("Processing trigger: " + trigger);
     ProcessInstance processInstance;
     if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
       processInstance = getProcessInstance(trigger.getProcessInstanceKey());
