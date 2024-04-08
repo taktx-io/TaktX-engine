@@ -8,14 +8,13 @@ import lombok.Getter;
 
 @Getter
 public class Process extends RootElement {
-  public static final Process NONE =
-      new Process(BaseElementId.NONE, BaseElementId.NONE, FlowElements.EMPTY);
+  public static final Process NONE = new Process(Constants.NONE, Constants.NONE, FlowElements.EMPTY);
   private final FlowElements flowElements;
 
   @JsonCreator
   public Process(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("flowElements") FlowElements flowElements) {
     super(id, parentId);
     this.flowElements = flowElements;

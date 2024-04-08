@@ -10,10 +10,10 @@ import lombok.Getter;
 public class ExclusiveGateway extends Gateway {
   @JsonCreator
   public ExclusiveGateway(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing) {
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("incoming") Set<String> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing) {
     super(id, parentId, incoming, outgoing);
   }
 }

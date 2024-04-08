@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -33,7 +33,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                   ProcessInstanceKey.NONE,
                   ProcessDefinition.NONE,
                   element.getParentId(),
-                  BaseElementId.NONE,
+                  Constants.NONE,
                   processInstance.getVariables())),
           ThrowingEvent.NOOP,
           returnVariables);

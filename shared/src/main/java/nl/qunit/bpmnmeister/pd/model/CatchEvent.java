@@ -12,10 +12,10 @@ public abstract class CatchEvent extends Event {
   protected final Set<EventDefinition> eventDefinitions;
 
   protected CatchEvent(
-      @Nonnull BaseElementId id,
-      @Nonnull BaseElementId parentId,
-      @Nonnull Set<BaseElementId> incoming,
-      @Nonnull Set<BaseElementId> outgoing,
+      @Nonnull String id,
+      @Nonnull String parentId,
+      @Nonnull Set<String> incoming,
+      @Nonnull Set<String> outgoing,
       @Nonnull Set<EventDefinition> eventDefinitions) {
     super(id, parentId, incoming, outgoing);
     this.eventDefinitions = eventDefinitions;

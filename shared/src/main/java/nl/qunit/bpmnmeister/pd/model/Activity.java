@@ -10,10 +10,10 @@ public abstract class Activity extends FlowNode {
   private final LoopCharacteristics loopCharacteristics;
 
   protected Activity(
-      @Nonnull BaseElementId id,
-      @Nonnull BaseElementId parentId,
-      @Nonnull Set<BaseElementId> incoming,
-      @Nonnull Set<BaseElementId> outgoing,
+      @Nonnull String id,
+      @Nonnull String parentId,
+      @Nonnull Set<String> incoming,
+      @Nonnull Set<String> outgoing,
       @Nonnull LoopCharacteristics loopCharacteristics) {
     super(id, parentId, incoming, outgoing);
     this.loopCharacteristics = loopCharacteristics;
@@ -42,5 +42,5 @@ public abstract class Activity extends FlowNode {
   public abstract ProcessDefinition getAsSubProcessDefinition(
       ProcessDefinition parentProcessDefinition);
 
-  public abstract BaseElementId getAsSubProcessStartElementId();
+  public abstract String getAsSubProcessStartElementId();
 }

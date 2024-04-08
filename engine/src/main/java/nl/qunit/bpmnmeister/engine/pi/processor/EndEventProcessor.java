@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
@@ -35,7 +35,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
               ProcessInstanceKey.NONE,
               ProcessDefinition.NONE,
               element.getParentId(),
-              BaseElementId.NONE,
+              Constants.NONE,
               processInstance.getVariables()));
     }
     EndEventState newState =

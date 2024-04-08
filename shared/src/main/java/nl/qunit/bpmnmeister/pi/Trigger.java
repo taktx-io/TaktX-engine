@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
@@ -18,14 +17,14 @@ public abstract class Trigger {
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessInstanceKey parentProcessInstanceKey;
   private final ProcessDefinition processDefinition;
-  private final BaseElementId elementId;
+  private final String elementId;
   private final Variables variables;
 
   protected Trigger(
       ProcessInstanceKey processInstanceKey,
       ProcessInstanceKey parentProcessInstanceKey,
       ProcessDefinition processDefinition,
-      BaseElementId elementId,
+      String elementId,
       Variables variables) {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;

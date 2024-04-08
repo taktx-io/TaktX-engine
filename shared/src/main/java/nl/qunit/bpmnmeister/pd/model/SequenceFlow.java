@@ -9,16 +9,16 @@ import lombok.Getter;
 
 @Getter
 public class SequenceFlow extends FlowElement {
-  BaseElementId source;
-  BaseElementId target;
+  String source;
+  String target;
   FlowCondition condition;
 
   @JsonCreator
   public SequenceFlow(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("source") BaseElementId source,
-      @Nonnull @JsonProperty("target") BaseElementId target,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("source") String source,
+      @Nonnull @JsonProperty("target") String target,
       @Nonnull @JsonProperty("condition") FlowCondition condition) {
     super(id, parentId);
     this.source = source;

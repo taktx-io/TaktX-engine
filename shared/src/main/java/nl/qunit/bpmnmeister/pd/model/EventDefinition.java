@@ -7,8 +7,8 @@ import jakarta.annotation.Nonnull;
 public class EventDefinition extends RootElement {
   @JsonCreator
   protected EventDefinition(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId) {
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId) {
     super(id, parentId);
   }
 }

@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -95,7 +94,7 @@ public class ScheduleCommandFactory {
   private static List<ProcessInstanceStartCommand> getStartCommands(
       ProcessDefinition processDefinition, StartEvent startEvent) {
     List<ProcessInstanceStartCommand> processInstanceStartCommand = new ArrayList<>();
-    for (BaseElementId outgoingFlowId : startEvent.getOutgoing()) {
+    for (String outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow)
               processDefinition

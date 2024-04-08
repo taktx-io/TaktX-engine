@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -54,7 +54,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             element.getAsSubProcessStartElementId(),
-            BaseElementId.NONE,
+            Constants.NONE,
             updatedVariables));
   }
 

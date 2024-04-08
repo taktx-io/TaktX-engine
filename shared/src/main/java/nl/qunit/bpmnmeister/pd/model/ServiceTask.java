@@ -14,10 +14,10 @@ public class ServiceTask extends Task {
 
   @JsonCreator
   public ServiceTask(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("incoming") Set<String> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("implementation") String implementation,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics) {
     super(id, parentId, incoming, outgoing, loopCharacteristics);
@@ -25,7 +25,7 @@ public class ServiceTask extends Task {
   }
 
   @Override
-  protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
+  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new ServiceTask(
         getId(), getId(), getIncoming(), outgoing, getImplementation(), LoopCharacteristics.NONE);
   }

@@ -7,10 +7,10 @@ import lombok.Getter;
 @Getter
 public abstract class ThrowEvent extends Event {
   protected ThrowEvent(
-      @Nonnull BaseElementId id,
-      @Nonnull BaseElementId parentId,
-      @Nonnull Set<BaseElementId> incoming,
-      @Nonnull Set<BaseElementId> outgoing) {
+      @Nonnull String id,
+      @Nonnull String parentId,
+      @Nonnull Set<String> incoming,
+      @Nonnull Set<String> outgoing) {
     super(id, parentId, incoming, outgoing);
   }
 }

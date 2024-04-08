@@ -10,14 +10,14 @@ import lombok.Getter;
 @EqualsAndHashCode
 public class DefinitionsKey {
 
-  public static final DefinitionsKey NONE = new DefinitionsKey(BaseElementId.NONE, "");
+  public static final DefinitionsKey NONE = new DefinitionsKey("", "");
 
-  private final BaseElementId processDefinitionId;
+  private final String processDefinitionId;
   private final String hash;
 
   @JsonCreator
   public DefinitionsKey(
-      @JsonProperty("processDefinitionId") BaseElementId processDefinitionId,
+      @JsonProperty("processDefinitionId") String processDefinitionId,
       @JsonProperty("hash") String hash) {
     this.processDefinitionId = processDefinitionId;
     this.hash = hash;

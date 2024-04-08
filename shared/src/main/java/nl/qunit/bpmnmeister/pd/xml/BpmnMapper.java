@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pd.xml;
 import jakarta.xml.bind.JAXBElement;
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsKey;
 import nl.qunit.bpmnmeister.pd.model.Process;

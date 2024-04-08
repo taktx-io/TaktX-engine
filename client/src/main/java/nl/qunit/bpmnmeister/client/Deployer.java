@@ -20,7 +20,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import org.eclipse.microprofile.reactive.messaging.Channel;
@@ -34,7 +33,7 @@ public class Deployer {
   @Channel("process-definition-xml-outgoing")
   Emitter<String> definitionEmitter;
 
-  private final Map<BaseElementId, Object> definitionMap = new HashMap<>();
+  private final Map<String, Object> definitionMap = new HashMap<>();
 
   @PostConstruct
   void init() throws IOException {
@@ -66,7 +65,7 @@ public class Deployer {
     return CDI.current().select(beanClass).get();
   }
 
-  public Map<BaseElementId, Object> getDefinitionMap() {
+  public Map<String, Object> getDefinitionMap() {
     return definitionMap;
   }
 }

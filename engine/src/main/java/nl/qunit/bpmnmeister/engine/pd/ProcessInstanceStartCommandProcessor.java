@@ -1,7 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
@@ -46,7 +46,7 @@ public class ProcessInstanceStartCommandProcessor
               ProcessInstanceKey.NONE,
               processDefinitionActivation.getProcessDefinition(),
               startCommandRecord.value().getElementId(),
-              BaseElementId.NONE,
+              Constants.NONE,
               startCommandRecord.value().getVariables());
       context.forward(
           new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));

@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -39,18 +38,18 @@ public class ProcessInstanceMigrationProcessor
     ProcessDefinition oldProcessDefinition = processInstance.getProcessDefinition();
     ProcessDefinition newProcessDefinition = triggerRecord.value().getNewProcessDefinition();
 
-    Set<BaseElementId> existingIds =
+    Set<String> existingIds =
         oldProcessDefinition.getDefinitions().getRootProcess().getFlowElements().keySet();
-    Set<BaseElementId> newDefinitionIds =
+    Set<String> newDefinitionIds =
         newProcessDefinition.getDefinitions().getRootProcess().getFlowElements().keySet();
 
-    Set<BaseElementId> updatedIds = new HashSet<>(existingIds);
+    Set<String> updatedIds = new HashSet<>(existingIds);
     updatedIds.retainAll(newDefinitionIds);
 
-    Set<BaseElementId> newIds = new HashSet<>(newDefinitionIds);
+    Set<String> newIds = new HashSet<>(newDefinitionIds);
     newIds.removeAll(existingIds);
 
-    Map<BaseElementId, BpmnElementState> newElementStates = new HashMap<>();
+    Map<String, BpmnElementState> newElementStates = new HashMap<>();
     updatedIds.forEach(
         updatedId -> {
           BaseElement oldElement =

@@ -43,7 +43,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinition("/bpmn/task-single.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 
@@ -51,7 +51,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
@@ -59,7 +59,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
@@ -67,7 +67,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinition("/bpmn/task-single.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()).isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 

@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -45,7 +45,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcessState oldState,
       Variables variables) {
     Set<Trigger> subProcessTriggers = new HashSet<>();
-    BaseElementId startElement = getStartEvent(element);
+    String startElement = getStartEvent(element);
 
     FlowElementTrigger subProcessTrigger =
         new FlowElementTrigger(
@@ -53,7 +53,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
             startElement,
-            BaseElementId.NONE,
+            Constants.NONE,
             variables);
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
@@ -81,7 +81,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     return finishActivity(processInstance, element, newSubProcessState, Variables.EMPTY);
   }
 
-  private BaseElementId getStartEvent(SubProcess subProcess) {
+  private String getStartEvent(SubProcess subProcess) {
     if (!subProcess.getElements().getStartEvents().isEmpty()) {
       return subProcess.getElements().getStartEvents().get(0).getId();
     } else {

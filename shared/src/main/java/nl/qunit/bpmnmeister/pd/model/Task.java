@@ -13,10 +13,10 @@ import lombok.Getter;
 public class Task extends Activity {
   @JsonCreator
   public Task(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("incoming") Set<String> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics) {
     super(id, parentId, incoming, outgoing, loopCharacteristics);
   }
@@ -24,17 +24,17 @@ public class Task extends Activity {
   @JsonIgnore
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
-    Map<BaseElementId, FlowElement> elements = new HashMap<>();
-    BaseElementId sequenceFlowId = new BaseElementId(getId().getId() + "-to-end");
+    Map<String, FlowElement> elements = new HashMap<>();
+    String sequenceFlowId = new String(getId() + "-to-end");
     elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
-    BaseElementId endEventId = new BaseElementId(getId().getId() + "-end");
+    String endEventId = new String(getId() + "-end");
     elements.put(
         sequenceFlowId,
         new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
     elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of()));
 
     // Wrap in Process element
-    BaseElementId parentProcessDefinitionId =
+    String parentProcessDefinitionId =
         parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
     Process process =
         new Process(
@@ -50,11 +50,11 @@ public class Task extends Activity {
   }
 
   @Override
-  public BaseElementId getAsSubProcessStartElementId() {
+  public String getAsSubProcessStartElementId() {
     return getId();
   }
 
-  protected FlowElement withoutLoopCharacteristics(Set<BaseElementId> outgoing) {
+  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new Task(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
   }
 }

@@ -7,14 +7,14 @@ import lombok.Getter;
 
 @Getter
 public abstract class FlowNode extends FlowElement {
-  private final Set<BaseElementId> incoming;
-  private final Set<BaseElementId> outgoing;
+  private final Set<String> incoming;
+  private final Set<String> outgoing;
 
   protected FlowNode(
-      @Nonnull BaseElementId id,
-      @Nonnull BaseElementId parentId,
-      @Nonnull Set<BaseElementId> incoming,
-      @Nonnull Set<BaseElementId> outgoing) {
+      @Nonnull String id,
+      @Nonnull String parentId,
+      @Nonnull Set<String> incoming,
+      @Nonnull Set<String> outgoing) {
     super(id, parentId);
     this.incoming = incoming;
     this.outgoing = outgoing;

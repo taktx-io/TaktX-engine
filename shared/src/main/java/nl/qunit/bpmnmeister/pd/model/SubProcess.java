@@ -16,10 +16,10 @@ public class SubProcess extends Activity {
 
   @JsonCreator
   public SubProcess(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("incoming") Set<String> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
       @Nonnull @JsonProperty("elements") FlowElements elements) {
 
@@ -31,21 +31,21 @@ public class SubProcess extends Activity {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Integer version = parentProcessDefinition.getVersion();
-    BaseElementId parentProcessDefinitionId =
+    String parentProcessDefinitionId =
         parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
     Process process = new Process(parentProcessDefinitionId, parentProcessDefinitionId, elements);
     Definitions definitions =
         new Definitions(
-            new DefinitionsKey(new BaseElementId(parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()
+            new DefinitionsKey(parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
                     + "-"
-                    + getId().getId()),
+                    + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
             process);
     return new ProcessDefinition(definitions, version);
   }
 
   @Override
-  public BaseElementId getAsSubProcessStartElementId() {
+  public String getAsSubProcessStartElementId() {
     List<StartEvent> startEvents = elements.getStartEvents();
     if (startEvents.size() != 1) {
       throw new IllegalStateException("SubProcess must have exactly one start event");

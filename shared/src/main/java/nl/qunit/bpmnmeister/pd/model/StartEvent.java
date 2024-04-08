@@ -11,10 +11,10 @@ public class StartEvent extends CatchEvent {
 
   @JsonCreator
   public StartEvent(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
-      @Nonnull @JsonProperty("incoming") Set<BaseElementId> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<BaseElementId> outgoing,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("incoming") Set<String> incoming,
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions) {
     super(id, parentId, incoming, outgoing, eventDefinitions);
   }

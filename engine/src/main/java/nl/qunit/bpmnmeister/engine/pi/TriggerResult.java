@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -15,8 +14,8 @@ import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 public class TriggerResult {
 
   private final BpmnElementState newElementState;
-  private final Set<BaseElementId> newActiveFlows;
-  private final Set<BaseElementId> externalTasks;
+  private final Set<String> newActiveFlows;
+  private final Set<String> externalTasks;
   private final Set<Trigger> newProcessInstanceTriggers;
   private final ThrowingEvent throwingEvent;
   private final Variables variables;
@@ -24,8 +23,8 @@ public class TriggerResult {
   @JsonCreator
   public TriggerResult(
       @Nonnull @JsonProperty("newElementState") BpmnElementState newElementState,
-      @Nonnull @JsonProperty("newActiveFlows") Set<BaseElementId> newActiveFlows,
-      @Nonnull @JsonProperty("externalTasks") Set<BaseElementId> externalTasks,
+      @Nonnull @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
+      @Nonnull @JsonProperty("externalTasks") Set<String> externalTasks,
       @Nonnull @JsonProperty("newProcessInstanceTriggers") Set<Trigger> newProcessInstanceTriggers,
       @Nonnull @JsonProperty("throwEvent") ThrowingEvent throwingEvent,
       @Nonnull @JsonProperty("variables") Variables variables) {

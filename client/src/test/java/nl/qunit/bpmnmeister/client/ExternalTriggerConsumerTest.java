@@ -11,7 +11,6 @@ import jakarta.inject.Inject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -28,14 +27,14 @@ class ExternalTriggerConsumerTest {
     @Test
     void testConsume() throws InvocationTargetException, IllegalAccessException {
         ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new BaseElementId("processDefinitionId"),  1);
-        BaseElementId externalTaskId = new BaseElementId("externalTaskId");
+        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new String("processDefinitionId"),  1);
+        String externalTaskId = new String("externalTaskId");
         JsonNode jsonNode = new TextNode("testvalue");
         Variables variables = new Variables(Map.of("variable1", jsonNode));
         ExternalTaskTrigger mockExternalTaskTrigger = new ExternalTaskTrigger(processInstanceKey, processDefinitionKey, externalTaskId, variables);
 
         TestWorker testWorker = new TestWorker();
-        when(deployer.getDefinitionMap()).thenReturn(Map.of(new BaseElementId("processDefinitionId"), Map.of(1, testWorker)));
+        when(deployer.getDefinitionMap()).thenReturn(Map.of(new String("processDefinitionId"), Map.of(1, testWorker)));
 
         // Call the method to test
         externalTriggerConsumer.consume(mockExternalTaskTrigger);

@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
@@ -14,14 +13,14 @@ public class EventDefinitionMapper {
   private EventDefinitionMapper() {}
 
   public static Set<EventDefinition> map(
-      List<JAXBElement<? extends TEventDefinition>> eventDefinition, BaseElementId parentId) {
+      List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId) {
     return eventDefinition.stream()
         .map(JAXBElement::getValue)
         .map(ed -> mapEventDefinition(ed, parentId))
         .collect(Collectors.toSet());
   }
 
-  private static EventDefinition mapEventDefinition(TEventDefinition ed, BaseElementId parentId) {
+  private static EventDefinition mapEventDefinition(TEventDefinition ed, String parentId) {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
       String duration =
           timerEventDefinition.getTimeDuration() != null
@@ -42,7 +41,7 @@ public class EventDefinitionMapper {
                   .collect(Collectors.joining(""))
               : "";
       return new TimerEventDefinition(
-          new BaseElementId(timerEventDefinition.getId()), parentId, duration, cycle, timeDate);
+          new String(timerEventDefinition.getId()), parentId, duration, cycle, timeDate);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @Getter
@@ -12,7 +12,7 @@ public class ExternalTaskResponseTrigger extends Trigger {
   public static final ExternalTaskResponseTrigger NONE =
       new ExternalTaskResponseTrigger(
           ProcessInstanceKey.NONE,
-          BaseElementId.NONE,
+          Constants.NONE,
           ExternalTaskResponseResult.NONE,
           Variables.EMPTY);
   private final ExternalTaskResponseResult externalTaskResponseResult;
@@ -20,7 +20,7 @@ public class ExternalTaskResponseTrigger extends Trigger {
   @JsonCreator
   public ExternalTaskResponseTrigger(
       @JsonProperty("processInstanceKey") @Nonnull ProcessInstanceKey processInstanceKey,
-      @JsonProperty("elementId") @Nonnull BaseElementId elementId,
+      @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("externalTaskResponseResult") @Nonnull
           ExternalTaskResponseResult externalTaskResponseResult,
       @JsonProperty("variables") @Nonnull Variables variables) {

@@ -23,10 +23,10 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = TimerEventDefinition.class)
 })
 public abstract class BaseElement {
-  private final BaseElementId id;
-  private final BaseElementId parentId;
+  private final String id;
+  private final String parentId;
 
-  protected BaseElement(@Nonnull BaseElementId id, @Nonnull BaseElementId parentId) {
+  protected BaseElement(@Nonnull String id, @Nonnull String parentId) {
     this.id = id;
     this.parentId = parentId;
   }

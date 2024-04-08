@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 public abstract class RootElement extends BaseElement {
-  protected RootElement(@Nonnull BaseElementId id, @Nonnull BaseElementId parentId) {
+  protected RootElement(@Nonnull String id, @Nonnull String parentId) {
     super(id, parentId);
   }
 }

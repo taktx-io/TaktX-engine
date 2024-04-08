@@ -9,12 +9,12 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public class ProcessDefinitionKey {
-  private final BaseElementId processDefinitionId;
+  private final String processDefinitionId;
   private final Integer version;
 
   @JsonCreator
   public ProcessDefinitionKey(
-      @Nonnull @JsonProperty("processDefinitionId") BaseElementId processDefinitionId,
+      @Nonnull @JsonProperty("processDefinitionId") String processDefinitionId,
       @Nonnull @JsonProperty("version") Integer version) {
     this.processDefinitionId = processDefinitionId;
     this.version = version;

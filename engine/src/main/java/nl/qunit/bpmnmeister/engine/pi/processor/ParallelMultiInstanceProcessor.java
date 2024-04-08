@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -43,7 +43,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
               processInstance.getProcessInstanceKey(),
               subProcessDefinition,
               element.getId(),
-              BaseElementId.NONE,
+              Constants.NONE,
               subProcessVariables));
     }
     return subProcessTriggers;

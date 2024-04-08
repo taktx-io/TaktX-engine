@@ -17,7 +17,6 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
@@ -34,13 +33,13 @@ import nl.qunit.bpmnmeister.pd.model.Task;
 public class FlowElementMapper {
   private FlowElementMapper() {}
 
-  public static FlowElement map(TFlowElement tFlowElement, BaseElementId parentId) {
+  public static FlowElement map(TFlowElement tFlowElement, String parentId) {
     if (tFlowElement instanceof TSequenceFlow tSequenceFlow) {
       return new SequenceFlow(
-          new BaseElementId(tSequenceFlow.getId()),
+          new String(tSequenceFlow.getId()),
           parentId,
-          new BaseElementId(((TBaseElement) tSequenceFlow.getSourceRef()).getId()),
-          new BaseElementId(((TBaseElement) tSequenceFlow.getTargetRef()).getId()),
+          new String(((TBaseElement) tSequenceFlow.getSourceRef()).getId()),
+          new String(((TBaseElement) tSequenceFlow.getTargetRef()).getId()),
           tSequenceFlow.getConditionExpression() != null
               ? new FlowCondition(tSequenceFlow.getConditionExpression().getContent().toString())
               : FlowCondition.NONE);
@@ -51,7 +50,7 @@ public class FlowElementMapper {
       if (activity instanceof TServiceTask serviceTask) {
         activityFlowElement =
             new ServiceTask(
-                new BaseElementId(serviceTask.getId()),
+                new String(serviceTask.getId()),
                 parentId,
                 mapQNameList(serviceTask.getIncoming()),
                 mapQNameList(serviceTask.getOutgoing()),
@@ -60,23 +59,23 @@ public class FlowElementMapper {
       } else if (activity instanceof TTask task) {
         activityFlowElement =
             new Task(
-                new BaseElementId(task.getId()),
+                new String(task.getId()),
                 parentId,
                 mapQNameList(task.getIncoming()),
                 mapQNameList(task.getOutgoing()),
                 loopCharacteristics);
       } else if (activity instanceof TSubProcess subProcess) {
-        Map<BaseElementId, FlowElement> elements =
+        Map<String, FlowElement> elements =
             subProcess.getFlowElement().stream()
                 .map(
                     flowElement ->
                         FlowElementMapper.map(
-                            flowElement.getValue(), new BaseElementId(tFlowElement.getId())))
+                            flowElement.getValue(), new String(tFlowElement.getId())))
                 .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
 
         activityFlowElement =
             new SubProcess(
-                new BaseElementId(tFlowElement.getId()),
+                new String(tFlowElement.getId()),
                 parentId,
                 mapQNameList(subProcess.getIncoming()),
                 mapQNameList(subProcess.getOutgoing()),
@@ -86,26 +85,26 @@ public class FlowElementMapper {
       return activityFlowElement;
     } else if (tFlowElement instanceof TParallelGateway parallelGateway) {
       return new ParallelGateway(
-          new BaseElementId(parallelGateway.getId()),
+          new String(parallelGateway.getId()),
           parentId,
           mapQNameList(parallelGateway.getIncoming()),
           mapQNameList(parallelGateway.getOutgoing()));
     } else if (tFlowElement instanceof TExclusiveGateway exclusiveGateway) {
       return new ExclusiveGateway(
-          new BaseElementId(exclusiveGateway.getId()),
+          new String(exclusiveGateway.getId()),
           parentId,
           mapQNameList(exclusiveGateway.getIncoming()),
           mapQNameList(exclusiveGateway.getOutgoing()));
     } else if (tFlowElement instanceof TStartEvent startEvent) {
       return new StartEvent(
-          new BaseElementId(startEvent.getId()),
+          new String(startEvent.getId()),
           parentId,
           mapQNameList(startEvent.getIncoming()),
           mapQNameList(startEvent.getOutgoing()),
           EventDefinitionMapper.map(startEvent.getEventDefinition(), parentId));
     } else if (tFlowElement instanceof TEndEvent endEvent) {
       return new EndEvent(
-          new BaseElementId(endEvent.getId()),
+          new String(endEvent.getId()),
           parentId,
           mapQNameList(endEvent.getIncoming()),
           mapQNameList(endEvent.getOutgoing()));
@@ -115,7 +114,7 @@ public class FlowElementMapper {
         "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
-  private static Set<BaseElementId> mapQNameList(List<QName> incoming) {
-    return incoming.stream().map(i -> new BaseElementId(i.toString())).collect(Collectors.toSet());
+  private static Set<String> mapQNameList(List<QName> incoming) {
+    return incoming.stream().map(i -> new String(i.toString())).collect(Collectors.toSet());
   }
 }

@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import nl.qunit.bpmnmeister.Topics;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -119,7 +119,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine triggerNewProcessInstance(String elementId) {
     ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     Trigger trigger = new FlowElementTrigger(processInstanceKey, ProcessInstanceKey.NONE,
-        activeProcessDefintion, new BaseElementId(elementId), BaseElementId.NONE, Variables.EMPTY);
+        activeProcessDefintion, new String(elementId), Constants.NONE, Variables.EMPTY);
     triggerEmitter.send(trigger);
     return this;
   }
@@ -168,7 +168,7 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine startProcessInstance(Variables variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
-    BaseElementId startEventId = activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements()
+    String startEventId = activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements()
         .getStartEvents().get(0).getId();
     ProcessInstanceStartCommand startCommand = new ProcessInstanceStartCommand(
         processDefinitionKey, startEventId, variables);
@@ -210,7 +210,7 @@ public class BpmnTestEngine {
     activeExternalTaskTrigger = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> pollExternalTask(elementId),
             externalTaskTrigger -> externalTaskTrigger != null && externalTaskTrigger.getElementId()
-                .getId().equals(elementId));
+                .equals(elementId));
     return this;
   }
 

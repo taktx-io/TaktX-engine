@@ -10,7 +10,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.MediaType;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -42,10 +41,10 @@ public class ProcessResource {
       throw new IllegalArgumentException("Failed to parse variables", e);
     }
     ProcessDefinitionKey processDefinitionKey =
-        new ProcessDefinitionKey(new BaseElementId(processId), version);
+        new ProcessDefinitionKey(new String(processId), version);
     ProcessInstanceStartCommand startCommand =
         new ProcessInstanceStartCommand(
-            processDefinitionKey, new BaseElementId(elementId), new Variables(variablesMap));
+            processDefinitionKey, new String(elementId), new Variables(variablesMap));
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey, startCommand));
   }
 }

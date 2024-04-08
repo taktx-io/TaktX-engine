@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @Getter
@@ -14,11 +14,11 @@ public class FlowElementTrigger extends Trigger {
           ProcessInstanceKey.NONE,
           ProcessInstanceKey.NONE,
           ProcessDefinition.NONE,
-          BaseElementId.NONE,
-          BaseElementId.NONE,
+          Constants.NONE,
+          Constants.NONE,
           Variables.EMPTY);
 
-  private final BaseElementId inputFlowId;
+  private final String inputFlowId;
 
   @JsonCreator
   public FlowElementTrigger(
@@ -26,8 +26,8 @@ public class FlowElementTrigger extends Trigger {
       @JsonProperty("parentProcessInstanceKey") @Nonnull
           ProcessInstanceKey parentProcessInstanceKey,
       @JsonProperty("processDefinition") @Nonnull ProcessDefinition processDefinition,
-      @JsonProperty("elementId") @Nonnull BaseElementId elementId,
-      @JsonProperty("inputFlowId") @Nonnull BaseElementId inputFlowId,
+      @JsonProperty("elementId") @Nonnull String elementId,
+      @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(processInstanceKey, parentProcessInstanceKey, processDefinition, elementId, variables);
     this.inputFlowId = inputFlowId;

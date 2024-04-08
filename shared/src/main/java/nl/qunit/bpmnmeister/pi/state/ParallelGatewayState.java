@@ -6,16 +6,15 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 
 @Getter
 public class ParallelGatewayState extends GatewayState {
-  Set<BaseElementId> triggeredFlows;
+  Set<String> triggeredFlows;
 
   @JsonCreator
   public ParallelGatewayState(
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @Nonnull @JsonProperty("triggeredFlows") Set<BaseElementId> triggeredFlows,
+      @Nonnull @JsonProperty("triggeredFlows") Set<String> triggeredFlows,
       @JsonProperty("passedCnt") int passedCnt) {
     super(elementInstanceId, passedCnt);
     this.triggeredFlows = triggeredFlows;

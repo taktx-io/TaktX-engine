@@ -14,8 +14,8 @@ public class TimerEventDefinition extends EventDefinition {
 
   @JsonCreator
   public TimerEventDefinition(
-      @Nonnull @JsonProperty("id") BaseElementId id,
-      @Nonnull @JsonProperty("parentId") BaseElementId parentId,
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("timeDate") String timeDate,
       @Nonnull @JsonProperty("timeDuration") String timeDuration,
       @Nonnull @JsonProperty("timeCycle") String timeCycle) {

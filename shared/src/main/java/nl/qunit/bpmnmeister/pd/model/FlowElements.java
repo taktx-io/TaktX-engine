@@ -15,10 +15,10 @@ import lombok.Getter;
 public class FlowElements {
   public static final FlowElements EMPTY = new FlowElements(Map.of());
 
-  private final Map<BaseElementId, FlowElement> elements;
+  private final Map<String, FlowElement> elements;
 
   @JsonCreator
-  public FlowElements(@Nonnull @JsonProperty("elements") Map<BaseElementId, FlowElement> elements) {
+  public FlowElements(@Nonnull @JsonProperty("elements") Map<String, FlowElement> elements) {
     this.elements = elements;
   }
 
@@ -28,12 +28,12 @@ public class FlowElements {
   }
 
   @JsonIgnore
-  public Set<BaseElementId> keySet() {
+  public Set<String> keySet() {
     return Set.copyOf(elements.keySet());
   }
 
   @JsonIgnore
-  public FlowElement get(BaseElementId id) {
+  public FlowElement get(String id) {
     return elements.get(id);
   }
 
@@ -46,7 +46,7 @@ public class FlowElements {
   }
 
   @JsonIgnore
-  public Optional<FlowElement> getFlowElement(BaseElementId id) {
+  public Optional<FlowElement> getFlowElement(String id) {
     return elements.values().stream()
         .filter(flowElement -> id.equals(flowElement.getId()))
         .findFirst();

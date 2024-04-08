@@ -11,7 +11,6 @@ import java.lang.reflect.Parameter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
@@ -42,9 +41,9 @@ public class ExternalTriggerConsumer {
   public void consume(ExternalTaskTrigger externalTaskTrigger)
       throws InvocationTargetException, IllegalAccessException {
     LOG.info("Received external task trigger: " + externalTaskTrigger);
-    BaseElementId processDefinitionId =
+    String processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
-    BaseElementId externalTaskId = externalTaskTrigger.getElementId();
+    String externalTaskId = externalTaskTrigger.getElementId();
     Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId);
 
     // Get method from workerInstance which has matching annotation
@@ -95,11 +94,11 @@ public class ExternalTriggerConsumer {
     return args;
   }
 
-  private Optional<Method> findMatchingMethod(Class<?> aClass, BaseElementId externalTaskId) {
+  private Optional<Method> findMatchingMethod(Class<?> aClass, String externalTaskId) {
     for (Method method : aClass.getDeclaredMethods()) {
       ExternalTask externalTaskAnnotation = method.getAnnotation(ExternalTask.class);
       if (externalTaskAnnotation != null
-          && externalTaskAnnotation.element().equals(externalTaskId.getId())) {
+          && externalTaskAnnotation.element().equals(externalTaskId)) {
         return Optional.of(method);
       }
     }
