@@ -44,9 +44,8 @@ public class ExternalTriggerConsumer {
     LOG.info("Received external task trigger: " + externalTaskTrigger);
     BaseElementId processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
-    Integer generation = externalTaskTrigger.getProcessDefinitionKey().getGeneration();
     BaseElementId externalTaskId = externalTaskTrigger.getElementId();
-    Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId).get(generation);
+    Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId);
 
     // Get method from workerInstance which has matching annotation
     Class<?> aClass = workerInstance.getClass();

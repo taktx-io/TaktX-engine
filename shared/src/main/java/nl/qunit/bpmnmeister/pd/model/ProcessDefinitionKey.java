@@ -10,23 +10,19 @@ import lombok.Getter;
 @EqualsAndHashCode
 public class ProcessDefinitionKey {
   private final BaseElementId processDefinitionId;
-  private final Integer generation;
   private final Integer version;
 
   @JsonCreator
   public ProcessDefinitionKey(
       @Nonnull @JsonProperty("processDefinitionId") BaseElementId processDefinitionId,
-      @Nonnull @JsonProperty("generation") Integer generation,
       @Nonnull @JsonProperty("version") Integer version) {
     this.processDefinitionId = processDefinitionId;
-    this.generation = generation;
     this.version = version;
   }
 
   public static ProcessDefinitionKey of(ProcessDefinition processDefinition) {
     return new ProcessDefinitionKey(
-        processDefinition.getDefinitions().getProcessDefinitionId(),
-        processDefinition.getDefinitions().getGeneration(),
+        processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         processDefinition.getVersion());
   }
 
@@ -35,9 +31,6 @@ public class ProcessDefinitionKey {
     return "ProcessDefinitionKey{"
         + "processDefinitionId='"
         + processDefinitionId
-        + '\''
-        + ", generation='"
-        + generation
         + '\''
         + ", version="
         + version

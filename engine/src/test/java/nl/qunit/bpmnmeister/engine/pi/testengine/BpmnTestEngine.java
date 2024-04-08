@@ -31,7 +31,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.util.GenerationExtractor;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -114,7 +113,7 @@ public class BpmnTestEngine {
   @Incoming("process-definition-parsed-incoming")
   public void consume(ProcessDefinition processDefinition) {
     LOG.info("Received process definition: " + processDefinition);
-    hashToDefinitionMap.put(processDefinition.getDefinitions().getHash(), processDefinition);
+    hashToDefinitionMap.put(processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
   }
 
   public BpmnTestEngine triggerNewProcessInstance(String elementId) {
@@ -146,8 +145,7 @@ public class BpmnTestEngine {
       throws JAXBException, NoSuchAlgorithmException, IOException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
-    Integer generation = GenerationExtractor.getGenerationFromString(filename).orElseThrow();
-    definitionsBeingDeployed = BpmnParser.parse(xml, generation);
+    definitionsBeingDeployed = BpmnParser.parse(xml);
     xmlEmitter.send(KafkaRecord.of(filename, xml));
     return this;
   }
@@ -155,7 +153,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitForProcessDeployment() {
     activeProcessDefintion = Awaitility.await()
         .until(() -> {
-          return hashToDefinitionMap.get(definitionsBeingDeployed.getHash());
+          return hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash());
         }, Objects::nonNull);
 
     return this;

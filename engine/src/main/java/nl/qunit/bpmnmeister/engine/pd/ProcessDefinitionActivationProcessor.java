@@ -27,8 +27,7 @@ public class ProcessDefinitionActivationProcessor
     ProcessDefinition processDefinition = incoming.value();
     if (key.getVersion() > 1) {
       ProcessDefinitionKey previousVersionKey =
-          new ProcessDefinitionKey(
-              key.getProcessDefinitionId(), key.getGeneration(), key.getVersion() - 1);
+          new ProcessDefinitionKey(key.getProcessDefinitionId(), key.getVersion() - 1);
       ProcessDefinitionActivation deActivation =
           new ProcessDefinitionActivation(
               ProcessDefinition.NONE, ProcessDefinitionStateEnum.INACTIVE);

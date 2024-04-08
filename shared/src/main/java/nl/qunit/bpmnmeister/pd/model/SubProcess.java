@@ -32,16 +32,14 @@ public class SubProcess extends Activity {
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Integer version = parentProcessDefinition.getVersion();
     BaseElementId parentProcessDefinitionId =
-        parentProcessDefinition.getDefinitions().getProcessDefinitionId();
+        parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
     Process process = new Process(parentProcessDefinitionId, parentProcessDefinitionId, elements);
     Definitions definitions =
         new Definitions(
-            new BaseElementId(
-                parentProcessDefinition.getDefinitions().getProcessDefinitionId().getId()
+            new DefinitionsKey(new BaseElementId(parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId().getId()
                     + "-"
                     + getId().getId()),
-            parentProcessDefinition.getDefinitions().getGeneration(),
-            parentProcessDefinition.getDefinitions().getHash(),
+            parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
             process);
     return new ProcessDefinition(definitions, version);
   }

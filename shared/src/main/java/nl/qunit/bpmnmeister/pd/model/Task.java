@@ -35,16 +35,14 @@ public class Task extends Activity {
 
     // Wrap in Process element
     BaseElementId parentProcessDefinitionId =
-        parentProcessDefinition.getDefinitions().getProcessDefinitionId();
+        parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
     Process process =
         new Process(
             parentProcessDefinitionId, parentProcessDefinitionId, new FlowElements(elements));
 
     Definitions definitions =
         new Definitions(
-            parentProcessDefinition.getDefinitions().getProcessDefinitionId(),
-            parentProcessDefinition.getDefinitions().getGeneration(),
-            parentProcessDefinition.getDefinitions().getHash(),
+            parentProcessDefinition.getDefinitions().getDefinitionsKey(),
             process);
 
     Integer version = parentProcessDefinition.getVersion();

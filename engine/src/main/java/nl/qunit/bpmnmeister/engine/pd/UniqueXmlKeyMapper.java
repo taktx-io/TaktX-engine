@@ -4,7 +4,6 @@ import jakarta.xml.bind.JAXBException;
 import java.security.NoSuchAlgorithmException;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
-import nl.qunit.bpmnmeister.util.GenerationExtractor;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
 
@@ -14,16 +13,13 @@ public class UniqueXmlKeyMapper
   @Override
   public KeyValue<String, Definitions> apply(String key, String value) {
     try {
-      Integer generation = GenerationExtractor.getGenerationFromString(key).orElseThrow();
-      Definitions parsed = BpmnParser.parse(value, generation);
+      Definitions parsed = BpmnParser.parse(value);
       return KeyValue.pair(
-          parsed.getProcessDefinitionId()
-              + "-"
-              + generation
+          parsed.getDefinitionsKey().getProcessDefinitionId()
               + "-"
               + value.length()
               + "-"
-              + parsed.getHash(),
+              + parsed.getDefinitionsKey().getHash(),
           parsed);
     } catch (JAXBException e) {
       throw new RuntimeException(e);

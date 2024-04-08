@@ -12,13 +12,13 @@ import nl.qunit.bpmnmeister.util.SHA256;
 
 public class BpmnParser {
 
-  public static Definitions parse(String xml, Integer generation)
+  public static Definitions parse(String xml)
       throws JAXBException, NoSuchAlgorithmException {
     JAXBContext context = JAXBContext.newInstance(TDefinitions.class);
     Unmarshaller un = context.createUnmarshaller();
     JAXBElement<TDefinitions> definitions =
         (JAXBElement<TDefinitions>) un.unmarshal(new StringReader(xml));
     String hash = SHA256.getHash(xml);
-    return BpmnMapper.map(definitions.getValue(), hash, generation);
+    return BpmnMapper.map(definitions.getValue(), hash);
   }
 }

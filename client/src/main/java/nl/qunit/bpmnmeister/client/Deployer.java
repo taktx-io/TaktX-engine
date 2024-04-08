@@ -23,7 +23,6 @@ import java.util.Set;
 import nl.qunit.bpmnmeister.pd.model.BaseElementId;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
-import nl.qunit.bpmnmeister.util.GenerationExtractor;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -35,7 +34,7 @@ public class Deployer {
   @Channel("process-definition-xml-outgoing")
   Emitter<String> definitionEmitter;
 
-  private final Map<BaseElementId, Map<Integer, Object>> definitionMap = new HashMap<>();
+  private final Map<BaseElementId, Object> definitionMap = new HashMap<>();
 
   @PostConstruct
   void init() throws IOException {
@@ -51,13 +50,9 @@ public class Deployer {
           Path bpmnPath = Paths.get(url.getPath());
           String xml = Files.readString(bpmnPath);
           String filename = bpmnPath.getFileName().toString();
-          Integer generation = GenerationExtractor.getGenerationFromString(filename).orElseThrow();
-          Definitions definitions = BpmnParser.parse(xml, generation);
+          Definitions definitions = BpmnParser.parse(xml);
 
-          Map<Integer, Object> genMap =
-              definitionMap.computeIfAbsent(
-                  definitions.getProcessDefinitionId(), k -> new HashMap<>());
-          genMap.put(generation, beanInstance);
+          definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
 
           definitionEmitter.send(KafkaRecord.of(filename, xml));
         }
@@ -71,7 +66,7 @@ public class Deployer {
     return CDI.current().select(beanClass).get();
   }
 
-  public Map<BaseElementId, Map<Integer, Object>> getDefinitionMap() {
+  public Map<BaseElementId, Object> getDefinitionMap() {
     return definitionMap;
   }
 }

@@ -204,7 +204,7 @@ public class ProcessDefinitionTopologyProducer {
             .map(
                 (key, value) ->
                     KeyValue.pair(
-                        value.getProcessDefinitionId() + "." + value.getGeneration(), value))
+                        value.getDefinitionsKey().getProcessDefinitionId().toString(), value))
             .groupByKey(Grouped.with(Serdes.String(), new ObjectMapperSerde<>(Definitions.class)))
             .aggregate(
                 initializer,
@@ -218,8 +218,7 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) ->
                     KeyValue.pair(
                         new ProcessDefinitionKey(
-                            value.getDefinitions().getProcessDefinitionId(),
-                            value.getDefinitions().getGeneration(),
+                            value.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
                             value.getVersion()),
                         value));
     processDefinitionStream.to(

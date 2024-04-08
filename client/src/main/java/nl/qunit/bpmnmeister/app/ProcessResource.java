@@ -31,7 +31,6 @@ public class ProcessResource {
   @Consumes(MediaType.APPLICATION_JSON)
   public void start(
       @RestPath String processId,
-      @RestPath Integer gen,
       @RestPath Integer version,
       @RestPath String elementId,
       String variables) {
@@ -43,7 +42,7 @@ public class ProcessResource {
       throw new IllegalArgumentException("Failed to parse variables", e);
     }
     ProcessDefinitionKey processDefinitionKey =
-        new ProcessDefinitionKey(new BaseElementId(processId), gen, version);
+        new ProcessDefinitionKey(new BaseElementId(processId), version);
     ProcessInstanceStartCommand startCommand =
         new ProcessInstanceStartCommand(
             processDefinitionKey, new BaseElementId(elementId), new Variables(variablesMap));

@@ -28,7 +28,7 @@ class ExternalTriggerConsumerTest {
     @Test
     void testConsume() throws InvocationTargetException, IllegalAccessException {
         ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new BaseElementId("processDefinitionId"), 1, 1);
+        ProcessDefinitionKey processDefinitionKey = new ProcessDefinitionKey(new BaseElementId("processDefinitionId"),  1);
         BaseElementId externalTaskId = new BaseElementId("externalTaskId");
         JsonNode jsonNode = new TextNode("testvalue");
         Variables variables = new Variables(Map.of("variable1", jsonNode));
