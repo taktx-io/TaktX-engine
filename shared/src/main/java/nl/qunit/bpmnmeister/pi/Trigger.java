@@ -16,6 +16,7 @@ public abstract class Trigger {
 
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessInstanceKey parentProcessInstanceKey;
+  private final String parentElementId;
   private final ProcessDefinition processDefinition;
   private final String elementId;
   private final Variables variables;
@@ -23,11 +24,13 @@ public abstract class Trigger {
   protected Trigger(
       ProcessInstanceKey processInstanceKey,
       ProcessInstanceKey parentProcessInstanceKey,
+      String parentElementId,
       ProcessDefinition processDefinition,
       String elementId,
       Variables variables) {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.parentElementId = parentElementId;
     this.processDefinition = processDefinition;
     this.elementId = elementId;
     this.variables = variables;

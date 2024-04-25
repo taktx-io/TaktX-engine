@@ -31,15 +31,23 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
               new FlowElementTrigger(
                   processInstance.getParentProcessInstanceKey(),
                   ProcessInstanceKey.NONE,
+                  processInstance.getParentElementId(),
                   ProcessDefinition.NONE,
-                  element.getParentId(),
+                  Constants.NONE,
                   Constants.NONE,
                   processInstance.getVariables())),
+          Set.of(),
           ThrowingEvent.NOOP,
           returnVariables);
     } else {
       return new TriggerResult(
-          newState, element.getOutgoing(), Set.of(), Set.of(), ThrowingEvent.NOOP, returnVariables);
+          newState,
+          element.getOutgoing(),
+          Set.of(),
+          Set.of(),
+          Set.of(),
+          ThrowingEvent.NOOP,
+          returnVariables);
     }
   }
 }

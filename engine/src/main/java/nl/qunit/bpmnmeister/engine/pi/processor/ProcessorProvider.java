@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
@@ -24,6 +25,7 @@ public class ProcessorProvider {
   @Inject ServiceTaskProcessor serviceTaskProcessor;
   @Inject TaskProcessor taskProcessor;
   @Inject SubProcessProcessor subProcessProcessor;
+  @Inject CallActivityProcessor callActivityProcessor;
   @Inject SequentialMultiInstanceProcessor sequentialMultiInstanceProcessor;
   @Inject ParallelMultiInstanceProcessor parallelMultiInstanceProcessor;
 
@@ -52,6 +54,8 @@ public class ProcessorProvider {
       processor = taskProcessor;
     } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
+    } else if (element instanceof CallActivity) {
+      processor = callActivityProcessor;
     }
     if (!activity.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       if (activity.getLoopCharacteristics().getIsSequential()) {

@@ -8,9 +8,9 @@ import lombok.ToString;
 
 @Getter
 @ToString
-public class TaskState extends ActivityState {
+public class CallActivityState extends ActivityState {
   @JsonCreator
-  public TaskState(
+  public CallActivityState(
       @JsonProperty("state") ActivityStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt) {

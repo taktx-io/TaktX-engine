@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 import nl.qunit.bpmnmeister.bpmn.TActivity;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
+import nl.qunit.bpmnmeister.bpmn.TCallActivity;
 import nl.qunit.bpmnmeister.bpmn.TEndEvent;
 import nl.qunit.bpmnmeister.bpmn.TExclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
@@ -17,6 +18,7 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
+import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
@@ -81,6 +83,15 @@ public class FlowElementMapper {
                 mapQNameList(subProcess.getOutgoing()),
                 loopCharacteristics,
                 new FlowElements(elements));
+      } else if (activity instanceof TCallActivity callActivity) {
+        activityFlowElement =
+            new CallActivity(
+                new String(tFlowElement.getId()),
+                parentId,
+                mapQNameList(callActivity.getIncoming()),
+                mapQNameList(callActivity.getOutgoing()),
+                loopCharacteristics,
+                callActivity.getCalledElement().toString());
       }
       return activityFlowElement;
     } else if (tFlowElement instanceof TParallelGateway parallelGateway) {

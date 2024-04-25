@@ -36,6 +36,7 @@ public class ParallelGatewayProcessor
         outputFlows,
         Set.of(),
         Set.of(),
+        Set.of(),
         ThrowingEvent.NOOP,
         Variables.EMPTY);
   }

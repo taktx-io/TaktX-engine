@@ -181,7 +181,8 @@ public class ProcessDefinitionTopologyProducer {
             .branch(
                 (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,
-                (key, value) -> value instanceof ExternalTaskTrigger);
+                (key, value) -> value instanceof ExternalTaskTrigger,
+                (key, value) -> value instanceof ProcessInstanceStartCommand);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -198,6 +199,15 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE));
+    branches[3]
+        .map(
+            (key, value) ->
+                KeyValue.pair(
+                    ((ProcessInstanceStartCommand) value).getProcessDefinitionId(),
+                    (ProcessInstanceStartCommand) value))
+        .to(
+            PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
+            Produced.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {

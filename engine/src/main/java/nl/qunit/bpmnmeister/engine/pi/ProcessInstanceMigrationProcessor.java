@@ -86,6 +86,7 @@ public class ProcessInstanceMigrationProcessor
     ProcessInstance newProcessInstance =
         new ProcessInstance(
             processInstance.getParentProcessInstanceKey(),
+            processInstance.getParentElementId(),
             processInstance.getProcessInstanceKey(),
             newProcessDefinition,
             new ElementStates(newElementStates),

@@ -190,4 +190,27 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("task-id", 3)
         .hasPassedElement("EndEvent_1");
   }
+  @Test
+  void testProcessCallActivitySingle()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.gen1.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilChildProcessIsStarted()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_CalledElement")
+        .hasPassedElement("task_CalledElement")
+        .hasPassedElement("EndEvent_CalledElement")
+        .toProcessLevel()
+        .assertThatParentProcess()
+        .hasPassedElement("StartEvent_1")
+        .toProcessLevel()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("callactivity-id")
+        .hasPassedElement("EndEvent_1");
+  }
 }

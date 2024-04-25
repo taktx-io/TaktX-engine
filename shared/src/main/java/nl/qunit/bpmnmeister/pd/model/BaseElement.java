@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
+@EqualsAndHashCode
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = EndEvent.class),
@@ -24,27 +25,9 @@ import lombok.Getter;
 })
 public abstract class BaseElement {
   private final String id;
-  private final String parentId;
 
-  protected BaseElement(@Nonnull String id, @Nonnull String parentId) {
+  protected BaseElement(@Nonnull String id) {
     this.id = id;
-    this.parentId = parentId;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    BaseElement that = (BaseElement) o;
-    return Objects.equals(id, that.id) && Objects.equals(parentId, that.parentId);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(id, parentId);
-  }
 }

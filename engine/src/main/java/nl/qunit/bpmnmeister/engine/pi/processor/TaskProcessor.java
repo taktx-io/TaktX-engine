@@ -32,6 +32,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
         element.getOutgoing(),
         Set.of(),
         Set.of(),
+        Set.of(),
         ThrowingEvent.NOOP,
         Variables.EMPTY);
   }

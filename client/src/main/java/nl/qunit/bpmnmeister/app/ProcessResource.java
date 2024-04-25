@@ -10,7 +10,8 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.MediaType;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.eclipse.microprofile.reactive.messaging.Channel;
@@ -30,8 +31,6 @@ public class ProcessResource {
   @Consumes(MediaType.APPLICATION_JSON)
   public void start(
       @RestPath String processId,
-      @RestPath Integer version,
-      @RestPath String elementId,
       String variables) {
     // Convert Json string to Map of variables with JsonNode values
     Map<String, JsonNode> variablesMap;
@@ -40,11 +39,12 @@ public class ProcessResource {
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to parse variables", e);
     }
-    ProcessDefinitionKey processDefinitionKey =
-        new ProcessDefinitionKey(new String(processId), version);
     ProcessInstanceStartCommand startCommand =
         new ProcessInstanceStartCommand(
-            processDefinitionKey, new String(elementId), new Variables(variablesMap));
-    startCommandEmitter.send(KafkaRecord.of(processDefinitionKey, startCommand));
+            ProcessInstanceKey.NONE,
+            Constants.NONE,
+            processId,
+            new Variables(variablesMap));
+    startCommandEmitter.send(KafkaRecord.of(processId, startCommand));
   }
 }

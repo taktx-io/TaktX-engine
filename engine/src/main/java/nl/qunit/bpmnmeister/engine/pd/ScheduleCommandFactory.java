@@ -11,10 +11,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.scheduler.FixedRateStartCommand;
@@ -104,8 +106,9 @@ public class ScheduleCommandFactory {
                   .orElseThrow();
       processInstanceStartCommand.add(
           new ProcessInstanceStartCommand(
+              ProcessInstanceKey.NONE,
+              Constants.NONE,
               processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
-              sequenceFlow.getTarget(),
               Variables.EMPTY));
     }
     return processInstanceStartCommand;

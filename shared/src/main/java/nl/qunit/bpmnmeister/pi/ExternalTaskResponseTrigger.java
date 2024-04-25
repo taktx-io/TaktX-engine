@@ -25,7 +25,7 @@ public class ExternalTaskResponseTrigger extends Trigger {
           ExternalTaskResponseResult externalTaskResponseResult,
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(
-        processInstanceKey, ProcessInstanceKey.NONE, ProcessDefinition.NONE, elementId, variables);
+        processInstanceKey, ProcessInstanceKey.NONE, Constants.NONE, ProcessDefinition.NONE, elementId, variables);
     this.externalTaskResponseResult = externalTaskResponseResult;
   }
 }

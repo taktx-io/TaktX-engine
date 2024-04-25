@@ -28,6 +28,7 @@ public class ExclusiveGatewayProcessor
         element.getOutgoing(),
         Set.of(),
         Set.of(),
+        Set.of(),
         ThrowingEvent.NOOP,
         Variables.EMPTY);
   }

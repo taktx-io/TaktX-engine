@@ -25,13 +25,14 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       Variables variables) {
     if (oldState.getState() != ActivityStateEnum.READY) {
       return new TriggerResult(
-          oldState, Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
+          oldState, Set.of(), Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
     }
     return new TriggerResult(
         new ServiceTaskState(
             ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), oldState.getPassedCnt()),
         Set.of(),
         Set.of(element.getId()),
+        Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
         Variables.EMPTY);
@@ -46,7 +47,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       Variables variables) {
     if (oldState.getState() != ActivityStateEnum.ACTIVE) {
       return new TriggerResult(
-          oldState, Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
+          oldState, Set.of(), Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
     }
 
     return new TriggerResult(
@@ -55,6 +56,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             oldState.getElementInstanceId(),
             oldState.getPassedCnt() + 1),
         element.getOutgoing(),
+        Set.of(),
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,

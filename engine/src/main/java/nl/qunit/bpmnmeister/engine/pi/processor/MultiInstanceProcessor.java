@@ -62,6 +62,7 @@ public abstract class MultiInstanceProcessor
           element.getOutgoing(),
           Set.of(),
           Set.of(),
+          Set.of(),
           ThrowingEvent.NOOP,
           returnVariables);
     } else {
@@ -77,6 +78,7 @@ public abstract class MultiInstanceProcessor
           Set.of(),
           Set.of(),
           subProcessTriggers,
+          Set.of(),
           ThrowingEvent.NOOP,
           returnVariables);
     }
@@ -131,6 +133,7 @@ public abstract class MultiInstanceProcessor
           Set.of(),
           Set.of(),
           subProcessTriggers,
+          Set.of(),
           ThrowingEvent.NOOP,
           returnVariables);
     } else {

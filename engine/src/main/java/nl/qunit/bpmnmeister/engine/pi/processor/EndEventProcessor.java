@@ -33,8 +33,9 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
           new FlowElementTrigger(
               processInstance.getParentProcessInstanceKey(),
               ProcessInstanceKey.NONE,
+              processInstance.getParentElementId(),
               ProcessDefinition.NONE,
-              element.getParentId(),
+              Constants.NONE,
               Constants.NONE,
               processInstance.getVariables()));
     }
@@ -45,6 +46,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
         Set.of(),
         Set.of(),
         processInstanceTriggers,
+        Set.of(),
         new EndThrowingEvent(),
         Variables.EMPTY);
   }

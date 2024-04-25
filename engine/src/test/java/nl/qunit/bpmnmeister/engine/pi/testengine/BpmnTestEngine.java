@@ -116,14 +116,6 @@ public class BpmnTestEngine {
     hashToDefinitionMap.put(processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
   }
 
-  public BpmnTestEngine triggerNewProcessInstance(String elementId) {
-    ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-    Trigger trigger = new FlowElementTrigger(processInstanceKey, ProcessInstanceKey.NONE,
-        activeProcessDefintion, new String(elementId), Constants.NONE, Variables.EMPTY);
-    triggerEmitter.send(trigger);
-    return this;
-  }
-
   public ExternalTaskTrigger pollExternalTask(String elementId) {
     ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.get(activeProcessInstance.getProcessInstanceKey());
     if (externalTaskTriggers == null) {
@@ -168,10 +160,11 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine startProcessInstance(Variables variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
-    String startEventId = activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements()
-        .getStartEvents().get(0).getId();
     ProcessInstanceStartCommand startCommand = new ProcessInstanceStartCommand(
-        activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(), startEventId, variables);
+        ProcessInstanceKey.NONE,
+        Constants.NONE,
+        activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
+        variables);
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey.getProcessDefinitionId(), startCommand));
 
     ProcessInstanceKey activeProcessInstanceKey = Awaitility.await()

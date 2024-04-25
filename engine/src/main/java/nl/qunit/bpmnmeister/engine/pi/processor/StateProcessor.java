@@ -43,7 +43,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends BpmnElemen
       S oldState,
       Variables variables) {
     return new TriggerResult(
-        oldState, Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
+        oldState, Set.of(), Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
   }
 
   public abstract S initialState();

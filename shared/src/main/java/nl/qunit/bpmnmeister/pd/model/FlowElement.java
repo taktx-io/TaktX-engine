@@ -6,7 +6,7 @@ import lombok.Getter;
 @Getter
 public abstract class FlowElement extends BaseElement {
   protected FlowElement(@Nonnull String id, @Nonnull String parentId) {
-    super(id, parentId);
+    super(id);
   }
 
   @Override

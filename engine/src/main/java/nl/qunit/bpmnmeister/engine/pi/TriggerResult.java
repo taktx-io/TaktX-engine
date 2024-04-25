@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -17,6 +18,7 @@ public class TriggerResult {
   private final Set<String> newActiveFlows;
   private final Set<String> externalTasks;
   private final Set<Trigger> newProcessInstanceTriggers;
+  private final Set<ProcessInstanceStartCommand> newStartCommands;
   private final ThrowingEvent throwingEvent;
   private final Variables variables;
 
@@ -26,12 +28,14 @@ public class TriggerResult {
       @Nonnull @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
       @Nonnull @JsonProperty("externalTasks") Set<String> externalTasks,
       @Nonnull @JsonProperty("newProcessInstanceTriggers") Set<Trigger> newProcessInstanceTriggers,
+      @Nonnull @JsonProperty("newStartCommands") Set<ProcessInstanceStartCommand> newStartCommands,
       @Nonnull @JsonProperty("throwEvent") ThrowingEvent throwingEvent,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;
     this.externalTasks = externalTasks;
     this.newProcessInstanceTriggers = newProcessInstanceTriggers;
+    this.newStartCommands = newStartCommands;
     this.throwingEvent = throwingEvent;
     this.variables = variables;
   }

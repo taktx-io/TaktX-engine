@@ -41,6 +41,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
           new FlowElementTrigger(
               new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
               processInstance.getProcessInstanceKey(),
+              element.getId(),
               subProcessDefinition,
               element.getId(),
               Constants.NONE,

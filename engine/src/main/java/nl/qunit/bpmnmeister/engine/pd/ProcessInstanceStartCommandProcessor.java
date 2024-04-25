@@ -4,6 +4,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
@@ -37,15 +38,25 @@ public class ProcessInstanceStartCommandProcessor
     ProcessDefinition processDefinition =
         processDefinitionStore.get(
             new ProcessDefinitionKey(startCommandRecord.key(), latestVersion));
-    ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
+    StartEvent startEvent =
+        processDefinition
+            .getDefinitions()
+            .getRootProcess()
+            .getFlowElements()
+            .getStartEvents()
+            .get(0);
+    ProcessInstanceStartCommand startCommand = startCommandRecord.value();
+    ProcessInstanceKey processInstanceKey =
+        new ProcessInstanceKey(UUID.randomUUID(), startCommand.getParentProcessInstanceId());
     Trigger processInstanceTrigger =
         new FlowElementTrigger(
             processInstanceKey,
-            ProcessInstanceKey.NONE,
+            startCommand.getParentProcessInstanceId(),
+            startCommand.getParentElementId(),
             processDefinition,
-            startCommandRecord.value().getElementId(),
+            startEvent.getId(),
             Constants.NONE,
-            startCommandRecord.value().getVariables());
+            startCommand.getVariables());
     context.forward(
         new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));
   }
