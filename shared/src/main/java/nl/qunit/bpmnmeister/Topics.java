@@ -9,7 +9,8 @@ public enum Topics {
   PROCESS_INSTANCE_TOPIC("process-instance-topic"),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger-topic"),
   EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger-topic"),
-  PROCESS_INSTANCE_MIGRATION_TOPIC("process-migration-topic");
+  PROCESS_INSTANCE_MIGRATION_TOPIC("process-migration-topic"),
+  DEFINITIONS_TOPIC("definitions-topic");
 
   private final String topicName;
 

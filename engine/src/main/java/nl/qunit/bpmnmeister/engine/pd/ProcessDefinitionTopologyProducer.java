@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
+import static nl.qunit.bpmnmeister.Topics.DEFINITIONS_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
@@ -7,11 +8,12 @@ import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_START_COMMAND_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_ACTIVATION_STORE_NAME;
-import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_PARSED_STORE;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
-import static nl.qunit.bpmnmeister.engine.pd.Stores.UNIQUE_KEY_DEFINITIONS_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.XML_BY_HASH_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
 import io.quarkus.cache.Cache;
@@ -42,12 +44,8 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Aggregator;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.Grouped;
-import org.apache.kafka.streams.kstream.Initializer;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 
 @ApplicationScoped
@@ -90,7 +88,7 @@ public class ProcessDefinitionTopologyProducer {
   public Topology buildTopology() {
     StreamsBuilder builder = new StreamsBuilder();
 
-    setupDefinitionStream(builder);
+    setupNewDefinitionStream(builder);
 
     setupActivationStream(builder);
 
@@ -105,12 +103,53 @@ public class ProcessDefinitionTopologyProducer {
     return builder.build();
   }
 
+  private void setupNewDefinitionStream(StreamsBuilder builder) {
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(XML_BY_HASH_STORE_NAME), Serdes.String(), DEFINITIONS_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(DEFINITION_COUNT_BY_ID_STORE_NAME),
+            Serdes.String(),
+            Serdes.Integer()));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(PROCESS_DEFINITION_STORE_NAME),
+            PROCESS_DEFINITION_KEY_SERDE,
+            PROCESS_DEFINITION_SERDE));
+
+    builder.stream(XML_TOPIC.getTopicName(), Consumed.with(Serdes.String(), Serdes.String()))
+        .map(new DefinitionsMapper())
+        .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), DEFINITIONS_SERDE));
+
+    builder.stream(
+            DEFINITIONS_TOPIC.getTopicName(), Consumed.with(Serdes.String(), DEFINITIONS_SERDE))
+        .process(
+            DefinitionsProcessor::new,
+            Stores.XML_BY_HASH_STORE_NAME,
+            DEFINITION_COUNT_BY_ID_STORE_NAME,
+            PROCESS_DEFINITION_STORE_NAME)
+        .to(
+            Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
+            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE));
+
+    builder.stream(
+            Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
+            Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))
+        .process(ProcessDefinitionActivationProcessor::new)
+        .to(
+            PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
+            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
+  }
+
   private void setupProcessInstanceStartCommandStream(StreamsBuilder builder) {
     builder.stream(
             PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
-            Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_INSTANCE_START_COMMAND_SERDE))
+            Consumed.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE))
         .process(
-            ProcessInstanceStartCommandProcessor::new, PROCESS_DEFINITION_ACTIVATION_STORE_NAME)
+            ProcessInstanceStartCommandProcessor::new,
+            PROCESS_DEFINITION_STORE_NAME,
+            DEFINITION_COUNT_BY_ID_STORE_NAME)
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
@@ -173,64 +212,11 @@ public class ProcessDefinitionTopologyProducer {
         stateStore.stream(
             Topics.SCHEDULE_COMMANDS.getTopicName(),
             Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
-    KStream<ProcessDefinitionKey, ProcessInstanceStartCommand> processStream =
+    KStream<String, ProcessInstanceStartCommand> processStream =
         scheduleCommandStream.process(() -> new ScheduleProcessor(clock), SCHEDULES_STORE_NAME);
     processStream.to(
         PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
-        Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_INSTANCE_START_COMMAND_SERDE));
-  }
-
-  private void setupDefinitionStream(StreamsBuilder builder) {
-    Initializer<ProcessDefinition> initializer = () -> new ProcessDefinition(Definitions.NONE, 0);
-
-    Aggregator<String, Definitions, ProcessDefinition> aggregator =
-        (key, value, aggregation) -> new ProcessDefinition(value, aggregation.getVersion() + 1);
-
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(UNIQUE_KEY_DEFINITIONS_STORE_NAME),
-            Serdes.String(),
-            DEFINITIONS_SERDE));
-
-    KStream<String, String> xmlStream =
-        builder.stream(XML_TOPIC.getTopicName(), Consumed.with(Serdes.String(), Serdes.String()));
-
-    KStream<String, Definitions> generatedKeyDefinitionStream =
-        xmlStream.map(new UniqueXmlKeyMapper());
-
-    KStream<ProcessDefinitionKey, ProcessDefinition> processDefinitionStream =
-        generatedKeyDefinitionStream
-            .process(StoreDefinitionsProcessor::new, UNIQUE_KEY_DEFINITIONS_STORE_NAME)
-            .map(
-                (key, value) ->
-                    KeyValue.pair(
-                        value.getDefinitionsKey().getProcessDefinitionId().toString(), value))
-            .groupByKey(Grouped.with(Serdes.String(), new ObjectMapperSerde<>(Definitions.class)))
-            .aggregate(
-                initializer,
-                aggregator,
-                Materialized.<String, ProcessDefinition>as(
-                        keyValueStoreSupplier.get(PROCESS_DEFINITION_PARSED_STORE))
-                    .withKeySerde(Serdes.String())
-                    .withValueSerde(PROCESS_DEFINITION_SERDE))
-            .toStream()
-            .map(
-                (key, value) ->
-                    KeyValue.pair(
-                        new ProcessDefinitionKey(
-                            value.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
-                            value.getVersion()),
-                        value));
-    processDefinitionStream.to(
-        Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
-        Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE));
-
-    KStream<ProcessDefinitionKey, ProcessDefinitionActivation> activationStreamOut =
-        processDefinitionStream.process(ProcessDefinitionActivationProcessor::new);
-
-    activationStreamOut.to(
-        PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
-        Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
+        Produced.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE));
   }
 
   private void setupActivationStream(StreamsBuilder builder) {

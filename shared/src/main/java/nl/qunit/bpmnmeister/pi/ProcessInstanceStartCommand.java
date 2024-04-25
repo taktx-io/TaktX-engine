@@ -3,20 +3,19 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
 public class ProcessInstanceStartCommand {
-  private final ProcessDefinitionKey processDefinitionKey;
+  private final String processDefinitionId;
   private final String elementId;
   private final Variables variables;
 
   @JsonCreator
   public ProcessInstanceStartCommand(
-      @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @JsonProperty("processDefinitionId") String processDefinitionId,
       @JsonProperty("elementId") String elementId,
       @JsonProperty("variables") Variables variables) {
-    this.processDefinitionKey = processDefinitionKey;
+    this.processDefinitionId = processDefinitionId;
     this.elementId = elementId;
     this.variables = variables;
   }

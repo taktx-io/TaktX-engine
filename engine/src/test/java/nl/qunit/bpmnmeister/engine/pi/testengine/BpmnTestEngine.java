@@ -171,8 +171,8 @@ public class BpmnTestEngine {
     String startEventId = activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements()
         .getStartEvents().get(0).getId();
     ProcessInstanceStartCommand startCommand = new ProcessInstanceStartCommand(
-        processDefinitionKey, startEventId, variables);
-    startCommandEmitter.send(KafkaRecord.of(processDefinitionKey, startCommand));
+        activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(), startEventId, variables);
+    startCommandEmitter.send(KafkaRecord.of(processDefinitionKey.getProcessDefinitionId(), startCommand));
 
     ProcessInstanceKey activeProcessInstanceKey = Awaitility.await()
         .until(() -> {

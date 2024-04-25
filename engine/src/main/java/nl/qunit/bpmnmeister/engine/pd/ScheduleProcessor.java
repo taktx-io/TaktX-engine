@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
@@ -14,9 +13,8 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ScheduleProcessor
-    implements Processor<
-        ScheduleKey, ScheduleStartCommand, ProcessDefinitionKey, ProcessInstanceStartCommand> {
-  private ProcessorContext<ProcessDefinitionKey, ProcessInstanceStartCommand> context;
+    implements Processor<ScheduleKey, ScheduleStartCommand, String, ProcessInstanceStartCommand> {
+  private ProcessorContext<String, ProcessInstanceStartCommand> context;
   private Clock clock;
 
   public ScheduleProcessor(Clock clock) {
@@ -24,7 +22,7 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void init(ProcessorContext<ProcessDefinitionKey, ProcessInstanceStartCommand> context) {
+  public void init(ProcessorContext<String, ProcessInstanceStartCommand> context) {
     this.context = context;
     context.schedule(
         Duration.ofSeconds(1),
@@ -48,7 +46,7 @@ public class ScheduleProcessor
                                           context.forward(
                                               new Record<>(
                                                   processInstanceStartCommand
-                                                      .getProcessDefinitionKey(),
+                                                      .getProcessDefinitionId(),
                                                   processInstanceStartCommand,
                                                   Instant.now(clock).toEpochMilli()))));
                       if (updatedScheduleCommand != null) {

@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
@@ -105,7 +104,7 @@ public class ScheduleCommandFactory {
                   .orElseThrow();
       processInstanceStartCommand.add(
           new ProcessInstanceStartCommand(
-              ProcessDefinitionKey.of(processDefinition),
+              processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
               sequenceFlow.getTarget(),
               Variables.EMPTY));
     }
