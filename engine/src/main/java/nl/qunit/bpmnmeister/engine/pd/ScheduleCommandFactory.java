@@ -17,7 +17,7 @@ import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.scheduler.FixedRateStartCommand;
 import nl.qunit.bpmnmeister.scheduler.OneTimeStartCommand;
@@ -51,8 +51,7 @@ public class ScheduleCommandFactory {
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceStartCommand> startCommands =
-        getStartCommands(processDefinition, startEvent);
+    List<StartCommand> startCommands = getStartCommands(processDefinition, startEvent);
 
     return new OneTimeStartCommand(startCommands, timerEventDefinition.getTimeDate());
   }
@@ -72,7 +71,7 @@ public class ScheduleCommandFactory {
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceStartCommand> triggers = getStartCommands(processDefinition, startEvent);
+    List<StartCommand> triggers = getStartCommands(processDefinition, startEvent);
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
     return new FixedRateStartCommand(
         triggers,
@@ -86,15 +85,14 @@ public class ScheduleCommandFactory {
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<ProcessInstanceStartCommand> startCommands =
-        getStartCommands(processDefinition, startEvent);
+    List<StartCommand> startCommands = getStartCommands(processDefinition, startEvent);
     return new RecurringStartCommand(
         startCommands, timerEventDefinition.getTimeCycle(), Instant.now(clock).toString());
   }
 
-  private static List<ProcessInstanceStartCommand> getStartCommands(
+  private static List<StartCommand> getStartCommands(
       ProcessDefinition processDefinition, StartEvent startEvent) {
-    List<ProcessInstanceStartCommand> processInstanceStartCommand = new ArrayList<>();
+    List<StartCommand> processInstanceStartCommand = new ArrayList<>();
     for (String outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow)
@@ -105,7 +103,7 @@ public class ScheduleCommandFactory {
                   .getFlowElement(outgoingFlowId)
                   .orElseThrow();
       processInstanceStartCommand.add(
-          new ProcessInstanceStartCommand(
+          new StartCommand(
               ProcessInstanceKey.NONE,
               Constants.NONE,
               processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),

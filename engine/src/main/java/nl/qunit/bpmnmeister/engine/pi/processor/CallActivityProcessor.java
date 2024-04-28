@@ -7,7 +7,7 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
@@ -33,7 +33,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
           Set.of(),
           Set.of(),
           Set.of(
-              new ProcessInstanceStartCommand(
+              new StartCommand(
                   processInstance.getProcessInstanceKey(),
                   element.getId(),
                   element.getCalledElement(),

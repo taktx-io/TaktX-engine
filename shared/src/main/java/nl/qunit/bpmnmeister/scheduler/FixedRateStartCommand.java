@@ -7,11 +7,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @Getter
 public class FixedRateStartCommand implements ScheduleStartCommand {
-  private final List<ProcessInstanceStartCommand> startCommands;
+  private final List<StartCommand> startCommands;
   private final String period;
   private final int repetitions;
   private final int repeatedCnt;
@@ -19,7 +19,7 @@ public class FixedRateStartCommand implements ScheduleStartCommand {
 
   @JsonCreator
   public FixedRateStartCommand(
-      @JsonProperty("triggers") List<ProcessInstanceStartCommand> startCommands,
+      @JsonProperty("triggers") List<StartCommand> startCommands,
       @JsonProperty("period") String period,
       @JsonProperty("repetitions") int repetitions,
       @JsonProperty("repeatedCnt") int repeatedCnt,
@@ -33,7 +33,7 @@ public class FixedRateStartCommand implements ScheduleStartCommand {
 
   @Override
   public FixedRateStartCommand evaluate(
-      Instant now, Consumer<List<ProcessInstanceStartCommand>> triggerConsumer) {
+      Instant now, Consumer<List<StartCommand>> triggerConsumer) {
     Instant nextExecution = Instant.parse(instantiation).plus(Duration.parse(period));
     if (now.isAfter(nextExecution)) {
       // Time reached, return triggers

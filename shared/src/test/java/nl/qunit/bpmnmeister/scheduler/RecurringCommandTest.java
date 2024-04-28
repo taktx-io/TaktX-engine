@@ -7,7 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import org.junit.jupiter.api.Test;
 
 class RecurringCommandTest {
@@ -19,10 +19,10 @@ class RecurringCommandTest {
 
     @Test
     void test() {
-        ProcessInstanceStartCommand trigger1 = mock(ProcessInstanceStartCommand.class);
+        StartCommand trigger1 = mock(StartCommand.class);
         RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
-        List<ProcessInstanceStartCommand> triggersReceived = new ArrayList<>();
+        List<StartCommand> triggersReceived = new ArrayList<>();
         RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggersReceived::addAll);
 
         assertThat(triggersReceived).isEmpty();
@@ -32,10 +32,10 @@ class RecurringCommandTest {
     }
     @Test
     void testAfter() {
-        ProcessInstanceStartCommand trigger1 = mock(ProcessInstanceStartCommand.class);
+        StartCommand trigger1 = mock(StartCommand.class);
         RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
-        List<ProcessInstanceStartCommand> triggersReceived = new ArrayList<>();
+        List<StartCommand> triggersReceived = new ArrayList<>();
         RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);
 
         assertThat(triggersReceived).containsExactly(trigger1);

@@ -144,7 +144,7 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  void testProcessTaskMultiInstanceParallelMay()
+  void testProcessTaskMultiInstanceParallelMany()
       throws IOException, JAXBException, NoSuchAlgorithmException {
 
     bpmnTestEngine
@@ -190,6 +190,7 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("task-id", 3)
         .hasPassedElement("EndEvent_1");
   }
+
   @Test
   void testProcessCallActivitySingle()
       throws IOException, JAXBException, NoSuchAlgorithmException {
@@ -212,5 +213,24 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasPassedElement("callactivity-id")
         .hasPassedElement("EndEvent_1");
+
+  }
+
+
+  @Test
+  void testProcessCallActivityMultiInstanceSequential()
+      throws IOException, JAXBException, NoSuchAlgorithmException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.gen1.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axyz0", "bxyz1", "cxyz2")))
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("callactivity-id", 3)
+        .hasPassedElement("EndEvent_1");
+
   }
 }

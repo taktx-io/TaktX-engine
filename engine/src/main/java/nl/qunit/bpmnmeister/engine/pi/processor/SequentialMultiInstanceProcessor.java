@@ -10,7 +10,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
@@ -18,7 +18,7 @@ import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 @ApplicationScoped
 public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
   @Override
-  protected Set<Trigger> getSubProcessTriggersWhenReady(
+  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,
@@ -28,7 +28,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
   }
 
   @Override
-  protected Set<Trigger> getSubProcessTriggersWhenActive(
+  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,
@@ -37,7 +37,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
     return getSubProcessTrigger(processInstance, element, variables, inputCollection, loopCnt);
   }
 
-  private static Set<Trigger> getSubProcessTrigger(
+  private static Set<ProcessInstanceTrigger> getSubProcessTrigger(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,

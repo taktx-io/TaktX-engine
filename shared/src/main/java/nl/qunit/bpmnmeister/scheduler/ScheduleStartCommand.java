@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -15,8 +15,8 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
   // other ScheduleCommand subclasses...
 })
 public interface ScheduleStartCommand {
-  List<ProcessInstanceStartCommand> getStartCommands();
+  List<StartCommand> getStartCommands();
 
   ScheduleStartCommand evaluate(
-      Instant now, Consumer<List<ProcessInstanceStartCommand>> triggerConsumer);
+      Instant now, Consumer<List<StartCommand>> triggerConsumer);
 }

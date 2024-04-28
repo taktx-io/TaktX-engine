@@ -41,7 +41,7 @@ public class SubProcess extends Activity {
                     + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
             process);
-    return new ProcessDefinition(definitions, version);
+    return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 
   @Override

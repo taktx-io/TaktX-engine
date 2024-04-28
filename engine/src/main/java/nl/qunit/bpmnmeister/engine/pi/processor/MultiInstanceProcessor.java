@@ -12,8 +12,8 @@ import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
-import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
@@ -66,7 +66,7 @@ public abstract class MultiInstanceProcessor
           ThrowingEvent.NOOP,
           returnVariables);
     } else {
-      Set<Trigger> subProcessTriggers =
+      Set<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenReady(processInstance, element, variables, inputCollection, 0);
 
       return new TriggerResult(
@@ -120,7 +120,7 @@ public abstract class MultiInstanceProcessor
 
     JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
     if (loopsReceived < inputCollection.size()) {
-      Set<Trigger> subProcessTriggers =
+      Set<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenActive(
               processInstance, element, variables, inputCollection, loopsReceived);
 
@@ -147,14 +147,14 @@ public abstract class MultiInstanceProcessor
     }
   }
 
-  protected abstract Set<Trigger> getSubProcessTriggersWhenReady(
+  protected abstract Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
       int loopCnt);
 
-  protected abstract Set<Trigger> getSubProcessTriggersWhenActive(
+  protected abstract Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,

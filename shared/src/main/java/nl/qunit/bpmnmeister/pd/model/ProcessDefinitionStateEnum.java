@@ -6,7 +6,6 @@ package nl.qunit.bpmnmeister.pd.model;
  * ACTIVE -> INACTIVE: Schedules are cancelled. INACTIVE: No new instances will be started.
  */
 public enum ProcessDefinitionStateEnum {
-  INITIAL, //
   ACTIVE, // Active, can be triggered and StartEvent timers are running
   INACTIVE, // No new instances will be started.
 }

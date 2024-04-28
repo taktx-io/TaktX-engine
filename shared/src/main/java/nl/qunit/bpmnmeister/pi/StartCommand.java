@@ -2,11 +2,13 @@ package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 
 @Getter
-public class ProcessInstanceStartCommand {
+@EqualsAndHashCode(callSuper = true)
+public class StartCommand extends DefinitionsTrigger {
 
   private final ProcessInstanceKey parentProcessInstanceId;
   private final String parentElementId;
@@ -14,7 +16,7 @@ public class ProcessInstanceStartCommand {
   private final Variables variables;
 
   @JsonCreator
-  public ProcessInstanceStartCommand(
+  public StartCommand(
       @JsonProperty("parentProcessInstanceId") ProcessInstanceKey parentProcessInstanceId,
       @JsonProperty("parentElementId") String parentElementId,
       @JsonProperty("processDefinitionId") String processDefinitionId,

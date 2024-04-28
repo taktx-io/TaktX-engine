@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister;
 public enum Topics {
   PROCESS_DEFINITION_PARSED_TOPIC("process-definition-parsed-topic"),
   PROCESS_DEFINTIION_ACTIVATION_TOPIC("process-definition-activation-topic"),
-  PROCESS_INSTANCE_START_COMMAND_TOPIC("process-instance-start-command-topic"),
   XML_TOPIC("process-definition-xml-topic"),
   SCHEDULE_COMMANDS("schedule-commands"),
   PROCESS_INSTANCE_TOPIC("process-instance-topic"),

@@ -1,63 +1,28 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
-import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pd.model.StartEvent;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ProcessInstanceStartCommandProcessor
-    implements Processor<String, ProcessInstanceStartCommand, ProcessInstanceKey, Trigger> {
-  private ProcessorContext<ProcessInstanceKey, Trigger> context;
+    implements Processor<String, StartCommand, ProcessInstanceKey, ProcessInstanceTrigger> {
+  private ProcessorContext<ProcessInstanceKey, ProcessInstanceTrigger> context;
   private KeyValueStore<String, Integer> definitionCountByIdStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processDefinitionStore;
 
   @Override
-  public void init(ProcessorContext<ProcessInstanceKey, Trigger> context) {
+  public void init(ProcessorContext<ProcessInstanceKey, ProcessInstanceTrigger> context) {
     this.context = context;
     this.definitionCountByIdStore = context.getStateStore(Stores.DEFINITION_COUNT_BY_ID_STORE_NAME);
     this.processDefinitionStore = context.getStateStore(Stores.PROCESS_DEFINITION_STORE_NAME);
   }
 
   @Override
-  public void process(Record<String, ProcessInstanceStartCommand> startCommandRecord) {
-    Integer latestVersion = this.definitionCountByIdStore.get(startCommandRecord.key());
-    if (latestVersion == null) {
-      throw new IllegalStateException(
-          "Process definition not found for key: " + startCommandRecord.key());
-    }
-
-    ProcessDefinition processDefinition =
-        processDefinitionStore.get(
-            new ProcessDefinitionKey(startCommandRecord.key(), latestVersion));
-    StartEvent startEvent =
-        processDefinition
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getStartEvents()
-            .get(0);
-    ProcessInstanceStartCommand startCommand = startCommandRecord.value();
-    ProcessInstanceKey processInstanceKey =
-        new ProcessInstanceKey(UUID.randomUUID(), startCommand.getParentProcessInstanceId());
-    Trigger processInstanceTrigger =
-        new FlowElementTrigger(
-            processInstanceKey,
-            startCommand.getParentProcessInstanceId(),
-            startCommand.getParentElementId(),
-            processDefinition,
-            startEvent.getId(),
-            Constants.NONE,
-            startCommand.getVariables());
-    context.forward(
-        new Record<>(processInstanceKey, processInstanceTrigger, startCommandRecord.timestamp()));
-  }
+  public void process(Record<String, StartCommand> startCommandRecord) {}
 }

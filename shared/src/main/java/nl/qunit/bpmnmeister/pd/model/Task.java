@@ -46,7 +46,7 @@ public class Task extends Activity {
             process);
 
     Integer version = parentProcessDefinition.getVersion();
-    return new ProcessDefinition(definitions, version);
+    return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 
   @Override

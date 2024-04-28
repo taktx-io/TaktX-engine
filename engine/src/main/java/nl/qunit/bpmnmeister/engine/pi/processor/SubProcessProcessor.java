@@ -10,8 +10,8 @@ import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
-import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
@@ -44,7 +44,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcess element,
       SubProcessState oldState,
       Variables variables) {
-    Set<Trigger> subProcessTriggers = new HashSet<>();
+    Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
     String startElement = getStartEvent(element);
 
     FlowElementTrigger subProcessTrigger =

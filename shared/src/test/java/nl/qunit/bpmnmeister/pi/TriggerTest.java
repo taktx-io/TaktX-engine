@@ -6,24 +6,24 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import java.lang.reflect.Modifier;
 import java.util.Set;
 import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import org.junit.jupiter.api.Test;
 import org.reflections.Reflections;
 
 class TriggerTest {
   @Test
   void testAllSubTypesAreMappedToJackson() {
-    Reflections reflections = new Reflections(Trigger.class.getPackageName());
-    Set<Class<? extends Trigger>> allClasses = reflections.getSubTypesOf(Trigger.class);
+    Reflections reflections = new Reflections(ProcessInstanceTrigger.class.getPackageName());
+    Set<Class<? extends ProcessInstanceTrigger>> allClasses = reflections.getSubTypesOf(
+        ProcessInstanceTrigger.class);
 
-    Set<Class<? extends Trigger>> nonAbstractClasses = allClasses.stream()
+    Set<Class<? extends ProcessInstanceTrigger>> nonAbstractClasses = allClasses.stream()
         .filter(aClass -> !Modifier.isAbstract(aClass.getModifiers()))
         .collect(Collectors.toSet());
 
-    JsonSubTypes jsonSubTypes = Trigger.class.getAnnotation(JsonSubTypes.class);
+    JsonSubTypes jsonSubTypes = ProcessInstanceTrigger.class.getAnnotation(JsonSubTypes.class);
     JsonSubTypes.Type[] types = jsonSubTypes.value();
 
-    for (Class<? extends Trigger> nonAbstractClass : nonAbstractClasses) {
+    for (Class<? extends ProcessInstanceTrigger> nonAbstractClass : nonAbstractClasses) {
       boolean isMapped = false;
       for (JsonSubTypes.Type type : types) {
         if (type.value().equals(nonAbstractClass)) {

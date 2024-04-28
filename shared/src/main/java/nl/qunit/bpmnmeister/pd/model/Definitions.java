@@ -8,8 +8,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
-@EqualsAndHashCode
-public class Definitions {
+@EqualsAndHashCode(callSuper = true)
+public class Definitions extends DefinitionsTrigger {
   public static final Definitions NONE = new Definitions(DefinitionsKey.NONE, Process.NONE);
   private final DefinitionsKey definitionsKey;
   private final Process rootProcess;

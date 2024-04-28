@@ -8,7 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @Getter
-public class ExternalTaskResponseTrigger extends Trigger {
+public class ExternalTaskResponseTrigger extends ProcessInstanceTrigger {
   public static final ExternalTaskResponseTrigger NONE =
       new ExternalTaskResponseTrigger(
           ProcessInstanceKey.NONE,

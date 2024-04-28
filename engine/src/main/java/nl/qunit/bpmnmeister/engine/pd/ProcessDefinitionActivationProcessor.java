@@ -4,37 +4,83 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
+import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
+import nl.qunit.bpmnmeister.scheduler.ScheduleType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 public class ProcessDefinitionActivationProcessor
     implements Processor<
-        ProcessDefinitionKey,
-        ProcessDefinition,
-        ProcessDefinitionKey,
-        ProcessDefinitionActivation> {
-  private ProcessorContext<ProcessDefinitionKey, ProcessDefinitionActivation> context;
+        ProcessDefinitionKey, ProcessDefinitionActivation, ScheduleKey, ScheduleStartCommand> {
+
+  private ProcessorContext<ScheduleKey, ScheduleStartCommand> context;
+  private final ScheduleCommandFactory timerDefinitionScheduler;
+
+  public ProcessDefinitionActivationProcessor(ScheduleCommandFactory timerDefinitionScheduler) {
+    this.timerDefinitionScheduler = timerDefinitionScheduler;
+  }
 
   @Override
-  public void init(ProcessorContext<ProcessDefinitionKey, ProcessDefinitionActivation> context) {
+  public void init(ProcessorContext<ScheduleKey, ScheduleStartCommand> context) {
     this.context = context;
   }
 
   @Override
-  public void process(Record<ProcessDefinitionKey, ProcessDefinition> incoming) {
-    ProcessDefinitionKey key = incoming.key();
-    ProcessDefinition processDefinition = incoming.value();
-    if (key.getVersion() > 1) {
-      ProcessDefinitionKey previousVersionKey =
-          new ProcessDefinitionKey(key.getProcessDefinitionId(), key.getVersion() - 1);
-      ProcessDefinitionActivation deActivation =
-          new ProcessDefinitionActivation(
-              ProcessDefinition.NONE, ProcessDefinitionStateEnum.INACTIVE);
-      context.forward(new Record<>(previousVersionKey, deActivation, incoming.timestamp()));
+  public void process(
+      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord) {
+    if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
+      ProcessDefinitionActivation processActivation = processActivationRecord.value();
+      ProcessDefinition processDefinition = processActivation.getProcessDefinition();
+      processDefinition
+          .getDefinitions()
+          .getRootProcess()
+          .getFlowElements()
+          .getStartEvents()
+          .forEach(
+              startEvent ->
+                  startEvent
+                      .getTimerEventDefinitions()
+                      .forEach(
+                          timerEventDefinition -> {
+                            ScheduleKey scheduleKey =
+                                new ScheduleKey(
+                                    processActivationRecord.key(),
+                                    ScheduleType.from(timerEventDefinition),
+                                    startEvent.getId(),
+                                    timerEventDefinition.getId());
+                            context.forward(
+                                new Record<>(
+                                    scheduleKey,
+                                    timerDefinitionScheduler.schedule(
+                                        processDefinition, startEvent, timerEventDefinition),
+                                    processActivationRecord.timestamp()));
+                          }));
+    } else if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.INACTIVE) {
+      ProcessDefinitionActivation processActivation = processActivationRecord.value();
+      ProcessDefinition processDefinition = processActivation.getProcessDefinition();
+      processDefinition
+          .getDefinitions()
+          .getRootProcess()
+          .getFlowElements()
+          .getStartEvents()
+          .forEach(
+              startEvent ->
+                  startEvent
+                      .getTimerEventDefinitions()
+                      .forEach(
+                          timerEventDefinition -> {
+                            ScheduleKey scheduleKey =
+                                new ScheduleKey(
+                                    processActivationRecord.key(),
+                                    ScheduleType.from(timerEventDefinition),
+                                    startEvent.getId(),
+                                    timerEventDefinition.getId());
+                            context.forward(
+                                new Record<>(
+                                    scheduleKey, null, processActivationRecord.timestamp()));
+                          }));
     }
-    ProcessDefinitionActivation activation =
-        new ProcessDefinitionActivation(processDefinition, ProcessDefinitionStateEnum.ACTIVE);
-    context.forward(new Record<>(key, activation, incoming.timestamp()));
   }
 }

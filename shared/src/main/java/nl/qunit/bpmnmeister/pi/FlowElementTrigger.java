@@ -8,7 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 
 @Getter
-public class FlowElementTrigger extends Trigger {
+public class FlowElementTrigger extends ProcessInstanceTrigger {
   public static final FlowElementTrigger NONE =
       new FlowElementTrigger(
           ProcessInstanceKey.NONE,

@@ -2,14 +2,13 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import static nl.qunit.bpmnmeister.Topics.DEFINITIONS_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINITION_PARSED_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
-import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_START_COMMAND_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
-import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_ACTIVATION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
@@ -28,6 +27,7 @@ import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
@@ -36,14 +36,15 @@ import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
@@ -58,7 +59,8 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
   static final ObjectMapperSerde<ScheduleStartCommand> SCHEDULE_COMMAND_SERDE =
       new ObjectMapperSerde<>(ScheduleStartCommand.class);
-  static final ObjectMapperSerde<Trigger> TRIGGER_SERDE = new ObjectMapperSerde<>(Trigger.class);
+  static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
   static final ObjectMapperSerde<ProcessInstanceMigrationTrigger> PROCESS_INSTANCE_MIGRATION_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
   static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
@@ -67,13 +69,14 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
   public static final ObjectMapperSerde<Definitions> DEFINITIONS_SERDE =
       new ObjectMapperSerde<>(Definitions.class);
+  public static final ObjectMapperSerde<DefinitionsTrigger> DEFINITIONS_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(DefinitionsTrigger.class);
   private static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstance.class);
   private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
-  private static final ObjectMapperSerde<ProcessInstanceStartCommand>
-      PROCESS_INSTANCE_START_COMMAND_SERDE =
-          new ObjectMapperSerde<>(ProcessInstanceStartCommand.class);
+  private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
+      new ObjectMapperSerde<>(StartCommand.class);
 
   @Inject ScheduleCommandFactory scheduleCommandFactory;
   @Inject Clock clock;
@@ -93,8 +96,6 @@ public class ProcessDefinitionTopologyProducer {
     setupActivationStream(builder);
 
     setupStartScheduleCommandStream(builder);
-
-    setupProcessInstanceStartCommandStream(builder);
 
     setupProcessInstanceStream(builder);
 
@@ -123,36 +124,49 @@ public class ProcessDefinitionTopologyProducer {
         .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), DEFINITIONS_SERDE));
 
     builder.stream(
-            DEFINITIONS_TOPIC.getTopicName(), Consumed.with(Serdes.String(), DEFINITIONS_SERDE))
+            DEFINITIONS_TOPIC.getTopicName(),
+            Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
             DefinitionsProcessor::new,
             Stores.XML_BY_HASH_STORE_NAME,
             DEFINITION_COUNT_BY_ID_STORE_NAME,
             PROCESS_DEFINITION_STORE_NAME)
-        .to(
-            Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
-            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE));
-
-    builder.stream(
-            Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
-            Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))
-        .process(ProcessDefinitionActivationProcessor::new)
-        .to(
-            PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
-            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
-  }
-
-  private void setupProcessInstanceStartCommandStream(StreamsBuilder builder) {
-    builder.stream(
-            PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
-            Consumed.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE))
-        .process(
-            ProcessInstanceStartCommandProcessor::new,
-            PROCESS_DEFINITION_STORE_NAME,
-            DEFINITION_COUNT_BY_ID_STORE_NAME)
-        .to(
-            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
+        .split()
+        .branch(
+            (key, value) -> value instanceof ProcessDefinition,
+            Branched.withConsumer(
+                (ks) ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessDefinitionKey) key, (ProcessDefinition) value))
+                        .to(
+                            PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
+                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
+        .branch(
+            (key, value) -> value instanceof ProcessDefinitionActivation,
+            Branched.withConsumer(
+                (ks) ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessDefinitionKey) key,
+                                    (ProcessDefinitionActivation) value))
+                        .to(
+                            PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
+                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
+        .branch(
+            (key, value) -> value instanceof ProcessInstanceTrigger,
+            Branched.withConsumer(
+                (ks) ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                        .to(
+                            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
   }
 
   private void setupProcessInstanceMigrationStream(StreamsBuilder builder) {
@@ -174,7 +188,7 @@ public class ProcessDefinitionTopologyProducer {
     KStream<Object, Object>[] branches =
         builder.stream(
                 PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-                Consumed.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE))
+                Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
             .process(
                 () -> new ProcessInstanceProcessor(processorProvider, processInstanceCache),
                 PROCESS_INSTANCE_STORE_NAME)
@@ -182,7 +196,7 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger,
-                (key, value) -> value instanceof ProcessInstanceStartCommand);
+                (key, value) -> value instanceof StartCommand);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -190,10 +204,11 @@ public class ProcessDefinitionTopologyProducer {
             PROCESS_INSTANCE_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_SERDE));
     branches[1]
-        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (Trigger) value))
+        .map(
+            (key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, TRIGGER_SERDE));
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE));
     branches[2]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
         .to(
@@ -203,11 +218,8 @@ public class ProcessDefinitionTopologyProducer {
         .map(
             (key, value) ->
                 KeyValue.pair(
-                    ((ProcessInstanceStartCommand) value).getProcessDefinitionId(),
-                    (ProcessInstanceStartCommand) value))
-        .to(
-            PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
-            Produced.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE));
+                    ((StartCommand) value).getProcessDefinitionId(), (StartCommand) value))
+        .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {
@@ -222,20 +234,13 @@ public class ProcessDefinitionTopologyProducer {
         stateStore.stream(
             Topics.SCHEDULE_COMMANDS.getTopicName(),
             Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
-    KStream<String, ProcessInstanceStartCommand> processStream =
+    KStream<String, StartCommand> processStream =
         scheduleCommandStream.process(() -> new ScheduleProcessor(clock), SCHEDULES_STORE_NAME);
     processStream.to(
-        PROCESS_INSTANCE_START_COMMAND_TOPIC.getTopicName(),
-        Produced.with(Serdes.String(), PROCESS_INSTANCE_START_COMMAND_SERDE));
+        DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
   }
 
   private void setupActivationStream(StreamsBuilder builder) {
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(PROCESS_DEFINITION_ACTIVATION_STORE_NAME),
-            PROCESS_DEFINITION_KEY_SERDE,
-            PROCESS_ACTIVATION_SERDE));
-
     KStream<ProcessDefinitionKey, ProcessDefinitionActivation> activationStreamIn =
         builder.stream(
             PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
@@ -243,8 +248,7 @@ public class ProcessDefinitionTopologyProducer {
 
     KStream<ScheduleKey, ScheduleStartCommand> scheduleStream =
         activationStreamIn.process(
-            () -> new StoreProcessDefinitionActivationProcessor(scheduleCommandFactory),
-            PROCESS_DEFINITION_ACTIVATION_STORE_NAME);
+            () -> new ProcessDefinitionActivationProcessor(scheduleCommandFactory));
 
     scheduleStream.to(
         Topics.SCHEDULE_COMMANDS.getTopicName(),

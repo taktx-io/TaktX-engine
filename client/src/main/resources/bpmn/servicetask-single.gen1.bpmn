@@ -45,11 +45,9 @@
         <di:waypoint x="370" y="117" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_00uez6y_di" bpmnElement="Flow_00uez6y">
-        <di:waypoint x="470" y="117" />
+        <di:waypoint x="472" y="117" />
         <di:waypoint x="642" y="117" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
-
-

@@ -6,16 +6,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @Getter
 public class OneTimeStartCommand implements ScheduleStartCommand {
-  private final List<ProcessInstanceStartCommand> startCommands;
+  private final List<StartCommand> startCommands;
   private final String when;
 
   @JsonCreator
   public OneTimeStartCommand(
-      @JsonProperty("startCommands") List<ProcessInstanceStartCommand> startCommands,
+      @JsonProperty("startCommands") List<StartCommand> startCommands,
       @JsonProperty("when") String when) {
     this.startCommands = startCommands;
     this.when = when;
@@ -23,7 +23,7 @@ public class OneTimeStartCommand implements ScheduleStartCommand {
 
   @Override
   public OneTimeStartCommand evaluate(
-      Instant now, Consumer<List<ProcessInstanceStartCommand>> consumer) {
+      Instant now, Consumer<List<StartCommand>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
       consumer.accept(startCommands);

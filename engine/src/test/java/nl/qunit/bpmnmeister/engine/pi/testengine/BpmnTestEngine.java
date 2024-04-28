@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -25,11 +24,10 @@ import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -52,7 +50,7 @@ public class BpmnTestEngine {
 
   @Inject
   @Channel("process-instance-trigger-outgoing")
-  Emitter<Trigger> triggerEmitter;
+  Emitter<ProcessInstanceTrigger> triggerEmitter;
 
   @Inject
   @Channel("process-definition-xml-outgoing")
@@ -60,11 +58,11 @@ public class BpmnTestEngine {
 
   @Inject
   @Channel("process-instance-start-command-outgoing")
-  Emitter<ProcessInstanceStartCommand> startCommandEmitter;
+  Emitter<StartCommand> startCommandEmitter;
 
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<Trigger>> definitionToInstancesMap = new HashMap<>();
+  private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
   private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
@@ -82,12 +80,12 @@ public class BpmnTestEngine {
   }
 
   @Incoming("process-instance-trigger-incoming")
-  public void consume(Trigger trigger) {
+  public void consume(ProcessInstanceTrigger trigger) {
     LOG.info("Received flow element trigger: " + trigger);
     if (!trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
       ProcessDefinitionKey ProcessDefinitionKey = nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
           trigger.getProcessDefinition());
-      ConcurrentLinkedQueue<Trigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
+      ConcurrentLinkedQueue<ProcessInstanceTrigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
           ProcessDefinitionKey, k -> new ConcurrentLinkedQueue<>());
       processInstanceKeyList.add(trigger);
     }
@@ -160,7 +158,7 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine startProcessInstance(Variables variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
-    ProcessInstanceStartCommand startCommand = new ProcessInstanceStartCommand(
+    StartCommand startCommand = new StartCommand(
         ProcessInstanceKey.NONE,
         Constants.NONE,
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
@@ -169,12 +167,12 @@ public class BpmnTestEngine {
 
     ProcessInstanceKey activeProcessInstanceKey = Awaitility.await()
         .until(() -> {
-          ConcurrentLinkedQueue<Trigger> flowElementTriggers = definitionToInstancesMap.get(
+          ConcurrentLinkedQueue<ProcessInstanceTrigger> flowElementTriggers = definitionToInstancesMap.get(
               processDefinitionKey);
           if (flowElementTriggers == null || flowElementTriggers.isEmpty()) {
             return null;
           }
-          Trigger poll = flowElementTriggers.poll();
+          ProcessInstanceTrigger poll = flowElementTriggers.poll();
           if (poll != null && poll.getProcessDefinition() != null && ProcessDefinitionKey.of(poll.getProcessDefinition()).equals(processDefinitionKey)) {
             return poll.getProcessInstanceKey();
           }

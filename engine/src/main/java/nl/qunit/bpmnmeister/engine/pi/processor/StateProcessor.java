@@ -6,15 +6,15 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
-import nl.qunit.bpmnmeister.pi.Trigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 public abstract class StateProcessor<E extends BaseElement, S extends BpmnElementState> {
 
   public final TriggerResult trigger(
-      Trigger trigger,
+      ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       BaseElement element,
       BpmnElementState oldState,

@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import org.jboss.logging.Logger;
@@ -27,7 +27,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
       ProcessInstance processInstance,
       EndEvent element,
       EndEventState oldState) {
-    Set<Trigger> processInstanceTriggers = new HashSet<>();
+    Set<ProcessInstanceTrigger> processInstanceTriggers = new HashSet<>();
     if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
       processInstanceTriggers.add(
           new FlowElementTrigger(

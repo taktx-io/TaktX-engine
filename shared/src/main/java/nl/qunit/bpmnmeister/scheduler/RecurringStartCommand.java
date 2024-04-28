@@ -15,17 +15,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @Getter
 public class RecurringStartCommand implements ScheduleStartCommand {
-  private final List<ProcessInstanceStartCommand> startCommands;
+  private final List<StartCommand> startCommands;
   private final String cron;
   private final String instantiation;
 
   @JsonCreator
   public RecurringStartCommand(
-      @JsonProperty("triggers") List<ProcessInstanceStartCommand> startCommands,
+      @JsonProperty("triggers") List<StartCommand> startCommands,
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
     this.startCommands = startCommands;
@@ -35,7 +35,7 @@ public class RecurringStartCommand implements ScheduleStartCommand {
 
   @Override
   public RecurringStartCommand evaluate(
-      Instant now, Consumer<List<ProcessInstanceStartCommand>> triggerConsumer) {
+      Instant now, Consumer<List<StartCommand>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);

@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
 
   @Override
-  protected Set<Trigger> getSubProcessTriggersWhenReady(
+  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,
@@ -30,7 +30,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
     ProcessDefinition subProcessDefinition =
         element.getAsSubProcessDefinition(processInstance.getProcessDefinition());
 
-    Set<Trigger> subProcessTriggers = new HashSet<>();
+    Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
 
     for (int i = 0; i < inputCollection.size(); i++) {
       Variables subProcessVariables = variables.put("loopCnt", new IntNode(i));
@@ -51,7 +51,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
   }
 
   @Override
-  protected Set<Trigger> getSubProcessTriggersWhenActive(
+  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       Activity element,
       Variables variables,

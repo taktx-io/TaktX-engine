@@ -24,7 +24,7 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.Trigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -34,7 +34,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.jboss.logging.Logger;
 
 public class ProcessInstanceProcessor
-    implements Processor<ProcessInstanceKey, Trigger, Object, Object> {
+    implements Processor<ProcessInstanceKey, ProcessInstanceTrigger, Object, Object> {
 
   private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessor.class);
   final ProcessorProvider processorProvider;
@@ -54,9 +54,9 @@ public class ProcessInstanceProcessor
   }
 
   @Override
-  public void process(Record<ProcessInstanceKey, Trigger> triggerRecord) {
+  public void process(Record<ProcessInstanceKey, ProcessInstanceTrigger> triggerRecord) {
     Instant start = Instant.now();
-    Trigger trigger = triggerRecord.value();
+    ProcessInstanceTrigger trigger = triggerRecord.value();
     LOG.info("Processing trigger: " + trigger);
     ProcessInstance processInstance;
     if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
@@ -101,7 +101,7 @@ public class ProcessInstanceProcessor
     return processInstanceStore.get(key);
   }
 
-  public ProcessInstance trigger(ProcessInstance processInstance, Trigger trigger) {
+  public ProcessInstance trigger(ProcessInstance processInstance, ProcessInstanceTrigger trigger) {
     ProcessInstance newProcessInstance = processInstance;
 
     LOG.info(
@@ -165,7 +165,7 @@ public class ProcessInstanceProcessor
                         Instant.now().toEpochMilli()));
               });
 
-      List<Trigger> nextTriggers = new ArrayList<>();
+      List<ProcessInstanceTrigger> nextTriggers = new ArrayList<>();
       triggerResult
           .getNewActiveFlows()
           .forEach(
@@ -224,7 +224,7 @@ public class ProcessInstanceProcessor
               variablesWithTriggerResult,
               newProcessInstanceState);
 
-      for (Trigger nextTrigger : nextTriggers) {
+      for (ProcessInstanceTrigger nextTrigger : nextTriggers) {
 
         if (!nextTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)
             || processInstance

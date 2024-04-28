@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceStartCommand;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
@@ -24,14 +24,13 @@ public class ProcessResource {
 
   @Inject
   @Channel("process-instance-start-command-outgoing")
-  Emitter<ProcessInstanceStartCommand> startCommandEmitter;
+  Emitter<StartCommand> startCommandEmitter;
 
   @POST
-  @Path("/{processId}/{gen}/{version}/{elementId}")
+  @Path("/{processId}")
   @Consumes(MediaType.APPLICATION_JSON)
   public void start(
-      @RestPath String processId,
-      String variables) {
+      @RestPath String processId, String variables) {
     // Convert Json string to Map of variables with JsonNode values
     Map<String, JsonNode> variablesMap;
     try {
@@ -39,8 +38,8 @@ public class ProcessResource {
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to parse variables", e);
     }
-    ProcessInstanceStartCommand startCommand =
-        new ProcessInstanceStartCommand(
+    StartCommand startCommand =
+        new StartCommand(
             ProcessInstanceKey.NONE,
             Constants.NONE,
             processId,
