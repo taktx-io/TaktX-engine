@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -26,13 +27,14 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   protected TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       SubProcess element,
       SubProcessState oldState,
       Variables variables) {
     if (oldState.getState() == ActivityStateEnum.READY) {
-      return triggerWhenReady(processInstance, element, oldState, variables);
+      return triggerWhenReady(processInstance, definition, element, oldState, variables);
     } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
-      return triggerWhenActive(processInstance, element, oldState, variables);
+      return triggerWhenActive(processInstance, definition, element, oldState, variables);
     } else {
       LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
       return null;
@@ -41,6 +43,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
   protected TriggerResult triggerWhenReady(
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       SubProcess element,
       SubProcessState oldState,
       Variables variables) {
@@ -52,7 +55,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
             processInstance.getProcessInstanceKey(),
             element.getId(),
-            element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
+            element.getAsSubProcessDefinition(definition),
             startElement,
             Constants.NONE,
             variables);
@@ -72,6 +75,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
   protected TriggerResult triggerWhenActive(
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       SubProcess element,
       SubProcessState oldState,
       Variables variables) {

@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -21,6 +22,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
   protected TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       Task element,
       TaskState oldState,
       Variables variables) {

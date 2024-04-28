@@ -45,7 +45,9 @@ public class ExternalTriggerConsumer {
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
     String externalTaskId = externalTaskTrigger.getElementId();
     Object workerInstance = deployer.getDefinitionMap().get(processDefinitionId);
-
+    if (workerInstance == null) {
+      return;
+    }
     // Get method from workerInstance which has matching annotation
     Class<?> aClass = workerInstance.getClass();
     Optional<Method> optMethod = findMatchingMethod(aClass, externalTaskId);

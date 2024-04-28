@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Event;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -16,6 +17,7 @@ public abstract class EventProcessor<E extends Event, S extends EventState>
   public TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       E element,
       S oldState,
       Variables variables) {

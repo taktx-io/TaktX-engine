@@ -40,9 +40,15 @@ public class Task extends Activity {
         new Process(
             parentProcessDefinitionId, parentProcessDefinitionId, new FlowElements(elements));
 
+    DefinitionsKey subDefinitionsKey =
+        new DefinitionsKey(
+            parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
+                + "-"
+                + getId(),
+            parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
     Definitions definitions =
         new Definitions(
-            parentProcessDefinition.getDefinitions().getDefinitionsKey(),
+            subDefinitionsKey,
             process);
 
     Integer version = parentProcessDefinition.getVersion();

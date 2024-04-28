@@ -10,6 +10,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -28,19 +29,21 @@ public abstract class MultiInstanceProcessor
   public TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
 
     return switch (oldState.getState()) {
-      case READY -> triggerWhenReady(processInstance, element, oldState, variables);
-      case ACTIVE -> triggerWhenActive(processInstance, element, oldState, variables);
+      case READY -> triggerWhenReady(processInstance, definition, element, oldState, variables);
+      case ACTIVE -> triggerWhenActive(processInstance, definition, element, oldState, variables);
       default -> throw new IllegalStateException("Unknown state: " + oldState.getState());
     };
   }
 
   private TriggerResult triggerWhenReady(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
@@ -67,7 +70,8 @@ public abstract class MultiInstanceProcessor
           returnVariables);
     } else {
       Set<ProcessInstanceTrigger> subProcessTriggers =
-          getSubProcessTriggersWhenReady(processInstance, element, variables, inputCollection, 0);
+          getSubProcessTriggersWhenReady(
+              processInstance, processDefinition, element, variables, inputCollection, 0);
 
       return new TriggerResult(
           new MultiInstanceState(
@@ -86,6 +90,7 @@ public abstract class MultiInstanceProcessor
 
   private TriggerResult triggerWhenActive(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       MultiInstanceState oldState,
       Variables variables) {
@@ -122,7 +127,12 @@ public abstract class MultiInstanceProcessor
     if (loopsReceived < inputCollection.size()) {
       Set<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenActive(
-              processInstance, element, variables, inputCollection, loopsReceived);
+              processInstance,
+              processDefinition,
+              element,
+              variables,
+              inputCollection,
+              loopsReceived);
 
       return new TriggerResult(
           new MultiInstanceState(
@@ -149,6 +159,7 @@ public abstract class MultiInstanceProcessor
 
   protected abstract Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
@@ -156,6 +167,7 @@ public abstract class MultiInstanceProcessor
 
   protected abstract Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,

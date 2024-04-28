@@ -40,17 +40,25 @@ public class ProcessInstanceProcessor
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
+  private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
   private final Cache processInstanceCache;
+  private final Cache processInstanceDefinitionCache;
 
-  public ProcessInstanceProcessor(ProcessorProvider processorProvider, Cache processInstanceCache) {
+  public ProcessInstanceProcessor(
+      ProcessorProvider processorProvider,
+      Cache processInstanceCache,
+      Cache processInstanceDefinitionCache) {
     this.processorProvider = processorProvider;
     this.processInstanceCache = processInstanceCache;
+    this.processInstanceDefinitionCache = processInstanceDefinitionCache;
   }
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
     this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
+    this.processInstanceDefinitionStore =
+        context.getStateStore(Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME);
   }
 
   @Override
@@ -59,21 +67,26 @@ public class ProcessInstanceProcessor
     ProcessInstanceTrigger trigger = triggerRecord.value();
     LOG.info("Processing trigger: " + trigger);
     ProcessInstance processInstance;
+    ProcessDefinition definition;
     if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
       processInstance = getProcessInstance(trigger.getProcessInstanceKey());
+      definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
     } else {
+      ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(trigger.getProcessDefinition());
+      definition = trigger.getProcessDefinition();
       processInstance =
           new ProcessInstance(
               trigger.getParentProcessInstanceKey(),
               trigger.getParentElementId(),
               trigger.getProcessInstanceKey(),
-              trigger.getProcessDefinition(),
+              processDefinitionKey,
               ElementStates.EMPTY,
               trigger.getVariables(),
               ProcessInstanceState.START);
+      storeProcessDefinition(definition);
     }
 
-    ProcessInstance updatedProcessInstance = trigger(processInstance, trigger);
+    ProcessInstance updatedProcessInstance = trigger(processInstance, definition, trigger);
     storeProcessInstance(updatedProcessInstance);
 
     context.forward(
@@ -96,12 +109,28 @@ public class ProcessInstanceProcessor
         updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
   }
 
+  private void storeProcessDefinition(
+      ProcessDefinition definition) {
+    processInstanceDefinitionCache
+        .as(CaffeineCache.class)
+        .put(ProcessDefinitionKey.of(definition), CompletableFuture.completedFuture(definition));
+    processInstanceDefinitionStore.put(ProcessDefinitionKey.of(definition), definition);
+  }
+
   @CacheResult(cacheName = "process-instance-cache")
   ProcessInstance getProcessInstance(ProcessInstanceKey key) {
     return processInstanceStore.get(key);
   }
 
-  public ProcessInstance trigger(ProcessInstance processInstance, ProcessInstanceTrigger trigger) {
+  @CacheResult(cacheName = "process-instance-definition-cache")
+  ProcessDefinition getProcessInstanceDefinition(ProcessDefinitionKey key) {
+    return processInstanceDefinitionStore.get(key);
+  }
+
+  public ProcessInstance trigger(
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      ProcessInstanceTrigger trigger) {
     ProcessInstance newProcessInstance = processInstance;
 
     LOG.info(
@@ -114,12 +143,7 @@ public class ProcessInstanceProcessor
             ? trigger.getParentElementId()
             : trigger.getElementId();
     Optional<FlowElement> optFlowElement =
-        processInstance
-            .getProcessDefinition()
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getFlowElement(elementId);
+        definition.getDefinitions().getRootProcess().getFlowElements().getFlowElement(elementId);
     if (optFlowElement.isPresent()) {
       LOG.info("Element states: " + processInstance.getElementStates());
 
@@ -136,7 +160,8 @@ public class ProcessInstanceProcessor
       }
       LOG.info("Trigger processor: " + processor);
       TriggerResult triggerResult =
-          processor.trigger(trigger, processInstance, flowElement, elementState, mergedVariables);
+          processor.trigger(
+              trigger, processInstance, definition, flowElement, elementState, mergedVariables);
       LOG.info("Trigger processor result: " + triggerResult);
 
       ElementStates newElementStates =
@@ -155,7 +180,7 @@ public class ProcessInstanceProcessor
                 ExternalTaskTrigger newExternalTaskTrigger =
                     new ExternalTaskTrigger(
                         processInstance.getProcessInstanceKey(),
-                        ProcessDefinitionKey.of(processInstance.getProcessDefinition()),
+                        ProcessDefinitionKey.of(definition),
                         externalTaskId,
                         variablesWithTriggerResult);
                 context.forward(
@@ -173,8 +198,7 @@ public class ProcessInstanceProcessor
                 LOG.info("Trigger flow: " + flowId);
                 SequenceFlow flow =
                     (SequenceFlow)
-                        processInstance
-                            .getProcessDefinition()
+                        definition
                             .getDefinitions()
                             .getRootProcess()
                             .getFlowElements()
@@ -219,7 +243,7 @@ public class ProcessInstanceProcessor
               processInstance.getParentProcessInstanceKey(),
               processInstance.getParentElementId(),
               processInstance.getProcessInstanceKey(),
-              processInstance.getProcessDefinition(),
+              processInstance.getProcessDefinitionKey(),
               newElementStates,
               variablesWithTriggerResult,
               newProcessInstanceState);
@@ -227,8 +251,7 @@ public class ProcessInstanceProcessor
       for (ProcessInstanceTrigger nextTrigger : nextTriggers) {
 
         if (!nextTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)
-            || processInstance
-                    .getProcessDefinition()
+            || definition
                     .getDefinitions()
                     .getRootProcess()
                     .getFlowElements()
@@ -242,7 +265,7 @@ public class ProcessInstanceProcessor
               new Record<>(
                   nextTrigger.getProcessInstanceKey(), nextTrigger, Instant.now().toEpochMilli()));
         } else {
-          newProcessInstance = trigger(newProcessInstance, nextTrigger);
+          newProcessInstance = trigger(newProcessInstance, definition, nextTrigger);
         }
       }
     } else {

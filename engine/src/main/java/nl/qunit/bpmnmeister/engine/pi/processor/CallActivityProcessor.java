@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartCommand;
@@ -22,6 +23,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
   protected TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       CallActivity element,
       CallActivityState oldState,
       Variables variables) {

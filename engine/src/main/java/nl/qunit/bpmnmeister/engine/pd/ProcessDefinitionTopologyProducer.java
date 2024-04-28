@@ -10,6 +10,7 @@ import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.XML_BY_HASH_STORE_NAME;
@@ -86,6 +87,10 @@ public class ProcessDefinitionTopologyProducer {
   @Inject
   @CacheName("process-instance-cache")
   Cache processInstanceCache;
+
+  @Inject
+  @CacheName("process-instance-definition-cache")
+  Cache processInstanceDefinitionCache;
 
   @Produces
   public Topology buildTopology() {
@@ -184,14 +189,22 @@ public class ProcessDefinitionTopologyProducer {
             keyValueStoreSupplier.get(PROCESS_INSTANCE_STORE_NAME),
             PROCESS_INSTANCE_KEY_SERDE,
             PROCESS_INSTANCE_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(PROCESS_INSTANCE_DEFINITION_STORE_NAME),
+            PROCESS_DEFINITION_KEY_SERDE,
+            PROCESS_DEFINITION_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(
                 PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                 Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
             .process(
-                () -> new ProcessInstanceProcessor(processorProvider, processInstanceCache),
-                PROCESS_INSTANCE_STORE_NAME)
+                () ->
+                    new ProcessInstanceProcessor(
+                        processorProvider, processInstanceCache, processInstanceDefinitionCache),
+                PROCESS_INSTANCE_STORE_NAME,
+                PROCESS_INSTANCE_DEFINITION_STORE_NAME)
             .branch(
                 (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,

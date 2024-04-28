@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -20,25 +21,30 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
   @Override
   protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    return getSubProcessTrigger(processInstance, element, variables, inputCollection, loopCnt);
+    return getSubProcessTrigger(
+        processInstance, processDefinition, element, variables, inputCollection, loopCnt);
   }
 
   @Override
   protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    return getSubProcessTrigger(processInstance, element, variables, inputCollection, loopCnt);
+    return getSubProcessTrigger(
+        processInstance, processDefinition, element, variables, inputCollection, loopCnt);
   }
 
   private static Set<ProcessInstanceTrigger> getSubProcessTrigger(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
@@ -53,7 +59,7 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
             new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
             processInstance.getProcessInstanceKey(),
             element.getId(),
-            element.getAsSubProcessDefinition(processInstance.getProcessDefinition()),
+            element.getAsSubProcessDefinition(processDefinition),
             element.getAsSubProcessStartElementId(),
             Constants.NONE,
             updatedVariables));

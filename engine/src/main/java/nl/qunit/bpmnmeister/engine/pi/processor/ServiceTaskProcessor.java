@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
@@ -20,6 +21,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   protected TriggerResult triggerFlowElement(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
@@ -42,6 +44,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   protected TriggerResult triggerExternalTaskResponse(
       ExternalTaskResponseTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {

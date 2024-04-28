@@ -9,6 +9,7 @@ import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -26,16 +27,19 @@ public class ProcessInstanceMigrationProcessor
   private final ProcessorProvider processorProvider;
 
   private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
+  private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
+    this.processInstanceDefinitionStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
   }
 
   @Override
   public void process(Record<ProcessInstanceKey, ProcessInstanceMigrationTrigger> triggerRecord) {
     ProcessInstance processInstance = processInstanceStore.get(triggerRecord.key());
-    ProcessDefinition oldProcessDefinition = processInstance.getProcessDefinition();
+    ProcessDefinition oldProcessDefinition =
+        processInstanceDefinitionStore.get(processInstance.getProcessDefinitionKey());
     ProcessDefinition newProcessDefinition = triggerRecord.value().getNewProcessDefinition();
 
     Set<String> existingIds =
@@ -83,16 +87,18 @@ public class ProcessInstanceMigrationProcessor
           newElementStates.put(newId, newElementState);
         });
 
+    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(newProcessDefinition);
     ProcessInstance newProcessInstance =
         new ProcessInstance(
             processInstance.getParentProcessInstanceKey(),
             processInstance.getParentElementId(),
             processInstance.getProcessInstanceKey(),
-            newProcessDefinition,
+            processDefinitionKey,
             new ElementStates(newElementStates),
             processInstance.getVariables(),
             processInstance.getProcessInstanceState());
 
     processInstanceStore.put(triggerRecord.key(), newProcessInstance);
+    processInstanceDefinitionStore.put(processDefinitionKey, newProcessDefinition);
   }
 }

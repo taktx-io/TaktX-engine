@@ -41,15 +41,22 @@ public class CallActivity extends Activity {
     elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of()));
 
     // Wrap in Process element
+    DefinitionsKey existingDefinitionsKey = parentProcessDefinition.getDefinitions().getDefinitionsKey();
     String parentProcessDefinitionId =
-        parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
+        existingDefinitionsKey.getProcessDefinitionId();
     Process process =
         new Process(
             parentProcessDefinitionId, parentProcessDefinitionId, new FlowElements(elements));
 
+    DefinitionsKey subDefinitionsKey =
+        new DefinitionsKey(
+            parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
+            + "-"
+            + getId(),
+            parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
     Definitions definitions =
         new Definitions(
-            parentProcessDefinition.getDefinitions().getDefinitionsKey(),
+            subDefinitionsKey,
             process);
 
     Integer version = parentProcessDefinition.getVersion();

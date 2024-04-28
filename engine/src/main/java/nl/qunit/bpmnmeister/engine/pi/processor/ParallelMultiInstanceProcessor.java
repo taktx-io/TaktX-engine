@@ -23,12 +23,12 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
   @Override
   protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    ProcessDefinition subProcessDefinition =
-        element.getAsSubProcessDefinition(processInstance.getProcessDefinition());
+    ProcessDefinition subProcessDefinition = element.getAsSubProcessDefinition(processDefinition);
 
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
 
@@ -53,6 +53,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
   @Override
   protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
