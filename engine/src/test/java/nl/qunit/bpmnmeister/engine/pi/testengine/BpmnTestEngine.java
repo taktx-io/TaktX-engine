@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
+import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -51,6 +53,9 @@ public class BpmnTestEngine {
   AdminClient adminClient;
 
   @Inject
+  Clock clock;
+
+  @Inject
   @Channel("process-instance-trigger-outgoing")
   Emitter<ProcessInstanceTrigger> triggerEmitter;
 
@@ -71,7 +76,7 @@ public class BpmnTestEngine {
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
   private Definitions definitionsBeingDeployed;
-
+  private MutableClock mutableClock;
 
   @PostConstruct
   public void init() {
@@ -79,6 +84,7 @@ public class BpmnTestEngine {
         Arrays.stream(Topics.values())
             .map(topic -> new NewTopic(topic.getTopicName(), 1, (short) 1))
             .toList());
+    this.mutableClock = (MutableClock) clock;
   }
 
   @Incoming("process-instance-trigger-incoming")
