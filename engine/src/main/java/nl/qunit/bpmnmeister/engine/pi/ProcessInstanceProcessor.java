@@ -72,7 +72,8 @@ public class ProcessInstanceProcessor
       processInstance = getProcessInstance(trigger.getProcessInstanceKey());
       definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
     } else {
-      ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(trigger.getProcessDefinition());
+      ProcessDefinitionKey processDefinitionKey =
+          ProcessDefinitionKey.of(trigger.getProcessDefinition());
       definition = trigger.getProcessDefinition();
       processInstance =
           new ProcessInstance(
@@ -109,8 +110,7 @@ public class ProcessInstanceProcessor
         updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
   }
 
-  private void storeProcessDefinition(
-      ProcessDefinition definition) {
+  private void storeProcessDefinition(ProcessDefinition definition) {
     processInstanceDefinitionCache
         .as(CaffeineCache.class)
         .put(ProcessDefinitionKey.of(definition), CompletableFuture.completedFuture(definition));
@@ -230,13 +230,12 @@ public class ProcessInstanceProcessor
       triggerResult
           .getNewStartCommands()
           .forEach(
-              startCommand -> {
-                context.forward(
-                    new Record<>(
-                        startCommand.getProcessDefinitionId(),
-                        startCommand,
-                        Instant.now().toEpochMilli()));
-              });
+              startCommand ->
+                  context.forward(
+                      new Record<>(
+                          startCommand.getProcessDefinitionId(),
+                          startCommand,
+                          Instant.now().toEpochMilli())));
 
       newProcessInstance =
           new ProcessInstance(

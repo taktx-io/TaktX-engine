@@ -8,7 +8,8 @@ import lombok.Getter;
 
 @Getter
 public class Process extends RootElement {
-  public static final Process NONE = new Process(Constants.NONE, Constants.NONE, FlowElements.EMPTY);
+  public static final Process NONE =
+      new Process(Constants.NONE, Constants.NONE, FlowElements.EMPTY);
   private final FlowElements flowElements;
 
   @JsonCreator

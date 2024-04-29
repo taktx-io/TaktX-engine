@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://camunda.org/schema/zeebe/1.0">
+  <xs:element name="calledElement">
+    <xs:complexType>
+      <xs:attribute name="processId" use="required" type="xs:string"/>
+      <xs:attribute name="propagateAllChildVariables" type="xs:boolean"/>
+      <xs:attribute name="propagateAllParentVariables" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="loopCharacteristics">
+    <xs:complexType id="LoopCharacteristics" >
+      <xs:attribute name="inputCollection" use="required" type="xs:string"/>
+      <xs:attribute name="inputElement" use="required" type="xs:string"/>
+      <xs:attribute name="outputCollection" use="required" type="xs:string"/>
+      <xs:attribute name="outputElement" use="required" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

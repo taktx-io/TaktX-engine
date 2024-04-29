@@ -6,7 +6,7 @@
   xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt"
   targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0"
   modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
-  <bpmn:process id="service-task-single" isExecutable="true">
+  <bpmn:process id="subprocess-single" isExecutable="true">
     <bpmn:documentation>documen</bpmn:documentation>
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_0v3edbs</bpmn:outgoing>
@@ -35,7 +35,7 @@
     </bpmn:subProcess>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="service-task-single">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="subprocess-single">
       <bpmndi:BPMNShape id="Event_0gfxmm9_di" bpmnElement="Event_0gfxmm9">
         <dc:Bounds x="642" y="169" width="36" height="36"/>
       </bpmndi:BPMNShape>

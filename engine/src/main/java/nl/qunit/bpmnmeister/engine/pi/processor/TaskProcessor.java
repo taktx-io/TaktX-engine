@@ -36,7 +36,7 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
-        Variables.EMPTY);
+        variables);
   }
 
   @Override

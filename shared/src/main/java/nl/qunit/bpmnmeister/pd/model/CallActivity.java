@@ -12,8 +12,7 @@ import lombok.Getter;
 @Getter
 public class CallActivity extends Activity {
 
-  @Nonnull
-  private final String calledElement;
+  @Nonnull private final String calledElement;
 
   @JsonCreator
   public CallActivity(
@@ -22,8 +21,7 @@ public class CallActivity extends Activity {
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("calledElement") String calledElement
-  ) {
+      @Nonnull @JsonProperty("calledElement") String calledElement) {
     super(id, parentId, incoming, outgoing, loopCharacteristics);
     this.calledElement = calledElement;
   }
@@ -32,18 +30,18 @@ public class CallActivity extends Activity {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    String sequenceFlowId = new String(getId() + "-to-end");
+    String sequenceFlowId = getId() + "-to-end";
     elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
-    String endEventId = new String(getId() + "-end");
+    String endEventId = getId() + "-end";
     elements.put(
         sequenceFlowId,
         new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
     elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of()));
 
     // Wrap in Process element
-    DefinitionsKey existingDefinitionsKey = parentProcessDefinition.getDefinitions().getDefinitionsKey();
-    String parentProcessDefinitionId =
-        existingDefinitionsKey.getProcessDefinitionId();
+    DefinitionsKey existingDefinitionsKey =
+        parentProcessDefinition.getDefinitions().getDefinitionsKey();
+    String parentProcessDefinitionId = existingDefinitionsKey.getProcessDefinitionId();
     Process process =
         new Process(
             parentProcessDefinitionId, parentProcessDefinitionId, new FlowElements(elements));
@@ -51,13 +49,10 @@ public class CallActivity extends Activity {
     DefinitionsKey subDefinitionsKey =
         new DefinitionsKey(
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
-            + "-"
-            + getId(),
+                + "-"
+                + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
-    Definitions definitions =
-        new Definitions(
-            subDefinitionsKey,
-            process);
+    Definitions definitions = new Definitions(subDefinitionsKey, process);
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
@@ -69,6 +64,7 @@ public class CallActivity extends Activity {
   }
 
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
-    return new CallActivity(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement);
+    return new CallActivity(
+        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement);
   }
 }

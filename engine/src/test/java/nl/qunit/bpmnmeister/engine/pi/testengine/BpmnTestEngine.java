@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
@@ -26,8 +27,8 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -37,6 +38,7 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.jboss.logging.Logger;
+import org.xml.sax.SAXException;
 
 @ApplicationScoped
 public class BpmnTestEngine {
@@ -132,10 +134,10 @@ public class BpmnTestEngine {
 
 
   public BpmnTestEngine deployProcessDefinition(String filename)
-      throws JAXBException, NoSuchAlgorithmException, IOException {
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
-    definitionsBeingDeployed = BpmnParser.parse(xml);
+    definitionsBeingDeployed = new BpmnParser().parse(xml);
     xmlEmitter.send(KafkaRecord.of(filename, xml));
     return this;
   }
@@ -150,7 +152,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
-      throws JAXBException, NoSuchAlgorithmException, IOException {
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     deployProcessDefinition(filename);
     waitForProcessDeployment();
     return this;

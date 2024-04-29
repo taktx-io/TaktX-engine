@@ -1,11 +1,14 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import jakarta.xml.bind.JAXBException;
+import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
+import org.xml.sax.SAXException;
 
 public class UniqueXmlKeyMapper
     implements KeyValueMapper<String, String, KeyValue<String, Definitions>> {
@@ -13,7 +16,7 @@ public class UniqueXmlKeyMapper
   @Override
   public KeyValue<String, Definitions> apply(String key, String value) {
     try {
-      Definitions parsed = BpmnParser.parse(value);
+      Definitions parsed = new BpmnParser().parse(value);
       return KeyValue.pair(
           parsed.getDefinitionsKey().getProcessDefinitionId()
               + "-"
@@ -21,10 +24,12 @@ public class UniqueXmlKeyMapper
               + "-"
               + parsed.getDefinitionsKey().getHash(),
           parsed);
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
+    } catch (JAXBException
+        | NoSuchAlgorithmException
+        | IOException
+        | ParserConfigurationException
+        | SAXException e) {
+      throw new IllegalStateException(e);
     }
   }
 }

@@ -20,10 +20,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.xml.sax.SAXException;
 
 @ApplicationScoped
 @Startup
@@ -49,14 +51,17 @@ public class Deployer {
           Path bpmnPath = Paths.get(url.getPath());
           String xml = Files.readString(bpmnPath);
           String filename = bpmnPath.getFileName().toString();
-          Definitions definitions = BpmnParser.parse(xml);
+          Definitions definitions = new BpmnParser().parse(xml);
 
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
 
           definitionEmitter.send(KafkaRecord.of(filename, xml));
         }
       }
-    } catch (JAXBException | NoSuchAlgorithmException e) {
+    } catch (JAXBException
+        | NoSuchAlgorithmException
+        | ParserConfigurationException
+        | SAXException e) {
       throw new IllegalStateException(e);
     }
   }

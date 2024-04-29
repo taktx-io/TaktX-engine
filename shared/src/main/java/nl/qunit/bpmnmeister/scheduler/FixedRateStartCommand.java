@@ -32,8 +32,7 @@ public class FixedRateStartCommand implements ScheduleStartCommand {
   }
 
   @Override
-  public FixedRateStartCommand evaluate(
-      Instant now, Consumer<List<StartCommand>> triggerConsumer) {
+  public FixedRateStartCommand evaluate(Instant now, Consumer<List<StartCommand>> triggerConsumer) {
     Instant nextExecution = Instant.parse(instantiation).plus(Duration.parse(period));
     if (now.isAfter(nextExecution)) {
       // Time reached, return triggers

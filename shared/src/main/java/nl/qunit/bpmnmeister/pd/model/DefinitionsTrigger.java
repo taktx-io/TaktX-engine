@@ -9,12 +9,11 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @JsonTypeInfo(use = Id.CLASS, property = "clazz", defaultImpl = Definitions.class)
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = Definitions.class),
-    @JsonSubTypes.Type(value = StartCommand.class)
+  @JsonSubTypes.Type(value = Definitions.class),
+  @JsonSubTypes.Type(value = StartCommand.class)
 })
 @Getter
 @EqualsAndHashCode
 public abstract class DefinitionsTrigger {
-  protected DefinitionsTrigger() {
-  }
+  protected DefinitionsTrigger() {}
 }

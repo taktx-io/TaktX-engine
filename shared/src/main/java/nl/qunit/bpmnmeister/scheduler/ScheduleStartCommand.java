@@ -17,6 +17,5 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 public interface ScheduleStartCommand {
   List<StartCommand> getStartCommands();
 
-  ScheduleStartCommand evaluate(
-      Instant now, Consumer<List<StartCommand>> triggerConsumer);
+  ScheduleStartCommand evaluate(Instant now, Consumer<List<StartCommand>> triggerConsumer);
 }

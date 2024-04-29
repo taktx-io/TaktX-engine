@@ -18,7 +18,6 @@ import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
-import org.camunda.feel.api.EvaluationResult;
 
 public abstract class MultiInstanceProcessor
     extends ActivityProcessor<Activity, MultiInstanceState> {
@@ -54,7 +53,9 @@ public abstract class MultiInstanceProcessor
     Variables returnVariables =
         new Variables(Map.of())
             .put(element.getLoopCharacteristics().getOutputCollection(), outputCollection);
-    JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
+    JsonNode inputCollection =
+        feelExpressionHandler.processFeelExpression(
+            element.getLoopCharacteristics().getInputCollection(), variables);
     if (inputCollection == null || inputCollection.isEmpty()) {
       return new TriggerResult(
           new MultiInstanceState(
@@ -99,20 +100,9 @@ public abstract class MultiInstanceProcessor
     ArrayNode outputCollection =
         (ArrayNode) variables.get(element.getLoopCharacteristics().getOutputCollection());
 
-    String outputElement = element.getLoopCharacteristics().getOutputElement().trim();
-    JsonNode outputElementNode;
-    if (outputElement.startsWith("=")) {
-      EvaluationResult evaluationResult =
-          feelExpressionHandler.processFeelExpression(outputElement.substring(1), variables);
-      if (evaluationResult.isSuccess()) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        outputElementNode = objectMapper.valueToTree(evaluationResult.result());
-      } else {
-        outputElementNode = null;
-      }
-    } else {
-      outputElementNode = variables.get(outputElement);
-    }
+    JsonNode outputElementNode =
+        feelExpressionHandler.processFeelExpression(
+            element.getLoopCharacteristics().getOutputElement(), variables);
     if (outputElementNode != null) {
       outputCollection.add(outputElementNode);
     }
@@ -123,7 +113,9 @@ public abstract class MultiInstanceProcessor
 
     int loopsReceived = oldState.getLoopCnt() + 1;
 
-    JsonNode inputCollection = variables.get(element.getLoopCharacteristics().getInputCollection());
+    JsonNode inputCollection =
+        feelExpressionHandler.processFeelExpression(
+            element.getLoopCharacteristics().getInputCollection(), variables);
     if (loopsReceived < inputCollection.size()) {
       Set<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenActive(

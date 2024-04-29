@@ -10,17 +10,17 @@
       <bpmn:incoming>Flow_00uez6y</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="callactivity-id" targetRef="EndEvent_1" />
-    <bpmn:callActivity id="callactivity-id" name="CallActivity">
+    <bpmn:callActivity id="callactivity-id" name="CallActivity" calledElement="calledActivity">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="calledActivity" />
+        <zeebe:calledElement processId="calledActivity" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>
       <bpmn:multiInstanceLoopCharacteristics isSequential="true">
         <bpmn:extensionElements>
-          <zeebe:loopCharacteristics inputCollection="=inputCollection" inputElement="inputElement" outputCollection="outputCollection" outputElement="=inputElement  + &#34;xxx&#34;&#10; + string(loopCnt)" />
+          <zeebe:loopCharacteristics inputCollection="=inputCollection" inputElement="inputElement" outputCollection="outputCollection" outputElement="=outputElement" />
         </bpmn:extensionElements>
-        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=false</bpmn:completionCondition>
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=true</bpmn:completionCondition>
       </bpmn:multiInstanceLoopCharacteristics>
     </bpmn:callActivity>
   </bpmn:process>
@@ -33,15 +33,15 @@
         <dc:Bounds x="642" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0gw7pzx_di" bpmnElement="callactivity-id">
-        <dc:Bounds x="380" y="77" width="100" height="80" />
+        <dc:Bounds x="400" y="77" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0v3edbs_di" bpmnElement="Flow_0v3edbs">
         <di:waypoint x="215" y="117" />
-        <di:waypoint x="380" y="117" />
+        <di:waypoint x="400" y="117" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_00uez6y_di" bpmnElement="Flow_00uez6y">
-        <di:waypoint x="480" y="117" />
+        <di:waypoint x="500" y="117" />
         <di:waypoint x="642" y="117" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

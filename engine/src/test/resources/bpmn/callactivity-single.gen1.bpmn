@@ -10,7 +10,7 @@
       <bpmn:incoming>Flow_00uez6y</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="callactivity-id" targetRef="EndEvent_1" />
-    <bpmn:callActivity id="callactivity-id" name="CallActivity" calledElement="calledActivity">
+    <bpmn:callActivity id="callactivity-id" name="CallActivity">
       <bpmn:extensionElements>
         <zeebe:calledElement processId="calledActivity" propagateAllChildVariables="true" />
       </bpmn:extensionElements>

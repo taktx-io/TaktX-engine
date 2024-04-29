@@ -34,8 +34,7 @@ public class RecurringStartCommand implements ScheduleStartCommand {
   }
 
   @Override
-  public RecurringStartCommand evaluate(
-      Instant now, Consumer<List<StartCommand>> triggerConsumer) {
+  public RecurringStartCommand evaluate(Instant now, Consumer<List<StartCommand>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);

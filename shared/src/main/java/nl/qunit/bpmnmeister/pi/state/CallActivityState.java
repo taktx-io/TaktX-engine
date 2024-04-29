@@ -16,5 +16,4 @@ public class CallActivityState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt) {
     super(state, elementInstanceId, passedCnt);
   }
-
 }

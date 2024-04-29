@@ -24,13 +24,20 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
   @JsonCreator
   public FlowElementTrigger(
       @JsonProperty("processInstanceKey") @Nonnull ProcessInstanceKey processInstanceKey,
-      @JsonProperty("parentProcessInstanceKey") @Nonnull ProcessInstanceKey parentProcessInstanceKey,
+      @JsonProperty("parentProcessInstanceKey") @Nonnull
+          ProcessInstanceKey parentProcessInstanceKey,
       @JsonProperty("parentElementId") @Nonnull String parentElementId,
       @JsonProperty("processDefinition") @Nonnull ProcessDefinition processDefinition,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
-    super(processInstanceKey, parentProcessInstanceKey, parentElementId, processDefinition, elementId, variables);
+    super(
+        processInstanceKey,
+        parentProcessInstanceKey,
+        parentElementId,
+        processDefinition,
+        elementId,
+        variables);
     this.inputFlowId = inputFlowId;
   }
 }

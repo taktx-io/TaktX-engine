@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.ToString;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
@@ -21,7 +20,8 @@ public class ProcessInstance {
 
   @JsonCreator
   public ProcessInstance(
-      @Nonnull @JsonProperty("parentProcessInstanceKey") ProcessInstanceKey parentProcessInstanceKey,
+      @Nonnull @JsonProperty("parentProcessInstanceKey")
+          ProcessInstanceKey parentProcessInstanceKey,
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,

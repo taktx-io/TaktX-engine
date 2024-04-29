@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -21,5 +20,4 @@ public class Definitions extends DefinitionsTrigger {
     this.definitionsKey = definitionsKey;
     this.rootProcess = rootProcess;
   }
-
 }

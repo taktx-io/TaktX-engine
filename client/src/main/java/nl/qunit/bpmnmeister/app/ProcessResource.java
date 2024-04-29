@@ -29,8 +29,7 @@ public class ProcessResource {
   @POST
   @Path("/{processId}")
   @Consumes(MediaType.APPLICATION_JSON)
-  public void start(
-      @RestPath String processId, String variables) {
+  public void start(@RestPath String processId, String variables) {
     // Convert Json string to Map of variables with JsonNode values
     Map<String, JsonNode> variablesMap;
     try {
@@ -40,10 +39,7 @@ public class ProcessResource {
     }
     StartCommand startCommand =
         new StartCommand(
-            ProcessInstanceKey.NONE,
-            Constants.NONE,
-            processId,
-            new Variables(variablesMap));
+            ProcessInstanceKey.NONE, Constants.NONE, processId, new Variables(variablesMap));
     startCommandEmitter.send(KafkaRecord.of(processId, startCommand));
   }
 }

@@ -22,8 +22,7 @@ public class OneTimeStartCommand implements ScheduleStartCommand {
   }
 
   @Override
-  public OneTimeStartCommand evaluate(
-      Instant now, Consumer<List<StartCommand>> consumer) {
+  public OneTimeStartCommand evaluate(Instant now, Consumer<List<StartCommand>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
       consumer.accept(startCommands);

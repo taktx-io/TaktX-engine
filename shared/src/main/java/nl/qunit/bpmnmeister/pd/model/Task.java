@@ -25,9 +25,9 @@ public class Task extends Activity {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    String sequenceFlowId = new String(getId() + "-to-end");
+    String sequenceFlowId = getId() + "-to-end";
     elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
-    String endEventId = new String(getId() + "-end");
+    String endEventId = getId() + "-end";
     elements.put(
         sequenceFlowId,
         new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
@@ -46,10 +46,7 @@ public class Task extends Activity {
                 + "-"
                 + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
-    Definitions definitions =
-        new Definitions(
-            subDefinitionsKey,
-            process);
+    Definitions definitions = new Definitions(subDefinitionsKey, process);
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);

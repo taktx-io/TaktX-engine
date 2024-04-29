@@ -29,5 +29,4 @@ public abstract class BaseElement {
   protected BaseElement(@Nonnull String id) {
     this.id = id;
   }
-
 }
