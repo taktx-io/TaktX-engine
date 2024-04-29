@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,6 +32,9 @@ class ProcessInstanceProcessorTest {
 
   @Inject
   BpmnTestEngine bpmnTestEngine;
+
+  @Inject
+  Clock clock;
 
   @PostConstruct
   void init() {
