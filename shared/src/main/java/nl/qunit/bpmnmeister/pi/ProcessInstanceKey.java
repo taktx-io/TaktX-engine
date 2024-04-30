@@ -3,51 +3,31 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
 import java.util.UUID;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 
 @Getter
+@EqualsAndHashCode
 public class ProcessInstanceKey {
-  public static final ProcessInstanceKey NONE =
-      new ProcessInstanceKey(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+  public static final ProcessInstanceKey NONE = new ProcessInstanceKey(Constants.NONE_UUID);
 
-  private final UUID processInstanceId;
+  private final UUID id;
 
-  private final ProcessInstanceKey parentProcessInstanceId;
+  private final ProcessInstanceKey parentId;
 
   @JsonCreator
   public ProcessInstanceKey(
-      @JsonProperty("processInstanceId") @Nonnull UUID processInstanceId,
-      @JsonProperty("parentProcessInstanceId") @Nonnull
-          ProcessInstanceKey parentProcessInstanceId) {
-    this.processInstanceId = processInstanceId;
-    this.parentProcessInstanceId = parentProcessInstanceId;
+      @JsonProperty("id") @Nonnull UUID id,
+      @JsonProperty("parentId") @Nonnull
+      ProcessInstanceKey parentId) {
+    this.id = id;
+    this.parentId = parentId;
   }
 
-  public ProcessInstanceKey(@JsonProperty("processInstanceId") @Nonnull UUID processInstanceId) {
-    this(processInstanceId, ProcessInstanceKey.NONE);
+  public ProcessInstanceKey(@JsonProperty("id") @Nonnull UUID id) {
+    this(id, ProcessInstanceKey.NONE);
   }
 
-  @Override
-  public String toString() {
-    return processInstanceId.toString();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ProcessInstanceKey that = (ProcessInstanceKey) o;
-    return Objects.equals(processInstanceId, that.processInstanceId);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(processInstanceId);
-  }
 }

@@ -68,7 +68,6 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
     ProcessInstanceTrigger processInstanceTrigger =
         new FlowElementTrigger(
             processInstanceKey,
-            startCommand.getParentProcessInstanceId(),
             startCommand.getParentElementId(),
             processDefinition,
             startEvent.getId(),
@@ -116,7 +115,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
       processDefinitionStore.put(key, processDefinition);
       ProcessDefinitionActivation activationMessage =
           new ProcessDefinitionActivation(processDefinition, ProcessDefinitionStateEnum.ACTIVE);
-      context.forward(new Record<>(previousKey, activationMessage, record.timestamp()));
+      context.forward(new Record<>(key, activationMessage, record.timestamp()));
     }
     context.forward(
         new Record<>(

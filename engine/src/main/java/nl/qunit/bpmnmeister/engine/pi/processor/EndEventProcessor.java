@@ -28,11 +28,10 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
       EndEvent element,
       EndEventState oldState) {
     Set<ProcessInstanceTrigger> processInstanceTriggers = new HashSet<>();
-    if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
+    if (!processInstance.getProcessInstanceKey().getParentId().equals(ProcessInstanceKey.NONE)) {
       processInstanceTriggers.add(
           new FlowElementTrigger(
-              processInstance.getParentProcessInstanceKey(),
-              ProcessInstanceKey.NONE,
+              processInstance.getProcessInstanceKey().getParentId(),
               processInstance.getParentElementId(),
               ProcessDefinition.NONE,
               Constants.NONE,

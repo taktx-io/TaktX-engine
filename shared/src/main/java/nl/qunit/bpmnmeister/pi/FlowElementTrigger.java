@@ -12,7 +12,6 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
   public static final FlowElementTrigger NONE =
       new FlowElementTrigger(
           ProcessInstanceKey.NONE,
-          ProcessInstanceKey.NONE,
           Constants.NONE,
           ProcessDefinition.NONE,
           Constants.NONE,
@@ -24,8 +23,6 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
   @JsonCreator
   public FlowElementTrigger(
       @JsonProperty("processInstanceKey") @Nonnull ProcessInstanceKey processInstanceKey,
-      @JsonProperty("parentProcessInstanceKey") @Nonnull
-          ProcessInstanceKey parentProcessInstanceKey,
       @JsonProperty("parentElementId") @Nonnull String parentElementId,
       @JsonProperty("processDefinition") @Nonnull ProcessDefinition processDefinition,
       @JsonProperty("elementId") @Nonnull String elementId,
@@ -33,7 +30,6 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(
         processInstanceKey,
-        parentProcessInstanceKey,
         parentElementId,
         processDefinition,
         elementId,

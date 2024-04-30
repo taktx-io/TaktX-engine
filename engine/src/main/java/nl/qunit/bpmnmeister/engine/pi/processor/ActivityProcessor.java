@@ -22,15 +22,14 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       Activity element,
       ActivityState newState,
       Variables returnVariables) {
-    if (!processInstance.getParentProcessInstanceKey().equals(ProcessInstanceKey.NONE)) {
+    if (!processInstance.getProcessInstanceKey().getParentId().equals(ProcessInstanceKey.NONE)) {
       return new TriggerResult(
           newState,
           Set.of(),
           Set.of(),
           Set.of(
               new FlowElementTrigger(
-                  processInstance.getParentProcessInstanceKey(),
-                  ProcessInstanceKey.NONE,
+                  processInstance.getProcessInstanceKey().getParentId(),
                   processInstance.getParentElementId(),
                   ProcessDefinition.NONE,
                   Constants.NONE,

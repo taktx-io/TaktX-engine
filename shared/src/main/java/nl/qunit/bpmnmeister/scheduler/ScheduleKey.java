@@ -3,8 +3,12 @@ package nl.qunit.bpmnmeister.scheduler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import lombok.Getter;
+import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
+@ToString
+@Getter
 public class ScheduleKey {
   private final ProcessDefinitionKey processDefinitionKey;
   private final ScheduleType scheduleType;
@@ -23,9 +27,4 @@ public class ScheduleKey {
     this.timerEventDefinitionId = timerEventDefinitionId;
   }
 
-  @Override
-  public String toString() {
-    return String.format(
-        "%s-%s-%s-%s", processDefinitionKey, scheduleType, elementId, timerEventDefinitionId);
-  }
 }

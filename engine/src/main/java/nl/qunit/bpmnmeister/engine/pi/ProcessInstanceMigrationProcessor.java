@@ -90,7 +90,6 @@ public class ProcessInstanceMigrationProcessor
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(newProcessDefinition);
     ProcessInstance newProcessInstance =
         new ProcessInstance(
-            processInstance.getParentProcessInstanceKey(),
             processInstance.getParentElementId(),
             processInstance.getProcessInstanceKey(),
             processDefinitionKey,

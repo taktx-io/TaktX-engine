@@ -26,7 +26,6 @@ public class ExternalTaskResponseTrigger extends ProcessInstanceTrigger {
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(
         processInstanceKey,
-        ProcessInstanceKey.NONE,
         Constants.NONE,
         ProcessDefinition.NONE,
         elementId,

@@ -236,4 +236,17 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1");
 
   }
+  @Test
+  void testScheduledStart_R5()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/schedule_start_r5.bpmn")
+        .moveTimeForward(Duration.ofSeconds(3))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofSeconds(2))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted();
+  }
 }

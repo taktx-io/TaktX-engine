@@ -57,7 +57,6 @@ public class SequentialMultiInstanceProcessor extends MultiInstanceProcessor {
     return Set.of(
         new FlowElementTrigger(
             new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
-            processInstance.getProcessInstanceKey(),
             element.getId(),
             element.getAsSubProcessDefinition(processDefinition),
             element.getAsSubProcessStartElementId(),

@@ -20,6 +20,10 @@ public class ProcessInstanceAssert {
     this.bpmnTestEngine = bpmnTestEngine;
   }
 
+  public ProcessInstanceAssert isNull() {
+    assertThat(processInstance).isNull();
+    return this;
+  }
   public ProcessInstanceAssert isCompleted() {
     assertThat(processInstance.getProcessInstanceState()).isEqualTo(
         ProcessInstanceState.COMPLETED);
@@ -27,7 +31,7 @@ public class ProcessInstanceAssert {
   }
   public ProcessInstanceAssert hasPassedElement(String elementId, int count) {
     BpmnElementState bpmnElementState = processInstance.getElementStates()
-        .get(new String(elementId));
+        .get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotNull();
     assertThat(bpmnElementState.getPassedCnt()).as("element " + elementId + " has not passed").isEqualTo(count);
     return this;
@@ -35,7 +39,7 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasPassedElement(String elementId) {
     BpmnElementState bpmnElementState = processInstance.getElementStates()
-        .get(new String(elementId));
+        .get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotNull();
     assertThat(bpmnElementState.getPassedCnt()).as("element " + elementId + " has not passed").isPositive();
     return this;
@@ -54,7 +58,7 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasNotPassedElement(String endEvent1) {
     BpmnElementState bpmnElementState = processInstance.getElementStates()
-        .get(new String(endEvent1));
+        .get(endEvent1);
     if (bpmnElementState != null) {
       assertThat(bpmnElementState.getPassedCnt()).as("element " + endEvent1 + " has passed").isZero();
     }

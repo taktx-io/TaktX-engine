@@ -77,7 +77,6 @@ public class ProcessInstanceProcessor
       definition = trigger.getProcessDefinition();
       processInstance =
           new ProcessInstance(
-              trigger.getParentProcessInstanceKey(),
               trigger.getParentElementId(),
               trigger.getProcessInstanceKey(),
               processDefinitionKey,
@@ -209,7 +208,6 @@ public class ProcessInstanceProcessor
                   FlowElementTrigger newTrigger =
                       new FlowElementTrigger(
                           processInstance.getProcessInstanceKey(),
-                          processInstance.getParentProcessInstanceKey(),
                           processInstance.getParentElementId(),
                           ProcessDefinition.NONE,
                           flow.getTarget(),
@@ -239,7 +237,6 @@ public class ProcessInstanceProcessor
 
       newProcessInstance =
           new ProcessInstance(
-              processInstance.getParentProcessInstanceKey(),
               processInstance.getParentElementId(),
               processInstance.getProcessInstanceKey(),
               processInstance.getProcessDefinitionKey(),

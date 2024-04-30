@@ -40,7 +40,7 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
                   .collect(Collectors.joining(""))
               : "";
       return new TimerEventDefinition(
-          timerEventDefinition.getId(), parentId, duration, cycle, timeDate);
+          timerEventDefinition.getId(), parentId, timeDate, duration, cycle);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }

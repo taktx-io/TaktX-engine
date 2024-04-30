@@ -40,6 +40,8 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Assertions;
+import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 import org.xml.sax.SAXException;
 
 @ApplicationScoped
@@ -77,6 +79,7 @@ public class BpmnTestEngine {
   private ExternalTaskTrigger activeExternalTaskTrigger;
   private Definitions definitionsBeingDeployed;
   private MutableClock mutableClock;
+  private ProcessInstance latestInstantiatedProcessInstance;
 
   @PostConstruct
   public void init() {
@@ -113,7 +116,12 @@ public class BpmnTestEngine {
     ConcurrentLinkedQueue<ProcessInstance> processInstances1 = processInstanceQueueMap.computeIfAbsent(
         processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     processInstances1.add(processInstance);
-    processInstanceMap.put(processInstance.getProcessInstanceKey(), processInstance);
+    ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
+        processInstance);
+    if (previousProcessInstance == null) {
+      latestInstantiatedProcessInstance = processInstance;
+    }
+
   }
 
   @Incoming("process-definition-parsed-incoming")
@@ -214,11 +222,19 @@ public class BpmnTestEngine {
   }
 
 
+  public BpmnTestEngine waitForNewProcessInstance() {
+    ProcessInstance referenceProcessInstance = latestInstantiatedProcessInstance;
+    activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
+        .until(() -> latestInstantiatedProcessInstance,
+            instance -> referenceProcessInstance != instance);
+    return this;
+  }
+
   public BpmnTestEngine waitUntilChildProcessIsStarted() {
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> {
           Optional<ProcessInstanceKey> first = processInstanceQueueMap.keySet().stream()
-              .filter(k -> k.getParentProcessInstanceId().equals(activeProcessInstance.getProcessInstanceKey()))
+              .filter(k -> k.getParentId().equals(activeProcessInstance.getProcessInstanceKey()))
               .findFirst();
           if (first.isEmpty()) {
             return null;
@@ -284,12 +300,32 @@ public class BpmnTestEngine {
 
   public ProcessInstanceAssert assertThatParentProcess() {
     ProcessInstance parentProcessInstance = processInstanceMap.get(
-        activeProcessInstance.getParentProcessInstanceKey());
+        activeProcessInstance.getProcessInstanceKey().getParentId());
     activeProcessInstance = parentProcessInstance;
     return new ProcessInstanceAssert(parentProcessInstance, this);
   }
 
   public ProcessDefinition deployedProcessDefinition() {
     return activeProcessDefintion;
+  }
+
+  public BpmnTestEngine waitFor(Duration duration) {
+    try {
+      Thread.sleep(duration.toMillis());
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(e);
+    }
+    return this;
+  }
+
+  public BpmnTestEngine moveTimeForward(Duration duration) {
+    mutableClock.advanceBy(duration);
+    return this;
+  }
+
+  public BpmnTestEngine doNotExpectNewProcessInstance() {
+    Assertions.assertThrows(ConditionTimeoutException.class, () ->
+      waitForNewProcessInstance());
+    return this;
   }
 }

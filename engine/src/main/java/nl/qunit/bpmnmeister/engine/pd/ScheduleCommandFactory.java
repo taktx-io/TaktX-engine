@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -28,6 +29,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 @ApplicationScoped
 public class ScheduleCommandFactory {
   @Inject Clock clock;
+  @Inject FeelExpressionHandler feelExpressionHandler;
 
   public ScheduleStartCommand schedule(
       ProcessDefinition processDefinition,
@@ -72,6 +74,7 @@ public class ScheduleCommandFactory {
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
     List<StartCommand> triggers = getStartCommands(processDefinition, startEvent);
+
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
     return new FixedRateStartCommand(
         triggers,
