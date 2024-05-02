@@ -31,10 +31,9 @@
       <bpmn:incoming>Flow_0xs875z</bpmn:incoming>
       <bpmn:outgoing>Flow_0yv5wy9</bpmn:outgoing>
       <bpmn:multiInstanceLoopCharacteristics isSequential="false">
-        <bpmn:loopDataInputRef>inputCollection</bpmn:loopDataInputRef>
-        <bpmn:inputDataItem name="inputElement"/>
-        <bpmn:outputDataItem name="outputElement"/>
-        <bpmn:loopDataOutputRef>outputCollection</bpmn:loopDataOutputRef>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="inputCollection" inputElement="inputElement" outputElement="outputElement" outputCollection="outputCollection" />
+        </bpmn:extensionElements>
       </bpmn:multiInstanceLoopCharacteristics>
     </bpmn:serviceTask>
     <bpmn:serviceTask id="create-collection-id" name="Create Collection">

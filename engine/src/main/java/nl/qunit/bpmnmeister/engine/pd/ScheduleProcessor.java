@@ -15,7 +15,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 public class ScheduleProcessor
     implements Processor<ScheduleKey, ScheduleStartCommand, String, StartCommand> {
   private ProcessorContext<String, StartCommand> context;
-  private Clock clock;
+  private final Clock clock;
 
   public ScheduleProcessor(Clock clock) {
     this.clock = clock;
@@ -25,7 +25,7 @@ public class ScheduleProcessor
   public void init(ProcessorContext<String, StartCommand> context) {
     this.context = context;
     context.schedule(
-        Duration.ofSeconds(1),
+        Duration.ofMillis(100),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
           KeyValueStore<ScheduleKey, ScheduleStartCommand> scheduleStore =

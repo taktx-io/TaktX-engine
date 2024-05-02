@@ -24,7 +24,11 @@ import org.xml.sax.helpers.DefaultHandler;
 public class BpmnParser {
 
   public Definitions parse(String xml)
-      throws JAXBException, NoSuchAlgorithmException, SAXException, IOException, ParserConfigurationException {
+      throws JAXBException,
+          NoSuchAlgorithmException,
+          SAXException,
+          IOException,
+          ParserConfigurationException {
     JAXBContext context = JAXBContext.newInstance(TDefinitions.class);
 
     MyHandler handler = new MyHandler();

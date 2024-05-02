@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.pd.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Set;
@@ -39,8 +40,10 @@ public abstract class Activity extends FlowNode {
     return Objects.hash(super.hashCode(), loopCharacteristics);
   }
 
+  @JsonIgnore
   public abstract ProcessDefinition getAsSubProcessDefinition(
       ProcessDefinition parentProcessDefinition);
 
+  @JsonIgnore
   public abstract String getAsSubProcessStartElementId();
 }

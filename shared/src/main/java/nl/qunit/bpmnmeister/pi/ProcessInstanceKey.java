@@ -20,8 +20,7 @@ public class ProcessInstanceKey {
   @JsonCreator
   public ProcessInstanceKey(
       @JsonProperty("id") @Nonnull UUID id,
-      @JsonProperty("parentId") @Nonnull
-      ProcessInstanceKey parentId) {
+      @JsonProperty("parentId") @Nonnull ProcessInstanceKey parentId) {
     this.id = id;
     this.parentId = parentId;
   }
@@ -29,5 +28,4 @@ public class ProcessInstanceKey {
   public ProcessInstanceKey(@JsonProperty("id") @Nonnull UUID id) {
     this(id, ProcessInstanceKey.NONE);
   }
-
 }

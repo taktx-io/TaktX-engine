@@ -33,7 +33,8 @@ public class GenericRootElementMapper implements RootElementMapper {
     Map<String, FlowElement> flowElements = new HashMap<>();
     for (JAXBElement<? extends TFlowElement> jaxbFlowElement : jaxbFlowElementList) {
       TFlowElement tFlowElement = jaxbFlowElement.getValue();
-      FlowElement flowElement = bpmnMapperFactory.createFlowElementMapper().map(tFlowElement, Constants.NONE);
+      FlowElement flowElement =
+          bpmnMapperFactory.createFlowElementMapper().map(tFlowElement, Constants.NONE);
       flowElements.put(flowElement.getId(), flowElement);
     }
     return new FlowElements(flowElements);

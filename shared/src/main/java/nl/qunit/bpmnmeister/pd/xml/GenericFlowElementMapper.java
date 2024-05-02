@@ -50,7 +50,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               : FlowCondition.NONE);
     } else if (tFlowElement instanceof TActivity activity) {
       LoopCharacteristics loopCharacteristics =
-          bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
+          bpmnMapperFactory
+              .createLoopCharacteristicsMapper()
+              .map(activity.getLoopCharacteristics());
       FlowElement activityFlowElement = null;
       if (activity instanceof TServiceTask serviceTask) {
         activityFlowElement =
@@ -74,8 +76,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
             subProcess.getFlowElement().stream()
                 .map(
                     flowElement ->
-                        bpmnMapperFactory.createFlowElementMapper().map(
-                            flowElement.getValue(), tFlowElement.getId()))
+                        bpmnMapperFactory
+                            .createFlowElementMapper()
+                            .map(flowElement.getValue(), tFlowElement.getId()))
                 .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
 
         activityFlowElement =
@@ -87,7 +90,10 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 loopCharacteristics,
                 new FlowElements(elements));
       } else if (activity instanceof TCallActivity callActivity) {
-        activityFlowElement = bpmnMapperFactory.createCallActivityMapper().map(callActivity, parentId, loopCharacteristics);
+        activityFlowElement =
+            bpmnMapperFactory
+                .createCallActivityMapper()
+                .map(callActivity, parentId, loopCharacteristics);
       }
       return activityFlowElement;
     } else if (tFlowElement instanceof TParallelGateway parallelGateway) {
@@ -108,7 +114,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           parentId,
           mapQNameList(startEvent.getIncoming()),
           mapQNameList(startEvent.getOutgoing()),
-          bpmnMapperFactory.createEventDefinitionMapper().map(startEvent.getEventDefinition(), parentId));
+          bpmnMapperFactory
+              .createEventDefinitionMapper()
+              .map(startEvent.getEventDefinition(), parentId));
     } else if (tFlowElement instanceof TEndEvent endEvent) {
       return new EndEvent(
           endEvent.getId(),
@@ -122,6 +130,6 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   }
 
   private static Set<String> mapQNameList(List<QName> incoming) {
-    return incoming.stream().map(i -> i.toString()).collect(Collectors.toSet());
+    return incoming.stream().map(QName::toString).collect(Collectors.toSet());
   }
 }

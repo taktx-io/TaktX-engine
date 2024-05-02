@@ -7,5 +7,6 @@ import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 
 public interface EventDefinitionMapper {
-  Set<EventDefinition> map(List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId);
+  Set<EventDefinition> map(
+      List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId);
 }

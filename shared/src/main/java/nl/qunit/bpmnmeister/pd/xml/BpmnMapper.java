@@ -5,5 +5,4 @@ import nl.qunit.bpmnmeister.pd.model.Definitions;
 
 public interface BpmnMapper {
   Definitions map(TDefinitions definitions, String hash);
-
 }

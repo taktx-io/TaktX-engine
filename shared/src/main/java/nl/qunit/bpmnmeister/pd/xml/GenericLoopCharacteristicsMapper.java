@@ -7,8 +7,7 @@ import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 
 public class GenericLoopCharacteristicsMapper implements LoopCharacteristicsMapper {
 
-  public LoopCharacteristics map(
-      JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
+  public LoopCharacteristics map(JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
     if (loopCharacteristics != null) {
       TLoopCharacteristics tLoopCharacteristics = loopCharacteristics.getValue();
       if (tLoopCharacteristics instanceof TMultiInstanceLoopCharacteristics tLoopCharacteristics1) {

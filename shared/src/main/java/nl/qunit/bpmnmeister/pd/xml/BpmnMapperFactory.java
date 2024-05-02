@@ -7,9 +7,10 @@ public class BpmnMapperFactory {
   public static final String NS_ZEEBE_1_0 = "http://camunda.org/schema/zeebe/1.0";
   private final Set<String> namespaces;
 
-  BpmnMapperFactory(Set<String> namespaces){
+  BpmnMapperFactory(Set<String> namespaces) {
     this.namespaces = namespaces;
   }
+
   public BpmnMapper createBpmnMapper() {
     return new GenericBpmnMapper(this);
   }
@@ -33,6 +34,7 @@ public class BpmnMapperFactory {
       return new GenericLoopCharacteristicsMapper();
     }
   }
+
   public CallActivityMapper createCallActivityMapper() {
     if (namespaces.contains(NS_ZEEBE_1_0)) {
       return new ZeebeCallActivityMapper();

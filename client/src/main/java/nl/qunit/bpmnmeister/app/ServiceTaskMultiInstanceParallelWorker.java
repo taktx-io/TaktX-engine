@@ -17,7 +17,7 @@ public class ServiceTaskMultiInstanceParallelWorker {
   public CreateCollectionResults createCollection() {
     System.out.println("ServiceTaskMultiInstanceParallelWorker.createCollection()");
     return new CreateCollectionResults(
-        IntStream.rangeClosed(1, 100).boxed().map(i -> "" + i).toList());
+        IntStream.rangeClosed(1, 1000).boxed().map(i -> "" + i).toList());
   }
 
   @ExternalTask(element = "service-task-id")

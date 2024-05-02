@@ -33,13 +33,18 @@ public class FixedRateStartCommand implements ScheduleStartCommand {
 
   @Override
   public FixedRateStartCommand evaluate(Instant now, Consumer<List<StartCommand>> triggerConsumer) {
-    Instant nextExecution = Instant.parse(instantiation).plus(Duration.parse(period));
-    if (now.isAfter(nextExecution)) {
+    Instant instantiation = Instant.parse(this.instantiation);
+    if (now.isAfter(instantiation)) {
       // Time reached, return triggers
       triggerConsumer.accept(startCommands);
 
       if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
         // Return a new command with the next execution time
+        Instant nextExecution = instantiation.plus(Duration.parse(period));
+        if (now.isAfter(nextExecution)) {
+          // If the next execution time is already in the past, skip to the next one
+          nextExecution = now.plus(Duration.parse(period));
+        }
         return new FixedRateStartCommand(
             startCommands, period, repetitions, repeatedCnt + 1, nextExecution.toString());
       } else {

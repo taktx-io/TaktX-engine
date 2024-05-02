@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-    implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
+    implementation 'org.apache.kafka:kafka-clients:3.4.0'
     implementation 'io.quarkus:quarkus-jaxb'
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-resteasy-reactive'
@@ -22,6 +22,7 @@ dependencies {
 
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.quarkus:quarkus-junit5-mockito'
+    testImplementation 'io.quarkus:quarkus-test-kafka-companion'
     testImplementation 'org.assertj:assertj-core:3.24.2'
 
     compileOnly 'org.projectlombok:lombok:1.18.30'

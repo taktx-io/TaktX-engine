@@ -28,12 +28,7 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
-    super(
-        processInstanceKey,
-        parentElementId,
-        processDefinition,
-        elementId,
-        variables);
+    super(processInstanceKey, parentElementId, processDefinition, elementId, variables);
     this.inputFlowId = inputFlowId;
   }
 }

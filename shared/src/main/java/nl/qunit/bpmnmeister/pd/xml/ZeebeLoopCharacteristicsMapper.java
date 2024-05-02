@@ -8,13 +8,15 @@ import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 
 public class ZeebeLoopCharacteristicsMapper implements LoopCharacteristicsMapper {
 
-  public LoopCharacteristics map(
-      JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
+  public LoopCharacteristics map(JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
     if (loopCharacteristics != null) {
       TLoopCharacteristics tLoopCharacteristics = loopCharacteristics.getValue();
-      if (tLoopCharacteristics instanceof TMultiInstanceLoopCharacteristics multiInstanceLoopCharacteristics) {
-        Optional<nl.qunit.bpmnmeister.bpmn.LoopCharacteristics> optLoop = ExtensionElementHelper.extractExtensionElement(tLoopCharacteristics.getExtensionElements(),
-            nl.qunit.bpmnmeister.bpmn.LoopCharacteristics.class);
+      if (tLoopCharacteristics
+          instanceof TMultiInstanceLoopCharacteristics multiInstanceLoopCharacteristics) {
+        Optional<nl.qunit.bpmnmeister.bpmn.LoopCharacteristics> optLoop =
+            ExtensionElementHelper.extractExtensionElement(
+                tLoopCharacteristics.getExtensionElements(),
+                nl.qunit.bpmnmeister.bpmn.LoopCharacteristics.class);
         if (optLoop.isPresent()) {
           nl.qunit.bpmnmeister.bpmn.LoopCharacteristics zeebeLoop = optLoop.get();
           return new LoopCharacteristics(

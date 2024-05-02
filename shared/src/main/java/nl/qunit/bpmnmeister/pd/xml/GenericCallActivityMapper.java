@@ -7,8 +7,8 @@ import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 public class GenericCallActivityMapper implements CallActivityMapper {
 
   @Override
-  public CallActivity map(TCallActivity callActivity, String parentId,
-      LoopCharacteristics loopCharacteristics) {
+  public CallActivity map(
+      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics) {
     return new CallActivity(
         callActivity.getId(),
         parentId,
@@ -17,5 +17,4 @@ public class GenericCallActivityMapper implements CallActivityMapper {
         loopCharacteristics,
         callActivity.getCalledElement().toString());
   }
-
 }

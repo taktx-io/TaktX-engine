@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
@@ -18,6 +19,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+@Slf4j
 public class DefinitionsProcessor implements Processor<String, DefinitionsTrigger, Object, Object> {
 
   private ProcessorContext<Object, Object> context;
@@ -49,9 +51,12 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
       Record<String, DefinitionsTrigger> record, StartCommand startCommand, String definitionId) {
     Integer latestVersion = this.definitionCountByIdStore.get(definitionId);
     if (latestVersion == null) {
+      StringBuilder storedDefinitions = new StringBuilder("Available definitions: ");
+      this.definitionCountByIdStore
+          .all()
+          .forEachRemaining(e -> storedDefinitions.append(e.key + " "));
+      log.error("Process definition not found for key: {}. {}", definitionId, storedDefinitions);
       return;
-      //      throw new IllegalStateException("Process definition not found for key: " +
-      // definitionId);
     }
 
     ProcessDefinition processDefinition =

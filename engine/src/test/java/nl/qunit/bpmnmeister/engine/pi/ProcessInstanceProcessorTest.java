@@ -242,7 +242,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/schedule_start_r5.bpmn")
-        .moveTimeForward(Duration.ofSeconds(3))
+        .moveTimeForward(Duration.ofSeconds(1))
         .waitForNewProcessInstance()
         .waitUntilCompleted()
         .moveTimeForward(Duration.ofSeconds(2))

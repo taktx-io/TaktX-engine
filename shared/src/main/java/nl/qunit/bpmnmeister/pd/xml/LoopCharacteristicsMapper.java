@@ -6,5 +6,4 @@ import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 
 public interface LoopCharacteristicsMapper {
   LoopCharacteristics map(JAXBElement<? extends TLoopCharacteristics> loopCharacteristics);
-
 }

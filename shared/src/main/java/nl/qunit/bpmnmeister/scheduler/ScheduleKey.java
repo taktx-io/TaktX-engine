@@ -26,5 +26,4 @@ public class ScheduleKey {
     this.elementId = elementId;
     this.timerEventDefinitionId = timerEventDefinitionId;
   }
-
 }

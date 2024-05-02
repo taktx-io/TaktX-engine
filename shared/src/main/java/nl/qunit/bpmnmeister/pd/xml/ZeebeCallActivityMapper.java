@@ -9,9 +9,12 @@ import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 public class ZeebeCallActivityMapper implements CallActivityMapper {
 
   @Override
-  public CallActivity map(TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics) {
-    Optional<CalledElement> optCalledElement = ExtensionElementHelper.extractExtensionElement(callActivity.getExtensionElements(), CalledElement.class);
-    String calledElement =  optCalledElement.isEmpty() ? "" : optCalledElement.get().getProcessId();
+  public CallActivity map(
+      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics) {
+    Optional<CalledElement> optCalledElement =
+        ExtensionElementHelper.extractExtensionElement(
+            callActivity.getExtensionElements(), CalledElement.class);
+    String calledElement = optCalledElement.isEmpty() ? "" : optCalledElement.get().getProcessId();
     return new CallActivity(
         callActivity.getId(),
         parentId,
