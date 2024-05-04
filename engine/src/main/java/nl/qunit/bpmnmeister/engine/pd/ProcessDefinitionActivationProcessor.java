@@ -4,7 +4,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
+import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduleType;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -13,17 +13,17 @@ import org.apache.kafka.streams.processor.api.Record;
 
 public class ProcessDefinitionActivationProcessor
     implements Processor<
-        ProcessDefinitionKey, ProcessDefinitionActivation, ScheduleKey, ScheduleCommand> {
+        ProcessDefinitionKey, ProcessDefinitionActivation, ScheduleKey, MessageScheduler> {
 
-  private ProcessorContext<ScheduleKey, ScheduleCommand> context;
-  private final ScheduleCommandFactory timerDefinitionScheduler;
+  private ProcessorContext<ScheduleKey, MessageScheduler> context;
+  private final StartCommandScheduler startCommandScheduler;
 
-  public ProcessDefinitionActivationProcessor(ScheduleCommandFactory timerDefinitionScheduler) {
-    this.timerDefinitionScheduler = timerDefinitionScheduler;
+  public ProcessDefinitionActivationProcessor(StartCommandScheduler startCommandScheduler) {
+    this.startCommandScheduler = startCommandScheduler;
   }
 
   @Override
-  public void init(ProcessorContext<ScheduleKey, ScheduleCommand> context) {
+  public void init(ProcessorContext<ScheduleKey, MessageScheduler> context) {
     this.context = context;
   }
 
@@ -53,8 +53,8 @@ public class ProcessDefinitionActivationProcessor
                             context.forward(
                                 new Record<>(
                                     scheduleKey,
-                                    timerDefinitionScheduler.schedule(
-                                        processDefinition, startEvent, timerEventDefinition),
+                                    startCommandScheduler.schedule(
+                                        processDefinition, timerEventDefinition),
                                     processActivationRecord.timestamp()));
                           }));
     } else if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.INACTIVE) {

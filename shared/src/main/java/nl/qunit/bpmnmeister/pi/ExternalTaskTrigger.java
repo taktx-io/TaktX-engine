@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
-public class ExternalTaskTrigger {
+public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKey> {
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final String elementId;
@@ -37,5 +38,10 @@ public class ExternalTaskTrigger {
         + ", variables="
         + variables
         + '}';
+  }
+
+  @Override
+  public ProcessInstanceKey getRecordKey() {
+    return processInstanceKey;
   }
 }

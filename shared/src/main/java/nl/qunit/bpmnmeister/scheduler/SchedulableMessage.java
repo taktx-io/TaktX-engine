@@ -10,6 +10,6 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 @JsonSubTypes({
     @JsonSubTypes.Type(value = StartCommand.class),
 })
-public interface SchedulableMessage {
-  String getRecordKey();
+public interface SchedulableMessage<T> {
+  T getRecordKey();
 }

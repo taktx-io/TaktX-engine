@@ -39,8 +39,8 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
@@ -59,8 +59,8 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ScheduleKey.class);
   static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
-  static final ObjectMapperSerde<ScheduleCommand> SCHEDULE_COMMAND_SERDE =
-      new ObjectMapperSerde<>(ScheduleCommand.class);
+  static final ObjectMapperSerde<MessageScheduler> SCHEDULE_COMMAND_SERDE =
+      new ObjectMapperSerde<>(MessageScheduler.class);
   static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
   static final ObjectMapperSerde<ProcessInstanceMigrationTrigger> PROCESS_INSTANCE_MIGRATION_SERDE =
@@ -80,7 +80,7 @@ public class ProcessDefinitionTopologyProducer {
   private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
 
-  @Inject ScheduleCommandFactory scheduleCommandFactory;
+  @Inject StartCommandScheduler startCommandScheduler;
   @Inject Clock clock;
   @Inject ProcessorProvider processorProvider;
   @Inject KeyValueStoreSupplier keyValueStoreSupplier;
@@ -244,7 +244,7 @@ public class ProcessDefinitionTopologyProducer {
                 SCHEDULE_KEY_SERDE,
                 SCHEDULE_COMMAND_SERDE));
 
-    KStream<ScheduleKey, ScheduleCommand> scheduleCommandStream =
+    KStream<ScheduleKey, MessageScheduler> scheduleCommandStream =
         stateStore.stream(
             Topics.SCHEDULE_COMMANDS.getTopicName(),
             Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
@@ -268,9 +268,9 @@ public class ProcessDefinitionTopologyProducer {
             PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
             Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
 
-    KStream<ScheduleKey, ScheduleCommand> scheduleStream =
+    KStream<ScheduleKey, MessageScheduler> scheduleStream =
         activationStreamIn.process(
-            () -> new ProcessDefinitionActivationProcessor(scheduleCommandFactory));
+            () -> new ProcessDefinitionActivationProcessor(startCommandScheduler));
 
     scheduleStream.to(
         Topics.SCHEDULE_COMMANDS.getTopicName(),

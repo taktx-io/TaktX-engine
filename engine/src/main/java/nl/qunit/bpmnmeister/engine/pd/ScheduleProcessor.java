@@ -3,8 +3,8 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -13,7 +13,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ScheduleProcessor
-    implements Processor<ScheduleKey, ScheduleCommand, Object, SchedulableMessage> {
+    implements Processor<ScheduleKey, MessageScheduler, Object, SchedulableMessage> {
   private ProcessorContext<Object, SchedulableMessage> context;
   private final Clock clock;
 
@@ -28,16 +28,16 @@ public class ScheduleProcessor
         Duration.ofMillis(100),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
-          KeyValueStore<ScheduleKey, ScheduleCommand> scheduleStore =
+          KeyValueStore<ScheduleKey, MessageScheduler> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
           scheduleStore
               .all()
               .forEachRemaining(
                   scheduleKeyValue -> {
                     ScheduleKey scheduleKey = scheduleKeyValue.key;
-                    ScheduleCommand scheduleCommand = scheduleKeyValue.value;
+                    MessageScheduler scheduleCommand = scheduleKeyValue.value;
                     if (scheduleCommand != null) {
-                      ScheduleCommand updatedScheduleCommand =
+                      MessageScheduler updatedScheduleCommand =
                           scheduleCommand.evaluate(
                               Instant.now(clock),
                               schedulableMessages ->
@@ -59,8 +59,8 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduleKey, ScheduleCommand> scheduleRecord) {
-    KeyValueStore<ScheduleKey, ScheduleCommand> stateStore =
+  public void process(Record<ScheduleKey, MessageScheduler> scheduleRecord) {
+    KeyValueStore<ScheduleKey, MessageScheduler> stateStore =
         context.getStateStore(Stores.SCHEDULES_STORE_NAME);
     if (scheduleRecord.value() != null) {
       stateStore.put(scheduleRecord.key(), scheduleRecord.value());

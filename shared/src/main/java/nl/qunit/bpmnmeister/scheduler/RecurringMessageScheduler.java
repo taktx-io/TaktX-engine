@@ -17,23 +17,23 @@ import java.util.function.Consumer;
 import lombok.Getter;
 
 @Getter
-public class RecurringStartCommand implements ScheduleCommand {
-  private final List<SchedulableMessage> schedulableMessages;
+public class RecurringMessageScheduler implements MessageScheduler {
+  private final List<SchedulableMessage<?>> messages;
   private final String cron;
   private final String instantiation;
 
   @JsonCreator
-  public RecurringStartCommand(
-      @JsonProperty("triggers") List<SchedulableMessage> schedulableMessages,
+  public RecurringMessageScheduler(
+      @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
-    this.schedulableMessages = schedulableMessages;
+    this.messages = messages;
     this.cron = cron;
     this.instantiation = instantiation;
   }
 
   @Override
-  public RecurringStartCommand evaluate(Instant now, Consumer<List<SchedulableMessage>> triggerConsumer) {
+  public RecurringMessageScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -43,11 +43,11 @@ public class RecurringStartCommand implements ScheduleCommand {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(schedulableMessages);
+        triggerConsumer.accept(messages);
 
         // Return a new command with the next execution time
-        return new RecurringStartCommand(
-            schedulableMessages, parsedCron.asString(), zonedDateTime.get().toString());
+        return new RecurringMessageScheduler(
+            messages, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;

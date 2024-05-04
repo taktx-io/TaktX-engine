@@ -8,23 +8,23 @@ import java.util.function.Consumer;
 import lombok.Getter;
 
 @Getter
-public class OneTimeStartCommand implements ScheduleCommand {
-  private final List<SchedulableMessage> schedulableMessages;
+public class OneTimeScheduler implements MessageScheduler {
+  private final List<SchedulableMessage<?>> messages;
   private final String when;
 
   @JsonCreator
-  public OneTimeStartCommand(
-      @JsonProperty("startCommands") List<SchedulableMessage> messages,
+  public OneTimeScheduler(
+      @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("when") String when) {
-    this.schedulableMessages = messages;
+    this.messages = messages;
     this.when = when;
   }
 
   @Override
-  public OneTimeStartCommand evaluate(Instant now, Consumer<List<SchedulableMessage>> consumer) {
+  public OneTimeScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
-      consumer.accept(schedulableMessages);
+      consumer.accept(messages);
 
       // Return null to indicate that this command is done
       return null;

@@ -9,7 +9,7 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class StartCommand extends DefinitionsTrigger implements SchedulableMessage {
+public class StartCommand extends DefinitionsTrigger implements SchedulableMessage<String> {
 
   private final ProcessInstanceKey parentProcessInstanceId;
   private final String parentElementId;

@@ -20,42 +20,42 @@ class RecurringCommandTest {
     @Test
     void test() {
         StartCommand trigger1 = mock(StartCommand.class);
-        RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
         List<SchedulableMessage> triggersReceived = new ArrayList<>();
-        RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggersReceived::addAll);
+        RecurringMessageScheduler newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggersReceived::addAll);
 
         assertThat(triggersReceived).isEmpty();
         assertThat(newCommand.getInstantiation()).isEqualTo("2021-01-01T00:00:30Z");
-        assertThat(newCommand.getSchedulableMessages()).containsExactly(trigger1);
+        assertThat(newCommand.getMessages()).containsExactly(trigger1);
         assertThat(newCommand.getCron()).isEqualTo(recurringCommand.getCron());
     }
     @Test
     void testAfter() {
         StartCommand trigger1 = mock(StartCommand.class);
-        RecurringStartCommand recurringCommand = new RecurringStartCommand(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
         List<SchedulableMessage> triggersReceived = new ArrayList<>();
-        RecurringStartCommand newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);
+        RecurringMessageScheduler newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);
 
         assertThat(triggersReceived).containsExactly(trigger1);
         assertThat(newCommand.getInstantiation()).isEqualTo("2021-01-01T00:01Z");
-        assertThat(newCommand.getSchedulableMessages()).containsExactly(trigger1);
+        assertThat(newCommand.getMessages()).containsExactly(trigger1);
         assertThat(newCommand.getCron()).isEqualTo(recurringCommand.getCron());
 
         triggersReceived.clear();
-        RecurringStartCommand newCommand2 = newCommand.evaluate(Instant.now(CLOCK_AFTER2), triggersReceived::addAll);
+        RecurringMessageScheduler newCommand2 = newCommand.evaluate(Instant.now(CLOCK_AFTER2), triggersReceived::addAll);
 
         assertThat(triggersReceived).isEmpty();
         assertThat(newCommand2.getInstantiation()).isEqualTo("2021-01-01T00:01Z");
-        assertThat(newCommand2.getSchedulableMessages()).containsExactly(trigger1);
+        assertThat(newCommand2.getMessages()).containsExactly(trigger1);
         assertThat(newCommand2.getCron()).isEqualTo(recurringCommand.getCron());
 
-        RecurringStartCommand newCommand3 = newCommand.evaluate(Instant.now(CLOCK_AFTER3), triggersReceived::addAll);
+        RecurringMessageScheduler newCommand3 = newCommand.evaluate(Instant.now(CLOCK_AFTER3), triggersReceived::addAll);
 
         assertThat(triggersReceived).containsExactly(trigger1);
         assertThat(newCommand3.getInstantiation()).isEqualTo("2021-01-01T00:02Z");
-        assertThat(newCommand3.getSchedulableMessages()).containsExactly(trigger1);
+        assertThat(newCommand3.getMessages()).containsExactly(trigger1);
         assertThat(newCommand3.getCron()).isEqualTo(recurringCommand.getCron());
 
     }
