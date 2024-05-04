@@ -3,9 +3,9 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
+import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
-import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -13,8 +13,8 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ScheduleProcessor
-    implements Processor<ScheduleKey, ScheduleStartCommand, String, StartCommand> {
-  private ProcessorContext<String, StartCommand> context;
+    implements Processor<ScheduleKey, ScheduleCommand, Object, SchedulableMessage> {
+  private ProcessorContext<Object, SchedulableMessage> context;
   private final Clock clock;
 
   public ScheduleProcessor(Clock clock) {
@@ -22,32 +22,31 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void init(ProcessorContext<String, StartCommand> context) {
+  public void init(ProcessorContext<Object, SchedulableMessage> context) {
     this.context = context;
     context.schedule(
         Duration.ofMillis(100),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
-          KeyValueStore<ScheduleKey, ScheduleStartCommand> scheduleStore =
+          KeyValueStore<ScheduleKey, ScheduleCommand> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
           scheduleStore
               .all()
               .forEachRemaining(
                   scheduleKeyValue -> {
                     ScheduleKey scheduleKey = scheduleKeyValue.key;
-                    ScheduleStartCommand scheduleCommand = scheduleKeyValue.value;
+                    ScheduleCommand scheduleCommand = scheduleKeyValue.value;
                     if (scheduleCommand != null) {
-                      ScheduleStartCommand updatedScheduleCommand =
+                      ScheduleCommand updatedScheduleCommand =
                           scheduleCommand.evaluate(
                               Instant.now(clock),
-                              processInstanceStartCommands ->
-                                  processInstanceStartCommands.forEach(
-                                      processInstanceStartCommand ->
+                              schedulableMessages ->
+                                  schedulableMessages.forEach(
+                                      message ->
                                           context.forward(
                                               new Record<>(
-                                                  processInstanceStartCommand
-                                                      .getProcessDefinitionId(),
-                                                  processInstanceStartCommand,
+                                                  message.getRecordKey(),
+                                                  message,
                                                   Instant.now(clock).toEpochMilli()))));
                       if (updatedScheduleCommand != null) {
                         scheduleStore.put(scheduleKey, updatedScheduleCommand);
@@ -60,13 +59,13 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduleKey, ScheduleStartCommand> record) {
-    KeyValueStore<ScheduleKey, ScheduleStartCommand> stateStore =
+  public void process(Record<ScheduleKey, ScheduleCommand> scheduleRecord) {
+    KeyValueStore<ScheduleKey, ScheduleCommand> stateStore =
         context.getStateStore(Stores.SCHEDULES_STORE_NAME);
-    if (record.value() != null) {
-      stateStore.put(record.key(), record.value());
+    if (scheduleRecord.value() != null) {
+      stateStore.put(scheduleRecord.key(), scheduleRecord.value());
     } else {
-      stateStore.delete(record.key());
+      stateStore.delete(scheduleRecord.key());
     }
   }
 }

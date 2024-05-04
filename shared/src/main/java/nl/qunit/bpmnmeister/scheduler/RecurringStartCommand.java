@@ -15,26 +15,25 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @Getter
-public class RecurringStartCommand implements ScheduleStartCommand {
-  private final List<StartCommand> startCommands;
+public class RecurringStartCommand implements ScheduleCommand {
+  private final List<SchedulableMessage> schedulableMessages;
   private final String cron;
   private final String instantiation;
 
   @JsonCreator
   public RecurringStartCommand(
-      @JsonProperty("triggers") List<StartCommand> startCommands,
+      @JsonProperty("triggers") List<SchedulableMessage> schedulableMessages,
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
-    this.startCommands = startCommands;
+    this.schedulableMessages = schedulableMessages;
     this.cron = cron;
     this.instantiation = instantiation;
   }
 
   @Override
-  public RecurringStartCommand evaluate(Instant now, Consumer<List<StartCommand>> triggerConsumer) {
+  public RecurringStartCommand evaluate(Instant now, Consumer<List<SchedulableMessage>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -44,11 +43,11 @@ public class RecurringStartCommand implements ScheduleStartCommand {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(startCommands);
+        triggerConsumer.accept(schedulableMessages);
 
         // Return a new command with the next execution time
         return new RecurringStartCommand(
-            startCommands, parsedCron.asString(), zonedDateTime.get().toString());
+            schedulableMessages, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;

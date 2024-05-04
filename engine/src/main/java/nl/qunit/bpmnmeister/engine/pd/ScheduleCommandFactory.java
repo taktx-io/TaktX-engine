@@ -24,14 +24,15 @@ import nl.qunit.bpmnmeister.scheduler.FixedRateStartCommand;
 import nl.qunit.bpmnmeister.scheduler.OneTimeStartCommand;
 import nl.qunit.bpmnmeister.scheduler.RecurringStartCommand;
 import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
-import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
+import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 
 @ApplicationScoped
 public class ScheduleCommandFactory {
   @Inject Clock clock;
   @Inject FeelExpressionHandler feelExpressionHandler;
 
-  public ScheduleStartCommand schedule(
+  public ScheduleCommand schedule(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
@@ -45,20 +46,20 @@ public class ScheduleCommandFactory {
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
 
-  private ScheduleStartCommand scheduleDuration(TimerEventDefinition timerEventDefinition) {
+  private ScheduleCommand scheduleDuration(TimerEventDefinition timerEventDefinition) {
     return null;
   }
 
-  private ScheduleStartCommand scheduleOneTime(
+  private ScheduleCommand scheduleOneTime(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<StartCommand> startCommands = getStartCommands(processDefinition, startEvent);
+    List<SchedulableMessage> startCommands = getStartCommands(processDefinition, startEvent);
 
     return new OneTimeStartCommand(startCommands, timerEventDefinition.getTimeDate());
   }
 
-  private ScheduleStartCommand scheduleCycle(
+  private ScheduleCommand scheduleCycle(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
@@ -69,11 +70,11 @@ public class ScheduleCommandFactory {
     }
   }
 
-  private ScheduleStartCommand scheduleFixedRate(
+  private ScheduleCommand scheduleFixedRate(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<StartCommand> triggers = getStartCommands(processDefinition, startEvent);
+    List<SchedulableMessage> triggers = getStartCommands(processDefinition, startEvent);
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
     return new FixedRateStartCommand(
@@ -84,18 +85,18 @@ public class ScheduleCommandFactory {
         Instant.now(clock).toString());
   }
 
-  private ScheduleStartCommand scheduleCron(
+  private ScheduleCommand scheduleCron(
       ProcessDefinition processDefinition,
       StartEvent startEvent,
       TimerEventDefinition timerEventDefinition) {
-    List<StartCommand> startCommands = getStartCommands(processDefinition, startEvent);
+    List<SchedulableMessage> messages = getStartCommands(processDefinition, startEvent);
     return new RecurringStartCommand(
-        startCommands, timerEventDefinition.getTimeCycle(), Instant.now(clock).toString());
+        messages, timerEventDefinition.getTimeCycle(), Instant.now(clock).toString());
   }
 
-  private static List<StartCommand> getStartCommands(
+  private static List<SchedulableMessage> getStartCommands(
       ProcessDefinition processDefinition, StartEvent startEvent) {
-    List<StartCommand> processInstanceStartCommand = new ArrayList<>();
+    List<SchedulableMessage> processInstanceStartCommand = new ArrayList<>();
     for (String outgoingFlowId : startEvent.getOutgoing()) {
       SequenceFlow sequenceFlow =
           (SequenceFlow)

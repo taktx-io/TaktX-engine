@@ -5,10 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class StartCommand extends DefinitionsTrigger {
+public class StartCommand extends DefinitionsTrigger implements SchedulableMessage {
 
   private final ProcessInstanceKey parentProcessInstanceId;
   private final String parentElementId;
@@ -25,5 +26,10 @@ public class StartCommand extends DefinitionsTrigger {
     this.parentElementId = parentElementId;
     this.processDefinitionId = processDefinitionId;
     this.variables = variables;
+  }
+
+  @Override
+  public String getRecordKey() {
+    return processDefinitionId;
   }
 }

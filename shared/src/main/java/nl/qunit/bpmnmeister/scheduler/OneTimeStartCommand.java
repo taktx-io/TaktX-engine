@@ -6,26 +6,25 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @Getter
-public class OneTimeStartCommand implements ScheduleStartCommand {
-  private final List<StartCommand> startCommands;
+public class OneTimeStartCommand implements ScheduleCommand {
+  private final List<SchedulableMessage> schedulableMessages;
   private final String when;
 
   @JsonCreator
   public OneTimeStartCommand(
-      @JsonProperty("startCommands") List<StartCommand> startCommands,
+      @JsonProperty("startCommands") List<SchedulableMessage> messages,
       @JsonProperty("when") String when) {
-    this.startCommands = startCommands;
+    this.schedulableMessages = messages;
     this.when = when;
   }
 
   @Override
-  public OneTimeStartCommand evaluate(Instant now, Consumer<List<StartCommand>> consumer) {
+  public OneTimeStartCommand evaluate(Instant now, Consumer<List<SchedulableMessage>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
-      consumer.accept(startCommands);
+      consumer.accept(schedulableMessages);
 
       // Return null to indicate that this command is done
       return null;

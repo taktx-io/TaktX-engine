@@ -4,8 +4,8 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
+import nl.qunit.bpmnmeister.scheduler.ScheduleCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
-import nl.qunit.bpmnmeister.scheduler.ScheduleStartCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduleType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -13,9 +13,9 @@ import org.apache.kafka.streams.processor.api.Record;
 
 public class ProcessDefinitionActivationProcessor
     implements Processor<
-        ProcessDefinitionKey, ProcessDefinitionActivation, ScheduleKey, ScheduleStartCommand> {
+        ProcessDefinitionKey, ProcessDefinitionActivation, ScheduleKey, ScheduleCommand> {
 
-  private ProcessorContext<ScheduleKey, ScheduleStartCommand> context;
+  private ProcessorContext<ScheduleKey, ScheduleCommand> context;
   private final ScheduleCommandFactory timerDefinitionScheduler;
 
   public ProcessDefinitionActivationProcessor(ScheduleCommandFactory timerDefinitionScheduler) {
@@ -23,7 +23,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   @Override
-  public void init(ProcessorContext<ScheduleKey, ScheduleStartCommand> context) {
+  public void init(ProcessorContext<ScheduleKey, ScheduleCommand> context) {
     this.context = context;
   }
 
