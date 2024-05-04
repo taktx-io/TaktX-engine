@@ -20,4 +20,6 @@ public interface MessageScheduler {
 
   @JsonIgnore
   MessageScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer);
+
+  ScheduleType getScheduleType();
 }

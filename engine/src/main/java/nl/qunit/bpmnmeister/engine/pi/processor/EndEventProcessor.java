@@ -47,6 +47,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
         processInstanceTriggers,
         Set.of(),
         new EndThrowingEvent(),
+        Set.of(),
         Variables.EMPTY);
   }
 

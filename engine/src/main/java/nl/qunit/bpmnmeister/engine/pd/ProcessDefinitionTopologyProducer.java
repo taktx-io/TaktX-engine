@@ -7,6 +7,7 @@ import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.SCHEDULE_COMMANDS;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
@@ -59,7 +60,7 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ScheduleKey.class);
   static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
-  static final ObjectMapperSerde<MessageScheduler> SCHEDULE_COMMAND_SERDE =
+  static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
   static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
@@ -210,7 +211,8 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof ProcessInstance,
                 (key, value) -> value instanceof FlowElementTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger,
-                (key, value) -> value instanceof StartCommand);
+                (key, value) -> value instanceof StartCommand,
+                (key, value) -> value instanceof MessageScheduler);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -234,6 +236,11 @@ public class ProcessDefinitionTopologyProducer {
                 KeyValue.pair(
                     ((StartCommand) value).getProcessDefinitionId(), (StartCommand) value))
         .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
+    branches[4]
+        .map((key, value) -> KeyValue.pair(((ScheduleKey) key), (MessageScheduler) value))
+        .to(
+            SCHEDULE_COMMANDS.getTopicName(),
+            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {
@@ -242,12 +249,12 @@ public class ProcessDefinitionTopologyProducer {
             keyValueStoreBuilder(
                 keyValueStoreSupplier.get(SCHEDULES_STORE_NAME),
                 SCHEDULE_KEY_SERDE,
-                SCHEDULE_COMMAND_SERDE));
+                MESSAGE_SCHEDULER_SERDE));
 
     KStream<ScheduleKey, MessageScheduler> scheduleCommandStream =
         stateStore.stream(
             Topics.SCHEDULE_COMMANDS.getTopicName(),
-            Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
+            Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     KStream<Object, SchedulableMessage> processStream =
         scheduleCommandStream.process(() -> new ScheduleProcessor(clock), SCHEDULES_STORE_NAME);
     processStream
@@ -274,6 +281,6 @@ public class ProcessDefinitionTopologyProducer {
 
     scheduleStream.to(
         Topics.SCHEDULE_COMMANDS.getTopicName(),
-        Produced.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_SERDE));
+        Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
   }
 }

@@ -6,6 +6,6 @@ import lombok.Getter;
 @Getter
 public abstract class RootElement extends BaseElement {
   protected RootElement(@Nonnull String id, @Nonnull String parentId) {
-    super(id);
+    super(id, parentId);
   }
 }

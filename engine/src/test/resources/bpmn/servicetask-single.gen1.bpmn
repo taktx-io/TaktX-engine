@@ -12,10 +12,10 @@
     <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="service-task-id" targetRef="EndEvent_2" />
     <bpmn:serviceTask id="service-task-id" name="ServiceTask">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition />
         <zeebe:ioMapping>
           <zeebe:input source="=123" target="inputVariable" />
         </zeebe:ioMapping>
+        <zeebe:taskDefinition type="service-task-id" retries="5" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>

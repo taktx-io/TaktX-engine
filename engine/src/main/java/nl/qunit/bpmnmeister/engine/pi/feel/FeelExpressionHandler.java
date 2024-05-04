@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.feel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +57,9 @@ public class FeelExpressionHandler {
       }
     } else {
       resultNode = variables.get(expression);
+      if (resultNode == null) {
+        resultNode = new TextNode(expression);
+      }
     }
 
     return resultNode;

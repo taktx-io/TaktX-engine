@@ -27,6 +27,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -187,6 +188,21 @@ public class ProcessInstanceProcessor
                         newExternalTaskTrigger.getProcessInstanceKey(),
                         newExternalTaskTrigger,
                         Instant.now().toEpochMilli()));
+              });
+
+      triggerResult
+          .getMessageSchedulers()
+          .forEach(
+              messageScheduler -> {
+                LOG.info("Trigger scheduled message: ");
+                ScheduleKey scheduleKey =
+                    new ScheduleKey(
+                        ProcessDefinitionKey.of(definition),
+                        messageScheduler.getScheduleType(),
+                        flowElement.getId(),
+                        "");
+                context.forward(
+                    new Record<>(scheduleKey, messageScheduler, Instant.now().toEpochMilli()));
               });
 
       List<ProcessInstanceTrigger> nextTriggers = new ArrayList<>();

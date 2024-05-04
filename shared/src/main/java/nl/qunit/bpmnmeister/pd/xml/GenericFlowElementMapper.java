@@ -26,7 +26,6 @@ import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
@@ -56,13 +55,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       FlowElement activityFlowElement = null;
       if (activity instanceof TServiceTask serviceTask) {
         activityFlowElement =
-            new ServiceTask(
-                serviceTask.getId(),
-                parentId,
-                mapQNameList(serviceTask.getIncoming()),
-                mapQNameList(serviceTask.getOutgoing()),
-                serviceTask.getImplementation(),
-                loopCharacteristics);
+            bpmnMapperFactory
+                .createServiceTaskMapper()
+                .map(serviceTask, parentId, loopCharacteristics);
       } else if (activity instanceof TTask task) {
         activityFlowElement =
             new Task(

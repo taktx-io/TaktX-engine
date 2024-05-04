@@ -38,6 +38,7 @@ public class ParallelGatewayProcessor
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Variables.EMPTY);
   }
 

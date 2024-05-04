@@ -132,6 +132,47 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
+  void testProcessServiceTaskFailed5Retries()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed1", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed2", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed3", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed4", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed5", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed5", "true"))
+        .waitUntilCompleted()
+        .assertThatProcess().hasFailed();
+  }
+  @Test
+  void testProcessServiceTaskFailed3RetriesButThenSucceeds()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed1", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed2", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andResponseWithFailure(true, "failure", Variables.of("failed3", "true"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .waitUntilCompleted()
+        .assertThatProcess().isCompleted();
+  }
+
+  @Test
   void testProcessTaskMultiInstanceParallel()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 

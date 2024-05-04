@@ -41,6 +41,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
                   element.getCalledElement(),
                   variables)),
           ThrowingEvent.NOOP,
+          Set.of(),
           Variables.EMPTY);
     } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
       CallActivityState newState =
@@ -51,7 +52,14 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
       return finishActivity(processInstance, element, newState, variables);
     } else {
       return new TriggerResult(
-          oldState, Set.of(), Set.of(), Set.of(), Set.of(), ThrowingEvent.NOOP, Variables.EMPTY);
+          oldState,
+          Set.of(),
+          Set.of(),
+          Set.of(),
+          Set.of(),
+          ThrowingEvent.NOOP,
+          Set.of(),
+          Variables.EMPTY);
     }
   }
 

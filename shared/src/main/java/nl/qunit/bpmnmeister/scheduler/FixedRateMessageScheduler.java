@@ -55,4 +55,9 @@ public class FixedRateMessageScheduler implements MessageScheduler {
       return this;
     }
   }
+
+  @Override
+  public ScheduleType getScheduleType() {
+    return ScheduleType.FIXED_RATE;
+  }
 }

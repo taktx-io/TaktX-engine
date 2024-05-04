@@ -25,8 +25,10 @@ import lombok.Getter;
 })
 public abstract class BaseElement {
   private final String id;
+  private final String parentId;
 
-  protected BaseElement(@Nonnull String id) {
+  protected BaseElement(@Nonnull String id, String parentId) {
     this.id = id;
+    this.parentId = parentId;
   }
 }

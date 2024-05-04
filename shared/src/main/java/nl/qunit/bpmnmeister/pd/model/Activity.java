@@ -2,11 +2,12 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
 import java.util.Set;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public abstract class Activity extends FlowNode {
   private final LoopCharacteristics loopCharacteristics;
 
@@ -18,26 +19,6 @@ public abstract class Activity extends FlowNode {
       @Nonnull LoopCharacteristics loopCharacteristics) {
     super(id, parentId, incoming, outgoing);
     this.loopCharacteristics = loopCharacteristics;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    Activity activity = (Activity) o;
-    return Objects.equals(loopCharacteristics, activity.loopCharacteristics);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), loopCharacteristics);
   }
 
   @JsonIgnore

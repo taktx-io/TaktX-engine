@@ -15,4 +15,22 @@
       <xs:attribute name="outputElement" use="required" type="xs:string"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="taskDefinition">
+    <xs:complexType id="taskDefinition" >
+      <xs:attribute name="type" use="required" type="xs:string"/>
+      <xs:attribute name="retries" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="taskHeaders">
+    <xs:complexType id="taskHeaders" >
+      <xs:sequence>
+        <xs:element name="header" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:attribute name="key" use="required" type="xs:string"/>
+            <xs:attribute name="value" use="required" type="xs:string"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

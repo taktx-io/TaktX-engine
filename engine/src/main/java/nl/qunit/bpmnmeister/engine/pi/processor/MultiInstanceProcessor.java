@@ -68,6 +68,7 @@ public abstract class MultiInstanceProcessor
           Set.of(),
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           returnVariables);
     } else {
       Set<ProcessInstanceTrigger> subProcessTriggers =
@@ -85,6 +86,7 @@ public abstract class MultiInstanceProcessor
           subProcessTriggers,
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           returnVariables);
     }
   }
@@ -137,6 +139,7 @@ public abstract class MultiInstanceProcessor
           subProcessTriggers,
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           returnVariables);
     } else {
       MultiInstanceState newState =

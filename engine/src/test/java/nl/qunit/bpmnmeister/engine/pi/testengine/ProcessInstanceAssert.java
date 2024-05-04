@@ -71,4 +71,12 @@ public class ProcessInstanceAssert {
     consumer.accept(new ObjectMapper().treeToValue(jsonNode, Object.class));
     return this;
   }
+
+  public void hasState(ProcessInstanceState processInstanceState) {
+    assertThat(processInstance.getProcessInstanceState()).isEqualTo(processInstanceState);
+  }
+
+  public void hasFailed() {
+    assertThat(processInstance.getProcessInstanceState()).isEqualTo(ProcessInstanceState.FAILED);
+  }
 }

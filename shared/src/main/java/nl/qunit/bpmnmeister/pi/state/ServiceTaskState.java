@@ -9,23 +9,16 @@ import lombok.Getter;
 @Getter
 public class ServiceTaskState extends TaskState {
 
+  private final int attempt;
+
   @JsonCreator
   public ServiceTaskState(
       @Nonnull @JsonProperty("state") ActivityStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("passedCnt") int passedCnt) {
+      @JsonProperty("passedCnt") int passedCnt,
+      @JsonProperty("attempt") int attempt) {
     super(state, elementInstanceId, passedCnt);
+    this.attempt = attempt;
   }
 
-  @Override
-  public String toString() {
-    return "ServiceTaskState{"
-        + "elementInstanceId="
-        + getElementInstanceId()
-        + ", state="
-        + getState()
-        + ", passedCnt="
-        + getPassedCnt()
-        + '}';
-  }
 }

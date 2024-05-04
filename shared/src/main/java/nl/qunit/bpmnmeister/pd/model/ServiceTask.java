@@ -3,50 +3,50 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public class ServiceTask extends Task {
 
+  private final String workerDefinition;
+  private final String retries;
   private final String implementation;
+  private final Map<String, String> headers;
 
   @JsonCreator
   public ServiceTask(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
+      @Nonnull @JsonProperty("workerDefinition") String workerDefinition,
+      @Nonnull @JsonProperty("retries") String retries,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("implementation") String implementation,
-      @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics) {
+      @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
+      @Nonnull @JsonProperty("headers") Map<String, String> headers
+  ) {
     super(id, parentId, incoming, outgoing, loopCharacteristics);
+    this.workerDefinition = workerDefinition;
+    this.retries = retries;
     this.implementation = implementation;
+    this.headers = headers;
   }
 
   @Override
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new ServiceTask(
-        getId(), getId(), getIncoming(), outgoing, getImplementation(), LoopCharacteristics.NONE);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    ServiceTask that = (ServiceTask) o;
-    return Objects.equals(implementation, that.implementation);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), implementation);
+        getId(),
+        getId(),
+        getWorkerDefinition(),
+        getRetries(),
+        getIncoming(),
+        outgoing,
+        getImplementation(),
+        LoopCharacteristics.NONE,
+        getHeaders());
   }
 }

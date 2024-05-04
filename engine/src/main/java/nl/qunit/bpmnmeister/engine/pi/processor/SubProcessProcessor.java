@@ -69,6 +69,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
         subProcessTriggers,
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Variables.EMPTY);
   }
 

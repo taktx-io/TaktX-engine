@@ -30,6 +30,7 @@ public class ExclusiveGatewayProcessor
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Variables.EMPTY);
   }
 

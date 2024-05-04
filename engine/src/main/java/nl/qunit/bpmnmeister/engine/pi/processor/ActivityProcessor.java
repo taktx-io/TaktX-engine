@@ -37,6 +37,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                   processInstance.getVariables())),
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           returnVariables);
     } else {
       return new TriggerResult(
@@ -46,6 +47,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           Set.of(),
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           returnVariables);
     }
   }

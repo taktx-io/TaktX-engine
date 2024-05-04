@@ -29,6 +29,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
         Set.of(),
         Set.of(),
         new StartThrowingEvent(),
+        Set.of(),
         Variables.EMPTY);
   }
 

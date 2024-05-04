@@ -56,4 +56,9 @@ public class RecurringMessageScheduler implements MessageScheduler {
     // Something went wrong, return null to indicate that this command is done
     return null;
   }
+
+  @Override
+  public ScheduleType getScheduleType() {
+    return ScheduleType.RECURRING;
+  }
 }

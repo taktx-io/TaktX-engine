@@ -10,6 +10,7 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 
 @Getter
 public class TriggerResult {
@@ -20,6 +21,7 @@ public class TriggerResult {
   private final Set<ProcessInstanceTrigger> newProcessInstanceTriggers;
   private final Set<StartCommand> newStartCommands;
   private final ThrowingEvent throwingEvent;
+  private final Set<MessageScheduler> messageSchedulers;
   private final Variables variables;
 
   @JsonCreator
@@ -31,6 +33,7 @@ public class TriggerResult {
           Set<ProcessInstanceTrigger> newProcessInstanceTriggers,
       @Nonnull @JsonProperty("newStartCommands") Set<StartCommand> newStartCommands,
       @Nonnull @JsonProperty("throwEvent") ThrowingEvent throwingEvent,
+      @Nonnull @JsonProperty("schedules") Set<MessageScheduler> messageSchedulers,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;
@@ -38,6 +41,7 @@ public class TriggerResult {
     this.newProcessInstanceTriggers = newProcessInstanceTriggers;
     this.newStartCommands = newStartCommands;
     this.throwingEvent = throwingEvent;
+    this.messageSchedulers = messageSchedulers;
     this.variables = variables;
   }
 }

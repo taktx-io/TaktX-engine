@@ -42,4 +42,12 @@ public class BpmnMapperFactory {
       return new GenericCallActivityMapper();
     }
   }
+
+  public ServiceTaskMapper createServiceTaskMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeServiceTaskMapper();
+    } else {
+      return new GenericServiceTaskMapper();
+    }
+  }
 }
