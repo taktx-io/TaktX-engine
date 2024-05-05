@@ -51,7 +51,7 @@ class ProcessInstanceProcessorTest {
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 
     processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
+        .deployProcessDefinition("/bpmn/task-single-2-retry-backoff.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
     assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
@@ -59,7 +59,7 @@ class ProcessInstanceProcessorTest {
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
     processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
+        .deployProcessDefinition("/bpmn/task-single-2-retry-backoff.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
     assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
@@ -139,17 +139,17 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
         .startProcessInstance(Variables.EMPTY)
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed1", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed2", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed2", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed3", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed3", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed4", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed4", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed5", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed5", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed5", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed5", "true"))
         .waitUntilCompleted()
         .assertThatProcess().hasFailed();
   }
@@ -161,15 +161,44 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
         .startProcessInstance(Variables.EMPTY)
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed1", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed2", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed2", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
-        .andResponseWithFailure(true, "failure", Variables.of("failed3", "true"))
+        .andRespondWithFailure(true, "failure", Variables.of("failed3", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(Variables.of("success", "true"))
         .waitUntilCompleted()
         .assertThatProcess().isCompleted();
+  }
+  @Test
+  void testProcessServiceTaskRetryBackoff()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofMillis(3001))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithFailure(true, "failure", Variables.of("failed2", "true"))
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofMillis(3001))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithFailure(true, "failure", Variables.of("failed3", "true"))
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofMillis(3001))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .isCompleted()
+        .hasVariableMatching("failed1", val -> assertThat(val).isEqualTo("true"))
+        .hasVariableMatching("failed2", val -> assertThat(val).isEqualTo("true"))
+        .hasVariableMatching("failed3", val -> assertThat(val).isEqualTo("true"))
+        .hasVariableMatching("success", val -> assertThat(val).isEqualTo("true"));
   }
 
   @Test

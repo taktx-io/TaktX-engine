@@ -203,6 +203,12 @@ public class ExternalTriggerConsumer {
 
       CompletableFuture.runAsync(
           () -> {
+            KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter =
+                new KafkaProducer<>(
+                    kafkaPropertiesHelper.getKafkaProducerProperties(
+                        ProcessInstanceKeyJsonSeserializer.class,
+                        ExternalTaskTriggerResponseSerializer.class));
+            ExternalTaskResponseTrigger processInstanceTrigger;
             try {
               Object result =
                   method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
@@ -211,29 +217,31 @@ public class ExternalTriggerConsumer {
                       ? Map.of()
                       : objectMapper.convertValue(result, LinkedHashMap.class);
               ExternalTaskResponseResult externalTaskResponseResult =
-                  new ExternalTaskResponseResult(true, null);
-              ExternalTaskResponseTrigger processInstanceTrigger =
+                  new ExternalTaskResponseResult(true, true, null);
+              processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskId,
                       externalTaskResponseResult,
                       new Variables(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
-              KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter =
-                  new KafkaProducer<>(
-                      kafkaPropertiesHelper.getKafkaProducerProperties(
-                          ProcessInstanceKeyJsonSeserializer.class,
-                          ExternalTaskTriggerResponseSerializer.class));
-              responseEmitter.send(
-                  new ProducerRecord<>(
-                      Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-                      externalTaskTrigger.getProcessInstanceKey(),
-                      processInstanceTrigger));
-              responseEmitter.flush();
-              responseEmitter.close();
-            } catch (Exception e) {
+            } catch (Throwable e) {
               LOG.error("Error invoking method", e);
+              processInstanceTrigger =
+                  new ExternalTaskResponseTrigger(
+                      externalTaskTrigger.getProcessInstanceKey(),
+                      externalTaskId,
+                      new ExternalTaskResponseResult(false, true, e.getMessage()),
+                      Variables.EMPTY);
             }
+            responseEmitter.send(
+                new ProducerRecord<>(
+                    Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+                    externalTaskTrigger.getProcessInstanceKey(),
+                    processInstanceTrigger));
+            responseEmitter.flush();
+            responseEmitter.close();
+
           });
 
     } else {

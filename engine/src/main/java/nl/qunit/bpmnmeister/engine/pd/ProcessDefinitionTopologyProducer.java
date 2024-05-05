@@ -266,7 +266,15 @@ public class ProcessDefinitionTopologyProducer {
                     ks.map((key, value) -> KeyValue.pair((String) key, (StartCommand) value))
                         .to(
                             DEFINITIONS_TOPIC.getTopicName(),
-                            Produced.with(Serdes.String(), START_COMMAND_SERDE))));
+                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
+        .branch(
+            (k, v) -> v instanceof ExternalTaskTrigger,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
+                        .to(
+                            EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
+                            Produced.with(PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))));
   }
 
   private void setupActivationStream(StreamsBuilder builder) {

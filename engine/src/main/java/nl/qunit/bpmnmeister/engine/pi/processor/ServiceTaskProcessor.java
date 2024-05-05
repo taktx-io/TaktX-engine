@@ -5,6 +5,7 @@ import static com.cronutils.utils.StringUtils.isNumeric;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -34,6 +35,8 @@ import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, ServiceTaskState> {
 
   @Inject FeelExpressionHandler feelExpressionHandler;
+
+  @Inject Clock clock;
 
   @Override
   protected TriggerResult triggerFlowElement(
@@ -182,7 +185,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             processInstance.getProcessDefinitionKey(),
             workerDefinition,
             variables);
-    String triggerTime = Instant.now().plus(Duration.parse(backoff)).toString();
+    String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     return new OneTimeScheduler(List.of(externalTask), triggerTime);
   }
 

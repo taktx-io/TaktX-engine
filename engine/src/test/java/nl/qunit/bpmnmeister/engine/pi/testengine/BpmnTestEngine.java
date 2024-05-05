@@ -256,7 +256,7 @@ public class BpmnTestEngine {
     triggerExternalTaskResponse(activeExternalTaskTrigger, new ExternalTaskResponseResult(true, null, null), of);
     return this;
   }
-  public BpmnTestEngine andResponseWithFailure(boolean allowRetry, String errorMessage, Variables of) {
+  public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String errorMessage, Variables of) {
     triggerExternalTaskResponse(activeExternalTaskTrigger, new ExternalTaskResponseResult(false, allowRetry, errorMessage), of);
     return this;
   }
