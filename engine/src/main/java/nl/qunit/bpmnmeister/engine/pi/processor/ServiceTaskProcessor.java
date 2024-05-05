@@ -57,6 +57,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
           Set.of(),
           Variables.EMPTY);
     }
+    String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
     return new TriggerResult(
         new ServiceTaskState(
             ActivityStateEnum.ACTIVE,
@@ -64,12 +65,17 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             oldState.getPassedCnt(),
             oldState.getAttempt() + 1),
         Set.of(),
-        Set.of(element.getWorkerDefinition()),
+        Set.of(workerDefinition),
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
         Set.of(),
         Variables.EMPTY);
+  }
+
+  private String getWorkerDefinition(String workerDefinition, Variables variables) {
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
+    return jsonNode.asText();
   }
 
   @Override
@@ -135,11 +141,11 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             // This means for now we do nothing, the retry will be scheduled by the scheduler
             MessageScheduler messageScheduler =
                 scheduleNextExternalTask(
-                    element.getWorkerDefinition(), backoff.get(), processInstance, variables);
+                    trigger.getElementId(), backoff.get(), processInstance, variables);
             messageSchedulers = Set.of(messageScheduler);
           } else {
             // No backoff time defined, retry directly
-            workerDefinitions = Set.of(element.getWorkerDefinition());
+            workerDefinitions = Set.of(trigger.getElementId());
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker

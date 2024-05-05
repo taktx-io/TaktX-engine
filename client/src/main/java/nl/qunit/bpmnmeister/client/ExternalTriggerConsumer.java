@@ -241,7 +241,6 @@ public class ExternalTriggerConsumer {
                     processInstanceTrigger));
             responseEmitter.flush();
             responseEmitter.close();
-
           });
 
     } else {

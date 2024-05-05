@@ -131,6 +131,24 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_2");
   }
 
+
+  @Test
+  void testProcessServiceTaskSingleFx()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithSuccess(Variables.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "value1")
+        .hasPassedElement("StartEvent_2")
+        .hasPassedElement("service-task-id")
+        .hasPassedElement("EndEvent_2");
+  }
+
   @Test
   void testProcessServiceTaskFailed5Retries()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
