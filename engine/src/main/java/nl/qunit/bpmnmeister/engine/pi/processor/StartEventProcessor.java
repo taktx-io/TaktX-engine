@@ -2,11 +2,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
@@ -18,7 +17,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
 
   @Override
   protected TriggerResult triggerEvent(
-      FlowElementTrigger trigger,
+      ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       StartEvent element,
       StartEventState oldState) {
@@ -31,10 +30,5 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
         new StartThrowingEvent(),
         Set.of(),
         Variables.EMPTY);
-  }
-
-  @Override
-  public StartEventState initialState() {
-    return new StartEventState(UUID.randomUUID(), 0);
   }
 }

@@ -33,7 +33,8 @@ public class RecurringMessageScheduler implements MessageScheduler {
   }
 
   @Override
-  public RecurringMessageScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
+  public RecurringMessageScheduler evaluate(
+      Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);

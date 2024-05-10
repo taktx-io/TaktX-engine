@@ -28,8 +28,11 @@ public class ZeebeServiceTaskMapper implements ServiceTaskMapper {
     Optional<TaskHeaders> taskDefinitionheaders =
         ExtensionElementHelper.extractExtensionElement(
             serviceTask.getExtensionElements(), TaskHeaders.class);
-    taskDefinitionheaders.ifPresent(taskHeaders -> taskHeaders.getHeader()
-        .forEach(header -> headers.put(header.getKey(), header.getValue())));
+    taskDefinitionheaders.ifPresent(
+        taskHeaders ->
+            taskHeaders
+                .getHeader()
+                .forEach(header -> headers.put(header.getKey(), header.getValue())));
 
     return new ServiceTask(
         serviceTask.getId(),

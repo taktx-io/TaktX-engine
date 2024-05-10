@@ -6,9 +6,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
-public abstract class CatchEvent extends Event {
+public abstract class CatchEvent<S extends BpmnElementState> extends Event<S> {
   protected final Set<EventDefinition> eventDefinitions;
 
   protected CatchEvent(

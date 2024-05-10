@@ -9,7 +9,8 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 @Getter
 public class ExternalTaskResponseResult {
 
-  public static final ExternalTaskResponseResult NONE = new ExternalTaskResponseResult(false, false, Constants.NONE);
+  public static final ExternalTaskResponseResult NONE =
+      new ExternalTaskResponseResult(false, false, Constants.NONE);
   private final Boolean success;
   private final String errorMessage;
   private final Boolean allowRetry;

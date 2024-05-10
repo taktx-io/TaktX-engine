@@ -31,7 +31,8 @@ public class FixedRateMessageScheduler implements MessageScheduler {
   }
 
   @Override
-  public FixedRateMessageScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
+  public FixedRateMessageScheduler evaluate(
+      Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
     Instant instant = Instant.parse(this.instantiation);
     if (now.isAfter(instant)) {
       // Time reached, return triggers

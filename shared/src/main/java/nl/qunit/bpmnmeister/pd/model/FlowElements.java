@@ -46,6 +46,14 @@ public class FlowElements {
   }
 
   @JsonIgnore
+  public List<FlowNode> getFlowNodes() {
+    return elements.values().stream()
+        .filter(FlowNode.class::isInstance)
+        .map(FlowNode.class::cast)
+        .toList();
+  }
+
+  @JsonIgnore
   public Optional<FlowElement> getFlowElement(String id) {
     return elements.values().stream()
         .filter(flowElement -> id.equals(flowElement.getId()))

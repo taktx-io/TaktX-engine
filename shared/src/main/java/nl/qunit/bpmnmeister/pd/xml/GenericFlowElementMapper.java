@@ -29,6 +29,7 @@ import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pi.state.TaskState;
 
 public class GenericFlowElementMapper implements FlowElementMapper {
   private final BpmnMapperFactory bpmnMapperFactory;
@@ -60,7 +61,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 .map(serviceTask, parentId, loopCharacteristics);
       } else if (activity instanceof TTask task) {
         activityFlowElement =
-            new Task(
+            new Task<TaskState>(
                 task.getId(),
                 parentId,
                 mapQNameList(task.getIncoming()),

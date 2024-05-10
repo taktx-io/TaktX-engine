@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 public class ProcessInstance {
   private final String parentElementId;
   private final ProcessInstanceKey processInstanceKey;
+  private final ProcessInstanceKey parentInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final ElementStates elementStates;
   private final Variables variables;
@@ -21,12 +22,14 @@ public class ProcessInstance {
   public ProcessInstance(
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("elementStates") ElementStates elementStates,
       @Nonnull @JsonProperty("variables") Variables variables,
       @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState) {
     this.parentElementId = parentElementId;
     this.processInstanceKey = processInstanceKey;
+    this.parentInstanceKey = parentInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
     this.elementStates = elementStates;
     this.variables = variables;

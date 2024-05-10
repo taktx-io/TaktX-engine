@@ -13,7 +13,6 @@ import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -25,6 +24,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -69,22 +69,24 @@ public class ProcessInstanceProcessor
     LOG.info("Processing trigger: " + trigger);
     ProcessInstance processInstance;
     ProcessDefinition definition;
-    if (trigger.getProcessDefinition().equals(ProcessDefinition.NONE)) {
-      processInstance = getProcessInstance(trigger.getProcessInstanceKey());
-      definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
-    } else {
-      ProcessDefinitionKey processDefinitionKey =
-          ProcessDefinitionKey.of(trigger.getProcessDefinition());
-      definition = trigger.getProcessDefinition();
+
+    if (trigger instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger) {
+      definition = startNewProcessInstanceTrigger.getProcessDefinition();
+      ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(definition);
       processInstance =
           new ProcessInstance(
-              trigger.getParentElementId(),
-              trigger.getProcessInstanceKey(),
+              startNewProcessInstanceTrigger.getParentElementId(),
+              startNewProcessInstanceTrigger.getProcessInstanceKey(),
+              startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
               processDefinitionKey,
-              ElementStates.EMPTY,
-              trigger.getVariables(),
+              definition.initElementStates(),
+              startNewProcessInstanceTrigger.getVariables(),
               ProcessInstanceState.START);
       storeProcessDefinition(definition);
+
+    } else {
+      processInstance = getProcessInstance(trigger.getProcessInstanceKey());
+      definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
     }
 
     ProcessInstance updatedProcessInstance = trigger(processInstance, definition, trigger);
@@ -138,10 +140,7 @@ public class ProcessInstanceProcessor
             + processInstance.getProcessInstanceKey()
             + " with trigger "
             + trigger);
-    String elementId =
-        trigger.getElementId().equals(Constants.NONE)
-            ? trigger.getParentElementId()
-            : trigger.getElementId();
+    String elementId = trigger.getElementId();
     Optional<FlowElement> optFlowElement =
         definition.getDefinitions().getRootProcess().getFlowElements().getFlowElement(elementId);
     if (optFlowElement.isPresent()) {
@@ -155,9 +154,7 @@ public class ProcessInstanceProcessor
       StateProcessor<? extends BaseElement, ? extends BpmnElementState> processor =
           processorProvider.getProcessor(flowElement);
       BpmnElementState elementState = processInstance.getElementStates().get(elementId);
-      if (elementState == null) {
-        elementState = processor.initialState();
-      }
+
       LOG.info("Trigger processor: " + processor);
       TriggerResult triggerResult =
           processor.trigger(
@@ -224,8 +221,6 @@ public class ProcessInstanceProcessor
                   FlowElementTrigger newTrigger =
                       new FlowElementTrigger(
                           processInstance.getProcessInstanceKey(),
-                          processInstance.getParentElementId(),
-                          ProcessDefinition.NONE,
                           flow.getTarget(),
                           flow.getId(),
                           variablesWithTriggerResult);
@@ -255,6 +250,7 @@ public class ProcessInstanceProcessor
           new ProcessInstance(
               processInstance.getParentElementId(),
               processInstance.getProcessInstanceKey(),
+              processInstance.getParentInstanceKey(),
               processInstance.getProcessDefinitionKey(),
               newElementStates,
               variablesWithTriggerResult,
@@ -262,7 +258,7 @@ public class ProcessInstanceProcessor
 
       for (ProcessInstanceTrigger nextTrigger : nextTriggers) {
 
-        if (!nextTrigger.getProcessDefinition().equals(ProcessDefinition.NONE)
+        if ((nextTrigger instanceof StartNewProcessInstanceTrigger)
             || definition
                     .getDefinitions()
                     .getRootProcess()

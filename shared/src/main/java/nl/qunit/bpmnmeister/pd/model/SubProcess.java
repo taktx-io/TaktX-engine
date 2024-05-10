@@ -5,12 +5,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 
 @Getter
-public class SubProcess extends Activity {
+@EqualsAndHashCode(callSuper = true)
+public class SubProcess extends Activity<SubProcessState> {
 
   private final FlowElements elements;
 
@@ -58,22 +62,7 @@ public class SubProcess extends Activity {
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    SubProcess that = (SubProcess) o;
-    return Objects.equals(elements, that.elements);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), elements);
+  public SubProcessState getInitialState() {
+    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
   }
 }

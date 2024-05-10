@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
@@ -14,10 +15,11 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = ParallelGatewayState.class),
   @JsonSubTypes.Type(value = StartEventState.class),
   @JsonSubTypes.Type(value = TaskState.class),
+  @JsonSubTypes.Type(value = CallActivityState.class),
   @JsonSubTypes.Type(value = ServiceTaskState.class),
-  @JsonSubTypes.Type(value = MultiInstanceState.class),
   @JsonSubTypes.Type(value = SubProcessState.class),
 })
+@ToString
 public abstract class BpmnElementState {
   private final UUID elementInstanceId;
   private final int passedCnt;

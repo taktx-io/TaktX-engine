@@ -7,10 +7,13 @@ import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 
 @Getter
-public class CallActivity extends Activity {
+public class CallActivity extends Activity<CallActivityState> {
 
   @Nonnull private final String calledElement;
 
@@ -66,5 +69,10 @@ public class CallActivity extends Activity {
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new CallActivity(
         getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement);
+  }
+
+  @Override
+  public CallActivityState getInitialState() {
+    return new CallActivityState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
   }
 }

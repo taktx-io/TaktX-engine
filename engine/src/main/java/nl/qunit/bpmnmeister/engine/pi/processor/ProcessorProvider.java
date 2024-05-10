@@ -7,7 +7,6 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
@@ -26,8 +25,6 @@ public class ProcessorProvider {
   @Inject TaskProcessor taskProcessor;
   @Inject SubProcessProcessor subProcessProcessor;
   @Inject CallActivityProcessor callActivityProcessor;
-  @Inject SequentialMultiInstanceProcessor sequentialMultiInstanceProcessor;
-  @Inject ParallelMultiInstanceProcessor parallelMultiInstanceProcessor;
 
   public StateProcessor<?, ?> getProcessor(BaseElement element) {
     if (element instanceof StartEvent) {
@@ -39,14 +36,14 @@ public class ProcessorProvider {
     } else if (element instanceof ParallelGateway) {
       return parallelGatewayProcessor;
     } else if (element instanceof Activity activity) {
-      return getStateProcessorForActivity(element, activity);
+      return getStateProcessorForActivity(activity);
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
   }
 
   private StateProcessor<? extends BaseElement, ? extends BpmnElementState>
-      getStateProcessorForActivity(BaseElement element, Activity activity) {
+      getStateProcessorForActivity(Activity element) {
     ActivityProcessor<? extends Activity, ? extends BpmnElementState> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
@@ -57,14 +54,6 @@ public class ProcessorProvider {
     } else if (element instanceof CallActivity) {
       processor = callActivityProcessor;
     }
-    if (!activity.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
-      if (activity.getLoopCharacteristics().getIsSequential()) {
-        return sequentialMultiInstanceProcessor;
-      } else {
-        return parallelMultiInstanceProcessor;
-      }
-    } else {
-      return processor;
-    }
+    return processor;
   }
 }

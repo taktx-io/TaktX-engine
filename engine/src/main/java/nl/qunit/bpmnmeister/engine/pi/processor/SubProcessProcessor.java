@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
@@ -24,7 +25,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   private static final Logger LOG = Logger.getLogger(SubProcessProcessor.class);
 
   @Override
-  protected TriggerResult triggerFlowElement(
+  protected TriggerResult triggerFlowElementWithoutLoop(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -50,18 +51,22 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
     String startElement = getStartEvent(element);
 
-    FlowElementTrigger subProcessTrigger =
-        new FlowElementTrigger(
-            new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
-            element.getId(),
+    StartNewProcessInstanceTrigger subProcessTrigger =
+        new StartNewProcessInstanceTrigger(
+            new ProcessInstanceKey(UUID.randomUUID()),
+            processInstance.getProcessInstanceKey(),
             element.getAsSubProcessDefinition(definition),
+            element.getId(),
             startElement,
             Constants.NONE,
             variables);
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
         new SubProcessState(
-            ActivityStateEnum.ACTIVE, oldState.getElementInstanceId(), oldState.getPassedCnt());
+            ActivityStateEnum.ACTIVE,
+            oldState.getElementInstanceId(),
+            oldState.getPassedCnt(),
+            oldState.getLoopCnt());
     return new TriggerResult(
         newSubProcessState,
         Set.of(),
@@ -83,7 +88,8 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
         new SubProcessState(
             ActivityStateEnum.FINISHED,
             oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1);
+            oldState.getPassedCnt() + 1,
+            oldState.getLoopCnt());
     return finishActivity(processInstance, element, newSubProcessState, Variables.EMPTY);
   }
 
@@ -93,10 +99,5 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     } else {
       return subProcess.getElements().values().get(0).getId();
     }
-  }
-
-  @Override
-  public SubProcessState initialState() {
-    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
   }
 }

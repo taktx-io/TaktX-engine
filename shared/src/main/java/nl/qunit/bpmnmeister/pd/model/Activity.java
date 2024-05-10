@@ -5,10 +5,11 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class Activity extends FlowNode {
+public abstract class Activity<S extends BpmnElementState> extends FlowNode<S> {
   private final LoopCharacteristics loopCharacteristics;
 
   protected Activity(

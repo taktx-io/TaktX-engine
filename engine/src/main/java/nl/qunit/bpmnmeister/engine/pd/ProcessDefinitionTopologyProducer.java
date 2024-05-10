@@ -40,6 +40,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -78,6 +79,9 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ProcessInstance.class);
   private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
+  private static final ObjectMapperSerde<StartNewProcessInstanceTrigger>
+      START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE =
+          new ObjectMapperSerde<>(StartNewProcessInstanceTrigger.class);
   private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
 
@@ -212,7 +216,8 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof FlowElementTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
-                (key, value) -> value instanceof MessageScheduler);
+                (key, value) -> value instanceof MessageScheduler,
+                (key, value) -> value instanceof StartNewProcessInstanceTrigger);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -241,6 +246,13 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
+    branches[5]
+        .map(
+            (key, value) ->
+                KeyValue.pair(((ProcessInstanceKey) key), (StartNewProcessInstanceTrigger) value))
+        .to(
+            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {

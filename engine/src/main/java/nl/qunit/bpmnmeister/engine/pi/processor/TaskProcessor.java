@@ -2,7 +2,6 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.Task;
@@ -15,22 +14,23 @@ import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
-public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
+public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
   private static final Logger LOG = Logger.getLogger(TaskProcessor.class);
 
   @Override
-  protected TriggerResult triggerFlowElement(
+  protected TriggerResult triggerFlowElementWithoutLoop(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
-      Task element,
+      Task<TaskState> element,
       TaskState oldState,
       Variables variables) {
     return new TriggerResult(
         new TaskState(
             ActivityStateEnum.FINISHED,
             oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1),
+            oldState.getPassedCnt() + 1,
+            oldState.getLoopCnt()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -38,10 +38,5 @@ public class TaskProcessor extends ActivityProcessor<Task, TaskState> {
         ThrowingEvent.NOOP,
         Set.of(),
         variables);
-  }
-
-  @Override
-  public TaskState initialState() {
-    return new TaskState(ActivityStateEnum.READY, UUID.randomUUID(), 0);
   }
 }

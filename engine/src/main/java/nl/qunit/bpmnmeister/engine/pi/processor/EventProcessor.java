@@ -5,13 +5,12 @@ import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EventState;
-import org.jboss.logging.Logger;
 
-public abstract class EventProcessor<E extends Event, S extends EventState>
+public abstract class EventProcessor<E extends Event<?>, S extends EventState>
     extends StateProcessor<E, S> {
-  private static final Logger LOG = Logger.getLogger(EventProcessor.class);
 
   @Override
   public TriggerResult triggerFlowElement(
@@ -25,5 +24,5 @@ public abstract class EventProcessor<E extends Event, S extends EventState>
   }
 
   protected abstract TriggerResult triggerEvent(
-      FlowElementTrigger trigger, ProcessInstance processInstance, E element, S oldState);
+      ProcessInstanceTrigger trigger, ProcessInstance processInstance, E element, S oldState);
 }

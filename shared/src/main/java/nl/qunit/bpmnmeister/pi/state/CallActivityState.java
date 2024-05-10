@@ -13,7 +13,26 @@ public class CallActivityState extends ActivityState {
   public CallActivityState(
       @JsonProperty("state") ActivityStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("passedCnt") int passedCnt) {
-    super(state, elementInstanceId, passedCnt);
+      @JsonProperty("passedCnt") int passedCnt,
+      @JsonProperty("loopCnt") int loopCnt) {
+    super(state, elementInstanceId, passedCnt, loopCnt);
+  }
+
+  @Override
+  public ActivityState getNextLoopState() {
+    return new CallActivityState(
+        ActivityStateEnum.ACTIVE,
+        this.getElementInstanceId(),
+        this.getPassedCnt(),
+        this.getLoopCnt() + 1);
+  }
+
+  @Override
+  public ActivityState getFinishedLoopState() {
+    return new CallActivityState(
+        ActivityStateEnum.FINISHED,
+        this.getElementInstanceId(),
+        this.getPassedCnt() + 1,
+        this.getLoopCnt() + 1);
   }
 }

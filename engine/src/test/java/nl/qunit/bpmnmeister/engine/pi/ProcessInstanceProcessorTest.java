@@ -51,7 +51,7 @@ class ProcessInstanceProcessorTest {
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 
     processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2-retry-backoff.bpmn")
+        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
     assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
@@ -59,7 +59,7 @@ class ProcessInstanceProcessorTest {
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
     processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2-retry-backoff.bpmn")
+        .deployProcessDefinition("/bpmn/task-single-2.gen1.bpmn")
         .waitForProcessDeployment()
         .deployedProcessDefinition();
     assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
@@ -230,7 +230,7 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
         .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 3)
+        .hasPassedElement("task-id", 1)
         .hasPassedElement("EndEvent_1");
   }
 
@@ -247,7 +247,7 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
         .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 1000)
+        .hasPassedElement("task-id", 1)
         .hasPassedElement("EndEvent_1");
   }
 
@@ -258,12 +258,12 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
+        .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2", "dxxx3", "exxx4", "fxxx5"))
         .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 3)
+        .hasPassedElement("task-id", 1)
         .hasPassedElement("EndEvent_1");
   }
 
@@ -278,7 +278,7 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 3)
+        .hasPassedElement("task-id", 1)
         .hasPassedElement("EndEvent_1");
   }
 
@@ -320,7 +320,7 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasPassedElement("StartEvent_1")
-        .hasPassedElement("callactivity-id", 3)
+        .hasPassedElement("callactivity-id", 1)
         .hasPassedElement("EndEvent_1");
 
   }

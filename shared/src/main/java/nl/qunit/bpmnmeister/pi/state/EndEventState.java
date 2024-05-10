@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
+@ToString(callSuper = true)
 public class EndEventState extends EventState {
   @JsonCreator
   public EndEventState(

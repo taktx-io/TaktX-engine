@@ -9,11 +9,11 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -68,13 +68,15 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             .getFlowElements()
             .getStartEvents()
             .get(0);
-    ProcessInstanceKey processInstanceKey =
-        new ProcessInstanceKey(UUID.randomUUID(), startCommand.getParentProcessInstanceId());
+    ProcessInstanceKey parentProcessInstanceKey =
+        new ProcessInstanceKey(startCommand.getParentProcessInstanceId().getId());
+    ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     ProcessInstanceTrigger processInstanceTrigger =
-        new FlowElementTrigger(
+        new StartNewProcessInstanceTrigger(
             processInstanceKey,
-            startCommand.getParentElementId(),
+            parentProcessInstanceKey,
             processDefinition,
+            startCommand.getParentElementId(),
             startEvent.getId(),
             Constants.NONE,
             startCommand.getVariables());

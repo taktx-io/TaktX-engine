@@ -33,9 +33,4 @@ public class ExclusiveGatewayProcessor
         Set.of(),
         Variables.EMPTY);
   }
-
-  @Override
-  public ExclusiveGatewayState initialState() {
-    return new ExclusiveGatewayState(UUID.randomUUID(), 0);
-  }
 }

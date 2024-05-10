@@ -56,6 +56,4 @@ public abstract class StateProcessor<E extends BaseElement, S extends BpmnElemen
         Set.of(),
         Variables.EMPTY);
   }
-
-  public abstract S initialState();
 }

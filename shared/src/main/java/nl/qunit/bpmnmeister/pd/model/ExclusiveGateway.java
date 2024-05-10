@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 
 @Getter
-public class ExclusiveGateway extends Gateway {
+public class ExclusiveGateway extends Gateway<ExclusiveGatewayState> {
   @JsonCreator
   public ExclusiveGateway(
       @Nonnull @JsonProperty("id") String id,
@@ -15,5 +17,10 @@ public class ExclusiveGateway extends Gateway {
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing) {
     super(id, parentId, incoming, outgoing);
+  }
+
+  @Override
+  public ExclusiveGatewayState getInitialState() {
+    return new ExclusiveGatewayState(UUID.randomUUID(), 0);
   }
 }

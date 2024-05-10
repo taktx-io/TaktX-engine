@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ElementStates;
@@ -72,9 +73,10 @@ public class ProcessInstanceMigrationProcessor
           if (oldElement.getClass().equals(newElement.getClass())) {
             newElementStates.put(updatedId, oldState);
           } else {
-            BpmnElementState newElementState =
-                processorProvider.getProcessor(newElement).initialState();
-            newElementStates.put(updatedId, newElementState);
+            if (newElement instanceof FlowNode flowNode) {
+              BpmnElementState newElementState = flowNode.getInitialState();
+              newElementStates.put(updatedId, newElementState);
+            }
           }
         });
 
@@ -82,9 +84,10 @@ public class ProcessInstanceMigrationProcessor
         newId -> {
           BaseElement newElement =
               newProcessDefinition.getDefinitions().getRootProcess().getFlowElements().get(newId);
-          BpmnElementState newElementState =
-              processorProvider.getProcessor(newElement).initialState();
-          newElementStates.put(newId, newElementState);
+          if (newElement instanceof FlowNode flowNode) {
+            BpmnElementState newElementState = flowNode.getInitialState();
+            newElementStates.put(newId, newElementState);
+          }
         });
 
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(newProcessDefinition);
@@ -92,6 +95,7 @@ public class ProcessInstanceMigrationProcessor
         new ProcessInstance(
             processInstance.getParentElementId(),
             processInstance.getProcessInstanceKey(),
+            processInstance.getParentInstanceKey(),
             processDefinitionKey,
             new ElementStates(newElementStates),
             processInstance.getVariables(),

@@ -3,11 +3,9 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -15,26 +13,22 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
-  private static final Logger LOG = Logger.getLogger(EndEventProcessor.class);
 
   @Override
   protected TriggerResult triggerEvent(
-      FlowElementTrigger trigger,
+      ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
       EndEvent element,
       EndEventState oldState) {
     Set<ProcessInstanceTrigger> processInstanceTriggers = new HashSet<>();
-    if (!processInstance.getProcessInstanceKey().getParentId().equals(ProcessInstanceKey.NONE)) {
+    if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
       processInstanceTriggers.add(
           new FlowElementTrigger(
-              processInstance.getProcessInstanceKey().getParentId(),
+              processInstance.getParentInstanceKey(),
               processInstance.getParentElementId(),
-              ProcessDefinition.NONE,
-              Constants.NONE,
               Constants.NONE,
               processInstance.getVariables()));
     }
@@ -49,10 +43,5 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
         new EndThrowingEvent(),
         Set.of(),
         Variables.EMPTY);
-  }
-
-  @Override
-  public EndEventState initialState() {
-    return new EndEventState(UUID.randomUUID(), 0);
   }
 }

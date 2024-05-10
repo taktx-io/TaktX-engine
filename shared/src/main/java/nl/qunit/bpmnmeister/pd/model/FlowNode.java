@@ -1,12 +1,14 @@
 package nl.qunit.bpmnmeister.pd.model;
 
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
 import java.util.Set;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @Getter
-public abstract class FlowNode extends FlowElement {
+@EqualsAndHashCode(callSuper = true)
+public abstract class FlowNode<S extends BpmnElementState> extends FlowElement {
   private final Set<String> incoming;
   private final Set<String> outgoing;
 
@@ -20,24 +22,5 @@ public abstract class FlowNode extends FlowElement {
     this.outgoing = outgoing;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    FlowNode flowNode = (FlowNode) o;
-    return Objects.equals(incoming, flowNode.incoming)
-        && Objects.equals(outgoing, flowNode.outgoing);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), incoming, outgoing);
-  }
+  public abstract S getInitialState();
 }

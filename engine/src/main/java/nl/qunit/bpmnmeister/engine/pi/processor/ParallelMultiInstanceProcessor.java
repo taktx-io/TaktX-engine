@@ -2,33 +2,28 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
-import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
-import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 
-@ApplicationScoped
-public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
+class ParallelMultiInstanceProcessor {
+  private ParallelMultiInstanceProcessor() {}
 
-  @Override
-  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
+  public static Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity element,
       Variables variables,
       JsonNode inputCollection,
       int loopCnt) {
-    ProcessDefinition subProcessDefinition = element.getAsSubProcessDefinition(processDefinition);
 
     Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
 
@@ -38,10 +33,11 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
       subProcessVariables =
           subProcessVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
       subProcessTriggers.add(
-          new FlowElementTrigger(
-              new ProcessInstanceKey(UUID.randomUUID(), processInstance.getProcessInstanceKey()),
+          new StartNewProcessInstanceTrigger(
+              new ProcessInstanceKey(UUID.randomUUID()),
+              processInstance.getProcessInstanceKey(),
+              element.getAsSubProcessDefinition(processDefinition),
               element.getId(),
-              subProcessDefinition,
               element.getId(),
               Constants.NONE,
               subProcessVariables));
@@ -49,8 +45,7 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
     return subProcessTriggers;
   }
 
-  @Override
-  protected Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
+  public static Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity element,
@@ -58,10 +53,5 @@ public class ParallelMultiInstanceProcessor extends MultiInstanceProcessor {
       JsonNode inputCollection,
       int loopCnt) {
     return Set.of();
-  }
-
-  @Override
-  public MultiInstanceState initialState() {
-    return new MultiInstanceState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
   }
 }

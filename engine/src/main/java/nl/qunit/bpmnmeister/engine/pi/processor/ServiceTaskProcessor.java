@@ -12,7 +12,6 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -39,7 +38,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   @Inject Clock clock;
 
   @Override
-  protected TriggerResult triggerFlowElement(
+  protected TriggerResult triggerFlowElementWithoutLoop(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -63,6 +62,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             ActivityStateEnum.ACTIVE,
             oldState.getElementInstanceId(),
             oldState.getPassedCnt(),
+            oldState.getLoopCnt(),
             oldState.getAttempt() + 1),
         Set.of(),
         Set.of(workerDefinition),
@@ -106,6 +106,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
               ActivityStateEnum.ACTIVE,
               oldState.getElementInstanceId(),
               oldState.getPassedCnt(),
+              oldState.getLoopCnt(),
               oldState.getAttempt() + 1);
       ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
       Set<String> workerDefinitions = Set.of();
@@ -156,6 +157,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
                   ActivityStateEnum.TERMINATED,
                   oldState.getElementInstanceId(),
                   oldState.getPassedCnt(),
+                  oldState.getLoopCnt(),
                   oldState.getAttempt());
         }
       } else {
@@ -166,6 +168,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
                 ActivityStateEnum.TERMINATED,
                 oldState.getElementInstanceId(),
                 oldState.getPassedCnt(),
+                oldState.getLoopCnt(),
                 oldState.getAttempt());
       }
       return new TriggerResult(
@@ -198,11 +201,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   private static TriggerResult succesfulResponseTriggerResult(
       ExternalTaskResponseTrigger trigger, ServiceTask element, ServiceTaskState oldState) {
     return new TriggerResult(
-        new ServiceTaskState(
-            ActivityStateEnum.FINISHED,
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1,
-            oldState.getAttempt()),
+        oldState.getFinishedLoopState(),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -210,10 +209,5 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
         ThrowingEvent.NOOP,
         Set.of(),
         trigger.getVariables());
-  }
-
-  @Override
-  public ServiceTaskState initialState() {
-    return new ServiceTaskState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
   }
 }

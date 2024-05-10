@@ -11,12 +11,10 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ParallelGatewayProcessor
     extends GatewayProcessor<ParallelGateway, ParallelGatewayState> {
-  private static final Logger LOG = Logger.getLogger(ParallelGatewayProcessor.class);
 
   @Override
   protected TriggerResult triggerDecision(
@@ -40,10 +38,5 @@ public class ParallelGatewayProcessor
         ThrowingEvent.NOOP,
         Set.of(),
         Variables.EMPTY);
-  }
-
-  @Override
-  public ParallelGatewayState initialState() {
-    return new ParallelGatewayState(UUID.randomUUID(), new HashSet<>(), 0);
   }
 }

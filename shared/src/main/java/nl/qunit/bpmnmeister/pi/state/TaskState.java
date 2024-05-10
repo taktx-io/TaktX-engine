@@ -7,13 +7,32 @@ import lombok.Getter;
 import lombok.ToString;
 
 @Getter
-@ToString
+@ToString(callSuper = true)
 public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
       @JsonProperty("state") ActivityStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("passedCnt") int passedCnt) {
-    super(state, elementInstanceId, passedCnt);
+      @JsonProperty("passedCnt") int passedCnt,
+      @JsonProperty("loopCnt") int loopCnt) {
+    super(state, elementInstanceId, passedCnt, loopCnt);
+  }
+
+  @Override
+  public ActivityState getNextLoopState() {
+    return new TaskState(
+        ActivityStateEnum.ACTIVE,
+        this.getElementInstanceId(),
+        this.getPassedCnt(),
+        this.getLoopCnt() + 1);
+  }
+
+  @Override
+  public ActivityState getFinishedLoopState() {
+    return new TaskState(
+        ActivityStateEnum.FINISHED,
+        this.getElementInstanceId(),
+        this.getPassedCnt() + 1,
+        this.getLoopCnt() + 1);
   }
 }
