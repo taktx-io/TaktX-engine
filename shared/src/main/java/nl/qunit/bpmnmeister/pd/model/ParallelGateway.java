@@ -6,6 +6,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
 @Getter
@@ -21,6 +22,6 @@ public class ParallelGateway extends Gateway<ParallelGatewayState> {
 
   @Override
   public ParallelGatewayState getInitialState() {
-    return new ParallelGatewayState(UUID.randomUUID(), Set.of(), 0);
+    return new ParallelGatewayState(UUID.randomUUID(), Set.of(), 0, ActivityStateEnum.READY);
   }
 }

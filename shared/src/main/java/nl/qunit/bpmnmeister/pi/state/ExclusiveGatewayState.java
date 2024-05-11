@@ -10,7 +10,17 @@ public class ExclusiveGatewayState extends GatewayState {
   @JsonCreator
   public ExclusiveGatewayState(
       @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId,
-      @JsonProperty("passedCnt") int passedCnt) {
-    super(elementInstanceId, passedCnt);
+      @JsonProperty("passedCnt") int passedCnt,
+      @JsonProperty("state") ActivityStateEnum state) {
+    super(elementInstanceId, passedCnt, state);
+  }
+
+  @Override
+  public BpmnElementState terminate() {
+    if (this.getState() == ActivityStateEnum.ACTIVE) {
+      return new ExclusiveGatewayState(this.getElementInstanceId(), this.getPassedCnt(), ActivityStateEnum.TERMINATED);
+    } else {
+      return this;
+    }
   }
 }

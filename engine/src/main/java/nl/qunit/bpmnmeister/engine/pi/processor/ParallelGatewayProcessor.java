@@ -10,6 +10,7 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
 @ApplicationScoped
@@ -22,6 +23,7 @@ public class ParallelGatewayProcessor
       ProcessInstance processInstance,
       ParallelGateway element,
       ParallelGatewayState oldState) {
+
     Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());
     final Set<String> outputFlows = new HashSet<>();
@@ -30,7 +32,11 @@ public class ParallelGatewayProcessor
       outputFlows.addAll(element.getOutgoing());
     }
     return new TriggerResult(
-        new ParallelGatewayState(UUID.randomUUID(), newTriggeredFlows, oldState.getPassedCnt() + 1),
+        new ParallelGatewayState(
+            UUID.randomUUID(),
+            newTriggeredFlows,
+            oldState.getPassedCnt() + 1,
+            ActivityStateEnum.ACTIVE),
         outputFlows,
         Set.of(),
         Set.of(),

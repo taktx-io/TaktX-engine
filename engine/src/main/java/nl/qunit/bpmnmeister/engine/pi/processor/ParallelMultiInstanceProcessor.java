@@ -38,7 +38,7 @@ class ParallelMultiInstanceProcessor {
               processInstance.getProcessInstanceKey(),
               element.getAsSubProcessDefinition(processDefinition),
               element.getId(),
-              element.getId(),
+              element.getAsSubProcessStartElementId(),
               Constants.NONE,
               subProcessVariables));
     }

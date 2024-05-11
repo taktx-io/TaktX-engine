@@ -16,4 +16,9 @@ public class EndEventState extends EventState {
       @JsonProperty("passedCnt") int passedCnt) {
     super(elementInstanceId, passedCnt);
   }
+
+  @Override
+  public BpmnElementState terminate() {
+    return new EndEventState(getElementInstanceId(), getPassedCnt());
+  }
 }

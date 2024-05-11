@@ -64,19 +64,21 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       Variables variables) {
 
     // Store the output element in the output collection
-    ArrayNode outputCollection =
-        (ArrayNode) variables.get(element.getLoopCharacteristics().getOutputCollection());
-
-    JsonNode outputElementNode =
-        feelExpressionHandler.processFeelExpression(
-            element.getLoopCharacteristics().getOutputElement(), variables);
-    if (outputElementNode != null) {
-      outputCollection.add(outputElementNode);
+    Variables returnVariables = new Variables(Map.of());
+    if (element.getLoopCharacteristics().getOutputCollection() != null
+        && element.getLoopCharacteristics().getOutputElement() != null) {
+      ArrayNode outputCollection =
+          (ArrayNode) variables.get(element.getLoopCharacteristics().getOutputCollection());
+      JsonNode outputElementNode =
+          feelExpressionHandler.processFeelExpression(
+              element.getLoopCharacteristics().getOutputElement(), variables);
+      if (outputElementNode != null) {
+        outputCollection.add(outputElementNode);
+      }
+      returnVariables =
+          returnVariables.put(
+              element.getLoopCharacteristics().getOutputCollection(), outputCollection);
     }
-
-    Variables returnVariables =
-        new Variables(Map.of())
-            .put(element.getLoopCharacteristics().getOutputCollection(), outputCollection);
 
     JsonNode inputCollection =
         feelExpressionHandler.processFeelExpression(
@@ -146,11 +148,12 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       Variables variables) {
     // Create ArrayNode as new OutputCollection and add it to the variables
     ObjectMapper objectMapper = new ObjectMapper();
-    ArrayNode outputCollection = objectMapper.createArrayNode();
 
-    Variables returnVariables =
-        new Variables(Map.of())
-            .put(element.getLoopCharacteristics().getOutputCollection(), outputCollection);
+    String outputCollectionName = element.getLoopCharacteristics().getOutputCollection();
+    Variables returnVariables = new Variables(Map.of());
+    if (outputCollectionName != null) {
+      returnVariables = returnVariables.put(outputCollectionName, objectMapper.createArrayNode());
+    }
     JsonNode inputCollection =
         feelExpressionHandler.processFeelExpression(
             element.getLoopCharacteristics().getInputCollection(), variables);

@@ -9,14 +9,12 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ExclusiveGatewayProcessor
     extends GatewayProcessor<ExclusiveGateway, ExclusiveGatewayState> {
-  private static final Logger LOG = Logger.getLogger(ExclusiveGatewayProcessor.class);
-
   @Override
   protected TriggerResult triggerDecision(
       FlowElementTrigger trigger,
@@ -24,7 +22,8 @@ public class ExclusiveGatewayProcessor
       ExclusiveGateway element,
       ExclusiveGatewayState oldState) {
     return new TriggerResult(
-        new ExclusiveGatewayState(UUID.randomUUID(), oldState.getPassedCnt() + 1),
+        new ExclusiveGatewayState(
+            UUID.randomUUID(), oldState.getPassedCnt() + 1, ActivityStateEnum.ACTIVE),
         element.getOutgoing(),
         Set.of(),
         Set.of(),

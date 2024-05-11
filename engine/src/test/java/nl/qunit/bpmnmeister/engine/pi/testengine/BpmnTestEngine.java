@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -28,9 +30,11 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -70,7 +74,7 @@ public class BpmnTestEngine {
   Emitter<StartCommand> startCommandEmitter;
 
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, ProcessInstanceKey> processInstanceParentChildMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, List<ProcessInstanceKey>> processInstanceParentChildMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
@@ -121,7 +125,9 @@ public class BpmnTestEngine {
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
         processInstance);
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
-      processInstanceParentChildMap.put(processInstance.getParentInstanceKey(), processInstance.getProcessInstanceKey());
+      List<ProcessInstanceKey> processInstanceKeys = processInstanceParentChildMap.computeIfAbsent(
+          processInstance.getParentInstanceKey(), k -> new ArrayList<>());
+      processInstanceKeys.add(processInstance.getProcessInstanceKey());
     }
     if (previousProcessInstance == null) {
       latestInstantiatedProcessInstance = processInstance;
@@ -238,19 +244,23 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilChildProcessIsStarted() {
+    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.ACTIVE);
+  }
+ public BpmnTestEngine waitUntilChildProcessIsTerminated() {
+    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.TERMINATED);
+  }
+
+  public BpmnTestEngine waitUntilChildProcessesHaveState(int expectedCount, ProcessInstanceState processInstanceState) {
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> {
-          ProcessInstanceKey childKey = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
-          if (childKey == null) {
+          List<ProcessInstanceKey> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
+          if (childKeys == null) {
             return null;
           }
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(childKey);
-          if (processInstances == null || processInstances.isEmpty()) {
-            return null;
-          }
-          ProcessInstance poll = processInstances.poll();
-          if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceState().isStarted()) {
-            return poll;
+          if (childKeys.size() >= expectedCount) {
+            ProcessInstanceKey processInstanceKey = childKeys.get(childKeys.size() - 1);
+            ProcessInstance processInstance = processInstanceMap.get(processInstanceKey);
+            return processInstance != null && processInstance.getProcessInstanceState() == processInstanceState ? processInstance : null;
           }
           return null;
         }, Objects::nonNull);
@@ -307,6 +317,12 @@ public class BpmnTestEngine {
     activeExternalTaskTrigger = null;
   }
 
+  public BpmnTestEngine parentProcess() {
+    ProcessInstance parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
+    activeProcessInstance = parentProcessInstance;
+    return this;
+  }
+
   public ProcessInstanceAssert assertThatParentProcess() {
     ProcessInstance parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
     activeProcessInstance = parentProcessInstance;
@@ -334,6 +350,11 @@ public class BpmnTestEngine {
   public BpmnTestEngine doNotExpectNewProcessInstance() {
     Assertions.assertThrows(ConditionTimeoutException.class, () ->
       waitForNewProcessInstance());
+    return this;
+  }
+
+  public BpmnTestEngine terminate() {
+    triggerEmitter.send(new TerminateProcessInstanceTrigger(activeProcessInstance.getProcessInstanceKey()));
     return this;
   }
 }

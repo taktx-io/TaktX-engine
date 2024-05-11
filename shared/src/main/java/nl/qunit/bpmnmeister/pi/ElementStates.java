@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
@@ -32,5 +33,11 @@ public class ElementStates {
   @Override
   public String toString() {
     return "ElementStates{" + "elementStateMap=" + elementStateMap + '}';
+  }
+
+  public ElementStates terminate() {
+    Map<String, BpmnElementState> terminatedStates = elementStateMap.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().terminate()));
+    return new ElementStates(terminatedStates);
   }
 }

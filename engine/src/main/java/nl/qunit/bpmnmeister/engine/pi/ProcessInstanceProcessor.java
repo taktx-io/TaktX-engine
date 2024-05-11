@@ -25,6 +25,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -41,6 +42,7 @@ public class ProcessInstanceProcessor
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
+  private KeyValueStore<ProcessInstanceKey, ProcessInstanceKey> childProcessInstanceStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
   private final Cache processInstanceCache;
   private final Cache processInstanceDefinitionCache;
@@ -60,6 +62,8 @@ public class ProcessInstanceProcessor
     this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
     this.processInstanceDefinitionStore =
         context.getStateStore(Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME);
+    this.childProcessInstanceStore =
+        context.getStateStore(Stores.CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME);
   }
 
   @Override
@@ -83,7 +87,13 @@ public class ProcessInstanceProcessor
               startNewProcessInstanceTrigger.getVariables(),
               ProcessInstanceState.START);
       storeProcessDefinition(definition);
-
+      if (!startNewProcessInstanceTrigger
+          .getParentProcessInstanceKey()
+          .equals(ProcessInstanceKey.NONE)) {
+        childProcessInstanceStore.put(
+            startNewProcessInstanceTrigger.getProcessInstanceKey(),
+            startNewProcessInstanceTrigger.getParentProcessInstanceKey());
+      }
     } else {
       processInstance = getProcessInstance(trigger.getProcessInstanceKey());
       definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
@@ -133,6 +143,45 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance,
       ProcessDefinition definition,
       ProcessInstanceTrigger trigger) {
+    if (trigger instanceof TerminateProcessInstanceTrigger) {
+      return handleTerminate(processInstance);
+    } else {
+      return handleElementTrigger(processInstance, definition, trigger);
+    }
+  }
+
+  private ProcessInstance handleTerminate(ProcessInstance processInstance) {
+    // Terminate all child process instances
+    childProcessInstanceStore
+        .all()
+        .forEachRemaining(
+            childToParentKeyValue -> {
+              ProcessInstanceKey childKey = childToParentKeyValue.key;
+              ProcessInstanceKey parentKey = childToParentKeyValue.value;
+              if (parentKey.equals(processInstance.getProcessInstanceKey())) {
+                context.forward(
+                    new Record<>(
+                        childKey,
+                        new TerminateProcessInstanceTrigger(childKey),
+                        Instant.now().toEpochMilli()));
+              }
+            });
+
+    ElementStates terminated = processInstance.getElementStates().terminate();
+    return new ProcessInstance(
+        processInstance.getParentElementId(),
+        processInstance.getProcessInstanceKey(),
+        processInstance.getParentInstanceKey(),
+        processInstance.getProcessDefinitionKey(),
+        terminated,
+        processInstance.getVariables(),
+        ProcessInstanceState.TERMINATED);
+  }
+
+  private ProcessInstance handleElementTrigger(
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      ProcessInstanceTrigger trigger) {
     ProcessInstance newProcessInstance = processInstance;
 
     LOG.info(
@@ -169,82 +218,9 @@ public class ProcessInstanceProcessor
       ProcessInstanceState newProcessInstanceState =
           determineNewProcessInstanceState(processInstance, triggerResult);
 
-      triggerResult
-          .getExternalTasks()
-          .forEach(
-              externalTaskId -> {
-                LOG.info("Trigger external task: " + externalTaskId);
-                ExternalTaskTrigger newExternalTaskTrigger =
-                    new ExternalTaskTrigger(
-                        processInstance.getProcessInstanceKey(),
-                        ProcessDefinitionKey.of(definition),
-                        externalTaskId,
-                        variablesWithTriggerResult);
-                context.forward(
-                    new Record<>(
-                        newExternalTaskTrigger.getProcessInstanceKey(),
-                        newExternalTaskTrigger,
-                        Instant.now().toEpochMilli()));
-              });
-
-      triggerResult
-          .getMessageSchedulers()
-          .forEach(
-              messageScheduler -> {
-                LOG.info("Trigger scheduled message: ");
-                ScheduleKey scheduleKey =
-                    new ScheduleKey(
-                        ProcessDefinitionKey.of(definition),
-                        messageScheduler.getScheduleType(),
-                        flowElement.getId(),
-                        "");
-                context.forward(
-                    new Record<>(scheduleKey, messageScheduler, Instant.now().toEpochMilli()));
-              });
-
-      List<ProcessInstanceTrigger> nextTriggers = new ArrayList<>();
-      triggerResult
-          .getNewActiveFlows()
-          .forEach(
-              flowId -> {
-                LOG.info("Trigger flow: " + flowId);
-                SequenceFlow flow =
-                    (SequenceFlow)
-                        definition
-                            .getDefinitions()
-                            .getRootProcess()
-                            .getFlowElements()
-                            .getFlowElement(flowId)
-                            .orElseThrow();
-                if (flow.testCondition()) {
-                  LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
-                  FlowElementTrigger newTrigger =
-                      new FlowElementTrigger(
-                          processInstance.getProcessInstanceKey(),
-                          flow.getTarget(),
-                          flow.getId(),
-                          variablesWithTriggerResult);
-                  nextTriggers.add(newTrigger);
-                }
-              });
-
-      triggerResult
-          .getNewProcessInstanceTriggers()
-          .forEach(
-              newProcessInstanceTrigger -> {
-                LOG.info("Trigger new process instance: " + newProcessInstanceTrigger);
-                nextTriggers.add(newProcessInstanceTrigger);
-              });
-
-      triggerResult
-          .getNewStartCommands()
-          .forEach(
-              startCommand ->
-                  context.forward(
-                      new Record<>(
-                          startCommand.getProcessDefinitionId(),
-                          startCommand,
-                          Instant.now().toEpochMilli())));
+      List<ProcessInstanceTrigger> nextTriggers =
+          processTriggerResult(
+              processInstance, definition, triggerResult, variablesWithTriggerResult, flowElement);
 
       newProcessInstance =
           new ProcessInstance(
@@ -280,6 +256,91 @@ public class ProcessInstanceProcessor
       LOG.error("Flow element not found: " + trigger.getElementId());
     }
     return newProcessInstance;
+  }
+
+  private List<ProcessInstanceTrigger> processTriggerResult(
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      TriggerResult triggerResult,
+      Variables variablesWithTriggerResult,
+      BaseElement flowElement) {
+    triggerResult
+        .getExternalTasks()
+        .forEach(
+            externalTaskId -> {
+              LOG.info("Trigger external task: " + externalTaskId);
+              ExternalTaskTrigger newExternalTaskTrigger =
+                  new ExternalTaskTrigger(
+                      processInstance.getProcessInstanceKey(),
+                      ProcessDefinitionKey.of(definition),
+                      externalTaskId,
+                      variablesWithTriggerResult);
+              context.forward(
+                  new Record<>(
+                      newExternalTaskTrigger.getProcessInstanceKey(),
+                      newExternalTaskTrigger,
+                      Instant.now().toEpochMilli()));
+            });
+
+    triggerResult
+        .getMessageSchedulers()
+        .forEach(
+            messageScheduler -> {
+              LOG.info("Trigger scheduled message: ");
+              ScheduleKey scheduleKey =
+                  new ScheduleKey(
+                      ProcessDefinitionKey.of(definition),
+                      messageScheduler.getScheduleType(),
+                      flowElement.getId(),
+                      "");
+              context.forward(
+                  new Record<>(scheduleKey, messageScheduler, Instant.now().toEpochMilli()));
+            });
+
+    List<ProcessInstanceTrigger> nextTriggers = new ArrayList<>();
+    triggerResult
+        .getNewActiveFlows()
+        .forEach(
+            flowId -> {
+              LOG.info("Trigger flow: " + flowId);
+              SequenceFlow flow =
+                  (SequenceFlow)
+                      definition
+                          .getDefinitions()
+                          .getRootProcess()
+                          .getFlowElements()
+                          .getFlowElement(flowId)
+                          .orElseThrow();
+              if (flow.testCondition()) {
+                LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
+                FlowElementTrigger newTrigger =
+                    new FlowElementTrigger(
+                        processInstance.getProcessInstanceKey(),
+                        flow.getTarget(),
+                        flow.getId(),
+                        variablesWithTriggerResult);
+                nextTriggers.add(newTrigger);
+              }
+            });
+
+    triggerResult
+        .getNewProcessInstanceTriggers()
+        .forEach(
+            newProcessInstanceTrigger -> {
+              LOG.info("Trigger new process instance: " + newProcessInstanceTrigger);
+              nextTriggers.add(newProcessInstanceTrigger);
+            });
+
+    triggerResult
+        .getNewStartCommands()
+        .forEach(
+            startCommand ->
+                context.forward(
+                    new Record<>(
+                        startCommand.getProcessDefinitionId(),
+                        startCommand,
+                        Instant.now().toEpochMilli())));
+    return nextTriggers;
   }
 
   private ProcessInstanceState determineNewProcessInstanceState(

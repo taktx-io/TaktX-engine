@@ -76,7 +76,13 @@ public class ProcessInstanceAssert {
     assertThat(processInstance.getProcessInstanceState()).isEqualTo(processInstanceState);
   }
 
-  public void hasFailed() {
+  public ProcessInstanceAssert hasFailed() {
     assertThat(processInstance.getProcessInstanceState()).isEqualTo(ProcessInstanceState.FAILED);
+    return this;
+  }
+
+  public ProcessInstanceAssert isTerminated() {
+    assertThat(processInstance.getProcessInstanceState()).isEqualTo(ProcessInstanceState.TERMINATED);
+    return this;
   }
 }

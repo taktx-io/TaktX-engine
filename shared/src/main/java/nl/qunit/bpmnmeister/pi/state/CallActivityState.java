@@ -35,4 +35,14 @@ public class CallActivityState extends ActivityState {
         this.getPassedCnt() + 1,
         this.getLoopCnt() + 1);
   }
+
+  @Override
+  public BpmnElementState terminate() {
+    if (this.getState() == ActivityStateEnum.ACTIVE) {
+      return new CallActivityState(
+          ActivityStateEnum.TERMINATED, this.getElementInstanceId(), this.getPassedCnt(), this.getLoopCnt());
+    } else {
+      return this;
+    }
+  }
 }

@@ -6,6 +6,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 
 @Getter
@@ -21,6 +22,6 @@ public class ExclusiveGateway extends Gateway<ExclusiveGatewayState> {
 
   @Override
   public ExclusiveGatewayState getInitialState() {
-    return new ExclusiveGatewayState(UUID.randomUUID(), 0);
+    return new ExclusiveGatewayState(UUID.randomUUID(), 0, ActivityStateEnum.READY);
   }
 }

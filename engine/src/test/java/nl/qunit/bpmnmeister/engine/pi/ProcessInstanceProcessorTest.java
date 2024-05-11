@@ -16,6 +16,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -324,6 +325,7 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1");
 
   }
+
   @Test
   void testScheduledStart_R5()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
@@ -336,5 +338,22 @@ class ProcessInstanceProcessorTest {
         .moveTimeForward(Duration.ofSeconds(2))
         .waitForNewProcessInstance()
         .waitUntilCompleted();
+  }
+
+  @Test
+  void testTerminateChildProcesses()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/terminate-child-processes.bpmn")
+        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
+        .waitUntilChildProcessesHaveState(6, ProcessInstanceState.ACTIVE)
+        .parentProcess()
+        .terminate()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .isTerminated()
+        .toProcessLevel()
+        .waitUntilChildProcessesHaveState(6, ProcessInstanceState.TERMINATED);
   }
 }
