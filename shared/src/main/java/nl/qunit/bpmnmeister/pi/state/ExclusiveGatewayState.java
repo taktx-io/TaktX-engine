@@ -15,12 +15,4 @@ public class ExclusiveGatewayState extends GatewayState {
     super(elementInstanceId, passedCnt, state);
   }
 
-  @Override
-  public BpmnElementState terminate() {
-    if (this.getState() == ActivityStateEnum.ACTIVE) {
-      return new ExclusiveGatewayState(this.getElementInstanceId(), this.getPassedCnt(), ActivityStateEnum.TERMINATED);
-    } else {
-      return this;
-    }
-  }
 }

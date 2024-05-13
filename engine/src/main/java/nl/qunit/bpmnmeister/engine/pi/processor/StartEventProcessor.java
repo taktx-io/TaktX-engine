@@ -9,12 +9,9 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class StartEventProcessor extends EventProcessor<StartEvent, StartEventState> {
-  private static final Logger LOG = Logger.getLogger(StartEventProcessor.class);
-
   @Override
   protected TriggerResult triggerEvent(
       ProcessInstanceTrigger trigger,
@@ -28,6 +25,7 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
         Set.of(),
         Set.of(),
         new StartThrowingEvent(),
+        Set.of(),
         Set.of(),
         Variables.EMPTY);
   }

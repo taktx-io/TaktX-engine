@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import jakarta.inject.Inject;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -16,9 +19,11 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
+import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 
 public abstract class ActivityProcessor<E extends Activity, S extends ActivityState>
     extends StateProcessor<E, S> {
@@ -33,17 +38,78 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       E element,
       S oldState,
       Variables variables) {
-    if (element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
-      return triggerFlowElementWithoutLoop(
-          trigger, processInstance, definition, element, oldState, variables);
-    } else {
-      return triggerFlowElementWithLoop(
-          trigger, processInstance, definition, element, oldState, variables);
+    TriggerResult triggerResult =
+        getTriggerResultMultiInstanceOrSingle(
+            trigger, processInstance, definition, element, oldState, variables);
+
+    return getTriggerResultForBoundaryEvents(
+        processInstance, definition, element, oldState, triggerResult);
+  }
+
+  protected TriggerResult getTriggerResultForBoundaryEvents(
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      E element,
+      S oldState,
+      TriggerResult triggerResult) {
+    List<BoundaryEvent> boundaryEvents =
+        definition
+            .getDefinitions()
+            .getRootProcess()
+            .getFlowElements()
+            .getBoundaryEventsAttachedToElement(element.getId());
+    S newElementState = (S) triggerResult.getNewElementState();
+    Set<ProcessInstanceTrigger> triggers =
+        new HashSet<>(triggerResult.getNewProcessInstanceTriggers());
+    if (elementActivated(oldState, newElementState)) {
+      for (BoundaryEvent boundaryEvent : boundaryEvents) {
+        triggers.add(
+            new FlowElementTrigger(
+                processInstance.getProcessInstanceKey(),
+                boundaryEvent.getId(),
+                Constants.NONE,
+                processInstance.getVariables()));
+      }
+    } else if (elementFinished(oldState, newElementState)) {
+      for (BoundaryEvent boundaryEvent : boundaryEvents) {
+        triggers.add(
+            new TerminateTrigger(processInstance.getProcessInstanceKey(), boundaryEvent.getId()));
+      }
     }
+
+    return triggerResult.toBuilder().newProcessInstanceTriggers(triggers).build();
+  }
+
+  private TriggerResult getTriggerResultMultiInstanceOrSingle(
+      FlowElementTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      E element,
+      S oldState,
+      Variables variables) {
+    TriggerResult triggerResult;
+    if (element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
+      triggerResult =
+          triggerFlowElementWithoutLoop(
+              trigger, processInstance, definition, element, oldState, variables);
+    } else {
+      triggerResult =
+          triggerFlowElementWithLoop(processInstance, definition, element, oldState, variables);
+    }
+    return triggerResult;
+  }
+
+  private boolean elementActivated(S oldState, S newState) {
+    return oldState.getState() == ActivityStateEnum.READY
+        && newState.getState() == ActivityStateEnum.ACTIVE;
+  }
+
+  protected boolean elementFinished(S oldState, S newState) {
+    return oldState.getState() == ActivityStateEnum.ACTIVE
+        && newState.getState() == ActivityStateEnum.FINISHED;
   }
 
   private TriggerResult triggerFlowElementWithLoop(
-      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       E element,
@@ -101,6 +167,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           returnVariables);
     } else {
       return finishActivity(
@@ -111,11 +178,11 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   private Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
-      Activity element,
+      Activity<?> element,
       Variables variables,
       JsonNode inputCollection,
       int loopsReceived) {
-    if (element.getLoopCharacteristics().getIsSequential()) {
+    if (element.getLoopCharacteristics().isSequential()) {
       return SequentialMultiInstanceProcessor.getSubProcessTriggersWhenActive(
           processInstance, processDefinition, element, variables, inputCollection, loopsReceived);
     } else {
@@ -131,7 +198,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       Variables variables,
       JsonNode inputCollection,
       int i) {
-    if (element.getLoopCharacteristics().getIsSequential()) {
+    if (element.getLoopCharacteristics().isSequential()) {
       return SequentialMultiInstanceProcessor.getSubProcessTriggersWhenReady(
           processInstance, processDefinition, element, variables, inputCollection, i);
     } else {
@@ -166,6 +233,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           returnVariables);
     } else {
       Set<ProcessInstanceTrigger> subProcessTriggers =
@@ -179,6 +247,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           subProcessTriggers,
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           Set.of(),
           returnVariables);
     }
@@ -194,7 +263,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
   protected TriggerResult finishActivity(
       ProcessInstance processInstance,
-      Activity element,
+      Activity<?> element,
       ActivityState newState,
       Variables returnVariables) {
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
@@ -211,6 +280,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           returnVariables);
     } else {
       return new TriggerResult(
@@ -220,6 +290,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           Set.of(),
           Set.of(),
           ThrowingEvent.NOOP,
+          Set.of(),
           Set.of(),
           returnVariables);
     }

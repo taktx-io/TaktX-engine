@@ -38,11 +38,12 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -63,6 +64,9 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ScheduleKey.class);
   static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
+  static final ObjectMapperSerde<ProcessInstanceKeyElementPair>
+      PROCESS_INSTANCE_KEY_ELEMENT_PAIR_SERDE =
+          new ObjectMapperSerde<>(ProcessInstanceKeyElementPair.class);
   static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
   static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
@@ -84,13 +88,12 @@ public class ProcessDefinitionTopologyProducer {
   private static final ObjectMapperSerde<StartNewProcessInstanceTrigger>
       START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE =
           new ObjectMapperSerde<>(StartNewProcessInstanceTrigger.class);
-  private static final ObjectMapperSerde<TerminateProcessInstanceTrigger>
-      TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE =
-          new ObjectMapperSerde<>(TerminateProcessInstanceTrigger.class);
+  private static final ObjectMapperSerde<TerminateTrigger>
+      TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE = new ObjectMapperSerde<>(TerminateTrigger.class);
   private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
 
-  @Inject StartCommandScheduler startCommandScheduler;
+  @Inject MessageSchedulerFactory messageSchedulerFactory;
   @Inject Clock clock;
   @Inject ProcessorProvider processorProvider;
   @Inject KeyValueStoreSupplier keyValueStoreSupplier;
@@ -151,7 +154,7 @@ public class ProcessDefinitionTopologyProducer {
         .branch(
             (key, value) -> value instanceof ProcessDefinition,
             Branched.withConsumer(
-                (ks) ->
+                ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
@@ -162,7 +165,7 @@ public class ProcessDefinitionTopologyProducer {
         .branch(
             (key, value) -> value instanceof ProcessDefinitionActivation,
             Branched.withConsumer(
-                (ks) ->
+                ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
@@ -174,7 +177,7 @@ public class ProcessDefinitionTopologyProducer {
         .branch(
             (key, value) -> value instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
-                (ks) ->
+                ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
@@ -209,7 +212,7 @@ public class ProcessDefinitionTopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME),
             PROCESS_INSTANCE_KEY_SERDE,
-            PROCESS_INSTANCE_KEY_SERDE));
+            PROCESS_INSTANCE_KEY_ELEMENT_PAIR_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(
@@ -229,7 +232,7 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof StartCommand,
                 (key, value) -> value instanceof MessageScheduler,
                 (key, value) -> value instanceof StartNewProcessInstanceTrigger,
-                (key, value) -> value instanceof TerminateProcessInstanceTrigger);
+                (key, value) -> value instanceof TerminateTrigger);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -266,9 +269,7 @@ public class ProcessDefinitionTopologyProducer {
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE));
     branches[6]
-        .map(
-            (key, value) ->
-                KeyValue.pair(((ProcessInstanceKey) key), (TerminateProcessInstanceTrigger) value))
+        .map((key, value) -> KeyValue.pair(((ProcessInstanceKey) key), (TerminateTrigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE));
@@ -309,7 +310,19 @@ public class ProcessDefinitionTopologyProducer {
                         .to(
                             EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
-                                PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))));
+                                PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
+        .branch(
+            (k, v) -> v instanceof FlowElementTrigger,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                        .to(
+                            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
   }
 
   private void setupActivationStream(StreamsBuilder builder) {
@@ -320,7 +333,7 @@ public class ProcessDefinitionTopologyProducer {
 
     KStream<ScheduleKey, MessageScheduler> scheduleStream =
         activationStreamIn.process(
-            () -> new ProcessDefinitionActivationProcessor(startCommandScheduler));
+            () -> new ProcessDefinitionActivationProcessor(messageSchedulerFactory));
 
     scheduleStream.to(
         Topics.SCHEDULE_COMMANDS.getTopicName(),

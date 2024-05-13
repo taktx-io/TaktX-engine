@@ -11,6 +11,7 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 
 @ApplicationScoped
@@ -42,6 +43,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
                   variables)),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           Variables.EMPTY);
     } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
       CallActivityState newState =
@@ -60,7 +62,22 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           Variables.EMPTY);
     }
+  }
+
+  @Override
+  protected BpmnElementState getTerminateElementState(CallActivityState elementState) {
+    CallActivityState newState = elementState;
+    if (elementState.getState() == ActivityStateEnum.ACTIVE) {
+      newState =
+          new CallActivityState(
+              ActivityStateEnum.TERMINATED,
+              elementState.getElementInstanceId(),
+              elementState.getPassedCnt(),
+              elementState.getLoopCnt());
+    }
+    return newState;
   }
 }

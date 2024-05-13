@@ -6,10 +6,11 @@ import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public class FlowElementTrigger extends ProcessInstanceTrigger {
+public class FlowElementTrigger extends ProcessInstanceTrigger implements SchedulableMessage<ProcessInstanceKey> {
   public static final FlowElementTrigger NONE =
       new FlowElementTrigger(
           ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, Variables.EMPTY);
@@ -24,5 +25,10 @@ public class FlowElementTrigger extends ProcessInstanceTrigger {
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(processInstanceKey, elementId, variables);
     this.inputFlowId = inputFlowId;
+  }
+
+  @Override
+  public ProcessInstanceKey getRecordKey() {
+    return getProcessInstanceKey();
   }
 }

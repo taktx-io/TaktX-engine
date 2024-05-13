@@ -44,13 +44,4 @@ public class ServiceTaskState extends TaskState {
         this.getAttempt());
   }
 
-  @Override
-  public BpmnElementState terminate() {
-    if (this.getState() == ActivityStateEnum.ACTIVE) {
-      return new TaskState(
-          ActivityStateEnum.TERMINATED, this.getElementInstanceId(), this.getPassedCnt(), this.getLoopCnt());
-    } else {
-      return this;
-    }
-  }
 }

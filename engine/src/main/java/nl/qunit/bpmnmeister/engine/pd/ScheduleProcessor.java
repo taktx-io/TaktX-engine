@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -12,6 +13,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+@Slf4j
 public class ScheduleProcessor
     implements Processor<ScheduleKey, MessageScheduler, Object, SchedulableMessage> {
   private ProcessorContext<Object, SchedulableMessage> context;
@@ -42,12 +44,14 @@ public class ScheduleProcessor
                               Instant.now(clock),
                               schedulableMessages ->
                                   schedulableMessages.forEach(
-                                      message ->
-                                          context.forward(
-                                              new Record<>(
-                                                  message.getRecordKey(),
-                                                  message,
-                                                  Instant.now(clock).toEpochMilli()))));
+                                      message -> {
+                                        log.info("Scheduler triggered message {}", message);
+                                        context.forward(
+                                            new Record<>(
+                                                message.getRecordKey(),
+                                                message,
+                                                Instant.now(clock).toEpochMilli()));
+                                      }));
                       if (updatedScheduleCommand != null) {
                         scheduleStore.put(scheduleKey, updatedScheduleCommand);
                       } else {

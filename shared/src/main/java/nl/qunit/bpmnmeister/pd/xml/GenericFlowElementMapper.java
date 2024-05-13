@@ -8,7 +8,9 @@ import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 import nl.qunit.bpmnmeister.bpmn.TActivity;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
+import nl.qunit.bpmnmeister.bpmn.TBoundaryEvent;
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
+import nl.qunit.bpmnmeister.bpmn.TCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TEndEvent;
 import nl.qunit.bpmnmeister.bpmn.TExclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
@@ -18,6 +20,7 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
@@ -104,16 +107,33 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           parentId,
           mapQNameList(exclusiveGateway.getIncoming()),
           mapQNameList(exclusiveGateway.getOutgoing()));
-    } else if (tFlowElement instanceof TStartEvent startEvent) {
-      return new StartEvent(
-          startEvent.getId(),
-          parentId,
-          mapQNameList(startEvent.getIncoming()),
-          mapQNameList(startEvent.getOutgoing()),
-          bpmnMapperFactory
-              .createEventDefinitionMapper()
-              .map(startEvent.getEventDefinition(), parentId));
-    } else if (tFlowElement instanceof TEndEvent endEvent) {
+    } else if (tFlowElement instanceof TCatchEvent tCatchEvent) {
+      if (tCatchEvent instanceof TStartEvent startEvent) {
+        return new StartEvent(
+            startEvent.getId(),
+            parentId,
+            mapQNameList(startEvent.getIncoming()),
+            mapQNameList(startEvent.getOutgoing()),
+            bpmnMapperFactory
+                .createEventDefinitionMapper()
+                .map(startEvent.getEventDefinition(), parentId));
+      }
+      else if (tCatchEvent instanceof TBoundaryEvent boundaryEvent) {
+        return new BoundaryEvent(
+            boundaryEvent.getId(),
+            parentId,
+            mapQNameList(boundaryEvent.getIncoming()),
+            mapQNameList(boundaryEvent.getOutgoing()),
+            bpmnMapperFactory
+                .createEventDefinitionMapper()
+                .map(boundaryEvent.getEventDefinition(), parentId),
+            boundaryEvent.getAttachedToRef().toString(),
+            boundaryEvent.isCancelActivity());
+      }
+    }
+
+
+ else if (tFlowElement instanceof TEndEvent endEvent) {
       return new EndEvent(
           endEvent.getId(),
           parentId,

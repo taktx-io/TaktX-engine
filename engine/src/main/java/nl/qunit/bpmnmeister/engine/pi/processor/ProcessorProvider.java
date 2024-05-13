@@ -2,8 +2,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.pi.processor.flowelement.BoundaryEventProcessor;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
@@ -22,6 +24,7 @@ public class ProcessorProvider {
   @Inject ExclusiveGatewayProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayProcessor parallelGatewayProcessor;
   @Inject ServiceTaskProcessor serviceTaskProcessor;
+  @Inject BoundaryEventProcessor boundaryEventProcessor;
   @Inject TaskProcessor taskProcessor;
   @Inject SubProcessProcessor subProcessProcessor;
   @Inject CallActivityProcessor callActivityProcessor;
@@ -37,6 +40,8 @@ public class ProcessorProvider {
       return parallelGatewayProcessor;
     } else if (element instanceof Activity activity) {
       return getStateProcessorForActivity(activity);
+    } else if (element instanceof BoundaryEvent) {
+      return boundaryEventProcessor;
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());

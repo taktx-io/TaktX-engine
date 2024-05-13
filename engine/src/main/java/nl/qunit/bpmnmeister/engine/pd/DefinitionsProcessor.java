@@ -36,19 +36,21 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
   }
 
   @Override
-  public void process(Record<String, DefinitionsTrigger> record) {
-    String definitionId = record.key();
-    if (record.value() instanceof Definitions definitions) {
-      processDefinitionsRecord(record, definitions, definitionId);
-    } else if (record.value() instanceof StartCommand startCommand) {
-      processStartCommandRecord(record, startCommand, definitionId);
+  public void process(Record<String, DefinitionsTrigger> definitionsRecord) {
+    String definitionId = definitionsRecord.key();
+    if (definitionsRecord.value() instanceof Definitions definitions) {
+      processDefinitionsRecord(definitionsRecord, definitions, definitionId);
+    } else if (definitionsRecord.value() instanceof StartCommand startCommand) {
+      processStartCommandRecord(definitionsRecord, startCommand, definitionId);
     } else {
-      throw new RuntimeException("Unsupported trigger: " + record.value());
+      throw new IllegalStateException("Unsupported trigger: " + definitionsRecord.value());
     }
   }
 
   private void processStartCommandRecord(
-      Record<String, DefinitionsTrigger> record, StartCommand startCommand, String definitionId) {
+      Record<String, DefinitionsTrigger> definitionsRecord,
+      StartCommand startCommand,
+      String definitionId) {
     Integer latestVersion = this.definitionCountByIdStore.get(definitionId);
     if (latestVersion == null) {
       StringBuilder storedDefinitions = new StringBuilder("Available definitions: ");
@@ -68,23 +70,24 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             .getFlowElements()
             .getStartEvents()
             .get(0);
-    ProcessInstanceKey parentProcessInstanceKey =
-        new ProcessInstanceKey(startCommand.getParentProcessInstanceId().getId());
     ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     ProcessInstanceTrigger processInstanceTrigger =
         new StartNewProcessInstanceTrigger(
             processInstanceKey,
-            parentProcessInstanceKey,
+            startCommand.getParentProcessInstanceKey(),
             processDefinition,
             startCommand.getParentElementId(),
             startEvent.getId(),
             Constants.NONE,
             startCommand.getVariables());
-    context.forward(new Record<>(processInstanceKey, processInstanceTrigger, record.timestamp()));
+    context.forward(
+        new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
   }
 
   private void processDefinitionsRecord(
-      Record<String, DefinitionsTrigger> record, Definitions definitions, String definitionId) {
+      Record<String, DefinitionsTrigger> definitionsRecord,
+      Definitions definitions,
+      String definitionId) {
     String hash = definitions.getDefinitionsKey().getHash();
     ProcessDefinition processDefinition;
     if (xmlByHashStore.get(hash) != null) {
@@ -112,7 +115,8 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             new ProcessDefinitionActivation(
                 previousDefinition, ProcessDefinitionStateEnum.INACTIVE);
         processDefinitionStore.put(previousKey, dactivatedProcessDefinition);
-        context.forward(new Record<>(previousKey, deactivationMessage, record.timestamp()));
+        context.forward(
+            new Record<>(previousKey, deactivationMessage, definitionsRecord.timestamp()));
       }
 
       definitionCountByIdStore.put(definitionId, newVersion);
@@ -122,12 +126,12 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
       processDefinitionStore.put(key, processDefinition);
       ProcessDefinitionActivation activationMessage =
           new ProcessDefinitionActivation(processDefinition, ProcessDefinitionStateEnum.ACTIVE);
-      context.forward(new Record<>(key, activationMessage, record.timestamp()));
+      context.forward(new Record<>(key, activationMessage, definitionsRecord.timestamp()));
     }
     context.forward(
         new Record<>(
             new ProcessDefinitionKey(definitionId, processDefinition.getVersion()),
             processDefinition,
-            record.timestamp()));
+            definitionsRecord.timestamp()));
   }
 }

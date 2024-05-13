@@ -15,6 +15,7 @@ import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 @ApplicationScoped
 public class ExclusiveGatewayProcessor
     extends GatewayProcessor<ExclusiveGateway, ExclusiveGatewayState> {
+
   @Override
   protected TriggerResult triggerDecision(
       FlowElementTrigger trigger,
@@ -29,6 +30,7 @@ public class ExclusiveGatewayProcessor
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Set.of(),
         Variables.EMPTY);
   }

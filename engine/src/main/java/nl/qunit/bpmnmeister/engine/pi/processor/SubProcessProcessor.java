@@ -16,6 +16,7 @@ import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import org.jboss.logging.Logger;
 
@@ -33,16 +34,17 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       SubProcessState oldState,
       Variables variables) {
     if (oldState.getState() == ActivityStateEnum.READY) {
-      return triggerWhenReady(processInstance, definition, element, oldState, variables);
+      return triggerWithoutLoopWhenReady(processInstance, definition, element, oldState, variables);
     } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
-      return triggerWhenActive(processInstance, definition, element, oldState, variables);
+      return triggerWithoutLoopWhenActive(
+          processInstance, definition, element, oldState, variables);
     } else {
       LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
       return null;
     }
   }
 
-  protected TriggerResult triggerWhenReady(
+  protected TriggerResult triggerWithoutLoopWhenReady(
       ProcessInstance processInstance,
       ProcessDefinition definition,
       SubProcess element,
@@ -75,10 +77,11 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
         Set.of(),
         ThrowingEvent.NOOP,
         Set.of(),
+        Set.of(),
         Variables.EMPTY);
   }
 
-  protected TriggerResult triggerWhenActive(
+  protected TriggerResult triggerWithoutLoopWhenActive(
       ProcessInstance processInstance,
       ProcessDefinition definition,
       SubProcess element,
@@ -99,5 +102,19 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     } else {
       return subProcess.getElements().values().get(0).getId();
     }
+  }
+
+  @Override
+  protected BpmnElementState getTerminateElementState(SubProcessState elementState) {
+    SubProcessState newState = elementState;
+    if (elementState.getState() == ActivityStateEnum.ACTIVE) {
+      newState =
+          new SubProcessState(
+              ActivityStateEnum.TERMINATED,
+              elementState.getElementInstanceId(),
+              elementState.getPassedCnt(),
+              elementState.getLoopCnt());
+    }
+    return newState;
   }
 }

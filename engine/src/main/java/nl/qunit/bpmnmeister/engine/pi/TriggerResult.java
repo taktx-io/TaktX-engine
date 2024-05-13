@@ -4,25 +4,29 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NonNull;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
+import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 
 @Getter
+@Builder(toBuilder = true)
 public class TriggerResult {
-
-  private final BpmnElementState newElementState;
-  private final Set<String> newActiveFlows;
-  private final Set<String> externalTasks;
-  private final Set<ProcessInstanceTrigger> newProcessInstanceTriggers;
-  private final Set<StartCommand> newStartCommands;
-  private final ThrowingEvent throwingEvent;
-  private final Set<MessageScheduler> messageSchedulers;
-  private final Variables variables;
+  @NonNull private final BpmnElementState newElementState;
+  @Builder.Default private final Set<String> newActiveFlows = Set.of();
+  @Builder.Default private final Set<String> externalTasks = Set.of();
+  @Builder.Default private final Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
+  @Builder.Default private final Set<StartCommand> newStartCommands = Set.of();
+  @Builder.Default private final ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
+  @Builder.Default private final Set<MessageScheduler> messageSchedulers = Set.of();
+  @Builder.Default private final Set<ScheduleKey> cancelSchedules = Set.of();
+  @Builder.Default private final Variables variables = Variables.EMPTY;
 
   @JsonCreator
   public TriggerResult(
@@ -33,7 +37,8 @@ public class TriggerResult {
           Set<ProcessInstanceTrigger> newProcessInstanceTriggers,
       @Nonnull @JsonProperty("newStartCommands") Set<StartCommand> newStartCommands,
       @Nonnull @JsonProperty("throwEvent") ThrowingEvent throwingEvent,
-      @Nonnull @JsonProperty("schedules") Set<MessageScheduler> messageSchedulers,
+      @Nonnull @JsonProperty("newSchedules") Set<MessageScheduler> newSchedules,
+      @Nonnull @JsonProperty("cancelSchedules") Set<ScheduleKey> cancelSchedules,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.newElementState = newElementState;
     this.newActiveFlows = newActiveFlows;
@@ -41,7 +46,8 @@ public class TriggerResult {
     this.newProcessInstanceTriggers = newProcessInstanceTriggers;
     this.newStartCommands = newStartCommands;
     this.throwingEvent = throwingEvent;
-    this.messageSchedulers = messageSchedulers;
+    this.messageSchedulers = newSchedules;
+    this.cancelSchedules = cancelSchedules;
     this.variables = variables;
   }
 }

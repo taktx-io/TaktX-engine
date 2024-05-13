@@ -20,7 +20,9 @@ class RecurringCommandTest {
     @Test
     void test() {
         StartCommand trigger1 = mock(StartCommand.class);
-        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(
+            processDefinitionKey, processInstanceKey, targetElementId, timerEventDefinition.getId(),
+            List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
         List<SchedulableMessage> triggersReceived = new ArrayList<>();
         RecurringMessageScheduler newCommand = recurringCommand.evaluate(Instant.now(CLOCK), triggersReceived::addAll);
@@ -33,7 +35,9 @@ class RecurringCommandTest {
     @Test
     void testAfter() {
         StartCommand trigger1 = mock(StartCommand.class);
-        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
+        RecurringMessageScheduler recurringCommand = new RecurringMessageScheduler(
+            processDefinitionKey, processInstanceKey, targetElementId, timerEventDefinition.getId(),
+            List.of(trigger1), "0 * * * * ?", Instant.now(CLOCK).toString());
 
         List<SchedulableMessage> triggersReceived = new ArrayList<>();
         RecurringMessageScheduler newCommand = recurringCommand.evaluate(Instant.now(CLOCK_AFTER), triggersReceived::addAll);

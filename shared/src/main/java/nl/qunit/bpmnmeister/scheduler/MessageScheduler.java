@@ -22,4 +22,6 @@ public interface MessageScheduler {
   MessageScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer);
 
   ScheduleType getScheduleType();
+
+  ScheduleKey getScheduleKey();
 }

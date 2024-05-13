@@ -22,6 +22,7 @@ public abstract class Activity<S extends BpmnElementState> extends FlowNode<S> {
     this.loopCharacteristics = loopCharacteristics;
   }
 
+
   @JsonIgnore
   public abstract ProcessDefinition getAsSubProcessDefinition(
       ProcessDefinition parentProcessDefinition);

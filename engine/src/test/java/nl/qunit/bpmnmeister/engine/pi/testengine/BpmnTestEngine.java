@@ -34,7 +34,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -353,8 +353,12 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine terminate() {
-    triggerEmitter.send(new TerminateProcessInstanceTrigger(activeProcessInstance.getProcessInstanceKey()));
+  public BpmnTestEngine terminateProcessWithChildProcesses() {
+    triggerEmitter.send(new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE));
+    return this;
+  }
+  public BpmnTestEngine terminateChildProcessesForElement(String elementId) {
+    triggerEmitter.send(new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId));
     return this;
   }
 }

@@ -1,6 +1,5 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -29,7 +28,4 @@ public abstract class BpmnElementState {
     this.elementInstanceId = elementInstanceId;
     this.passedCnt = passedCnt;
   }
-
-  @JsonIgnore
-  public abstract BpmnElementState terminate();
 }

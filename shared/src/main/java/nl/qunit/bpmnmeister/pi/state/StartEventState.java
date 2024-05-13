@@ -16,8 +16,4 @@ public class StartEventState extends EventState {
     super(elementInstanceId, passedCnt);
   }
 
-  @Override
-  public BpmnElementState terminate() {
-    return new StartEventState(getElementInstanceId(), getPassedCnt());
-  }
 }

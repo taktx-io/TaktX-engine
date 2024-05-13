@@ -341,7 +341,7 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  void testTerminateChildProcesses()
+  void testTerminateParentAndChildProcesses()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 
     bpmnTestEngine
@@ -349,11 +349,46 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
         .waitUntilChildProcessesHaveState(6, ProcessInstanceState.ACTIVE)
         .parentProcess()
-        .terminate()
+        .terminateProcessWithChildProcesses()
         .waitUntilCompleted()
         .assertThatProcess()
         .isTerminated()
         .toProcessLevel()
         .waitUntilChildProcessesHaveState(6, ProcessInstanceState.TERMINATED);
+  }
+
+  @Test
+  void testBoundaryTimerTriggered()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
+        .waitUntilCompleted()
+        .assertThatProcess().isCompleted()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Boundary_Timer_1")
+        .hasPassedElement("EndEvent_2")
+        .hasNotPassedElement("EndEvent_1");
+  }
+
+  @Test
+  void testBoundaryTimerNotTriggered()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
+        .assertThatProcess().isCompleted()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("EndEvent_1")
+        .hasNotPassedElement("Boundary_Timer_1")
+        .hasNotPassedElement("EndEvent_2");
   }
 }

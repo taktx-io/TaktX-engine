@@ -11,18 +11,18 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 @EqualsAndHashCode(callSuper = true)
 public class StartCommand extends DefinitionsTrigger implements SchedulableMessage<String> {
 
-  private final ProcessInstanceKey parentProcessInstanceId;
+  private final ProcessInstanceKey parentProcessInstanceKey;
   private final String parentElementId;
   private final String processDefinitionId;
   private final Variables variables;
 
   @JsonCreator
   public StartCommand(
-      @JsonProperty("parentProcessInstanceId") ProcessInstanceKey parentProcessInstanceId,
+      @JsonProperty("parentProcessInstanceKey") ProcessInstanceKey parentProcessInstanceKey,
       @JsonProperty("parentElementId") String parentElementId,
       @JsonProperty("processDefinitionId") String processDefinitionId,
       @JsonProperty("variables") Variables variables) {
-    this.parentProcessInstanceId = parentProcessInstanceId;
+    this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.parentElementId = parentElementId;
     this.processDefinitionId = processDefinitionId;
     this.variables = variables;

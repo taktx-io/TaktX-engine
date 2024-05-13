@@ -9,11 +9,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
@@ -22,9 +24,12 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -54,6 +59,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           Variables.EMPTY);
     }
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
@@ -69,6 +75,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Set.of(),
         Variables.EMPTY);
   }
@@ -86,6 +93,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
+
     if (oldState.getState() != ActivityStateEnum.ACTIVE) {
       return new TriggerResult(
           oldState,
@@ -95,9 +103,27 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
           Set.of(),
           ThrowingEvent.NOOP,
           Set.of(),
+          Set.of(),
           Variables.EMPTY);
     }
 
+    TriggerResult triggerResult =
+        getTriggerResultForExternalTaskResponse(
+            trigger, processInstance, definition, element, oldState, variables);
+
+    triggerResult =
+        getTriggerResultForBoundaryEvents(
+            processInstance, definition, element, oldState, triggerResult);
+    return triggerResult;
+  }
+
+  private TriggerResult getTriggerResultForExternalTaskResponse(
+      ExternalTaskResponseTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      ServiceTask element,
+      ServiceTaskState oldState,
+      Variables variables) {
     if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
       return succesfulResponseTriggerResult(trigger, element, oldState);
     } else {
@@ -142,7 +168,11 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             // This means for now we do nothing, the retry will be scheduled by the scheduler
             MessageScheduler messageScheduler =
                 scheduleNextExternalTask(
-                    trigger.getElementId(), backoff.get(), processInstance, variables);
+                    trigger.getElementId(),
+                    backoff.get(),
+                    processInstance,
+                    element.getId(),
+                    variables);
             messageSchedulers = Set.of(messageScheduler);
           } else {
             // No backoff time defined, retry directly
@@ -171,14 +201,30 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
                 oldState.getLoopCnt(),
                 oldState.getAttempt());
       }
+
+      Set<ProcessInstanceTrigger> newProcessInstanceTriggers = new HashSet<>();
+      List<BoundaryEvent> boundaryEvents =
+          definition
+              .getDefinitions()
+              .getRootProcess()
+              .getFlowElements()
+              .getBoundaryEventsAttachedToElement(element.getId());
+      if (elementFinished(oldState, newServiceTaskState)) {
+        for (BoundaryEvent boundaryEvent : boundaryEvents) {
+          newProcessInstanceTriggers.add(
+              new TerminateTrigger(processInstance.getProcessInstanceKey(), boundaryEvent.getId()));
+        }
+      }
+
       return new TriggerResult(
           newServiceTaskState,
           Set.of(),
           workerDefinitions,
-          Set.of(),
+          newProcessInstanceTriggers,
           Set.of(),
           throwingEvent,
           messageSchedulers,
+          Set.of(),
           trigger.getVariables());
     }
   }
@@ -187,6 +233,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       String workerDefinition,
       String backoff,
       ProcessInstance processInstance,
+      String elementId,
       Variables variables) {
     ExternalTaskTrigger externalTask =
         new ExternalTaskTrigger(
@@ -195,7 +242,13 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             workerDefinition,
             variables);
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
-    return new OneTimeScheduler(List.of(externalTask), triggerTime);
+    return new OneTimeScheduler(
+        processInstance.getProcessDefinitionKey(),
+        processInstance.getProcessInstanceKey(),
+        elementId,
+        workerDefinition,
+        List.of(externalTask),
+        triggerTime);
   }
 
   private static TriggerResult succesfulResponseTriggerResult(
@@ -208,6 +261,22 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
         Set.of(),
         ThrowingEvent.NOOP,
         Set.of(),
+        Set.of(),
         trigger.getVariables());
+  }
+
+  @Override
+  protected BpmnElementState getTerminateElementState(ServiceTaskState elementState) {
+    ServiceTaskState newState = elementState;
+    if (elementState.getState() == ActivityStateEnum.ACTIVE) {
+      newState =
+          new ServiceTaskState(
+              ActivityStateEnum.TERMINATED,
+              elementState.getElementInstanceId(),
+              elementState.getPassedCnt(),
+              elementState.getLoopCnt(),
+              elementState.getAttempt());
+    }
+    return newState;
   }
 }

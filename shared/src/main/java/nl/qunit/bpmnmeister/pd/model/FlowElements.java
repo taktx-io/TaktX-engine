@@ -52,6 +52,13 @@ public class FlowElements {
         .map(FlowNode.class::cast)
         .toList();
   }
+  @JsonIgnore
+  public List<Activity> getActivities() {
+    return elements.values().stream()
+        .filter(Activity.class::isInstance)
+        .map(Activity.class::cast)
+        .toList();
+  }
 
   @JsonIgnore
   public Optional<FlowElement> getFlowElement(String id) {
@@ -59,6 +66,16 @@ public class FlowElements {
         .filter(flowElement -> id.equals(flowElement.getId()))
         .findFirst();
   }
+
+  @JsonIgnore
+  public Optional<FlowNode> getFlowNode(String elementId) {
+    return elements.values().stream()
+        .filter(FlowNode.class::isInstance)
+        .map(FlowNode.class::cast)
+        .filter(flowElement -> elementId.equals(flowElement.getId()))
+        .findFirst();
+  }
+
 
   @Override
   public boolean equals(Object o) {
@@ -76,4 +93,14 @@ public class FlowElements {
   public int hashCode() {
     return Objects.hash(elements);
   }
+
+  public List<BoundaryEvent> getBoundaryEventsAttachedToElement(String id) {
+    return elements.values().stream()
+        .filter(BoundaryEvent.class::isInstance)
+        .map(BoundaryEvent.class::cast)
+        .filter(boundaryEvent -> boundaryEvent.getAttachedToRef().equals(id))
+        .toList();
+
+  }
+
 }

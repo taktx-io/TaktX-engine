@@ -21,11 +21,4 @@ public class ParallelGatewayState extends GatewayState {
     this.triggeredFlows = triggeredFlows;
   }
 
-  @Override
-  public BpmnElementState terminate() {
-    if (this.getState() == ActivityStateEnum.ACTIVE) {
-      return new ParallelGatewayState(this.getElementInstanceId(), this.getTriggeredFlows(), this.getPassedCnt(), ActivityStateEnum.TERMINATED);
-    } else {
-      return this;
-    }
-  }}
+}

@@ -11,11 +11,9 @@ import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
-  private static final Logger LOG = Logger.getLogger(TaskProcessor.class);
 
   @Override
   protected TriggerResult triggerFlowElementWithoutLoop(
@@ -36,6 +34,7 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
         Set.of(),
         Set.of(),
         ThrowingEvent.NOOP,
+        Set.of(),
         Set.of(),
         variables);
   }

@@ -7,9 +7,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
+import lombok.ToString;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 
 @Getter
+@ToString
 public class FixedRateMessageScheduler implements MessageScheduler {
+
+  private final ProcessDefinitionKey processDefinitionKey;
+  private final ProcessInstanceKey processInstanceKey;
+  private final String targetElementId;
+  private final String timerDefinitionId;
   private final List<SchedulableMessage<?>> messages;
   private final String period;
   private final int repetitions;
@@ -18,11 +27,19 @@ public class FixedRateMessageScheduler implements MessageScheduler {
 
   @JsonCreator
   public FixedRateMessageScheduler(
+      @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("targetElementId") String targetElementId,
+      @JsonProperty("timerDefinitionId") String timerDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("period") String period,
       @JsonProperty("repetitions") int repetitions,
       @JsonProperty("repeatedCnt") int repeatedCnt,
       @JsonProperty("instantiation") String instantiation) {
+    this.processDefinitionKey = processDefinitionKey;
+    this.processInstanceKey = processInstanceKey;
+    this.targetElementId = targetElementId;
+    this.timerDefinitionId = timerDefinitionId;
     this.messages = messages;
     this.period = period;
     this.repetitions = repetitions;
@@ -46,6 +63,7 @@ public class FixedRateMessageScheduler implements MessageScheduler {
           nextExecution = now.plus(Duration.parse(period));
         }
         return new FixedRateMessageScheduler(
+            processDefinitionKey, processInstanceKey, targetElementId, timerDefinitionId,
             messages, period, repetitions, repeatedCnt + 1, nextExecution.toString());
       } else {
         // Return null to indicate that this command is done
@@ -60,5 +78,10 @@ public class FixedRateMessageScheduler implements MessageScheduler {
   @Override
   public ScheduleType getScheduleType() {
     return ScheduleType.FIXED_RATE;
+  }
+
+  @Override
+  public ScheduleKey getScheduleKey() {
+    return new ScheduleKey(processDefinitionKey, processInstanceKey, ScheduleType.FIXED_RATE, targetElementId, timerDefinitionId);
   }
 }

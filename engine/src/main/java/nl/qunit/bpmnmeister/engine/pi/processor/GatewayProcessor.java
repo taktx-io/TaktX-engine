@@ -34,6 +34,7 @@ public abstract class GatewayProcessor<G extends Gateway, S extends GatewayState
         Set.of(),
         ThrowingEvent.NOOP,
         Set.of(),
+        Set.of(),
         Variables.EMPTY);
   }
 

@@ -15,18 +15,35 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.Getter;
+import lombok.ToString;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 
 @Getter
+@ToString
 public class RecurringMessageScheduler implements MessageScheduler {
+
+  private final ProcessDefinitionKey processDefinitionKey;
+  private final ProcessInstanceKey processInstanceKey;
+  private final String targetElementId;
+  private final String timerEventDefinitionId;
   private final List<SchedulableMessage<?>> messages;
   private final String cron;
   private final String instantiation;
 
   @JsonCreator
   public RecurringMessageScheduler(
+      @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("targetElementId") String targetElementId,
+      @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
+    this.processDefinitionKey = processDefinitionKey;
+    this.processInstanceKey = processInstanceKey;
+    this.targetElementId = targetElementId;
+    this.timerEventDefinitionId = timerEventDefinitionId;
     this.messages = messages;
     this.cron = cron;
     this.instantiation = instantiation;
@@ -48,6 +65,7 @@ public class RecurringMessageScheduler implements MessageScheduler {
 
         // Return a new command with the next execution time
         return new RecurringMessageScheduler(
+            processDefinitionKey, processInstanceKey, targetElementId, timerEventDefinitionId,
             messages, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
@@ -61,5 +79,10 @@ public class RecurringMessageScheduler implements MessageScheduler {
   @Override
   public ScheduleType getScheduleType() {
     return ScheduleType.RECURRING;
+  }
+
+  @Override
+  public ScheduleKey getScheduleKey() {
+    return new ScheduleKey(processDefinitionKey, processInstanceKey, ScheduleType.RECURRING, targetElementId, timerEventDefinitionId);
   }
 }
