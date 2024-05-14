@@ -11,9 +11,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.scheduler.FixedRateMessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -25,12 +27,15 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 public class MessageSchedulerFactory {
   @Inject Clock clock;
 
+  @Inject FeelExpressionHandler feelExpressionHandler;
+
   public MessageScheduler schedule(
       ProcessDefinitionKey processDefinitionKey,
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
       return scheduleCycle(
@@ -38,7 +43,8 @@ public class MessageSchedulerFactory {
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
-          messages);
+          messages,
+          variables);
     } else if (timerEventDefinition.getTimeDate() != null
         && !timerEventDefinition.getTimeDate().isEmpty()) {
       return scheduleOneTime(
@@ -46,7 +52,8 @@ public class MessageSchedulerFactory {
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
-          messages);
+          messages,
+          variables);
     } else if (timerEventDefinition.getTimeDuration() != null
         && !timerEventDefinition.getTimeDuration().isEmpty()) {
       return scheduleDuration(
@@ -54,7 +61,8 @@ public class MessageSchedulerFactory {
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
-          messages);
+          messages,
+          variables);
     }
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
@@ -64,9 +72,14 @@ public class MessageSchedulerFactory {
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
 
-    RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeDuration());
+    String timeDuration =
+        feelExpressionHandler
+            .processFeelExpression(timerEventDefinition.getTimeDuration(), variables)
+            .asText();
+    RepeatDuration repeatDuration = RepeatDuration.parse(timeDuration);
     Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageScheduler(
         processDefinitionKey,
@@ -85,14 +98,19 @@ public class MessageSchedulerFactory {
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
+    String timeDate =
+        feelExpressionHandler
+            .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
+            .asText();
     return new OneTimeScheduler(
         processDefinitionKey,
         processInstanceKey,
         targetElementId,
         timerEventDefinition.getId(),
         messages,
-        timerEventDefinition.getTimeDate());
+        timeDate);
   }
 
   private MessageScheduler scheduleCycle(
@@ -100,21 +118,24 @@ public class MessageSchedulerFactory {
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
       return scheduleCron(
           processDefinitionKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
-          messages);
+          messages,
+          variables);
     } else {
       return scheduleFixedRate(
           processDefinitionKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
-          messages);
+          messages,
+          variables);
     }
   }
 
@@ -123,9 +144,15 @@ public class MessageSchedulerFactory {
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
 
-    RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
+    String timeCycle =
+        feelExpressionHandler
+            .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
+            .asText();
+
+    RepeatDuration repeatDuration = RepeatDuration.parse(timeCycle);
     Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageScheduler(
         processDefinitionKey,
@@ -144,14 +171,19 @@ public class MessageSchedulerFactory {
       ProcessInstanceKey processInstanceKey,
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
-      List<SchedulableMessage<?>> messages) {
+      List<SchedulableMessage<?>> messages,
+      Variables variables) {
+    String timeCycle =
+        feelExpressionHandler
+            .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
+            .asText();
     return new RecurringMessageScheduler(
         processDefinitionKey,
         processInstanceKey,
         targetElementId,
         timerEventDefinition.getId(),
         messages,
-        timerEventDefinition.getTimeCycle(),
+        timeCycle,
         Instant.now(clock).toString());
   }
 

@@ -111,7 +111,8 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
                         processInstance.getProcessInstanceKey(),
                         element.getId(),
                         timerEventDefinition,
-                        timeoutMessages))
+                        timeoutMessages,
+                        variables))
             .collect(Collectors.toSet());
     Set<ScheduleKey> scheduleKeys =
         schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());

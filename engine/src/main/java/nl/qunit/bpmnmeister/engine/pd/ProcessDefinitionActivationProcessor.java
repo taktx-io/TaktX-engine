@@ -69,7 +69,8 @@ public class ProcessDefinitionActivationProcessor
                                     ProcessInstanceKey.NONE,
                                     startEvent.getId(),
                                     timerEventDefinition,
-                                    getStartCommands(processDefinition));
+                                    getStartCommands(processDefinition),
+                                    Variables.EMPTY);
                             context.forward(
                                 new Record<>(
                                     schedule.getScheduleKey(),

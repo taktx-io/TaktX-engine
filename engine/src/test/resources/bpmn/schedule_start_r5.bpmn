@@ -4,7 +4,7 @@
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_0c7js9t</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerEventDefinition_1fh30na">
-        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R2/PT2S</bpmn:timeCycle>
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">="R2/PT2S"</bpmn:timeCycle>
       </bpmn:timerEventDefinition>
     </bpmn:startEvent>
     <bpmn:task id="Task">
