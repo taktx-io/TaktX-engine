@@ -74,7 +74,7 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
       Variables variables) {
 
     Set<ProcessInstanceTrigger> cancelElementTriggers = new HashSet<>();
-    if (element.getCancelActivity()) {
+    if (element.isCancelActivity()) {
       ProcessInstanceTrigger cancelElementTrigger =
           new TerminateTrigger(processInstance.getProcessInstanceKey(), element.getAttachedToRef());
       cancelElementTriggers.add(cancelElementTrigger);
@@ -85,7 +85,7 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
             new BoundaryEventState(
                 oldState.getElementInstanceId(),
                 oldState.getPassedCnt() + 1,
-                BoundaryEventStateEnum.FIRED,
+                oldState.getState(),
                 oldState.getScheduleKeys()))
         .newActiveFlows(element.getOutgoing())
         .newProcessInstanceTriggers(cancelElementTriggers)

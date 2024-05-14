@@ -15,7 +15,7 @@ import nl.qunit.bpmnmeister.pi.state.BoundaryEventStateEnum;
 public class BoundaryEvent extends CatchEvent<BoundaryEventState> {
 
   private final String attachedToRef;
-  private final Boolean cancelActivity;
+  private final boolean cancelActivity;
 
   @JsonCreator
   public BoundaryEvent(
@@ -25,7 +25,7 @@ public class BoundaryEvent extends CatchEvent<BoundaryEventState> {
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions,
       @Nonnull @JsonProperty("attachedToRef") String attachedToRef,
-      @Nonnull @JsonProperty("cancelActivity") Boolean cancelActivity) {
+      @JsonProperty("cancelActivity") boolean cancelActivity) {
     super(id, parentId, incoming, outgoing, eventDefinitions);
     this.attachedToRef = attachedToRef;
     this.cancelActivity = cancelActivity;

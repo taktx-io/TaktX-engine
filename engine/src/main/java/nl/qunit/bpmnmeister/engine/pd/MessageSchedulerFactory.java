@@ -8,6 +8,7 @@ import com.cronutils.parser.CronParser;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -66,6 +67,7 @@ public class MessageSchedulerFactory {
       List<SchedulableMessage<?>> messages) {
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeDuration());
+    Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageScheduler(
         processDefinitionKey,
         processInstanceKey,
@@ -75,7 +77,7 @@ public class MessageSchedulerFactory {
         repeatDuration.getDuration(),
         repeatDuration.getRepetitions(),
         0,
-        Instant.now(clock).toString());
+        Instant.now(clock).plus(duration).toString());
   }
 
   private MessageScheduler scheduleOneTime(

@@ -19,14 +19,14 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 @Builder(toBuilder = true)
 public class TriggerResult {
   @NonNull private final BpmnElementState newElementState;
-  @Builder.Default private final Set<String> newActiveFlows = Set.of();
-  @Builder.Default private final Set<String> externalTasks = Set.of();
-  @Builder.Default private final Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
-  @Builder.Default private final Set<StartCommand> newStartCommands = Set.of();
-  @Builder.Default private final ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
-  @Builder.Default private final Set<MessageScheduler> messageSchedulers = Set.of();
-  @Builder.Default private final Set<ScheduleKey> cancelSchedules = Set.of();
-  @Builder.Default private final Variables variables = Variables.EMPTY;
+  @Builder.Default private Set<String> newActiveFlows = Set.of();
+  @Builder.Default private Set<String> externalTasks = Set.of();
+  @Builder.Default private Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
+  @Builder.Default private Set<StartCommand> newStartCommands = Set.of();
+  @Builder.Default private ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
+  @Builder.Default private Set<MessageScheduler> messageSchedulers = Set.of();
+  @Builder.Default private Set<ScheduleKey> cancelSchedules = Set.of();
+  @Builder.Default private Variables variables = Variables.EMPTY;
 
   @JsonCreator
   public TriggerResult(

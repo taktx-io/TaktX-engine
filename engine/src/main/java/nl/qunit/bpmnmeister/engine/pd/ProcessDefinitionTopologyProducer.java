@@ -232,7 +232,8 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof StartCommand,
                 (key, value) -> value instanceof MessageScheduler,
                 (key, value) -> value instanceof StartNewProcessInstanceTrigger,
-                (key, value) -> value instanceof TerminateTrigger);
+                (key, value) -> value instanceof TerminateTrigger,
+                (key, value) -> key instanceof ScheduleKey);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -273,6 +274,11 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE));
+    branches[7]
+        .map((key, value) -> KeyValue.pair(((ScheduleKey) key), (MessageScheduler) value))
+        .to(
+            SCHEDULE_COMMANDS.getTopicName(),
+            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
   }
 
   private void setupStartScheduleCommandStream(StreamsBuilder builder) {

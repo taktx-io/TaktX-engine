@@ -391,4 +391,27 @@ class ProcessInstanceProcessorTest {
         .hasNotPassedElement("Boundary_Timer_1")
         .hasNotPassedElement("EndEvent_2");
   }
+
+  @Test
+  void testBoundaryTimerNonInterrupting()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
+        .waitFor(Duration.ofSeconds(1))
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("EndEvent_1")
+        .hasPassedElement("Boundary_Timer_1", 3)
+        .hasPassedElement("Interrupted_Task_1", 3);
+  }
 }
