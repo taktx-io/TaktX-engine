@@ -17,6 +17,7 @@ import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
@@ -54,10 +55,10 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
     Integer latestVersion = this.definitionCountByIdStore.get(definitionId);
     if (latestVersion == null) {
       StringBuilder storedDefinitions = new StringBuilder("Available definitions: ");
-      this.definitionCountByIdStore
-          .all()
-          .forEachRemaining(e -> storedDefinitions.append(e.key + " "));
-      log.error("Process definition not found for key: {}. {}", definitionId, storedDefinitions);
+      try (KeyValueIterator<String, Integer> all = this.definitionCountByIdStore.all()) {
+        all.forEachRemaining(e -> storedDefinitions.append(e.key + " "));
+        log.error("Process definition not found for key: {}. {}", definitionId, storedDefinitions);
+      }
       return;
     }
 

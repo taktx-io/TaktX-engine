@@ -435,4 +435,29 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("Task_1")
         .hasPassedElement("EndEvent_1");
   }
+  @Test
+  void testExclusiveGatewy()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/sequence-flow-condition.bpmn")
+        .startProcessInstance(Variables.of("inputVariable", 1))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Task_1")
+        .hasNotPassedElement("Task_2")
+        .hasPassedElement("EndEvent_1")
+
+        // now test the alternative default flow
+        .toProcessLevel()
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Task_2")
+        .hasNotPassedElement("Task_1")
+        .hasPassedElement("EndEvent_1");
+
+
+  }
 }

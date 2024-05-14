@@ -35,6 +35,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.jboss.logging.Logger;
 
@@ -173,27 +174,28 @@ public class ProcessInstanceProcessor
             + " with trigger "
             + terminateProcessInstanceTrigger);
     // Terminate all child process instances
-    childProcessInstanceStore
-        .all()
-        .forEachRemaining(
-            childToParentKeyValue -> {
-              ProcessInstanceKey childKey = childToParentKeyValue.key;
-              ProcessInstanceKeyElementPair parentKeyElementPair = childToParentKeyValue.value;
+    try (KeyValueIterator<ProcessInstanceKey, ProcessInstanceKeyElementPair> all =
+        childProcessInstanceStore.all()) {
+      all.forEachRemaining(
+          childToParentKeyValue -> {
+            ProcessInstanceKey childKey = childToParentKeyValue.key;
+            ProcessInstanceKeyElementPair parentKeyElementPair = childToParentKeyValue.value;
 
-              if (parentKeyElementPair
-                      .getProcessInstanceKey()
-                      .equals(processInstance.getProcessInstanceKey())
-                  && (terminateProcessInstanceTrigger.getElementId().equals(Constants.NONE)
-                      || terminateProcessInstanceTrigger
-                          .getElementId()
-                          .equals(parentKeyElementPair.getElementId()))) {
-                context.forward(
-                    new Record<>(
-                        childKey,
-                        new TerminateTrigger(childKey, Constants.NONE),
-                        Instant.now().toEpochMilli()));
-              }
-            });
+            if (parentKeyElementPair
+                    .getProcessInstanceKey()
+                    .equals(processInstance.getProcessInstanceKey())
+                && (terminateProcessInstanceTrigger.getElementId().equals(Constants.NONE)
+                    || terminateProcessInstanceTrigger
+                        .getElementId()
+                        .equals(parentKeyElementPair.getElementId()))) {
+              context.forward(
+                  new Record<>(
+                      childKey,
+                      new TerminateTrigger(childKey, Constants.NONE),
+                      Instant.now().toEpochMilli()));
+            }
+          });
+    }
 
     ProcessInstance updatedProcessInstance = processInstance;
     if (terminateProcessInstanceTrigger.getElementId().equals(Constants.NONE)) {
@@ -310,7 +312,7 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance,
       ProcessDefinition definition,
       TriggerResult triggerResult,
-      Variables variablesWithTriggerResult,
+      Variables variables,
       BaseElement flowElement) {
     triggerResult
         .getExternalTasks()
@@ -322,7 +324,7 @@ public class ProcessInstanceProcessor
                       processInstance.getProcessInstanceKey(),
                       ProcessDefinitionKey.of(definition),
                       externalTaskId,
-                      variablesWithTriggerResult);
+                      variables);
               context.forward(
                   new Record<>(
                       newExternalTaskTrigger.getProcessInstanceKey(),
@@ -369,16 +371,14 @@ public class ProcessInstanceProcessor
                           .getFlowElements()
                           .getFlowElement(flowId)
                           .orElseThrow();
-              if (flow.testCondition()) {
-                LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
-                FlowElementTrigger newTrigger =
-                    new FlowElementTrigger(
-                        processInstance.getProcessInstanceKey(),
-                        flow.getTarget(),
-                        flow.getId(),
-                        variablesWithTriggerResult);
-                nextTriggers.add(newTrigger);
-              }
+              LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
+              FlowElementTrigger newTrigger =
+                  new FlowElementTrigger(
+                      processInstance.getProcessInstanceKey(),
+                      flow.getTarget(),
+                      flow.getId(),
+                      variables);
+              nextTriggers.add(newTrigger);
             });
 
     triggerResult

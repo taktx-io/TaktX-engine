@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
@@ -21,8 +22,10 @@ public class ParallelGatewayProcessor
   protected TriggerResult triggerDecision(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       ParallelGateway element,
-      ParallelGatewayState oldState) {
+      ParallelGatewayState oldState,
+      Variables variables) {
 
     Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());

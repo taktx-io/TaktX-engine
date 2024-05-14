@@ -6,12 +6,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
+@EqualsAndHashCode
 public class FlowElements {
   public static final FlowElements EMPTY = new FlowElements(Map.of());
 
@@ -77,22 +78,6 @@ public class FlowElements {
   }
 
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    FlowElements that = (FlowElements) o;
-    return elements.values().containsAll(that.elements.values());
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(elements);
-  }
 
   public List<BoundaryEvent> getBoundaryEventsAttachedToElement(String id) {
     return elements.values().stream()
@@ -103,4 +88,13 @@ public class FlowElements {
 
   }
 
+  public List<SequenceFlow> getOutgoingSequenceFlowsForElement(ExclusiveGateway element) {
+    return element.getOutgoing().stream()
+        .map(this::getFlowElement)
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .filter(SequenceFlow.class::isInstance)
+        .map(SequenceFlow.class::cast)
+        .toList();
+  }
 }

@@ -5,11 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public class ParallelGateway extends Gateway<ParallelGatewayState> {
   @JsonCreator
   public ParallelGateway(

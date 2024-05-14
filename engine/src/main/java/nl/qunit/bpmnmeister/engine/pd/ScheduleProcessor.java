@@ -11,6 +11,7 @@ import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
@@ -32,33 +33,33 @@ public class ScheduleProcessor
         timestamp -> {
           KeyValueStore<ScheduleKey, MessageScheduler> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
-          scheduleStore
-              .all()
-              .forEachRemaining(
-                  scheduleKeyValue -> {
-                    ScheduleKey scheduleKey = scheduleKeyValue.key;
-                    MessageScheduler scheduleCommand = scheduleKeyValue.value;
-                    if (scheduleCommand != null) {
-                      MessageScheduler updatedScheduleCommand =
-                          scheduleCommand.evaluate(
-                              Instant.now(clock),
-                              schedulableMessages ->
-                                  schedulableMessages.forEach(
-                                      message -> {
-                                        log.info("Scheduler triggered message {}", message);
-                                        context.forward(
-                                            new Record<>(
-                                                message.getRecordKey(),
-                                                message,
-                                                Instant.now(clock).toEpochMilli()));
-                                      }));
-                      if (updatedScheduleCommand != null) {
-                        scheduleStore.put(scheduleKey, updatedScheduleCommand);
-                      } else {
-                        scheduleStore.delete(scheduleKey);
-                      }
+          try (KeyValueIterator<ScheduleKey, MessageScheduler> all = scheduleStore.all()) {
+            all.forEachRemaining(
+                scheduleKeyValue -> {
+                  ScheduleKey scheduleKey = scheduleKeyValue.key;
+                  MessageScheduler scheduleCommand = scheduleKeyValue.value;
+                  if (scheduleCommand != null) {
+                    MessageScheduler updatedScheduleCommand =
+                        scheduleCommand.evaluate(
+                            Instant.now(clock),
+                            schedulableMessages ->
+                                schedulableMessages.forEach(
+                                    message -> {
+                                      log.info("Scheduler triggered message {}", message);
+                                      context.forward(
+                                          new Record<>(
+                                              message.getRecordKey(),
+                                              message,
+                                              Instant.now(clock).toEpochMilli()));
+                                    }));
+                    if (updatedScheduleCommand != null) {
+                      scheduleStore.put(scheduleKey, updatedScheduleCommand);
+                    } else {
+                      scheduleStore.delete(scheduleKey);
                     }
-                  });
+                  }
+                });
+          }
         });
   }
 

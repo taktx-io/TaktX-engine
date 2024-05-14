@@ -24,7 +24,7 @@ public abstract class GatewayProcessor<G extends Gateway, S extends GatewayState
       Variables variables) {
     if (oldState.getState() == ActivityStateEnum.READY
         || oldState.getState() == ActivityStateEnum.ACTIVE) {
-      return triggerDecision(trigger, processInstance, element, oldState);
+      return triggerDecision(trigger, processInstance, definition, element, oldState, variables);
     }
     return new TriggerResult(
         oldState,
@@ -39,5 +39,10 @@ public abstract class GatewayProcessor<G extends Gateway, S extends GatewayState
   }
 
   protected abstract TriggerResult triggerDecision(
-      FlowElementTrigger trigger, ProcessInstance processInstance, G element, S oldState);
+      FlowElementTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      G element,
+      S oldState,
+      Variables variables);
 }
