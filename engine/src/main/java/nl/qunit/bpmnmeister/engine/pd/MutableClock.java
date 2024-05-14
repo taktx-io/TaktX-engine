@@ -41,4 +41,8 @@ public class MutableClock extends Clock {
   public void advanceBy(Duration duration) {
     instant = instant.plus(duration);
   }
+
+  public void set(Instant newInstant) {
+    instant = newInstant;
+  }
 }

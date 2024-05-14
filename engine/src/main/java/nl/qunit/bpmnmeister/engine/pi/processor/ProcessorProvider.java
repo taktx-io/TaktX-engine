@@ -7,8 +7,10 @@ import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
@@ -20,6 +22,7 @@ import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 public class ProcessorProvider {
 
   @Inject StartEventProcessor startEventProcessor;
+  @Inject IntermediateCatchEventProcessor intermediateCatchEventProcessor;
   @Inject EndEventProcessor endEventProcessor;
   @Inject ExclusiveGatewayProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayProcessor parallelGatewayProcessor;
@@ -30,8 +33,8 @@ public class ProcessorProvider {
   @Inject CallActivityProcessor callActivityProcessor;
 
   public StateProcessor<?, ?> getProcessor(BaseElement element) {
-    if (element instanceof StartEvent) {
-      return startEventProcessor;
+    if (element instanceof CatchEvent<?> catchEvent) {
+      return getProcessorForCatchEvent(catchEvent);
     } else if (element instanceof EndEvent) {
       return endEventProcessor;
     } else if (element instanceof ExclusiveGateway) {
@@ -40,11 +43,20 @@ public class ProcessorProvider {
       return parallelGatewayProcessor;
     } else if (element instanceof Activity activity) {
       return getStateProcessorForActivity(activity);
-    } else if (element instanceof BoundaryEvent) {
-      return boundaryEventProcessor;
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
+  }
+
+  private StateProcessor<?, ?> getProcessorForCatchEvent(CatchEvent<?> element) {
+    if (element instanceof StartEvent) {
+      return startEventProcessor;
+    } else if (element instanceof IntermediateCatchEvent) {
+      return intermediateCatchEventProcessor;
+    } else if (element instanceof BoundaryEvent) {
+      return boundaryEventProcessor;
+    }
+    throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }
 
   private StateProcessor<? extends BaseElement, ? extends BpmnElementState>

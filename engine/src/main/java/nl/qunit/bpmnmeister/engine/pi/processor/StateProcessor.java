@@ -1,6 +1,5 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
-import java.util.Set;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
@@ -12,7 +11,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateThrowingEvent;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
@@ -55,16 +53,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends BpmnElemen
       E element,
       S oldState,
       Variables variables) {
-    return new TriggerResult(
-        oldState,
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder().newElementState(oldState).build();
   }
 
   public TriggerResult terminate(

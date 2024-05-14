@@ -159,16 +159,11 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
               inputCollection,
               oldState.getLoopCnt());
 
-      return new TriggerResult(
-          oldState.getNextLoopState(),
-          Set.of(),
-          Set.of(),
-          subProcessTriggers,
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          returnVariables);
+      return TriggerResult.builder()
+          .newElementState(oldState.getNextLoopState())
+          .newProcessInstanceTriggers(subProcessTriggers)
+          .variables(returnVariables)
+          .build();
     } else {
       return finishActivity(
           processInstance, element, oldState.getFinishedLoopState(), returnVariables);

@@ -9,6 +9,7 @@ import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -413,5 +414,25 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("EndEvent_1")
         .hasPassedElement("Boundary_Timer_1", 3)
         .hasPassedElement("Interrupted_Task_1", 3);
+  }
+
+  @Test
+  void testIntermediateTimerCatch()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .setTime(Instant.parse("2024-02-29T07:59:59Z"))
+        .waitFor(Duration.ofSeconds(1))
+        .assertThatProcess()
+        .isStillActive()
+        .toProcessLevel()
+        .moveTimeForward(Duration.ofMillis(1001))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("CatchEvent_1")
+        .hasPassedElement("Task_1")
+        .hasPassedElement("EndEvent_1");
   }
 }

@@ -5,7 +5,6 @@ import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EventState;
 
@@ -24,5 +23,5 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
   }
 
   protected abstract TriggerResult triggerEvent(
-      ProcessInstanceTrigger trigger, ProcessInstance processInstance, E element, S oldState);
+      FlowElementTrigger trigger, ProcessInstance processInstance, E element, S oldState);
 }

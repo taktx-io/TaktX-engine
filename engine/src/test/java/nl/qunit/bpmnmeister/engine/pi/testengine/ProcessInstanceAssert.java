@@ -85,4 +85,9 @@ public class ProcessInstanceAssert {
     assertThat(processInstance.getProcessInstanceState()).isEqualTo(ProcessInstanceState.TERMINATED);
     return this;
   }
+
+  public ProcessInstanceAssert isStillActive() {
+    assertThat(processInstance.getProcessInstanceState()).isEqualTo(ProcessInstanceState.ACTIVE);
+    return this;
+  }
 }

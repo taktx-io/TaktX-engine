@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -344,6 +345,10 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine moveTimeForward(Duration duration) {
     mutableClock.advanceBy(duration);
+    return this;
+  }
+  public BpmnTestEngine setTime(Instant newInstant) {
+    mutableClock.set(newInstant);
     return this;
   }
 

@@ -14,6 +14,7 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = ExclusiveGatewayState.class),
   @JsonSubTypes.Type(value = ParallelGatewayState.class),
   @JsonSubTypes.Type(value = StartEventState.class),
+  @JsonSubTypes.Type(value = IntermediateCatchEventState.class),
   @JsonSubTypes.Type(value = TaskState.class),
   @JsonSubTypes.Type(value = CallActivityState.class),
   @JsonSubTypes.Type(value = ServiceTaskState.class),

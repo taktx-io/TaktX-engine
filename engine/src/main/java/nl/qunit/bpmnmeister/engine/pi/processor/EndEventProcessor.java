@@ -19,7 +19,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
 
   @Override
   protected TriggerResult triggerEvent(
-      ProcessInstanceTrigger trigger,
+      FlowElementTrigger trigger,
       ProcessInstance processInstance,
       EndEvent element,
       EndEventState oldState) {

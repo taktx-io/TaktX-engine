@@ -14,6 +14,7 @@ import nl.qunit.bpmnmeister.bpmn.TCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TEndEvent;
 import nl.qunit.bpmnmeister.bpmn.TExclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
+import nl.qunit.bpmnmeister.bpmn.TIntermediateCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TParallelGateway;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
 import nl.qunit.bpmnmeister.bpmn.TServiceTask;
@@ -26,6 +27,7 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
@@ -129,6 +131,15 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 .map(boundaryEvent.getEventDefinition(), parentId),
             boundaryEvent.getAttachedToRef().toString(),
             boundaryEvent.isCancelActivity());
+      } else if (tCatchEvent instanceof TIntermediateCatchEvent intermediateCatchEvent) {
+        return new IntermediateCatchEvent(
+            intermediateCatchEvent.getId(),
+            parentId,
+            mapQNameList(intermediateCatchEvent.getIncoming()),
+            mapQNameList(intermediateCatchEvent.getOutgoing()),
+            bpmnMapperFactory
+                .createEventDefinitionMapper()
+                .map(intermediateCatchEvent.getEventDefinition(), parentId));
       }
     }
 
