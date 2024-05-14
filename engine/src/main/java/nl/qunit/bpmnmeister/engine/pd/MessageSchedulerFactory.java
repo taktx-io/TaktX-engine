@@ -126,6 +126,7 @@ public class MessageSchedulerFactory {
       List<SchedulableMessage<?>> messages) {
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timerEventDefinition.getTimeCycle());
+    Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageScheduler(
         processDefinitionKey,
         processInstanceKey,
@@ -135,7 +136,7 @@ public class MessageSchedulerFactory {
         repeatDuration.getDuration(),
         repeatDuration.getRepetitions(),
         0,
-        Instant.now(clock).toString());
+        Instant.now(clock).plus(duration).toString());
   }
 
   private MessageScheduler scheduleCron(

@@ -106,7 +106,7 @@ public class ProcessInstanceProcessor
     }
 
     ProcessInstance updatedProcessInstance = trigger(processInstance, definition, trigger);
-    storeProcessInstance(updatedProcessInstance);
+    updateStoredProcessInstanceInformation(updatedProcessInstance);
 
     context.forward(
         new Record<>(
@@ -118,7 +118,7 @@ public class ProcessInstanceProcessor
     LOG.info("Processing took " + (end.toEpochMilli() - start.toEpochMilli()) + " ms");
   }
 
-  private void storeProcessInstance(ProcessInstance updatedProcessInstance) {
+  private void updateStoredProcessInstanceInformation(ProcessInstance updatedProcessInstance) {
     processInstanceCache
         .as(CaffeineCache.class)
         .put(
@@ -126,6 +126,13 @@ public class ProcessInstanceProcessor
             CompletableFuture.completedFuture(updatedProcessInstance));
     processInstanceStore.put(
         updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
+
+    // When the process has finished, failed or terminated, delete the process instance also from
+    // the
+    // parent-child store
+    if (updatedProcessInstance.getProcessInstanceState().isFinished()) {
+      childProcessInstanceStore.delete(updatedProcessInstance.getProcessInstanceKey());
+    }
   }
 
   private void storeProcessDefinition(ProcessDefinition definition) {
