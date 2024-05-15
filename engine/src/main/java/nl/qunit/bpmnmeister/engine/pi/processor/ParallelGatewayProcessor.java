@@ -29,8 +29,9 @@ public class ParallelGatewayProcessor
 
     Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());
+
     final Set<String> outputFlows = new HashSet<>();
-    if (element.getOutgoing().equals(newTriggeredFlows)) {
+    if (element.getIncoming().equals(newTriggeredFlows)) {
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
     }

@@ -54,7 +54,6 @@ public class BpmnTestEngine {
 
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  private static final long DEFAULT_INTERVAL_MILLIS = 1000;
 
   @Inject
   AdminClient adminClient;
@@ -366,4 +365,30 @@ public class BpmnTestEngine {
     triggerEmitter.send(new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId));
     return this;
   }
+
+  public BpmnTestEngine waitUntilElementHasPassed(String elementId) {
+    return waitUntilElementHasPassed(elementId, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilElementHasPassed(String elementId, Duration duration) {
+
+    activeProcessInstance = Awaitility.await()
+        .atMost(duration)
+        .until(() -> {
+          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
+              activeProcessInstance.getProcessInstanceKey());
+          if (processInstances == null || processInstances.isEmpty()) {
+            return null;
+          }
+          ProcessInstance poll = null;
+          do {
+            poll = processInstances.poll();
+            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
+                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getElementStates().get(elementId).getPassedCnt() > 0) {
+              return poll;
+            }
+          } while (poll != null);
+          return null;
+        }, Objects::nonNull);
+    return this;  }
 }

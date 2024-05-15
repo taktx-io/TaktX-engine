@@ -338,7 +338,9 @@ class ProcessInstanceProcessorTest {
         .waitUntilCompleted()
         .moveTimeForward(Duration.ofSeconds(2))
         .waitForNewProcessInstance()
-        .waitUntilCompleted();
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("Task", 1);
   }
 
   @Test
@@ -435,6 +437,7 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("Task_1")
         .hasPassedElement("EndEvent_1");
   }
+
   @Test
   void testExclusiveGatewy()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
@@ -457,7 +460,25 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("Task_2")
         .hasNotPassedElement("Task_1")
         .hasPassedElement("EndEvent_1");
+  }
 
-
+  @Test
+  void testParallelGateway()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/gateway-parallel.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilElementHasPassed("Task_1")
+        .assertThatProcess()
+        .hasNotPassedElement("Task_2")
+        .hasNotPassedElement("EndEvent_1")
+        .toProcessLevel()
+        .moveTimeForward(Duration.ofHours(1).plusMillis(1))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Task_1")
+        .hasPassedElement("Task_2")
+        .hasPassedElement("EndEvent_1");
   }
 }
