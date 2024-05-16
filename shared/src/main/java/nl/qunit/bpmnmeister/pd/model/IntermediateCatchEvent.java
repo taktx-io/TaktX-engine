@@ -6,8 +6,8 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
-import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventStateEnum;
 
 @Getter
 public class IntermediateCatchEvent extends CatchEvent<IntermediateCatchEventState> {
@@ -23,7 +23,7 @@ public class IntermediateCatchEvent extends CatchEvent<IntermediateCatchEventSta
   }
 
   @Override
-  public IntermediateCatchEventState getInitialState() {
-    return new IntermediateCatchEventState(UUID.randomUUID(), 0, IntermediateCatchEventStateEnum.READY, Set.of());
+  public IntermediateCatchEventState getInitialState(String inputFlowId, int passedCnt) {
+    return new IntermediateCatchEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(), inputFlowId);
   }
 }

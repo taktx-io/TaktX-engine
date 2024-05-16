@@ -6,6 +6,7 @@ import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartThrowingEvent;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
 @ApplicationScoped
@@ -17,10 +18,23 @@ public class StartEventProcessor extends EventProcessor<StartEvent, StartEventSt
       StartEvent element,
       StartEventState oldState) {
     return TriggerResult.builder()
-        .newElementState(
-            new StartEventState(oldState.getElementInstanceId(), oldState.getPassedCnt() + 1))
+        .newFlowNodeState(
+            new StartEventState(
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt() + 1,
+                FlowNodeStateEnum.FINISHED,
+                oldState.getInputFlowId()))
         .newActiveFlows(element.getOutgoing())
         .throwingEvent(new StartThrowingEvent())
         .build();
+  }
+
+  @Override
+  protected StartEventState getTerminateElementState(StartEventState elementState) {
+    return new StartEventState(
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getInputFlowId());
   }
 }

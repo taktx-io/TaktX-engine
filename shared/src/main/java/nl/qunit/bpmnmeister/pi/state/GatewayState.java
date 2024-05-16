@@ -4,13 +4,10 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public abstract class GatewayState extends BpmnElementState {
+public abstract class GatewayState extends FlowNodeState {
 
-  private final ActivityStateEnum state;
-
-  protected GatewayState(UUID elementInstanceId, int passedCnt, ActivityStateEnum state) {
-    super(elementInstanceId, passedCnt);
-    this.state = state;
+  protected GatewayState(UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
+    super(elementInstanceId, passedCnt, state, inputFlowId);
   }
 
 

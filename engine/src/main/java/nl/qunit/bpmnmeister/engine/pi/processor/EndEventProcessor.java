@@ -13,6 +13,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
 public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
@@ -33,7 +34,11 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
               processInstance.getVariables()));
     }
     EndEventState newState =
-        new EndEventState(oldState.getElementInstanceId(), oldState.getPassedCnt() + 1);
+        new EndEventState(
+            oldState.getElementInstanceId(),
+            oldState.getPassedCnt() + 1,
+            FlowNodeStateEnum.FINISHED,
+            oldState.getInputFlowId());
     return new TriggerResult(
         newState,
         Set.of(),
@@ -44,5 +49,14 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
         Set.of(),
         Set.of(),
         Variables.EMPTY);
+  }
+
+  @Override
+  protected EndEventState getTerminateElementState(EndEventState elementState) {
+    return new EndEventState(
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getInputFlowId());
   }
 }

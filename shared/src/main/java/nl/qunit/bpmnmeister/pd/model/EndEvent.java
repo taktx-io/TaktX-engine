@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 public class EndEvent extends ThrowEvent<EndEventState> {
@@ -20,7 +21,7 @@ public class EndEvent extends ThrowEvent<EndEventState> {
   }
 
   @Override
-  public EndEventState getInitialState() {
-    return new EndEventState(UUID.randomUUID(), 0);
+  public EndEventState getInitialState(String inputFlowId, int passedCnt) {
+    return new EndEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

@@ -8,7 +8,7 @@ import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
-import nl.qunit.bpmnmeister.pi.state.BoundaryEventStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -32,7 +32,8 @@ public class BoundaryEvent extends CatchEvent<BoundaryEventState> {
   }
 
   @Override
-  public BoundaryEventState getInitialState() {
-    return new BoundaryEventState(UUID.randomUUID(), 0, BoundaryEventStateEnum.READY, Set.of());
+  public BoundaryEventState getInitialState(String inputFlowId, int passedCnt) {
+    return new BoundaryEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(),
+        inputFlowId);
   }
 }

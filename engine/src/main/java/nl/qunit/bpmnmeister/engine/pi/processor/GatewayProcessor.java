@@ -8,10 +8,10 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
 
-public abstract class GatewayProcessor<G extends Gateway, S extends GatewayState>
+public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewayState>
     extends StateProcessor<G, S> {
 
   @Override
@@ -22,8 +22,8 @@ public abstract class GatewayProcessor<G extends Gateway, S extends GatewayState
       G element,
       S oldState,
       Variables variables) {
-    if (oldState.getState() == ActivityStateEnum.READY
-        || oldState.getState() == ActivityStateEnum.ACTIVE) {
+    if (oldState.getState() == FlowNodeStateEnum.READY
+        || oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       return triggerDecision(trigger, processInstance, definition, element, oldState, variables);
     }
     return new TriggerResult(

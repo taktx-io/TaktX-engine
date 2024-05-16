@@ -13,29 +13,32 @@ public class SubProcessState extends ActivityState {
 
   @JsonCreator
   public SubProcessState(
-      @Nonnull @JsonProperty("state") ActivityStateEnum state,
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("loopCnt") int loopCnt) {
-    super(state, elementInstanceId, passedCnt, loopCnt);
+      @JsonProperty("loopCnt") int loopCnt,
+      @JsonProperty("inputFlowId") String inputFlowId) {
+    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
   }
 
   @Override
   public ActivityState getNextLoopState() {
     return new SubProcessState(
-        ActivityStateEnum.ACTIVE,
+        FlowNodeStateEnum.ACTIVE,
         this.getElementInstanceId(),
         this.getPassedCnt(),
-        this.getLoopCnt() + 1);
+        this.getLoopCnt() + 1,
+        this.getInputFlowId());
   }
 
   @Override
   public ActivityState getFinishedLoopState() {
     return new SubProcessState(
-        ActivityStateEnum.FINISHED,
+        FlowNodeStateEnum.FINISHED,
         this.getElementInstanceId(),
         this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1);
+        this.getLoopCnt() + 1,
+        this.getInputFlowId());
   }
 
 }

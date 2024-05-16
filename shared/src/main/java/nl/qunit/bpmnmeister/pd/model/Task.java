@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
 
 @Getter
@@ -63,11 +63,11 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
   }
 
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
-    return new Task<TaskState>(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
+    return new Task<>(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
   }
 
   @Override
-  public TaskState getInitialState() {
-    return new TaskState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
+  public TaskState getInitialState(String inputFlowId, int passedCnt) {
+    return new TaskState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
   }
 }

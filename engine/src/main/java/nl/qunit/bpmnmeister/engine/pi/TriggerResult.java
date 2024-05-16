@@ -6,19 +6,20 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NonNull;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 
 @Getter
 @Builder(toBuilder = true)
 public class TriggerResult {
-  @NonNull private final BpmnElementState newElementState;
+  public static final TriggerResult EMPTY = TriggerResult.builder().build();
+
+  @Builder.Default private FlowNodeState newFlowNodeState = null;
   @Builder.Default private Set<String> newActiveFlows = Set.of();
   @Builder.Default private Set<String> externalTasks = Set.of();
   @Builder.Default private Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
@@ -30,7 +31,7 @@ public class TriggerResult {
 
   @JsonCreator
   public TriggerResult(
-      @Nonnull @JsonProperty("newElementState") BpmnElementState newElementState,
+      @Nonnull @JsonProperty("newFlowNodeState") FlowNodeState newFlowNodeState,
       @Nonnull @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
       @Nonnull @JsonProperty("externalTasks") Set<String> externalTasks,
       @Nonnull @JsonProperty("newProcessInstanceTriggers")
@@ -40,7 +41,7 @@ public class TriggerResult {
       @Nonnull @JsonProperty("newSchedules") Set<MessageScheduler> newSchedules,
       @Nonnull @JsonProperty("cancelSchedules") Set<ScheduleKey> cancelSchedules,
       @Nonnull @JsonProperty("variables") Variables variables) {
-    this.newElementState = newElementState;
+    this.newFlowNodeState = newFlowNodeState;
     this.newActiveFlows = newActiveFlows;
     this.externalTasks = externalTasks;
     this.newProcessInstanceTriggers = newProcessInstanceTriggers;

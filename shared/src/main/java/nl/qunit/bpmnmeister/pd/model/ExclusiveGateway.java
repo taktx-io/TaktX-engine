@@ -7,8 +7,8 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -29,7 +29,7 @@ public class ExclusiveGateway extends Gateway<ExclusiveGatewayState> {
   }
 
   @Override
-  public ExclusiveGatewayState getInitialState() {
-    return new ExclusiveGatewayState(UUID.randomUUID(), 0, ActivityStateEnum.READY);
+  public ExclusiveGatewayState getInitialState(String inputFlowId, int passedCnt) {
+    return new ExclusiveGatewayState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

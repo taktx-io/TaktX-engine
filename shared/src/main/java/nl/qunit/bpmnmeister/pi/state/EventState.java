@@ -7,9 +7,9 @@ import lombok.ToString;
 
 @Getter
 @ToString(callSuper = true)
-public abstract class EventState extends BpmnElementState {
+public abstract class EventState extends FlowNodeState {
   @JsonCreator
-  protected EventState(UUID elementInstanceId, int passedCnt) {
-    super(elementInstanceId, passedCnt);
+  protected EventState(UUID elementInstanceId, int passedCnt, FlowNodeStateEnum flowNodeStateEnum, String inputFlowId) {
+    super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
 }

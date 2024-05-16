@@ -11,8 +11,10 @@ public class ExclusiveGatewayState extends GatewayState {
   public ExclusiveGatewayState(
       @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("state") ActivityStateEnum state) {
-    super(elementInstanceId, passedCnt, state);
+      @JsonProperty("state") FlowNodeStateEnum state,
+      @JsonProperty("inputFlowId") String inputFlowId
+      ) {
+    super(elementInstanceId, passedCnt, state, inputFlowId);
   }
 
 }

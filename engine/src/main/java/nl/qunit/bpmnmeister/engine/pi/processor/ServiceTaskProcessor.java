@@ -28,8 +28,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -50,7 +49,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTask element,
       ServiceTaskState oldState,
       Variables variables) {
-    if (oldState.getState() != ActivityStateEnum.READY) {
+    if (oldState.getState() != FlowNodeStateEnum.READY) {
       return new TriggerResult(
           oldState,
           Set.of(),
@@ -65,11 +64,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
     return new TriggerResult(
         new ServiceTaskState(
-            ActivityStateEnum.ACTIVE,
+            FlowNodeStateEnum.ACTIVE,
             oldState.getElementInstanceId(),
             oldState.getPassedCnt(),
             oldState.getLoopCnt(),
-            oldState.getAttempt() + 1),
+            oldState.getAttempt() + 1,
+            oldState.getInputFlowId()),
         Set.of(),
         Set.of(workerDefinition),
         Set.of(),
@@ -94,7 +94,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTaskState oldState,
       Variables variables) {
 
-    if (oldState.getState() != ActivityStateEnum.ACTIVE) {
+    if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
       return new TriggerResult(
           oldState,
           Set.of(),
@@ -129,11 +129,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
     } else {
       ServiceTaskState newServiceTaskState =
           new ServiceTaskState(
-              ActivityStateEnum.ACTIVE,
+              FlowNodeStateEnum.ACTIVE,
               oldState.getElementInstanceId(),
               oldState.getPassedCnt(),
               oldState.getLoopCnt(),
-              oldState.getAttempt() + 1);
+              oldState.getAttempt() + 1,
+              oldState.getInputFlowId());
       ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
       Set<String> workerDefinitions = Set.of();
       Set<MessageScheduler> messageSchedulers = Set.of();
@@ -184,22 +185,24 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
           throwingEvent = new FailThrowingEvent();
           newServiceTaskState =
               new ServiceTaskState(
-                  ActivityStateEnum.TERMINATED,
+                  FlowNodeStateEnum.TERMINATED,
                   oldState.getElementInstanceId(),
                   oldState.getPassedCnt(),
                   oldState.getLoopCnt(),
-                  oldState.getAttempt());
+                  oldState.getAttempt(),
+                  oldState.getInputFlowId());
         }
       } else {
         // No retries allowed, fail the task and the processInstance
         throwingEvent = new FailThrowingEvent();
         newServiceTaskState =
             new ServiceTaskState(
-                ActivityStateEnum.TERMINATED,
+                FlowNodeStateEnum.TERMINATED,
                 oldState.getElementInstanceId(),
                 oldState.getPassedCnt(),
                 oldState.getLoopCnt(),
-                oldState.getAttempt());
+                oldState.getAttempt(),
+                oldState.getInputFlowId());
       }
 
       Set<ProcessInstanceTrigger> newProcessInstanceTriggers = new HashSet<>();
@@ -266,17 +269,13 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
   }
 
   @Override
-  protected BpmnElementState getTerminateElementState(ServiceTaskState elementState) {
-    ServiceTaskState newState = elementState;
-    if (elementState.getState() == ActivityStateEnum.ACTIVE) {
-      newState =
-          new ServiceTaskState(
-              ActivityStateEnum.TERMINATED,
-              elementState.getElementInstanceId(),
-              elementState.getPassedCnt(),
-              elementState.getLoopCnt(),
-              elementState.getAttempt());
-    }
-    return newState;
+  protected ServiceTaskState getTerminateElementState(ServiceTaskState elementState) {
+    return new ServiceTaskState(
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        elementState.getLoopCnt(),
+        elementState.getAttempt(),
+        elementState.getInputFlowId());
   }
 }

@@ -3,13 +3,9 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
-import nl.qunit.bpmnmeister.pi.ElementStates;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 
 @EqualsAndHashCode
 @Getter
@@ -33,10 +29,4 @@ public class ProcessDefinition {
     this.state = state;
   }
 
-  public ElementStates initElementStates() {
-    Map<String, BpmnElementState> collect =
-        definitions.getRootProcess().getFlowElements().getFlowNodes().stream()
-            .collect(Collectors.toMap(FlowNode::getId, FlowNode::getInitialState));
-    return new ElementStates(collect);
-  }
 }

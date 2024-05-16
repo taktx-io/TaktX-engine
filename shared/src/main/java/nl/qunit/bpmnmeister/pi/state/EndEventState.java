@@ -13,8 +13,10 @@ public class EndEventState extends EventState {
   @JsonCreator
   public EndEventState(
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("passedCnt") int passedCnt) {
-    super(elementInstanceId, passedCnt);
+      @JsonProperty("passedCnt") int passedCnt,
+      @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
+      @JsonProperty("inputFlowId") String inputFlowId) {
+    super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
 
 }

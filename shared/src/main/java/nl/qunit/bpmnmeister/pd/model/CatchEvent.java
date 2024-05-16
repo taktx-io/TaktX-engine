@@ -2,14 +2,15 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nonnull;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Getter
-public abstract class CatchEvent<S extends BpmnElementState> extends Event<S> {
+@EqualsAndHashCode(callSuper = true)
+public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> {
   protected final Set<EventDefinition> eventDefinitions;
 
   protected CatchEvent(
@@ -30,23 +31,4 @@ public abstract class CatchEvent<S extends BpmnElementState> extends Event<S> {
         .collect(Collectors.toSet());
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    CatchEvent that = (CatchEvent) o;
-    return Objects.equals(eventDefinitions, that.eventDefinitions);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), eventDefinitions);
-  }
 }

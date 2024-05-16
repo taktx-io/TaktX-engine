@@ -11,7 +11,7 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
 @ApplicationScoped
@@ -40,7 +40,8 @@ public class ParallelGatewayProcessor
             UUID.randomUUID(),
             newTriggeredFlows,
             oldState.getPassedCnt() + 1,
-            ActivityStateEnum.ACTIVE),
+            FlowNodeStateEnum.ACTIVE,
+            oldState.getInputFlowId()),
         outputFlows,
         Set.of(),
         Set.of(),
@@ -49,5 +50,15 @@ public class ParallelGatewayProcessor
         Set.of(),
         Set.of(),
         Variables.EMPTY);
+  }
+
+  @Override
+  protected ParallelGatewayState getTerminateElementState(ParallelGatewayState elementState) {
+    return new ParallelGatewayState(
+        elementState.getElementInstanceId(),
+        elementState.getTriggeredFlows(),
+        elementState.getPassedCnt(),
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getInputFlowId());
   }
 }

@@ -13,8 +13,8 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
-import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventStateEnum;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
@@ -29,30 +29,17 @@ public class IntermediateCatchEventProcessor
       ProcessInstance processInstance,
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState) {
-    if (oldState.getState() == IntermediateCatchEventStateEnum.READY) {
+    if (oldState.getState() == FlowNodeStateEnum.READY) {
       return scheduleEvents(processInstance, element, oldState);
-    } else if (oldState.getState() == IntermediateCatchEventStateEnum.WAITING) {
+    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       if (trigger.getInputFlowId().equals(Constants.NONE)) {
         return timerTriggered(oldState, element);
       } else {
         return scheduleEvents(processInstance, element, oldState);
       }
-    } else {
-      return new TriggerResult(
-          new IntermediateCatchEventState(
-              oldState.getElementInstanceId(),
-              oldState.getPassedCnt(),
-              oldState.getState(),
-              oldState.getScheduledKeys()),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
     }
+    throw new IllegalStateException(
+        "IntermediateCatchEventProcessor: Unexpected state: " + oldState.getState());
   }
 
   private static TriggerResult timerTriggered(
@@ -61,8 +48,9 @@ public class IntermediateCatchEventProcessor
         new IntermediateCatchEventState(
             oldState.getElementInstanceId(),
             oldState.getPassedCnt() + 1,
-            IntermediateCatchEventStateEnum.WAITING,
-            oldState.getScheduledKeys()),
+            FlowNodeStateEnum.ACTIVE,
+            oldState.getScheduledKeys(),
+            oldState.getInputFlowId()),
         element.getOutgoing(),
         Set.of(),
         Set.of(),
@@ -101,10 +89,11 @@ public class IntermediateCatchEventProcessor
         new IntermediateCatchEventState(
             oldState.getElementInstanceId(),
             oldState.getPassedCnt(),
-            IntermediateCatchEventStateEnum.WAITING,
+            FlowNodeStateEnum.ACTIVE,
             messageSchedulers.stream()
                 .map(MessageScheduler::getScheduleKey)
-                .collect(Collectors.toSet())),
+                .collect(Collectors.toSet()),
+            oldState.getInputFlowId()),
         Set.of(),
         Set.of(),
         Set.of(),
@@ -113,5 +102,16 @@ public class IntermediateCatchEventProcessor
         messageSchedulers,
         oldState.getScheduledKeys(), // Cancel any old schedules
         Variables.EMPTY);
+  }
+
+  @Override
+  protected IntermediateCatchEventState getTerminateElementState(
+      IntermediateCatchEventState elementState) {
+    return new IntermediateCatchEventState(
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getScheduledKeys(),
+        elementState.getInputFlowId());
   }
 }

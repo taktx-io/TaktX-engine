@@ -8,14 +8,13 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ElementStates;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -54,7 +53,7 @@ public class ProcessInstanceMigrationProcessor
     Set<String> newIds = new HashSet<>(newDefinitionIds);
     newIds.removeAll(existingIds);
 
-    Map<String, BpmnElementState> newElementStates = new HashMap<>();
+    Map<String, FlowNodeState> newElementStates = new HashMap<>();
     updatedIds.forEach(
         updatedId -> {
           BaseElement oldElement =
@@ -69,24 +68,9 @@ public class ProcessInstanceMigrationProcessor
                   .getRootProcess()
                   .getFlowElements()
                   .get(updatedId);
-          BpmnElementState oldState = processInstance.getElementStates().get(updatedId);
+          FlowNodeState oldState = processInstance.getElementStates().get(updatedId);
           if (oldElement.getClass().equals(newElement.getClass())) {
             newElementStates.put(updatedId, oldState);
-          } else {
-            if (newElement instanceof FlowNode flowNode) {
-              BpmnElementState newElementState = flowNode.getInitialState();
-              newElementStates.put(updatedId, newElementState);
-            }
-          }
-        });
-
-    newIds.forEach(
-        newId -> {
-          BaseElement newElement =
-              newProcessDefinition.getDefinitions().getRootProcess().getFlowElements().get(newId);
-          if (newElement instanceof FlowNode flowNode) {
-            BpmnElementState newElementState = flowNode.getInitialState();
-            newElementStates.put(newId, newElementState);
           }
         });
 
@@ -97,7 +81,7 @@ public class ProcessInstanceMigrationProcessor
             processInstance.getProcessInstanceKey(),
             processInstance.getParentInstanceKey(),
             processDefinitionKey,
-            new ElementStates(newElementStates),
+            new FlowNodeStates(newElementStates),
             processInstance.getVariables(),
             processInstance.getProcessInstanceState());
 

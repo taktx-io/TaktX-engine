@@ -15,33 +15,36 @@ public class ServiceTaskState extends TaskState {
 
   @JsonCreator
   public ServiceTaskState(
-      @Nonnull @JsonProperty("state") ActivityStateEnum state,
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("attempt") int attempt) {
-    super(state, elementInstanceId, passedCnt, loopCnt);
+      @JsonProperty("attempt") int attempt,
+      @JsonProperty("inputFlowId") String inputflowId) {
+    super(state, elementInstanceId, passedCnt, loopCnt, inputflowId);
     this.attempt = attempt;
   }
 
   @Override
   public ActivityState getNextLoopState() {
     return new ServiceTaskState(
-        ActivityStateEnum.ACTIVE,
+        FlowNodeStateEnum.ACTIVE,
         this.getElementInstanceId(),
         this.getPassedCnt(),
         this.getLoopCnt() + 1,
-        this.getAttempt());
+        this.getAttempt(),
+        this.getInputFlowId());
   }
 
   @Override
   public ActivityState getFinishedLoopState() {
     return new ServiceTaskState(
-        ActivityStateEnum.FINISHED,
+        FlowNodeStateEnum.FINISHED,
         this.getElementInstanceId(),
         this.getPassedCnt() + 1,
         this.getLoopCnt() + 1,
-        this.getAttempt());
+        this.getAttempt(),
+        this.getInputFlowId());
   }
 
 }

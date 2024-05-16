@@ -7,14 +7,18 @@ import lombok.ToString;
 
 @Getter
 @ToString(callSuper = true)
-public abstract class ActivityState extends BpmnElementState {
+public abstract class ActivityState extends FlowNodeState {
 
-  private final ActivityStateEnum state;
+  private final FlowNodeStateEnum state;
   private final int loopCnt;
 
   protected ActivityState(
-      ActivityStateEnum state, UUID elementInstanceId, int passedCnt, int loopCnt) {
-    super(elementInstanceId, passedCnt);
+      FlowNodeStateEnum state,
+      UUID elementInstanceId,
+      int passedCnt,
+      int loopCnt,
+      String inputFlowId) {
+    super(elementInstanceId, passedCnt, state, inputFlowId);
     this.state = state;
     this.loopCnt = loopCnt;
   }

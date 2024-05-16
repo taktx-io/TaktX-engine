@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 
 @Getter
@@ -62,7 +62,7 @@ public class SubProcess extends Activity<SubProcessState> {
   }
 
   @Override
-  public SubProcessState getInitialState() {
-    return new SubProcessState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
+  public SubProcessState getInitialState(String inputFlowId, int passedCnt) {
+    return new SubProcessState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
   }
 }

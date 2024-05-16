@@ -21,12 +21,16 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = SubProcessState.class),
 })
 @ToString
-public abstract class BpmnElementState {
+public abstract class FlowNodeState {
   private final UUID elementInstanceId;
   private final int passedCnt;
+  private final FlowNodeStateEnum state;
+  private final String inputFlowId;
 
-  protected BpmnElementState(UUID elementInstanceId, int passedCnt) {
+  protected FlowNodeState(UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
     this.elementInstanceId = elementInstanceId;
     this.passedCnt = passedCnt;
+    this.state = state;
+    this.inputFlowId = inputFlowId;
   }
 }

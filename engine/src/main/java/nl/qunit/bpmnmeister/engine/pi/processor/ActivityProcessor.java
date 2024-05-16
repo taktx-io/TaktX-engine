@@ -23,7 +23,7 @@ import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 public abstract class ActivityProcessor<E extends Activity, S extends ActivityState>
     extends StateProcessor<E, S> {
@@ -58,7 +58,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
             .getRootProcess()
             .getFlowElements()
             .getBoundaryEventsAttachedToElement(element.getId());
-    S newElementState = (S) triggerResult.getNewElementState();
+    S newElementState = (S) triggerResult.getNewFlowNodeState();
     Set<ProcessInstanceTrigger> triggers =
         new HashSet<>(triggerResult.getNewProcessInstanceTriggers());
     if (elementActivated(oldState, newElementState)) {
@@ -100,13 +100,13 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   }
 
   private boolean elementActivated(S oldState, S newState) {
-    return oldState.getState() == ActivityStateEnum.READY
-        && newState.getState() == ActivityStateEnum.ACTIVE;
+    return oldState.getState() == FlowNodeStateEnum.READY
+        && newState.getState() == FlowNodeStateEnum.ACTIVE;
   }
 
   protected boolean elementFinished(S oldState, S newState) {
-    return oldState.getState() == ActivityStateEnum.ACTIVE
-        && newState.getState() == ActivityStateEnum.FINISHED;
+    return oldState.getState() == FlowNodeStateEnum.ACTIVE
+        && newState.getState() == FlowNodeStateEnum.FINISHED;
   }
 
   private TriggerResult triggerFlowElementWithLoop(
@@ -160,7 +160,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
               oldState.getLoopCnt());
 
       return TriggerResult.builder()
-          .newElementState(oldState.getNextLoopState())
+          .newFlowNodeState(oldState.getNextLoopState())
           .newProcessInstanceTriggers(subProcessTriggers)
           .variables(returnVariables)
           .build();

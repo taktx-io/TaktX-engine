@@ -14,14 +14,13 @@ import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pi.ElementStates;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
@@ -30,7 +29,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -88,7 +87,7 @@ public class ProcessInstanceProcessor
               startNewProcessInstanceTrigger.getProcessInstanceKey(),
               startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
               processDefinitionKey,
-              definition.initElementStates(),
+              FlowNodeStates.EMPTY,
               startNewProcessInstanceTrigger.getVariables(),
               ProcessInstanceState.START);
       storeProcessDefinition(definition);
@@ -228,29 +227,25 @@ public class ProcessInstanceProcessor
             + " with trigger "
             + trigger);
     String elementId = trigger.getElementId();
-    Optional<FlowElement> optFlowElement =
-        definition.getDefinitions().getRootProcess().getFlowElements().getFlowElement(elementId);
-    if (optFlowElement.isPresent()) {
-      LOG.info("Element states: " + processInstance.getElementStates());
-
+    Optional<FlowNode> optFlowNode =
+        definition.getDefinitions().getRootProcess().getFlowElements().getFlowNode(elementId);
+    if (optFlowNode.isPresent()) {
       // Merge the variables from the process instance with the variables from the trigger
       Variables mergedVariables = processInstance.getVariables().merge(trigger.getVariables());
-      LOG.info("Variables: " + mergedVariables);
 
-      BaseElement flowElement = optFlowElement.get();
-      StateProcessor<? extends BaseElement, ? extends BpmnElementState> processor =
-          processorProvider.getProcessor(flowElement);
-      BpmnElementState elementState = processInstance.getElementStates().get(elementId);
-
+      FlowNode flowNode = optFlowNode.get();
+      StateProcessor<? extends BaseElement, ? extends FlowNodeState> processor =
+          processorProvider.getProcessor(flowNode);
       TriggerResult triggerResult =
-          processor.trigger(
-              trigger, processInstance, definition, flowElement, elementState, mergedVariables);
+          processor.trigger(trigger, processInstance, definition, flowNode, mergedVariables);
 
-      newProcessInstance =
-          processTriggerResult(
-              processInstance, definition, elementId, triggerResult, mergedVariables, flowElement);
+      if (!triggerResult.equals(TriggerResult.EMPTY)) {
+        newProcessInstance =
+            processTriggerResult(
+                processInstance, definition, elementId, triggerResult, mergedVariables, flowNode);
+      }
     } else {
-      LOG.error("Flow element not found: " + trigger.getElementId());
+      LOG.error("Flownode not found: " + trigger.getElementId());
     }
     return newProcessInstance;
   }
@@ -263,8 +258,8 @@ public class ProcessInstanceProcessor
       Variables mergedVariables,
       BaseElement flowElement) {
     ProcessInstance newProcessInstance;
-    ElementStates newElementStates =
-        processInstance.getElementStates().put(elementId, triggerResult.getNewElementState());
+    FlowNodeStates newFlowNodeStates =
+        processInstance.getElementStates().put(elementId, triggerResult.getNewFlowNodeState());
 
     Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 
@@ -281,7 +276,7 @@ public class ProcessInstanceProcessor
             processInstance.getProcessInstanceKey(),
             processInstance.getParentInstanceKey(),
             processInstance.getProcessDefinitionKey(),
-            newElementStates,
+            newFlowNodeStates,
             variablesWithTriggerResult,
             newProcessInstanceState);
 

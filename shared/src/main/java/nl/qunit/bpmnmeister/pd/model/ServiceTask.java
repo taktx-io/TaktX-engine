@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 
 @Getter
@@ -38,8 +38,9 @@ public class ServiceTask extends Task<ServiceTaskState> {
     this.headers = headers;
   }
 
-  public ServiceTaskState getInitialState() {
-    return new ServiceTaskState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0, 0);
+  @Override
+  public ServiceTaskState getInitialState(String inputFlowId, int passedCnt) {
+    return new ServiceTaskState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
   }
 
   @Override

@@ -18,7 +18,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
-import nl.qunit.bpmnmeister.pi.state.BoundaryEventStateEnum;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -38,12 +38,13 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
     Set<ScheduleKey> cancelSchedules = new HashSet<>(boundaryEventState.getScheduleKeys());
 
     return TriggerResult.builder()
-        .newElementState(
+        .newFlowNodeState(
             new BoundaryEventState(
                 boundaryEventState.getElementInstanceId(),
                 boundaryEventState.getPassedCnt(),
-                BoundaryEventStateEnum.TERMINATED,
-                boundaryEventState.getScheduleKeys()))
+                FlowNodeStateEnum.TERMINATED,
+                boundaryEventState.getScheduleKeys(),
+                boundaryEventState.getInputFlowId()))
         .cancelSchedules(cancelSchedules)
         .build();
   }
@@ -57,13 +58,13 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
       BoundaryEventState oldState,
       Variables variables) {
 
-    if (oldState.getState() == BoundaryEventStateEnum.READY) {
+    if (oldState.getState() == FlowNodeStateEnum.READY) {
       return startScheduler(processInstance, element, oldState, variables);
-    } else if (oldState.getState() == BoundaryEventStateEnum.WAITING) {
+    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       return timeout(processInstance, element, oldState, variables);
     } else {
       // Any scheduled triggers will be ignored here
-      return TriggerResult.builder().newElementState(oldState).build();
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
   }
 
@@ -81,12 +82,13 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
     }
 
     return TriggerResult.builder()
-        .newElementState(
+        .newFlowNodeState(
             new BoundaryEventState(
                 oldState.getElementInstanceId(),
                 oldState.getPassedCnt() + 1,
                 oldState.getState(),
-                oldState.getScheduleKeys()))
+                oldState.getScheduleKeys(),
+                oldState.getInputFlowId()))
         .newActiveFlows(element.getOutgoing())
         .newProcessInstanceTriggers(cancelElementTriggers)
         .variables(variables)
@@ -117,13 +119,24 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
     Set<ScheduleKey> scheduleKeys =
         schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());
     return TriggerResult.builder()
-        .newElementState(
+        .newFlowNodeState(
             new BoundaryEventState(
                 oldState.getElementInstanceId(),
                 oldState.getPassedCnt(),
-                BoundaryEventStateEnum.WAITING,
-                scheduleKeys))
+                FlowNodeStateEnum.ACTIVE,
+                scheduleKeys,
+                oldState.getInputFlowId()))
         .messageSchedulers(schedules)
         .build();
+  }
+
+  @Override
+  protected BoundaryEventState getTerminateElementState(BoundaryEventState elementState) {
+    return new BoundaryEventState(
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getScheduleKeys(),
+        elementState.getInputFlowId());
   }
 }

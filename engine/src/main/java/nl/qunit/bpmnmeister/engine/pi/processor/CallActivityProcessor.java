@@ -10,9 +10,8 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
 public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallActivityState> {
@@ -25,13 +24,14 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
       CallActivity element,
       CallActivityState oldState,
       Variables variables) {
-    if (oldState.getState() == ActivityStateEnum.READY) {
+    if (oldState.getState() == FlowNodeStateEnum.READY) {
       return new TriggerResult(
           new CallActivityState(
-              ActivityStateEnum.ACTIVE,
+              FlowNodeStateEnum.ACTIVE,
               oldState.getElementInstanceId(),
               oldState.getPassedCnt(),
-              oldState.getLoopCnt()),
+              oldState.getLoopCnt(),
+              oldState.getInputFlowId()),
           Set.of(),
           Set.of(),
           Set.of(),
@@ -45,13 +45,14 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
           Set.of(),
           Set.of(),
           Variables.EMPTY);
-    } else if (oldState.getState() == ActivityStateEnum.ACTIVE) {
+    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       CallActivityState newState =
           new CallActivityState(
-              ActivityStateEnum.FINISHED,
+              FlowNodeStateEnum.FINISHED,
               oldState.getElementInstanceId(),
               oldState.getPassedCnt() + 1,
-              oldState.getLoopCnt());
+              oldState.getLoopCnt(),
+              oldState.getInputFlowId());
       return finishActivity(processInstance, element, newState, variables);
     } else {
       return new TriggerResult(
@@ -68,16 +69,12 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
   }
 
   @Override
-  protected BpmnElementState getTerminateElementState(CallActivityState elementState) {
-    CallActivityState newState = elementState;
-    if (elementState.getState() == ActivityStateEnum.ACTIVE) {
-      newState =
-          new CallActivityState(
-              ActivityStateEnum.TERMINATED,
-              elementState.getElementInstanceId(),
-              elementState.getPassedCnt(),
-              elementState.getLoopCnt());
-    }
-    return newState;
+  protected CallActivityState getTerminateElementState(CallActivityState elementState) {
+    return new CallActivityState(
+        FlowNodeStateEnum.TERMINATED,
+        elementState.getElementInstanceId(),
+        elementState.getPassedCnt(),
+        elementState.getLoopCnt(),
+        elementState.getInputFlowId());
   }
 }

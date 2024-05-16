@@ -8,11 +8,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.ActivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public class CallActivity extends Activity<CallActivityState> {
 
   @Nonnull private final String calledElement;
@@ -72,7 +74,7 @@ public class CallActivity extends Activity<CallActivityState> {
   }
 
   @Override
-  public CallActivityState getInitialState() {
-    return new CallActivityState(ActivityStateEnum.READY, UUID.randomUUID(), 0, 0);
+  public CallActivityState getInitialState(String inputFlowId, int passedCnt) {
+    return new CallActivityState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
   }
 }

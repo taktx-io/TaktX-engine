@@ -16,7 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @ApplicationScoped
 public class ProcessorProvider {
@@ -59,9 +59,9 @@ public class ProcessorProvider {
     throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }
 
-  private StateProcessor<? extends BaseElement, ? extends BpmnElementState>
+  private StateProcessor<? extends BaseElement, ? extends FlowNodeState>
       getStateProcessorForActivity(Activity element) {
-    ActivityProcessor<? extends Activity, ? extends BpmnElementState> processor = null;
+    ActivityProcessor<? extends Activity, ? extends FlowNodeState> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
     } else if (element instanceof Task) {

@@ -4,11 +4,11 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class Gateway<S extends BpmnElementState> extends FlowNode<S> {
+public abstract class Gateway<S extends FlowNodeState> extends FlowNode<S> {
   protected Gateway(
       @Nonnull String id,
       @Nonnull String parentId,

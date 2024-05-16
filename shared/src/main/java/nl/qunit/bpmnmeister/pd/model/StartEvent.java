@@ -6,6 +6,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
 @Getter
@@ -22,7 +23,7 @@ public class StartEvent extends CatchEvent<StartEventState> {
   }
 
   @Override
-  public StartEventState getInitialState() {
-    return new StartEventState(UUID.randomUUID(), 0);
+  public StartEventState getInitialState(String inputFlowId, int passedCnt) {
+    return new StartEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

@@ -4,11 +4,11 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.BpmnElementState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class FlowNode<S extends BpmnElementState> extends FlowElement {
+public abstract class FlowNode<S extends FlowNodeState> extends FlowElement {
   private final Set<String> incoming;
   private final Set<String> outgoing;
 
@@ -22,5 +22,5 @@ public abstract class FlowNode<S extends BpmnElementState> extends FlowElement {
     this.outgoing = outgoing;
   }
 
-  public abstract S getInitialState();
+  public abstract S getInitialState(String inputFlowId, int passedCnt);
 }

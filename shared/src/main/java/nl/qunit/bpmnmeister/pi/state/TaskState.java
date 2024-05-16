@@ -11,28 +11,31 @@ import lombok.ToString;
 public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
-      @JsonProperty("state") ActivityStateEnum state,
+      @JsonProperty("state") FlowNodeStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("loopCnt") int loopCnt) {
-    super(state, elementInstanceId, passedCnt, loopCnt);
+      @JsonProperty("loopCnt") int loopCnt,
+      @JsonProperty("inputFlowId") String inputFlowId) {
+    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
   }
 
   @Override
   public ActivityState getNextLoopState() {
     return new TaskState(
-        ActivityStateEnum.ACTIVE,
+        FlowNodeStateEnum.ACTIVE,
         this.getElementInstanceId(),
         this.getPassedCnt(),
-        this.getLoopCnt() + 1);
+        this.getLoopCnt() + 1,
+        this.getInputFlowId());
   }
 
   @Override
   public ActivityState getFinishedLoopState() {
     return new TaskState(
-        ActivityStateEnum.FINISHED,
+        FlowNodeStateEnum.FINISHED,
         this.getElementInstanceId(),
         this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1);
+        this.getLoopCnt() + 1,
+        this.getInputFlowId());
   }
 }
