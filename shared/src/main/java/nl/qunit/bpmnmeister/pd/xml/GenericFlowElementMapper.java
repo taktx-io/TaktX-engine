@@ -18,6 +18,7 @@ import nl.qunit.bpmnmeister.bpmn.TGateway;
 import nl.qunit.bpmnmeister.bpmn.TInclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TIntermediateCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TParallelGateway;
+import nl.qunit.bpmnmeister.bpmn.TSendTask;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
 import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
@@ -163,6 +164,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           bpmnMapperFactory
               .createServiceTaskMapper()
               .map(serviceTask, parentId, loopCharacteristics);
+    } else if (activity instanceof TSendTask sendTask) {
+      activityFlowElement =
+          bpmnMapperFactory
+              .createSendTaskMapper()
+              .map(sendTask, parentId, loopCharacteristics);
     } else if (activity instanceof TTask task) {
       activityFlowElement =
           new Task<>(

@@ -50,4 +50,12 @@ public class BpmnMapperFactory {
       return new GenericServiceTaskMapper();
     }
   }
+
+  public SendTaskMapper createSendTaskMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeSendTaskMapper();
+    } else {
+      return new GenericSendTaskMapper();
+    }
+  }
 }

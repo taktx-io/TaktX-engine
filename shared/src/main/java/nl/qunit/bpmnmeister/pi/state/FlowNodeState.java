@@ -18,6 +18,7 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = TaskState.class),
   @JsonSubTypes.Type(value = CallActivityState.class),
   @JsonSubTypes.Type(value = ServiceTaskState.class),
+  @JsonSubTypes.Type(value = SendTaskState.class),
   @JsonSubTypes.Type(value = SubProcessState.class),
 })
 @ToString

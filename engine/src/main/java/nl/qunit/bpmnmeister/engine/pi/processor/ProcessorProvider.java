@@ -13,6 +13,7 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
+import nl.qunit.bpmnmeister.pd.model.SendTask;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
@@ -33,6 +34,7 @@ public class ProcessorProvider {
   @Inject TaskProcessor taskProcessor;
   @Inject SubProcessProcessor subProcessProcessor;
   @Inject CallActivityProcessor callActivityProcessor;
+  @Inject SendTaskProcessor sendTaskProcessor;
 
   public StateProcessor<?, ?> getProcessor(BaseElement element) {
     if (element instanceof CatchEvent<?> catchEvent) {
@@ -68,12 +70,15 @@ public class ProcessorProvider {
     ActivityProcessor<? extends Activity, ? extends FlowNodeState> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
-    } else if (element instanceof Task) {
-      processor = taskProcessor;
+    } else if (element instanceof SendTask) {
+      processor = sendTaskProcessor;
     } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
     } else if (element instanceof CallActivity) {
       processor = callActivityProcessor;
+    } else if (element instanceof Task) {
+      // This must be the last check, as Task is the superclass of all other tasks
+      processor = taskProcessor;
     }
     return processor;
   }

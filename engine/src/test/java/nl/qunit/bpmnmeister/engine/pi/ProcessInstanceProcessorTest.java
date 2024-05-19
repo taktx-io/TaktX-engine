@@ -560,4 +560,20 @@ class ProcessInstanceProcessorTest {
         .hasNotPassedElement("Task_2")
         .hasPassedElement("Task_3");
   }
+
+  @Test
+  void testSendTask_Single()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/sendtask-single.gen1.bpmn")
+        .startProcessInstance(Variables.EMPTY)
+        .waitUntilServiceTaskIsWaitingForResponse("send-task-id")
+        .andRespondWithSuccess(Variables.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "value1")
+        .hasPassedElement("StartEvent_2")
+        .hasPassedElement("send-task-id")
+        .hasPassedElement("EndEvent_2");
+  }
 }
