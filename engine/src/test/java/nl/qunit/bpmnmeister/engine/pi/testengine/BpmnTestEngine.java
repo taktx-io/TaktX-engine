@@ -384,7 +384,7 @@ public class BpmnTestEngine {
           do {
             poll = processInstances.poll();
             if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getElementStates().get(elementId).getPassedCnt() > 0) {
+                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getFlowNodeStates().get(elementId).get().getPassedCnt() > 0) {
               return poll;
             }
           } while (poll != null);

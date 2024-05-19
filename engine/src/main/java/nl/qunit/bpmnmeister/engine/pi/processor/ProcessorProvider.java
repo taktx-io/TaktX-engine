@@ -10,6 +10,7 @@ import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
@@ -26,6 +27,7 @@ public class ProcessorProvider {
   @Inject EndEventProcessor endEventProcessor;
   @Inject ExclusiveGatewayProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayProcessor parallelGatewayProcessor;
+  @Inject InclusiveGatewayProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskProcessor serviceTaskProcessor;
   @Inject BoundaryEventProcessor boundaryEventProcessor;
   @Inject TaskProcessor taskProcessor;
@@ -39,6 +41,8 @@ public class ProcessorProvider {
       return endEventProcessor;
     } else if (element instanceof ExclusiveGateway) {
       return exclusiveGatewayProcessor;
+    } else if (element instanceof InclusiveGateway) {
+      return inclusiveGatewayProcessor;
     } else if (element instanceof ParallelGateway) {
       return parallelGatewayProcessor;
     } else if (element instanceof Activity activity) {

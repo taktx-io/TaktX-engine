@@ -14,6 +14,8 @@ import nl.qunit.bpmnmeister.bpmn.TCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TEndEvent;
 import nl.qunit.bpmnmeister.bpmn.TExclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
+import nl.qunit.bpmnmeister.bpmn.TGateway;
+import nl.qunit.bpmnmeister.bpmn.TInclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TIntermediateCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TParallelGateway;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
@@ -29,6 +31,8 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.Gateway;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
@@ -37,6 +41,7 @@ import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.state.EventState;
+import nl.qunit.bpmnmeister.pi.state.GatewayState;
 
 public class GenericFlowElementMapper implements FlowElementMapper {
 
@@ -50,22 +55,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     if (tFlowElement instanceof TSequenceFlow tSequenceFlow) {
       return mapSequenceFlow(parentId, tSequenceFlow);
     } else if (tFlowElement instanceof TActivity activity) {
-      return mapActivity(tFlowElement, parentId, activity);
-    } else if (tFlowElement instanceof TParallelGateway parallelGateway) {
-      return new ParallelGateway(
-          parallelGateway.getId(),
-          parentId,
-          mapQNameList(parallelGateway.getIncoming()),
-          mapQNameList(parallelGateway.getOutgoing()));
-    } else if (tFlowElement instanceof TExclusiveGateway exclusiveGateway) {
-      return new ExclusiveGateway(
-          exclusiveGateway.getId(),
-          parentId,
-          mapQNameList(exclusiveGateway.getIncoming()),
-          mapQNameList(exclusiveGateway.getOutgoing()),
-          (exclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
-              ? sequenceFlow.getId()
-              : Constants.NONE);
+      return mapActivity(activity, parentId);
+    } else if (tFlowElement instanceof TGateway gateway) {
+      return mapGateway(gateway, parentId);
     } else if (tFlowElement instanceof TCatchEvent tCatchEvent) {
       return mapCatchEvent(parentId, tCatchEvent);
     } else if (tFlowElement instanceof TEndEvent endEvent) {
@@ -79,6 +71,37 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     throw new IllegalStateException(
         "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
+
+  private Gateway<? extends GatewayState> mapGateway(TGateway gateway, String parentId) {
+    if (gateway instanceof TParallelGateway parallelGateway) {
+      return new ParallelGateway(
+          parallelGateway.getId(),
+          parentId,
+          mapQNameList(parallelGateway.getIncoming()),
+          mapQNameList(parallelGateway.getOutgoing()));
+    } else if (gateway instanceof TExclusiveGateway exclusiveGateway) {
+      return new ExclusiveGateway(
+          exclusiveGateway.getId(),
+          parentId,
+          mapQNameList(exclusiveGateway.getIncoming()),
+          mapQNameList(exclusiveGateway.getOutgoing()),
+          (exclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
+              ? sequenceFlow.getId()
+              : Constants.NONE);
+    } else if (gateway instanceof TInclusiveGateway inclusiveGateway) {
+      return new InclusiveGateway(
+          inclusiveGateway.getId(),
+          parentId,
+          mapQNameList(inclusiveGateway.getIncoming()),
+          mapQNameList(inclusiveGateway.getOutgoing()),
+          (inclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
+              ? sequenceFlow.getId()
+              : Constants.NONE
+          );
+    }
+
+    throw new IllegalStateException(
+        "Unknown flow element type: " + gateway.getClass().getName());    }
 
   private CatchEvent<? extends EventState> mapCatchEvent(String parentId, TCatchEvent tCatchEvent) {
     if (tCatchEvent instanceof TStartEvent startEvent) {
@@ -113,7 +136,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     }
 
     throw new IllegalStateException(
-        "Unknown flow element type: " + tCatchEvent.getClass().getName());  }
+        "Unknown flow element type: " + tCatchEvent.getClass().getName());
+  }
 
   private SequenceFlow mapSequenceFlow(String parentId, TSequenceFlow tSequenceFlow) {
     return new SequenceFlow(
@@ -128,8 +152,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
             : FlowCondition.NONE);
   }
 
-  private FlowElement mapActivity(TFlowElement tFlowElement, String parentId,
-      TActivity activity) {
+  private FlowElement mapActivity(TActivity activity, String parentId) {
     LoopCharacteristics loopCharacteristics =
         bpmnMapperFactory
             .createLoopCharacteristicsMapper()
@@ -155,12 +178,12 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                   flowElement ->
                       bpmnMapperFactory
                           .createFlowElementMapper()
-                          .map(flowElement.getValue(), tFlowElement.getId()))
+                          .map(flowElement.getValue(), activity.getId()))
               .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
 
       activityFlowElement =
           new SubProcess(
-              tFlowElement.getId(),
+              activity.getId(),
               parentId,
               mapQNameList(subProcess.getIncoming()),
               mapQNameList(subProcess.getOutgoing()),

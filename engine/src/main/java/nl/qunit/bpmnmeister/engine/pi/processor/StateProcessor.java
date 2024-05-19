@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
+import java.util.Optional;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
@@ -26,8 +27,10 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
       FlowNode<?> element,
       Variables variables) {
     log.info("Trigger processor: " + this);
-    FlowNodeState flowNodeState = processInstance.getElementStates().get(element.getId());
+    Optional<FlowNodeState> optFlowNodeState =
+        processInstance.getFlowNodeStates().get(element.getId());
 
+    FlowNodeState flowNodeState = optFlowNodeState.orElse(null);
     if (trigger instanceof FlowElementTrigger flowElementTrigger) {
       if (flowNodeState == null) {
         flowNodeState = element.getInitialState(flowElementTrigger.getInputFlowId(), 0);

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Optional;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
@@ -30,18 +31,16 @@ public class ProcessInstanceAssert {
     return this;
   }
   public ProcessInstanceAssert hasPassedElement(String elementId, int count) {
-    FlowNodeState bpmnElementState = processInstance.getElementStates()
-        .get(elementId);
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotNull();
-    assertThat(bpmnElementState.getPassedCnt()).as("element " + elementId + " has not passed").isEqualTo(count);
+    Optional<FlowNodeState> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
+    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
+    assertThat(bpmnElementState.get().getPassedCnt()).as("element " + elementId + " has not passed").isEqualTo(count);
     return this;
   }
 
   public ProcessInstanceAssert hasPassedElement(String elementId) {
-    FlowNodeState bpmnElementState = processInstance.getElementStates()
-        .get(elementId);
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotNull();
-    assertThat(bpmnElementState.getPassedCnt()).as("element " + elementId + " has not passed").isPositive();
+    Optional<FlowNodeState> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
+    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
+    assertThat(bpmnElementState.get().getPassedCnt()).as("element " + elementId + " has not passed").isPositive();
     return this;
   }
 
@@ -57,11 +56,9 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasNotPassedElement(String endEvent1) {
-    FlowNodeState bpmnElementState = processInstance.getElementStates()
-        .get(endEvent1);
-    if (bpmnElementState != null) {
-      assertThat(bpmnElementState.getPassedCnt()).as("element " + endEvent1 + " has passed").isZero();
-    }
+    Optional<FlowNodeState> bpmnElementState = processInstance.getFlowNodeStates().get(endEvent1);
+    bpmnElementState.ifPresent(flowNodeState -> assertThat(flowNodeState.getPassedCnt()).as(
+        "element " + endEvent1 + " has passed").isZero());
     return this;
   }
 

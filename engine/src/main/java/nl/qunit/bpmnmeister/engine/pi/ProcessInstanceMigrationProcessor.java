@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
@@ -68,9 +69,9 @@ public class ProcessInstanceMigrationProcessor
                   .getRootProcess()
                   .getFlowElements()
                   .get(updatedId);
-          FlowNodeState oldState = processInstance.getElementStates().get(updatedId);
-          if (oldElement.getClass().equals(newElement.getClass())) {
-            newElementStates.put(updatedId, oldState);
+          Optional<FlowNodeState> oldState = processInstance.getFlowNodeStates().get(updatedId);
+          if (oldState.isPresent() && oldElement.getClass().equals(newElement.getClass())) {
+            newElementStates.put(updatedId, oldState.get());
           }
         });
 

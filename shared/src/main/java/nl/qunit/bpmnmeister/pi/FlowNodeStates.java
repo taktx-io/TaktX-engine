@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -21,8 +22,8 @@ public class FlowNodeStates {
     this.elementStateMap = elementStateMap;
   }
 
-  public FlowNodeState get(String elementId) {
-    return elementStateMap.get(elementId);
+  public Optional<FlowNodeState> get(String elementId) {
+    return Optional.ofNullable(elementStateMap.get(elementId));
   }
 
   public FlowNodeStates put(String elementId, FlowNodeState newElementState) {

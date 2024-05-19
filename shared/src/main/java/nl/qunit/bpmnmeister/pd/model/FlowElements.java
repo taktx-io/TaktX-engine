@@ -78,7 +78,7 @@ public class FlowElements {
   }
 
 
-
+  @JsonIgnore
   public List<BoundaryEvent> getBoundaryEventsAttachedToElement(String id) {
     return elements.values().stream()
         .filter(BoundaryEvent.class::isInstance)
@@ -88,7 +88,8 @@ public class FlowElements {
 
   }
 
-  public List<SequenceFlow> getOutgoingSequenceFlowsForElement(ExclusiveGateway element) {
+  @JsonIgnore
+  public List<SequenceFlow> getOutgoingSequenceFlowsForElement(FlowNode<?> element) {
     return element.getOutgoing().stream()
         .map(this::getFlowElement)
         .filter(Optional::isPresent)
@@ -96,5 +97,15 @@ public class FlowElements {
         .filter(SequenceFlow.class::isInstance)
         .map(SequenceFlow.class::cast)
         .toList();
+  }
+
+  @JsonIgnore
+  public Optional<FlowNode<?>> getFlowNodeWithOutgoingFlow(String sequenceFlowId) {
+    FlowElement flowElement = elements.get(sequenceFlowId);
+    if (flowElement instanceof SequenceFlow sequenceFlow) {
+      return Optional.ofNullable((FlowNode<?>) elements.get(sequenceFlow.getSource()));
+    }
+    return Optional.empty();
+
   }
 }

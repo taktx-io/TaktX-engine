@@ -259,7 +259,7 @@ public class ProcessInstanceProcessor
       BaseElement flowElement) {
     ProcessInstance newProcessInstance;
     FlowNodeStates newFlowNodeStates =
-        processInstance.getElementStates().put(elementId, triggerResult.getNewFlowNodeState());
+        processInstance.getFlowNodeStates().put(elementId, triggerResult.getNewFlowNodeState());
 
     Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 

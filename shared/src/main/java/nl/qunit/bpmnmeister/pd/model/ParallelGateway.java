@@ -19,7 +19,7 @@ public class ParallelGateway extends Gateway<ParallelGatewayState> {
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing) {
-    super(id, parentId, incoming, outgoing);
+    super(id, parentId, incoming, outgoing, Constants.NONE);
   }
 
   @Override
