@@ -1,9 +1,13 @@
 package nl.qunit.bpmnmeister;
 
+import lombok.Getter;
+
+@Getter
 public enum Topics {
   PROCESS_DEFINITION_PARSED_TOPIC("process-definition-parsed-topic"),
   PROCESS_DEFINTIION_ACTIVATION_TOPIC("process-definition-activation-topic"),
   XML_TOPIC("process-definition-xml-topic"),
+  MESSAGE_EVENT_TOPIC("message-event-topic"),
   SCHEDULE_COMMANDS("schedule-commands"),
   PROCESS_INSTANCE_TOPIC("process-instance-topic"),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger-topic"),
@@ -15,14 +19,5 @@ public enum Topics {
 
   Topics(String topicName) {
     this.topicName = topicName;
-  }
-
-  public String getTopicName() {
-    return topicName;
-  }
-
-  @Override
-  public String toString() {
-    return super.toString();
   }
 }

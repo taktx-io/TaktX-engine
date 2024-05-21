@@ -51,7 +51,7 @@ public class ProcessResource {
     }
     StartCommand startCommand =
         new StartCommand(
-            ProcessInstanceKey.NONE, Constants.NONE, processId, new Variables(variablesMap));
+            ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, processId, new Variables(variablesMap));
     KafkaProducer<String, StartCommand> startCommandEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(

@@ -57,7 +57,7 @@ public class CallActivity extends Activity<CallActivityState> {
                 + "-"
                 + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
-    Definitions definitions = new Definitions(subDefinitionsKey, process);
+    Definitions definitions = new Definitions(subDefinitionsKey, process, Map.of());
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);

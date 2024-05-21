@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import static nl.qunit.bpmnmeister.Topics.DEFINITIONS_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.MESSAGE_EVENT_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINITION_PARSED_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
@@ -11,6 +12,7 @@ import static nl.qunit.bpmnmeister.Topics.SCHEDULE_COMMANDS;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.MESSAGE_SUBSCRIPTION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
@@ -58,10 +60,16 @@ import org.apache.kafka.streams.kstream.Produced;
 
 @ApplicationScoped
 public class ProcessDefinitionTopologyProducer {
+  static final ObjectMapperSerde<MessageEvent> MESSAGE_EVENT_SERDE =
+      new ObjectMapperSerde<>(MessageEvent.class);
   static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   static final ObjectMapperSerde<ScheduleKey> SCHEDULE_KEY_SERDE =
       new ObjectMapperSerde<>(ScheduleKey.class);
+  static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
+      new ObjectMapperSerde<>(MessageEventKey.class);
+  static final ObjectMapperSerde<MessageSubscription> MESSAGE_SUBSCRIPTION_SERDE =
+      new ObjectMapperSerde<>(MessageSubscription.class);
   static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
   static final ObjectMapperSerde<ProcessInstanceKeyElementPair>
@@ -114,13 +122,29 @@ public class ProcessDefinitionTopologyProducer {
 
     setupActivationStream(builder);
 
-    setupStartScheduleCommandStream(builder);
+    setupMessageStream(builder);
+
+    setupScheduleCommandStream(builder);
 
     setupProcessInstanceStream(builder);
 
     setupProcessInstanceMigrationStream(builder);
 
     return builder.build();
+  }
+
+  private void setupMessageStream(StreamsBuilder builder) {
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(MESSAGE_SUBSCRIPTION_STORE_NAME),
+            MESSAGE_EVENT_KEY_SERDE,
+            MESSAGE_EVENT_SERDE));
+
+    builder.stream(
+            MESSAGE_EVENT_TOPIC.getTopicName(),
+            Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
+        .process(MessageEventProcessor::new, MESSAGE_SUBSCRIPTION_STORE_NAME)
+        .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
@@ -147,7 +171,7 @@ public class ProcessDefinitionTopologyProducer {
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
             DefinitionsProcessor::new,
-            Stores.XML_BY_HASH_STORE_NAME,
+            XML_BY_HASH_STORE_NAME,
             DEFINITION_COUNT_BY_ID_STORE_NAME,
             PROCESS_DEFINITION_STORE_NAME)
         .split()
@@ -281,7 +305,7 @@ public class ProcessDefinitionTopologyProducer {
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
   }
 
-  private void setupStartScheduleCommandStream(StreamsBuilder builder) {
+  private void setupScheduleCommandStream(StreamsBuilder builder) {
     StreamsBuilder stateStore =
         builder.addStateStore(
             keyValueStoreBuilder(
@@ -337,12 +361,30 @@ public class ProcessDefinitionTopologyProducer {
             PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
             Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
 
-    KStream<ScheduleKey, MessageScheduler> scheduleStream =
+    KStream<Object, Object> scheduleStream =
         activationStreamIn.process(
             () -> new ProcessDefinitionActivationProcessor(messageSchedulerFactory));
-
-    scheduleStream.to(
-        Topics.SCHEDULE_COMMANDS.getTopicName(),
-        Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
+    scheduleStream
+        .split()
+        .branch(
+            (key, value) -> value instanceof MessageScheduler,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((ScheduleKey) key, (MessageScheduler) value))
+                        .to(
+                            Topics.SCHEDULE_COMMANDS.getTopicName(),
+                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
+        .branch(
+            (key, value) -> value == null || value instanceof MessageSubscription,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((MessageEventKey) key, (MessageSubscription) value))
+                        .to(
+                            MESSAGE_EVENT_TOPIC.getTopicName(),
+                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_SUBSCRIPTION_SERDE))));
   }
 }

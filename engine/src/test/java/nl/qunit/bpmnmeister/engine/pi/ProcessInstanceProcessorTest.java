@@ -576,4 +576,40 @@ class ProcessInstanceProcessorTest {
         .hasPassedElement("send-task-id")
         .hasPassedElement("EndEvent_2");
   }
+
+  @Test
+  void testMessageStartEvent()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/message_start.bpmn")
+        .waitForProcessDeployment()
+        .waitForMessageSubscription("StartMessage2")
+        .sendMessage("StartMessage2", Variables.of("var1", "value1"))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("EndEvent_1")
+        .hasVariableWithValue("var1", "value1")
+        .toProcessLevel()
+        .sendMessage("StartMessage2", Variables.of("var2", "value2"))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("EndEvent_1")
+        .hasVariableWithValue("var2", "value2")
+        .toProcessLevel()
+        .deployProcessDefinitionAndWait("/bpmn/message_start_2.bpmn")
+        .waitForMessageSubscription("StartMessage3")
+        .sendMessage("StartMessage3", Variables.of("var3", "value3"))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_2")
+        .hasPassedElement("EndEvent_2")
+        .hasVariableWithValue("var3", "value3")
+        .toProcessLevel();
+
+  }
 }

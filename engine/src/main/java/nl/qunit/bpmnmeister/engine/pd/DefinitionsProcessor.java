@@ -8,7 +8,6 @@ import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
-import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -64,13 +63,16 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
     ProcessDefinition processDefinition =
         processDefinitionStore.get(new ProcessDefinitionKey(definitionId, latestVersion));
-    StartEvent startEvent =
-        processDefinition
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getStartEvents()
-            .get(0);
+    String startEventId =
+        !startCommand.getElementId().equals(Constants.NONE)
+            ? startCommand.getElementId()
+            : processDefinition
+                .getDefinitions()
+                .getRootProcess()
+                .getFlowElements()
+                .getStartEvents()
+                .get(0)
+                .getId();
     ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     ProcessInstanceTrigger processInstanceTrigger =
         new StartNewProcessInstanceTrigger(
@@ -78,7 +80,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             startCommand.getParentProcessInstanceKey(),
             processDefinition,
             startCommand.getParentElementId(),
-            startEvent.getId(),
+            startEventId,
             Constants.NONE,
             startCommand.getVariables());
     context.forward(

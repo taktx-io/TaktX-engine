@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
+import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
+import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
 public class GenericEventDefinitionMapper implements EventDefinitionMapper {
@@ -21,27 +23,40 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
 
   private EventDefinition mapEventDefinition(TEventDefinition ed, String parentId) {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
-      String duration =
-          timerEventDefinition.getTimeDuration() != null
-              ? timerEventDefinition.getTimeDuration().getContent().stream()
-                  .map(Object::toString)
-                  .collect(Collectors.joining(""))
-              : "";
-      String cycle =
-          timerEventDefinition.getTimeCycle() != null
-              ? timerEventDefinition.getTimeCycle().getContent().stream()
-                  .map(Object::toString)
-                  .collect(Collectors.joining(""))
-              : "";
-      String timeDate =
-          timerEventDefinition.getTimeDate() != null
-              ? timerEventDefinition.getTimeDate().getContent().stream()
-                  .map(Object::toString)
-                  .collect(Collectors.joining(""))
-              : "";
-      return new TimerEventDefinition(
-          timerEventDefinition.getId(), parentId, timeDate, duration, cycle);
+      return mapTimerEventDefinition(parentId, timerEventDefinition);
+    } else if (ed instanceof TMessageEventDefinition messageEventDefinition) {
+      return mapMessageEventDefinition(messageEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
+  }
+
+  private static MessageEventDefinition mapMessageEventDefinition(
+      TMessageEventDefinition messageEventDefinition) {
+    return new MessageEventDefinition(messageEventDefinition.getId(),
+        messageEventDefinition.getMessageRef().getLocalPart());
+  }
+
+  private TimerEventDefinition mapTimerEventDefinition(String parentId,
+      TTimerEventDefinition timerEventDefinition) {
+    String duration =
+        timerEventDefinition.getTimeDuration() != null
+            ? timerEventDefinition.getTimeDuration().getContent().stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(""))
+            : "";
+    String cycle =
+        timerEventDefinition.getTimeCycle() != null
+            ? timerEventDefinition.getTimeCycle().getContent().stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(""))
+            : "";
+    String timeDate =
+        timerEventDefinition.getTimeDate() != null
+            ? timerEventDefinition.getTimeDate().getContent().stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(""))
+            : "";
+    return new TimerEventDefinition(
+        timerEventDefinition.getId(), parentId, timeDate, duration, cycle);
   }
 }

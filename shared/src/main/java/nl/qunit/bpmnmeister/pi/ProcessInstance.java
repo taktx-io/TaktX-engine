@@ -3,12 +3,14 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
 @ToString
+@EqualsAndHashCode
 public class ProcessInstance {
   private final String parentElementId;
   private final ProcessInstanceKey processInstanceKey;

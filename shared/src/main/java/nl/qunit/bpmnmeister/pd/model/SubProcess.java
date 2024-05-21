@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -48,7 +49,8 @@ public class SubProcess extends Activity<SubProcessState> {
                     + "-"
                     + getId(),
                 parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
-            process);
+            process,
+            Map.of());
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 

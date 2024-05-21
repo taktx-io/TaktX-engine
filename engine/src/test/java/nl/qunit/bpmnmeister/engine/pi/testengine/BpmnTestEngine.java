@@ -20,6 +20,10 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
+import nl.qunit.bpmnmeister.engine.pd.MessageEvent;
+import nl.qunit.bpmnmeister.engine.pd.MessageEventImpl;
+import nl.qunit.bpmnmeister.engine.pd.MessageEventKey;
+import nl.qunit.bpmnmeister.engine.pd.MessageSubscription;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
@@ -73,12 +77,17 @@ public class BpmnTestEngine {
   @Channel("process-instance-start-command-outgoing")
   Emitter<StartCommand> startCommandEmitter;
 
+  @Inject
+  @Channel("message-event-outgoing")
+  Emitter<MessageEvent> messageEventEmitter;
+
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
   private final Map<ProcessInstanceKey, List<ProcessInstanceKey>> processInstanceParentChildMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
   private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
+  private final Map<String, MessageSubscription> messageSubscriptionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
@@ -105,6 +114,14 @@ public class BpmnTestEngine {
       ConcurrentLinkedQueue<ProcessInstanceTrigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
           ProcessDefinitionKey, k -> new ConcurrentLinkedQueue<>());
       processInstanceKeyList.add(trigger);
+    }
+  }
+
+  @Incoming("message-event-incoming")
+  public void consume(MessageEvent messageEvent) {
+    LOG.info("Received message event: " + messageEvent);
+    if (messageEvent instanceof MessageSubscription messageSubscription) {
+      messageSubscriptionMap.put(messageSubscription.getKey().messageName(), messageSubscription);
     }
   }
 
@@ -188,6 +205,7 @@ public class BpmnTestEngine {
     StartCommand startCommand = new StartCommand(
         ProcessInstanceKey.NONE,
         Constants.NONE,
+        Constants.NONE,
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey.getProcessDefinitionId(), startCommand));
@@ -239,7 +257,7 @@ public class BpmnTestEngine {
     ProcessInstance referenceProcessInstance = latestInstantiatedProcessInstance;
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> latestInstantiatedProcessInstance,
-            instance -> referenceProcessInstance != instance);
+            instance -> !Objects.equals(referenceProcessInstance, instance));
     return this;
   }
 
@@ -390,5 +408,22 @@ public class BpmnTestEngine {
           } while (poll != null);
           return null;
         }, Objects::nonNull);
-    return this;  }
+    return this;
+  }
+
+  public BpmnTestEngine sendMessage(String messageName, Variables variables) {
+    LOG.info("Sending message: " + messageName);
+    MessageEventImpl messageEvent = new MessageEventImpl(messageName, variables);
+    messageEventEmitter.send(KafkaRecord.of(new MessageEventKey(messageEvent.getMessageName()), messageEvent));
+    return this;
+  }
+
+  public BpmnTestEngine waitForMessageSubscription(String messageName) {
+    return waitForMessageSubscription(messageName, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitForMessageSubscription(String messageName, Duration duration) {
+    Awaitility.await().atMost(duration).until(() -> messageSubscriptionMap.get(messageName), Objects::nonNull);
+    return this;
+  }
 }

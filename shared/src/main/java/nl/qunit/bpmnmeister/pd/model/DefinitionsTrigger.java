@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 
-@JsonTypeInfo(use = Id.CLASS, property = "clazz", defaultImpl = Definitions.class)
+@JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = Definitions.class),
   @JsonSubTypes.Type(value = StartCommand.class)

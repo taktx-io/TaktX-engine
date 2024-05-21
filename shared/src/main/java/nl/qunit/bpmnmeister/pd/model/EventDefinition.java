@@ -3,7 +3,9 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(callSuper = true)
 public class EventDefinition extends RootElement {
   @JsonCreator
   protected EventDefinition(

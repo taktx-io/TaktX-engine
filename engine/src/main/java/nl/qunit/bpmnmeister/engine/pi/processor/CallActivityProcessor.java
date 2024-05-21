@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -38,6 +39,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
           Set.of(
               new StartCommand(
                   processInstance.getProcessInstanceKey(),
+                  Constants.NONE,
                   element.getId(),
                   element.getCalledElement(),
                   variables)),
