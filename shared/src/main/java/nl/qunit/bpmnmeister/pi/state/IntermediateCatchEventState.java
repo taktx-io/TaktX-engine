@@ -20,11 +20,9 @@ public class IntermediateCatchEventState extends EventState {
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
-      @Nonnull @JsonProperty("scheduledKeys") Set<ScheduleKey>scheduledKeys,
-      @Nonnull @JsonProperty("inputFlowId") String inputFlowId
-      ) {
+      @Nonnull @JsonProperty("scheduledKeys") Set<ScheduleKey> scheduledKeys,
+      @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
     super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
     this.scheduledKeys = scheduledKeys;
   }
-
 }

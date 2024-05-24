@@ -63,8 +63,15 @@ public class FixedRateMessageScheduler implements MessageScheduler {
           nextExecution = now.plus(Duration.parse(period));
         }
         return new FixedRateMessageScheduler(
-            processDefinitionKey, processInstanceKey, targetElementId, timerDefinitionId,
-            messages, period, repetitions, repeatedCnt + 1, nextExecution.toString());
+            processDefinitionKey,
+            processInstanceKey,
+            targetElementId,
+            timerDefinitionId,
+            messages,
+            period,
+            repetitions,
+            repeatedCnt + 1,
+            nextExecution.toString());
       } else {
         // Return null to indicate that this command is done
         return null;
@@ -82,6 +89,11 @@ public class FixedRateMessageScheduler implements MessageScheduler {
 
   @Override
   public ScheduleKey getScheduleKey() {
-    return new ScheduleKey(processDefinitionKey, processInstanceKey, ScheduleType.FIXED_RATE, targetElementId, timerDefinitionId);
+    return new ScheduleKey(
+        processDefinitionKey,
+        processInstanceKey,
+        ScheduleType.FIXED_RATE,
+        targetElementId,
+        timerDefinitionId);
   }
 }

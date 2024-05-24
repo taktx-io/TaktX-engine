@@ -14,16 +14,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
+import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageEventTrigger;
+import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscription;
+import nl.qunit.bpmnmeister.engine.pd.DefinitionMessageEventTrigger;
 import nl.qunit.bpmnmeister.engine.pd.MessageEvent;
-import nl.qunit.bpmnmeister.engine.pd.MessageEventImpl;
 import nl.qunit.bpmnmeister.engine.pd.MessageEventKey;
-import nl.qunit.bpmnmeister.engine.pd.MessageSubscription;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
@@ -87,7 +90,7 @@ public class BpmnTestEngine {
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
   private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
-  private final Map<String, MessageSubscription> messageSubscriptionMap = new HashMap<>();
+  private final Map<String, ConcurrentLinkedQueue<MessageEvent>> messageSubscriptionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
   private ProcessInstance activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
@@ -120,9 +123,9 @@ public class BpmnTestEngine {
   @Incoming("message-event-incoming")
   public void consume(MessageEvent messageEvent) {
     LOG.info("Received message event: " + messageEvent);
-    if (messageEvent instanceof MessageSubscription messageSubscription) {
-      messageSubscriptionMap.put(messageSubscription.getKey().messageName(), messageSubscription);
-    }
+    ConcurrentLinkedQueue<MessageEvent> messageEvents = messageSubscriptionMap.computeIfAbsent(
+        messageEvent.getKey().messageName(), k -> new ConcurrentLinkedQueue<>());
+    messageEvents.add(messageEvent);
   }
 
   @Incoming("external-task-trigger-incoming")
@@ -413,7 +416,7 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine sendMessage(String messageName, Variables variables) {
     LOG.info("Sending message: " + messageName);
-    MessageEventImpl messageEvent = new MessageEventImpl(messageName, variables);
+    DefinitionMessageEventTrigger messageEvent = new DefinitionMessageEventTrigger(messageName, variables);
     messageEventEmitter.send(KafkaRecord.of(new MessageEventKey(messageEvent.getMessageName()), messageEvent));
     return this;
   }
@@ -425,5 +428,43 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitForMessageSubscription(String messageName, Duration duration) {
     Awaitility.await().atMost(duration).until(() -> messageSubscriptionMap.get(messageName), Objects::nonNull);
     return this;
+  }
+
+  public BpmnTestEngine waitUntilReceiveTaskIsWaitingForMessage(String receiveTaskMessage, String elementId,
+      Set<String> correlationKeys) {
+    return waitUntilReceiveTaskIsWaitingForMessage(receiveTaskMessage, elementId, correlationKeys,
+        DEFAULT_DURATION
+    );
+  }
+
+  public BpmnTestEngine waitUntilReceiveTaskIsWaitingForMessage(String messageName, String elementId,
+      Set<String> correlationKeys, Duration duration) {
+    Set<String> remainingCorrelationKeys = new HashSet<>(correlationKeys);
+    Awaitility.await().atMost(duration).until(() -> {
+      ConcurrentLinkedQueue<MessageEvent> messageEvents = messageSubscriptionMap.get(messageName);
+      if (messageEvents == null) {
+        return false;
+      }
+      MessageEvent poll = null;
+      do {
+        poll = messageEvents.poll();
+        if (poll instanceof CorrelationMessageSubscription correlationMessageSubscription) {
+            remainingCorrelationKeys.remove(correlationMessageSubscription.getCorrelationKey());
+            return correlationMessageSubscription.getElementId().equals(elementId) && remainingCorrelationKeys.isEmpty();
+        }
+      } while (poll != null);
+
+      return false;
+    }, found -> found);
+    return this;
+  }
+
+  public BpmnTestEngine andSendMessageWithCorrelationKey(String messageName, String correlationKey,
+      Variables variables) {
+    LOG.info("Sending message: " + messageName);
+    CorrelationMessageEventTrigger messageEvent = new CorrelationMessageEventTrigger(messageName, correlationKey, variables);
+    messageEventEmitter.send(KafkaRecord.of(new MessageEventKey(messageEvent.getMessageName()), messageEvent));
+    return this;
+
   }
 }

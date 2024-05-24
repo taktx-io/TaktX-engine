@@ -29,5 +29,4 @@ public class LoopCharacteristics {
     this.outputCollection = outputCollection;
     this.outputElement = outputElement;
   }
-
 }

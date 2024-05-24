@@ -393,6 +393,18 @@ public class ProcessInstanceProcessor
                         startCommand.getProcessDefinitionId(),
                         startCommand,
                         Instant.now().toEpochMilli())));
+
+    triggerResult
+        .getNewMessageSubscriptions()
+        .forEach(
+            messageSubscription -> {
+              LOG.info("Trigger new message subscription: " + messageSubscription);
+              context.forward(
+                  new Record<>(
+                      messageSubscription.getKey(),
+                      messageSubscription,
+                      Instant.now().toEpochMilli()));
+            });
     return nextTriggers;
   }
 

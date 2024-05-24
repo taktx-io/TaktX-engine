@@ -24,6 +24,7 @@ public class ParallelGateway extends Gateway<ParallelGatewayState> {
 
   @Override
   public ParallelGatewayState getInitialState(String inputFlowId, int passedCnt) {
-    return new ParallelGatewayState(UUID.randomUUID(), Set.of(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+    return new ParallelGatewayState(
+        UUID.randomUUID(), Set.of(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

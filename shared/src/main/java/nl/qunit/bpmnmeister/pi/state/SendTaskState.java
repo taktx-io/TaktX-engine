@@ -1,4 +1,4 @@
-  package nl.qunit.bpmnmeister.pi.state;
+package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,5 +46,4 @@ public class SendTaskState extends TaskState {
         this.getAttempt(),
         this.getInputFlowId());
   }
-
 }

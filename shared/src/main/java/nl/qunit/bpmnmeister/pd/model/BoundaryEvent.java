@@ -33,7 +33,7 @@ public class BoundaryEvent extends CatchEvent<BoundaryEventState> {
 
   @Override
   public BoundaryEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new BoundaryEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(),
-        inputFlowId);
+    return new BoundaryEventState(
+        UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(), inputFlowId);
   }
 }

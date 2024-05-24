@@ -11,8 +11,9 @@ import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.SCHEDULE_COMMANDS;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.CORRELATION_MESSAGE_SUBSCRIPTION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_COUNT_BY_ID_STORE_NAME;
-import static nl.qunit.bpmnmeister.engine.pd.Stores.MESSAGE_SUBSCRIPTION_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.DEFINITION_MESSAGE_SUBSCRIPTION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
@@ -62,14 +63,16 @@ import org.apache.kafka.streams.kstream.Produced;
 public class ProcessDefinitionTopologyProducer {
   static final ObjectMapperSerde<MessageEvent> MESSAGE_EVENT_SERDE =
       new ObjectMapperSerde<>(MessageEvent.class);
+  static final ObjectMapperSerde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
+      new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
+  static final ObjectMapperSerde<CorrelationMessageSubscriptions> CORRELATION_SUBSCRIPTIONS_SERDE =
+      new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   static final ObjectMapperSerde<ScheduleKey> SCHEDULE_KEY_SERDE =
       new ObjectMapperSerde<>(ScheduleKey.class);
   static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKey.class);
-  static final ObjectMapperSerde<MessageSubscription> MESSAGE_SUBSCRIPTION_SERDE =
-      new ObjectMapperSerde<>(MessageSubscription.class);
   static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceKey.class);
   static final ObjectMapperSerde<ProcessInstanceKeyElementPair>
@@ -136,15 +139,43 @@ public class ProcessDefinitionTopologyProducer {
   private void setupMessageStream(StreamsBuilder builder) {
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(MESSAGE_SUBSCRIPTION_STORE_NAME),
+            keyValueStoreSupplier.get(DEFINITION_MESSAGE_SUBSCRIPTION_STORE_NAME),
             MESSAGE_EVENT_KEY_SERDE,
-            MESSAGE_EVENT_SERDE));
+            DEFINITION_SUBSCRIPTIONS_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(CORRELATION_MESSAGE_SUBSCRIPTION_STORE_NAME),
+            MESSAGE_EVENT_KEY_SERDE,
+            CORRELATION_SUBSCRIPTIONS_SERDE));
 
     builder.stream(
             MESSAGE_EVENT_TOPIC.getTopicName(),
             Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
-        .process(MessageEventProcessor::new, MESSAGE_SUBSCRIPTION_STORE_NAME)
-        .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
+        .process(
+            MessageEventProcessor::new,
+            DEFINITION_MESSAGE_SUBSCRIPTION_STORE_NAME,
+            CORRELATION_MESSAGE_SUBSCRIPTION_STORE_NAME)
+        .split()
+        .branch(
+            (key, value) -> value instanceof StartCommand,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommand) value))
+                        .to(
+                            DEFINITIONS_TOPIC.getTopicName(),
+                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
+        .branch(
+            (key, value) -> value instanceof ProcessInstanceTrigger,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                        .to(
+                            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
@@ -257,7 +288,8 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof MessageScheduler,
                 (key, value) -> value instanceof StartNewProcessInstanceTrigger,
                 (key, value) -> value instanceof TerminateTrigger,
-                (key, value) -> key instanceof ScheduleKey);
+                (key, value) -> key instanceof ScheduleKey,
+                (key, value) -> value instanceof MessageEvent);
 
     branches[0]
         .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
@@ -303,6 +335,11 @@ public class ProcessDefinitionTopologyProducer {
         .to(
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
+    branches[8]
+        .map((key, value) -> KeyValue.pair(((MessageEventKey) key), (MessageEvent) value))
+        .to(
+            MESSAGE_EVENT_TOPIC.getTopicName(),
+            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE));
   }
 
   private void setupScheduleCommandStream(StreamsBuilder builder) {
@@ -377,14 +414,14 @@ public class ProcessDefinitionTopologyProducer {
                             Topics.SCHEDULE_COMMANDS.getTopicName(),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
         .branch(
-            (key, value) -> value == null || value instanceof MessageSubscription,
+            (key, value) -> value == null || value instanceof MessageEvent,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((MessageEventKey) key, (MessageSubscription) value))
+                                KeyValue.pair((MessageEventKey) key, (MessageEvent) value))
                         .to(
                             MESSAGE_EVENT_TOPIC.getTopicName(),
-                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_SUBSCRIPTION_SERDE))));
+                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
   }
 }

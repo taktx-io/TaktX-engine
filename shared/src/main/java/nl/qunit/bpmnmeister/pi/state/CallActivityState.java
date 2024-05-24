@@ -38,5 +38,4 @@ public class CallActivityState extends ActivityState {
         this.getLoopCnt() + 1,
         this.getInputFlowId());
   }
-
 }

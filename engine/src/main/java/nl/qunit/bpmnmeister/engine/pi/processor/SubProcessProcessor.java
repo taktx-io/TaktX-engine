@@ -13,7 +13,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
@@ -35,8 +34,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     if (oldState.getState() == FlowNodeStateEnum.READY) {
       return triggerWithoutLoopWhenReady(processInstance, definition, element, oldState, variables);
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return triggerWithoutLoopWhenActive(
-          processInstance, definition, element, oldState, variables);
+      return triggerWithoutLoopWhenActive(processInstance, element, oldState);
     } else {
       LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
       return null;
@@ -69,24 +67,14 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             oldState.getPassedCnt(),
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
-    return new TriggerResult(
-        newSubProcessState,
-        Set.of(),
-        Set.of(),
-        subProcessTriggers,
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(newSubProcessState)
+        .newProcessInstanceTriggers(subProcessTriggers)
+        .build();
   }
 
   protected TriggerResult triggerWithoutLoopWhenActive(
-      ProcessInstance processInstance,
-      ProcessDefinition definition,
-      SubProcess element,
-      SubProcessState oldState,
-      Variables variables) {
+      ProcessInstance processInstance, SubProcess element, SubProcessState oldState) {
     SubProcessState newSubProcessState =
         new SubProcessState(
             FlowNodeStateEnum.FINISHED,

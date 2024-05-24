@@ -20,7 +20,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -220,31 +219,20 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
         feelExpressionHandler.processFeelExpression(
             element.getLoopCharacteristics().getInputCollection(), variables);
     if (inputCollection == null || inputCollection.isEmpty()) {
-      return new TriggerResult(
-          oldState.getFinishedLoopState(),
-          element.getOutgoing(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          returnVariables);
+      return TriggerResult.builder()
+          .newFlowNodeState(oldState.getFinishedLoopState())
+          .newActiveFlows(element.getOutgoing())
+          .variables(returnVariables)
+          .build();
     } else {
       Set<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenReady(
               processInstance, processDefinition, element, variables, inputCollection, 0);
-
-      return new TriggerResult(
-          oldState.getNextLoopState(),
-          Set.of(),
-          Set.of(),
-          subProcessTriggers,
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          returnVariables);
+      return TriggerResult.builder()
+          .newFlowNodeState(oldState.getNextLoopState())
+          .newProcessInstanceTriggers(subProcessTriggers)
+          .variables(returnVariables)
+          .build();
     }
   }
 
@@ -262,32 +250,23 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ActivityState newState,
       Variables returnVariables) {
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
-      return new TriggerResult(
-          newState,
-          Set.of(),
-          Set.of(),
-          Set.of(
-              new FlowElementTrigger(
-                  processInstance.getParentInstanceKey(),
-                  element.getParentId(),
-                  Constants.NONE,
-                  processInstance.getVariables())),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          returnVariables);
+      return TriggerResult.builder()
+          .newFlowNodeState(newState)
+          .newProcessInstanceTriggers(
+              Set.of(
+                  new FlowElementTrigger(
+                      processInstance.getParentInstanceKey(),
+                      element.getParentId(),
+                      Constants.NONE,
+                      processInstance.getVariables())))
+          .variables(returnVariables)
+          .build();
     } else {
-      return new TriggerResult(
-          newState,
-          element.getOutgoing(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          returnVariables);
+      return TriggerResult.builder()
+          .newFlowNodeState(newState)
+          .newActiveFlows(element.getOutgoing())
+          .variables(returnVariables)
+          .build();
     }
   }
 }

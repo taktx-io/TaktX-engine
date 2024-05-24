@@ -65,8 +65,13 @@ public class RecurringMessageScheduler implements MessageScheduler {
 
         // Return a new command with the next execution time
         return new RecurringMessageScheduler(
-            processDefinitionKey, processInstanceKey, targetElementId, timerEventDefinitionId,
-            messages, parsedCron.asString(), zonedDateTime.get().toString());
+            processDefinitionKey,
+            processInstanceKey,
+            targetElementId,
+            timerEventDefinitionId,
+            messages,
+            parsedCron.asString(),
+            zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;
@@ -83,6 +88,11 @@ public class RecurringMessageScheduler implements MessageScheduler {
 
   @Override
   public ScheduleKey getScheduleKey() {
-    return new ScheduleKey(processDefinitionKey, processInstanceKey, ScheduleType.RECURRING, targetElementId, timerEventDefinitionId);
+    return new ScheduleKey(
+        processDefinitionKey,
+        processInstanceKey,
+        ScheduleType.RECURRING,
+        targetElementId,
+        timerEventDefinitionId);
   }
 }

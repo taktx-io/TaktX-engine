@@ -14,7 +14,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
@@ -34,16 +33,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
         || oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       return triggerDecision(trigger, processInstance, definition, element, oldState, variables);
     }
-    return new TriggerResult(
-        oldState,
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder().newFlowNodeState(oldState).build();
   }
 
   protected abstract TriggerResult triggerDecision(

@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -36,20 +35,15 @@ public class ExclusiveGatewayProcessor
     Set<String> outgoingFlows =
         getOutgoingFlowsMatchingConditionOrDefault(
             definition, element, variables, feelExpressionHandler);
-    return new TriggerResult(
-        new ExclusiveGatewayState(
-            UUID.randomUUID(),
-            oldState.getPassedCnt() + 1,
-            FlowNodeStateEnum.ACTIVE,
-            oldState.getInputFlowId()),
-        outgoingFlows,
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new ExclusiveGatewayState(
+                UUID.randomUUID(),
+                oldState.getPassedCnt() + 1,
+                FlowNodeStateEnum.ACTIVE,
+                oldState.getInputFlowId()))
+        .newActiveFlows(outgoingFlows)
+        .build();
   }
 
   @Override

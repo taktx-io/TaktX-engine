@@ -1,11 +1,8 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import javax.xml.namespace.QName;
 import nl.qunit.bpmnmeister.bpmn.TActivity;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
 import nl.qunit.bpmnmeister.bpmn.TBoundaryEvent;
@@ -18,6 +15,7 @@ import nl.qunit.bpmnmeister.bpmn.TGateway;
 import nl.qunit.bpmnmeister.bpmn.TInclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TIntermediateCatchEvent;
 import nl.qunit.bpmnmeister.bpmn.TParallelGateway;
+import nl.qunit.bpmnmeister.bpmn.TReceiveTask;
 import nl.qunit.bpmnmeister.bpmn.TSendTask;
 import nl.qunit.bpmnmeister.bpmn.TSequenceFlow;
 import nl.qunit.bpmnmeister.bpmn.TServiceTask;
@@ -97,12 +95,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           mapQNameList(inclusiveGateway.getOutgoing()),
           (inclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
               ? sequenceFlow.getId()
-              : Constants.NONE
-          );
+              : Constants.NONE);
     }
 
-    throw new IllegalStateException(
-        "Unknown flow element type: " + gateway.getClass().getName());    }
+    throw new IllegalStateException("Unknown flow element type: " + gateway.getClass().getName());
+  }
 
   private CatchEvent<? extends EventState> mapCatchEvent(String parentId, TCatchEvent tCatchEvent) {
     if (tCatchEvent instanceof TStartEvent startEvent) {
@@ -147,17 +144,16 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         ((TBaseElement) tSequenceFlow.getSourceRef()).getId(),
         ((TBaseElement) tSequenceFlow.getTargetRef()).getId(),
         tSequenceFlow.getConditionExpression() != null
-            ? new FlowCondition(tSequenceFlow.getConditionExpression().getContent().stream()
-            .map(Object::toString)
-            .collect(Collectors.joining("")))
+            ? new FlowCondition(
+                tSequenceFlow.getConditionExpression().getContent().stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining("")))
             : FlowCondition.NONE);
   }
 
   private FlowElement mapActivity(TActivity activity, String parentId) {
     LoopCharacteristics loopCharacteristics =
-        bpmnMapperFactory
-            .createLoopCharacteristicsMapper()
-            .map(activity.getLoopCharacteristics());
+        bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
     FlowElement activityFlowElement = null;
     if (activity instanceof TServiceTask serviceTask) {
       activityFlowElement =
@@ -166,9 +162,12 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .map(serviceTask, parentId, loopCharacteristics);
     } else if (activity instanceof TSendTask sendTask) {
       activityFlowElement =
+          bpmnMapperFactory.createSendTaskMapper().map(sendTask, parentId, loopCharacteristics);
+    } else if (activity instanceof TReceiveTask receiveTask) {
+      activityFlowElement =
           bpmnMapperFactory
-              .createSendTaskMapper()
-              .map(sendTask, parentId, loopCharacteristics);
+              .createReceiveTaskMapper()
+              .map(receiveTask, parentId, loopCharacteristics);
     } else if (activity instanceof TTask task) {
       activityFlowElement =
           new Task<>(
@@ -202,9 +201,5 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .map(callActivity, parentId, loopCharacteristics);
     }
     return activityFlowElement;
-  }
-
-  private static Set<String> mapQNameList(List<QName> incoming) {
-    return incoming.stream().map(QName::toString).collect(Collectors.toSet());
   }
 }

@@ -33,4 +33,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+  <xs:element name="subscription">
+    <xs:complexType>
+      <xs:attribute name="correlationKey" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
 </xs:schema>

@@ -21,5 +21,4 @@ public class ParallelGatewayState extends GatewayState {
     super(elementInstanceId, passedCnt, state, inputFlowId);
     this.triggeredFlows = triggeredFlows;
   }
-
 }

@@ -46,5 +46,4 @@ public class ServiceTaskState extends TaskState {
         this.getAttempt(),
         this.getInputFlowId());
   }
-
 }

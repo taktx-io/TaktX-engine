@@ -50,34 +50,20 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       ServiceTaskState oldState,
       Variables variables) {
     if (oldState.getState() != FlowNodeStateEnum.READY) {
-      return new TriggerResult(
-          oldState,
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
-    return new TriggerResult(
-        new ServiceTaskState(
-            FlowNodeStateEnum.ACTIVE,
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt(),
-            oldState.getLoopCnt(),
-            oldState.getAttempt() + 1,
-            oldState.getInputFlowId()),
-        Set.of(),
-        Set.of(workerDefinition),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new ServiceTaskState(
+                FlowNodeStateEnum.ACTIVE,
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt(),
+                oldState.getLoopCnt(),
+                oldState.getAttempt() + 1,
+                oldState.getInputFlowId()))
+        .externalTasks(Set.of(workerDefinition))
+        .build();
   }
 
   private String getWorkerDefinition(String workerDefinition, Variables variables) {
@@ -95,16 +81,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       Variables variables) {
 
     if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
-      return new TriggerResult(
-          oldState,
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
 
     TriggerResult triggerResult =
@@ -219,16 +196,14 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
         }
       }
 
-      return new TriggerResult(
-          newServiceTaskState,
-          Set.of(),
-          workerDefinitions,
-          newProcessInstanceTriggers,
-          Set.of(),
-          throwingEvent,
-          messageSchedulers,
-          Set.of(),
-          trigger.getVariables());
+      return TriggerResult.builder()
+          .newFlowNodeState(newServiceTaskState)
+          .externalTasks(workerDefinitions)
+          .newProcessInstanceTriggers(newProcessInstanceTriggers)
+          .throwingEvent(throwingEvent)
+          .messageSchedulers(messageSchedulers)
+          .variables(trigger.getVariables())
+          .build();
     }
   }
 
@@ -256,16 +231,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
 
   private static TriggerResult succesfulResponseTriggerResult(
       ExternalTaskResponseTrigger trigger, ServiceTask element, ServiceTaskState oldState) {
-    return new TriggerResult(
-        oldState.getFinishedLoopState(),
-        element.getOutgoing(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        trigger.getVariables());
+
+    return TriggerResult.builder()
+        .newFlowNodeState(oldState.getFinishedLoopState())
+        .newActiveFlows(element.getOutgoing())
+        .variables(trigger.getVariables())
+        .build();
   }
 
   @Override

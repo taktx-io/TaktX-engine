@@ -11,7 +11,6 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
@@ -39,16 +38,11 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
             oldState.getPassedCnt() + 1,
             FlowNodeStateEnum.FINISHED,
             oldState.getInputFlowId());
-    return new TriggerResult(
-        newState,
-        Set.of(),
-        Set.of(),
-        processInstanceTriggers,
-        Set.of(),
-        new EndThrowingEvent(),
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(newState)
+        .newProcessInstanceTriggers(processInstanceTriggers)
+        .throwingEvent(new EndThrowingEvent())
+        .build();
   }
 
   @Override

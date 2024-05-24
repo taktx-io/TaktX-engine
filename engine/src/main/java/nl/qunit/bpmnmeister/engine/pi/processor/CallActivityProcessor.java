@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -26,27 +25,23 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
       CallActivityState oldState,
       Variables variables) {
     if (oldState.getState() == FlowNodeStateEnum.READY) {
-      return new TriggerResult(
-          new CallActivityState(
-              FlowNodeStateEnum.ACTIVE,
-              oldState.getElementInstanceId(),
-              oldState.getPassedCnt(),
-              oldState.getLoopCnt(),
-              oldState.getInputFlowId()),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(
-              new StartCommand(
-                  processInstance.getProcessInstanceKey(),
-                  Constants.NONE,
-                  element.getId(),
-                  element.getCalledElement(),
-                  variables)),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder()
+          .newFlowNodeState(
+              new CallActivityState(
+                  FlowNodeStateEnum.ACTIVE,
+                  oldState.getElementInstanceId(),
+                  oldState.getPassedCnt(),
+                  oldState.getLoopCnt(),
+                  oldState.getInputFlowId()))
+          .newStartCommands(
+              Set.of(
+                  new StartCommand(
+                      processInstance.getProcessInstanceKey(),
+                      Constants.NONE,
+                      element.getId(),
+                      element.getCalledElement(),
+                      variables)))
+          .build();
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       CallActivityState newState =
           new CallActivityState(
@@ -57,16 +52,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
               oldState.getInputFlowId());
       return finishActivity(processInstance, element, newState, variables);
     } else {
-      return new TriggerResult(
-          oldState,
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
   }
 

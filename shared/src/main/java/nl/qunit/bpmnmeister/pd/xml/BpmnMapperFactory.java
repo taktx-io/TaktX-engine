@@ -58,4 +58,16 @@ public class BpmnMapperFactory {
       return new GenericSendTaskMapper();
     }
   }
+
+  public ReceiveTaskMapper createReceiveTaskMapper() {
+    return new GenericReceiveTaskMapper();
+  }
+
+  public MessageMapper createMessageMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeMessagekMapper();
+    } else {
+      return new GenericMessageMapper();
+    }
+  }
 }

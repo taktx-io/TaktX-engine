@@ -53,6 +53,7 @@ public class FlowElements {
         .map(FlowNode.class::cast)
         .toList();
   }
+
   @JsonIgnore
   public List<Activity> getActivities() {
     return elements.values().stream()
@@ -77,7 +78,6 @@ public class FlowElements {
         .findFirst();
   }
 
-
   @JsonIgnore
   public List<BoundaryEvent> getBoundaryEventsAttachedToElement(String id) {
     return elements.values().stream()
@@ -85,7 +85,6 @@ public class FlowElements {
         .map(BoundaryEvent.class::cast)
         .filter(boundaryEvent -> boundaryEvent.getAttachedToRef().equals(id))
         .toList();
-
   }
 
   @JsonIgnore
@@ -106,6 +105,5 @@ public class FlowElements {
       return Optional.ofNullable((FlowNode<?>) elements.get(sequenceFlow.getSource()));
     }
     return Optional.empty();
-
   }
 }

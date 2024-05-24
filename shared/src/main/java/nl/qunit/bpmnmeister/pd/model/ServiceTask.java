@@ -40,7 +40,8 @@ public class ServiceTask extends Task<ServiceTaskState> {
 
   @Override
   public ServiceTaskState getInitialState(String inputFlowId, int passedCnt) {
-    return new ServiceTaskState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
+    return new ServiceTaskState(
+        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
   }
 
   @Override

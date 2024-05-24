@@ -10,7 +10,8 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public class FlowElementTrigger extends ProcessInstanceTrigger implements SchedulableMessage<ProcessInstanceKey> {
+public class FlowElementTrigger extends ProcessInstanceTrigger
+    implements SchedulableMessage<ProcessInstanceKey> {
   public static final FlowElementTrigger NONE =
       new FlowElementTrigger(
           ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, Variables.EMPTY);

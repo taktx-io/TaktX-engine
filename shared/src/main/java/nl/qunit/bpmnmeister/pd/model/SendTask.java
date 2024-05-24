@@ -40,7 +40,8 @@ public class SendTask extends Task<SendTaskState> {
 
   @Override
   public SendTaskState getInitialState(String inputFlowId, int passedCnt) {
-    return new SendTaskState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
+    return new SendTaskState(
+        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
   }
 
   @Override

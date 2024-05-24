@@ -19,5 +19,4 @@ public class MessageEventDefinition extends EventDefinition {
     super(id, Constants.NONE);
     this.messageRef = messageRef;
   }
-
 }

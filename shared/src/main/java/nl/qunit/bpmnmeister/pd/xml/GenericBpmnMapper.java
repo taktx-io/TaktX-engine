@@ -32,7 +32,8 @@ public class GenericBpmnMapper implements BpmnMapper {
         Process rootElement = bpmnMapperFactory.createRootElementMapper().map(tProcess);
         builder.rootProcess(rootElement);
       } else if (tRootElement instanceof TMessage tMessage) {
-        messages.put(tMessage.getId(), new Message(tMessage.getId(), tMessage.getName()));
+        MessageMapper messageMapper = bpmnMapperFactory.createMessageMapper();
+        messages.put(tMessage.getId(), messageMapper.map(tMessage));
       }
     }
 

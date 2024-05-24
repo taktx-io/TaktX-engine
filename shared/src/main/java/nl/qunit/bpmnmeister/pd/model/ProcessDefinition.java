@@ -28,5 +28,4 @@ public class ProcessDefinition {
     this.version = version;
     this.state = state;
   }
-
 }

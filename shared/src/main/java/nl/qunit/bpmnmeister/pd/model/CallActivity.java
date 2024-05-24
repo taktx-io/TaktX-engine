@@ -57,7 +57,9 @@ public class CallActivity extends Activity<CallActivityState> {
                 + "-"
                 + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
-    Definitions definitions = new Definitions(subDefinitionsKey, process, Map.of());
+    Definitions definitions =
+        new Definitions(
+            subDefinitionsKey, process, parentProcessDefinition.getDefinitions().getMessages());
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
@@ -75,6 +77,7 @@ public class CallActivity extends Activity<CallActivityState> {
 
   @Override
   public CallActivityState getInitialState(String inputFlowId, int passedCnt) {
-    return new CallActivityState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
+    return new CallActivityState(
+        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
   }
 }

@@ -6,6 +6,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.engine.pd.MessageEvent;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
@@ -27,6 +28,7 @@ public class TriggerResult {
   @Builder.Default private ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
   @Builder.Default private Set<MessageScheduler> messageSchedulers = Set.of();
   @Builder.Default private Set<ScheduleKey> cancelSchedules = Set.of();
+  @Builder.Default private Set<MessageEvent> newMessageSubscriptions = Set.of();
   @Builder.Default private Variables variables = Variables.EMPTY;
 
   @JsonCreator
@@ -40,6 +42,7 @@ public class TriggerResult {
       @Nonnull @JsonProperty("throwEvent") ThrowingEvent throwingEvent,
       @Nonnull @JsonProperty("newSchedules") Set<MessageScheduler> newSchedules,
       @Nonnull @JsonProperty("cancelSchedules") Set<ScheduleKey> cancelSchedules,
+      @Nonnull @JsonProperty("newMessageSubscriptions") Set<MessageEvent> newMessageSubscriptions,
       @Nonnull @JsonProperty("variables") Variables variables) {
     this.newFlowNodeState = newFlowNodeState;
     this.newActiveFlows = newActiveFlows;
@@ -49,6 +52,7 @@ public class TriggerResult {
     this.throwingEvent = throwingEvent;
     this.messageSchedulers = newSchedules;
     this.cancelSchedules = cancelSchedules;
+    this.newMessageSubscriptions = newMessageSubscriptions;
     this.variables = variables;
   }
 }

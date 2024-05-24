@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -10,13 +11,15 @@ import lombok.Getter;
 public class Message {
   private final String id;
   private final String name;
+  private final String correlationKey;
 
   @JsonCreator
   public Message(
-      @JsonProperty("id") String id,
-      @JsonProperty("name") String name
-  ) {
+      @Nonnull @JsonProperty("id") String id,
+      @Nonnull @JsonProperty("name") String name,
+      @Nonnull @JsonProperty("correlationKey") String correlationKey) {
     this.id = id;
     this.name = name;
+    this.correlationKey = correlationKey;
   }
 }

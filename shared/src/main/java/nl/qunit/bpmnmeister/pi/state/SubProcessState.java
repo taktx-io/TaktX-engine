@@ -40,5 +40,4 @@ public class SubProcessState extends ActivityState {
         this.getLoopCnt() + 1,
         this.getInputFlowId());
   }
-
 }

@@ -1,13 +1,11 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
@@ -23,21 +21,17 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
       Task<TaskState> element,
       TaskState oldState,
       Variables variables) {
-    return new TriggerResult(
-        new TaskState(
-            FlowNodeStateEnum.FINISHED,
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1,
-            oldState.getLoopCnt(),
-            oldState.getInputFlowId()),
-        element.getOutgoing(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        variables);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new TaskState(
+                FlowNodeStateEnum.FINISHED,
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt() + 1,
+                oldState.getLoopCnt(),
+                oldState.getInputFlowId()))
+        .newActiveFlows(element.getOutgoing())
+        .variables(variables)
+        .build();
   }
 
   @Override

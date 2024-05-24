@@ -24,6 +24,7 @@ public class IntermediateCatchEvent extends CatchEvent<IntermediateCatchEventSta
 
   @Override
   public IntermediateCatchEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new IntermediateCatchEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(), inputFlowId);
+    return new IntermediateCatchEventState(
+        UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, Set.of(), inputFlowId);
   }
 }

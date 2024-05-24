@@ -18,5 +18,4 @@ public class EndEventState extends EventState {
       @JsonProperty("inputFlowId") String inputFlowId) {
     super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
-
 }

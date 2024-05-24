@@ -24,7 +24,11 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = ServiceTask.class),
   @JsonSubTypes.Type(value = SendTask.class),
   @JsonSubTypes.Type(value = Task.class),
-  @JsonSubTypes.Type(value = TimerEventDefinition.class)
+  @JsonSubTypes.Type(value = TimerEventDefinition.class),
+  @JsonSubTypes.Type(value = InclusiveGateway.class),
+  @JsonSubTypes.Type(value = ReceiveTask.class),
+  @JsonSubTypes.Type(value = MessageEventDefinition.class),
+  @JsonSubTypes.Type(value = BoundaryEvent.class),
 })
 public abstract class BaseElement {
   private final String id;

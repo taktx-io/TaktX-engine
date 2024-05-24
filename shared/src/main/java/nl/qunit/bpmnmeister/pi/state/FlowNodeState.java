@@ -20,6 +20,9 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = ServiceTaskState.class),
   @JsonSubTypes.Type(value = SendTaskState.class),
   @JsonSubTypes.Type(value = SubProcessState.class),
+  @JsonSubTypes.Type(value = InclusiveGatewayState.class),
+  @JsonSubTypes.Type(value = BoundaryEventState.class),
+  @JsonSubTypes.Type(value = ReceiveTaskState.class),
 })
 @ToString
 public abstract class FlowNodeState {
@@ -28,7 +31,8 @@ public abstract class FlowNodeState {
   private final FlowNodeStateEnum state;
   private final String inputFlowId;
 
-  protected FlowNodeState(UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
+  protected FlowNodeState(
+      UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
     this.elementInstanceId = elementInstanceId;
     this.passedCnt = passedCnt;
     this.state = state;

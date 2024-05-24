@@ -14,8 +14,7 @@ import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayState;
 @EqualsAndHashCode(callSuper = true)
 public class InclusiveGateway extends Gateway<InclusiveGatewayState> {
 
-  @Nonnull
-  private final String defaultFlow;
+  @Nonnull private final String defaultFlow;
 
   @JsonCreator
   public InclusiveGateway(
@@ -30,6 +29,7 @@ public class InclusiveGateway extends Gateway<InclusiveGatewayState> {
 
   @Override
   public InclusiveGatewayState getInitialState(String inputFlowId, int passedCnt) {
-    return new InclusiveGatewayState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId, Set.of(), Set.of());
+    return new InclusiveGatewayState(
+        UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId, Set.of(), Set.of());
   }
 }

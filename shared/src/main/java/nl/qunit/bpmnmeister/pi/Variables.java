@@ -25,10 +25,16 @@ public class Variables {
   }
 
   public static Variables of(String key, Object value, String key2, Object value2) {
-    return new Variables(Map.of(key, new ObjectMapper().valueToTree(value), key2, new ObjectMapper().valueToTree(value2)));
+    return new Variables(
+        Map.of(
+            key,
+            new ObjectMapper().valueToTree(value),
+            key2,
+            new ObjectMapper().valueToTree(value2)));
   }
 
-  public static Variables of(String key, Object value, String key2, Object value2, String key3, Object value3) {
+  public static Variables of(
+      String key, Object value, String key2, Object value2, String key3, Object value3) {
     JsonNode v1 = new ObjectMapper().valueToTree(value);
     JsonNode v2 = new ObjectMapper().valueToTree(value2);
     JsonNode v3 = new ObjectMapper().valueToTree(value3);

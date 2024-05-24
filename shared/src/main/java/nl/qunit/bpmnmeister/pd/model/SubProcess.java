@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -50,7 +49,7 @@ public class SubProcess extends Activity<SubProcessState> {
                     + getId(),
                 parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
             process,
-            Map.of());
+            parentProcessDefinition.getDefinitions().getMessages());
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 
@@ -65,6 +64,7 @@ public class SubProcess extends Activity<SubProcessState> {
 
   @Override
   public SubProcessState getInitialState(String inputFlowId, int passedCnt) {
-    return new SubProcessState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
+    return new SubProcessState(
+        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
   }
 }

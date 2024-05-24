@@ -11,7 +11,6 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -44,21 +43,16 @@ public class IntermediateCatchEventProcessor
 
   private static TriggerResult timerTriggered(
       IntermediateCatchEventState oldState, IntermediateCatchEvent element) {
-    return new TriggerResult(
-        new IntermediateCatchEventState(
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1,
-            FlowNodeStateEnum.ACTIVE,
-            oldState.getScheduledKeys(),
-            oldState.getInputFlowId()),
-        element.getOutgoing(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new IntermediateCatchEventState(
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt() + 1,
+                FlowNodeStateEnum.ACTIVE,
+                oldState.getScheduledKeys(),
+                oldState.getInputFlowId()))
+        .newActiveFlows(element.getOutgoing())
+        .build();
   }
 
   private TriggerResult scheduleEvents(
@@ -85,23 +79,19 @@ public class IntermediateCatchEventProcessor
                         processInstance.getVariables()))
             .collect(Collectors.toSet());
 
-    return new TriggerResult(
-        new IntermediateCatchEventState(
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt(),
-            FlowNodeStateEnum.ACTIVE,
-            messageSchedulers.stream()
-                .map(MessageScheduler::getScheduleKey)
-                .collect(Collectors.toSet()),
-            oldState.getInputFlowId()),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        messageSchedulers,
-        oldState.getScheduledKeys(), // Cancel any old schedules
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new IntermediateCatchEventState(
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt(),
+                FlowNodeStateEnum.ACTIVE,
+                messageSchedulers.stream()
+                    .map(MessageScheduler::getScheduleKey)
+                    .collect(Collectors.toSet()),
+                oldState.getInputFlowId()))
+        .messageSchedulers(messageSchedulers)
+        .cancelSchedules(oldState.getScheduledKeys())
+        .build();
   }
 
   @Override

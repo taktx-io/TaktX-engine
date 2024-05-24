@@ -58,6 +58,11 @@ public class OneTimeScheduler implements MessageScheduler {
 
   @Override
   public ScheduleKey getScheduleKey() {
-    return  new ScheduleKey(processDefinitionKey, processInstanceKey, ScheduleType.ONE_TIME, targetElementId, timerEventDefinitionId);
+    return new ScheduleKey(
+        processDefinitionKey,
+        processInstanceKey,
+        ScheduleType.ONE_TIME,
+        targetElementId,
+        timerEventDefinitionId);
   }
 }

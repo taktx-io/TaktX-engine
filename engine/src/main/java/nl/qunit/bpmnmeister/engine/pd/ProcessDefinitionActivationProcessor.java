@@ -93,10 +93,14 @@ public class ProcessDefinitionActivationProcessor
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();
               Message message = processDefinition.getDefinitions().getMessages().get(messageRef);
-              String name = message.getName();
-              MessageEventKey key = new MessageEventKey(name);
-              MessageSubscription messageSubscription =
-                  new MessageSubscription(processActivationRecord.key(), startEvent.getId(), name);
+              String messageName = message.getName();
+              MessageEventKey key = new MessageEventKey(messageName);
+              MessageEvent messageSubscription =
+                  new DefinitionMessageSubscription(
+                      processActivationRecord.key(),
+                      startEvent.getId(),
+                      messageName,
+                      SubscribeAction.SUBSSCRIBE);
 
               context.forward(
                   new Record<>(key, messageSubscription, processActivationRecord.timestamp()));
@@ -113,9 +117,16 @@ public class ProcessDefinitionActivationProcessor
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();
               Message message = processDefinition.getDefinitions().getMessages().get(messageRef);
-              String name = message.getName();
-              MessageEventKey key = new MessageEventKey(name);
-              context.forward(new Record<>(key, null, processActivationRecord.timestamp()));
+              String messageName = message.getName();
+              MessageEventKey key = new MessageEventKey(messageName);
+              MessageEvent cancelSubscription =
+                  new DefinitionMessageSubscription(
+                      processActivationRecord.key(),
+                      startEvent.getId(),
+                      messageName,
+                      SubscribeAction.UNSUBSCRIBE);
+              context.forward(
+                  new Record<>(key, cancelSubscription, processActivationRecord.timestamp()));
             });
   }
 

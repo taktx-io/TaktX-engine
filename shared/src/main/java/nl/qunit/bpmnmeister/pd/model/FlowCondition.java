@@ -17,5 +17,4 @@ public class FlowCondition {
   public FlowCondition(@Nonnull @JsonProperty("expression") String expression) {
     this.expression = expression;
   }
-
 }

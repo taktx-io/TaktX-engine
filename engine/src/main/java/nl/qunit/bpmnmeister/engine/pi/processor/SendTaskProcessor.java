@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -37,8 +36,6 @@ import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 @ApplicationScoped
 public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState> {
 
-  @Inject FeelExpressionHandler feelExpressionHandler;
-
   @Inject Clock clock;
 
   @Override
@@ -50,34 +47,20 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       SendTaskState oldState,
       Variables variables) {
     if (oldState.getState() != FlowNodeStateEnum.READY) {
-      return new TriggerResult(
-          oldState,
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
-    return new TriggerResult(
-        new SendTaskState(
-            FlowNodeStateEnum.ACTIVE,
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt(),
-            oldState.getLoopCnt(),
-            oldState.getAttempt() + 1,
-            oldState.getInputFlowId()),
-        Set.of(),
-        Set.of(workerDefinition),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new SendTaskState(
+                FlowNodeStateEnum.ACTIVE,
+                oldState.getElementInstanceId(),
+                oldState.getPassedCnt(),
+                oldState.getLoopCnt(),
+                oldState.getAttempt() + 1,
+                oldState.getInputFlowId()))
+        .externalTasks(Set.of(workerDefinition))
+        .build();
   }
 
   private String getWorkerDefinition(String workerDefinition, Variables variables) {
@@ -95,16 +78,7 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       Variables variables) {
 
     if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
-      return new TriggerResult(
-          oldState,
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          Set.of(),
-          ThrowingEvent.NOOP,
-          Set.of(),
-          Set.of(),
-          Variables.EMPTY);
+      return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
 
     TriggerResult triggerResult =
@@ -218,17 +192,14 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
               new TerminateTrigger(processInstance.getProcessInstanceKey(), boundaryEvent.getId()));
         }
       }
-
-      return new TriggerResult(
-          newnewSendTaskState,
-          Set.of(),
-          workerDefinitions,
-          newProcessInstanceTriggers,
-          Set.of(),
-          throwingEvent,
-          messageSchedulers,
-          Set.of(),
-          trigger.getVariables());
+      return TriggerResult.builder()
+          .newFlowNodeState(newnewSendTaskState)
+          .externalTasks(workerDefinitions)
+          .newProcessInstanceTriggers(newProcessInstanceTriggers)
+          .throwingEvent(throwingEvent)
+          .messageSchedulers(messageSchedulers)
+          .variables(trigger.getVariables())
+          .build();
     }
   }
 
@@ -256,16 +227,11 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
 
   private static TriggerResult succesfulResponseTriggerResult(
       ExternalTaskResponseTrigger trigger, SendTask element, SendTaskState oldState) {
-    return new TriggerResult(
-        oldState.getFinishedLoopState(),
-        element.getOutgoing(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        trigger.getVariables());
+    return TriggerResult.builder()
+        .newFlowNodeState(oldState.getFinishedLoopState())
+        .newActiveFlows(element.getOutgoing())
+        .variables(trigger.getVariables())
+        .build();
   }
 
   @Override

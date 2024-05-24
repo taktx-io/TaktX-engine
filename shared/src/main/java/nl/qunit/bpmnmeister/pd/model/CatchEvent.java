@@ -31,7 +31,6 @@ public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> {
         .collect(Collectors.toSet());
   }
 
-
   @JsonIgnore
   public Set<MessageEventDefinition> getMessageStartEventDefinitions() {
     return eventDefinitions.stream()

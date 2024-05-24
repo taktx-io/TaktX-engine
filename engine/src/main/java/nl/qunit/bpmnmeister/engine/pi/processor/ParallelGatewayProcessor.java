@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
@@ -35,21 +34,16 @@ public class ParallelGatewayProcessor
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
     }
-    return new TriggerResult(
-        new ParallelGatewayState(
-            UUID.randomUUID(),
-            newTriggeredFlows,
-            oldState.getPassedCnt() + 1,
-            FlowNodeStateEnum.ACTIVE,
-            oldState.getInputFlowId()),
-        outputFlows,
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        ThrowingEvent.NOOP,
-        Set.of(),
-        Set.of(),
-        Variables.EMPTY);
+    return TriggerResult.builder()
+        .newFlowNodeState(
+            new ParallelGatewayState(
+                UUID.randomUUID(),
+                newTriggeredFlows,
+                oldState.getPassedCnt() + 1,
+                FlowNodeStateEnum.ACTIVE,
+                oldState.getInputFlowId()))
+        .newActiveFlows(outputFlows)
+        .build();
   }
 
   @Override

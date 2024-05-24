@@ -12,7 +12,8 @@ import lombok.Getter;
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class Definitions extends DefinitionsTrigger {
-  public static final Definitions NONE = new Definitions(DefinitionsKey.NONE, Process.NONE, Map.of());
+  public static final Definitions NONE =
+      new Definitions(DefinitionsKey.NONE, Process.NONE, Map.of());
   private final DefinitionsKey definitionsKey;
   private final Process rootProcess;
   private final Map<String, Message> messages;
@@ -21,8 +22,7 @@ public class Definitions extends DefinitionsTrigger {
   public Definitions(
       @JsonProperty("definitionsKey") @Nonnull DefinitionsKey definitionsKey,
       @JsonProperty("elements") @Nonnull Process rootProcess,
-      @JsonProperty("messages") @Nonnull Map<String, Message> messages
-      ) {
+      @JsonProperty("messages") @Nonnull Map<String, Message> messages) {
     this.definitionsKey = definitionsKey;
     this.rootProcess = rootProcess;
     this.messages = messages;

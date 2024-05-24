@@ -23,5 +23,4 @@ public class BoundaryEventState extends EventState {
     super(elementInstanceId, passedCnt, state, inputFlowId);
     this.scheduleKeys = scheduleKeys;
   }
-
 }

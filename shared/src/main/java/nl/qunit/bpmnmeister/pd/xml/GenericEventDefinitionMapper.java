@@ -32,12 +32,12 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
 
   private static MessageEventDefinition mapMessageEventDefinition(
       TMessageEventDefinition messageEventDefinition) {
-    return new MessageEventDefinition(messageEventDefinition.getId(),
-        messageEventDefinition.getMessageRef().getLocalPart());
+    return new MessageEventDefinition(
+        messageEventDefinition.getId(), messageEventDefinition.getMessageRef().getLocalPart());
   }
 
-  private TimerEventDefinition mapTimerEventDefinition(String parentId,
-      TTimerEventDefinition timerEventDefinition) {
+  private TimerEventDefinition mapTimerEventDefinition(
+      String parentId, TTimerEventDefinition timerEventDefinition) {
     String duration =
         timerEventDefinition.getTimeDuration() != null
             ? timerEventDefinition.getTimeDuration().getContent().stream()
