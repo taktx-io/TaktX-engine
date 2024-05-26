@@ -19,9 +19,14 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
       E element,
       S oldState,
       Variables variables) {
-    return triggerEvent(trigger, processInstance, element, oldState);
+    return triggerEvent(trigger, processInstance, definition, element, oldState, variables);
   }
 
   protected abstract TriggerResult triggerEvent(
-      FlowElementTrigger trigger, ProcessInstance processInstance, E element, S oldState);
+      FlowElementTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
+      E element,
+      S oldState,
+      Variables variables);
 }

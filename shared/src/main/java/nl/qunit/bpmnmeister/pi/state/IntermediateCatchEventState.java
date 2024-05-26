@@ -7,10 +7,12 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder(toBuilder = true)
 public class IntermediateCatchEventState extends EventState {
 
   private final Set<ScheduleKey> scheduledKeys;

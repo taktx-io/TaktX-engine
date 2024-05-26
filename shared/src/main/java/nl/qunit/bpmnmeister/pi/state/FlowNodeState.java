@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
@@ -25,6 +26,7 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = ReceiveTaskState.class),
 })
 @ToString
+@SuperBuilder(toBuilder = true)
 public abstract class FlowNodeState {
   private final UUID elementInstanceId;
   private final int passedCnt;

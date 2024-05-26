@@ -11,14 +11,14 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> {
-  protected final Set<EventDefinition> eventDefinitions;
+  protected final Set<? extends EventDefinition> eventDefinitions;
 
   protected CatchEvent(
       @Nonnull String id,
       @Nonnull String parentId,
       @Nonnull Set<String> incoming,
       @Nonnull Set<String> outgoing,
-      @Nonnull Set<EventDefinition> eventDefinitions) {
+      @Nonnull Set<? extends EventDefinition> eventDefinitions) {
     super(id, parentId, incoming, outgoing);
     this.eventDefinitions = eventDefinitions;
   }
@@ -32,7 +32,7 @@ public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> {
   }
 
   @JsonIgnore
-  public Set<MessageEventDefinition> getMessageStartEventDefinitions() {
+  public Set<MessageEventDefinition> getMessageventDefinitions() {
     return eventDefinitions.stream()
         .filter(MessageEventDefinition.class::isInstance)
         .map(MessageEventDefinition.class::cast)

@@ -88,7 +88,7 @@ public class ProcessDefinitionActivationProcessor
       StartEvent startEvent,
       ProcessDefinition processDefinition) {
     startEvent
-        .getMessageStartEventDefinitions()
+        .getMessageventDefinitions()
         .forEach(
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();
@@ -112,7 +112,7 @@ public class ProcessDefinitionActivationProcessor
       StartEvent startEvent,
       ProcessDefinition processDefinition) {
     startEvent
-        .getMessageStartEventDefinitions()
+        .getMessageventDefinitions()
         .forEach(
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();

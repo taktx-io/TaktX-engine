@@ -430,14 +430,14 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilReceiveTaskIsWaitingForMessage(String receiveTaskMessage, String elementId,
+  public BpmnTestEngine waitForMessageSubscription(String receiveTaskMessage, String elementId,
       Set<String> correlationKeys) {
-    return waitUntilReceiveTaskIsWaitingForMessage(receiveTaskMessage, elementId, correlationKeys,
+    return waitForMessageSubscription(receiveTaskMessage, elementId, correlationKeys,
         DEFAULT_DURATION
     );
   }
 
-  public BpmnTestEngine waitUntilReceiveTaskIsWaitingForMessage(String messageName, String elementId,
+  public BpmnTestEngine waitForMessageSubscription(String messageName, String elementId,
       Set<String> correlationKeys, Duration duration) {
     Set<String> remainingCorrelationKeys = new HashSet<>(correlationKeys);
     Awaitility.await().atMost(duration).until(() -> {

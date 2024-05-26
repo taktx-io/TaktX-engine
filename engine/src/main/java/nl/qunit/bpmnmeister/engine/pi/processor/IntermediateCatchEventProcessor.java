@@ -2,96 +2,53 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.engine.pd.MessageSchedulerFactory;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
-import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
-import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
+import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCatchEventStateBuilder;
 
 @ApplicationScoped
 public class IntermediateCatchEventProcessor
     extends EventProcessor<IntermediateCatchEvent, IntermediateCatchEventState> {
-  @Inject MessageSchedulerFactory messageSchedulerFactory;
+
+  @Inject MessageCatchEventHelper catchEventMessageHelper;
+  @Inject CatchEventSchedulerHelper catchEventSchedulerHelper;
 
   @Override
   protected TriggerResult triggerEvent(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       IntermediateCatchEvent element,
-      IntermediateCatchEventState oldState) {
+      IntermediateCatchEventState oldState,
+      Variables variables) {
+    TriggerResultBuilder triggerResultBuilder = TriggerResult.builder();
+    IntermediateCatchEventStateBuilder<?, ?> newStateBuilder = oldState.toBuilder();
+
     if (oldState.getState() == FlowNodeStateEnum.READY) {
-      return scheduleEvents(processInstance, element, oldState);
+      catchEventMessageHelper.processWhenReady(
+          processDefinition,
+          triggerResultBuilder,
+          newStateBuilder,
+          processInstance,
+          element,
+          variables);
+      catchEventSchedulerHelper.processWhenReady(
+          triggerResultBuilder, newStateBuilder, processInstance, element, oldState);
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      if (trigger.getInputFlowId().equals(Constants.NONE)) {
-        return timerTriggered(oldState, element);
-      } else {
-        return scheduleEvents(processInstance, element, oldState);
-      }
+      catchEventMessageHelper.processWhenActive(
+          triggerResultBuilder, newStateBuilder, element, oldState);
+      catchEventSchedulerHelper.processWhenActive(
+          trigger, triggerResultBuilder, newStateBuilder, element, oldState);
     }
-    throw new IllegalStateException(
-        "IntermediateCatchEventProcessor: Unexpected state: " + oldState.getState());
-  }
 
-  private static TriggerResult timerTriggered(
-      IntermediateCatchEventState oldState, IntermediateCatchEvent element) {
-    return TriggerResult.builder()
-        .newFlowNodeState(
-            new IntermediateCatchEventState(
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt() + 1,
-                FlowNodeStateEnum.ACTIVE,
-                oldState.getScheduledKeys(),
-                oldState.getInputFlowId()))
-        .newActiveFlows(element.getOutgoing())
-        .build();
-  }
-
-  private TriggerResult scheduleEvents(
-      ProcessInstance processInstance,
-      IntermediateCatchEvent element,
-      IntermediateCatchEventState oldState) {
-    List<SchedulableMessage<?>> messages =
-        List.of(
-            new FlowElementTrigger(
-                processInstance.getProcessInstanceKey(),
-                element.getId(),
-                Constants.NONE,
-                Variables.EMPTY));
-    Set<MessageScheduler> messageSchedulers =
-        element.getTimerEventDefinitions().stream()
-            .map(
-                timerEventDefinition ->
-                    messageSchedulerFactory.schedule(
-                        processInstance.getProcessDefinitionKey(),
-                        processInstance.getProcessInstanceKey(),
-                        element.getId(),
-                        timerEventDefinition,
-                        messages,
-                        processInstance.getVariables()))
-            .collect(Collectors.toSet());
-
-    return TriggerResult.builder()
-        .newFlowNodeState(
-            new IntermediateCatchEventState(
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt(),
-                FlowNodeStateEnum.ACTIVE,
-                messageSchedulers.stream()
-                    .map(MessageScheduler::getScheduleKey)
-                    .collect(Collectors.toSet()),
-                oldState.getInputFlowId()))
-        .messageSchedulers(messageSchedulers)
-        .cancelSchedules(oldState.getScheduledKeys())
-        .build();
+    return triggerResultBuilder.newFlowNodeState(newStateBuilder.build()).build();
   }
 
   @Override

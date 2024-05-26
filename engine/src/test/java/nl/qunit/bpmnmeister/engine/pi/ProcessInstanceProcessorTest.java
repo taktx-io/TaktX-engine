@@ -620,7 +620,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/receive-task.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(Variables.of("correlationKey", "key1"))
-        .waitUntilReceiveTaskIsWaitingForMessage("ReceiveTaskMessage", "Receive_Task_1", Set.of("key1"))
+        .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("key1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "key1", Variables.of("var1", "value1"))
         .waitUntilCompleted();
   }
@@ -632,16 +632,32 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(Variables.EMPTY)
-        .waitUntilReceiveTaskIsWaitingForMessage("ReceiveTaskMessage", "Receive_Task_1", Set.of("1", "2", "3", "4", "5"))
+        .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("1", "2", "3", "4", "5"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "5", Variables.of("var1", "value1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "3", Variables.of("var1", "value1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "1", Variables.of("var1", "value1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "2", Variables.of("var1", "value1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "4", Variables.of("var1", "value1"))
         .waitUntilCompleted();
-//
-//        .waitFor(Duration.ofSeconds(60))
-//        .waitUntilCompleted();
+  }
+
+  @Test
+  void testMessageIntermediateCatch()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
+        .waitForProcessDeployment()
+        .startProcessInstance(Variables.of("correlationKey", "key1"))
+        .waitForMessageSubscription("IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
+        .andSendMessageWithCorrelationKey("IntermediateCatchMessage", "key1", Variables.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("MessageIntermediateCatchEvent_1")
+        .hasPassedElement("EndEvent_1")
+        .hasVariableWithValue("var1", "value1");
+
+
   }
 
 }

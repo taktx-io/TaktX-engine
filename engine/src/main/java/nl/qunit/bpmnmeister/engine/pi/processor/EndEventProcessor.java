@@ -6,11 +6,13 @@ import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
@@ -21,8 +23,10 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
   protected TriggerResult triggerEvent(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       EndEvent element,
-      EndEventState oldState) {
+      EndEventState oldState,
+      Variables variables) {
     Set<ProcessInstanceTrigger> processInstanceTriggers = new HashSet<>();
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
       processInstanceTriggers.add(
