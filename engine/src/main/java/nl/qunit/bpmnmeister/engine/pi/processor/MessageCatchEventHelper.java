@@ -5,19 +5,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
 import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.engine.pd.MessageEvent;
-import nl.qunit.bpmnmeister.engine.pd.SubscribeAction;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCatchEventStateBuilder;
+import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 
 @ApplicationScoped
 public class MessageCatchEventHelper {
@@ -51,8 +50,7 @@ public class MessageCatchEventHelper {
                       processInstance.getProcessInstanceKey(),
                       correlationKey,
                       element.getId(),
-                      messageName,
-                      SubscribeAction.SUBSSCRIBE);
+                      messageName);
                 })
             .collect(Collectors.toSet());
 

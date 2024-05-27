@@ -3,36 +3,38 @@ package nl.qunit.bpmnmeister.engine.pd;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 
 @Getter
 @EqualsAndHashCode
 public class DefinitionMessageSubscriptions {
-  private final Set<DefinitionMessageSubscription> definitions;
+  private final Map<MessageEventKey, DefinitionMessageSubscription> definitions;
 
   @JsonCreator
   public DefinitionMessageSubscriptions(
-      @JsonProperty("definitions") Set<DefinitionMessageSubscription> definitions) {
+      @JsonProperty("definitions")
+          Map<MessageEventKey, DefinitionMessageSubscription> definitions) {
     this.definitions = definitions;
   }
 
   @JsonIgnore
   public DefinitionMessageSubscriptions update(DefinitionMessageSubscription messageSubscription) {
-    Set<DefinitionMessageSubscription> newDefinitions = new HashSet<>(definitions);
-    if (messageSubscription.getSubscribeAction() == SubscribeAction.SUBSSCRIBE) {
-      newDefinitions.add(messageSubscription);
-    } else {
-      DefinitionMessageSubscription toRemove =
-          new DefinitionMessageSubscription(
-              messageSubscription.getProcessDefinitionKey(),
-              messageSubscription.getElementId(),
-              messageSubscription.getMessageName(),
-              SubscribeAction.SUBSSCRIBE);
-      newDefinitions.remove(toRemove);
-    }
+    Map<MessageEventKey, DefinitionMessageSubscription> newDefinitions = new HashMap(definitions);
+    newDefinitions.put(messageSubscription.getKey(), messageSubscription);
+    return new DefinitionMessageSubscriptions(newDefinitions);
+  }
+
+  @JsonIgnore
+  public DefinitionMessageSubscriptions remove(
+      CancelDefinitionMessageSubscription messageSubscription) {
+    Map<MessageEventKey, DefinitionMessageSubscription> newDefinitions = new HashMap<>(definitions);
+    newDefinitions.remove(messageSubscription.getKey());
     return new DefinitionMessageSubscriptions(newDefinitions);
   }
 }

@@ -22,17 +22,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
-import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageEventTrigger;
-import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.engine.pd.DefinitionMessageEventTrigger;
-import nl.qunit.bpmnmeister.engine.pd.MessageEvent;
-import nl.qunit.bpmnmeister.engine.pd.MessageEventKey;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
@@ -44,6 +42,8 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -388,10 +388,14 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilElementHasPassed(String elementId) {
-    return waitUntilElementHasPassed(elementId, DEFAULT_DURATION);
+    return waitUntilElementHasPassed(elementId, 1, DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine waitUntilElementHasPassed(String elementId, Duration duration) {
+  public BpmnTestEngine waitUntilElementHasPassed(String elementId, int count) {
+    return waitUntilElementHasPassed(elementId, count, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilElementHasPassed(String elementId, int count, Duration duration) {
 
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
@@ -405,7 +409,7 @@ public class BpmnTestEngine {
           do {
             poll = processInstances.poll();
             if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getFlowNodeStates().get(elementId).get().getPassedCnt() > 0) {
+                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getFlowNodeStates().get(elementId).get().getPassedCnt() >= count) {
               return poll;
             }
           } while (poll != null);

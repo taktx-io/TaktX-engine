@@ -660,4 +660,53 @@ class ProcessInstanceProcessorTest {
 
   }
 
+  @Test
+  void testBoundaryMessageInterrupting()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
+        .waitForProcessDeployment()
+        .startProcessInstance(Variables.of("correlationKey", "key1"))
+        .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1",
+            Set.of("key1"))
+        .andSendMessageWithCorrelationKey("BoundaryMessage", "key1",
+            Variables.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("BoundaryEvent_1")
+        .hasPassedElement("EndEvent_2")
+        .hasNotPassedElement("EndEvent_1")
+        .hasNotPassedElement("service-task-id")
+        .hasVariableWithValue("var1", "value1");
+  }
+  @Test
+  void testBoundaryMessageNonInterrupting()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
+        .waitForProcessDeployment()
+        .startProcessInstance(Variables.of("correlationKey", "key1"))
+        .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
+        .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1",
+            Set.of("key1"))
+        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
+            Variables.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
+            Variables.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
+            Variables.of("var1", "value1"))
+        .waitUntilElementHasPassed("BoundaryEvent_1", 3)
+        .andRespondWithSuccess(Variables.of("var2", "value2"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("service-task-id")
+        .hasPassedElement("BoundaryEvent_1", 3)
+        .hasPassedElement("EndEvent_1")
+        .hasVariableWithValue("var1", "value1")
+        .hasVariableWithValue("var2", "value2");
+
+  }
+
 }

@@ -3,44 +3,42 @@ package nl.qunit.bpmnmeister.engine.pd;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.ToString;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 
 @Getter
 @ToString
 public class CorrelationMessageSubscriptions {
-  private final Set<CorrelationMessageSubscription> instances;
+  private final Map<MessageEventKey, CorrelationMessageSubscription> instances;
 
   @JsonCreator
   public CorrelationMessageSubscriptions(
-      @JsonProperty("instanceMap") Set<CorrelationMessageSubscription> instances) {
+      @JsonProperty("instanceMap") Map<MessageEventKey, CorrelationMessageSubscription> instances) {
     this.instances = instances;
   }
 
   @JsonIgnore
   public CorrelationMessageSubscriptions update(
       CorrelationMessageSubscription messageSubscription) {
-    Set<CorrelationMessageSubscription> newInstances = new HashSet<>(instances);
-    if (messageSubscription.getSubscribeAction() == SubscribeAction.SUBSSCRIBE) {
-      newInstances.add(messageSubscription);
-    } else {
-      CorrelationMessageSubscription toRemove =
-          new CorrelationMessageSubscription(
-              messageSubscription.getProcessInstanceKey(),
-              messageSubscription.getCorrelationKey(),
-              messageSubscription.getElementId(),
-              messageSubscription.getMessageName(),
-              SubscribeAction.SUBSSCRIBE);
-      newInstances.remove(toRemove);
-    }
+    Map<MessageEventKey, CorrelationMessageSubscription> newInstances = new HashMap<>(instances);
+    newInstances.put(messageSubscription.getKey(), messageSubscription);
     return new CorrelationMessageSubscriptions(newInstances);
   }
 
-  public CorrelationMessageSubscriptions remove(CorrelationMessageSubscription subscription) {
-    Set<CorrelationMessageSubscription> newInstances = new HashSet<>(instances);
-    newInstances.remove(subscription);
+  public CorrelationMessageSubscriptions remove(MessageEventKey messageEventKey) {
+    Map<MessageEventKey, CorrelationMessageSubscription> newInstances = new HashMap<>(instances);
+    newInstances.remove(messageEventKey);
+    return new CorrelationMessageSubscriptions(newInstances);
+  }
+
+  public CorrelationMessageSubscriptions removeAll(Set<MessageEventKey> toRemove) {
+    Map<MessageEventKey, CorrelationMessageSubscription> newInstances = new HashMap<>(instances);
+    toRemove.forEach(newInstances::remove);
     return new CorrelationMessageSubscriptions(newInstances);
   }
 }

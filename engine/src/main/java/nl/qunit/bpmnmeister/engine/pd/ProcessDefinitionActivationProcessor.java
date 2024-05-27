@@ -8,10 +8,14 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
+import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -97,10 +101,7 @@ public class ProcessDefinitionActivationProcessor
               MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent messageSubscription =
                   new DefinitionMessageSubscription(
-                      processActivationRecord.key(),
-                      startEvent.getId(),
-                      messageName,
-                      SubscribeAction.SUBSSCRIBE);
+                      processActivationRecord.key(), startEvent.getId(), messageName);
 
               context.forward(
                   new Record<>(key, messageSubscription, processActivationRecord.timestamp()));
@@ -120,11 +121,7 @@ public class ProcessDefinitionActivationProcessor
               String messageName = message.getName();
               MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent cancelSubscription =
-                  new DefinitionMessageSubscription(
-                      processActivationRecord.key(),
-                      startEvent.getId(),
-                      messageName,
-                      SubscribeAction.UNSUBSCRIBE);
+                  new CancelDefinitionMessageSubscription(messageName);
               context.forward(
                   new Record<>(key, cancelSubscription, processActivationRecord.timestamp()));
             });

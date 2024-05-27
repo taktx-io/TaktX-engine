@@ -81,15 +81,13 @@ public class MessageSchedulerFactory {
             .asText();
     RepeatDuration repeatDuration = RepeatDuration.parse(timeDuration);
     Duration duration = Duration.parse(repeatDuration.getDuration());
-    return new FixedRateMessageScheduler(
+
+    return new OneTimeScheduler(
         processDefinitionKey,
         processInstanceKey,
         targetElementId,
         timerEventDefinition.getId(),
         messages,
-        repeatDuration.getDuration(),
-        repeatDuration.getRepetitions(),
-        0,
         Instant.now(clock).plus(duration).toString());
   }
 

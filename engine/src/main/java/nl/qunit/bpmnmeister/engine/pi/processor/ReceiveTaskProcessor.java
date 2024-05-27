@@ -3,11 +3,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
-import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.engine.pd.SubscribeAction;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -76,8 +75,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
                     processInstance.getProcessInstanceKey(),
                     correlationKey,
                     element.getId(),
-                    messageName,
-                    SubscribeAction.SUBSSCRIBE)))
+                    messageName)))
         .build();
   }
 
