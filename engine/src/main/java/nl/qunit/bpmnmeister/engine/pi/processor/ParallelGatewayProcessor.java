@@ -30,9 +30,11 @@ public class ParallelGatewayProcessor
     newTriggeredFlows.add(trigger.getInputFlowId());
 
     final Set<String> outputFlows = new HashSet<>();
+    FlowNodeStateEnum newState = FlowNodeStateEnum.ACTIVE;
     if (element.getIncoming().equals(newTriggeredFlows)) {
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
+      newState = FlowNodeStateEnum.FINISHED;
     }
     return TriggerResult.builder()
         .newFlowNodeState(
@@ -40,7 +42,7 @@ public class ParallelGatewayProcessor
                 UUID.randomUUID(),
                 newTriggeredFlows,
                 oldState.getPassedCnt() + 1,
-                FlowNodeStateEnum.ACTIVE,
+                newState,
                 oldState.getInputFlowId()))
         .newActiveFlows(outputFlows)
         .build();

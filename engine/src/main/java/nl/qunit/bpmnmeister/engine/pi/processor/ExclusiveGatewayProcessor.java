@@ -2,7 +2,6 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
-import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
@@ -38,9 +37,9 @@ public class ExclusiveGatewayProcessor
     return TriggerResult.builder()
         .newFlowNodeState(
             new ExclusiveGatewayState(
-                UUID.randomUUID(),
+                oldState.getElementInstanceId(),
                 oldState.getPassedCnt() + 1,
-                FlowNodeStateEnum.ACTIVE,
+                FlowNodeStateEnum.FINISHED,
                 oldState.getInputFlowId()))
         .newActiveFlows(outgoingFlows)
         .build();

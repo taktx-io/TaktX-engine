@@ -1,16 +1,18 @@
 package nl.qunit.bpmnmeister.pi;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 public class EndThrowingEvent extends ThrowingEvent {
 
-  @JsonCreator
-  public EndThrowingEvent() {}
-
   @Override
-  public ProcessInstanceState process(ProcessInstance processInstance) {
-    return ProcessInstanceState.COMPLETED;
+  public ProcessInstanceState process(ProcessInstance processInstance,
+      FlowNodeStates newFlowNodeStates) {
+    if (newFlowNodeStates.getWithState(FlowNodeStateEnum.ACTIVE).isEmpty()) {
+      return ProcessInstanceState.COMPLETED;
+    } else {
+      return processInstance.getProcessInstanceState();
+    }
   }
 }

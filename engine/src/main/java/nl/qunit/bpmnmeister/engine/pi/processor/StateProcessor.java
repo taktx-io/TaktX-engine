@@ -11,7 +11,6 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateThrowingEvent;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -87,10 +86,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
       TerminateTrigger terminateTrigger,
       E flowElement,
       S elementState) {
-    return TriggerResult.builder()
-        .newFlowNodeState(getTerminateElementState(elementState))
-        .throwingEvent(new TerminateThrowingEvent())
-        .build();
+    return TriggerResult.builder().newFlowNodeState(getTerminateElementState(elementState)).build();
   }
 
   protected abstract S getTerminateElementState(S elementState);

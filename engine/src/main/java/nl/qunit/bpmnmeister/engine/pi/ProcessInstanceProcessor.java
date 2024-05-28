@@ -208,6 +208,10 @@ public class ProcessInstanceProcessor
                 definition,
                 new TerminateTrigger(processInstance.getProcessInstanceKey(), flowNode.getId()));
       }
+      updatedProcessInstance =
+          updatedProcessInstance.toBuilder()
+              .processInstanceState(ProcessInstanceState.TERMINATED)
+              .build();
       return updatedProcessInstance;
     } else {
       // Terminate the element indicated in the trigger.
@@ -264,7 +268,7 @@ public class ProcessInstanceProcessor
     Variables variablesWithTriggerResult = mergedVariables.merge(triggerResult.getVariables());
 
     ProcessInstanceState newProcessInstanceState =
-        determineNewProcessInstanceState(processInstance, triggerResult);
+        determineNewProcessInstanceState(processInstance, newFlowNodeStates, triggerResult);
 
     List<ProcessInstanceTrigger> nextTriggers =
         processTriggerResultForwards(
@@ -283,13 +287,14 @@ public class ProcessInstanceProcessor
     for (ProcessInstanceTrigger nextTrigger : nextTriggers) {
 
       if ((nextTrigger instanceof StartNewProcessInstanceTrigger)
-          || definition
-                  .getDefinitions()
-                  .getRootProcess()
-                  .getFlowElements()
-                  .getFlowElement(nextTrigger.getElementId())
-                  .orElse(null)
-              instanceof Activity
+          || (definition
+                      .getDefinitions()
+                      .getRootProcess()
+                      .getFlowElements()
+                      .getFlowElement(nextTrigger.getElementId())
+                      .orElse(null)
+                  instanceof Activity
+              && !(nextTrigger instanceof TerminateTrigger))
           || !nextTrigger
               .getProcessInstanceKey()
               .equals(newProcessInstance.getProcessInstanceKey())) {
@@ -353,6 +358,15 @@ public class ProcessInstanceProcessor
             });
 
     List<ProcessInstanceTrigger> nextTriggers = new ArrayList<>();
+
+    triggerResult
+        .getNewProcessInstanceTriggers()
+        .forEach(
+            newProcessInstanceTrigger -> {
+              LOG.info("Trigger new process instance: " + newProcessInstanceTrigger);
+              nextTriggers.add(newProcessInstanceTrigger);
+            });
+
     triggerResult
         .getNewActiveFlows()
         .forEach(
@@ -366,7 +380,6 @@ public class ProcessInstanceProcessor
                           .getFlowElements()
                           .getFlowElement(flowId)
                           .orElseThrow();
-              LOG.info("Flow condition is true, triggering activity: " + flow.getTarget());
               FlowElementTrigger newTrigger =
                   new FlowElementTrigger(
                       processInstance.getProcessInstanceKey(),
@@ -374,14 +387,6 @@ public class ProcessInstanceProcessor
                       flow.getId(),
                       variables);
               nextTriggers.add(newTrigger);
-            });
-
-    triggerResult
-        .getNewProcessInstanceTriggers()
-        .forEach(
-            newProcessInstanceTrigger -> {
-              LOG.info("Trigger new process instance: " + newProcessInstanceTrigger);
-              nextTriggers.add(newProcessInstanceTrigger);
             });
 
     triggerResult
@@ -409,9 +414,11 @@ public class ProcessInstanceProcessor
   }
 
   private ProcessInstanceState determineNewProcessInstanceState(
-      ProcessInstance processInstance, TriggerResult triggerResult) {
+      ProcessInstance processInstance,
+      FlowNodeStates newFlowNodeStates,
+      TriggerResult triggerResult) {
     ProcessInstanceState newProcessInstanceState =
-        triggerResult.getThrowingEvent().process(processInstance);
+        triggerResult.getThrowingEvent().process(processInstance, newFlowNodeStates);
     if (newProcessInstanceState.isFinished()) {
       processInstanceCache.invalidate(processInstance.getProcessInstanceKey());
     }
