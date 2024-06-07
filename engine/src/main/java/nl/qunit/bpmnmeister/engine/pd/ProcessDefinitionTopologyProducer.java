@@ -45,8 +45,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -98,11 +96,6 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(ProcessInstance.class);
   private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
-  private static final ObjectMapperSerde<StartNewProcessInstanceTrigger>
-      START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE =
-          new ObjectMapperSerde<>(StartNewProcessInstanceTrigger.class);
-  private static final ObjectMapperSerde<TerminateTrigger>
-      TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE = new ObjectMapperSerde<>(TerminateTrigger.class);
   private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
 
@@ -284,12 +277,10 @@ public class ProcessDefinitionTopologyProducer {
                 CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME)
             .branch(
                 (key, value) -> value instanceof ProcessInstance,
-                (key, value) -> value instanceof FlowElementTrigger,
+                (key, value) -> value instanceof ProcessInstanceTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
                 (key, value) -> value instanceof MessageScheduler,
-                (key, value) -> value instanceof StartNewProcessInstanceTrigger,
-                (key, value) -> value instanceof TerminateTrigger,
                 (key, value) -> key instanceof ScheduleKey,
                 (key, value) -> value instanceof MessageEvent);
 
@@ -321,23 +312,11 @@ public class ProcessDefinitionTopologyProducer {
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     branches[5]
-        .map(
-            (key, value) ->
-                KeyValue.pair(((ProcessInstanceKey) key), (StartNewProcessInstanceTrigger) value))
-        .to(
-            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, START_NEW_PROCESS_INSTANCE_TRIGGER_SERDE));
-    branches[6]
-        .map((key, value) -> KeyValue.pair(((ProcessInstanceKey) key), (TerminateTrigger) value))
-        .to(
-            PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, TERMINATE_PROCESS_INSTANCE_TRIGGER_SERDE));
-    branches[7]
         .map((key, value) -> KeyValue.pair(((ScheduleKey) key), (MessageScheduler) value))
         .to(
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
-    branches[8]
+    branches[6]
         .map((key, value) -> KeyValue.pair(((MessageEventKey) key), (MessageEvent) value))
         .to(
             MESSAGE_EVENT_TOPIC.getTopicName(),
