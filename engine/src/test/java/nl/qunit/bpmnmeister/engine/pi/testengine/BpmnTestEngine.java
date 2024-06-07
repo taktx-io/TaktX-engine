@@ -471,4 +471,8 @@ public class BpmnTestEngine {
     return this;
 
   }
+
+  public ExternalTaskAssert assertThatExternalTask() {
+    return new ExternalTaskAssert(activeExternalTaskTrigger, this);
+  }
 }

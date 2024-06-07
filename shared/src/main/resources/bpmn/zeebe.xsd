@@ -39,4 +39,23 @@
     </xs:complexType>
   </xs:element>
 
+  <xs:element name="ioMapping">
+    <xs:complexType id="ioMapping">
+          <xs:sequence>
+            <xs:element name="input" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="source" use="required" type="xs:string"/>
+                <xs:attribute name="target" use="required" type="xs:string"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="output" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="source" use="required" type="xs:string"/>
+                <xs:attribute name="target" use="required" type="xs:string"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
 </xs:schema>

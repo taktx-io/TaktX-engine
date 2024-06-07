@@ -70,4 +70,12 @@ public class BpmnMapperFactory {
       return new GenericMessageMapper();
     }
   }
+
+  public IoMappingMapper getIoMappingMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeIoMappingMapper();
+    } else {
+      return new GenericIoMappingMapper();
+    }
+  }
 }

@@ -23,7 +23,7 @@ public class TriggerResult {
 
   @Builder.Default private FlowNodeState newFlowNodeState = null;
   @Builder.Default private Set<String> newActiveFlows = Set.of();
-  @Builder.Default private Set<String> externalTasks = Set.of();
+  @Builder.Default private Set<ExternalTaskInfo> externalTasks = Set.of();
   @Builder.Default private Set<ProcessInstanceTrigger> newProcessInstanceTriggers = Set.of();
   @Builder.Default private Set<StartCommand> newStartCommands = Set.of();
   @Builder.Default private ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
@@ -37,7 +37,7 @@ public class TriggerResult {
   public TriggerResult(
       @Nonnull @JsonProperty("newFlowNodeState") FlowNodeState newFlowNodeState,
       @Nonnull @JsonProperty("newActiveFlows") Set<String> newActiveFlows,
-      @Nonnull @JsonProperty("externalTasks") Set<String> externalTasks,
+      @Nonnull @JsonProperty("externalTasks") Set<ExternalTaskInfo> externalTasks,
       @Nonnull @JsonProperty("newProcessInstanceTriggers")
           Set<ProcessInstanceTrigger> newProcessInstanceTriggers,
       @Nonnull @JsonProperty("newStartCommands") Set<StartCommand> newStartCommands,

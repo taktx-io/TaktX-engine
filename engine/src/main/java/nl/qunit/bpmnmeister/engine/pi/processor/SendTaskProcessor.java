@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -49,7 +50,10 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
     if (oldState.getState() != FlowNodeStateEnum.READY) {
       return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
+
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
+    ExternalTaskInfo externalTaskInfo =
+        new ExternalTaskInfo(workerDefinition, getExternalTaskVariables());
     return TriggerResult.builder()
         .newFlowNodeState(
             new SendTaskState(
@@ -59,8 +63,12 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
                 oldState.getLoopCnt(),
                 oldState.getAttempt() + 1,
                 oldState.getInputFlowId()))
-        .externalTasks(Set.of(workerDefinition))
+        .externalTasks(Set.of(externalTaskInfo))
         .build();
+  }
+
+  private static Variables getExternalTaskVariables() {
+    return Variables.EMPTY;
   }
 
   private String getWorkerDefinition(String workerDefinition, Variables variables) {
@@ -110,7 +118,7 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
               oldState.getAttempt() + 1,
               oldState.getInputFlowId());
       ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
-      Set<String> workerDefinitions = Set.of();
+      Set<ExternalTaskInfo> workerDefinitions = Set.of();
       Set<MessageScheduler> messageSchedulers = Set.of();
 
       if (!element.getRetries().equals(Constants.NONE)) {
@@ -151,7 +159,9 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
             messageSchedulers = Set.of(messageScheduler);
           } else {
             // No backoff time defined, retry directly
-            workerDefinitions = Set.of(trigger.getElementId());
+            ExternalTaskInfo externalTaskInfo =
+                new ExternalTaskInfo(trigger.getElementId(), getExternalTaskVariables());
+            workerDefinitions = Set.of(externalTaskInfo);
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker

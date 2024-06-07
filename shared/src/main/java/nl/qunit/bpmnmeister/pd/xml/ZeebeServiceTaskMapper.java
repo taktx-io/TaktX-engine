@@ -6,6 +6,7 @@ import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TaskDefinition;
 import nl.qunit.bpmnmeister.bpmn.TaskHeaders;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 
@@ -13,7 +14,8 @@ public class ZeebeServiceTaskMapper implements ServiceTaskMapper {
 
   @Override
   public ServiceTask map(
-      TServiceTask serviceTask, String parentId, LoopCharacteristics loopCharacteristics) {
+      TServiceTask serviceTask, String parentId, LoopCharacteristics loopCharacteristics,
+      InputOutputMapping ioMapping) {
     Optional<TaskDefinition> taskDefinition =
         ExtensionElementHelper.extractExtensionElement(
             serviceTask.getExtensionElements(), TaskDefinition.class);
@@ -43,6 +45,7 @@ public class ZeebeServiceTaskMapper implements ServiceTaskMapper {
         mapQNameList(serviceTask.getOutgoing()),
         serviceTask.getImplementation(),
         loopCharacteristics,
-        headers);
+        headers,
+        ioMapping);
   }
 }

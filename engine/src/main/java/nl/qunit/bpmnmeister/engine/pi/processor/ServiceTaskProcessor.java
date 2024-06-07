@@ -13,12 +13,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask;
+import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
@@ -41,6 +43,8 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
 
   @Inject Clock clock;
 
+  @Inject IoMappingProcessor ioMappingProcessor;
+
   @Override
   protected TriggerResult triggerFlowElementWithoutLoop(
       FlowElementTrigger trigger,
@@ -53,6 +57,10 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
       return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
     String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
+
+    Variables externalTaskVariables = getExternalTaskVariables(element, variables);
+    ExternalTaskInfo externalTaskInfo =
+        new ExternalTaskInfo(workerDefinition, externalTaskVariables);
     return TriggerResult.builder()
         .newFlowNodeState(
             new ServiceTaskState(
@@ -62,8 +70,12 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
                 oldState.getLoopCnt(),
                 oldState.getAttempt() + 1,
                 oldState.getInputFlowId()))
-        .externalTasks(Set.of(workerDefinition))
+        .externalTasks(Set.of(externalTaskInfo))
         .build();
+  }
+
+  private Variables getExternalTaskVariables(WithIoMapping element, Variables variables) {
+    return ioMappingProcessor.getInputVariables(element, variables);
   }
 
   private String getWorkerDefinition(String workerDefinition, Variables variables) {
@@ -113,7 +125,7 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
               oldState.getAttempt() + 1,
               oldState.getInputFlowId());
       ThrowingEvent throwingEvent = ThrowingEvent.NOOP;
-      Set<String> workerDefinitions = Set.of();
+      Set<ExternalTaskInfo> workerDefinitions = Set.of();
       Set<MessageScheduler> messageSchedulers = Set.of();
 
       if (!element.getRetries().equals(Constants.NONE)) {
@@ -154,7 +166,10 @@ public class ServiceTaskProcessor extends ActivityProcessor<ServiceTask, Service
             messageSchedulers = Set.of(messageScheduler);
           } else {
             // No backoff time defined, retry directly
-            workerDefinitions = Set.of(trigger.getElementId());
+            ExternalTaskInfo externalTaskInfo =
+                new ExternalTaskInfo(
+                    trigger.getElementId(), getExternalTaskVariables(element, variables));
+            workerDefinitions = Set.of(externalTaskInfo);
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker

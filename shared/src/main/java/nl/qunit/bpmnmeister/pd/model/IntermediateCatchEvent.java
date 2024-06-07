@@ -18,8 +18,9 @@ public class IntermediateCatchEvent extends CatchEvent<IntermediateCatchEventSta
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
-      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions) {
-    super(id, parentId, incoming, outgoing, eventDefinitions);
+      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
   }
 
   @Override

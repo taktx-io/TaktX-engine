@@ -22,8 +22,9 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
-      @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics);
+      @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
   }
 
   @JsonIgnore
@@ -65,7 +66,7 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
   }
 
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
-    return new Task<>(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE);
+    return new Task<>(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, getIoMapping());
   }
 
   @Override

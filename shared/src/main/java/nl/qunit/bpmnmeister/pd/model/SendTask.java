@@ -30,8 +30,9 @@ public class SendTask extends Task<SendTaskState> {
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("implementation") String implementation,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("headers") Map<String, String> headers) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics);
+      @Nonnull @JsonProperty("headers") Map<String, String> headers,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.workerDefinition = workerDefinition;
     this.retries = retries;
     this.implementation = implementation;
@@ -55,6 +56,7 @@ public class SendTask extends Task<SendTaskState> {
         outgoing,
         getImplementation(),
         LoopCharacteristics.NONE,
-        getHeaders());
+        getHeaders(),
+        getIoMapping());
   }
 }

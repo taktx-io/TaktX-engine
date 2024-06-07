@@ -12,9 +12,9 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
 @ApplicationScoped
-public class StartEventProcessor extends EventProcessor<StartEvent, StartEventState> {
+public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEventState> {
   @Override
-  protected TriggerResult triggerEvent(
+  protected TriggerResult triggerCatchEvent(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,

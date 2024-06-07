@@ -9,7 +9,7 @@ import lombok.ToString;
 
 @Getter
 @ToString(callSuper = true)
-public class StartEventState extends EventState {
+public class StartEventState extends CatchEventState {
   @JsonCreator
   public StartEventState(
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,

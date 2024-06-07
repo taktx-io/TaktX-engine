@@ -4,13 +4,15 @@ import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.CalledElement;
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 
 public class ZeebeCallActivityMapper implements CallActivityMapper {
 
   @Override
   public CallActivity map(
-      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics) {
+      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics,
+      InputOutputMapping ioMapping) {
     Optional<CalledElement> optCalledElement =
         ExtensionElementHelper.extractExtensionElement(
             callActivity.getExtensionElements(), CalledElement.class);
@@ -21,6 +23,7 @@ public class ZeebeCallActivityMapper implements CallActivityMapper {
         mapQNameList(callActivity.getIncoming()),
         mapQNameList(callActivity.getOutgoing()),
         loopCharacteristics,
-        calledElement);
+        calledElement,
+        ioMapping);
   }
 }

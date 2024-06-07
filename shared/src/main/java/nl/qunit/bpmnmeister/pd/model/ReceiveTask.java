@@ -23,8 +23,9 @@ public class ReceiveTask extends Task<ReceiveTaskState> {
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("messageRef") String messageRef) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics);
+      @Nonnull @JsonProperty("messageRef") String messageRef,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.messageRef = messageRef;
   }
 
@@ -37,6 +38,6 @@ public class ReceiveTask extends Task<ReceiveTaskState> {
   @Override
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new ReceiveTask(
-        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, getMessageRef());
+        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, getMessageRef(), getIoMapping());
   }
 }

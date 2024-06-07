@@ -55,7 +55,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
           variables);
     } else if (trigger instanceof TerminateTrigger terminateTrigger) {
       if (flowNodeState != null) {
-        return terminate(processInstance, terminateTrigger, (E) element, (S) flowNodeState);
+        return terminate(terminateTrigger, (E) element, (S) flowNodeState);
       } else {
         return TriggerResult.EMPTY;
       }
@@ -81,11 +81,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
     return TriggerResult.builder().newFlowNodeState(oldState).build();
   }
 
-  public TriggerResult terminate(
-      ProcessInstance processInstance,
-      TerminateTrigger terminateTrigger,
-      E flowElement,
-      S elementState) {
+  public TriggerResult terminate(TerminateTrigger terminateTrigger, E flowElement, S elementState) {
     return TriggerResult.builder().newFlowNodeState(getTerminateElementState(elementState)).build();
   }
 

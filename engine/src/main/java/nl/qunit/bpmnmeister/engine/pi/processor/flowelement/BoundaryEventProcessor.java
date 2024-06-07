@@ -37,7 +37,6 @@ public class BoundaryEventProcessor extends StateProcessor<BoundaryEvent, Bounda
 
   @Override
   public TriggerResult terminate(
-      ProcessInstance processInstance,
       TerminateTrigger terminateTrigger,
       BoundaryEvent boundaryEvent,
       BoundaryEventState boundaryEventState) {

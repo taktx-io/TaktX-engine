@@ -32,6 +32,7 @@ import nl.qunit.bpmnmeister.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.Gateway;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
@@ -102,6 +103,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   }
 
   private CatchEvent<? extends EventState> mapCatchEvent(String parentId, TCatchEvent tCatchEvent) {
+    InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(tCatchEvent);
     if (tCatchEvent instanceof TStartEvent startEvent) {
       return new StartEvent(
           startEvent.getId(),
@@ -110,7 +112,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           mapQNameList(startEvent.getOutgoing()),
           bpmnMapperFactory
               .createEventDefinitionMapper()
-              .map(startEvent.getEventDefinition(), parentId));
+              .map(startEvent.getEventDefinition(), parentId),
+          ioMapping);
     } else if (tCatchEvent instanceof TBoundaryEvent boundaryEvent) {
       return new BoundaryEvent(
           boundaryEvent.getId(),
@@ -121,7 +124,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .createEventDefinitionMapper()
               .map(boundaryEvent.getEventDefinition(), parentId),
           boundaryEvent.getAttachedToRef().toString(),
-          boundaryEvent.isCancelActivity());
+          boundaryEvent.isCancelActivity(),
+          ioMapping);
     } else if (tCatchEvent instanceof TIntermediateCatchEvent intermediateCatchEvent) {
       return new IntermediateCatchEvent(
           intermediateCatchEvent.getId(),
@@ -130,7 +134,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           mapQNameList(intermediateCatchEvent.getOutgoing()),
           bpmnMapperFactory
               .createEventDefinitionMapper()
-              .map(intermediateCatchEvent.getEventDefinition(), parentId));
+              .map(intermediateCatchEvent.getEventDefinition(), parentId),
+          ioMapping);
     }
 
     throw new IllegalStateException(
@@ -152,6 +157,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   }
 
   private FlowElement mapActivity(TActivity activity, String parentId) {
+    InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(activity);
+
     LoopCharacteristics loopCharacteristics =
         bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
     FlowElement activityFlowElement = null;
@@ -159,15 +166,15 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       activityFlowElement =
           bpmnMapperFactory
               .createServiceTaskMapper()
-              .map(serviceTask, parentId, loopCharacteristics);
+              .map(serviceTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TSendTask sendTask) {
       activityFlowElement =
-          bpmnMapperFactory.createSendTaskMapper().map(sendTask, parentId, loopCharacteristics);
+          bpmnMapperFactory.createSendTaskMapper().map(sendTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TReceiveTask receiveTask) {
       activityFlowElement =
           bpmnMapperFactory
               .createReceiveTaskMapper()
-              .map(receiveTask, parentId, loopCharacteristics);
+              .map(receiveTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TTask task) {
       activityFlowElement =
           new Task<>(
@@ -175,7 +182,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               parentId,
               mapQNameList(task.getIncoming()),
               mapQNameList(task.getOutgoing()),
-              loopCharacteristics);
+              loopCharacteristics, ioMapping);
     } else if (activity instanceof TSubProcess subProcess) {
       Map<String, FlowElement> elements =
           subProcess.getFlowElement().stream()
@@ -193,12 +200,13 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               mapQNameList(subProcess.getIncoming()),
               mapQNameList(subProcess.getOutgoing()),
               loopCharacteristics,
-              new FlowElements(elements));
+              new FlowElements(elements),
+              ioMapping);
     } else if (activity instanceof TCallActivity callActivity) {
       activityFlowElement =
           bpmnMapperFactory
               .createCallActivityMapper()
-              .map(callActivity, parentId, loopCharacteristics);
+              .map(callActivity, parentId, loopCharacteristics, ioMapping);
     }
     return activityFlowElement;
   }

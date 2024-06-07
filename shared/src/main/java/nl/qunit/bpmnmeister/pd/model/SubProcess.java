@@ -25,9 +25,10 @@ public class SubProcess extends Activity<SubProcessState> {
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("elements") FlowElements elements) {
+      @Nonnull @JsonProperty("elements") FlowElements elements,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
 
-    super(id, parentId, incoming, outgoing, loopCharacteristics);
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.elements = elements;
   }
 

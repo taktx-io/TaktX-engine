@@ -15,13 +15,13 @@ import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCat
 
 @ApplicationScoped
 public class IntermediateCatchEventProcessor
-    extends EventProcessor<IntermediateCatchEvent, IntermediateCatchEventState> {
+    extends CatchEventProcessor<IntermediateCatchEvent, IntermediateCatchEventState> {
 
   @Inject MessageCatchEventHelper catchEventMessageHelper;
   @Inject CatchEventSchedulerHelper catchEventSchedulerHelper;
 
   @Override
-  protected TriggerResult triggerEvent(
+  protected TriggerResult triggerCatchEvent(
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,

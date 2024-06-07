@@ -9,17 +9,21 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class Activity<S extends FlowNodeState> extends FlowNode<S> {
+public abstract class Activity<S extends FlowNodeState> extends FlowNode<S> implements WithIoMapping {
   private final LoopCharacteristics loopCharacteristics;
+  @Nonnull
+  private final InputOutputMapping ioMapping;
 
   protected Activity(
       @Nonnull String id,
       @Nonnull String parentId,
       @Nonnull Set<String> incoming,
       @Nonnull Set<String> outgoing,
-      @Nonnull LoopCharacteristics loopCharacteristics) {
+      @Nonnull LoopCharacteristics loopCharacteristics,
+      @Nonnull InputOutputMapping ioMapping) {
     super(id, parentId, incoming, outgoing);
     this.loopCharacteristics = loopCharacteristics;
+    this.ioMapping = ioMapping;
   }
 
   @JsonIgnore

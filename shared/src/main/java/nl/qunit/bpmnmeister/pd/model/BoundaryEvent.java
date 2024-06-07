@@ -25,8 +25,9 @@ public class BoundaryEvent extends CatchEvent<BoundaryEventState> {
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions,
       @Nonnull @JsonProperty("attachedToRef") String attachedToRef,
-      @JsonProperty("cancelActivity") boolean cancelActivity) {
-    super(id, parentId, incoming, outgoing, eventDefinitions);
+      @JsonProperty("cancelActivity") boolean cancelActivity,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
     this.attachedToRef = attachedToRef;
     this.cancelActivity = cancelActivity;
   }

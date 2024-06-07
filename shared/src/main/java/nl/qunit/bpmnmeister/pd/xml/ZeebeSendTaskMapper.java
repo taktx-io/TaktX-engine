@@ -6,6 +6,7 @@ import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.TSendTask;
 import nl.qunit.bpmnmeister.bpmn.TaskDefinition;
 import nl.qunit.bpmnmeister.bpmn.TaskHeaders;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.SendTask;
 
@@ -13,7 +14,8 @@ public class ZeebeSendTaskMapper implements SendTaskMapper {
 
   @Override
   public SendTask map(
-      TSendTask sendTask, String parentId, LoopCharacteristics loopCharacteristics) {
+      TSendTask sendTask, String parentId, LoopCharacteristics loopCharacteristics,
+      InputOutputMapping ioMapping) {
     Optional<TaskDefinition> taskDefinition =
         ExtensionElementHelper.extractExtensionElement(
             sendTask.getExtensionElements(), TaskDefinition.class);
@@ -43,6 +45,7 @@ public class ZeebeSendTaskMapper implements SendTaskMapper {
         mapQNameList(sendTask.getOutgoing()),
         sendTask.getImplementation(),
         loopCharacteristics,
-        headers);
+        headers,
+        ioMapping);
   }
 }

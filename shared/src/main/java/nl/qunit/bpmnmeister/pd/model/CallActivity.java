@@ -26,8 +26,10 @@ public class CallActivity extends Activity<CallActivityState> {
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
-      @Nonnull @JsonProperty("calledElement") String calledElement) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics);
+      @Nonnull @JsonProperty("calledElement") String calledElement,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping
+  ) {
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.calledElement = calledElement;
   }
 
@@ -72,7 +74,7 @@ public class CallActivity extends Activity<CallActivityState> {
 
   protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
     return new CallActivity(
-        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement);
+        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement, getIoMapping());
   }
 
   @Override

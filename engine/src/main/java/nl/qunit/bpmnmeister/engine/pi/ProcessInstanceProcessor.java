@@ -317,14 +317,14 @@ public class ProcessInstanceProcessor
     triggerResult
         .getExternalTasks()
         .forEach(
-            externalTaskId -> {
-              LOG.info("Trigger external task: " + externalTaskId);
+            externalTask -> {
+              LOG.info("Trigger external task: " + externalTask);
               ExternalTaskTrigger newExternalTaskTrigger =
                   new ExternalTaskTrigger(
                       processInstance.getProcessInstanceKey(),
                       ProcessDefinitionKey.of(definition),
-                      externalTaskId,
-                      variables);
+                      externalTask.getExternalTaskId(),
+                      externalTask.getVariables());
               context.forward(
                   new Record<>(
                       newExternalTaskTrigger.getProcessInstanceKey(),
