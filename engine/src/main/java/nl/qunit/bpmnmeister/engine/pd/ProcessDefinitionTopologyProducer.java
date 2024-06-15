@@ -6,8 +6,8 @@ import static nl.qunit.bpmnmeister.Topics.MESSAGE_EVENT_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINITION_PARSED_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
-import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
+import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_UPDATE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.SCHEDULE_COMMANDS;
 import static nl.qunit.bpmnmeister.Topics.XML_TOPIC;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME;
@@ -18,6 +18,7 @@ import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAM
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.VARIABLES_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.XML_BY_HASH_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
@@ -31,6 +32,7 @@ import java.time.Clock;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesParentPair;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
@@ -44,6 +46,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
@@ -94,10 +97,14 @@ public class ProcessDefinitionTopologyProducer {
       new ObjectMapperSerde<>(DefinitionsTrigger.class);
   private static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstance.class);
+  private static final ObjectMapperSerde<ProcessInstanceUpdate> PROCESS_INSTANCE_UPDATE_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceUpdate.class);
   private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
   private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
+  private static final ObjectMapperSerde<VariablesParentPair> VARIABLES_PARENT_PAIR_SERDE =
+      new ObjectMapperSerde<>(VariablesParentPair.class);
 
   @Inject MessageSchedulerFactory messageSchedulerFactory;
   @Inject Clock clock;
@@ -263,6 +270,11 @@ public class ProcessDefinitionTopologyProducer {
             keyValueStoreSupplier.get(CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME),
             PROCESS_INSTANCE_KEY_SERDE,
             PROCESS_INSTANCE_KEY_ELEMENT_PAIR_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(VARIABLES_STORE_NAME),
+            PROCESS_INSTANCE_KEY_SERDE,
+            VARIABLES_PARENT_PAIR_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(
@@ -274,9 +286,10 @@ public class ProcessDefinitionTopologyProducer {
                         processorProvider, processInstanceCache, processInstanceDefinitionCache),
                 PROCESS_INSTANCE_STORE_NAME,
                 PROCESS_INSTANCE_DEFINITION_STORE_NAME,
-                CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME)
+                CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME,
+                VARIABLES_STORE_NAME)
             .branch(
-                (key, value) -> value instanceof ProcessInstance,
+                (key, value) -> value instanceof ProcessInstanceUpdate,
                 (key, value) -> value instanceof ProcessInstanceTrigger,
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
@@ -285,10 +298,10 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof MessageEvent);
 
     branches[0]
-        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstance) value))
+        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceUpdate) value))
         .to(
-            PROCESS_INSTANCE_TOPIC.getTopicName(),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_SERDE));
+            PROCESS_INSTANCE_UPDATE_TOPIC.getTopicName(),
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_UPDATE_SERDE));
     branches[1]
         .map(
             (key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceTrigger) value))

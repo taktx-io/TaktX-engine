@@ -70,7 +70,7 @@ public class ExternalTriggerConsumer {
   }
 
   @PostConstruct
-  void init() throws IOException {
+  void init() {
     scanAndDeployBpmnDefinitions();
     parsedDefinitionConsumer =
         createConsumer(
@@ -232,7 +232,7 @@ public class ExternalTriggerConsumer {
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskId,
                       new ExternalTaskResponseResult(false, true, e.getMessage()),
-                      Variables.EMPTY);
+                      Variables.empty());
             }
             responseEmitter.send(
                 new ProducerRecord<>(

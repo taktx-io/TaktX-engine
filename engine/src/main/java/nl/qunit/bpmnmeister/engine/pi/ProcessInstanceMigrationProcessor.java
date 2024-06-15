@@ -83,7 +83,6 @@ public class ProcessInstanceMigrationProcessor
             processInstance.getParentInstanceKey(),
             processDefinitionKey,
             new FlowNodeStates(newElementStates),
-            processInstance.getVariables(),
             processInstance.getProcessInstanceState());
 
     processInstanceStore.put(triggerRecord.key(), newProcessInstance);

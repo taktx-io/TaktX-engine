@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -9,7 +10,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
@@ -23,7 +23,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
       ProcessDefinition definition,
       CallActivity element,
       CallActivityState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     if (oldState.getState() == FlowNodeStateEnum.READY) {
       return TriggerResult.builder()
           .newFlowNodeState(
@@ -40,7 +40,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
                       Constants.NONE,
                       element.getId(),
                       element.getCalledElement(),
-                      variables)))
+                      variables.getCurrentScopeVariables())))
           .build();
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       CallActivityState newState =
@@ -50,7 +50,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
               oldState.getPassedCnt() + 1,
               oldState.getLoopCnt(),
               oldState.getInputFlowId());
-      return finishActivity(processInstance, element, newState, variables);
+      return finishActivity(processInstance, definition, element, newState, variables);
     } else {
       return TriggerResult.builder().newFlowNodeState(oldState).build();
     }

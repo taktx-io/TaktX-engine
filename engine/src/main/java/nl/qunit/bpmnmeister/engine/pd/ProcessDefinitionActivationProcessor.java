@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.ArrayList;
 import java.util.List;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -48,7 +49,7 @@ public class ProcessDefinitionActivationProcessor
             startEvent.getParentId(),
             Constants.NONE,
             processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
-            Variables.EMPTY));
+            Variables.empty()));
 
     return processInstanceStartCommand;
   }
@@ -160,7 +161,7 @@ public class ProcessDefinitionActivationProcessor
                       startEvent.getId(),
                       timerEventDefinition,
                       getStartCommands(processDefinition, startEvent),
-                      Variables.EMPTY);
+                      ScopedVars.EMPTY);
               context.forward(
                   new Record<>(
                       schedule.getScheduleKey(), schedule, processActivationRecord.timestamp()));

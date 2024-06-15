@@ -1,16 +1,18 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.ToString;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
 
 @ApplicationScoped
+@ToString(callSuper = true)
 public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
 
   @Override
@@ -20,7 +22,7 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
       ProcessDefinition definition,
       Task<TaskState> element,
       TaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     return TriggerResult.builder()
         .newFlowNodeState(
             new TaskState(
@@ -29,8 +31,9 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
                 oldState.getPassedCnt() + 1,
                 oldState.getLoopCnt(),
                 oldState.getInputFlowId()))
-        .newActiveFlows(element.getOutgoing())
-        .variables(variables)
+        .processInstanceTriggers(
+            TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+                processInstance, definition, element))
         .build();
   }
 

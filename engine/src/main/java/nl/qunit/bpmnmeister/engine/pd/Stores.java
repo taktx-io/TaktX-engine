@@ -19,4 +19,5 @@ public class Stores {
       "correlation-message-subscription-store";
   public static final String CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME =
       "child-to-parent-instance-key-store";
+  public static final String VARIABLES_STORE_NAME = "variables-store";
 }

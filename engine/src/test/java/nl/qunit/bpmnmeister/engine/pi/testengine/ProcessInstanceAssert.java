@@ -7,16 +7,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 public class ProcessInstanceAssert {
 
-  private final ProcessInstance processInstance;
+  private final ProcessInstanceUpdate processInstance;
   private final BpmnTestEngine bpmnTestEngine;
 
-  public ProcessInstanceAssert(ProcessInstance processInstance, BpmnTestEngine bpmnTestEngine) {
+  public ProcessInstanceAssert(ProcessInstanceUpdate processInstance, BpmnTestEngine bpmnTestEngine) {
     this.processInstance = processInstance;
     this.bpmnTestEngine = bpmnTestEngine;
   }
@@ -65,6 +66,10 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert hasVariableMatching(String var1, Consumer<Object> consumer)
       throws JsonProcessingException {
     JsonNode jsonNode = processInstance.getVariables().get(var1);
+    while (jsonNode == null && !processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
+      ProcessInstanceUpdate parentProcessInstance = bpmnTestEngine.getProcessInstance(processInstance.getParentInstanceKey());
+      jsonNode = parentProcessInstance.getVariables().get(var1);
+    }
     consumer.accept(new ObjectMapper().treeToValue(jsonNode, Object.class));
     return this;
   }

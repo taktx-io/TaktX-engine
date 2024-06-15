@@ -1,9 +1,10 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -30,11 +31,11 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       ProcessDefinition definition,
       SubProcess element,
       SubProcessState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     if (oldState.getState() == FlowNodeStateEnum.READY) {
       return triggerWithoutLoopWhenReady(processInstance, definition, element, oldState, variables);
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return triggerWithoutLoopWhenActive(processInstance, element, oldState);
+      return triggerWithoutLoopWhenActive(processInstance, definition, element, oldState);
     } else {
       LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
       return null;
@@ -46,19 +47,21 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       ProcessDefinition definition,
       SubProcess element,
       SubProcessState oldState,
-      Variables variables) {
-    Set<ProcessInstanceTrigger> subProcessTriggers = new HashSet<>();
+      ScopedVars variables) {
+    List<ProcessInstanceTrigger> subProcessTriggers = new ArrayList<>();
     String startElement = getStartEvent(element);
-
+    ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
+    ProcessInstanceKey parentProcessInstanceKey = processInstance.getProcessInstanceKey();
+    variables.push(childProcessInstanceKey, parentProcessInstanceKey, Variables.empty());
     StartNewProcessInstanceTrigger subProcessTrigger =
         new StartNewProcessInstanceTrigger(
-            new ProcessInstanceKey(UUID.randomUUID()),
-            processInstance.getProcessInstanceKey(),
+            childProcessInstanceKey,
+            parentProcessInstanceKey,
             element.getAsSubProcessDefinition(definition),
             element.getId(),
             startElement,
             Constants.NONE,
-            variables);
+            variables.getCurrentScopeVariables());
     subProcessTriggers.add(subProcessTrigger);
     SubProcessState newSubProcessState =
         new SubProcessState(
@@ -69,12 +72,15 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             oldState.getInputFlowId());
     return TriggerResult.builder()
         .newFlowNodeState(newSubProcessState)
-        .newProcessInstanceTriggers(subProcessTriggers)
+        .processInstanceTriggers(subProcessTriggers)
         .build();
   }
 
   protected TriggerResult triggerWithoutLoopWhenActive(
-      ProcessInstance processInstance, SubProcess element, SubProcessState oldState) {
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      SubProcess element,
+      SubProcessState oldState) {
     SubProcessState newSubProcessState =
         new SubProcessState(
             FlowNodeStateEnum.FINISHED,
@@ -82,7 +88,8 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             oldState.getPassedCnt() + 1,
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
-    return finishActivity(processInstance, element, newSubProcessState, Variables.EMPTY);
+    return finishActivity(
+        processInstance, definition, element, newSubProcessState, ScopedVars.EMPTY);
   }
 
   private String getStartEvent(SubProcess subProcess) {

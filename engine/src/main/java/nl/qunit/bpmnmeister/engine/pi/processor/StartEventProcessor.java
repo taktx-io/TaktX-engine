@@ -1,13 +1,13 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartThrowingEvent;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
@@ -20,7 +20,7 @@ public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEv
       ProcessDefinition processDefinition,
       StartEvent element,
       StartEventState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     return TriggerResult.builder()
         .newFlowNodeState(
             new StartEventState(
@@ -28,7 +28,9 @@ public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEv
                 oldState.getPassedCnt() + 1,
                 FlowNodeStateEnum.FINISHED,
                 oldState.getInputFlowId()))
-        .newActiveFlows(element.getOutgoing())
+        .processInstanceTriggers(
+            TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+                processInstance, processDefinition, element))
         .throwingEvent(new StartThrowingEvent())
         .build();
   }

@@ -11,7 +11,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 
 @Getter
 @SuperBuilder(toBuilder = true)
-public class BoundaryEventState extends EventState {
+public class BoundaryEventState extends CatchEventState {
 
   private final Set<ScheduleKey> scheduleKeys;
   private final Set<MessageEventKey> messageEventKeys;

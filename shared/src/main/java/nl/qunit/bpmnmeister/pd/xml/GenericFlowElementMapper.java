@@ -61,11 +61,13 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     } else if (tFlowElement instanceof TCatchEvent tCatchEvent) {
       return mapCatchEvent(parentId, tCatchEvent);
     } else if (tFlowElement instanceof TEndEvent endEvent) {
+      InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(endEvent);
       return new EndEvent(
           endEvent.getId(),
           parentId,
           mapQNameList(endEvent.getIncoming()),
-          mapQNameList(endEvent.getOutgoing()));
+          mapQNameList(endEvent.getOutgoing()),
+          ioMapping);
     }
 
     throw new IllegalStateException(

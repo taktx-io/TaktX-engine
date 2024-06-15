@@ -12,7 +12,6 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 @EqualsAndHashCode(callSuper = true)
 public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> implements WithIoMapping {
   protected final Set<? extends EventDefinition> eventDefinitions;
-  private final InputOutputMapping ioMapping;
 
   protected CatchEvent(
       @Nonnull String id,
@@ -21,9 +20,8 @@ public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> imple
       @Nonnull Set<String> outgoing,
       @Nonnull Set<? extends EventDefinition> eventDefinitions,
       @Nonnull InputOutputMapping ioMapping) {
-    super(id, parentId, incoming, outgoing);
+    super(id, parentId, incoming, outgoing, ioMapping);
     this.eventDefinitions = eventDefinitions;
-    this.ioMapping = ioMapping;
   }
 
   @JsonIgnore

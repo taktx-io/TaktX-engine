@@ -9,11 +9,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ExternalTaskInfo;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -24,6 +26,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
@@ -39,6 +42,8 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
 
   @Inject Clock clock;
 
+  @Inject IoMappingProcessor ioMappingProcessor;
+
   @Override
   protected TriggerResult triggerFlowElementWithoutLoop(
       FlowElementTrigger trigger,
@@ -46,7 +51,7 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       ProcessDefinition definition,
       SendTask element,
       SendTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     if (oldState.getState() != FlowNodeStateEnum.READY) {
       return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
@@ -68,10 +73,10 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
   }
 
   private static Variables getExternalTaskVariables() {
-    return Variables.EMPTY;
+    return Variables.empty();
   }
 
-  private String getWorkerDefinition(String workerDefinition, Variables variables) {
+  private String getWorkerDefinition(String workerDefinition, ScopedVars variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();
   }
@@ -83,7 +88,15 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       ProcessDefinition definition,
       SendTask element,
       SendTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
+
+    variables.push(
+        new ProcessInstanceKey(UUID.randomUUID()),
+        trigger.getProcessInstanceKey(),
+        trigger.getVariables());
+    Variables mappedVariables = ioMappingProcessor.getOutputVariables(element, variables);
+    variables.pop();
+    variables.merge(mappedVariables);
 
     if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
       return TriggerResult.builder().newFlowNodeState(oldState).build();
@@ -105,9 +118,10 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       ProcessDefinition definition,
       SendTask element,
       SendTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
-      return succesfulResponseTriggerResult(trigger, element, oldState);
+      return succesfulResponseTriggerResult(
+          element, oldState, processInstance, definition, variables);
     } else {
       SendTaskState newnewSendTaskState =
           new SendTaskState(
@@ -189,7 +203,7 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
                 oldState.getInputFlowId());
       }
 
-      Set<ProcessInstanceTrigger> newProcessInstanceTriggers = new HashSet<>();
+      List<ProcessInstanceTrigger> newProcessInstanceTriggers = new ArrayList<>();
       List<BoundaryEvent> boundaryEvents =
           definition
               .getDefinitions()
@@ -205,10 +219,9 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       return TriggerResult.builder()
           .newFlowNodeState(newnewSendTaskState)
           .externalTasks(workerDefinitions)
-          .newProcessInstanceTriggers(newProcessInstanceTriggers)
+          .processInstanceTriggers(newProcessInstanceTriggers)
           .throwingEvent(throwingEvent)
           .messageSchedulers(messageSchedulers)
-          .variables(trigger.getVariables())
           .build();
     }
   }
@@ -218,13 +231,13 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
       String backoff,
       ProcessInstance processInstance,
       String elementId,
-      Variables variables) {
+      ScopedVars variables) {
     ExternalTaskTrigger externalTask =
         new ExternalTaskTrigger(
             processInstance.getProcessInstanceKey(),
             processInstance.getProcessDefinitionKey(),
             workerDefinition,
-            variables);
+            variables.getCurrentScopeVariables());
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     return new OneTimeScheduler(
         processInstance.getProcessDefinitionKey(),
@@ -235,12 +248,17 @@ public class SendTaskProcessor extends ActivityProcessor<SendTask, SendTaskState
         triggerTime);
   }
 
-  private static TriggerResult succesfulResponseTriggerResult(
-      ExternalTaskResponseTrigger trigger, SendTask element, SendTaskState oldState) {
+  private TriggerResult succesfulResponseTriggerResult(
+      SendTask element,
+      SendTaskState oldState,
+      ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
+      ScopedVars variables) {
     return TriggerResult.builder()
         .newFlowNodeState(oldState.getFinishedLoopState())
-        .newActiveFlows(element.getOutgoing())
-        .variables(trigger.getVariables())
+        .processInstanceTriggers(
+            TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+                processInstance, processDefinition, element))
         .build();
   }
 

@@ -11,11 +11,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.scheduler.FixedRateMessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -35,7 +35,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
       return scheduleCycle(
@@ -73,7 +73,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
 
     String timeDuration =
         feelExpressionHandler
@@ -97,7 +97,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
     String timeDate =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
@@ -117,7 +117,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
       return scheduleCron(
           processDefinitionKey,
@@ -143,7 +143,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
 
     String timeCycle =
         feelExpressionHandler
@@ -170,7 +170,7 @@ public class MessageSchedulerFactory {
       String targetElementId,
       TimerEventDefinition timerEventDefinition,
       List<SchedulableMessage<?>> messages,
-      Variables variables) {
+      ScopedVars variables) {
     String timeCycle =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)

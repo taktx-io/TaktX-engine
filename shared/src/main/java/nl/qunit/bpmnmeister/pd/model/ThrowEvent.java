@@ -6,12 +6,15 @@ import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Getter
-public abstract class ThrowEvent<S extends FlowNodeState> extends Event<S> {
+public abstract class ThrowEvent<S extends FlowNodeState> extends Event<S>  {
+
   protected ThrowEvent(
       @Nonnull String id,
       @Nonnull String parentId,
       @Nonnull Set<String> incoming,
-      @Nonnull Set<String> outgoing) {
-    super(id, parentId, incoming, outgoing);
+      @Nonnull Set<String> outgoing,
+      @Nonnull InputOutputMapping ioMapping
+  ) {
+    super(id, parentId, incoming, outgoing, ioMapping);
   }
 }

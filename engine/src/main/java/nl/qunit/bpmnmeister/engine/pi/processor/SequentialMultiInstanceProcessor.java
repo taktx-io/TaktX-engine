@@ -2,8 +2,9 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -16,48 +17,52 @@ import nl.qunit.bpmnmeister.pi.Variables;
 class SequentialMultiInstanceProcessor {
   private SequentialMultiInstanceProcessor() {}
 
-  public static Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
+  public static List<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity element,
-      Variables variables,
+      ScopedVars variables,
       JsonNode inputCollection,
       int loopCnt) {
     return getSubProcessTrigger(
         processInstance, processDefinition, element, variables, inputCollection, loopCnt);
   }
 
-  public static Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
+  public static List<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity element,
-      Variables variables,
+      ScopedVars variables,
       JsonNode inputCollection,
       int loopCnt) {
     return getSubProcessTrigger(
         processInstance, processDefinition, element, variables, inputCollection, loopCnt);
   }
 
-  private static Set<ProcessInstanceTrigger> getSubProcessTrigger(
+  private static List<ProcessInstanceTrigger> getSubProcessTrigger(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity element,
-      Variables variables,
+      ScopedVars variables,
       JsonNode inputCollection,
       int loopCnt) {
-    Variables updatedVariables = variables.put("loopCnt", new IntNode(loopCnt));
+    ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
+    ProcessInstanceKey parentProcessInstanceKey = processInstance.getProcessInstanceKey();
+    variables.push(
+        childProcessInstanceKey,
+        parentProcessInstanceKey,
+        Variables.of("loopCnt", new IntNode(loopCnt)));
     JsonNode inputElement = inputCollection.get(loopCnt);
-    updatedVariables =
-        updatedVariables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
+    variables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
 
-    return java.util.Set.of(
+    return List.of(
         new StartNewProcessInstanceTrigger(
-            new ProcessInstanceKey(UUID.randomUUID()),
-            processInstance.getProcessInstanceKey(),
+            childProcessInstanceKey,
+            parentProcessInstanceKey,
             element.getAsSubProcessDefinition(processDefinition),
             element.getId(),
             element.getAsSubProcessStartElementId(),
             Constants.NONE,
-            updatedVariables));
+            variables.getCurrentScopeVariables()));
   }
 }

@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import java.util.Optional;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
@@ -12,11 +13,10 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @Slf4j
-@ToString
+@ToString(callSuper = true)
 public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeState> {
 
   public final TriggerResult trigger(
@@ -24,7 +24,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
       ProcessInstance processInstance,
       ProcessDefinition definition,
       FlowNode<?> element,
-      Variables variables) {
+      ScopedVars variables) {
     log.info("Trigger processor: " + this);
     Optional<FlowNodeState> optFlowNodeState =
         processInstance.getFlowNodeStates().get(element.getId());
@@ -45,9 +45,9 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
           (E) element,
           (S) flowNodeState,
           variables);
-    } else if (trigger instanceof ExternalTaskResponseTrigger externalTaskResponse) {
+    } else if (trigger instanceof ExternalTaskResponseTrigger externalTaskResponseTrigger) {
       return triggerExternalTaskResponse(
-          externalTaskResponse,
+          externalTaskResponseTrigger,
           processInstance,
           definition,
           (E) element,
@@ -69,7 +69,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables);
+      ScopedVars variables);
 
   protected TriggerResult triggerExternalTaskResponse(
       ExternalTaskResponseTrigger trigger,
@@ -77,7 +77,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables) {
+      ScopedVars variables) {
     return TriggerResult.builder().newFlowNodeState(oldState).build();
   }
 

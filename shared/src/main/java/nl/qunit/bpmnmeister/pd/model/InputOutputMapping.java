@@ -10,10 +10,7 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public class InputOutputMapping {
-
-  @Nonnull
   private final Set<IoVariableMapping> inputMappings;
-  @Nonnull
   private final Set<IoVariableMapping> outputMappings;
 
   @JsonCreator

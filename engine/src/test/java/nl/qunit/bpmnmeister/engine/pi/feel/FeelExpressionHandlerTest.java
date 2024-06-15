@@ -3,7 +3,8 @@ package nl.qunit.bpmnmeister.engine.pi.feel;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars.MockScopedVars;
 import org.junit.jupiter.api.Test;
 
 class FeelExpressionHandlerTest {
@@ -11,35 +12,35 @@ class FeelExpressionHandlerTest {
   @Test
   void testExpressionSuccessNoVars() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + 1", Variables.EMPTY);
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + 1", ScopedVars.EMPTY);
     assertThat(jsonNode.asInt()).isEqualTo(2);
   }
 
   @Test
   void testExpressionFailureNoVars() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 +", Variables.EMPTY);
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 +", ScopedVars.EMPTY);
     assertThat(jsonNode).isNull();
   }
 
   @Test
   void testExpressionSuccessWithSimpleVar() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + a", Variables.of("a", 5));
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + a", MockScopedVars.of("a", 5));
     assertThat(jsonNode.asInt()).isEqualTo(6);
   }
 
   @Test
   void testExpressionSuccessStringConcat() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=\"abc\" + a", Variables.of("a", "value"));
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=\"abc\" + a", MockScopedVars.of("a", "value"));
     assertThat(jsonNode.asText()).isEqualTo("abcvalue");
   }
 
   @Test
   void testExpressionSuccessDifferentTypeConcat() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=string(1) + a", Variables.of("a", "value"));
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=string(1) + a", MockScopedVars.of("a", "value"));
     assertThat(jsonNode.asText()).isEqualTo("1"
                                                     + "value");
   }
@@ -47,14 +48,14 @@ class FeelExpressionHandlerTest {
   @Test
   void testExpressionSuccessCallFunction() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=floor(1.4)", Variables.EMPTY);
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=floor(1.4)", ScopedVars.EMPTY);
     assertThat(jsonNode.asInt()).isEqualTo(1);
   }
 
   @Test
   void testExpressionSuccessWithComplexVar() {
     FeelExpressionHandler feelExpressionHandler = new FeelExpressionHandler(new FeelEngineProvider());
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + a.subVar.i", Variables.of("a", new ComplexVar(8)));
+    JsonNode jsonNode = feelExpressionHandler.processFeelExpression("=1 + a.subVar.i", MockScopedVars.of("a", new ComplexVar(8)));
     assertThat(jsonNode.asInt()).isEqualTo(9);
   }
 

@@ -16,8 +16,9 @@ public class EndEvent extends ThrowEvent<EndEventState> {
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
-      @Nonnull @JsonProperty("outgoing") Set<String> outgoing) {
-    super(id, parentId, incoming, outgoing);
+      @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
+      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
+    super(id, parentId, incoming, outgoing, ioMapping);
   }
 
   @Override

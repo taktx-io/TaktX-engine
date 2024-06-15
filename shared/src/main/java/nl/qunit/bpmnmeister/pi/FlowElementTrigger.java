@@ -14,7 +14,7 @@ public class FlowElementTrigger extends ProcessInstanceTrigger
     implements SchedulableMessage<ProcessInstanceKey> {
   public static final FlowElementTrigger NONE =
       new FlowElementTrigger(
-          ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, Variables.EMPTY);
+          ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, Variables.empty());
 
   private final String inputFlowId;
 

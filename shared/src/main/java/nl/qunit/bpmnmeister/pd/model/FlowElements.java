@@ -99,6 +99,15 @@ public class FlowElements {
   }
 
   @JsonIgnore
+  public Optional<FlowNode<?>> getFlowNodeWithIncomingFlow(String sequenceFlowId) {
+    FlowElement flowElement = elements.get(sequenceFlowId);
+    if (flowElement instanceof SequenceFlow sequenceFlow) {
+      return Optional.ofNullable((FlowNode<?>) elements.get(sequenceFlow.getTarget()));
+    }
+    return Optional.empty();
+  }
+
+  @JsonIgnore
   public Optional<FlowNode<?>> getFlowNodeWithOutgoingFlow(String sequenceFlowId) {
     FlowElement flowElement = elements.get(sequenceFlowId);
     if (flowElement instanceof SequenceFlow sequenceFlow) {

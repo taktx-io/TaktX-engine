@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.engine.pd.MessageSchedulerFactory;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -27,7 +29,8 @@ public class CatchEventSchedulerHelper {
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       ProcessInstance processInstance,
       IntermediateCatchEvent element,
-      IntermediateCatchEventState oldState) {
+      IntermediateCatchEventState oldState,
+      ScopedVars scopedVars) {
 
     List<SchedulableMessage<?>> messages =
         List.of(
@@ -35,7 +38,7 @@ public class CatchEventSchedulerHelper {
                 processInstance.getProcessInstanceKey(),
                 element.getId(),
                 Constants.NONE,
-                Variables.EMPTY));
+                Variables.empty()));
 
     Set<MessageScheduler> messageSchedulers =
         element.getTimerEventDefinitions().stream()
@@ -47,7 +50,7 @@ public class CatchEventSchedulerHelper {
                         element.getId(),
                         timerEventDefinition,
                         messages,
-                        processInstance.getVariables()))
+                        scopedVars))
             .collect(Collectors.toSet());
 
     newStateBuilder
@@ -67,10 +70,14 @@ public class CatchEventSchedulerHelper {
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       IntermediateCatchEvent element,
-      IntermediateCatchEventState oldState) {
+      IntermediateCatchEventState oldState,
+      ProcessInstance processInstance,
+      ProcessDefinition processDefinition) {
     if (trigger.getInputFlowId().equals(Constants.NONE)) {
       newStateBuilder.passedCnt(oldState.getPassedCnt() + 1);
-      triggerResultBuilder.newActiveFlows(element.getOutgoing());
+      triggerResultBuilder.processInstanceTriggers(
+          TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+              processInstance, processDefinition, element));
     }
   }
 }

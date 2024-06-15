@@ -4,10 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import jakarta.inject.Inject;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Activity;
@@ -36,7 +35,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables) {
+      ScopedVars variables) {
     TriggerResult triggerResult =
         getTriggerResultMultiInstanceOrSingle(
             trigger, processInstance, definition, element, oldState, variables);
@@ -58,8 +57,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
             .getFlowElements()
             .getBoundaryEventsAttachedToElement(element.getId());
     S newElementState = (S) triggerResult.getNewFlowNodeState();
-    Set<ProcessInstanceTrigger> triggers =
-        new HashSet<>(triggerResult.getNewProcessInstanceTriggers());
+    List<ProcessInstanceTrigger> triggers = new ArrayList<>();
     if (elementActivated(oldState, newElementState)) {
       for (BoundaryEvent boundaryEvent : boundaryEvents) {
         triggers.add(
@@ -67,7 +65,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                 processInstance.getProcessInstanceKey(),
                 boundaryEvent.getId(),
                 Constants.NONE,
-                processInstance.getVariables()));
+                Variables.empty()));
       }
     } else if (elementFinished(oldState, newElementState)) {
       for (BoundaryEvent boundaryEvent : boundaryEvents) {
@@ -75,8 +73,9 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
             new TerminateTrigger(processInstance.getProcessInstanceKey(), boundaryEvent.getId()));
       }
     }
+    triggers.addAll(triggerResult.getProcessInstanceTriggers());
 
-    return triggerResult.toBuilder().newProcessInstanceTriggers(triggers).build();
+    return triggerResult.toBuilder().processInstanceTriggers(triggers).build();
   }
 
   private TriggerResult getTriggerResultMultiInstanceOrSingle(
@@ -85,7 +84,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables) {
+      ScopedVars variables) {
     TriggerResult triggerResult;
     if (element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       triggerResult =
@@ -113,7 +112,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables) {
+      ScopedVars variables) {
     return switch (oldState.getState()) {
       case READY -> triggerWhenReady(processInstance, definition, element, oldState, variables);
       case ACTIVE -> triggerWhenActive(processInstance, definition, element, oldState, variables);
@@ -126,10 +125,9 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition processDefinition,
       E element,
       S oldState,
-      Variables variables) {
+      ScopedVars variables) {
 
     // Store the output element in the output collection
-    Variables returnVariables = new Variables(Map.of());
     if (element.getLoopCharacteristics().getOutputCollection() != null
         && element.getLoopCharacteristics().getOutputElement() != null) {
       ArrayNode outputCollection =
@@ -140,16 +138,14 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       if (outputElementNode != null) {
         outputCollection.add(outputElementNode);
       }
-      returnVariables =
-          returnVariables.put(
-              element.getLoopCharacteristics().getOutputCollection(), outputCollection);
+      variables.put(element.getLoopCharacteristics().getOutputCollection(), outputCollection);
     }
 
     JsonNode inputCollection =
         feelExpressionHandler.processFeelExpression(
             element.getLoopCharacteristics().getInputCollection(), variables);
     if (oldState.getLoopCnt() < inputCollection.size()) {
-      Set<ProcessInstanceTrigger> subProcessTriggers =
+      List<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenActive(
               processInstance,
               processDefinition,
@@ -160,20 +156,19 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
       return TriggerResult.builder()
           .newFlowNodeState(oldState.getNextLoopState())
-          .newProcessInstanceTriggers(subProcessTriggers)
-          .variables(returnVariables)
+          .processInstanceTriggers(subProcessTriggers)
           .build();
     } else {
       return finishActivity(
-          processInstance, element, oldState.getFinishedLoopState(), returnVariables);
+          processInstance, processDefinition, element, oldState.getFinishedLoopState(), variables);
     }
   }
 
-  private Set<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
+  private List<ProcessInstanceTrigger> getSubProcessTriggersWhenActive(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       Activity<?> element,
-      Variables variables,
+      ScopedVars variables,
       JsonNode inputCollection,
       int loopsReceived) {
     if (element.getLoopCharacteristics().isSequential()) {
@@ -185,11 +180,11 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
     }
   }
 
-  private Set<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
+  private List<ProcessInstanceTrigger> getSubProcessTriggersWhenReady(
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       E element,
-      Variables variables,
+      ScopedVars variables,
       JsonNode inputCollection,
       int i) {
     if (element.getLoopCharacteristics().isSequential()) {
@@ -206,14 +201,13 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition processDefinition,
       E element,
       S oldState,
-      Variables variables) {
-    // Create ArrayNode as new OutputCollection and add it to the variables
+      ScopedVars variables) {
+    // Create ArrayNode as new OutputCollection and add it to the variables in the current scope
     ObjectMapper objectMapper = new ObjectMapper();
 
     String outputCollectionName = element.getLoopCharacteristics().getOutputCollection();
-    Variables returnVariables = new Variables(Map.of());
     if (outputCollectionName != null) {
-      returnVariables = returnVariables.put(outputCollectionName, objectMapper.createArrayNode());
+      variables.put(outputCollectionName, objectMapper.createArrayNode());
     }
     JsonNode inputCollection =
         feelExpressionHandler.processFeelExpression(
@@ -221,17 +215,17 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
     if (inputCollection == null || inputCollection.isEmpty()) {
       return TriggerResult.builder()
           .newFlowNodeState(oldState.getFinishedLoopState())
-          .newActiveFlows(element.getOutgoing())
-          .variables(returnVariables)
+          .processInstanceTriggers(
+              TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+                  processInstance, processDefinition, element))
           .build();
     } else {
-      Set<ProcessInstanceTrigger> subProcessTriggers =
+      List<ProcessInstanceTrigger> subProcessTriggers =
           getSubProcessTriggersWhenReady(
               processInstance, processDefinition, element, variables, inputCollection, 0);
       return TriggerResult.builder()
           .newFlowNodeState(oldState.getNextLoopState())
-          .newProcessInstanceTriggers(subProcessTriggers)
-          .variables(returnVariables)
+          .processInstanceTriggers(subProcessTriggers)
           .build();
     }
   }
@@ -242,30 +236,31 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       ProcessDefinition definition,
       E element,
       S oldState,
-      Variables variables);
+      ScopedVars variables);
 
   protected TriggerResult finishActivity(
       ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
       Activity<?> element,
       ActivityState newState,
-      Variables returnVariables) {
+      ScopedVars variables) {
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
       return TriggerResult.builder()
           .newFlowNodeState(newState)
-          .newProcessInstanceTriggers(
-              Set.of(
+          .processInstanceTriggers(
+              List.of(
                   new FlowElementTrigger(
                       processInstance.getParentInstanceKey(),
                       element.getParentId(),
                       Constants.NONE,
-                      processInstance.getVariables())))
-          .variables(returnVariables)
+                      variables.getCurrentScopeVariables())))
           .build();
     } else {
       return TriggerResult.builder()
           .newFlowNodeState(newState)
-          .newActiveFlows(element.getOutgoing())
-          .variables(returnVariables)
+          .processInstanceTriggers(
+              TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+                  processInstance, processDefinition, element))
           .build();
     }
   }

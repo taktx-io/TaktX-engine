@@ -11,7 +11,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 @ToString(callSuper = true)
 public class StartNewProcessInstanceTrigger extends FlowElementTrigger {
 
-  @Nonnull private final ProcessInstanceKey parentProcessInstanceKey;
+  private final ProcessInstanceKey parentProcessInstanceKey;
   private final ProcessDefinition processDefinition;
   private final String parentElementId;
 

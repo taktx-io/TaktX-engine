@@ -2,14 +2,18 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
@@ -24,7 +28,7 @@ public class ParallelGatewayProcessor
       ProcessDefinition definition,
       ParallelGateway element,
       ParallelGatewayState oldState,
-      Variables variables) {
+      ScopedVars variables) {
 
     Set<String> newTriggeredFlows = new HashSet<>(oldState.getTriggeredFlows());
     newTriggeredFlows.add(trigger.getInputFlowId());
@@ -36,6 +40,26 @@ public class ParallelGatewayProcessor
       outputFlows.addAll(element.getOutgoing());
       newState = FlowNodeStateEnum.FINISHED;
     }
+    List<ProcessInstanceTrigger> triggers =
+        outputFlows.stream()
+            .map(
+                flowId -> {
+                  SequenceFlow flow =
+                      (SequenceFlow)
+                          definition
+                              .getDefinitions()
+                              .getRootProcess()
+                              .getFlowElements()
+                              .getFlowElement(flowId)
+                              .orElseThrow();
+                  return new FlowElementTrigger(
+                      processInstance.getProcessInstanceKey(),
+                      flow.getTarget(),
+                      flow.getId(),
+                      variables.getCurrentScopeVariables());
+                })
+            .collect(Collectors.toList());
+
     return TriggerResult.builder()
         .newFlowNodeState(
             new ParallelGatewayState(
@@ -44,7 +68,7 @@ public class ParallelGatewayProcessor
                 oldState.getPassedCnt() + 1,
                 newState,
                 oldState.getInputFlowId()))
-        .newActiveFlows(outputFlows)
+        .processInstanceTriggers(triggers)
         .build();
   }
 

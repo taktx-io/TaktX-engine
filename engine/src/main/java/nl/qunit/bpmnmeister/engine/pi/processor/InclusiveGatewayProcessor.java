@@ -7,14 +7,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayState;
@@ -23,12 +22,6 @@ import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayState;
 public class InclusiveGatewayProcessor
     extends GatewayProcessor<InclusiveGateway, InclusiveGatewayState> {
 
-  private final FeelExpressionHandler feelExpressionHandler;
-
-  public InclusiveGatewayProcessor(FeelExpressionHandler feelExpressionHandler) {
-    this.feelExpressionHandler = feelExpressionHandler;
-  }
-
   @Override
   protected TriggerResult triggerDecision(
       FlowElementTrigger trigger,
@@ -36,7 +29,7 @@ public class InclusiveGatewayProcessor
       ProcessDefinition definition,
       InclusiveGateway element,
       InclusiveGatewayState oldState,
-      Variables variables) {
+      ScopedVars variables) {
 
     Set<String> incomingFlows = element.getIncoming();
     Set<String> triggeredInputFlows = new HashSet<>(oldState.getTriggeredInputFlows());
@@ -57,7 +50,8 @@ public class InclusiveGatewayProcessor
                   oldState.getInputFlowId(),
                   triggeredInputFlows,
                   newActiveFlows))
-          .newActiveFlows(newActiveFlows)
+          .processInstanceTriggers(
+              getProcessInstanceTriggers(definition, processInstance, element, variables))
           .build();
 
     } else {

@@ -1,27 +1,41 @@
 package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
+@ToString
+@EqualsAndHashCode
 public class Variables {
 
-  public static final Variables EMPTY = new Variables(java.util.Map.of());
   private final Map<String, JsonNode> variables;
 
   @JsonCreator
-  public Variables(@Nonnull @JsonProperty("variables") Map<String, JsonNode> variables) {
-    this.variables = variables;
+  public Variables(
+      @Nonnull @JsonProperty("variables") Map<String, JsonNode> variables
+  ) {
+    this.variables = new HashMap<>(variables);
+  }
+
+  public static Variables empty() {
+    return new Variables(Map.of());
   }
 
   public static Variables of(String key, Object value) {
     return new Variables(Map.of(key, new ObjectMapper().valueToTree(value)));
+  }
+
+  public static Variables of(Map<String, JsonNode> variables) {
+    return new Variables(variables);
   }
 
   public static Variables of(String key, Object value, String key2, Object value2) {
@@ -41,30 +55,24 @@ public class Variables {
     return new Variables(Map.of(key, v1, key2, v2, key3, v3));
   }
 
+  @JsonIgnore
   public JsonNode get(String key) {
     return variables.get(key);
   }
 
-  public Variables put(String key, JsonNode value) {
-    Map<String, JsonNode> variables = new HashMap<>(this.variables);
-    variables.put(key, value);
-    return new Variables(Map.copyOf(variables));
+  @JsonIgnore
+  public JsonNode put(String key, JsonNode value) {
+    return variables.put(key, value);
   }
 
-  public Variables remove(String key) {
-    Map<String, JsonNode> variables = new HashMap<>(this.variables);
-    variables.remove(key);
-    return new Variables(Map.copyOf(variables));
+  @JsonIgnore
+  public JsonNode remove(String key) {
+    return variables.remove(key);
   }
 
-  public Variables merge(Variables variablesToMerge) {
-    Map<String, JsonNode> variables = new HashMap<>(this.variables);
+  @JsonIgnore
+  public void merge(Variables variablesToMerge) {
     variables.putAll(variablesToMerge.variables);
-    return new Variables(Map.copyOf(variables));
   }
 
-  @Override
-  public String toString() {
-    return "Variables{" + "variables=" + variables + '}';
-  }
 }

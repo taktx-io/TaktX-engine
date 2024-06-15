@@ -10,6 +10,6 @@ public class TerminateTrigger extends ProcessInstanceTrigger {
   public TerminateTrigger(
       @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @JsonProperty("elementId") String elementId) {
-    super(processInstanceKey, elementId, Variables.EMPTY);
+    super(processInstanceKey, elementId, Variables.empty());
   }
 }

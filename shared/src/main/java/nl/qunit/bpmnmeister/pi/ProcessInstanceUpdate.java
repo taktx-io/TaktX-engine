@@ -11,29 +11,27 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
 @ToString
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 @SuperBuilder(toBuilder = true)
-public class ProcessInstance {
-  private final String parentElementId;
-  private final ProcessInstanceKey processInstanceKey;
-  private final ProcessInstanceKey parentInstanceKey;
-  private final ProcessDefinitionKey processDefinitionKey;
-  private final FlowNodeStates flowNodeStates;
-  private final ProcessInstanceState processInstanceState;
+public class ProcessInstanceUpdate extends ProcessInstance {
+  private final Variables variables;
 
   @JsonCreator
-  public ProcessInstance(
+  public ProcessInstanceUpdate(
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,
-      @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState) {
-    this.parentElementId = parentElementId;
-    this.processInstanceKey = processInstanceKey;
-    this.parentInstanceKey = parentInstanceKey;
-    this.processDefinitionKey = processDefinitionKey;
-    this.flowNodeStates = flowNodeStates;
-    this.processInstanceState = processInstanceState;
+      @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState,
+      @Nonnull @JsonProperty("variables") Variables variables) {
+    super(parentElementId, processInstanceKey, parentInstanceKey, processDefinitionKey, flowNodeStates, processInstanceState);
+    this.variables = variables;
   }
+
+  public ProcessInstanceUpdate(ProcessInstance processInstance, Variables variables) {
+    this(processInstance.getParentElementId(), processInstance.getProcessInstanceKey(), processInstance.getParentInstanceKey(), processInstance.getProcessDefinitionKey(), processInstance.getFlowNodeStates(), processInstance.getProcessInstanceState(), variables);
+  }
+
+
 }

@@ -3,13 +3,13 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Set;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 
@@ -23,20 +23,21 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
       ProcessDefinition definition,
       ReceiveTask element,
       ReceiveTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     if (oldState.getState() == FlowNodeStateEnum.READY) {
       return subscribeToMessage(processInstance, definition, element, oldState, variables);
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return messageReceived(processInstance, element, oldState, variables);
+      return messageReceived(processInstance, definition, element, oldState, variables);
     }
     return TriggerResult.builder().newFlowNodeState(oldState).build();
   }
 
   private TriggerResult messageReceived(
       ProcessInstance processInstance,
+      ProcessDefinition definition,
       ReceiveTask element,
       ReceiveTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
 
     ReceiveTaskState newState =
         new ReceiveTaskState(
@@ -45,7 +46,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
             oldState.getPassedCnt() + 1,
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
-    return finishActivity(processInstance, element, newState, variables);
+    return finishActivity(processInstance, definition, element, newState, variables);
   }
 
   private TriggerResult subscribeToMessage(
@@ -53,7 +54,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
       ProcessDefinition definition,
       ReceiveTask element,
       ReceiveTaskState oldState,
-      Variables variables) {
+      ScopedVars variables) {
     String correlationKeyExpression =
         definition.getDefinitions().getMessages().get(element.getMessageRef()).getCorrelationKey();
     JsonNode jsonNode =

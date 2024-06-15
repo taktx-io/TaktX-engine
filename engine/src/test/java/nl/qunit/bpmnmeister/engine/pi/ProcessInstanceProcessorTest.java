@@ -84,7 +84,7 @@ class ProcessInstanceProcessorTest {
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElement("StartEvent_1")
@@ -98,7 +98,7 @@ class ProcessInstanceProcessorTest {
     LOG.info("testSubProcessTaskSingle");
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subprocess-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilChildProcessIsStarted()
         .waitUntilCompleted()
         .assertThatProcess()
@@ -123,12 +123,12 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(Variables.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasVariableWithValue("var1", "value1")
+        .hasVariableWithValue("MappedOutputVariable", "value1")
         .hasPassedElement("StartEvent_2")
         .hasPassedElement("service-task-id")
         .hasPassedElement("EndEvent_2");
@@ -141,7 +141,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(Variables.of("var1", "value1"))
         .waitUntilCompleted()
@@ -158,7 +158,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
@@ -180,7 +180,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
@@ -198,7 +198,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithFailure(true, "failure", Variables.of("failed1", "true"))
         .waitFor(Duration.ofSeconds(1))
@@ -292,7 +292,7 @@ class ProcessInstanceProcessorTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/callactivity-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilChildProcessIsStarted()
         .waitUntilCompleted()
         .assertThatProcess()
@@ -367,7 +367,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitUntilCompleted()
@@ -384,7 +384,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(Variables.of("success", "true"))
         .waitUntilCompleted()
@@ -402,7 +402,7 @@ class ProcessInstanceProcessorTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitFor(Duration.ofSeconds(1))
@@ -424,7 +424,7 @@ class ProcessInstanceProcessorTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .setTime(Instant.parse("2024-02-29T07:59:59Z"))
         .waitFor(Duration.ofSeconds(1))
         .assertThatProcess()
@@ -454,7 +454,7 @@ class ProcessInstanceProcessorTest {
 
         // now test the alternative default flow
         .toProcessLevel()
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElement("StartEvent_1")
@@ -468,7 +468,7 @@ class ProcessInstanceProcessorTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/gateway-parallel.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilElementHasPassed("Task_1")
         .assertThatProcess()
         .hasNotPassedElement("Task_2")
@@ -567,7 +567,7 @@ class ProcessInstanceProcessorTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/sendtask-single.gen1.bpmn")
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitUntilServiceTaskIsWaitingForResponse("send-task-id")
         .andRespondWithSuccess(Variables.of("var1", "value1"))
         .waitUntilCompleted()
@@ -631,7 +631,7 @@ class ProcessInstanceProcessorTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()
-        .startProcessInstance(Variables.EMPTY)
+        .startProcessInstance(Variables.empty())
         .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("1", "2", "3", "4", "5"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "5", Variables.of("var1", "value1"))
         .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "3", Variables.of("var1", "value1"))

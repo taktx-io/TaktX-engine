@@ -6,16 +6,18 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
-public class EndEventState extends ThrowEventState {
+@SuperBuilder(toBuilder = true)
+public class ThrowEventState extends EventState {
   @JsonCreator
-  public EndEventState(
+  public ThrowEventState(
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
-      @JsonProperty("inputFlowId") String inputFlowId) {
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
+      @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
     super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
 }

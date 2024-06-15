@@ -38,6 +38,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
@@ -84,19 +85,19 @@ public class BpmnTestEngine {
   @Channel("message-event-outgoing")
   Emitter<MessageEvent> messageEventEmitter;
 
-  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstance>> processInstanceQueueMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstanceUpdate>> processInstanceQueueMap = new HashMap<>();
   private final Map<ProcessInstanceKey, List<ProcessInstanceKey>> processInstanceParentChildMap = new HashMap<>();
   private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, ProcessInstance> processInstanceMap = new HashMap<>();
+  private final Map<ProcessInstanceKey, ProcessInstanceUpdate> processInstanceMap = new HashMap<>();
   private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEvent>> messageSubscriptionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
-  private ProcessInstance activeProcessInstance;
+  private ProcessInstanceUpdate activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
   private Definitions definitionsBeingDeployed;
   private MutableClock mutableClock;
-  private ProcessInstance latestInstantiatedProcessInstance;
+  private ProcessInstanceUpdate latestInstantiatedProcessInstance;
 
   @PostConstruct
   public void init() {
@@ -136,10 +137,10 @@ public class BpmnTestEngine {
     externalTaskTriggers.add(externalTaskTrigger);
   }
 
-  @Incoming("process-instance-incoming")
-  public void consume(ProcessInstance processInstance) {
+  @Incoming("process-instance-update-incoming")
+  public void consume(ProcessInstanceUpdate processInstance) {
     LOG.info("Received process instance: " + processInstance);
-    ConcurrentLinkedQueue<ProcessInstance> processInstances1 = processInstanceQueueMap.computeIfAbsent(
+    ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances1 = processInstanceQueueMap.computeIfAbsent(
         processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     processInstances1.add(processInstance);
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
@@ -231,12 +232,12 @@ public class BpmnTestEngine {
 
     activeProcessInstance = Awaitility.await()
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
+          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
               activeProcessInstanceKey);
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstance poll = processInstances.poll();
+          ProcessInstanceUpdate poll = processInstances.poll();
           if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
               .equals(activeProcessInstanceKey)) {
             return poll;
@@ -257,7 +258,7 @@ public class BpmnTestEngine {
 
 
   public BpmnTestEngine waitForNewProcessInstance() {
-    ProcessInstance referenceProcessInstance = latestInstantiatedProcessInstance;
+    ProcessInstanceUpdate referenceProcessInstance = latestInstantiatedProcessInstance;
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> latestInstantiatedProcessInstance,
             instance -> !Objects.equals(referenceProcessInstance, instance));
@@ -280,7 +281,7 @@ public class BpmnTestEngine {
           }
           if (childKeys.size() >= expectedCount) {
             ProcessInstanceKey processInstanceKey = childKeys.get(childKeys.size() - 1);
-            ProcessInstance processInstance = processInstanceMap.get(processInstanceKey);
+            ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
             return processInstance != null && processInstance.getProcessInstanceState() == processInstanceState ? processInstance : null;
           }
           return null;
@@ -306,12 +307,12 @@ public class BpmnTestEngine {
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
+          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
               activeProcessInstance.getProcessInstanceKey());
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstance poll = null;
+          ProcessInstanceUpdate poll = null;
           do {
             poll = processInstances.poll();
             if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
@@ -339,13 +340,13 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine parentProcess() {
-    ProcessInstance parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
+    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
     activeProcessInstance = parentProcessInstance;
     return this;
   }
 
   public ProcessInstanceAssert assertThatParentProcess() {
-    ProcessInstance parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
+    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
     activeProcessInstance = parentProcessInstance;
     return new ProcessInstanceAssert(parentProcessInstance, this);
   }
@@ -400,12 +401,12 @@ public class BpmnTestEngine {
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstance> processInstances = processInstanceQueueMap.get(
+          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
               activeProcessInstance.getProcessInstanceKey());
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstance poll = null;
+          ProcessInstanceUpdate poll = null;
           do {
             poll = processInstances.poll();
             if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
@@ -474,5 +475,9 @@ public class BpmnTestEngine {
 
   public ExternalTaskAssert assertThatExternalTask() {
     return new ExternalTaskAssert(activeExternalTaskTrigger, this);
+  }
+
+  public ProcessInstanceUpdate getProcessInstance(ProcessInstanceKey parentInstanceKey) {
+    return processInstanceMap.get(parentInstanceKey);
   }
 }

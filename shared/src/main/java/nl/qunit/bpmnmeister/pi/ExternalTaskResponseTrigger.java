@@ -15,7 +15,7 @@ public class ExternalTaskResponseTrigger extends ProcessInstanceTrigger {
           ProcessInstanceKey.NONE,
           Constants.NONE,
           ExternalTaskResponseResult.NONE,
-          Variables.EMPTY);
+          Variables.empty());
   private final ExternalTaskResponseResult externalTaskResponseResult;
 
   @JsonCreator

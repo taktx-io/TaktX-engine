@@ -1,8 +1,9 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
@@ -12,7 +13,6 @@ import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
@@ -26,15 +26,15 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
       ProcessDefinition processDefinition,
       EndEvent element,
       EndEventState oldState,
-      Variables variables) {
-    Set<ProcessInstanceTrigger> processInstanceTriggers = new HashSet<>();
+      ScopedVars variables) {
+    List<ProcessInstanceTrigger> processInstanceTriggers = new ArrayList<>();
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
       processInstanceTriggers.add(
           new FlowElementTrigger(
               processInstance.getParentInstanceKey(),
               processInstance.getParentElementId(),
               Constants.NONE,
-              processInstance.getVariables()));
+              variables.getCurrentScopeVariables()));
     }
     EndEventState newState =
         new EndEventState(
@@ -44,7 +44,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
             oldState.getInputFlowId());
     return TriggerResult.builder()
         .newFlowNodeState(newState)
-        .newProcessInstanceTriggers(processInstanceTriggers)
+        .processInstanceTriggers(processInstanceTriggers)
         .throwingEvent(new EndThrowingEvent())
         .build();
   }
