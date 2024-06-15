@@ -13,12 +13,7 @@ import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class ServiceTask extends Task<ServiceTaskState> {
-
-  private final String workerDefinition;
-  private final String retries;
-  private final String implementation;
-  private final Map<String, String> headers;
+public class ServiceTask extends ExternalTask<ServiceTaskState> {
 
   @JsonCreator
   public ServiceTask(
@@ -32,11 +27,7 @@ public class ServiceTask extends Task<ServiceTaskState> {
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
       @Nonnull @JsonProperty("headers") Map<String, String> headers,
       @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
-    this.workerDefinition = workerDefinition;
-    this.retries = retries;
-    this.implementation = implementation;
-    this.headers = headers;
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping, workerDefinition, retries, implementation, headers);
   }
 
   @Override

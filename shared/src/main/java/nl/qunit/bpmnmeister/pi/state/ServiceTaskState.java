@@ -9,9 +9,7 @@ import lombok.ToString;
 
 @Getter
 @ToString(callSuper = true)
-public class ServiceTaskState extends TaskState {
-
-  private final int attempt;
+public class ServiceTaskState extends ExternalTaskState {
 
   @JsonCreator
   public ServiceTaskState(
@@ -21,8 +19,7 @@ public class ServiceTaskState extends TaskState {
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("attempt") int attempt,
       @JsonProperty("inputFlowId") String inputflowId) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputflowId);
-    this.attempt = attempt;
+    super(state, elementInstanceId, passedCnt, loopCnt, inputflowId, attempt);
   }
 
   @Override

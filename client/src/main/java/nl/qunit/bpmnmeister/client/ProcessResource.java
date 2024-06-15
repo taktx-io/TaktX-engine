@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
@@ -51,7 +52,12 @@ public class ProcessResource {
     }
     StartCommand startCommand =
         new StartCommand(
-            ProcessInstanceKey.NONE, Constants.NONE, Constants.NONE, processId, new Variables(variablesMap));
+            new ProcessInstanceKey(UUID.randomUUID()),
+            ProcessInstanceKey.NONE,
+            Constants.NONE,
+            Constants.NONE,
+            processId,
+            new Variables(variablesMap));
     KafkaProducer<String, StartCommand> startCommandEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(

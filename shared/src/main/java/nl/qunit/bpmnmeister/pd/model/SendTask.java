@@ -13,13 +13,7 @@ import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class SendTask extends Task<SendTaskState> {
-
-  private final String workerDefinition;
-  private final String retries;
-  private final String implementation;
-  private final Map<String, String> headers;
-
+public class SendTask extends ExternalTask<SendTaskState> {
   @JsonCreator
   public SendTask(
       @Nonnull @JsonProperty("id") String id,
@@ -32,11 +26,7 @@ public class SendTask extends Task<SendTaskState> {
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristics loopCharacteristics,
       @Nonnull @JsonProperty("headers") Map<String, String> headers,
       @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
-    this.workerDefinition = workerDefinition;
-    this.retries = retries;
-    this.implementation = implementation;
-    this.headers = headers;
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping, workerDefinition, retries, implementation, headers);
   }
 
   @Override

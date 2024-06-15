@@ -11,7 +11,6 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 @EqualsAndHashCode(callSuper = true)
 public abstract class Activity<S extends FlowNodeState> extends FlowNode<S> implements WithIoMapping {
   private final LoopCharacteristics loopCharacteristics;
-  @Nonnull
   private final InputOutputMapping ioMapping;
 
   protected Activity(
