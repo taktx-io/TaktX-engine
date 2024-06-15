@@ -89,9 +89,10 @@ public class ProcessInstanceProcessor
           startNewProcessInstanceTrigger.getVariables());
       processInstance =
           new ProcessInstance(
-              startNewProcessInstanceTrigger.getParentElementId(),
+              startNewProcessInstanceTrigger.getRootInstanceKey(),
               startNewProcessInstanceTrigger.getProcessInstanceKey(),
               startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
+              startNewProcessInstanceTrigger.getParentElementId(),
               processDefinitionKey,
               FlowNodeStates.EMPTY,
               ProcessInstanceState.START);
@@ -205,7 +206,7 @@ public class ProcessInstanceProcessor
                         .equals(parentKeyElementPair.getElementId()))) {
               context.forward(
                   new Record<>(
-                      childKey,
+                      processInstance.getRootInstanceKey(),
                       new TerminateTrigger(childKey, Constants.NONE),
                       Instant.now().toEpochMilli()));
             }
@@ -289,9 +290,10 @@ public class ProcessInstanceProcessor
 
     newProcessInstance =
         new ProcessInstance(
-            processInstance.getParentElementId(),
+            processInstance.getRootInstanceKey(),
             processInstance.getProcessInstanceKey(),
             processInstance.getParentInstanceKey(),
+            processInstance.getParentElementId(),
             processInstance.getProcessDefinitionKey(),
             newFlowNodeStates,
             newProcessInstanceState);
@@ -312,7 +314,7 @@ public class ProcessInstanceProcessor
               .equals(newProcessInstance.getProcessInstanceKey())) {
         context.forward(
             new Record<>(
-                nextTrigger.getProcessInstanceKey(), nextTrigger, Instant.now().toEpochMilli()));
+                processInstance.getRootInstanceKey(), nextTrigger, Instant.now().toEpochMilli()));
       } else {
         newProcessInstance = trigger(newProcessInstance, definition, nextTrigger, variables);
       }
@@ -338,7 +340,7 @@ public class ProcessInstanceProcessor
                       externalTask.getVariables());
               context.forward(
                   new Record<>(
-                      newExternalTaskTrigger.getProcessInstanceKey(),
+                      processInstance.getRootInstanceKey(),
                       newExternalTaskTrigger,
                       Instant.now().toEpochMilli()));
             });

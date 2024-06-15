@@ -113,6 +113,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
               String correlationKey = jsonNode.asText();
               String messageName = message.getName();
               return new CorrelationMessageSubscription(
+                  processInstance.getRootInstanceKey(),
                   processInstance.getProcessInstanceKey(),
                   correlationKey,
                   element.getId(),

@@ -36,6 +36,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
           .newStartCommands(
               Set.of(
                   new StartCommand(
+                      processInstance.getRootInstanceKey(),
                       processInstance.getProcessInstanceKey(),
                       Constants.NONE,
                       element.getId(),

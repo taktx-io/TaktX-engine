@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -104,6 +105,7 @@ public class MessageEventProcessor
           .forEach(
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
+                  ProcessInstanceKey rootInstanceKey = subscription.getRootInstanceKey();
                   ProcessInstanceKey processInstanceKey = subscription.getProcessInstanceKey();
                   FlowElementTrigger flowElementTrigger =
                       new FlowElementTrigger(
@@ -114,7 +116,7 @@ public class MessageEventProcessor
 
                   context.forward(
                       new Record<>(
-                          processInstanceKey, flowElementTrigger, Instant.now().toEpochMilli()));
+                          rootInstanceKey, flowElementTrigger, Instant.now().toEpochMilli()));
                 }
               });
     }
@@ -136,6 +138,7 @@ public class MessageEventProcessor
                   ProcessDefinitionKey processDefinitionKey = value.getProcessDefinitionKey();
                   StartCommand startCommand =
                       new StartCommand(
+                          new ProcessInstanceKey(UUID.randomUUID()),
                           ProcessInstanceKey.NONE,
                           value.getElementId(),
                           Constants.NONE,

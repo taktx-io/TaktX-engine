@@ -55,6 +55,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     variables.push(childProcessInstanceKey, parentProcessInstanceKey, Variables.empty());
     StartNewProcessInstanceTrigger subProcessTrigger =
         new StartNewProcessInstanceTrigger(
+            processInstance.getRootInstanceKey(),
             childProcessInstanceKey,
             parentProcessInstanceKey,
             element.getAsSubProcessDefinition(definition),

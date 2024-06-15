@@ -18,6 +18,7 @@ public class ProcessInstanceUpdate extends ProcessInstance {
 
   @JsonCreator
   public ProcessInstanceUpdate(
+      @Nonnull @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
@@ -25,12 +26,12 @@ public class ProcessInstanceUpdate extends ProcessInstance {
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,
       @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState,
       @Nonnull @JsonProperty("variables") Variables variables) {
-    super(parentElementId, processInstanceKey, parentInstanceKey, processDefinitionKey, flowNodeStates, processInstanceState);
+    super(rootInstanceKey, processInstanceKey, parentInstanceKey, parentElementId, processDefinitionKey, flowNodeStates, processInstanceState);
     this.variables = variables;
   }
 
   public ProcessInstanceUpdate(ProcessInstance processInstance, Variables variables) {
-    this(processInstance.getParentElementId(), processInstance.getProcessInstanceKey(), processInstance.getParentInstanceKey(), processInstance.getProcessDefinitionKey(), processInstance.getFlowNodeStates(), processInstance.getProcessInstanceState(), variables);
+    this(processInstance.getRootInstanceKey(), processInstance.getParentElementId(), processInstance.getProcessInstanceKey(), processInstance.getParentInstanceKey(), processInstance.getProcessDefinitionKey(), processInstance.getFlowNodeStates(), processInstance.getProcessInstanceState(), variables);
   }
 
 

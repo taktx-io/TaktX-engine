@@ -22,7 +22,8 @@ public abstract class ProcessInstanceTrigger {
   private final Variables variables;
 
   protected ProcessInstanceTrigger(
-      ProcessInstanceKey processInstanceKey, String elementId, Variables variables) {
+      ProcessInstanceKey processInstanceKey,
+      String elementId, Variables variables) {
     this.processInstanceKey = processInstanceKey;
     this.elementId = elementId;
     this.variables = variables;

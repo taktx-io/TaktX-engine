@@ -14,6 +14,9 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 @EqualsAndHashCode
 @SuperBuilder(toBuilder = true)
 public class ProcessInstance {
+
+  @Nonnull
+  private final ProcessInstanceKey rootInstanceKey;
   private final String parentElementId;
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessInstanceKey parentInstanceKey;
@@ -23,12 +26,14 @@ public class ProcessInstance {
 
   @JsonCreator
   public ProcessInstance(
-      @Nonnull @JsonProperty("parentElementId") String parentElementId,
+      @Nonnull @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
       @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
+      @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,
       @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState) {
+    this.rootInstanceKey = rootInstanceKey;
     this.parentElementId = parentElementId;
     this.processInstanceKey = processInstanceKey;
     this.parentInstanceKey = parentInstanceKey;

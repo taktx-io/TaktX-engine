@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Message;
@@ -45,6 +46,7 @@ public class ProcessDefinitionActivationProcessor
     List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
         new StartCommand(
+            new ProcessInstanceKey(UUID.randomUUID()),
             ProcessInstanceKey.NONE,
             startEvent.getParentId(),
             Constants.NONE,

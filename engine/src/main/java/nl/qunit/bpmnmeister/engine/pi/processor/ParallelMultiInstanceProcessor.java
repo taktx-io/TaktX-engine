@@ -38,6 +38,7 @@ class ParallelMultiInstanceProcessor {
       variables.put(element.getLoopCharacteristics().getInputElement(), inputElement);
       subProcessTriggers.add(
           new StartNewProcessInstanceTrigger(
+              processInstance.getRootInstanceKey(),
               childProcessInstanceKey,
               parentProcessInstanceKey,
               element.getAsSubProcessDefinition(processDefinition),

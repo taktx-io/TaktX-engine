@@ -11,12 +11,15 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 @ToString(callSuper = true)
 public class StartNewProcessInstanceTrigger extends FlowElementTrigger {
 
+  @Nonnull
+  private final ProcessInstanceKey rootInstanceKey;
   private final ProcessInstanceKey parentProcessInstanceKey;
   private final ProcessDefinition processDefinition;
   private final String parentElementId;
 
   @JsonCreator
   public StartNewProcessInstanceTrigger(
+      @JsonProperty("rootInstanceKey") @Nonnull ProcessInstanceKey rootInstanceKey,
       @JsonProperty("processInstanceKey") @Nonnull ProcessInstanceKey processInstanceKey,
       @JsonProperty("parentProcessInstanceKey") @Nonnull
           ProcessInstanceKey parentProcessInstanceKey,
@@ -26,6 +29,7 @@ public class StartNewProcessInstanceTrigger extends FlowElementTrigger {
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(processInstanceKey, elementId, inputFlowId, variables);
+    this.rootInstanceKey = rootInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.processDefinition = processDefinition;
     this.parentElementId = parentElementId;

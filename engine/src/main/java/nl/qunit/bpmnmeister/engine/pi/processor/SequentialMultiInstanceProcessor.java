@@ -57,6 +57,7 @@ class SequentialMultiInstanceProcessor {
 
     return List.of(
         new StartNewProcessInstanceTrigger(
+            processInstance.getRootInstanceKey(),
             childProcessInstanceKey,
             parentProcessInstanceKey,
             element.getAsSubProcessDefinition(processDefinition),

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
@@ -207,6 +208,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine startProcessInstance(Variables variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
     StartCommand startCommand = new StartCommand(
+        new ProcessInstanceKey(UUID.randomUUID()),
         ProcessInstanceKey.NONE,
         Constants.NONE,
         Constants.NONE,

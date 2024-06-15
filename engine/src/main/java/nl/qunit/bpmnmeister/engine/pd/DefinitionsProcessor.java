@@ -76,6 +76,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
     ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     ProcessInstanceTrigger processInstanceTrigger =
         new StartNewProcessInstanceTrigger(
+            startCommand.getRootProcessInstanceKey(),
             processInstanceKey,
             startCommand.getParentProcessInstanceKey(),
             processDefinition,
@@ -84,7 +85,10 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             Constants.NONE,
             startCommand.getVariables());
     context.forward(
-        new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
+        new Record<>(
+            startCommand.getRootProcessInstanceKey(),
+            processInstanceTrigger,
+            definitionsRecord.timestamp()));
   }
 
   private void processDefinitionsRecord(

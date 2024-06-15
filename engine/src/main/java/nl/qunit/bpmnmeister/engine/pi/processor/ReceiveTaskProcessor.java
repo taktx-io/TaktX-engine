@@ -73,6 +73,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
         .newMessageSubscriptions(
             Set.of(
                 new CorrelationMessageSubscription(
+                    processInstance.getRootInstanceKey(),
                     processInstance.getProcessInstanceKey(),
                     correlationKey,
                     element.getId(),

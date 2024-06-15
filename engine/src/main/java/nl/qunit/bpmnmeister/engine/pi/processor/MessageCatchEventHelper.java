@@ -53,6 +53,7 @@ public class MessageCatchEventHelper {
                   String correlationKey = jsonNode.asText();
                   String messageName = message.getName();
                   return new CorrelationMessageSubscription(
+                      processInstance.getRootInstanceKey(),
                       processInstance.getProcessInstanceKey(),
                       correlationKey,
                       element.getId(),
