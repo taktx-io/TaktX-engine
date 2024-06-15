@@ -51,7 +51,7 @@ class ProcessInstanceProcessorVariableTest {
         .hasVariableWithValue("var2", "value2")
         .hasVariableWithValue("StartEvent_Output_1", "outputValue1")
         .hasVariableWithValue("StartEvent_Output_2", "outputValue2")
-        .hasVariableWithValue("MappedOutputVariable", "value2");
+        .hasVariableWithValue("MappedOutputVariable", "value1");
   }
 
 }
