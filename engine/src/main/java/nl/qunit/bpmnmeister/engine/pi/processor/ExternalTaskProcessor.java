@@ -209,6 +209,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       ScopedVars variables) {
     ExternalTaskTrigger externalTask =
         new ExternalTaskTrigger(
+            processInstance.getRootInstanceKey(),
             processInstance.getProcessInstanceKey(),
             processInstance.getProcessDefinitionKey(),
             workerDefinition,

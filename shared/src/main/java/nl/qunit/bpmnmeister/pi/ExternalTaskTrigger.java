@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -8,6 +9,8 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKey> {
+
+  private final ProcessInstanceKey rootInstanceKey;
   private final ProcessInstanceKey processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final String elementId;
@@ -15,10 +18,12 @@ public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKe
 
   @JsonCreator
   public ExternalTaskTrigger(
+      @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
       @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @JsonProperty("externalTaskId") String elementId,
       @JsonProperty("variables") Variables variables) {
+    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
     this.elementId = elementId;
@@ -40,6 +45,7 @@ public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKe
         + '}';
   }
 
+  @JsonIgnore
   @Override
   public ProcessInstanceKey getRecordKey() {
     return processInstanceKey;

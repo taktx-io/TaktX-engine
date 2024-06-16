@@ -21,16 +21,17 @@ public class ServiceTaskMultiInstanceParallelWorker {
   }
 
   @ExternalTask(element = "service-task-id")
-  public void serviceTask(String inputElement) {
+  public ServiceTaskResults serviceTask(String inputElement) {
     System.out.println(
         "ServiceTaskMultiInstanceParallelWorker.serviceTask() called with inputElement: "
             + inputElement);
+    return new ServiceTaskResults("result-" + inputElement);
   }
 
   @RequiredArgsConstructor
   @Getter
   public static class ServiceTaskResults {
-    public final String result;
+    public final String outputElement;
   }
 
   @RequiredArgsConstructor

@@ -183,7 +183,8 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeExternalTaskTrigger(
-      ExternalTaskTrigger externalTaskTrigger, String definitionId) {
+      ExternalTaskTrigger externalTaskTrigger,
+      String definitionId) {
     String processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
     if (!definitionId.equals(processDefinitionId)) {
@@ -237,7 +238,7 @@ public class ExternalTriggerConsumer {
             responseEmitter.send(
                 new ProducerRecord<>(
                     Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-                    externalTaskTrigger.getProcessInstanceKey(),
+                    externalTaskTrigger.getRootInstanceKey(),
                     processInstanceTrigger));
             responseEmitter.flush();
             responseEmitter.close();

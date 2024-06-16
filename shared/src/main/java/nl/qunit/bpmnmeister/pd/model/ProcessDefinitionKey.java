@@ -5,9 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
 @EqualsAndHashCode
+@ToString
 public class ProcessDefinitionKey {
   private final String processDefinitionId;
   private final Integer version;
@@ -26,14 +28,4 @@ public class ProcessDefinitionKey {
         processDefinition.getVersion());
   }
 
-  @Override
-  public String toString() {
-    return "ProcessDefinitionKey{"
-        + "processDefinitionId='"
-        + processDefinitionId
-        + '\''
-        + ", version="
-        + version
-        + '}';
-  }
 }

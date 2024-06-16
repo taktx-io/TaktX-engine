@@ -20,6 +20,8 @@ public class ContainerKafkaTestResource implements QuarkusTestResourceLifecycleM
     Map<String, String> systemProperties = new HashMap<>();
     systemProperties.put("kafka.bootstrap.servers", kafka.getBootstrapServers());
     systemProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+    systemProperties.put("auto.create.topics.enable", "true");
+    systemProperties.put("num.partitions", "3");
     systemProperties.put("group.min.session.timeout.ms", "100");
     systemProperties.put("group.max.session.timeout.ms", "10000");
     return systemProperties;

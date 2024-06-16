@@ -334,13 +334,14 @@ public class ProcessInstanceProcessor
               LOG.info("Trigger external task: " + externalTask);
               ExternalTaskTrigger newExternalTaskTrigger =
                   new ExternalTaskTrigger(
+                      processInstance.getRootInstanceKey(),
                       processInstance.getProcessInstanceKey(),
                       ProcessDefinitionKey.of(definition),
                       externalTask.getExternalTaskId(),
                       externalTask.getVariables());
               context.forward(
                   new Record<>(
-                      processInstance.getRootInstanceKey(),
+                      newExternalTaskTrigger.getProcessInstanceKey(),
                       newExternalTaskTrigger,
                       Instant.now().toEpochMilli()));
             });
