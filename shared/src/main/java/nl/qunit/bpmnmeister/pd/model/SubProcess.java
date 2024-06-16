@@ -46,7 +46,7 @@ public class SubProcess extends Activity<SubProcessState> {
                         .getDefinitions()
                         .getDefinitionsKey()
                         .getProcessDefinitionId()
-                    + "-"
+                    + "/"
                     + getId(),
                 parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
             process,

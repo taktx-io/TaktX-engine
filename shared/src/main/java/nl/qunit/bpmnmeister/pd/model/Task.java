@@ -49,7 +49,7 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
     DefinitionsKey subDefinitionsKey =
         new DefinitionsKey(
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
-                + "-"
+                + "/"
                 + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
     Definitions definitions =

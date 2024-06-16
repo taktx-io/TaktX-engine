@@ -3,9 +3,11 @@ package nl.qunit.bpmnmeister.engine.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.ToString;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @Getter
+@ToString
 public class ExternalTaskInfo {
 
   private final String externalTaskId;

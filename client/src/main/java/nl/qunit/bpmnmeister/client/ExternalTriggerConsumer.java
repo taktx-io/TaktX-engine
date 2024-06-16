@@ -64,7 +64,7 @@ public class ExternalTriggerConsumer {
 
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinition> parsedDefinitionConsumer;
-
+  private KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter;
   public ExternalTriggerConsumer(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
@@ -79,6 +79,13 @@ public class ExternalTriggerConsumer {
             ProcessDefinitionJsonDeserializer.class);
     parsedDefinitionConsumer.subscribe(
         Collections.singletonList(Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName()));
+
+    responseEmitter =
+        new KafkaProducer<>(
+            kafkaPropertiesHelper.getKafkaProducerProperties(
+                ProcessInstanceKeyJsonSeserializer.class,
+                ExternalTaskTriggerResponseSerializer.class));
+
     CompletableFuture.runAsync(
         () -> {
           while (true) {
@@ -141,7 +148,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeDefinition(ProcessDefinitionKey processDefinitionKey) {
-    String processDefinitionId = processDefinitionKey.getProcessDefinitionId();
+    String processDefinitionId = processDefinitionKey.getProcessDefinitionId().split("/")[0];
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance != null) {
       // We have a worker instance for this process definition. If not consumer exists yet
@@ -186,7 +193,7 @@ public class ExternalTriggerConsumer {
       ExternalTaskTrigger externalTaskTrigger,
       String definitionId) {
     String processDefinitionId =
-        externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId();
+        externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId().split("/")[0];
     if (!definitionId.equals(processDefinitionId)) {
       return;
     }
@@ -204,11 +211,6 @@ public class ExternalTriggerConsumer {
 
       CompletableFuture.runAsync(
           () -> {
-            KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter =
-                new KafkaProducer<>(
-                    kafkaPropertiesHelper.getKafkaProducerProperties(
-                        ProcessInstanceKeyJsonSeserializer.class,
-                        ExternalTaskTriggerResponseSerializer.class));
             ExternalTaskResponseTrigger processInstanceTrigger;
             try {
               Object result =
@@ -240,8 +242,6 @@ public class ExternalTriggerConsumer {
                     Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                     externalTaskTrigger.getRootInstanceKey(),
                     processInstanceTrigger));
-            responseEmitter.flush();
-            responseEmitter.close();
           });
 
     } else {

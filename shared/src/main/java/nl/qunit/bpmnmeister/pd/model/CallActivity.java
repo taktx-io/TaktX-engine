@@ -56,7 +56,7 @@ public class CallActivity extends Activity<CallActivityState> {
     DefinitionsKey subDefinitionsKey =
         new DefinitionsKey(
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
-                + "-"
+                + "/"
                 + getId(),
             parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
     Definitions definitions =
