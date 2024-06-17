@@ -31,6 +31,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import nl.qunit.bpmnmeister.pi.state.ExternalTaskState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -230,11 +231,8 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       ScopedVars variables) {
-    return TriggerResult.builder()
-        .newFlowNodeState(oldState.getFinishedLoopState())
-        .processInstanceTriggers(
-            TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-                processInstance, processDefinition, element))
-        .build();
+    ActivityState finishedLoopState = oldState.getFinishedLoopState();
+    return finishActivity(
+        processInstance, processDefinition, element, finishedLoopState, variables);
   }
 }

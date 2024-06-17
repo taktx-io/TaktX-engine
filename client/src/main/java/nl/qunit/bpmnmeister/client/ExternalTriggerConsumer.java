@@ -31,6 +31,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import javax.xml.parsers.ParserConfigurationException;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -53,6 +54,7 @@ import org.xml.sax.SAXException;
 
 @ApplicationScoped
 @Startup
+@Slf4j
 public class ExternalTriggerConsumer {
   private static final Logger LOG = Logger.getLogger(ExternalTriggerConsumer.class);
   private final Map<String, KafkaConsumer<ProcessInstanceKey, ExternalTaskTrigger>> consumerMap =
@@ -65,6 +67,7 @@ public class ExternalTriggerConsumer {
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinition> parsedDefinitionConsumer;
   private KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter;
+
   public ExternalTriggerConsumer(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
@@ -76,6 +79,7 @@ public class ExternalTriggerConsumer {
   }
 
   private void subscribeToDefinitionRecords() {
+    log.info("Subscribing to definition records");
     parsedDefinitionConsumer =
         createConsumer(
             "client-parsed-definition-consumer",
@@ -111,7 +115,7 @@ public class ExternalTriggerConsumer {
   }
 
   void scanAndDeployBpmnDefinitions() {
-    // Scan all beans for BpmnDeployment annotations
+    log.info("Scanning and deploying BPMN definitions");
     try {
       Set<Bean<?>> beans = beanManager.getBeans(Object.class, new AnnotationLiteral<Any>() {});
       KafkaProducer<String, String> xmlEmitter =
@@ -130,7 +134,7 @@ public class ExternalTriggerConsumer {
           Definitions definitions = new BpmnParser().parse(xml);
 
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
-
+          log.info("deploying {}", bpmnPath);
           xmlEmitter.send(new ProducerRecord<>(Topics.XML_TOPIC.getTopicName(), xml));
         }
       }
@@ -152,6 +156,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeDefinition(ProcessDefinitionKey processDefinitionKey) {
+    log.info("Consuming definition: " + processDefinitionKey);
     String processDefinitionId = processDefinitionKey.getProcessDefinitionId().split("/")[0];
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance != null) {
@@ -194,8 +199,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeExternalTaskTrigger(
-      ExternalTaskTrigger externalTaskTrigger,
-      String definitionId) {
+      ExternalTaskTrigger externalTaskTrigger, String definitionId) {
     String processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId().split("/")[0];
     if (!definitionId.equals(processDefinitionId)) {
