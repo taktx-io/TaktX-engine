@@ -71,7 +71,11 @@ public class ExternalTriggerConsumer {
 
   @PostConstruct
   void init() {
+    subscribeToDefinitionRecords();
     scanAndDeployBpmnDefinitions();
+  }
+
+  private void subscribeToDefinitionRecords() {
     parsedDefinitionConsumer =
         createConsumer(
             "client-parsed-definition-consumer",
