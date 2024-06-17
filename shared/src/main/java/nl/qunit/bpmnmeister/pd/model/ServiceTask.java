@@ -37,14 +37,14 @@ public class ServiceTask extends ExternalTask<ServiceTaskState> {
   }
 
   @Override
-  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
+  protected FlowElement withoutLoopCharacteristics() {
     return new ServiceTask(
         getId(),
         getId(),
         getWorkerDefinition(),
         getRetries(),
         getIncoming(),
-        outgoing,
+        getOutgoing(),
         getImplementation(),
         LoopCharacteristics.NONE,
         getHeaders(),

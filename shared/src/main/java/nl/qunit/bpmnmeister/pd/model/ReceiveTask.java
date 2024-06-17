@@ -36,8 +36,8 @@ public class ReceiveTask extends Task<ReceiveTaskState> {
   }
 
   @Override
-  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
+  protected FlowElement withoutLoopCharacteristics() {
     return new ReceiveTask(
-        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, getMessageRef(), getIoMapping());
+        getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, getMessageRef(), getIoMapping());
   }
 }

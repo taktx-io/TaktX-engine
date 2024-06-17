@@ -23,18 +23,14 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
       Task<TaskState> element,
       TaskState oldState,
       ScopedVars variables) {
-    return TriggerResult.builder()
-        .newFlowNodeState(
-            new TaskState(
-                FlowNodeStateEnum.FINISHED,
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt() + 1,
-                oldState.getLoopCnt(),
-                oldState.getInputFlowId()))
-        .processInstanceTriggers(
-            TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-                processInstance, definition, element))
-        .build();
+    TaskState finishedTaskState =
+        new TaskState(
+            FlowNodeStateEnum.FINISHED,
+            oldState.getElementInstanceId(),
+            oldState.getPassedCnt() + 1,
+            oldState.getLoopCnt(),
+            oldState.getInputFlowId());
+    return finishActivity(processInstance, definition, element, finishedTaskState, variables);
   }
 
   @Override

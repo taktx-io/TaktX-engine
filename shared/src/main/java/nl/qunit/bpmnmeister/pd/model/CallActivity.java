@@ -37,13 +37,7 @@ public class CallActivity extends Activity<CallActivityState> {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    String sequenceFlowId = getId() + "-to-end";
-    elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
-    String endEventId = getId() + "-end";
-    elements.put(
-        sequenceFlowId,
-        new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
-    elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of(), new InputOutputMapping(Set.of(), Set.of())));
+    elements.put(getId(), withoutLoopCharacteristics());
 
     // Wrap in Process element
     DefinitionsKey existingDefinitionsKey =
@@ -72,9 +66,9 @@ public class CallActivity extends Activity<CallActivityState> {
     return getId();
   }
 
-  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
+  protected FlowElement withoutLoopCharacteristics() {
     return new CallActivity(
-        getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, calledElement, getIoMapping());
+        getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, calledElement, getIoMapping());
   }
 
   @Override

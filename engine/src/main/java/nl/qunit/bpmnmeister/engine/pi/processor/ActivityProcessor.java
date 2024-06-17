@@ -14,11 +14,13 @@ import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.EndThrowingEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
+import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -244,24 +246,29 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       Activity<?> element,
       ActivityState newState,
       ScopedVars variables) {
-    if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
-      return TriggerResult.builder()
-          .newFlowNodeState(newState)
-          .processInstanceTriggers(
-              List.of(
-                  new FlowElementTrigger(
-                      processInstance.getParentInstanceKey(),
-                      element.getParentId(),
-                      Constants.NONE,
-                      variables.getCurrentScopeVariables())))
-          .build();
+    List<ProcessInstanceTrigger> triggers =
+        TriggerHelper.getProcessInstanceTriggersForOutputFlows(
+            processInstance, processDefinition, element);
+    ThrowingEvent throwingEvent;
+    if (triggers.isEmpty()) {
+      throwingEvent = new EndThrowingEvent();
+      if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
+        triggers =
+            List.of(
+                new FlowElementTrigger(
+                    processInstance.getParentInstanceKey(),
+                    processInstance.getParentElementId(),
+                    Constants.NONE,
+                    variables.getCurrentScopeVariables()));
+      }
     } else {
-      return TriggerResult.builder()
-          .newFlowNodeState(newState)
-          .processInstanceTriggers(
-              TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-                  processInstance, processDefinition, element))
-          .build();
+      throwingEvent = ThrowingEvent.NOOP;
     }
+
+    return TriggerResult.builder()
+        .newFlowNodeState(newState)
+        .processInstanceTriggers(triggers)
+        .throwingEvent(throwingEvent)
+        .build();
   }
 }

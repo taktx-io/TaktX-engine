@@ -31,13 +31,7 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    String sequenceFlowId = getId() + "-to-end";
-    elements.put(getId(), withoutLoopCharacteristics(Set.of(sequenceFlowId)));
-    String endEventId = getId() + "-end";
-    elements.put(
-        sequenceFlowId,
-        new SequenceFlow(sequenceFlowId, getId(), getId(), endEventId, FlowCondition.NONE));
-    elements.put(endEventId, new EndEvent(endEventId, getId(), Set.of(sequenceFlowId), Set.of(), new InputOutputMapping(Set.of(), Set.of())));
+    elements.put(getId(), withoutLoopCharacteristics());
 
     // Wrap in Process element
     String parentProcessDefinitionId =
@@ -65,8 +59,8 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
     return getId();
   }
 
-  protected FlowElement withoutLoopCharacteristics(Set<String> outgoing) {
-    return new Task<>(getId(), getId(), getIncoming(), outgoing, LoopCharacteristics.NONE, getIoMapping());
+  protected FlowElement withoutLoopCharacteristics() {
+    return new Task<>(getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, getIoMapping());
   }
 
   @Override
