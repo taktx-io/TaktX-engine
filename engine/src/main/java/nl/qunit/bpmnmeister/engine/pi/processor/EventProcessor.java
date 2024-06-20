@@ -4,6 +4,7 @@ import jakarta.inject.Inject;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -27,17 +28,21 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
       E element,
       S oldState,
       ScopedVars variables) {
-
+    TriggerResultBuilder triggerResultBuilder = TriggerResult.builder();
     ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
     variables.push(
         childProcessInstanceKey, processInstance.getProcessInstanceKey(), trigger.getVariables());
     Variables outputVariables = ioMappingProcessor.getOutputVariables(element, variables);
     variables.pop();
     variables.merge(outputVariables);
-    return triggerEvent(trigger, processInstance, definition, element, oldState, variables);
+
+    triggerEvent(
+        triggerResultBuilder, trigger, processInstance, definition, element, oldState, variables);
+    return triggerResultBuilder.build();
   }
 
-  protected abstract TriggerResult triggerEvent(
+  protected abstract void triggerEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,

@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+  xmlns:conversion="http://camunda.org/schema/conversion/1.0"
+  xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_08aslhi"
+  targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0"
+  modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
+  <bpmn:message id="Message_1ackwb5" name="SafetyDossierObtained">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>Activity_0decyd6</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_0mh7vz7" name="SolutionDiscoveryStarted">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>WaitForSolutionDiscoveryStartedTask</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_1pvy83v" name="SolutionReceived">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_1e8u3n0" name="SolutionActivated">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_01967ua" name="CongestionTentativelyResolved">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>Activity_1ozo762</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_09xq26p" name="CongestionNotResolved">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>Event_03bq2bj</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:process id="SolutionFulfillmentProcess" name="Solution fulfillment" processType="None" isClosed="false" isExecutable="true">
+    <bpmn:documentation>- WARNING: Attribute 'isStartableInTasklist' with value 'false' on 'process' is not supported.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Attribute 'isStartableInTasklist' with value 'false' on 'process' is not supported.</conversion:message>
+    </bpmn:extensionElements>
+    <bpmn:laneSet id="LaneSet_1szome3" />
+    <bpmn:startEvent id="Event_114gfj4" name="Start Solution Fulfillment">
+      <bpmn:outgoing>Flow_1rqj7ol</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="Event_0z9au2z" name="Safety Dossier has been closed">
+      <bpmn:incoming>Flow_0r9xn1b</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="Activity_1bl70h5">
+      <bpmn:incoming>Flow_1txtez9</bpmn:incoming>
+      <bpmn:startEvent id="Event_0uzk7wf">
+        <bpmn:outgoing>Flow_0wjip9n</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:receiveTask id="WaitForSafetyDossierObtainedTask" name="Wait for safety dossier obtained" messageRef="Message_1ackwb5">
+        <bpmn:incoming>Flow_0wjip9n</bpmn:incoming>
+        <bpmn:outgoing>Flow_1g1ssdj</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:receiveTask id="WaitForSolutionDiscoveryStartedTask" name="Wait for solution discovery started" messageRef="Message_0mh7vz7">
+        <bpmn:incoming>Flow_1g1ssdj</bpmn:incoming>
+        <bpmn:incoming>Flow_0rg1i57</bpmn:incoming>
+        <bpmn:outgoing>Flow_0mu3t8m</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:receiveTask id="WaitForCongestionResolvedTask" name="Wait for congestion resolved" messageRef="Message_01967ua">
+        <bpmn:incoming>Flow_1z0no0y</bpmn:incoming>
+        <bpmn:outgoing>Flow_1qcppl0</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:boundaryEvent id="SafetyDossierObtainedTimeoutBoundaryEvent" name="5 min timeout" cancelActivity="false" attachedToRef="WaitForSafetyDossierObtainedTask">
+        <bpmn:extensionElements>
+          <zeebe:ioMapping>
+            <zeebe:output source="=&#34;SAFETY_DOSSIER_OBTAINED_TIMEOUT&#34;" target="timeoutName" />
+            <zeebe:output source="=scenario.contingency.mrid" target="contingencyMrid" />
+            <zeebe:output source="=payloadMrid" target="tag" />
+            <zeebe:output source="=waitForSafetyDossierObtained" target="timeoutValue" />
+            <zeebe:output source="=scenario.contingency.name" target="contingencyName" />
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>Flow_161bg68</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TimerEventDefinition_0a5gsni">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">=waitForSafetyDossierObtained</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:boundaryEvent id="SolutionDiscoveryStartedTimeoutBoundaryEvent" name="38h Timeout (in case of Redispatch) and 30h timeout (in case of Restriction)" cancelActivity="false" attachedToRef="WaitForSolutionDiscoveryStartedTask">
+        <bpmn:extensionElements>
+          <zeebe:ioMapping>
+            <zeebe:output source="=&#34;SOLUTION_DISCOVERY_STARTED_TIMEOUT&#34;" target="timeoutName" />
+            <zeebe:output source="=scenario.contingency.mrid" target="contingencyMrid" />
+            <zeebe:output source="=payloadMrid" target="tag" />
+            <zeebe:output source="=waitForSolutionDiscoveryStarted" target="timeoutValue" />
+            <zeebe:output source="=scenario.contingency.name" target="contingencyName" />
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>Flow_1ce6hu5</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TimerEventDefinition_15zfd0x">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">=waitForSolutionDiscoveryStarted</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:parallelGateway id="Gateway_0ptrq15">
+        <bpmn:incoming>Flow_1qcppl0</bpmn:incoming>
+        <bpmn:outgoing>Flow_0r40ye5</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1fmnkdp</bpmn:outgoing>
+      </bpmn:parallelGateway>
+      <bpmn:sequenceFlow id="Flow_0r40ye5" sourceRef="Gateway_0ptrq15" targetRef="SendCongestionTentativelyResolvedTask" />
+      <bpmn:sendTask id="SendCongestionTentativelyResolvedTask" name="Send congestion tentatively resolved">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="send-congestion-tentatively-resolved" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0r40ye5</bpmn:incoming>
+      </bpmn:sendTask>
+      <bpmn:boundaryEvent id="Event_0summwy" name="200min timeout" cancelActivity="false" attachedToRef="WaitForCongestionResolvedTask">
+        <bpmn:extensionElements>
+          <zeebe:ioMapping>
+            <zeebe:output source="=&#34;CONGESTION_RESOLVED_TIMEOUT&#34;" target="timeoutName" />
+            <zeebe:output source="=scenario.contingency.mrid" target="contingencyMrid" />
+            <zeebe:output source="=payloadMrid" target="tag" />
+            <zeebe:output source="=waitForCongestionResolved" target="timeoutValue" />
+            <zeebe:output source="=scenario.contingency.name" target="contingencyName" />
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>Flow_1gtcm0a</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TimerEventDefinition_1qs32af">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">=waitForCongestionResolved</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:boundaryEvent id="Event_08gw89d" name="Congestion not resolved" attachedToRef="WaitForCongestionResolvedTask">
+        <bpmn:outgoing>Flow_0lpaiss</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MessageEventDefinition_0l7ooh2" messageRef="Message_09xq26p" />
+      </bpmn:boundaryEvent>
+      <bpmn:sendTask id="SendSolutionDiscoveryStartedTask" name="Send solution discovery started">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="send-solution-discovery-started" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1mdc63w</bpmn:incoming>
+      </bpmn:sendTask>
+      <bpmn:sequenceFlow id="Flow_1qcppl0" sourceRef="WaitForCongestionResolvedTask" targetRef="Gateway_0ptrq15" />
+      <bpmn:sequenceFlow id="Flow_1g1ssdj" sourceRef="WaitForSafetyDossierObtainedTask" targetRef="WaitForSolutionDiscoveryStartedTask" />
+      <bpmn:sendTask id="SendTimeoutOccurredExceptionSubProcessTask" name="Send timeout occurred exception">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="send-timeout-occurred-exception" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0prminn</bpmn:incoming>
+      </bpmn:sendTask>
+      <bpmn:parallelGateway id="Gateway_0w2mq5y">
+        <bpmn:incoming>Flow_0mu3t8m</bpmn:incoming>
+        <bpmn:outgoing>Flow_1z0no0y</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1mdc63w</bpmn:outgoing>
+      </bpmn:parallelGateway>
+      <bpmn:sequenceFlow id="Flow_1z0no0y" sourceRef="Gateway_0w2mq5y" targetRef="WaitForCongestionResolvedTask" />
+      <bpmn:sequenceFlow id="Flow_1mdc63w" sourceRef="Gateway_0w2mq5y" targetRef="SendSolutionDiscoveryStartedTask" />
+      <bpmn:sequenceFlow id="Flow_0mu3t8m" sourceRef="WaitForSolutionDiscoveryStartedTask" targetRef="Gateway_0w2mq5y" />
+      <bpmn:sequenceFlow id="Flow_1ce6hu5" sourceRef="SolutionDiscoveryStartedTimeoutBoundaryEvent" targetRef="Event_0rfjz2w" />
+      <bpmn:intermediateThrowEvent id="Event_0rfjz2w" name="Go to &#34;timeout&#34;">
+        <bpmn:incoming>Flow_1ce6hu5</bpmn:incoming>
+        <bpmn:linkEventDefinition id="LinkEventDefinition_06jrfpl" name="timeout" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:intermediateCatchEvent id="Event_09pst21" name="timeout">
+        <bpmn:outgoing>Flow_0prminn</bpmn:outgoing>
+        <bpmn:linkEventDefinition id="LinkEventDefinition_0vhrkvg" name="timeout" />
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="Flow_0prminn" sourceRef="Event_09pst21" targetRef="SendTimeoutOccurredExceptionSubProcessTask" />
+      <bpmn:sequenceFlow id="Flow_161bg68" sourceRef="SafetyDossierObtainedTimeoutBoundaryEvent" targetRef="Event_02d0du5" />
+      <bpmn:intermediateThrowEvent id="Event_02d0du5" name="Go to &#34;timeout&#34;">
+        <bpmn:incoming>Flow_161bg68</bpmn:incoming>
+        <bpmn:linkEventDefinition id="LinkEventDefinition_1co0lqk" name="timeout" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:sequenceFlow id="Flow_1gtcm0a" sourceRef="Event_0summwy" targetRef="Event_0gqk1cn" />
+      <bpmn:intermediateThrowEvent id="Event_0gqk1cn" name="Go to &#34;timeout&#34;">
+        <bpmn:incoming>Flow_1gtcm0a</bpmn:incoming>
+        <bpmn:linkEventDefinition id="LinkEventDefinition_1iv3vp4" name="timeout" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:sequenceFlow id="Flow_1fmnkdp" sourceRef="Gateway_0ptrq15" targetRef="Gateway_1b2n77a" />
+      <bpmn:sequenceFlow id="Flow_0lpaiss" sourceRef="Event_08gw89d" targetRef="Gateway_1b2n77a" />
+      <bpmn:sequenceFlow id="Flow_0rg1i57" sourceRef="Gateway_1b2n77a" targetRef="WaitForSolutionDiscoveryStartedTask" />
+      <bpmn:sequenceFlow id="Flow_0wjip9n" sourceRef="Event_0uzk7wf" targetRef="WaitForSafetyDossierObtainedTask" />
+      <bpmn:exclusiveGateway id="Gateway_1b2n77a" default="Flow_0rg1i57">
+        <bpmn:incoming>Flow_1fmnkdp</bpmn:incoming>
+        <bpmn:incoming>Flow_0lpaiss</bpmn:incoming>
+        <bpmn:outgoing>Flow_0rg1i57</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="WaitForSafetyDossierClosed" name="Wait for safety dossier closed" attachedToRef="Activity_1bl70h5">
+      <bpmn:outgoing>Flow_0r9xn1b</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0zhor9l" messageRef="Message_1uf68gt" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0r9xn1b" sourceRef="WaitForSafetyDossierClosed" targetRef="Event_0z9au2z" />
+    <bpmn:boundaryEvent id="WaitForCongestionNotResolvedExceptionTask" name="Wait for congestion not resolved exception" attachedToRef="Activity_1bl70h5">
+      <bpmn:outgoing>Flow_13i9xrv</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_031guf6" messageRef="Message_05fw2y4" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_13i9xrv" sourceRef="WaitForCongestionNotResolvedExceptionTask" targetRef="ExceptionHandlingCallActivity" />
+    <bpmn:callActivity id="ExceptionHandlingCallActivity" name="Exception Handling">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="ExceptionHandlingProcess" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_13i9xrv</bpmn:incoming>
+      <bpmn:outgoing>Flow_1r5uzfs</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:endEvent id="Event_0x6dftb" name="Exception handled">
+      <bpmn:incoming>Flow_1r5uzfs</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1r5uzfs" sourceRef="ExceptionHandlingCallActivity" targetRef="Event_0x6dftb" />
+    <bpmn:boundaryEvent id="Event_0cixtql" name="Congestion endtime has been reached" attachedToRef="Activity_1bl70h5">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=&#34;CONGESTION_END_TIME_REACHED&#34;" target="timeoutName" />
+          <zeebe:output source="=scenario.contingency.mrid" target="contingencyMrid" />
+          <zeebe:output source="=payloadMrid" target="tag" />
+          <zeebe:output source="=waitForSafetyDossierEnd" target="timeoutValue" />
+          <zeebe:output source="=scenario.contingency.name" target="contingencyName" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_16q9z1t</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_11bp5c7">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">=waitForSafetyDossierEnd</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_16q9z1t" sourceRef="Event_0cixtql" targetRef="SendTimeoutOccurredExceptionTask" />
+    <bpmn:sendTask id="SendTimeoutOccurredExceptionTask" name="Send timeout occurred exception">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-timeout-occurred-exception" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_16q9z1t</bpmn:incoming>
+      <bpmn:outgoing>Flow_1huh5yi</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="Event_1k0yihl" name="Timeout handled">
+      <bpmn:incoming>Flow_1huh5yi</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1huh5yi" sourceRef="SendTimeoutOccurredExceptionTask" targetRef="Event_1k0yihl" />
+    <bpmn:serviceTask id="DetermineTimeoutTask" name="Determine timeout">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="determine-timeout" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1rqj7ol</bpmn:incoming>
+      <bpmn:outgoing>Flow_1txtez9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1txtez9" sourceRef="DetermineTimeoutTask" targetRef="Activity_1bl70h5" />
+    <bpmn:sequenceFlow id="Flow_1rqj7ol" sourceRef="Event_114gfj4" targetRef="DetermineTimeoutTask" />
+  </bpmn:process>
+  <bpmn:error id="Error_0i7ksrs" name="SafetyDossierObtainedTimeoutError" errorCode="SAFETY_DOSSIER_OBTAINED_TIMEOUT">
+    <bpmn:documentation>- WARNING: Attribute 'errorMessage' with value 'Timeout error while waiting for obtainment of safety dossiers' on 'error' is not supported.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Attribute 'errorMessage' with value 'Timeout error while waiting for obtainment of safety dossiers' on 'error' is not supported.</conversion:message>
+    </bpmn:extensionElements>
+  </bpmn:error>
+  <bpmn:message id="Message_05fw2y4" name="CongestionNotResolvedException">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>Event_0kxrgme</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:escalation id="Escalation_0d7aji6" name="CongestionCannotBeResolvedEscalation" escalationCode="CONGESTION_CANNOT_BE_RESOLVED">
+    <bpmn:documentation>- WARNING: Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.</conversion:message>
+    </bpmn:extensionElements>
+  </bpmn:escalation>
+  <bpmn:escalation id="Escalation_19xtxpi" name="SolutionDiscoveryStartedTimeoutEscalation" escalationCode="SOLUTION_DISCOVERY_STARTED_TIMEOUT">
+    <bpmn:documentation>- WARNING: Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.</conversion:message>
+      <conversion:referencedBy>Event_12d5sch</conversion:referencedBy>
+    </bpmn:extensionElements>
+  </bpmn:escalation>
+  <bpmn:escalation id="Escalation_2k4d246" name="CongestionCannotBeResolvedTimeoutEscalation" escalationCode="CONGESTION_RESOLVED_TIMEOUT">
+    <bpmn:documentation>- WARNING: Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.</conversion:message>
+      <conversion:referencedBy>Event_0vqvylv</conversion:referencedBy>
+    </bpmn:extensionElements>
+  </bpmn:escalation>
+  <bpmn:message id="Message_1uf68gt" name="SafetyDossierClosed">
+    <bpmn:documentation>- TASK: Please define a correlation key.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="TASK">Please define a correlation key.</conversion:message>
+      <conversion:referencedBy>Event_0d7kt3c</conversion:referencedBy>
+      <zeebe:subscription correlationKey="=payloadMrid" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:escalation id="Escalation_31hnvld" name="SafetyDossierObtainedTimeoutEscalation" escalationCode="SAFETY_DOSSIER_OBTAINED_TIMEOUT">
+    <bpmn:documentation>- WARNING: Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.</conversion:message>
+      <conversion:referencedBy>Event_0p1npj2</conversion:referencedBy>
+    </bpmn:extensionElements>
+  </bpmn:escalation>
+  <bpmn:escalation id="Escalation_1d347dk" name="CongestionEndTimeReachedEscalation" escalationCode="CONGESTION_END_TIME_REACHED">
+    <bpmn:documentation>- WARNING: Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.
+</bpmn:documentation>
+    <bpmn:extensionElements>
+      <conversion:message severity="WARNING">Element 'escalation' is not supported in Zeebe version '8.1.0'. Please review.</conversion:message>
+      <conversion:referencedBy>Event_0t1or7i</conversion:referencedBy>
+    </bpmn:extensionElements>
+  </bpmn:escalation>
+  <bpmn:signal id="Signal_11oadrs" name="timeout" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="SolutionFulfillmentProcess">
+      <bpmndi:BPMNShape id="Event_114gfj4_di" bpmnElement="Event_114gfj4" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="142" y="292" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="126" y="346" width="67" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0z9au2z_di" bpmnElement="Event_0z9au2z" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
+        <dc:Bounds x="1622" y="292" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1599" y="346" width="81" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1bl70h5_di" bpmnElement="Activity_1bl70h5" isExpanded="true">
+        <dc:Bounds x="360" y="80" width="1010" height="630" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0uzk7wf_di" bpmnElement="Event_0uzk7wf">
+        <dc:Bounds x="392" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0qp6ghj_di" bpmnElement="WaitForSafetyDossierObtainedTask">
+        <dc:Bounds x="490" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_12v5lsr_di" bpmnElement="WaitForSolutionDiscoveryStartedTask">
+        <dc:Bounds x="690" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1a5a32k_di" bpmnElement="WaitForCongestionResolvedTask">
+        <dc:Bounds x="950" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_129w09h_di" bpmnElement="Gateway_0ptrq15">
+        <dc:Bounds x="1185" y="285" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0htb775_di" bpmnElement="SendCongestionTentativelyResolvedTask">
+        <dc:Bounds x="1160" y="430" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_17m1e3d_di" bpmnElement="SendSolutionDiscoveryStartedTask">
+        <dc:Bounds x="820" y="430" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1cigqn8" bpmnElement="SendTimeoutOccurredExceptionSubProcessTask">
+        <dc:Bounds x="1160" y="590" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0bwnou6_di" bpmnElement="Gateway_0w2mq5y">
+        <dc:Bounds x="845" y="285" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1p4jg9o_di" bpmnElement="Event_0rfjz2w">
+        <dc:Bounds x="672" y="452" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="653" y="495" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1phnwbq_di" bpmnElement="Event_09pst21">
+        <dc:Bounds x="420" y="612" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="422" y="655" width="37" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1eqjv0k_di" bpmnElement="Event_02d0du5">
+        <dc:Bounds x="522" y="452" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="505" y="495" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1jxntrk_di" bpmnElement="Event_0gqk1cn">
+        <dc:Bounds x="1032" y="452" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1013" y="495" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0ppilvq_di" bpmnElement="Gateway_1b2n77a" isMarkerVisible="true">
+        <dc:Bounds x="975" y="145" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1gfh23r_di" bpmnElement="Event_08gw89d">
+        <dc:Bounds x="982" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1012" y="226" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1nb8v9q_di" bpmnElement="Event_0summwy">
+        <dc:Bounds x="1032" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="971" y="383" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0zl1a5n_di" bpmnElement="SolutionDiscoveryStartedTimeoutBoundaryEvent">
+        <dc:Bounds x="672" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="599" y="380" width="81" height="80" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1x2eihs_di" bpmnElement="SafetyDossierObtainedTimeoutBoundaryEvent">
+        <dc:Bounds x="522" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="466" y="383" width="67" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0r40ye5_di" bpmnElement="Flow_0r40ye5">
+        <di:waypoint x="1210" y="335" />
+        <di:waypoint x="1210" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1qcppl0_di" bpmnElement="Flow_1qcppl0">
+        <di:waypoint x="1050" y="310" />
+        <di:waypoint x="1185" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1g1ssdj_di" bpmnElement="Flow_1g1ssdj">
+        <di:waypoint x="590" y="310" />
+        <di:waypoint x="690" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1z0no0y_di" bpmnElement="Flow_1z0no0y">
+        <di:waypoint x="895" y="310" />
+        <di:waypoint x="950" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1mdc63w_di" bpmnElement="Flow_1mdc63w">
+        <di:waypoint x="870" y="335" />
+        <di:waypoint x="870" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0mu3t8m_di" bpmnElement="Flow_0mu3t8m">
+        <di:waypoint x="790" y="310" />
+        <di:waypoint x="845" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ce6hu5_di" bpmnElement="Flow_1ce6hu5">
+        <di:waypoint x="690" y="368" />
+        <di:waypoint x="690" y="452" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0prminn_di" bpmnElement="Flow_0prminn">
+        <di:waypoint x="456" y="630" />
+        <di:waypoint x="1160" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_161bg68_di" bpmnElement="Flow_161bg68">
+        <di:waypoint x="540" y="368" />
+        <di:waypoint x="540" y="452" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1gtcm0a_di" bpmnElement="Flow_1gtcm0a">
+        <di:waypoint x="1050" y="368" />
+        <di:waypoint x="1050" y="452" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fmnkdp_di" bpmnElement="Flow_1fmnkdp">
+        <di:waypoint x="1210" y="285" />
+        <di:waypoint x="1210" y="170" />
+        <di:waypoint x="1025" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0lpaiss_di" bpmnElement="Flow_0lpaiss">
+        <di:waypoint x="1000" y="252" />
+        <di:waypoint x="1000" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0rg1i57_di" bpmnElement="Flow_0rg1i57">
+        <di:waypoint x="975" y="170" />
+        <di:waypoint x="740" y="170" />
+        <di:waypoint x="740" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0wjip9n_di" bpmnElement="Flow_0wjip9n">
+        <di:waypoint x="428" y="310" />
+        <di:waypoint x="490" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Activity_1wsxlop_di" bpmnElement="ExceptionHandlingCallActivity">
+        <dc:Bounds x="1480" y="380" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0x6dftb_di" bpmnElement="Event_0x6dftb" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1622" y="402" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1615" y="446" width="49" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_08pa8b8_di" bpmnElement="SendTimeoutOccurredExceptionTask">
+        <dc:Bounds x="1480" y="490" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1k0yihl_di" bpmnElement="Event_1k0yihl" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1622" y="512" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1599" y="563" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_08uc2dg_di" bpmnElement="DetermineTimeoutTask">
+        <dc:Bounds x="220" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1b5029i_di" bpmnElement="Event_0cixtql">
+        <dc:Bounds x="1352" y="512" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1376" y="550" width="88" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0p1z28o_di" bpmnElement="WaitForCongestionNotResolvedExceptionTask">
+        <dc:Bounds x="1352" y="402" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1373" y="443" width="73" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_19z90sh_di" bpmnElement="WaitForSafetyDossierClosed">
+        <dc:Bounds x="1352" y="292" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1384" y="336" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0r9xn1b_di" bpmnElement="Flow_0r9xn1b">
+        <di:waypoint x="1388" y="310" />
+        <di:waypoint x="1622" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13i9xrv_di" bpmnElement="Flow_13i9xrv">
+        <di:waypoint x="1388" y="420" />
+        <di:waypoint x="1480" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1r5uzfs_di" bpmnElement="Flow_1r5uzfs">
+        <di:waypoint x="1580" y="420" />
+        <di:waypoint x="1622" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16q9z1t_di" bpmnElement="Flow_16q9z1t">
+        <di:waypoint x="1388" y="530" />
+        <di:waypoint x="1480" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1huh5yi_di" bpmnElement="Flow_1huh5yi">
+        <di:waypoint x="1580" y="530" />
+        <di:waypoint x="1622" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1txtez9_di" bpmnElement="Flow_1txtez9">
+        <di:waypoint x="320" y="310" />
+        <di:waypoint x="360" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1rqj7ol_di" bpmnElement="Flow_1rqj7ol">
+        <di:waypoint x="178" y="310" />
+        <di:waypoint x="220" y="310" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

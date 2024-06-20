@@ -22,4 +22,6 @@ public abstract class Event<S extends FlowNodeState> extends FlowNode<S> impleme
     super(id, parentId, incoming, outgoing);
     this.ioMapping = ioMapping;
   }
+
+
 }

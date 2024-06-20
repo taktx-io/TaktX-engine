@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
-import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -17,10 +17,11 @@ import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
-public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
+public class EndEventProcessor extends ThrowEventProcessor<EndEvent, EndEventState> {
 
   @Override
-  protected TriggerResult triggerEvent(
+  protected void triggerThrowEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
@@ -42,7 +43,7 @@ public class EndEventProcessor extends EventProcessor<EndEvent, EndEventState> {
             oldState.getPassedCnt() + 1,
             FlowNodeStateEnum.FINISHED,
             oldState.getInputFlowId());
-    return TriggerResult.builder()
+    triggerResultBuilder
         .newFlowNodeState(newState)
         .processInstanceTriggers(processInstanceTriggers)
         .throwingEvent(new EndThrowingEvent())

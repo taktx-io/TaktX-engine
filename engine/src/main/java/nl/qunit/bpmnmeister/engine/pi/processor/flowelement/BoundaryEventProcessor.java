@@ -55,14 +55,14 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   }
 
   @Override
-  protected TriggerResult triggerCatchEvent(
+  protected void triggerCatchEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       BoundaryEvent element,
       BoundaryEventState oldState,
       ScopedVars variables) {
-    TriggerResultBuilder triggerResultBuilder = TriggerResult.builder();
 
     if (oldState.getState() == FlowNodeStateEnum.READY) {
       Set<MessageEvent> subscriptions =
@@ -74,7 +74,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       Set<ScheduleKey> scheduleKeys =
           schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());
 
-      return TriggerResult.builder()
+      triggerResultBuilder
           .newFlowNodeState(
               new BoundaryEventState(
                   oldState.getElementInstanceId(),
@@ -87,10 +87,11 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
           .newMessageSubscriptions(subscriptions)
           .build();
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return trigger(processInstance, processDefinition, element, oldState, variables);
+      trigger(
+          triggerResultBuilder, processInstance, processDefinition, element, oldState, variables);
     } else {
       // Any scheduled triggers or messages will be ignored here
-      return TriggerResult.builder().newFlowNodeState(oldState).build();
+      triggerResultBuilder.newFlowNodeState(oldState).build();
     }
   }
 
@@ -122,7 +123,8 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
         .collect(Collectors.toSet());
   }
 
-  private TriggerResult trigger(
+  private void trigger(
+      TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       BoundaryEvent element,
@@ -140,7 +142,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
           new TerminateTrigger(processInstance.getProcessInstanceKey(), element.getAttachedToRef());
       elementTriggers.add(cancelElementTrigger);
       elementTriggers.addAll(processInstanceTriggersForOutputFlows);
-      return TriggerResult.builder()
+      triggerResultBuilder
           .newFlowNodeState(
               new BoundaryEventState(
                   oldState.getElementInstanceId(),
@@ -156,7 +158,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
     } else {
       // Non interrupting boundary event. Keep the state active and keep listening for messages and
       // timers.
-      return TriggerResult.builder()
+      triggerResultBuilder
           .newFlowNodeState(
               new BoundaryEventState(
                   oldState.getElementInstanceId(),

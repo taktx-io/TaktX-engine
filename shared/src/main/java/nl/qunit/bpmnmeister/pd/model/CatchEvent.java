@@ -39,4 +39,12 @@ public abstract class CatchEvent<S extends FlowNodeState> extends Event<S> imple
         .map(MessageEventDefinition.class::cast)
         .collect(Collectors.toSet());
   }
+
+  @JsonIgnore
+  public Set<LinkEventDefinition> getLinkventDefinitions() {
+    return eventDefinitions.stream()
+        .filter(LinkEventDefinition.class::isInstance)
+        .map(LinkEventDefinition.class::cast)
+        .collect(Collectors.toSet());
+  }
 }

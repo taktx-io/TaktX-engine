@@ -1,7 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
-import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
@@ -12,7 +12,8 @@ public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends Cat
     extends EventProcessor<E, S> {
 
   @Override
-  protected TriggerResult triggerEvent(
+  protected void triggerEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
@@ -20,11 +21,18 @@ public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends Cat
       S oldState,
       ScopedVars variables) {
 
-    return triggerCatchEvent(
-        trigger, processInstance, processDefinition, element, oldState, variables);
+    triggerCatchEvent(
+        triggerResultBuilder,
+        trigger,
+        processInstance,
+        processDefinition,
+        element,
+        oldState,
+        variables);
   }
 
-  protected abstract TriggerResult triggerCatchEvent(
+  protected abstract void triggerCatchEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,

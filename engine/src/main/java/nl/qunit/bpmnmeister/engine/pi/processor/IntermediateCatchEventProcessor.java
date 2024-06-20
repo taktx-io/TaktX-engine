@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
-import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -18,29 +17,42 @@ public class IntermediateCatchEventProcessor
     extends CatchEventProcessor<IntermediateCatchEvent, IntermediateCatchEventState> {
 
   @Inject MessageCatchEventHelper catchEventMessageHelper;
+  @Inject LinkCatchEventHelper catchEventLinkHelper;
   @Inject CatchEventSchedulerHelper catchEventSchedulerHelper;
 
   @Override
-  protected TriggerResult triggerCatchEvent(
+  protected void triggerCatchEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState,
       ScopedVars variables) {
-    TriggerResultBuilder triggerResultBuilder = TriggerResult.builder();
     IntermediateCatchEventStateBuilder<?, ?> newStateBuilder = oldState.toBuilder();
 
     if (oldState.getState() == FlowNodeStateEnum.READY) {
-      catchEventMessageHelper.processWhenReady(
-          processDefinition,
-          triggerResultBuilder,
-          newStateBuilder,
-          processInstance,
-          element,
-          variables);
-      catchEventSchedulerHelper.processWhenReady(
-          triggerResultBuilder, newStateBuilder, processInstance, element, oldState, variables);
+      if (!element.getLinkventDefinitions().isEmpty()) {
+        catchEventLinkHelper.processWhenReady(
+            processDefinition,
+            triggerResultBuilder,
+            newStateBuilder,
+            processInstance,
+            element,
+            variables,
+            oldState);
+      } else if (!element.getMessageventDefinitions().isEmpty()) {
+        catchEventMessageHelper.processWhenReady(
+            processDefinition,
+            triggerResultBuilder,
+            newStateBuilder,
+            processInstance,
+            element,
+            variables);
+      } else if (!element.getTimerEventDefinitions().isEmpty()) {
+        catchEventSchedulerHelper.processWhenReady(
+            triggerResultBuilder, newStateBuilder, processInstance, element, oldState, variables);
+      }
     } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       catchEventMessageHelper.processWhenActive(
           trigger,
@@ -61,7 +73,7 @@ public class IntermediateCatchEventProcessor
           processDefinition);
     }
 
-    return triggerResultBuilder.newFlowNodeState(newStateBuilder.build()).build();
+    triggerResultBuilder.newFlowNodeState(newStateBuilder.build()).build();
   }
 
   @Override

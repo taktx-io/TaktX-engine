@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.pd.model.SendTask;
@@ -19,6 +20,7 @@ import nl.qunit.bpmnmeister.pd.model.ServiceTask;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
 @ApplicationScoped
@@ -26,6 +28,7 @@ public class ProcessorProvider {
 
   @Inject StartEventProcessor startEventProcessor;
   @Inject IntermediateCatchEventProcessor intermediateCatchEventProcessor;
+  @Inject IntermediateThrowEventProcessor intermediateThrowEventProcessor;
   @Inject EndEventProcessor endEventProcessor;
   @Inject ExclusiveGatewayProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayProcessor parallelGatewayProcessor;
@@ -39,10 +42,10 @@ public class ProcessorProvider {
   @Inject ReceiveTaskProcessor receiveTaskProcessor;
 
   public StateProcessor<?, ?> getProcessor(BaseElement element) {
-    if (element instanceof CatchEvent<?> catchEvent) {
+    if (element instanceof ThrowEvent<?> throwEvent) {
+      return getProcessorForThrowEvent(throwEvent);
+    } else if (element instanceof CatchEvent<?> catchEvent) {
       return getProcessorForCatchEvent(catchEvent);
-    } else if (element instanceof EndEvent) {
-      return endEventProcessor;
     } else if (element instanceof ExclusiveGateway) {
       return exclusiveGatewayProcessor;
     } else if (element instanceof InclusiveGateway) {
@@ -54,6 +57,15 @@ public class ProcessorProvider {
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
+  }
+
+  private StateProcessor<?, ?> getProcessorForThrowEvent(ThrowEvent<?> throwEvent) {
+    if (throwEvent instanceof EndEvent) {
+      return endEventProcessor;
+    } else if (throwEvent instanceof IntermediateThrowEvent) {
+      return intermediateThrowEventProcessor;
+    }
+    throw new IllegalStateException("Unknown throw element type: " + throwEvent.getClass());
   }
 
   private StateProcessor<?, ?> getProcessorForCatchEvent(CatchEvent<?> element) {

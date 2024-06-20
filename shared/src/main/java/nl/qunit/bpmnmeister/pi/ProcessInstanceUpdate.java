@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
-@ToString
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @SuperBuilder(toBuilder = true)
 public class ProcessInstanceUpdate extends ProcessInstance {

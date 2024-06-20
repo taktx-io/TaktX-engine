@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.bpmn.TActivity;
@@ -14,6 +15,7 @@ import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TGateway;
 import nl.qunit.bpmnmeister.bpmn.TInclusiveGateway;
 import nl.qunit.bpmnmeister.bpmn.TIntermediateCatchEvent;
+import nl.qunit.bpmnmeister.bpmn.TIntermediateThrowEvent;
 import nl.qunit.bpmnmeister.bpmn.TParallelGateway;
 import nl.qunit.bpmnmeister.bpmn.TReceiveTask;
 import nl.qunit.bpmnmeister.bpmn.TSendTask;
@@ -22,10 +24,12 @@ import nl.qunit.bpmnmeister.bpmn.TServiceTask;
 import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
+import nl.qunit.bpmnmeister.bpmn.TThrowEvent;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
+import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
@@ -34,14 +38,17 @@ import nl.qunit.bpmnmeister.pd.model.Gateway;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.pi.state.EventState;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
+import nl.qunit.bpmnmeister.pi.state.ThrowEventState;
 
 public class GenericFlowElementMapper implements FlowElementMapper {
 
@@ -60,18 +67,41 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return mapGateway(gateway, parentId);
     } else if (tFlowElement instanceof TCatchEvent tCatchEvent) {
       return mapCatchEvent(parentId, tCatchEvent);
-    } else if (tFlowElement instanceof TEndEvent endEvent) {
+    } else if (tFlowElement instanceof TThrowEvent throwEvent) {
+      return mapThrowEvent(parentId, throwEvent);
+    }
+
+    throw new IllegalStateException(
+        "Unknown flow element type: " + tFlowElement.getClass().getName());
+  }
+
+  private ThrowEvent<? extends ThrowEventState> mapThrowEvent(String parentId,
+      TThrowEvent throwEvent) {
+    Set<EventDefinition> eventDefinitions = bpmnMapperFactory.createEventDefinitionMapper()
+        .map(throwEvent.getEventDefinition(), parentId);
+
+    if (throwEvent instanceof TEndEvent endEvent) {
       InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(endEvent);
       return new EndEvent(
           endEvent.getId(),
           parentId,
           mapQNameList(endEvent.getIncoming()),
           mapQNameList(endEvent.getOutgoing()),
-          ioMapping);
+          ioMapping,
+          eventDefinitions);
+    } else if (throwEvent instanceof TIntermediateThrowEvent intermediateThrowEvent) {
+      InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
+      return new IntermediateThrowEvent(
+          intermediateThrowEvent.getId(),
+          parentId,
+          mapQNameList(intermediateThrowEvent.getIncoming()),
+          mapQNameList(intermediateThrowEvent.getOutgoing()),
+          ioMapping,
+          eventDefinitions);
     }
 
     throw new IllegalStateException(
-        "Unknown flow element type: " + tFlowElement.getClass().getName());
+        "Unknown flow element type: " + throwEvent.getClass().getName());
   }
 
   private Gateway<? extends GatewayState> mapGateway(TGateway gateway, String parentId) {

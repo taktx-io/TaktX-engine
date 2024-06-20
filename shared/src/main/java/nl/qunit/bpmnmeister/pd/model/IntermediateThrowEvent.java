@@ -6,25 +6,24 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
 
 @Getter
-public class EndEvent extends ThrowEvent<EndEventState> {
+public class IntermediateThrowEvent extends ThrowEvent<IntermediateThrowEventState> {
   @JsonCreator
-  public EndEvent(
+  public IntermediateThrowEvent(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping,
-      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions
-      ) {
+      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions) {
     super(id, parentId, incoming, outgoing, ioMapping, eventDefinitions);
   }
 
   @Override
-  public EndEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new EndEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+  public IntermediateThrowEventState getInitialState(String inputFlowId, int passedCnt) {
+    return new IntermediateThrowEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

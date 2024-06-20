@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
-import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
+import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
@@ -13,15 +13,17 @@ import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
 @ApplicationScoped
 public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEventState> {
+
   @Override
-  protected TriggerResult triggerCatchEvent(
+  protected void triggerCatchEvent(
+      TriggerResultBuilder triggerResultBuilder,
       FlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       StartEvent element,
       StartEventState oldState,
       ScopedVars variables) {
-    return TriggerResult.builder()
+    triggerResultBuilder
         .newFlowNodeState(
             new StartEventState(
                 oldState.getElementInstanceId(),

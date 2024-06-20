@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
+import nl.qunit.bpmnmeister.bpmn.TLinkEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
+import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
@@ -26,8 +28,15 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
       return mapTimerEventDefinition(parentId, timerEventDefinition);
     } else if (ed instanceof TMessageEventDefinition messageEventDefinition) {
       return mapMessageEventDefinition(messageEventDefinition);
+    } else if (ed instanceof TLinkEventDefinition linkEventDefinition) {
+      return mapLinkEventDefinition(linkEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
+  }
+
+  private EventDefinition mapLinkEventDefinition(TLinkEventDefinition linkEventDefinition) {
+    return new LinkEventDefinition(
+        linkEventDefinition.getId(), linkEventDefinition.getName());
   }
 
   private static MessageEventDefinition mapMessageEventDefinition(

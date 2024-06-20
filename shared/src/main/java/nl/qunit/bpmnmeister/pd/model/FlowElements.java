@@ -115,4 +115,13 @@ public class FlowElements {
     }
     return Optional.empty();
   }
+
+  public Optional<IntermediateCatchEvent> getLinkedCatchElement(String name) {
+    return elements.values().stream()
+        .filter(IntermediateCatchEvent.class::isInstance)
+        .map(IntermediateCatchEvent.class::cast)
+        .filter(imce -> imce.getLinkventDefinitions().stream().anyMatch(def -> def.getName().equals(name)))
+        .findFirst();
+
+  }
 }

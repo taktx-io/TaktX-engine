@@ -309,6 +309,9 @@ public class BpmnTestEngine {
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
         .until(() -> {
+          if (activeProcessInstance != null && activeProcessInstance.getProcessInstanceState().isFinished()) {
+            return activeProcessInstance;
+          }
           ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
               activeProcessInstance.getProcessInstanceKey());
           if (processInstances == null || processInstances.isEmpty()) {
