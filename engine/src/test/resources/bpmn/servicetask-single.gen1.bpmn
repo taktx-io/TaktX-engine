@@ -22,7 +22,7 @@
           <zeebe:input source="=123" target="inputVariable" />
           <zeebe:output source="=var1" target="MappedOutputVariable" />
         </zeebe:ioMapping>
-        <zeebe:taskDefinition type="service-task-id" retries="5" />
+        <zeebe:taskDefinition type="service-task" retries="5" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>

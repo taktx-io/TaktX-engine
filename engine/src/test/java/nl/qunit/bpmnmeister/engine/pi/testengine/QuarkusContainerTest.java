@@ -9,8 +9,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @QuarkusTest
-@QuarkusTestResource(ContainerKafkaTestResource.class)
+@QuarkusTestResource(ContainerTestResource.class)
 @Stereotype
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface QuarkusContainerKafkaTest {}
+public @interface QuarkusContainerTest {}

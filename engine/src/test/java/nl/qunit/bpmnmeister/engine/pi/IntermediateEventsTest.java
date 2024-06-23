@@ -13,13 +13,10 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.xml.sax.SAXException;
 
 @QuarkusContainerKafkaTest
-@TestMethodOrder(OrderAnnotation.class)
 class IntermediateEventsTest {
 
   private static final Logger LOG = Logger.getLogger(IntermediateEventsTest.class);

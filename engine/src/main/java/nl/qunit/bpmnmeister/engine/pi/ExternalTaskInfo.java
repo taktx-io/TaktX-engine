@@ -11,13 +11,16 @@ import nl.qunit.bpmnmeister.pi.Variables;
 public class ExternalTaskInfo {
 
   private final String externalTaskId;
+  private final String elementId;
   private final Variables variables;
 
   @JsonCreator
   public ExternalTaskInfo(
       @JsonProperty("externalTaskId") String externalTaskId,
+      @JsonProperty("elementId") String elementId,
       @JsonProperty("variables") Variables variables) {
     this.externalTaskId = externalTaskId;
+    this.elementId = elementId;
     this.variables = variables;
   }
 }

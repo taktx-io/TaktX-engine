@@ -29,8 +29,9 @@ dependencies {
     testImplementation 'io.quarkus:quarkus-jacoco'
 
     testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.testcontainers:testcontainers:1.19.7'
-    testImplementation 'org.testcontainers:kafka:1.19.7'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation "org.testcontainers:junit-jupiter"
+
     testImplementation 'org.awaitility:awaitility:4.2.1'
 
     compileOnly 'org.projectlombok:lombok:1.18.30'

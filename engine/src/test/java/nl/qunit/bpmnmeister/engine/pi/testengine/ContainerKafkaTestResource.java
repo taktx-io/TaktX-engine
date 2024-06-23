@@ -7,8 +7,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.testcontainers.containers.KafkaContainer;
 
 public class ContainerKafkaTestResource implements QuarkusTestResourceLifecycleManager {
-
-  public static final KafkaContainer kafka = new KafkaContainer("7.2.6");
+  private final KafkaContainer kafka = new KafkaContainer("7.2.6");
 
   /**
    * @return A map of system properties that should be set for the running tests

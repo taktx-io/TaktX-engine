@@ -131,15 +131,14 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       BoundaryEventState oldState,
       ScopedVars variables) {
     // Trigger by timer or by message.
-    List<ProcessInstanceTrigger> elementTriggers = new ArrayList<>();
     List<ProcessInstanceTrigger> processInstanceTriggersForOutputFlows =
         TriggerHelper.getProcessInstanceTriggersForOutputFlows(
             processInstance, processDefinition, element);
-    elementTriggers.addAll(processInstanceTriggersForOutputFlows);
     if (element.isCancelActivity()) {
       // Terminate the activity the boundary event is attached to
       ProcessInstanceTrigger cancelElementTrigger =
           new TerminateTrigger(processInstance.getProcessInstanceKey(), element.getAttachedToRef());
+      List<ProcessInstanceTrigger> elementTriggers = new ArrayList<>();
       elementTriggers.add(cancelElementTrigger);
       elementTriggers.addAll(processInstanceTriggersForOutputFlows);
       triggerResultBuilder

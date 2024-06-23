@@ -57,9 +57,10 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       return TriggerResult.builder().newFlowNodeState(oldState).build();
     }
 
-    String workerDefinition = getWorkerDefinition(element.getWorkerDefinition(), variables);
+    String externalTaskId = getExternalTaskId(element.getWorkerDefinition(), variables);
     ExternalTaskInfo externalTaskInfo =
-        new ExternalTaskInfo(workerDefinition, getExternalTaskVariables(element, variables));
+        new ExternalTaskInfo(
+            externalTaskId, element.getId(), getExternalTaskVariables(element, variables));
     return TriggerResult.builder()
         .newFlowNodeState(getNewAttempExternalTaskState(oldState))
         .externalTasks(Set.of(externalTaskInfo))
@@ -70,7 +71,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
     return ioMappingProcessor.getInputVariables(element, variables);
   }
 
-  private String getWorkerDefinition(String workerDefinition, ScopedVars variables) {
+  private String getExternalTaskId(String workerDefinition, ScopedVars variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();
   }
@@ -160,9 +161,13 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
             messageSchedulers = Set.of(messageScheduler);
           } else {
             // No backoff time defined, retry directly
+            String externalTaskId = getExternalTaskId(element.getWorkerDefinition(), variables);
+
             ExternalTaskInfo externalTaskInfo =
                 new ExternalTaskInfo(
-                    trigger.getElementId(), getExternalTaskVariables(element, variables));
+                    externalTaskId,
+                    trigger.getElementId(),
+                    getExternalTaskVariables(element, variables));
             workerDefinitions = Set.of(externalTaskInfo);
           }
         } else {
@@ -214,6 +219,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
             processInstance.getProcessInstanceKey(),
             processInstance.getProcessDefinitionKey(),
             workerDefinition,
+            elementId,
             variables.getCurrentScopeVariables());
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     return new OneTimeScheduler(

@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class FlowNodeStates {
     return Optional.ofNullable(elementStateMap.get(elementId));
   }
 
-  public FlowNodeStates put(String elementId, FlowNodeState newElementState) {
+  public FlowNodeStates put(String elementId, @Nonnull FlowNodeState newElementState) {
     Map<String, FlowNodeState> states = new HashMap<>(elementStateMap);
     states.put(elementId, newElementState);
     return new FlowNodeStates(Map.copyOf(states));

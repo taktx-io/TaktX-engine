@@ -18,12 +18,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
+import nl.qunit.bpmnmeister.engine.pi.DebuggerUtil;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -44,6 +46,8 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.commons.io.IOUtils;
@@ -62,7 +66,14 @@ import org.xml.sax.SAXException;
 public class BpmnTestEngine {
 
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
-  public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
+  public static final Duration DEFAULT_DURATION;
+  static {
+    if (DebuggerUtil.isDebuggerAttached()) {
+      DEFAULT_DURATION = Duration.ofSeconds(10);
+    } else {
+      DEFAULT_DURATION = Duration.ofSeconds(10);
+    }
+  }
 
   @Inject
   AdminClient adminClient;
@@ -144,6 +155,7 @@ public class BpmnTestEngine {
     ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances1 = processInstanceQueueMap.computeIfAbsent(
         processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     processInstances1.add(processInstance);
+    LOG.info("Process instance map: " + processInstanceQueueMap + " queue " + processInstances1);
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
         processInstance);
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
@@ -163,7 +175,7 @@ public class BpmnTestEngine {
     hashToDefinitionMap.put(processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
   }
 
-  public ExternalTaskTrigger pollExternalTask(String elementId) {
+  public ExternalTaskTrigger pollExternalTask() {
     ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.get(activeProcessInstance.getProcessInstanceKey());
     if (externalTaskTriggers == null) {
       return null;
@@ -216,45 +228,55 @@ public class BpmnTestEngine {
         variables);
     startCommandEmitter.send(KafkaRecord.of(processDefinitionKey.getProcessDefinitionId(), startCommand));
 
-    ProcessInstanceKey activeProcessInstanceKey = Awaitility.await()
-        .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstanceTrigger> flowElementTriggers = definitionToInstancesMap.get(
-              processDefinitionKey);
-          if (flowElementTriggers == null || flowElementTriggers.isEmpty()) {
+    ProcessInstanceKey activeProcessInstanceKey;
+    try {
+       activeProcessInstanceKey = Awaitility.await()
+          .until(() -> {
+            ConcurrentLinkedQueue<ProcessInstanceTrigger> flowElementTriggers = definitionToInstancesMap.get(
+                processDefinitionKey);
+            if (flowElementTriggers == null || flowElementTriggers.isEmpty()) {
+              return null;
+            }
+            ProcessInstanceTrigger poll = flowElementTriggers.poll();
+            if (poll instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger &&
+                ProcessDefinitionKey.of(startNewProcessInstanceTrigger.getProcessDefinition())
+                    .equals(processDefinitionKey)) {
+              return poll.getProcessInstanceKey();
+            }
             return null;
-          }
-          ProcessInstanceTrigger poll = flowElementTriggers.poll();
-          if (poll instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger &&
-              ProcessDefinitionKey.of(startNewProcessInstanceTrigger.getProcessDefinition())
-                  .equals(processDefinitionKey)) {
-            return poll.getProcessInstanceKey();
-          }
-          return null;
-        }, Objects::nonNull);
-
-    activeProcessInstance = Awaitility.await()
-        .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-              activeProcessInstanceKey);
-          if (processInstances == null || processInstances.isEmpty()) {
+          }, Objects::nonNull);
+    } catch (ConditionTimeoutException e) {
+      LOG.error("Error waiting for process instance to start: " + e);
+      throw new IllegalStateException(e);
+    }
+    try {
+      activeProcessInstance = Awaitility.await()
+          .until(() -> {
+            ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
+                activeProcessInstanceKey);
+            if (processInstances == null || processInstances.isEmpty()) {
+              return null;
+            }
+            ProcessInstanceUpdate poll = processInstances.poll();
+            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
+                .equals(activeProcessInstanceKey)) {
+              return poll;
+            }
             return null;
-          }
-          ProcessInstanceUpdate poll = processInstances.poll();
-          if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-              .equals(activeProcessInstanceKey)) {
-            return poll;
-          }
-          return null;
-        }, Objects::nonNull);
+          }, Objects::nonNull);
+    } catch (ConditionTimeoutException e) {
+      LOG.error("Error waiting for process instance to start: " + e);
+      throw new IllegalStateException(e);
+    }
 
     return this;
   }
 
   public BpmnTestEngine waitUntilServiceTaskIsWaitingForResponse(String elementId) {
     activeExternalTaskTrigger = Awaitility.await().atMost(DEFAULT_DURATION)
-        .until(() -> pollExternalTask(elementId),
-            externalTaskTrigger -> externalTaskTrigger != null && externalTaskTrigger.getElementId()
-                .equals(elementId));
+        .until(this::pollExternalTask,
+            externalTaskTrigger -> externalTaskTrigger != null &&
+                                   externalTaskTrigger.getElementId().equals(elementId));
     return this;
   }
 
@@ -300,33 +322,41 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilCompleted() {
+  public BpmnTestEngine   waitUntilCompleted() {
     return waitUntilCompleted(DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilCompleted(Duration duration) {
-
-    activeProcessInstance = Awaitility.await()
-        .atMost(duration)
-        .until(() -> {
-          if (activeProcessInstance != null && activeProcessInstance.getProcessInstanceState().isFinished()) {
-            return activeProcessInstance;
-          }
-          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-              activeProcessInstance.getProcessInstanceKey());
-          if (processInstances == null || processInstances.isEmpty()) {
-            return null;
-          }
-          ProcessInstanceUpdate poll = null;
-          do {
-            poll = processInstances.poll();
-            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getProcessInstanceState().isFinished()) {
-              return poll;
+    try {
+      activeProcessInstance = Awaitility.await()
+          .atMost(duration)
+          .until(() -> {
+            if (activeProcessInstance != null && activeProcessInstance.getProcessInstanceState()
+                .isFinished()) {
+              return activeProcessInstance;
             }
-          } while (poll != null);
-          return null;
-        }, Objects::nonNull);
+            ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
+                activeProcessInstance.getProcessInstanceKey());
+            if (processInstances == null || processInstances.isEmpty()) {
+              return null;
+            }
+            ProcessInstanceUpdate poll = null;
+            do {
+              poll = processInstances.poll();
+              if (poll != null && poll.getProcessInstanceKey() != null
+                  && poll.getProcessInstanceKey()
+                      .equals(activeProcessInstance.getProcessInstanceKey())
+                  && poll.getProcessInstanceState().isFinished()) {
+                return poll;
+              }
+            } while (poll != null);
+            return null;
+          }, Objects::nonNull);
+    } catch (ConditionTimeoutException e) {
+      LOG.error("Process instance: " + activeProcessInstance + " did not complete in time");
+      LOG.error(processInstanceMap);
+      throw e;
+    }
     return this;
   }
 
@@ -408,20 +438,28 @@ public class BpmnTestEngine {
         .until(() -> {
           ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
               activeProcessInstance.getProcessInstanceKey());
+          LOG.info("Pi for " + activeProcessInstance.getProcessInstanceKey() + " in : " + processInstanceQueueMap);
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
           ProcessInstanceUpdate poll = null;
           do {
             poll = processInstances.poll();
+            LOG.info("Poll: " + poll);
             if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstance.getProcessInstanceKey()) && poll.getFlowNodeStates().get(elementId).get().getPassedCnt() >= count) {
+                .equals(activeProcessInstance.getProcessInstanceKey()) &&
+                getPassedCnt(elementId, poll) >= count) {
               return poll;
             }
           } while (poll != null);
           return null;
         }, Objects::nonNull);
     return this;
+  }
+
+  private static int getPassedCnt(String elementId, ProcessInstanceUpdate poll) {
+    Optional<FlowNodeState> flowNodeState = poll.getFlowNodeStates().get(elementId);
+    return flowNodeState.map(FlowNodeState::getPassedCnt).orElse(0);
   }
 
   public BpmnTestEngine sendMessage(String messageName, Variables variables) {
@@ -484,5 +522,34 @@ public class BpmnTestEngine {
 
   public ProcessInstanceUpdate getProcessInstance(ProcessInstanceKey parentInstanceKey) {
     return processInstanceMap.get(parentInstanceKey);
+  }
+
+  public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
+
+    activeProcessInstance = Awaitility.await()
+        .atMost(duration)
+        .until(() -> {
+          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
+              activeProcessInstance.getProcessInstanceKey());
+          if (processInstances == null || processInstances.isEmpty()) {
+            return null;
+          }
+          ProcessInstanceUpdate poll = null;
+          do {
+            poll = processInstances.poll();
+            if (poll != null &&
+                poll.getProcessInstanceKey() != null &&
+                poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
+                 poll.getFlowNodeStates().get(elementId).isPresent() &&
+                FlowNodeStateEnum.ACTIVE == poll.getFlowNodeStates().get(elementId).get().getState()) {
+              return poll;
+            }
+          } while (poll != null);
+          return null;
+        }, Objects::nonNull);
+    return this;  }
+
+  public BpmnTestEngine waitUntilElementIsActive(String elementId) {
+    return waitUntilElementIsActive(elementId, DEFAULT_DURATION);
   }
 }

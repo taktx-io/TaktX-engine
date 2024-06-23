@@ -22,7 +22,7 @@
         <bpmn:incoming>Flow_10nh6nv</bpmn:incoming>
       </bpmn:endEvent>
       <bpmn:sequenceFlow id="Flow_10nh6nv" sourceRef="SubTask_1" targetRef="SubEndEvent_1" />
-      <bpmn:task id="SubTask_1" name="Service task">
+      <bpmn:task id="SubTask_1" name="task">
         <bpmn:incoming>Flow_1c8vhq0</bpmn:incoming>
         <bpmn:outgoing>Flow_10nh6nv</bpmn:outgoing>
       </bpmn:task>
@@ -47,6 +47,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0va9c59_di" bpmnElement="SubTask_1">
         <dc:Bounds x="370" y="147" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1c8vhq0_di" bpmnElement="Flow_1c8vhq0">
         <di:waypoint x="318" y="187" />

@@ -11,13 +11,10 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.xml.sax.SAXException;
 
 @QuarkusContainerKafkaTest
-@TestMethodOrder(OrderAnnotation.class)
 class GatewayTest {
 
   private static final Logger LOG = Logger.getLogger(GatewayTest.class);
@@ -130,6 +127,32 @@ class GatewayTest {
         .hasPassedElement("Task_1")
         .hasNotPassedElement("Task_2")
         .hasPassedElement("Task_3");
+  }
+
+
+
+  @Test
+  void testExclusiveGatewy()
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/sequence-flow-condition.bpmn")
+        .startProcessInstance(Variables.of("inputVariable", 1))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Task_1")
+        .hasNotPassedElement("Task_2")
+        .hasPassedElement("EndEvent_1")
+
+        // now test the alternative default flow
+        .toProcessLevel()
+        .startProcessInstance(Variables.empty())
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Task_2")
+        .hasNotPassedElement("Task_1")
+        .hasPassedElement("EndEvent_1");
   }
 
 }

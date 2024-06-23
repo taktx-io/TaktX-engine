@@ -12,13 +12,10 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.xml.sax.SAXException;
 
 @QuarkusContainerKafkaTest
-@TestMethodOrder(OrderAnnotation.class)
 class BoundaryEventsTest {
 
   private static final Logger LOG = Logger.getLogger(BoundaryEventsTest.class);
@@ -99,7 +96,6 @@ class BoundaryEventsTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
-        .waitForProcessDeployment()
         .startProcessInstance(Variables.of("correlationKey", "key1"))
         .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1",
             Set.of("key1"))
@@ -120,7 +116,6 @@ class BoundaryEventsTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
-        .waitForProcessDeployment()
         .startProcessInstance(Variables.of("correlationKey", "key1"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1",
@@ -144,4 +139,102 @@ class BoundaryEventsTest {
 
   }
 
+  @Test
+  void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .startProcessInstance(Variables.empty())
+        .waitUntilChildProcessIsStarted()
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_1")
+        .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_2")
+        .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
+        .parentProcess()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasTerminatedElement("Subprocess_1")
+        .hasPassedElement("EndEvent_1")
+        .hasPassedElement("Boundary_Timer_1")
+        .hasNotPassedElement("OkTask");
+  }
+
+
+  @Test
+  void testBoundaryTimer_SubProcessTriggered_NormalEnd()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .startProcessInstance(Variables.empty())
+        .waitUntilChildProcessIsStarted()
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_1")
+        .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_2")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .parentProcess()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Subprocess_1")
+        .hasPassedElement("EndEvent_2")
+        .hasNotPassedElement("Boundary_Timer_1")
+        .hasNotPassedElement("EndEvent_1")
+        .hasPassedElement("OkTask");
+  }
+
+  @Test
+  void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .startProcessInstance(Variables.empty())
+        .waitUntilChildProcessIsStarted()
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_1")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasTerminatedElement("SubProcess_Boundary_Timer_1")
+        .hasPassedElement("SubStartEvent_1")
+        .hasPassedElement("Service_Task_1")
+        .hasPassedElement("SubEndEvent_1")
+        .hasNotPassedElement("Service_Task_2")
+        .toProcessLevel()
+        .parentProcess()
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasPassedElement("Subprocess_1")
+        .hasPassedElement("EndEvent_2")
+        .hasPassedElement("OkTask")
+        .hasNotPassedElement("Boundary_Timer_1")
+        .hasNotPassedElement("EndEvent_1");
+  }
+
+
+  @Test
+  void testBoundaryTimer_SubProcessTriggered_NonInterrupting_BoundaryEventEnd_NoEnd()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess-noendevent.bpmn")
+        .startProcessInstance(Variables.empty())
+        .waitUntilChildProcessIsStarted()
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_1")
+        .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
+        .waitUntilServiceTaskIsWaitingForResponse("Service_Task_2")
+        .andRespondWithSuccess(Variables.of("success", "true"))
+        .parentProcess()
+        .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElement("StartEvent_1")
+        .hasTerminatedElement("Subprocess_1")
+        .hasPassedElement("EndEvent_1")
+        .hasPassedElement("Boundary_Timer_1")
+        .hasNotPassedElement("OkTask");
+  }
 }

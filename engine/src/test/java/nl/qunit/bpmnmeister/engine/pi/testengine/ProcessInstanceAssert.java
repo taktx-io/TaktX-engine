@@ -11,6 +11,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 public class ProcessInstanceAssert {
 
@@ -42,6 +43,14 @@ public class ProcessInstanceAssert {
     Optional<FlowNodeState> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
     assertThat(bpmnElementState.get().getPassedCnt()).as("element " + elementId + " has not passed").isPositive();
+    return this;
+  }
+
+  public ProcessInstanceAssert hasTerminatedElement(String elementId) {
+    Optional<FlowNodeState> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
+    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
+    assertThat(bpmnElementState.get().getState()).as("element " + elementId + " was not terminated").isEqualTo(
+        FlowNodeStateEnum.TERMINATED);
     return this;
   }
 
