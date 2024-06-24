@@ -31,4 +31,12 @@ public abstract class ThrowEvent<S extends FlowNodeState> extends Event<S>  {
         .map(LinkEventDefinition.class::cast)
         .collect(Collectors.toSet());
   }
+
+  @JsonIgnore
+  public Set<TerminateEventDefinition> getTerminateEventDefinitions() {
+    return eventDefinitions.stream()
+        .filter(TerminateEventDefinition.class::isInstance)
+        .map(TerminateEventDefinition.class::cast)
+        .collect(Collectors.toSet());
+  }
 }

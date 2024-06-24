@@ -155,7 +155,6 @@ public class BpmnTestEngine {
     ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances1 = processInstanceQueueMap.computeIfAbsent(
         processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     processInstances1.add(processInstance);
-    LOG.info("Process instance map: " + processInstanceQueueMap + " queue " + processInstances1);
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
         processInstance);
     if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
@@ -366,9 +365,12 @@ public class BpmnTestEngine {
 
   public void clear() {
     processInstanceQueueMap.clear();
+    processInstanceParentChildMap.clear();
     externalTaskTriggerQueueMap.clear();
     definitionToInstancesMap.clear();
     processInstanceMap.clear();
+    hashToDefinitionMap.clear();
+    messageSubscriptionMap.clear();
     activeProcessDefintion = null;
     activeProcessInstance = null;
     activeExternalTaskTrigger = null;

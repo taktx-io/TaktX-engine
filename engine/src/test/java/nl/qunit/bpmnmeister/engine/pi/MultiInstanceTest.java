@@ -18,7 +18,6 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
@@ -52,7 +51,7 @@ class MultiInstanceTest {
         .hasPassedElement("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testProcessTaskMultiInstanceParallelMany()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 

@@ -7,10 +7,12 @@ import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TLinkEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
+import nl.qunit.bpmnmeister.bpmn.TTerminateEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
 
 public class GenericEventDefinitionMapper implements EventDefinitionMapper {
@@ -30,8 +32,15 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
       return mapMessageEventDefinition(messageEventDefinition);
     } else if (ed instanceof TLinkEventDefinition linkEventDefinition) {
       return mapLinkEventDefinition(linkEventDefinition);
+    } else if (ed instanceof TTerminateEventDefinition terminateEventDefinition) {
+      return mapTerminateEventDefinition(terminateEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
+  }
+
+  private EventDefinition mapTerminateEventDefinition(
+      TTerminateEventDefinition terminateEventDefinition) {
+    return new TerminateEventDefinition(terminateEventDefinition.getId());
   }
 
   private EventDefinition mapLinkEventDefinition(TLinkEventDefinition linkEventDefinition) {
