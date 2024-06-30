@@ -1,10 +1,10 @@
 package nl.qunit.bpmnmeister.client;
 
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import java.util.UUID;
 
-public class ProcessInstanceKeyJsonSeserializer extends JsonSerializer<ProcessInstanceKey> {
+public class ProcessInstanceKeyJsonSeserializer extends JsonSerializer<UUID> {
 
   public ProcessInstanceKeyJsonSeserializer() {
-    super(ProcessInstanceKey.class);
+    super(UUID.class);
   }
 }

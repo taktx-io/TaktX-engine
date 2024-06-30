@@ -1,13 +1,13 @@
 package nl.qunit.bpmnmeister.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import java.util.UUID;
 
-public class ProcessInstanceKeyJsonDeserializer extends JsonDeserializer<ProcessInstanceKey> {
+public class ProcessInstanceKeyJsonDeserializer extends JsonDeserializer<UUID> {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   public ProcessInstanceKeyJsonDeserializer() {
-    super(ProcessInstanceKey.class, objectMapper);
+    super(UUID.class, objectMapper);
   }
 }

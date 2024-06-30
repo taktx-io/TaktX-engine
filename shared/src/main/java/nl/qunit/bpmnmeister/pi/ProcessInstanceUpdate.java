@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -18,10 +19,10 @@ public class ProcessInstanceUpdate extends ProcessInstance {
 
   @JsonCreator
   public ProcessInstanceUpdate(
-      @Nonnull @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
+      @Nonnull @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
-      @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
-      @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
+      @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
+      @Nonnull @JsonProperty("parentInstanceKey") UUID parentInstanceKey,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,
       @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState,

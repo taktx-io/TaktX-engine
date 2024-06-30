@@ -1,36 +1,49 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
+import io.quarkus.test.junit.QuarkusTest;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
-@QuarkusContainerKafkaTest
+@QuarkusTest
 class BoundaryEventsTest {
 
   private static final Logger LOG = Logger.getLogger(BoundaryEventsTest.class);
 
   @Inject
-  BpmnTestEngine bpmnTestEngine;
+  Clock clock;
 
+  static BpmnTestEngine bpmnTestEngine;
 
   @PostConstruct
   void init() {
-    LOG.info("Init BpmnTestEngine: " + bpmnTestEngine);
+    if (bpmnTestEngine == null) {
+      bpmnTestEngine = new BpmnTestEngine(clock);
+      bpmnTestEngine.init();
+    }
     bpmnTestEngine.clear();
   }
 
+  @AfterAll
+  static void closeEngine() {
+    if (bpmnTestEngine != null) {
+      bpmnTestEngine.close();
+    }
+  }
 
+  
   @Test
   void testBoundaryTimerTriggered()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {

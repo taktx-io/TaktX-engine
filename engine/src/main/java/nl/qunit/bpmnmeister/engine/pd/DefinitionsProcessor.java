@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
@@ -73,7 +72,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
                 .getStartEvents()
                 .get(0)
                 .getId();
-    ProcessInstanceKey processInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
+    UUID processInstanceKey = UUID.randomUUID();
     ProcessInstanceTrigger processInstanceTrigger =
         new StartNewProcessInstanceTrigger(
             startCommand.getRootProcessInstanceKey(),

@@ -12,9 +12,8 @@ import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -105,10 +104,10 @@ public class MessageEventProcessor
           .forEach(
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
-                  ProcessInstanceKey rootInstanceKey = subscription.getRootInstanceKey();
-                  ProcessInstanceKey processInstanceKey = subscription.getProcessInstanceKey();
-                  FlowElementTrigger flowElementTrigger =
-                      new FlowElementTrigger(
+                  UUID rootInstanceKey = subscription.getRootInstanceKey();
+                  UUID processInstanceKey = subscription.getProcessInstanceKey();
+                  StartFlowElementTrigger flowElementTrigger =
+                      new StartFlowElementTrigger(
                           processInstanceKey,
                           subscription.getElementId(),
                           Constants.NONE,
@@ -138,8 +137,8 @@ public class MessageEventProcessor
                   ProcessDefinitionKey processDefinitionKey = value.getProcessDefinitionKey();
                   StartCommand startCommand =
                       new StartCommand(
-                          new ProcessInstanceKey(UUID.randomUUID()),
-                          ProcessInstanceKey.NONE,
+                          UUID.randomUUID(),
+                          Constants.NONE_UUID,
                           value.getElementId(),
                           Constants.NONE,
                           processDefinitionKey.getProcessDefinitionId(),

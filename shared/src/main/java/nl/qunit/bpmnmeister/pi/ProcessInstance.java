@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -14,21 +15,19 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 @EqualsAndHashCode
 @SuperBuilder(toBuilder = true)
 public class ProcessInstance {
-
-  @Nonnull
-  private final ProcessInstanceKey rootInstanceKey;
+  private final ProcessInstanceState processInstanceState;
+  private final UUID rootInstanceKey;
   private final String parentElementId;
-  private final ProcessInstanceKey processInstanceKey;
-  private final ProcessInstanceKey parentInstanceKey;
+  private final UUID processInstanceKey;
+  private final UUID parentInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final FlowNodeStates flowNodeStates;
-  private final ProcessInstanceState processInstanceState;
 
   @JsonCreator
   public ProcessInstance(
-      @Nonnull @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
-      @Nonnull @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
-      @Nonnull @JsonProperty("parentInstanceKey") ProcessInstanceKey parentInstanceKey,
+      @Nonnull @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
+      @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
+      @Nonnull @JsonProperty("parentInstanceKey") UUID parentInstanceKey,
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,

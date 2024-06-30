@@ -13,7 +13,6 @@ import java.util.Optional;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -52,8 +51,8 @@ public class ProcessResource {
     }
     StartCommand startCommand =
         new StartCommand(
-            new ProcessInstanceKey(UUID.randomUUID()),
-            ProcessInstanceKey.NONE,
+            UUID.randomUUID(),
+            Constants.NONE_UUID,
             Constants.NONE,
             Constants.NONE,
             processId,

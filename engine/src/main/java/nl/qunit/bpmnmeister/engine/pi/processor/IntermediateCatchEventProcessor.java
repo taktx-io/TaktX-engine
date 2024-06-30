@@ -6,8 +6,8 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCatchEventStateBuilder;
@@ -23,7 +23,7 @@ public class IntermediateCatchEventProcessor
   @Override
   protected void triggerCatchEvent(
       TriggerResultBuilder triggerResultBuilder,
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       IntermediateCatchEvent element,

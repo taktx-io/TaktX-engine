@@ -13,18 +13,19 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.UUID;
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 
 @Getter
 @ToString
 public class RecurringMessageScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final ProcessInstanceKey processInstanceKey;
+  private final UUID rootInstanceKey;
+  private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerEventDefinitionId;
   private final List<SchedulableMessage<?>> messages;
@@ -34,13 +35,15 @@ public class RecurringMessageScheduler implements MessageScheduler {
   @JsonCreator
   public RecurringMessageScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
+      @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
     this.processDefinitionKey = processDefinitionKey;
+    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerEventDefinitionId = timerEventDefinitionId;
@@ -51,7 +54,7 @@ public class RecurringMessageScheduler implements MessageScheduler {
 
   @Override
   public RecurringMessageScheduler evaluate(
-      Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
+      Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -61,11 +64,12 @@ public class RecurringMessageScheduler implements MessageScheduler {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(messages);
+        triggerConsumer.accept(rootInstanceKey, messages);
 
         // Return a new command with the next execution time
         return new RecurringMessageScheduler(
             processDefinitionKey,
+            rootInstanceKey,
             processInstanceKey,
             targetElementId,
             timerEventDefinitionId,

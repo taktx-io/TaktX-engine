@@ -13,7 +13,6 @@ import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
@@ -46,8 +45,8 @@ public class ProcessDefinitionActivationProcessor
     List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
         new StartCommand(
-            new ProcessInstanceKey(UUID.randomUUID()),
-            ProcessInstanceKey.NONE,
+            UUID.randomUUID(),
+            Constants.NONE_UUID,
             startEvent.getParentId(),
             Constants.NONE,
             processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
@@ -140,7 +139,7 @@ public class ProcessDefinitionActivationProcessor
               ScheduleKey scheduleKey =
                   new ScheduleKey(
                       processActivationRecord.key(),
-                      ProcessInstanceKey.NONE,
+                      Constants.NONE_UUID,
                       ScheduleType.from(timerEventDefinition),
                       startEvent.getId(),
                       timerEventDefinition.getId());
@@ -159,7 +158,8 @@ public class ProcessDefinitionActivationProcessor
               MessageScheduler schedule =
                   messageSchedulerFactory.schedule(
                       processActivationRecord.key(),
-                      ProcessInstanceKey.NONE,
+                      Constants.NONE_UUID,
+                      Constants.NONE_UUID,
                       startEvent.getId(),
                       timerEventDefinition,
                       getStartCommands(processDefinition, startEvent),

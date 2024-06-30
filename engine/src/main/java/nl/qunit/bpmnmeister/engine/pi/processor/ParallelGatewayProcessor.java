@@ -11,9 +11,9 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
@@ -23,7 +23,7 @@ public class ParallelGatewayProcessor
 
   @Override
   protected TriggerResult triggerDecision(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       ParallelGateway element,
@@ -52,7 +52,7 @@ public class ParallelGatewayProcessor
                               .getFlowElements()
                               .getFlowElement(flowId)
                               .orElseThrow();
-                  return new FlowElementTrigger(
+                  return new StartFlowElementTrigger(
                       processInstance.getProcessInstanceKey(),
                       flow.getTarget(),
                       flow.getId(),

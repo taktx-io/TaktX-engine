@@ -10,7 +10,6 @@ import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -29,8 +28,8 @@ class ParallelMultiInstanceProcessor {
     List<ProcessInstanceTrigger> subProcessTriggers = new ArrayList<>();
 
     for (int i = 0; i < inputCollection.size(); i++) {
-      ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-      ProcessInstanceKey parentProcessInstanceKey = processInstance.getProcessInstanceKey();
+      UUID childProcessInstanceKey = UUID.randomUUID();
+      UUID parentProcessInstanceKey = processInstance.getProcessInstanceKey();
 
       Variables childVariables = Variables.of("loopCnt", new IntNode(i));
       variables.push(childProcessInstanceKey, parentProcessInstanceKey, childVariables);

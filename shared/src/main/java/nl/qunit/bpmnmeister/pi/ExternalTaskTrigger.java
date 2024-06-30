@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -10,10 +11,10 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString
-public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKey> {
+public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
 
-  private final ProcessInstanceKey rootInstanceKey;
-  private final ProcessInstanceKey processInstanceKey;
+  private final UUID rootInstanceKey;
+  private final UUID processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final String externalTaskId;
   private final String elementId;
@@ -21,8 +22,8 @@ public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKe
 
   @JsonCreator
   public ExternalTaskTrigger(
-      @JsonProperty("rootInstanceKey") ProcessInstanceKey rootInstanceKey,
-      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
+      @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @JsonProperty("externalTaskId") String externalTaskId,
       @JsonProperty("elementId") String elementId,
@@ -52,7 +53,7 @@ public class ExternalTaskTrigger implements SchedulableMessage<ProcessInstanceKe
 
   @JsonIgnore
   @Override
-  public ProcessInstanceKey getRecordKey() {
+  public UUID getRecordKey(UUID rootInstanceKey) {
     return processInstanceKey;
   }
 }

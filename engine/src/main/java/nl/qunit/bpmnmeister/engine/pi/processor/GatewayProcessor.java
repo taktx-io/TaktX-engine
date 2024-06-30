@@ -16,9 +16,9 @@ import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.Gateway;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
 
@@ -29,7 +29,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
 
   @Override
   protected TriggerResult triggerFlowElement(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       G element,
@@ -43,7 +43,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
   }
 
   protected abstract TriggerResult triggerDecision(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       G element,
@@ -106,7 +106,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
                       .getRootProcess()
                       .getFlowElements()
                       .getFlowNodeWithIncomingFlow(flowId);
-              return new FlowElementTrigger(
+              return new StartFlowElementTrigger(
                   processInstance.getProcessInstanceKey(),
                   flowNodeWithIncomingFlow.get().getId(),
                   flowId,

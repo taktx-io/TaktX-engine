@@ -9,7 +9,6 @@ import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -46,8 +45,8 @@ class SequentialMultiInstanceProcessor {
       ScopedVars variables,
       JsonNode inputCollection,
       int loopCnt) {
-    ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-    ProcessInstanceKey parentProcessInstanceKey = processInstance.getProcessInstanceKey();
+    UUID childProcessInstanceKey = UUID.randomUUID();
+    UUID parentProcessInstanceKey = processInstance.getProcessInstanceKey();
     variables.push(
         childProcessInstanceKey,
         parentProcessInstanceKey,

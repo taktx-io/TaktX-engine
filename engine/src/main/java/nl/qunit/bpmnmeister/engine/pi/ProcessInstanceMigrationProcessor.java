@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
@@ -13,7 +14,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.FlowNodeStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -23,11 +23,11 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @RequiredArgsConstructor
 public class ProcessInstanceMigrationProcessor
-    implements Processor<ProcessInstanceKey, ProcessInstanceMigrationTrigger, Object, Object> {
+    implements Processor<UUID, ProcessInstanceMigrationTrigger, Object, Object> {
 
   private final ProcessorProvider processorProvider;
 
-  private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
+  private KeyValueStore<UUID, ProcessInstance> processInstanceStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
 
   @Override
@@ -37,7 +37,7 @@ public class ProcessInstanceMigrationProcessor
   }
 
   @Override
-  public void process(Record<ProcessInstanceKey, ProcessInstanceMigrationTrigger> triggerRecord) {
+  public void process(Record<UUID, ProcessInstanceMigrationTrigger> triggerRecord) {
     ProcessInstance processInstance = processInstanceStore.get(triggerRecord.key());
     ProcessDefinition oldProcessDefinition =
         processInstanceDefinitionStore.get(processInstance.getProcessDefinitionKey());

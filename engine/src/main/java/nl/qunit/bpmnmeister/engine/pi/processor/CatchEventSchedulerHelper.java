@@ -11,8 +11,8 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -34,7 +34,7 @@ public class CatchEventSchedulerHelper {
 
     List<SchedulableMessage<?>> messages =
         List.of(
-            new FlowElementTrigger(
+            new StartFlowElementTrigger(
                 processInstance.getProcessInstanceKey(),
                 element.getId(),
                 Constants.NONE,
@@ -46,6 +46,7 @@ public class CatchEventSchedulerHelper {
                 timerEventDefinition ->
                     messageSchedulerFactory.schedule(
                         processInstance.getProcessDefinitionKey(),
+                        processInstance.getRootInstanceKey(),
                         processInstance.getProcessInstanceKey(),
                         element.getId(),
                         timerEventDefinition,
@@ -66,7 +67,7 @@ public class CatchEventSchedulerHelper {
   }
 
   public void processWhenActive(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       IntermediateCatchEvent element,

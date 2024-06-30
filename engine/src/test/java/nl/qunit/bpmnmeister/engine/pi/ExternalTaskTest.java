@@ -2,33 +2,46 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.quarkus.test.junit.QuarkusTest;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.engine.pi.testengine.QuarkusContainerKafkaTest;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
-@QuarkusContainerKafkaTest
+@QuarkusTest
 class ExternalTaskTest {
 
   private static final Logger LOG = Logger.getLogger(ExternalTaskTest.class);
 
   @Inject
-  BpmnTestEngine bpmnTestEngine;
+  Clock clock;
 
+  static BpmnTestEngine bpmnTestEngine;
 
   @PostConstruct
   void init() {
-    LOG.info("Init BpmnTestEngine: " + bpmnTestEngine);
+    if (bpmnTestEngine == null) {
+      bpmnTestEngine = new BpmnTestEngine(clock);
+      bpmnTestEngine.init();
+    }
     bpmnTestEngine.clear();
+  }
+
+  @AfterAll
+  static void closeEngine() {
+    if (bpmnTestEngine != null) {
+      bpmnTestEngine.close();
+    }
   }
 
   @Test

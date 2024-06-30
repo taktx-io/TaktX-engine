@@ -24,10 +24,9 @@ import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -47,7 +46,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
 
   @Override
   protected TriggerResult triggerFlowElementWithoutLoop(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       T element,
@@ -85,10 +84,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       S oldState,
       ScopedVars variables) {
 
-    variables.push(
-        new ProcessInstanceKey(UUID.randomUUID()),
-        trigger.getProcessInstanceKey(),
-        trigger.getVariables());
+    variables.push(UUID.randomUUID(), trigger.getProcessInstanceKey(), trigger.getVariables());
     Variables mappedVariables = ioMappingProcessor.getOutputVariables(element, variables);
     variables.pop();
     variables.merge(mappedVariables);
@@ -224,6 +220,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     return new OneTimeScheduler(
         processInstance.getProcessDefinitionKey(),
+        processInstance.getRootInstanceKey(),
         processInstance.getProcessInstanceKey(),
         elementId,
         workerDefinition,

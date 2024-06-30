@@ -14,9 +14,9 @@ import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
@@ -29,7 +29,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
   @Override
   protected final TriggerResult triggerFlowElement(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       E element,
@@ -60,7 +60,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
     if (elementActivated(oldState, newElementState)) {
       for (BoundaryEvent boundaryEvent : boundaryEvents) {
         triggers.add(
-            new FlowElementTrigger(
+            new StartFlowElementTrigger(
                 processInstance.getProcessInstanceKey(),
                 boundaryEvent.getId(),
                 Constants.NONE,
@@ -78,7 +78,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   }
 
   private TriggerResult getTriggerResultMultiInstanceOrSingle(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       E element,
@@ -230,7 +230,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   }
 
   protected abstract TriggerResult triggerFlowElementWithoutLoop(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       E element,

@@ -5,18 +5,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.UUID;
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 
 @Getter
 @ToString
 public class FixedRateMessageScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final ProcessInstanceKey processInstanceKey;
+  private final UUID rootInstanceKey;
+  private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerDefinitionId;
   private final List<SchedulableMessage<?>> messages;
@@ -28,7 +29,8 @@ public class FixedRateMessageScheduler implements MessageScheduler {
   @JsonCreator
   public FixedRateMessageScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
+      @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerDefinitionId") String timerDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
@@ -37,6 +39,7 @@ public class FixedRateMessageScheduler implements MessageScheduler {
       @JsonProperty("repeatedCnt") int repeatedCnt,
       @JsonProperty("instantiation") String instantiation) {
     this.processDefinitionKey = processDefinitionKey;
+    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerDefinitionId = timerDefinitionId;
@@ -49,11 +52,11 @@ public class FixedRateMessageScheduler implements MessageScheduler {
 
   @Override
   public FixedRateMessageScheduler evaluate(
-      Instant now, Consumer<List<SchedulableMessage<?>>> triggerConsumer) {
+      Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> triggerConsumer) {
     Instant instant = Instant.parse(this.instantiation);
     if (now.isAfter(instant)) {
       // Time reached, return triggers
-      triggerConsumer.accept(messages);
+      triggerConsumer.accept(rootInstanceKey, messages);
 
       if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
         // Return a new command with the next execution time
@@ -64,6 +67,7 @@ public class FixedRateMessageScheduler implements MessageScheduler {
         }
         return new FixedRateMessageScheduler(
             processDefinitionKey,
+            rootInstanceKey,
             processInstanceKey,
             targetElementId,
             timerDefinitionId,

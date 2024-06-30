@@ -9,10 +9,9 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -26,7 +25,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
 
   @Override
   protected TriggerResult triggerFlowElementWithoutLoop(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       SubProcess element,
@@ -50,8 +49,8 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
       ScopedVars variables) {
     List<ProcessInstanceTrigger> subProcessTriggers = new ArrayList<>();
     String startElement = getStartEvent(element);
-    ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
-    ProcessInstanceKey parentProcessInstanceKey = processInstance.getProcessInstanceKey();
+    UUID childProcessInstanceKey = UUID.randomUUID();
+    UUID parentProcessInstanceKey = processInstance.getProcessInstanceKey();
     variables.push(childProcessInstanceKey, parentProcessInstanceKey, Variables.empty());
     StartNewProcessInstanceTrigger subProcessTrigger =
         new StartNewProcessInstanceTrigger(

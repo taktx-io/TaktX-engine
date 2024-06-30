@@ -5,9 +5,9 @@ import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 public class TriggerHelper {
@@ -25,7 +25,7 @@ public class TriggerHelper {
         .map(
             sequenceFlow -> {
               String targetElementId = sequenceFlow.getTarget();
-              return new FlowElementTrigger(
+              return new StartFlowElementTrigger(
                   processInstance.getProcessInstanceKey(),
                   targetElementId,
                   sequenceFlow.getId(),

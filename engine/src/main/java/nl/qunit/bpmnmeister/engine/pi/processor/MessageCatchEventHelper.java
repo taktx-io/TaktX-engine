@@ -13,9 +13,8 @@ import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -66,7 +65,7 @@ public class MessageCatchEventHelper {
   }
 
   public void processWhenActive(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       IntermediateCatchEvent element,
@@ -75,7 +74,7 @@ public class MessageCatchEventHelper {
       ProcessDefinition processDefinition,
       ScopedVars variables) {
 
-    ProcessInstanceKey childProcessInstanceKey = new ProcessInstanceKey(UUID.randomUUID());
+    UUID childProcessInstanceKey = UUID.randomUUID();
     variables.push(
         childProcessInstanceKey, processInstance.getProcessInstanceKey(), trigger.getVariables());
     Variables outputVariables = ioMappingProcessor.getOutputVariables(element, variables);

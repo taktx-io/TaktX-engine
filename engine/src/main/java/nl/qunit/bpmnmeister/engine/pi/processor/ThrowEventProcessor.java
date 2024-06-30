@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -11,10 +12,9 @@ import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.ThrowEventState;
 
@@ -24,7 +24,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
   @Override
   protected void triggerEvent(
       TriggerResultBuilder triggerResultBuilder,
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       E element,
@@ -58,12 +58,12 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
         variables);
   }
 
-  private ProcessInstanceTrigger getTerminateTrigger(ProcessInstanceKey processInstanceKey) {
+  private ProcessInstanceTrigger getTerminateTrigger(UUID processInstanceKey) {
     return new TerminateTrigger(processInstanceKey, Constants.NONE);
   }
 
   private Optional<ProcessInstanceTrigger> getProcessInstanceTrigger(
-      ProcessInstanceKey processInstanceKey,
+      UUID processInstanceKey,
       ProcessDefinition processDefinition,
       LinkEventDefinition led,
       ScopedVars variables) {
@@ -75,7 +75,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
             .getLinkedCatchElement(led.getName());
     return linkedCatchElement.map(
         catchEvent ->
-            new FlowElementTrigger(
+            new StartFlowElementTrigger(
                 processInstanceKey,
                 catchEvent.getId(),
                 Constants.NONE,
@@ -84,7 +84,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
 
   protected abstract void triggerThrowEvent(
       TriggerResultBuilder triggerResultBuilder,
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       E element,

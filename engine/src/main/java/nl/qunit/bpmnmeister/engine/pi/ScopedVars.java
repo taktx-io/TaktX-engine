@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 public interface ScopedVars {
@@ -17,12 +17,9 @@ public interface ScopedVars {
 
   Variables getCurrentScopeVariables();
 
-  Variables select(ProcessInstanceKey processInstanceKey);
+  Variables select(UUID processInstanceKey);
 
-  Variables push(
-      ProcessInstanceKey processInstanceKey,
-      ProcessInstanceKey parentProcessInstanceKey,
-      Variables vars);
+  Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars);
 
   JsonNode put(String name, JsonNode node);
 
@@ -61,15 +58,12 @@ public interface ScopedVars {
     }
 
     @Override
-    public Variables select(ProcessInstanceKey processInstanceKey) {
+    public Variables select(UUID processInstanceKey) {
       return Variables.of(of);
     }
 
     @Override
-    public Variables push(
-        ProcessInstanceKey processInstanceKey,
-        ProcessInstanceKey parentProcessInstanceKey,
-        Variables vars) {
+    public Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars) {
       of.clear();
       of.putAll(vars.getVariables());
       return vars;

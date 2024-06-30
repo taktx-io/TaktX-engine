@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,6 @@ import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -57,7 +57,7 @@ import org.xml.sax.SAXException;
 @Slf4j
 public class ExternalTriggerConsumer {
   private static final Logger LOG = Logger.getLogger(ExternalTriggerConsumer.class);
-  private final Map<String, KafkaConsumer<ProcessInstanceKey, ExternalTaskTrigger>> consumerMap =
+  private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap =
       new HashMap<>();
 
   ObjectMapper objectMapper;
@@ -66,7 +66,7 @@ public class ExternalTriggerConsumer {
 
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinition> parsedDefinitionConsumer;
-  private KafkaProducer<ProcessInstanceKey, ExternalTaskResponseTrigger> responseEmitter;
+  private KafkaProducer<UUID, ExternalTaskResponseTrigger> responseEmitter;
 
   public ExternalTriggerConsumer(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
@@ -163,10 +163,10 @@ public class ExternalTriggerConsumer {
       // We have a worker instance for this process definition. If not consumer exists yet
       // for that process definitionm create a new one for the external-task-trigger-incoming
       // channel
-      KafkaConsumer<ProcessInstanceKey, ExternalTaskTrigger> consumer =
+      KafkaConsumer<UUID, ExternalTaskTrigger> consumer =
           consumerMap.get(processDefinitionId);
       if (consumer == null) {
-        KafkaConsumer<ProcessInstanceKey, ExternalTaskTrigger> newConsumer =
+        KafkaConsumer<UUID, ExternalTaskTrigger> newConsumer =
             createConsumer(
                 "consumer-" + processDefinitionId,
                 ProcessInstanceKeyJsonDeserializer.class,
@@ -177,9 +177,9 @@ public class ExternalTriggerConsumer {
         CompletableFuture.runAsync(
             () -> {
               while (true) {
-                ConsumerRecords<ProcessInstanceKey, ExternalTaskTrigger> records =
+                ConsumerRecords<UUID, ExternalTaskTrigger> records =
                     newConsumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<ProcessInstanceKey, ExternalTaskTrigger> record : records) {
+                for (ConsumerRecord<UUID, ExternalTaskTrigger> record : records) {
                   consumeExternalTaskTrigger(record.value(), processDefinitionId);
                 }
               }

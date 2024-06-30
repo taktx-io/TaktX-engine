@@ -29,6 +29,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
@@ -39,20 +40,20 @@ import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -64,46 +65,48 @@ import org.apache.kafka.streams.kstream.Produced;
 
 @ApplicationScoped
 public class ProcessDefinitionTopologyProducer {
-  static final ObjectMapperSerde<MessageEvent> MESSAGE_EVENT_SERDE =
+  public static final ObjectMapperSerde<MessageEvent> MESSAGE_EVENT_SERDE =
       new ObjectMapperSerde<>(MessageEvent.class);
-  static final ObjectMapperSerde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
-      new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
-  static final ObjectMapperSerde<CorrelationMessageSubscriptions> CORRELATION_SUBSCRIPTIONS_SERDE =
-      new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
-  static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
+  public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
+      DEFINITION_SUBSCRIPTIONS_SERDE =
+          new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
+  public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
+      CORRELATION_SUBSCRIPTIONS_SERDE =
+          new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
+  public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  static final ObjectMapperSerde<ScheduleKey> SCHEDULE_KEY_SERDE =
+  public static final ObjectMapperSerde<ScheduleKey> SCHEDULE_KEY_SERDE =
       new ObjectMapperSerde<>(ScheduleKey.class);
-  static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
+  public static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKey.class);
-  static final ObjectMapperSerde<ProcessInstanceKey> PROCESS_INSTANCE_KEY_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceKey.class);
-  static final ObjectMapperSerde<ProcessInstanceKeyElementPair>
+  public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
+  public static final ObjectMapperSerde<ProcessInstanceKeyElementPair>
       PROCESS_INSTANCE_KEY_ELEMENT_PAIR_SERDE =
           new ObjectMapperSerde<>(ProcessInstanceKeyElementPair.class);
-  static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
+  public static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
-  static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
+  public static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
-  static final ObjectMapperSerde<ProcessInstanceMigrationTrigger> PROCESS_INSTANCE_MIGRATION_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
-  static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
+  public static final ObjectMapperSerde<ProcessInstanceMigrationTrigger>
+      PROCESS_INSTANCE_MIGRATION_SERDE =
+          new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
+  public static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinition.class);
-  static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
+  public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
   public static final ObjectMapperSerde<Definitions> DEFINITIONS_SERDE =
       new ObjectMapperSerde<>(Definitions.class);
   public static final ObjectMapperSerde<DefinitionsTrigger> DEFINITIONS_TRIGGER_SERDE =
       new ObjectMapperSerde<>(DefinitionsTrigger.class);
-  private static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
+  public static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstance.class);
-  private static final ObjectMapperSerde<ProcessInstanceUpdate> PROCESS_INSTANCE_UPDATE_SERDE =
+  public static final ObjectMapperSerde<ProcessInstanceUpdate> PROCESS_INSTANCE_UPDATE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceUpdate.class);
-  private static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
+  public static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
-  private static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
+  public static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommand.class);
-  private static final ObjectMapperSerde<VariablesParentPair> VARIABLES_PARENT_PAIR_SERDE =
+  public static final ObjectMapperSerde<VariablesParentPair> VARIABLES_PARENT_PAIR_SERDE =
       new ObjectMapperSerde<>(VariablesParentPair.class);
 
   @Inject MessageSchedulerFactory messageSchedulerFactory;
@@ -172,8 +175,7 @@ public class ProcessDefinitionTopologyProducer {
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
@@ -237,8 +239,7 @@ public class ProcessDefinitionTopologyProducer {
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
@@ -298,18 +299,17 @@ public class ProcessDefinitionTopologyProducer {
                 (key, value) -> value instanceof MessageEvent);
 
     branches[0]
-        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceUpdate) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceUpdate) value))
         .to(
             PROCESS_INSTANCE_UPDATE_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_UPDATE_SERDE));
     branches[1]
-        .map(
-            (key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE));
     branches[2]
-        .map((key, value) -> KeyValue.pair((ProcessInstanceKey) key, (ExternalTaskTrigger) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTrigger) value))
         .to(
             EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE));
@@ -364,22 +364,18 @@ public class ProcessDefinitionTopologyProducer {
             (k, v) -> v instanceof ExternalTaskTrigger,
             Branched.withConsumer(
                 ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessInstanceKey) key, (ExternalTaskTrigger) value))
+                    ks.map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTrigger) value))
                         .to(
                             EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (k, v) -> v instanceof FlowElementTrigger,
+            (k, v) -> v instanceof StartFlowElementTrigger,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessInstanceKey) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(

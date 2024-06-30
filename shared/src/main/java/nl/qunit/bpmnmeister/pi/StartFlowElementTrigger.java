@@ -7,26 +7,30 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public class ExternalTaskResponseTrigger extends ProcessInstanceTrigger {
-  public static final ExternalTaskResponseTrigger NONE =
-      new ExternalTaskResponseTrigger(
-          Constants.NONE_UUID,
-          Constants.NONE,
-          ExternalTaskResponseResult.NONE,
-          Variables.empty());
-  private final ExternalTaskResponseResult externalTaskResponseResult;
+public class StartFlowElementTrigger extends ProcessInstanceTrigger
+    implements SchedulableMessage<UUID> {
+  public static final StartFlowElementTrigger NONE =
+      new StartFlowElementTrigger(
+          Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
+
+  private final String inputFlowId;
 
   @JsonCreator
-  public ExternalTaskResponseTrigger(
+  public StartFlowElementTrigger(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("elementId") @Nonnull String elementId,
-      @JsonProperty("externalTaskResponseResult") @Nonnull
-          ExternalTaskResponseResult externalTaskResponseResult,
+      @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
     super(processInstanceKey, elementId, variables);
-    this.externalTaskResponseResult = externalTaskResponseResult;
+    this.inputFlowId = inputFlowId;
+  }
+
+  @Override
+  public UUID getRecordKey(UUID rootInstanceKey) {
+    return rootInstanceKey;
   }
 }

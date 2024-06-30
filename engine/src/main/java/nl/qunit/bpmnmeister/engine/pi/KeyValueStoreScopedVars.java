@@ -7,34 +7,30 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.pi.Variables;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class KeyValueStoreScopedVars implements ScopedVars {
 
-  private final KeyValueStore<ProcessInstanceKey, VariablesParentPair> variableStore;
+  private final KeyValueStore<UUID, VariablesParentPair> variableStore;
 
-  private ProcessInstanceKey currentScopeKey;
+  private UUID currentScopeKey;
   private VariablesParentPair currentScope;
 
-  public KeyValueStoreScopedVars(
-      KeyValueStore<ProcessInstanceKey, VariablesParentPair> variableStore) {
+  public KeyValueStoreScopedVars(KeyValueStore<UUID, VariablesParentPair> variableStore) {
     this.variableStore = variableStore;
   }
 
   @Override
-  public Variables select(ProcessInstanceKey processInstanceKey) {
+  public Variables select(UUID processInstanceKey) {
     currentScope = variableStore.get(processInstanceKey);
     currentScopeKey = processInstanceKey;
     return currentScope.getVariables();
   }
 
   @Override
-  public Variables push(
-      ProcessInstanceKey processInstanceKey,
-      ProcessInstanceKey parentProcessInstanceKey,
-      Variables vars) {
+  public Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars) {
     currentScope = new VariablesParentPair(parentProcessInstanceKey, vars);
     currentScopeKey = processInstanceKey;
     variableStore.put(processInstanceKey, currentScope);
@@ -110,7 +106,7 @@ public class KeyValueStoreScopedVars implements ScopedVars {
     return jsonNode;
   }
 
-  private JsonNode getFromParent(ProcessInstanceKey parent, String name) {
+  private JsonNode getFromParent(UUID parent, String name) {
     if (parent != null) {
       VariablesParentPair parentScope = variableStore.get(parent);
       if (parentScope == null) {

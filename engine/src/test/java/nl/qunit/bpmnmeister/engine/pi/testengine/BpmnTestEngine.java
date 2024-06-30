@@ -1,10 +1,8 @@
 package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 
-import io.smallrye.reactive.messaging.kafka.KafkaRecord;
-import jakarta.annotation.PostConstruct;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
+import io.quarkus.kafka.client.serialization.ObjectMapperSerializer;
+import io.smallrye.reactive.messaging.kafka.KafkaConsumerRebalanceListener;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -25,6 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
+import nl.qunit.bpmnmeister.engine.pd.ProcessDefinitionTopologyProducer;
 import nl.qunit.bpmnmeister.engine.pi.DebuggerUtil;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Definitions;
@@ -38,7 +37,6 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
@@ -53,17 +51,15 @@ import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.awaitility.Awaitility;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Assertions;
 import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 import org.xml.sax.SAXException;
 
-@ApplicationScoped
-public class BpmnTestEngine {
+public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION;
@@ -75,53 +71,96 @@ public class BpmnTestEngine {
     }
   }
 
-  @Inject
-  AdminClient adminClient;
-
-  @Inject
-  Clock clock;
-
-  @Inject
-  @Channel("process-instance-trigger-outgoing")
-  Emitter<ProcessInstanceTrigger> triggerEmitter;
-
-  @Inject
-  @Channel("process-definition-xml-outgoing")
-  Emitter<String> xmlEmitter;
-
-  @Inject
-  @Channel("process-instance-start-command-outgoing")
-  Emitter<StartCommand> startCommandEmitter;
-
-  @Inject
-  @Channel("message-event-outgoing")
-  Emitter<MessageEvent> messageEventEmitter;
-
-  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ProcessInstanceUpdate>> processInstanceQueueMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, List<ProcessInstanceKey>> processInstanceParentChildMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
+  private final Map<UUID, ConcurrentLinkedQueue<ProcessInstanceUpdate>> processInstanceQueueMap = new HashMap<>();
+  private final Map<UUID, List<UUID>> processInstanceParentChildMap = new HashMap<>();
+  private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
-  private final Map<ProcessInstanceKey, ProcessInstanceUpdate> processInstanceMap = new HashMap<>();
+  private final Map<UUID, ProcessInstanceUpdate> processInstanceMap = new HashMap<>();
   private final Map<String, ProcessDefinition> hashToDefinitionMap = new HashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEvent>> messageSubscriptionMap = new HashMap<>();
   private ProcessDefinition activeProcessDefintion;
   private ProcessInstanceUpdate activeProcessInstance;
   private ExternalTaskTrigger activeExternalTaskTrigger;
   private Definitions definitionsBeingDeployed;
-  private MutableClock mutableClock;
+  private final MutableClock mutableClock;
   private ProcessInstanceUpdate latestInstantiatedProcessInstance;
+  private KafkaConsumerUtil<UUID, ProcessInstanceTrigger> processInstanceTriggerConsumer;
+  private KafkaConsumerUtil<MessageEventKey, MessageEvent> messageEventConsumer;
+  private KafkaConsumerUtil<UUID, ExternalTaskTrigger> externalTaskTriggerConsumer;
+  private KafkaConsumerUtil<UUID, ProcessInstanceUpdate> processInstanceUpdateConsumer;
+  private KafkaConsumerUtil<ProcessDefinitionKey, ProcessDefinition> processDefinitionParsedConsumer;
+  private KafkaProducerUtil<UUID, ProcessInstanceTrigger> triggerEmitter;
+  private KafkaProducerUtil<String, String> xmlEmitter;
+  private KafkaProducerUtil<String, StartCommand>  startCommandEmitter;
+  private KafkaProducerUtil<MessageEventKey, MessageEvent> messageEventEmitter;
 
-  @PostConstruct
-  public void init() {
-    LOG.info("creating topics");
-    adminClient.createTopics(
-        Arrays.stream(Topics.values())
-            .map(topic -> new NewTopic(topic.getTopicName(), 1, (short) 1))
-            .toList());
+  public BpmnTestEngine(Clock clock) {
     this.mutableClock = (MutableClock) clock;
   }
 
-  @Incoming("process-instance-trigger-incoming")
+  public void init() {
+    String kafkaBootstrapServers = ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    AdminClient adminClient = AdminClient.create(
+        Map.of("bootstrap.servers", kafkaBootstrapServers));
+    adminClient.createTopics(
+        Arrays.stream(Topics.values())
+            .map(topic -> new NewTopic(topic.getTopicName(), 5, (short) 1))
+            .toList());
+
+    triggerEmitter = new KafkaProducerUtil(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+        ProcessDefinitionTopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
+        ObjectMapperSerializer.class.getName());
+    xmlEmitter = new KafkaProducerUtil<>(Topics.XML_TOPIC.getTopicName(),
+        StringSerializer.class.getName(),
+        StringSerializer.class.getName());
+    startCommandEmitter = new KafkaProducerUtil<>(Topics.DEFINITIONS_TOPIC.getTopicName(),
+        StringSerializer.class.getName(),
+        ObjectMapperSerializer.class.getName());
+    messageEventEmitter = new KafkaProducerUtil<>(Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
+        ObjectMapperSerializer.class.getName(),
+        ObjectMapperSerializer.class.getName());
+    processInstanceTriggerConsumer = new KafkaConsumerUtil<>("test-group",
+        Topics.PROCESS_INSTANCE_TRIGGER_TOPIC,
+        ProcessDefinitionTopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
+        ProcessInstanceTriggerDeserializer.class.getName(),
+        this::consume);
+    messageEventConsumer = new KafkaConsumerUtil<>("test-group",
+        Topics.MESSAGE_EVENT_TOPIC,
+        MessageEventKeyDeserializer.class.getName(),
+        MessageEventDeserializer.class.getName(),
+        this::consume);
+    externalTaskTriggerConsumer = new KafkaConsumerUtil<>("test-group",
+        Topics.EXTERNAL_TASK_TRIGGER_TOPIC,
+        ProcessDefinitionTopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
+        ExternalTaskTriggerDeserializer.class.getName(),
+        this::consume);
+    processInstanceUpdateConsumer = new KafkaConsumerUtil<>("test-group",
+        Topics.PROCESS_INSTANCE_UPDATE_TOPIC,
+        ProcessDefinitionTopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
+        ProcessInstanceUpdateDeserializer.class.getName(),
+        this::consume);
+    processDefinitionParsedConsumer = new KafkaConsumerUtil<>("test-group",
+        Topics.PROCESS_DEFINITION_PARSED_TOPIC,
+        ProcessDefinitionKeyDeserializer.class.getName(),
+        ProcessDefinitionDeserializer.class.getName(),
+        this::consume);
+    clear();
+  }
+
+  public void close() {
+    LOG.info("Closing bpmn test engine");
+    processInstanceTriggerConsumer.stop();
+    messageEventConsumer.stop();
+    externalTaskTriggerConsumer.stop();
+    processInstanceUpdateConsumer.stop();
+    processDefinitionParsedConsumer.stop();
+    messageEventEmitter.close();
+    xmlEmitter.close();
+    startCommandEmitter.close();
+    triggerEmitter.close();
+
+  }
+
   public void consume(ProcessInstanceTrigger trigger) {
     LOG.info("Received flow element trigger: " + trigger);
     if (trigger instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger) {
@@ -133,7 +172,6 @@ public class BpmnTestEngine {
     }
   }
 
-  @Incoming("message-event-incoming")
   public void consume(MessageEvent messageEvent) {
     LOG.info("Received message event: " + messageEvent);
     ConcurrentLinkedQueue<MessageEvent> messageEvents = messageSubscriptionMap.computeIfAbsent(
@@ -141,7 +179,6 @@ public class BpmnTestEngine {
     messageEvents.add(messageEvent);
   }
 
-  @Incoming("external-task-trigger-incoming")
   public void consume(ExternalTaskTrigger externalTaskTrigger) {
     LOG.info("Received external task trigger: " + externalTaskTrigger);
     ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.computeIfAbsent(
@@ -149,7 +186,6 @@ public class BpmnTestEngine {
     externalTaskTriggers.add(externalTaskTrigger);
   }
 
-  @Incoming("process-instance-update-incoming")
   public void consume(ProcessInstanceUpdate processInstance) {
     LOG.info("Received process instance: " + processInstance);
     ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances1 = processInstanceQueueMap.computeIfAbsent(
@@ -157,8 +193,8 @@ public class BpmnTestEngine {
     processInstances1.add(processInstance);
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
         processInstance);
-    if (!processInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
-      List<ProcessInstanceKey> processInstanceKeys = processInstanceParentChildMap.computeIfAbsent(
+    if (!processInstance.getParentInstanceKey().equals(Constants.NONE_UUID)) {
+      List<UUID> processInstanceKeys = processInstanceParentChildMap.computeIfAbsent(
           processInstance.getParentInstanceKey(), k -> new ArrayList<>());
       processInstanceKeys.add(processInstance.getProcessInstanceKey());
     }
@@ -168,9 +204,8 @@ public class BpmnTestEngine {
 
   }
 
-  @Incoming("process-definition-parsed-incoming")
   public void consume(ProcessDefinition processDefinition) {
-    LOG.info("Received process definition: " + processDefinition);
+    LOG.info("Received process definition: " + processDefinition + " " + processDefinition.getDefinitions().getDefinitionsKey().getHash()) ;
     hashToDefinitionMap.put(processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
   }
 
@@ -184,10 +219,12 @@ public class BpmnTestEngine {
   }
 
 
-  public void triggerExternalTaskResponse(ExternalTaskTrigger externalTaskTrigger,
+  public void triggerExternalTaskResponse(UUID rootInstanceKey, ExternalTaskTrigger externalTaskTrigger,
       ExternalTaskResponseResult externalTaskResponseResult, Variables variables) {
-      triggerEmitter.send(new ExternalTaskResponseTrigger(externalTaskTrigger.getProcessInstanceKey(),
-          externalTaskTrigger.getElementId(), externalTaskResponseResult, variables));
+      triggerEmitter.send(rootInstanceKey,
+          new ExternalTaskResponseTrigger(externalTaskTrigger.getProcessInstanceKey(),
+          externalTaskTrigger.getElementId(), externalTaskResponseResult, variables)
+      );
   }
 
 
@@ -196,7 +233,7 @@ public class BpmnTestEngine {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     definitionsBeingDeployed = new BpmnParser().parse(xml);
-    xmlEmitter.send(KafkaRecord.of(filename, xml));
+    xmlEmitter.send(filename, xml);
     return this;
   }
 
@@ -218,16 +255,17 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine startProcessInstance(Variables variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
+    UUID rootProcessInstanceKey = UUID.randomUUID();
     StartCommand startCommand = new StartCommand(
-        new ProcessInstanceKey(UUID.randomUUID()),
-        ProcessInstanceKey.NONE,
+        rootProcessInstanceKey,
+        Constants.NONE_UUID,
         Constants.NONE,
         Constants.NONE,
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
-    startCommandEmitter.send(KafkaRecord.of(processDefinitionKey.getProcessDefinitionId(), startCommand));
+    startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
 
-    ProcessInstanceKey activeProcessInstanceKey;
+    UUID activeProcessInstanceKey;
     try {
        activeProcessInstanceKey = Awaitility.await()
           .until(() -> {
@@ -298,12 +336,12 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitUntilChildProcessesHaveState(int expectedCount, ProcessInstanceState processInstanceState) {
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> {
-          List<ProcessInstanceKey> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
+          List<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
           if (childKeys == null) {
             return null;
           }
           if (childKeys.size() >= expectedCount) {
-            ProcessInstanceKey processInstanceKey = childKeys.get(childKeys.size() - 1);
+            UUID processInstanceKey = childKeys.get(childKeys.size() - 1);
             ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
             return processInstance != null && processInstance.getProcessInstanceState() == processInstanceState ? processInstance : null;
           }
@@ -313,11 +351,12 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine andRespondWithSuccess(Variables of) {
-    triggerExternalTaskResponse(activeExternalTaskTrigger, new ExternalTaskResponseResult(true, null, null), of);
+    triggerExternalTaskResponse(activeProcessInstance.getRootInstanceKey(), activeExternalTaskTrigger, new ExternalTaskResponseResult(true, null, null), of);
     return this;
   }
   public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String errorMessage, Variables of) {
-    triggerExternalTaskResponse(activeExternalTaskTrigger, new ExternalTaskResponseResult(false, allowRetry, errorMessage), of);
+    triggerExternalTaskResponse(activeProcessInstance.getRootInstanceKey(),
+        activeExternalTaskTrigger, new ExternalTaskResponseResult(false, allowRetry, errorMessage), of);
     return this;
   }
 
@@ -417,11 +456,11 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine terminateProcessWithChildProcesses() {
-    triggerEmitter.send(new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE));
+    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE));
     return this;
   }
   public BpmnTestEngine terminateChildProcessesForElement(String elementId) {
-    triggerEmitter.send(new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId));
+    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId));
     return this;
   }
 
@@ -467,7 +506,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine sendMessage(String messageName, Variables variables) {
     LOG.info("Sending message: " + messageName);
     DefinitionMessageEventTrigger messageEvent = new DefinitionMessageEventTrigger(messageName, variables);
-    messageEventEmitter.send(KafkaRecord.of(new MessageEventKey(messageEvent.getMessageName()), messageEvent));
+    messageEventEmitter.send(new MessageEventKey(messageEvent.getMessageName()), messageEvent);
     return this;
   }
 
@@ -513,7 +552,7 @@ public class BpmnTestEngine {
       Variables variables) {
     LOG.info("Sending message: " + messageName);
     CorrelationMessageEventTrigger messageEvent = new CorrelationMessageEventTrigger(messageName, correlationKey, variables);
-    messageEventEmitter.send(KafkaRecord.of(new MessageEventKey(messageEvent.getMessageName()), messageEvent));
+    messageEventEmitter.send(new MessageEventKey(messageEvent.getMessageName()), messageEvent);
     return this;
 
   }
@@ -522,7 +561,7 @@ public class BpmnTestEngine {
     return new ExternalTaskAssert(activeExternalTaskTrigger, this);
   }
 
-  public ProcessInstanceUpdate getProcessInstance(ProcessInstanceKey parentInstanceKey) {
+  public ProcessInstanceUpdate getProcessInstance(UUID parentInstanceKey) {
     return processInstanceMap.get(parentInstanceKey);
   }
 

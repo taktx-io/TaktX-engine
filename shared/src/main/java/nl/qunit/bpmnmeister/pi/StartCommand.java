@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
@@ -11,8 +12,8 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 @EqualsAndHashCode(callSuper = true)
 public class StartCommand extends DefinitionsTrigger implements SchedulableMessage<String> {
 
-  private final ProcessInstanceKey rootProcessInstanceKey;
-  private final ProcessInstanceKey parentProcessInstanceKey;
+  private final UUID rootProcessInstanceKey;
+  private final UUID parentProcessInstanceKey;
   private final String elementId;
   private final String parentElementId;
   private final String processDefinitionId;
@@ -20,8 +21,8 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
 
   @JsonCreator
   public StartCommand(
-      @JsonProperty("rootProcessInstanceKey") ProcessInstanceKey rootProcessInstanceKey,
-      @JsonProperty("parentProcessInstanceKey") ProcessInstanceKey parentProcessInstanceKey,
+      @JsonProperty("rootProcessInstanceKey") UUID rootProcessInstanceKey,
+      @JsonProperty("parentProcessInstanceKey") UUID parentProcessInstanceKey,
       @JsonProperty("elementId") String elementId,
       @JsonProperty("parentElementId") String parentElementId,
       @JsonProperty("processDefinitionId") String processDefinitionId,
@@ -35,7 +36,7 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
   }
 
   @Override
-  public String getRecordKey() {
+  public String getRecordKey(UUID rootInstanceKey) {
     return processDefinitionId;
   }
 }

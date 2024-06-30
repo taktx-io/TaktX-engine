@@ -6,6 +6,7 @@ import io.quarkus.cache.CaffeineCache;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
@@ -16,14 +17,13 @@ import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -37,18 +37,17 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.jboss.logging.Logger;
 
 public class ProcessInstanceProcessor
-    implements Processor<ProcessInstanceKey, ProcessInstanceTrigger, Object, Object> {
+    implements Processor<UUID, ProcessInstanceTrigger, Object, Object> {
 
   private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessor.class);
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
-  private KeyValueStore<ProcessInstanceKey, ProcessInstance> processInstanceStore;
-  private KeyValueStore<ProcessInstanceKey, ProcessInstanceKeyElementPair>
-      childProcessInstanceStore;
+  private KeyValueStore<UUID, ProcessInstance> processInstanceStore;
+  private KeyValueStore<UUID, ProcessInstanceKeyElementPair> childProcessInstanceStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
   private final Cache processInstanceCache;
   private final Cache processInstanceDefinitionCache;
-  private KeyValueStore<ProcessInstanceKey, VariablesParentPair> variablesStore;
+  private KeyValueStore<UUID, VariablesParentPair> variablesStore;
 
   public ProcessInstanceProcessor(
       ProcessorProvider processorProvider,
@@ -71,7 +70,7 @@ public class ProcessInstanceProcessor
   }
 
   @Override
-  public void process(Record<ProcessInstanceKey, ProcessInstanceTrigger> triggerRecord) {
+  public void process(Record<UUID, ProcessInstanceTrigger> triggerRecord) {
     ProcessInstanceTrigger trigger = triggerRecord.value();
 
     processTrigger(trigger);
@@ -100,7 +99,7 @@ public class ProcessInstanceProcessor
       storeProcessDefinition(definition);
       if (!startNewProcessInstanceTrigger
           .getParentProcessInstanceKey()
-          .equals(ProcessInstanceKey.NONE)) {
+          .equals(Constants.NONE_UUID)) {
         childProcessInstanceStore.put(
             startNewProcessInstanceTrigger.getProcessInstanceKey(),
             new ProcessInstanceKeyElementPair(
@@ -153,7 +152,7 @@ public class ProcessInstanceProcessor
   }
 
   @CacheResult(cacheName = "process-instance-cache")
-  ProcessInstance getStoredProcessInstance(ProcessInstanceKey key) {
+  ProcessInstance getStoredProcessInstance(UUID key) {
     return processInstanceStore.get(key);
   }
 
@@ -191,9 +190,9 @@ public class ProcessInstanceProcessor
             updatedProcessInstance.toBuilder()
                 .processInstanceState(ProcessInstanceState.COMPLETED)
                 .build();
-        if (!updatedProcessInstance.getParentInstanceKey().equals(ProcessInstanceKey.NONE)) {
+        if (!updatedProcessInstance.getParentInstanceKey().equals(Constants.NONE_UUID)) {
           processTrigger(
-              new FlowElementTrigger(
+              new StartFlowElementTrigger(
                   updatedProcessInstance.getParentInstanceKey(),
                   updatedProcessInstance.getParentElementId(),
                   Constants.NONE,
@@ -215,11 +214,11 @@ public class ProcessInstanceProcessor
             + " with trigger "
             + terminateProcessInstanceTrigger);
     // Terminate all child process instances
-    try (KeyValueIterator<ProcessInstanceKey, ProcessInstanceKeyElementPair> all =
+    try (KeyValueIterator<UUID, ProcessInstanceKeyElementPair> all =
         childProcessInstanceStore.all()) {
       all.forEachRemaining(
           childToParentKeyValue -> {
-            ProcessInstanceKey childKey = childToParentKeyValue.key;
+            UUID childKey = childToParentKeyValue.key;
             ProcessInstanceKeyElementPair parentKeyElementPair = childToParentKeyValue.value;
 
             if (parentKeyElementPair

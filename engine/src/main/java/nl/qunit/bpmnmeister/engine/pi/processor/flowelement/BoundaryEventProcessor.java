@@ -18,9 +18,9 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -57,7 +57,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   @Override
   protected void triggerCatchEvent(
       TriggerResultBuilder triggerResultBuilder,
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       BoundaryEvent element,
@@ -177,8 +177,8 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       BoundaryEvent element,
       BoundaryEventState oldState,
       ScopedVars variables) {
-    FlowElementTrigger timeoutMessage =
-        new FlowElementTrigger(
+    StartFlowElementTrigger timeoutMessage =
+        new StartFlowElementTrigger(
             processInstance.getProcessInstanceKey(),
             element.getId(),
             Constants.NONE,
@@ -189,6 +189,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
             timerEventDefinition ->
                 messageSchedulerFactory.schedule(
                     processInstance.getProcessDefinitionKey(),
+                    processInstance.getRootInstanceKey(),
                     processInstance.getProcessInstanceKey(),
                     element.getId(),
                     timerEventDefinition,

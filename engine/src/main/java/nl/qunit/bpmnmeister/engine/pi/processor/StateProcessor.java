@@ -9,9 +9,9 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
-import nl.qunit.bpmnmeister.pi.FlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 
@@ -30,7 +30,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
         processInstance.getFlowNodeStates().get(element.getId());
 
     FlowNodeState flowNodeState = optFlowNodeState.orElse(null);
-    if (trigger instanceof FlowElementTrigger flowElementTrigger) {
+    if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
       if (flowNodeState == null) {
         flowNodeState = element.getInitialState(flowElementTrigger.getInputFlowId(), 0);
       } else if (flowNodeState.getState().isFinished()) {
@@ -64,7 +64,7 @@ public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeSt
   }
 
   protected abstract TriggerResult triggerFlowElement(
-      FlowElementTrigger trigger,
+      StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       E element,

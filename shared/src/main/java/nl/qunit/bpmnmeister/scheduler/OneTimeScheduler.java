@@ -4,18 +4,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.UUID;
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKey;
 
 @Getter
 @ToString
 public class OneTimeScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final ProcessInstanceKey processInstanceKey;
+  private final UUID rootInstanceKey;
+  private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerEventDefinitionId;
   private final List<SchedulableMessage<?>> messages;
@@ -24,12 +25,14 @@ public class OneTimeScheduler implements MessageScheduler {
   @JsonCreator
   public OneTimeScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("processInstanceKey") ProcessInstanceKey processInstanceKey,
+      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
+      @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("when") String when) {
     this.processDefinitionKey = processDefinitionKey;
+    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerEventDefinitionId = timerEventDefinitionId;
@@ -38,10 +41,10 @@ public class OneTimeScheduler implements MessageScheduler {
   }
 
   @Override
-  public OneTimeScheduler evaluate(Instant now, Consumer<List<SchedulableMessage<?>>> consumer) {
+  public OneTimeScheduler evaluate(Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
-      consumer.accept(messages);
+      consumer.accept(rootInstanceKey, messages);
 
       // Return null to indicate that this command is done
       return null;
