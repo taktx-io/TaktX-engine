@@ -11,33 +11,20 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class SubProcessState extends ActivityState {
 
+  private final UUID childProcessInstanceId;
+
   @JsonCreator
   public SubProcessState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("childProcessInstanceId") UUID childProcessInstanceId,
+      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    super(state, elementId, parentElementInstanceId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    this.childProcessInstanceId = childProcessInstanceId;
   }
 
-  @Override
-  public ActivityState getNextLoopState() {
-    return new SubProcessState(
-        FlowNodeStateEnum.ACTIVE,
-        this.getElementInstanceId(),
-        this.getPassedCnt(),
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
-
-  @Override
-  public ActivityState getFinishedLoopState() {
-    return new SubProcessState(
-        FlowNodeStateEnum.FINISHED,
-        this.getElementInstanceId(),
-        this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
 }

@@ -23,7 +23,7 @@ public class IntermediateThrowEvent extends ThrowEvent<IntermediateThrowEventSta
   }
 
   @Override
-  public IntermediateThrowEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new IntermediateThrowEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+  public IntermediateThrowEventState getInitialState(String elementId, String inputFlowId, int passedCnt) {
+    return new IntermediateThrowEventState(UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

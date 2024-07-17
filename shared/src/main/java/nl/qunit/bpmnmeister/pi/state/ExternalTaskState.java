@@ -14,13 +14,15 @@ public class ExternalTaskState extends TaskState {
   @JsonCreator
   public ExternalTaskState(
       @JsonProperty("state") FlowNodeStateEnum state,
+      @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId,
       @JsonProperty("attempt") int attempt
       ) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    super(state, parentElementInstanceId, elementInstanceId, elementId, passedCnt, loopCnt, inputFlowId);
     this.attempt = attempt;
   }
 

@@ -18,16 +18,12 @@ import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.Variables;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 @QuarkusTest
 class MultiInstanceTest {
-
-  private static final Logger LOG = Logger.getLogger(MultiInstanceTest.class);
 
   @Inject
   Clock clock;
@@ -65,7 +61,7 @@ class MultiInstanceTest {
         .hasPassedElement("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testProcessTaskMultiInstanceParallelMany()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 

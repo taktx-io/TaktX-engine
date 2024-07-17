@@ -28,8 +28,8 @@ public class InclusiveGateway extends Gateway<InclusiveGatewayState> {
   }
 
   @Override
-  public InclusiveGatewayState getInitialState(String inputFlowId, int passedCnt) {
+  public InclusiveGatewayState getInitialState(String elementId, String inputFlowId, int passedCnt) {
     return new InclusiveGatewayState(
-        UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId, Set.of(), Set.of());
+        UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId, Set.of(), Set.of());
   }
 }

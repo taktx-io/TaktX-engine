@@ -23,5 +23,6 @@ public abstract class Event<S extends FlowNodeState> extends FlowNode<S> impleme
     this.ioMapping = ioMapping;
   }
 
+  public abstract S getInitialState(String elementId, String inputFlowId, int passedCnt);
 
 }

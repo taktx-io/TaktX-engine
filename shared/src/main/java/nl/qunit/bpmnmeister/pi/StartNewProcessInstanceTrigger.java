@@ -22,14 +22,14 @@ public class StartNewProcessInstanceTrigger extends StartFlowElementTrigger {
   public StartNewProcessInstanceTrigger(
       @JsonProperty("rootInstanceKey") @Nonnull UUID rootInstanceKey,
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
-      @JsonProperty("parentProcessInstanceKey") @Nonnull
-      UUID parentProcessInstanceKey,
+      @JsonProperty("parentProcessInstanceKey") @Nonnull UUID parentProcessInstanceKey,
       @JsonProperty("processDefinition") @Nonnull ProcessDefinition processDefinition,
       @JsonProperty("parentElementId") @Nonnull String parentElementId,
+      @JsonProperty("sourceInstanceId") @Nonnull UUID sourceInstanceId,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull Variables variables) {
-    super(processInstanceKey, elementId, inputFlowId, variables);
+    super(processInstanceKey, sourceInstanceId, elementId, inputFlowId, variables);
     this.rootInstanceKey = rootInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.processDefinition = processDefinition;

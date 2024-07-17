@@ -12,30 +12,12 @@ public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
       @JsonProperty("state") FlowNodeStateEnum state,
+      @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
-  }
-
-  @Override
-  public ActivityState getNextLoopState() {
-    return new TaskState(
-        FlowNodeStateEnum.ACTIVE,
-        this.getElementInstanceId(),
-        this.getPassedCnt(),
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
-
-  @Override
-  public ActivityState getFinishedLoopState() {
-    return new TaskState(
-        FlowNodeStateEnum.FINISHED,
-        this.getElementInstanceId(),
-        this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
+    super(state, elementId, parentElementInstanceId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
   }
 }

@@ -7,33 +7,29 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
-    implements SchedulableMessage<UUID> {
-  public static final ContinueFlowElementTrigger NONE =
-      new ContinueFlowElementTrigger(
-          Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
+public class StartFlowElementTriggerIteration extends StartFlowElementTrigger  {
+  public static final StartFlowElementTriggerIteration NONE =
+      new StartFlowElementTriggerIteration(
+          Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
 
+  private final UUID parentElementInstance;
   private final UUID elementInstanceId;
-  private final String inputFlowId;
 
   @JsonCreator
-  public ContinueFlowElementTrigger(
+  public StartFlowElementTriggerIteration(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
+      @JsonProperty("parentElementInstance") @Nonnull UUID parentElementInstance,
       @JsonProperty("elementInstanceId") @Nonnull UUID elementInstanceId,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
-      @JsonProperty("variables") @Nonnull Variables variables) {
-    super(processInstanceKey, elementId, variables);
+      @JsonProperty("variables") @Nonnull Variables variables
+      ) {
+    super(processInstanceKey, Constants.NONE_UUID, elementId, inputFlowId, variables);
+    this.parentElementInstance = parentElementInstance;
     this.elementInstanceId = elementInstanceId;
-    this.inputFlowId = inputFlowId;
   }
 
-  @Override
-  public UUID getRecordKey(UUID rootInstanceKey) {
-    return rootInstanceKey;
-  }
 }

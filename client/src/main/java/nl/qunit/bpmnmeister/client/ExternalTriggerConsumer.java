@@ -233,6 +233,7 @@ public class ExternalTriggerConsumer {
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskId,
+                      externalTaskTrigger.getElementInstanceId(),
                       externalTaskResponseResult,
                       new Variables(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
@@ -242,6 +243,7 @@ public class ExternalTriggerConsumer {
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskId,
+                      externalTaskTrigger.getElementInstanceId(),
                       new ExternalTaskResponseResult(false, true, e.getMessage()),
                       Variables.empty());
             }

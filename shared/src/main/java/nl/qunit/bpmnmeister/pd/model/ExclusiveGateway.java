@@ -25,8 +25,8 @@ public class ExclusiveGateway extends Gateway<ExclusiveGatewayState> {
   }
 
   @Override
-  public ExclusiveGatewayState getInitialState(String inputFlowId, int passedCnt) {
+  public ExclusiveGatewayState getInitialState(String elementId, String inputFlowId, int passedCnt) {
     return new ExclusiveGatewayState(
-        UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+        UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
@@ -22,7 +23,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
     extends EventProcessor<E, S> {
 
   @Override
-  protected void triggerEvent(
+  protected void triggerEventStart(
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
@@ -58,8 +59,20 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
         variables);
   }
 
+  @Override
+  protected void triggerEventContinue(
+      ContinueFlowElementTrigger continueFlowElementTrigger,
+      TriggerResultBuilder triggerResultBuilder,
+      ProcessInstance processInstance,
+      ProcessDefinition processDefinition,
+      E element,
+      S oldState,
+      ScopedVars variables) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   private ProcessInstanceTrigger getTerminateTrigger(UUID processInstanceKey) {
-    return new TerminateTrigger(processInstanceKey, Constants.NONE);
+    return new TerminateTrigger(processInstanceKey, Constants.NONE, Constants.NONE_UUID);
   }
 
   private Optional<ProcessInstanceTrigger> getProcessInstanceTrigger(
@@ -77,6 +90,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
         catchEvent ->
             new StartFlowElementTrigger(
                 processInstanceKey,
+                Constants.NONE_UUID,
                 catchEvent.getId(),
                 Constants.NONE,
                 variables.getCurrentScopeVariables()));

@@ -17,6 +17,7 @@ import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -35,27 +36,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   @Inject MessageSchedulerFactory messageSchedulerFactory;
 
   @Override
-  public TriggerResult terminate(
-      TerminateTrigger terminateTrigger,
-      BoundaryEvent boundaryEvent,
-      BoundaryEventState boundaryEventState) {
-
-    return TriggerResult.builder()
-        .newFlowNodeState(
-            new BoundaryEventState(
-                boundaryEventState.getElementInstanceId(),
-                boundaryEventState.getPassedCnt(),
-                FlowNodeStateEnum.TERMINATED,
-                boundaryEventState.getScheduleKeys(),
-                boundaryEventState.getMessageEventKeys(),
-                boundaryEventState.getInputFlowId()))
-        .cancelSchedules(boundaryEventState.getScheduleKeys())
-        .cancelMessageSubscriptions(boundaryEventState.getMessageEventKeys())
-        .build();
-  }
-
-  @Override
-  protected void triggerCatchEvent(
+  protected void triggerCatchEventStart(
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
@@ -64,41 +45,37 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       BoundaryEventState oldState,
       ScopedVars variables) {
 
-    if (oldState.getState() == FlowNodeStateEnum.READY) {
-      Set<MessageEvent> subscriptions =
-          getMessageSubscriptions(processInstance, processDefinition, element, variables);
-      Set<MessageEventKey> messageEventKeys =
-          subscriptions.stream().map(MessageEvent::getKey).collect(Collectors.toSet());
-      Set<MessageScheduler> schedules =
-          getSchedules(triggerResultBuilder, processInstance, element, oldState, variables);
-      Set<ScheduleKey> scheduleKeys =
-          schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());
+    Set<MessageEvent> subscriptions =
+        getMessageSubscriptions(processInstance, processDefinition, element, oldState, variables);
+    Set<MessageEventKey> messageEventKeys =
+        subscriptions.stream().map(MessageEvent::getKey).collect(Collectors.toSet());
+    Set<MessageScheduler> schedules =
+        getSchedules(triggerResultBuilder, processInstance, element, oldState, variables);
+    Set<ScheduleKey> scheduleKeys =
+        schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());
 
-      triggerResultBuilder
-          .newFlowNodeState(
-              new BoundaryEventState(
-                  oldState.getElementInstanceId(),
-                  oldState.getPassedCnt(),
-                  FlowNodeStateEnum.ACTIVE,
-                  scheduleKeys,
-                  messageEventKeys,
-                  oldState.getInputFlowId()))
-          .messageSchedulers(schedules)
-          .newMessageSubscriptions(subscriptions)
-          .build();
-    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      trigger(
-          triggerResultBuilder, processInstance, processDefinition, element, oldState, variables);
-    } else {
-      // Any scheduled triggers or messages will be ignored here
-      triggerResultBuilder.newFlowNodeState(oldState).build();
-    }
+    triggerResultBuilder
+        .newFlowNodeStates(
+            List.of(
+                new BoundaryEventState(
+                    oldState.getElementInstanceId(),
+                    oldState.getElementId(),
+                    oldState.getPassedCnt(),
+                    FlowNodeStateEnum.ACTIVE,
+                    trigger.getSourceInstanceId(),
+                    scheduleKeys,
+                    messageEventKeys,
+                    oldState.getInputFlowId())))
+        .messageSchedulers(schedules)
+        .newMessageSubscriptions(subscriptions)
+        .build();
   }
 
   private Set<MessageEvent> getMessageSubscriptions(
       ProcessInstance processInstance,
       ProcessDefinition definition,
       BoundaryEvent element,
+      BoundaryEventState oldState,
       ScopedVars variables) {
     return element.getMessageventDefinitions().stream()
         .map(
@@ -118,12 +95,15 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
                   processInstance.getProcessInstanceKey(),
                   correlationKey,
                   element.getId(),
+                  oldState.getElementInstanceId(),
                   messageName);
             })
         .collect(Collectors.toSet());
   }
 
-  private void trigger(
+  @Override
+  protected void triggerEventContinue(
+      ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
@@ -133,23 +113,29 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
     // Trigger by timer or by message.
     List<ProcessInstanceTrigger> processInstanceTriggersForOutputFlows =
         TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-            processInstance, processDefinition, element);
+            processInstance, processDefinition, oldState, element);
     if (element.isCancelActivity()) {
       // Terminate the activity the boundary event is attached to
       ProcessInstanceTrigger cancelElementTrigger =
-          new TerminateTrigger(processInstance.getProcessInstanceKey(), element.getAttachedToRef());
+          new TerminateTrigger(
+              processInstance.getProcessInstanceKey(),
+              element.getAttachedToRef(),
+              oldState.getAttachedInstanceId());
       List<ProcessInstanceTrigger> elementTriggers = new ArrayList<>();
       elementTriggers.add(cancelElementTrigger);
       elementTriggers.addAll(processInstanceTriggersForOutputFlows);
       triggerResultBuilder
-          .newFlowNodeState(
-              new BoundaryEventState(
-                  oldState.getElementInstanceId(),
-                  oldState.getPassedCnt() + 1,
-                  FlowNodeStateEnum.FINISHED,
-                  oldState.getScheduleKeys(),
-                  oldState.getMessageEventKeys(),
-                  oldState.getInputFlowId()))
+          .newFlowNodeStates(
+              List.of(
+                  new BoundaryEventState(
+                      oldState.getElementInstanceId(),
+                      oldState.getElementId(),
+                      oldState.getPassedCnt() + 1,
+                      FlowNodeStateEnum.FINISHED,
+                      oldState.getAttachedInstanceId(),
+                      oldState.getScheduleKeys(),
+                      oldState.getMessageEventKeys(),
+                      oldState.getInputFlowId())))
           .processInstanceTriggers(elementTriggers)
           .cancelSchedules(oldState.getScheduleKeys())
           .cancelMessageSubscriptions(oldState.getMessageEventKeys())
@@ -158,14 +144,17 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       // Non interrupting boundary event. Keep the state active and keep listening for messages and
       // timers.
       triggerResultBuilder
-          .newFlowNodeState(
-              new BoundaryEventState(
-                  oldState.getElementInstanceId(),
-                  oldState.getPassedCnt() + 1,
-                  FlowNodeStateEnum.ACTIVE,
-                  oldState.getScheduleKeys(),
-                  oldState.getMessageEventKeys(),
-                  oldState.getInputFlowId()))
+          .newFlowNodeStates(
+              List.of(
+                  new BoundaryEventState(
+                      oldState.getElementInstanceId(),
+                      oldState.getElementId(),
+                      oldState.getPassedCnt() + 1,
+                      FlowNodeStateEnum.ACTIVE,
+                      oldState.getAttachedInstanceId(),
+                      oldState.getScheduleKeys(),
+                      oldState.getMessageEventKeys(),
+                      oldState.getInputFlowId())))
           .processInstanceTriggers(processInstanceTriggersForOutputFlows)
           .build();
     }
@@ -177,9 +166,10 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       BoundaryEvent element,
       BoundaryEventState oldState,
       ScopedVars variables) {
-    StartFlowElementTrigger timeoutMessage =
-        new StartFlowElementTrigger(
+    ContinueFlowElementTrigger timeoutMessage =
+        new ContinueFlowElementTrigger(
             processInstance.getProcessInstanceKey(),
+            oldState.getElementInstanceId(),
             element.getId(),
             Constants.NONE,
             variables.getCurrentScopeVariables());
@@ -199,11 +189,36 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   }
 
   @Override
+  public TriggerResult terminate(
+      TerminateTrigger terminateTrigger,
+      BoundaryEvent boundaryEvent,
+      BoundaryEventState boundaryEventState) {
+
+    return TriggerResult.builder()
+        .newFlowNodeStates(
+            List.of(
+                new BoundaryEventState(
+                    boundaryEventState.getElementInstanceId(),
+                    boundaryEventState.getElementId(),
+                    boundaryEventState.getPassedCnt(),
+                    FlowNodeStateEnum.TERMINATED,
+                    boundaryEventState.getAttachedInstanceId(),
+                    boundaryEventState.getScheduleKeys(),
+                    boundaryEventState.getMessageEventKeys(),
+                    boundaryEventState.getInputFlowId())))
+        .cancelSchedules(boundaryEventState.getScheduleKeys())
+        .cancelMessageSubscriptions(boundaryEventState.getMessageEventKeys())
+        .build();
+  }
+
+  @Override
   protected BoundaryEventState getTerminateElementState(BoundaryEventState elementState) {
     return new BoundaryEventState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,
+        elementState.getAttachedInstanceId(),
         elementState.getScheduleKeys(),
         elementState.getMessageEventKeys(),
         elementState.getInputFlowId());

@@ -29,15 +29,18 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder(toBuilder = true)
 public abstract class FlowNodeState {
   private final UUID elementInstanceId;
+  private final String elementId;
   private final int passedCnt;
   private final FlowNodeStateEnum state;
   private final String inputFlowId;
 
   protected FlowNodeState(
-      UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
+      UUID elementInstanceId, String elementId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
     this.elementInstanceId = elementInstanceId;
+    this.elementId = elementId;
     this.passedCnt = passedCnt;
     this.state = state;
     this.inputFlowId = inputFlowId;
+
   }
 }

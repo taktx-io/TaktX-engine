@@ -30,9 +30,9 @@ public class ReceiveTask extends Task<ReceiveTaskState> {
   }
 
   @Override
-  public ReceiveTaskState getInitialState(String inputFlowId, int passedCnt) {
+  public ReceiveTaskState getInitialState(UUID parentElementInstanceId, String elementId, String inputFlowId, int passedCnt) {
     return new ReceiveTaskState(
-        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
+        FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, inputFlowId);
   }
 
   @Override

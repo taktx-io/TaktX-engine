@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -9,33 +10,20 @@ import lombok.ToString;
 @Getter
 @ToString
 public class CallActivityState extends ActivityState {
+
+  private final UUID childProcessInstanceId;
+
   @JsonCreator
   public CallActivityState(
-      @JsonProperty("state") FlowNodeStateEnum state,
-      @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("childProcessInstanceId") UUID childProcessInstanceId,
+      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
+      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputFlowId);
-  }
-
-  @Override
-  public ActivityState getNextLoopState() {
-    return new CallActivityState(
-        FlowNodeStateEnum.ACTIVE,
-        this.getElementInstanceId(),
-        this.getPassedCnt(),
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
-
-  @Override
-  public ActivityState getFinishedLoopState() {
-    return new CallActivityState(
-        FlowNodeStateEnum.FINISHED,
-        this.getElementInstanceId(),
-        this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
+      @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
+    super(state, elementId, parentElementInstanceId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    this.childProcessInstanceId = childProcessInstanceId;
   }
 }

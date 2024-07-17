@@ -4,7 +4,6 @@ import io.quarkus.cache.Cache;
 import io.quarkus.cache.CacheResult;
 import io.quarkus.cache.CaffeineCache;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -16,14 +15,13 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeStates;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceKeyElementPair;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -32,7 +30,6 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.jboss.logging.Logger;
 
@@ -43,7 +40,6 @@ public class ProcessInstanceProcessor
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<UUID, ProcessInstance> processInstanceStore;
-  private KeyValueStore<UUID, ProcessInstanceKeyElementPair> childProcessInstanceStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
   private final Cache processInstanceCache;
   private final Cache processInstanceDefinitionCache;
@@ -64,8 +60,6 @@ public class ProcessInstanceProcessor
     this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
     this.processInstanceDefinitionStore =
         context.getStateStore(Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME);
-    this.childProcessInstanceStore =
-        context.getStateStore(Stores.CHILD_PARENT_PROCESS_INSTANCE_KEY_STORE_NAME);
     this.variablesStore = context.getStateStore(Stores.VARIABLES_STORE_NAME);
   }
 
@@ -93,19 +87,11 @@ public class ProcessInstanceProcessor
               startNewProcessInstanceTrigger.getProcessInstanceKey(),
               startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
               startNewProcessInstanceTrigger.getParentElementId(),
+              startNewProcessInstanceTrigger.getSourceInstanceId(),
               processDefinitionKey,
               FlowNodeStates.EMPTY,
               ProcessInstanceState.START);
       storeProcessDefinition(definition);
-      if (!startNewProcessInstanceTrigger
-          .getParentProcessInstanceKey()
-          .equals(Constants.NONE_UUID)) {
-        childProcessInstanceStore.put(
-            startNewProcessInstanceTrigger.getProcessInstanceKey(),
-            new ProcessInstanceKeyElementPair(
-                startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
-                startNewProcessInstanceTrigger.getParentElementId()));
-      }
     } else {
       processInstance = getStoredProcessInstance(trigger.getProcessInstanceKey());
       definition = getProcessInstanceDefinition(processInstance.getProcessDefinitionKey());
@@ -136,12 +122,6 @@ public class ProcessInstanceProcessor
             CompletableFuture.completedFuture(updatedProcessInstance));
     processInstanceStore.put(
         updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
-    // When the process has finished, failed or terminated, delete the process instance also from
-    // the
-    // parent-child store
-    if (updatedProcessInstance.getProcessInstanceState().isFinished()) {
-      childProcessInstanceStore.delete(updatedProcessInstance.getProcessInstanceKey());
-    }
   }
 
   private void storeProcessDefinition(ProcessDefinition definition) {
@@ -178,9 +158,6 @@ public class ProcessInstanceProcessor
     } else {
       updatedProcessInstance =
           handleElementTrigger(processInstance, variables, definition, trigger);
-      updateStoredProcessInstanceInformation(updatedProcessInstance);
-      sendProcessInstanceUpdate(updatedProcessInstance, variables);
-
       if (!updatedProcessInstance.getProcessInstanceState().isFinished()
           && updatedProcessInstance
               .getFlowNodeStates()
@@ -190,10 +167,14 @@ public class ProcessInstanceProcessor
             updatedProcessInstance.toBuilder()
                 .processInstanceState(ProcessInstanceState.COMPLETED)
                 .build();
+        updateStoredProcessInstanceInformation(updatedProcessInstance);
+        sendProcessInstanceUpdate(updatedProcessInstance, variables);
+
         if (!updatedProcessInstance.getParentInstanceKey().equals(Constants.NONE_UUID)) {
           processTrigger(
-              new StartFlowElementTrigger(
+              new ContinueFlowElementTrigger(
                   updatedProcessInstance.getParentInstanceKey(),
+                  updatedProcessInstance.getParentElementInstanceId1(),
                   updatedProcessInstance.getParentElementId(),
                   Constants.NONE,
                   variables.getCurrentScopeVariables()));
@@ -213,38 +194,20 @@ public class ProcessInstanceProcessor
             + processInstance.getProcessInstanceKey()
             + " with trigger "
             + terminateProcessInstanceTrigger);
-    // Terminate all child process instances
-    try (KeyValueIterator<UUID, ProcessInstanceKeyElementPair> all =
-        childProcessInstanceStore.all()) {
-      all.forEachRemaining(
-          childToParentKeyValue -> {
-            UUID childKey = childToParentKeyValue.key;
-            ProcessInstanceKeyElementPair parentKeyElementPair = childToParentKeyValue.value;
-
-            if (parentKeyElementPair
-                    .getProcessInstanceKey()
-                    .equals(processInstance.getProcessInstanceKey())
-                && (terminateProcessInstanceTrigger.getElementId().equals(Constants.NONE)
-                    || terminateProcessInstanceTrigger
-                        .getElementId()
-                        .equals(parentKeyElementPair.getElementId()))) {
-              processTrigger(new TerminateTrigger(childKey, Constants.NONE));
-            }
-          });
-    }
-
     ProcessInstance updatedProcessInstance = processInstance;
-    if (terminateProcessInstanceTrigger.getElementId().equals(Constants.NONE)) {
+    if (terminateProcessInstanceTrigger.getElementInstanceId().equals(Constants.NONE_UUID)) {
       // Terminate all elements in this process
-      List<FlowNode> flowNodes =
-          definition.getDefinitions().getRootProcess().getFlowElements().getFlowNodes();
-      for (FlowNode flowNode : flowNodes) {
+      for (FlowNodeState flowNodeState :
+          processInstance.getFlowNodeStates().getElementStateMap().values()) {
         updatedProcessInstance =
             handleElementTrigger(
                 updatedProcessInstance,
                 variables,
                 definition,
-                new TerminateTrigger(processInstance.getProcessInstanceKey(), flowNode.getId()));
+                new TerminateTrigger(
+                    processInstance.getProcessInstanceKey(),
+                    flowNodeState.getElementId(),
+                    flowNodeState.getElementInstanceId()));
       }
       updatedProcessInstance =
           updatedProcessInstance.toBuilder()
@@ -253,8 +216,34 @@ public class ProcessInstanceProcessor
       return updatedProcessInstance;
     } else {
       // Terminate the element indicated in the trigger.
-      return handleElementTrigger(
-          processInstance, variables, definition, terminateProcessInstanceTrigger);
+      Optional<FlowNodeState> optFlowNodeState =
+          processInstance
+              .getFlowNodeStates()
+              .get(terminateProcessInstanceTrigger.getElementInstanceId());
+      if (optFlowNodeState.isPresent()) {
+        String elementId = optFlowNodeState.get().getElementId();
+        Optional<FlowNode> optFlowNode =
+            definition.getDefinitions().getRootProcess().getFlowElements().getFlowNode(elementId);
+        if (optFlowNode.isPresent()) {
+          FlowNode<?> flowNode = optFlowNode.get();
+          StateProcessor<? extends BaseElement, ? extends FlowNodeState> processor =
+              processorProvider.getProcessor(flowNode);
+          TriggerResult triggerResult =
+              processor.trigger(
+                  terminateProcessInstanceTrigger,
+                  processInstance,
+                  definition,
+                  flowNode,
+                  variables);
+
+          if (!triggerResult.equals(TriggerResult.EMPTY)) {
+            updatedProcessInstance =
+                processTriggerResult(
+                    processInstance, definition, triggerResult, variables, flowNode);
+          }
+        }
+      }
+      return updatedProcessInstance;
     }
   }
 
@@ -277,8 +266,7 @@ public class ProcessInstanceProcessor
 
       if (!triggerResult.equals(TriggerResult.EMPTY)) {
         updatedProcessInstance =
-            processTriggerResult(
-                processInstance, definition, elementId, triggerResult, scopedVars, flowNode);
+            processTriggerResult(processInstance, definition, triggerResult, scopedVars, flowNode);
       }
     } else {
       LOG.error("Flownode not found: " + trigger.getElementId());
@@ -289,13 +277,12 @@ public class ProcessInstanceProcessor
   private ProcessInstance processTriggerResult(
       ProcessInstance processInstance,
       ProcessDefinition definition,
-      String elementId,
       TriggerResult triggerResult,
       ScopedVars variables,
       BaseElement flowElement) {
     ProcessInstance updatedProcessInstance;
     FlowNodeStates newFlowNodeStates =
-        processInstance.getFlowNodeStates().put(elementId, triggerResult.getNewFlowNodeState());
+        processInstance.getFlowNodeStates().putAll(triggerResult.getNewFlowNodeStates());
 
     ProcessInstanceState newProcessInstanceState =
         determineNewProcessInstanceState(processInstance, newFlowNodeStates, triggerResult);
@@ -308,6 +295,7 @@ public class ProcessInstanceProcessor
             processInstance.getProcessInstanceKey(),
             processInstance.getParentInstanceKey(),
             processInstance.getParentElementId(),
+            processInstance.getParentElementInstanceId1(),
             processInstance.getProcessDefinitionKey(),
             newFlowNodeStates,
             newProcessInstanceState);
@@ -316,7 +304,8 @@ public class ProcessInstanceProcessor
 
     for (ProcessInstanceTrigger nextTrigger : triggerResult.getProcessInstanceTriggers()) {
 
-      if (nextTrigger instanceof StartNewProcessInstanceTrigger) {
+      if (nextTrigger instanceof StartNewProcessInstanceTrigger
+          || nextTrigger instanceof TerminateTrigger) {
         processTrigger(nextTrigger);
       } else {
         updatedProcessInstance =
@@ -343,6 +332,7 @@ public class ProcessInstanceProcessor
                       ProcessDefinitionKey.of(definition),
                       externalTask.getExternalTaskId(),
                       externalTask.getElementId(),
+                      externalTask.getElementInstanceId(),
                       externalTask.getVariables());
               context.forward(
                   new Record<>(

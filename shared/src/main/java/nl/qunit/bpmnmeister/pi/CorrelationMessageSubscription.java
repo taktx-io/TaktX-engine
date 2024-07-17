@@ -14,11 +14,11 @@ import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 @ToString
 public class CorrelationMessageSubscription extends MessageEvent {
 
-  @Nonnull
   private final UUID rootInstanceKey;
   private final UUID processInstanceKey;
   private final String correlationKey;
   private final String elementId;
+  private final UUID elementInstanceId1;
 
   @JsonCreator
   public CorrelationMessageSubscription(
@@ -26,11 +26,13 @@ public class CorrelationMessageSubscription extends MessageEvent {
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("correlationKey") String correlationKey,
       @Nonnull @JsonProperty("elementId") String elementId,
+      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("messageName") String messageName) {
     super(messageName);
     this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.correlationKey = correlationKey;
     this.elementId = elementId;
+    this.elementInstanceId1 = elementInstanceId;
   }
 }

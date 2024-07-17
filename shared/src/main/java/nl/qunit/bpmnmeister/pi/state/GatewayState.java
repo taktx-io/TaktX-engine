@@ -7,7 +7,7 @@ import lombok.Getter;
 public abstract class GatewayState extends FlowNodeState {
 
   protected GatewayState(
-      UUID elementInstanceId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
-    super(elementInstanceId, passedCnt, state, inputFlowId);
+      UUID elementInstanceId, String elementId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
+    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
   }
 }

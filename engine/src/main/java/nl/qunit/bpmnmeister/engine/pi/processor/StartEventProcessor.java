@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
@@ -15,7 +16,7 @@ import nl.qunit.bpmnmeister.pi.state.StartEventState;
 public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEventState> {
 
   @Override
-  protected void triggerCatchEvent(
+  protected void triggerCatchEventStart(
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
@@ -24,15 +25,17 @@ public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEv
       StartEventState oldState,
       ScopedVars variables) {
     triggerResultBuilder
-        .newFlowNodeState(
-            new StartEventState(
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt() + 1,
-                FlowNodeStateEnum.FINISHED,
-                oldState.getInputFlowId()))
+        .newFlowNodeStates(
+            List.of(
+                new StartEventState(
+                    oldState.getElementInstanceId(),
+                    oldState.getElementId(),
+                    oldState.getPassedCnt() + 1,
+                    FlowNodeStateEnum.FINISHED,
+                    oldState.getInputFlowId())))
         .processInstanceTriggers(
             TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-                processInstance, processDefinition, element))
+                processInstance, processDefinition, oldState, element))
         .throwingEvent(new StartThrowingEvent())
         .build();
   }
@@ -41,6 +44,7 @@ public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEv
   protected StartEventState getTerminateElementState(StartEventState elementState) {
     return new StartEventState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,
         elementState.getInputFlowId());

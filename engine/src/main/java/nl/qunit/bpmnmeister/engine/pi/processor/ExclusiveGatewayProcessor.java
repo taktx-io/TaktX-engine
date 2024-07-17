@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
@@ -24,14 +25,16 @@ public class ExclusiveGatewayProcessor
       ScopedVars variables) {
 
     return TriggerResult.builder()
-        .newFlowNodeState(
-            new ExclusiveGatewayState(
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt() + 1,
-                FlowNodeStateEnum.FINISHED,
-                oldState.getInputFlowId()))
+        .newFlowNodeStates(
+            List.of(
+                new ExclusiveGatewayState(
+                    oldState.getElementInstanceId(),
+                    oldState.getElementId(),
+                    oldState.getPassedCnt() + 1,
+                    FlowNodeStateEnum.FINISHED,
+                    oldState.getInputFlowId())))
         .processInstanceTriggers(
-            getProcessInstanceTriggers(definition, processInstance, element, variables))
+            getProcessInstanceTriggers(definition, processInstance, element, oldState, variables))
         .build();
   }
 
@@ -39,6 +42,7 @@ public class ExclusiveGatewayProcessor
   protected ExclusiveGatewayState getTerminateElementState(ExclusiveGatewayState elementState) {
     return new ExclusiveGatewayState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,
         elementState.getInputFlowId());

@@ -15,9 +15,10 @@ public class ThrowEventState extends EventState {
   @JsonCreator
   public ThrowEventState(
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
       @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
-    super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
 }

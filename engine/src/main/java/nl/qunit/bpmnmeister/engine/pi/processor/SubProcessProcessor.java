@@ -9,39 +9,22 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProcessState> {
 
-  private static final Logger LOG = Logger.getLogger(SubProcessProcessor.class);
-
   @Override
-  protected TriggerResult triggerFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElementWithoutLoop(
       StartFlowElementTrigger trigger,
-      ProcessInstance processInstance,
-      ProcessDefinition definition,
-      SubProcess element,
-      SubProcessState oldState,
-      ScopedVars variables) {
-    if (oldState.getState() == FlowNodeStateEnum.READY) {
-      return triggerWithoutLoopWhenReady(processInstance, definition, element, oldState, variables);
-    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return triggerWithoutLoopWhenActive(processInstance, definition, element, oldState);
-    } else {
-      LOG.warn("SubProcess is in state " + oldState.getState() + " and cannot be triggered.");
-      return null;
-    }
-  }
-
-  protected TriggerResult triggerWithoutLoopWhenReady(
       ProcessInstance processInstance,
       ProcessDefinition definition,
       SubProcess element,
@@ -59,6 +42,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             parentProcessInstanceKey,
             element.getAsSubProcessDefinition(definition),
             element.getId(),
+            oldState.getElementInstanceId(),
             startElement,
             Constants.NONE,
             variables.getCurrentScopeVariables());
@@ -66,30 +50,44 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
     SubProcessState newSubProcessState =
         new SubProcessState(
             FlowNodeStateEnum.ACTIVE,
+            childProcessInstanceKey,
+            oldState.getParentElementInstanceId(),
             oldState.getElementInstanceId(),
+            oldState.getElementId(),
             oldState.getPassedCnt(),
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
     return TriggerResult.builder()
-        .newFlowNodeState(newSubProcessState)
+        .newFlowNodeStates(List.of(newSubProcessState))
         .processInstanceTriggers(subProcessTriggers)
         .build();
   }
 
-  protected TriggerResult triggerWithoutLoopWhenActive(
+  @Override
+  protected TriggerResult triggerContinueFlowElement(
+      ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       SubProcess element,
-      SubProcessState oldState) {
+      SubProcessState subProcessState,
+      ScopedVars variables) {
     SubProcessState newSubProcessState =
         new SubProcessState(
             FlowNodeStateEnum.FINISHED,
-            oldState.getElementInstanceId(),
-            oldState.getPassedCnt() + 1,
-            oldState.getLoopCnt(),
-            oldState.getInputFlowId());
+            subProcessState.getChildProcessInstanceId(),
+            subProcessState.getParentElementInstanceId(),
+            subProcessState.getElementInstanceId(),
+            subProcessState.getElementId(),
+            subProcessState.getPassedCnt() + 1,
+            subProcessState.getLoopCnt(),
+            subProcessState.getInputFlowId());
     return finishActivity(
-        processInstance, definition, element, newSubProcessState, ScopedVars.EMPTY);
+        TriggerResult.EMPTY,
+        processInstance,
+        definition,
+        element,
+        newSubProcessState,
+        ScopedVars.EMPTY);
   }
 
   private String getStartEvent(SubProcess subProcess) {
@@ -101,10 +99,25 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   }
 
   @Override
+  public TriggerResult terminate(
+      TerminateTrigger terminateTrigger, SubProcess flowElement, SubProcessState elementState) {
+    ProcessInstanceTrigger terminateSubProcessTrigger =
+        new TerminateTrigger(
+            elementState.getChildProcessInstanceId(), Constants.NONE, Constants.NONE_UUID);
+    return TriggerResult.builder()
+        .newFlowNodeStates(List.of(getTerminateElementState(elementState)))
+        .processInstanceTriggers(List.of(terminateSubProcessTrigger))
+        .build();
+  }
+
+  @Override
   protected SubProcessState getTerminateElementState(SubProcessState elementState) {
     return new SubProcessState(
         FlowNodeStateEnum.TERMINATED,
+        elementState.getChildProcessInstanceId(),
+        elementState.getParentElementInstanceId(),
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         elementState.getLoopCnt(),
         elementState.getInputFlowId());

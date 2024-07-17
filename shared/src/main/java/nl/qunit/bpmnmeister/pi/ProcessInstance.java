@@ -20,6 +20,7 @@ public class ProcessInstance {
   private final String parentElementId;
   private final UUID processInstanceKey;
   private final UUID parentInstanceKey;
+  private final UUID parentElementInstanceId1;
   private final ProcessDefinitionKey processDefinitionKey;
   private final FlowNodeStates flowNodeStates;
 
@@ -29,6 +30,7 @@ public class ProcessInstance {
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("parentInstanceKey") UUID parentInstanceKey,
       @Nonnull @JsonProperty("parentElementId") String parentElementId,
+      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStates flowNodeStates,
       @Nonnull @JsonProperty("processInstanceState") ProcessInstanceState processInstanceState) {
@@ -36,6 +38,7 @@ public class ProcessInstance {
     this.parentElementId = parentElementId;
     this.processInstanceKey = processInstanceKey;
     this.parentInstanceKey = parentInstanceKey;
+    this.parentElementInstanceId1 = parentElementInstanceId;
     this.processDefinitionKey = processDefinitionKey;
     this.flowNodeStates = flowNodeStates;
     this.processInstanceState = processInstanceState;

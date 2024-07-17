@@ -13,9 +13,10 @@ public abstract class EventState extends FlowNodeState {
   @JsonCreator
   protected EventState(
       UUID elementInstanceId,
+      String elementId,
       int passedCnt,
       FlowNodeStateEnum flowNodeStateEnum,
       String inputFlowId) {
-    super(elementInstanceId, passedCnt, flowNodeStateEnum, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, flowNodeStateEnum, inputFlowId);
   }
 }

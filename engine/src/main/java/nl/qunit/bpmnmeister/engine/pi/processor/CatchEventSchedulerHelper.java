@@ -11,8 +11,8 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -34,8 +34,9 @@ public class CatchEventSchedulerHelper {
 
     List<SchedulableMessage<?>> messages =
         List.of(
-            new StartFlowElementTrigger(
+            new ContinueFlowElementTrigger(
                 processInstance.getProcessInstanceKey(),
+                oldState.getElementInstanceId(),
                 element.getId(),
                 Constants.NONE,
                 Variables.empty()));
@@ -67,7 +68,7 @@ public class CatchEventSchedulerHelper {
   }
 
   public void processWhenActive(
-      StartFlowElementTrigger trigger,
+      ContinueFlowElementTrigger trigger,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       IntermediateCatchEvent element,
@@ -76,9 +77,10 @@ public class CatchEventSchedulerHelper {
       ProcessDefinition processDefinition) {
     if (trigger.getInputFlowId().equals(Constants.NONE)) {
       newStateBuilder.passedCnt(oldState.getPassedCnt() + 1);
+      newStateBuilder.state(FlowNodeStateEnum.FINISHED);
       triggerResultBuilder.processInstanceTriggers(
           TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-              processInstance, processDefinition, element));
+              processInstance, processDefinition, oldState, element));
     }
   }
 }

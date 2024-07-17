@@ -9,11 +9,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -72,7 +70,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   private final Map<UUID, ConcurrentLinkedQueue<ProcessInstanceUpdate>> processInstanceQueueMap = new HashMap<>();
-  private final Map<UUID, List<UUID>> processInstanceParentChildMap = new HashMap<>();
+  private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new HashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
   private final Map<UUID, ProcessInstanceUpdate> processInstanceMap = new HashMap<>();
@@ -194,8 +192,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     ProcessInstance previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
         processInstance);
     if (!processInstance.getParentInstanceKey().equals(Constants.NONE_UUID)) {
-      List<UUID> processInstanceKeys = processInstanceParentChildMap.computeIfAbsent(
-          processInstance.getParentInstanceKey(), k -> new ArrayList<>());
+      Set<UUID> processInstanceKeys = processInstanceParentChildMap.computeIfAbsent(
+          processInstance.getParentInstanceKey(), k -> new HashSet<>());
       processInstanceKeys.add(processInstance.getProcessInstanceKey());
     }
     if (previousProcessInstance == null) {
@@ -223,7 +221,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       ExternalTaskResponseResult externalTaskResponseResult, Variables variables) {
       triggerEmitter.send(rootInstanceKey,
           new ExternalTaskResponseTrigger(externalTaskTrigger.getProcessInstanceKey(),
-          externalTaskTrigger.getElementId(), externalTaskResponseResult, variables)
+          externalTaskTrigger.getElementId(), externalTaskTrigger.getElementInstanceId(), externalTaskResponseResult, variables)
       );
   }
 
@@ -259,8 +257,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     StartCommand startCommand = new StartCommand(
         rootProcessInstanceKey,
         Constants.NONE_UUID,
+        Constants.NONE_UUID,
         Constants.NONE,
         Constants.NONE,
+        Constants.NONE_UUID,
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
     startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
@@ -336,12 +336,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public BpmnTestEngine waitUntilChildProcessesHaveState(int expectedCount, ProcessInstanceState processInstanceState) {
     activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> {
-          List<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
+          Set<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
           if (childKeys == null) {
             return null;
           }
           if (childKeys.size() >= expectedCount) {
-            UUID processInstanceKey = childKeys.get(childKeys.size() - 1);
+            UUID processInstanceKey = childKeys.iterator().next();
             ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
             return processInstance != null && processInstance.getProcessInstanceState() == processInstanceState ? processInstance : null;
           }
@@ -456,11 +456,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateProcessWithChildProcesses() {
-    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE));
+    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE, Constants.NONE_UUID));
     return this;
   }
   public BpmnTestEngine terminateChildProcessesForElement(String elementId) {
-    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId));
+    triggerEmitter.send(activeProcessInstance.getRootInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId, Constants.NONE_UUID));
     return this;
   }
 

@@ -72,7 +72,10 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
                 .getStartEvents()
                 .get(0)
                 .getId();
-    UUID processInstanceKey = UUID.randomUUID();
+    UUID processInstanceKey =
+        startCommand.getProcessInstanceKey().equals(Constants.NONE_UUID)
+            ? UUID.randomUUID()
+            : startCommand.getProcessInstanceKey();
     ProcessInstanceTrigger processInstanceTrigger =
         new StartNewProcessInstanceTrigger(
             startCommand.getRootProcessInstanceKey(),
@@ -80,6 +83,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
             startCommand.getParentProcessInstanceKey(),
             processDefinition,
             startCommand.getParentElementId(),
+            startCommand.getParentElementInstanceId(),
             startEventId,
             Constants.NONE,
             startCommand.getVariables());

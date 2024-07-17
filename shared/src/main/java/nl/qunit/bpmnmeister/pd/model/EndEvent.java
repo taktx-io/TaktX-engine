@@ -24,7 +24,7 @@ public class EndEvent extends ThrowEvent<EndEventState> {
   }
 
   @Override
-  public EndEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new EndEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+  public EndEventState getInitialState(String elementId, String inputFlowId, int passedCnt) {
+    return new EndEventState(UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

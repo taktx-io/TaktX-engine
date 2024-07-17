@@ -15,12 +15,13 @@ public class InclusiveGatewayState extends GatewayState {
   @JsonCreator
   public InclusiveGatewayState(
       @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId,
+      @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("state") FlowNodeStateEnum state,
-      @JsonProperty("inputFlowId") String inputFlowId,
-      @JsonProperty("triggeInputFlows") Set<String> triggeredInputFlows,
-      @JsonProperty("selectedOutputFlows") Set<String> selectedOutputFlows) {
-    super(elementInstanceId, passedCnt, state, inputFlowId);
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("inputFlowId") String inputFlowId,
+      @Nonnull @JsonProperty("triggeInputFlows") Set<String> triggeredInputFlows,
+      @Nonnull @JsonProperty("selectedOutputFlows") Set<String> selectedOutputFlows) {
+    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
     this.triggeredInputFlows = triggeredInputFlows;
     this.selectedOutputFlows = selectedOutputFlows;
   }

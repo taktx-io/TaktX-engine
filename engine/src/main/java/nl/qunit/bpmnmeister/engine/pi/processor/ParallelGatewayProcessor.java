@@ -4,7 +4,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
@@ -54,6 +53,7 @@ public class ParallelGatewayProcessor
                               .orElseThrow();
                   return new StartFlowElementTrigger(
                       processInstance.getProcessInstanceKey(),
+                      oldState.getElementInstanceId(),
                       flow.getTarget(),
                       flow.getId(),
                       variables.getCurrentScopeVariables());
@@ -61,13 +61,15 @@ public class ParallelGatewayProcessor
             .collect(Collectors.toList());
 
     return TriggerResult.builder()
-        .newFlowNodeState(
-            new ParallelGatewayState(
-                UUID.randomUUID(),
-                newTriggeredFlows,
-                oldState.getPassedCnt() + 1,
-                newState,
-                oldState.getInputFlowId()))
+        .newFlowNodeStates(
+            List.of(
+                new ParallelGatewayState(
+                    oldState.getElementInstanceId(),
+                    oldState.getElementId(),
+                    newTriggeredFlows,
+                    oldState.getPassedCnt() + 1,
+                    newState,
+                    oldState.getInputFlowId())))
         .processInstanceTriggers(triggers)
         .build();
   }
@@ -76,6 +78,7 @@ public class ParallelGatewayProcessor
   protected ParallelGatewayState getTerminateElementState(ParallelGatewayState elementState) {
     return new ParallelGatewayState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getTriggeredFlows(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,

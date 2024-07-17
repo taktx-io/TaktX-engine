@@ -12,7 +12,9 @@ public class SendTaskProcessor extends ExternalTaskProcessor<SendTask, SendTaskS
   protected SendTaskState getNewAttempExternalTaskState(SendTaskState oldState) {
     return new SendTaskState(
         FlowNodeStateEnum.ACTIVE,
+        oldState.getParentElementInstanceId(),
         oldState.getElementInstanceId(),
+        oldState.getElementId(),
         oldState.getPassedCnt(),
         oldState.getLoopCnt(),
         oldState.getAttempt() + 1,
@@ -20,10 +22,25 @@ public class SendTaskProcessor extends ExternalTaskProcessor<SendTask, SendTaskS
   }
 
   @Override
+  protected SendTaskState getFinishedState(SendTaskState oldState) {
+    return new SendTaskState(
+        FlowNodeStateEnum.FINISHED,
+        oldState.getParentElementInstanceId(),
+        oldState.getElementInstanceId(),
+        oldState.getElementId(),
+        oldState.getPassedCnt() + 1,
+        oldState.getLoopCnt(),
+        oldState.getAttempt(),
+        oldState.getInputFlowId());
+  }
+
+  @Override
   protected SendTaskState getTerminateElementState(SendTaskState elementState) {
     return new SendTaskState(
         FlowNodeStateEnum.TERMINATED,
+        elementState.getParentElementInstanceId(),
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         elementState.getLoopCnt(),
         elementState.getAttempt(),

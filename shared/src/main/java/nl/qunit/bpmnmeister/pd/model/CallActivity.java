@@ -61,19 +61,14 @@ public class CallActivity extends Activity<CallActivityState> {
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 
-  @Override
-  public String getAsSubProcessStartElementId() {
-    return getId();
-  }
-
   protected FlowElement withoutLoopCharacteristics() {
     return new CallActivity(
         getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, calledElement, getIoMapping());
   }
 
   @Override
-  public CallActivityState getInitialState(String inputFlowId, int passedCnt) {
+  public CallActivityState getInitialState(UUID parentElementInstanceId, String elementId, String inputFlowId, int passedCnt) {
     return new CallActivityState(
-        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
+        FlowNodeStateEnum.READY, UUID.randomUUID(), parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, inputFlowId);
   }
 }

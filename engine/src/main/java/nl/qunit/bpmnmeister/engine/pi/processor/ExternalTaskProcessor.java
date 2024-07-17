@@ -8,7 +8,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,18 +15,16 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
@@ -45,23 +42,38 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
   @Inject IoMappingProcessor ioMappingProcessor;
 
   @Override
-  protected TriggerResult triggerFlowElementWithoutLoop(
+  protected TriggerResult triggerContinueFlowElement(
+      ContinueFlowElementTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      T element,
+      S s,
+      ScopedVars variables) {
+    if (trigger instanceof ExternalTaskResponseTrigger externalTaskResponseTrigger) {
+      return triggerExternalTaskResponse(
+          externalTaskResponseTrigger, processInstance, definition, element, s, variables);
+    } else {
+      return TriggerResult.EMPTY;
+    }
+  }
+
+  @Override
+  protected TriggerResult triggerStartFlowElementWithoutLoop(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       T element,
       S oldState,
       ScopedVars variables) {
-    if (oldState.getState() != FlowNodeStateEnum.READY) {
-      return TriggerResult.builder().newFlowNodeState(oldState).build();
-    }
-
     String externalTaskId = getExternalTaskId(element.getWorkerDefinition(), variables);
     ExternalTaskInfo externalTaskInfo =
         new ExternalTaskInfo(
-            externalTaskId, element.getId(), getExternalTaskVariables(element, variables));
+            externalTaskId,
+            element.getId(),
+            oldState.getElementInstanceId(),
+            getExternalTaskVariables(element, variables));
     return TriggerResult.builder()
-        .newFlowNodeState(getNewAttempExternalTaskState(oldState))
+        .newFlowNodeStates(List.of(getNewAttempExternalTaskState(oldState)))
         .externalTasks(Set.of(externalTaskInfo))
         .build();
   }
@@ -75,8 +87,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
     return jsonNode.asText();
   }
 
-  @Override
-  protected TriggerResult triggerExternalTaskResponse(
+  private TriggerResult triggerExternalTaskResponse(
       ExternalTaskResponseTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -90,16 +101,13 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
     variables.merge(mappedVariables);
 
     if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
-      return TriggerResult.builder().newFlowNodeState(oldState).build();
+      return TriggerResult.builder().newFlowNodeStates(List.of(oldState)).build();
     }
 
     TriggerResult triggerResult =
         getTriggerResultForExternalTaskResponse(
             trigger, processInstance, definition, element, oldState, variables);
 
-    triggerResult =
-        getTriggerResultForBoundaryEvents(
-            processInstance, definition, element, oldState, triggerResult);
     return triggerResult;
   }
 
@@ -153,6 +161,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
                     backoff.get(),
                     processInstance,
                     element.getId(),
+                    oldState.getElementInstanceId(),
                     variables);
             messageSchedulers = Set.of(messageScheduler);
           } else {
@@ -163,6 +172,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
                 new ExternalTaskInfo(
                     externalTaskId,
                     trigger.getElementId(),
+                    oldState.getElementInstanceId(),
                     getExternalTaskVariables(element, variables));
             workerDefinitions = Set.of(externalTaskInfo);
           }
@@ -178,23 +188,9 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
         newnewExternalTaskState = getTerminateElementState(oldState);
       }
 
-      List<ProcessInstanceTrigger> newProcessInstanceTriggers = new ArrayList<>();
-      List<BoundaryEvent> boundaryEvents =
-          definition
-              .getDefinitions()
-              .getRootProcess()
-              .getFlowElements()
-              .getBoundaryEventsAttachedToElement(element.getId());
-      if (elementFinished(oldState, newnewExternalTaskState)) {
-        for (BoundaryEvent boundaryEvent : boundaryEvents) {
-          newProcessInstanceTriggers.add(
-              new TerminateTrigger(processInstance.getProcessInstanceKey(), boundaryEvent.getId()));
-        }
-      }
       return TriggerResult.builder()
-          .newFlowNodeState(newnewExternalTaskState)
+          .newFlowNodeStates(List.of(newnewExternalTaskState))
           .externalTasks(workerDefinitions)
-          .processInstanceTriggers(newProcessInstanceTriggers)
           .throwingEvent(throwingEvent)
           .messageSchedulers(messageSchedulers)
           .build();
@@ -208,6 +204,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       String backoff,
       ProcessInstance processInstance,
       String elementId,
+      UUID elementInstanceId,
       ScopedVars variables) {
     ExternalTaskTrigger externalTask =
         new ExternalTaskTrigger(
@@ -216,6 +213,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
             processInstance.getProcessDefinitionKey(),
             workerDefinition,
             elementId,
+            elementInstanceId,
             variables.getCurrentScopeVariables());
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     return new OneTimeScheduler(
@@ -234,8 +232,14 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       ProcessInstance processInstance,
       ProcessDefinition processDefinition,
       ScopedVars variables) {
-    ActivityState finishedLoopState = oldState.getFinishedLoopState();
     return finishActivity(
-        processInstance, processDefinition, element, finishedLoopState, variables);
+        TriggerResult.EMPTY,
+        processInstance,
+        processDefinition,
+        element,
+        getFinishedState(oldState),
+        variables);
   }
+
+  protected abstract ActivityState getFinishedState(S oldState);
 }

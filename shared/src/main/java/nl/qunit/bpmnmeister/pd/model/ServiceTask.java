@@ -31,9 +31,9 @@ public class ServiceTask extends ExternalTask<ServiceTaskState> {
   }
 
   @Override
-  public ServiceTaskState getInitialState(String inputFlowId, int passedCnt) {
+  public ServiceTaskState getInitialState(UUID parentElementInstanceId, String elementId, String inputFlowId, int passedCnt) {
     return new ServiceTaskState(
-        FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, 0, inputFlowId);
+        FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, 0, inputFlowId);
   }
 
   @Override

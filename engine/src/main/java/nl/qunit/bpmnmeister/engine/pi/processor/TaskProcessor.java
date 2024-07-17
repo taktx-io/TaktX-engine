@@ -6,6 +6,7 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -16,7 +17,7 @@ import nl.qunit.bpmnmeister.pi.state.TaskState;
 public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
 
   @Override
-  protected TriggerResult triggerFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElementWithoutLoop(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -26,18 +27,34 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
     TaskState finishedTaskState =
         new TaskState(
             FlowNodeStateEnum.FINISHED,
+            oldState.getParentElementInstanceId(),
             oldState.getElementInstanceId(),
+            oldState.getElementId(),
             oldState.getPassedCnt() + 1,
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
-    return finishActivity(processInstance, definition, element, finishedTaskState, variables);
+    return finishActivity(
+        TriggerResult.EMPTY, processInstance, definition, element, finishedTaskState, variables);
+  }
+
+  @Override
+  protected TriggerResult triggerContinueFlowElement(
+      ContinueFlowElementTrigger continueFlowElementTrigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      Task<TaskState> element,
+      TaskState taskState,
+      ScopedVars variables) {
+    return TriggerResult.EMPTY;
   }
 
   @Override
   protected TaskState getTerminateElementState(TaskState elementState) {
     return new TaskState(
         FlowNodeStateEnum.TERMINATED,
+        elementState.getParentElementInstanceId(),
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         elementState.getLoopCnt(),
         elementState.getInputFlowId());

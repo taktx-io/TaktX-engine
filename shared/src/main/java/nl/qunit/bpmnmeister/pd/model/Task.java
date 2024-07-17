@@ -54,17 +54,12 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
   }
 
-  @Override
-  public String getAsSubProcessStartElementId() {
-    return getId();
-  }
-
   protected FlowElement withoutLoopCharacteristics() {
     return new Task<>(getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, getIoMapping());
   }
 
   @Override
-  public TaskState getInitialState(String inputFlowId, int passedCnt) {
-    return new TaskState(FlowNodeStateEnum.READY, UUID.randomUUID(), passedCnt, 0, inputFlowId);
+  public TaskState getInitialState(UUID parentElementInstanceId, String elementId, String inputFlowId, int passedCnt) {
+    return new TaskState(FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, inputFlowId);
   }
 }

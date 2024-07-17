@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
+import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -26,9 +27,9 @@ public abstract class Activity<S extends FlowNodeState> extends FlowNode<S> impl
   }
 
   @JsonIgnore
+  public abstract S getInitialState(UUID parentElementInstanceId, String elementId, String inputFlowId, int passedCnt);
+
+    @JsonIgnore
   public abstract ProcessDefinition getAsSubProcessDefinition(
       ProcessDefinition parentProcessDefinition);
-
-  @JsonIgnore
-  public abstract String getAsSubProcessStartElementId();
 }

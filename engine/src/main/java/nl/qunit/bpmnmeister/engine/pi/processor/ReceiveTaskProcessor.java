@@ -2,11 +2,13 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
@@ -17,19 +19,25 @@ import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, ReceiveTaskState> {
 
   @Override
-  protected TriggerResult triggerFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElementWithoutLoop(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
       ReceiveTask element,
       ReceiveTaskState oldState,
       ScopedVars variables) {
-    if (oldState.getState() == FlowNodeStateEnum.READY) {
-      return subscribeToMessage(processInstance, definition, element, oldState, variables);
-    } else if (oldState.getState() == FlowNodeStateEnum.ACTIVE) {
-      return messageReceived(processInstance, definition, element, oldState, variables);
-    }
-    return TriggerResult.builder().newFlowNodeState(oldState).build();
+    return subscribeToMessage(processInstance, definition, element, oldState, variables);
+  }
+
+  @Override
+  protected TriggerResult triggerContinueFlowElement(
+      ContinueFlowElementTrigger continueFlowElementTrigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      ReceiveTask element,
+      ReceiveTaskState receiveTaskState,
+      ScopedVars variables) {
+    return messageReceived(processInstance, definition, element, receiveTaskState, variables);
   }
 
   private TriggerResult messageReceived(
@@ -42,11 +50,14 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
     ReceiveTaskState newState =
         new ReceiveTaskState(
             FlowNodeStateEnum.FINISHED,
+            oldState.getParentElementInstanceId(),
             oldState.getElementInstanceId(),
+            oldState.getElementId(),
             oldState.getPassedCnt() + 1,
             oldState.getLoopCnt(),
             oldState.getInputFlowId());
-    return finishActivity(processInstance, definition, element, newState, variables);
+    return finishActivity(
+        TriggerResult.EMPTY, processInstance, definition, element, newState, variables);
   }
 
   private TriggerResult subscribeToMessage(
@@ -63,13 +74,16 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
     String messageName =
         definition.getDefinitions().getMessages().get(element.getMessageRef()).getName();
     return TriggerResult.builder()
-        .newFlowNodeState(
-            new ReceiveTaskState(
-                FlowNodeStateEnum.ACTIVE,
-                oldState.getElementInstanceId(),
-                oldState.getPassedCnt(),
-                oldState.getLoopCnt(),
-                oldState.getInputFlowId()))
+        .newFlowNodeStates(
+            List.of(
+                new ReceiveTaskState(
+                    FlowNodeStateEnum.ACTIVE,
+                    oldState.getParentElementInstanceId(),
+                    oldState.getElementInstanceId(),
+                    oldState.getElementId(),
+                    oldState.getPassedCnt(),
+                    oldState.getLoopCnt(),
+                    oldState.getInputFlowId())))
         .newMessageSubscriptions(
             Set.of(
                 new CorrelationMessageSubscription(
@@ -77,6 +91,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
                     processInstance.getProcessInstanceKey(),
                     correlationKey,
                     element.getId(),
+                    oldState.getElementInstanceId(),
                     messageName)))
         .build();
   }
@@ -85,7 +100,9 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
   protected ReceiveTaskState getTerminateElementState(ReceiveTaskState elementState) {
     return new ReceiveTaskState(
         FlowNodeStateEnum.TERMINATED,
+        elementState.getParentElementInstanceId(),
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         elementState.getLoopCnt(),
         elementState.getInputFlowId());

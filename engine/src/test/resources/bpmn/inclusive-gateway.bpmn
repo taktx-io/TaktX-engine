@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_15g5art" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.23.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.5.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_15g5art" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
   <bpmn:process id="Process_019jye8" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_17jyjtn</bpmn:outgoing>
@@ -67,39 +67,40 @@
       <bpmndi:BPMNShape id="BPMNShape_1hwfaph" bpmnElement="Task_3">
         <dc:Bounds x="470" y="310" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_17jyjtn_di" bpmnElement="Flow_17jyjtn">
-        <di:waypoint x="188" y="117" />
-        <di:waypoint x="365" y="117" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1urcjai_di" bpmnElement="Flow_1urcjai">
         <di:waypoint x="415" y="117" />
         <di:waypoint x="470" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10l7dqh_di" bpmnElement="Flow_10l7dqh">
+        <di:waypoint x="570" y="117" />
+        <di:waypoint x="625" y="117" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1qhlm00_di" bpmnElement="Flow_1qhlm00">
         <di:waypoint x="390" y="142" />
         <di:waypoint x="390" y="230" />
         <di:waypoint x="470" y="230" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_10l7dqh_di" bpmnElement="Flow_10l7dqh">
-        <di:waypoint x="570" y="117" />
-        <di:waypoint x="625" y="117" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1p4tp5h_di" bpmnElement="Flow_1p4tp5h">
         <di:waypoint x="570" y="230" />
         <di:waypoint x="650" y="230" />
         <di:waypoint x="650" y="142" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17jyjtn_di" bpmnElement="Flow_17jyjtn">
+        <di:waypoint x="188" y="117" />
+        <di:waypoint x="365" y="117" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0a0gzd6_di" bpmnElement="Flow_0a0gzd6">
+        <di:waypoint x="675" y="117" />
+        <di:waypoint x="1112" y="117" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1owo2ek_di" bpmnElement="Flow_1owo2ek">
         <di:waypoint x="570" y="350" />
         <di:waypoint x="650" y="350" />
         <di:waypoint x="650" y="142" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0a0gzd6_di" bpmnElement="Flow_0a0gzd6">
-        <di:waypoint x="675" y="117" />
-        <di:waypoint x="1112" y="117" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_116v9wt_di" bpmnElement="Flow_116v9wt">
-        <di:waypoint x="390" y="142" />
+        <di:waypoint x="380" y="132" />
+        <di:waypoint x="360" y="160" />
         <di:waypoint x="390" y="350" />
         <di:waypoint x="470" y="350" />
       </bpmndi:BPMNEdge>

@@ -1,6 +1,5 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -10,22 +9,20 @@ import lombok.ToString;
 public abstract class ActivityState extends FlowNodeState {
 
   private final FlowNodeStateEnum state;
+  private final UUID parentElementInstanceId;
   private final int loopCnt;
 
   protected ActivityState(
       FlowNodeStateEnum state,
+      String elementId,
+      UUID parentElementInstanceId,
       UUID elementInstanceId,
       int passedCnt,
       int loopCnt,
       String inputFlowId) {
-    super(elementInstanceId, passedCnt, state, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
     this.state = state;
+    this.parentElementInstanceId = parentElementInstanceId;
     this.loopCnt = loopCnt;
   }
-
-  @JsonIgnore
-  public abstract ActivityState getNextLoopState();
-
-  @JsonIgnore
-  public abstract ActivityState getFinishedLoopState();
 }

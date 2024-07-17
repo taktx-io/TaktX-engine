@@ -53,8 +53,10 @@ public class ProcessResource {
         new StartCommand(
             UUID.randomUUID(),
             Constants.NONE_UUID,
+            Constants.NONE_UUID,
             Constants.NONE,
             Constants.NONE,
+            Constants.NONE_UUID,
             processId,
             new Variables(variablesMap));
     KafkaProducer<String, StartCommand> startCommandEmitter =

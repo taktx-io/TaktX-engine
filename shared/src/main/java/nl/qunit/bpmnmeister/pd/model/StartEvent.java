@@ -24,7 +24,7 @@ public class StartEvent extends CatchEvent<StartEventState> {
   }
 
   @Override
-  public StartEventState getInitialState(String inputFlowId, int passedCnt) {
-    return new StartEventState(UUID.randomUUID(), passedCnt, FlowNodeStateEnum.READY, inputFlowId);
+  public StartEventState getInitialState(String elementId, String inputFlowId, int passedCnt) {
+    return new StartEventState(UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId);
   }
 }

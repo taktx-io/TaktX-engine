@@ -18,6 +18,7 @@ public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
   private final ProcessDefinitionKey processDefinitionKey;
   private final String externalTaskId;
   private final String elementId;
+  private final UUID elementInstanceId;
   private final Variables variables;
 
   @JsonCreator
@@ -27,28 +28,15 @@ public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @JsonProperty("externalTaskId") String externalTaskId,
       @JsonProperty("elementId") String elementId,
+      @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("variables") Variables variables) {
     this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
     this.externalTaskId = externalTaskId;
     this.elementId = elementId;
+    this.elementInstanceId = elementInstanceId;
     this.variables = variables;
-  }
-
-  @Override
-  public String toString() {
-    return "ExternalTaskTrigger{"
-        + "processInstanceKey="
-        + processInstanceKey
-        + ", processDefinitionKey="
-        + processDefinitionKey
-        + ", externalTaskId='"
-        + elementId
-        + '\''
-        + ", variables="
-        + variables
-        + '}';
   }
 
   @JsonIgnore

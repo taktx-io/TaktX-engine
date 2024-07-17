@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
@@ -19,16 +20,63 @@ import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
 
+@Slf4j
 public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewayState>
     extends StateProcessor<G, S> {
 
   @Inject FeelExpressionHandler feelExpressionHandler;
 
-  @Override
-  protected TriggerResult triggerFlowElement(
+  public final TriggerResult trigger(
+      ProcessInstanceTrigger trigger,
+      ProcessInstance processInstance,
+      ProcessDefinition definition,
+      FlowNode<?> element,
+      ScopedVars variables) {
+    log.info("Trigger processor: " + this);
+
+    if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
+      Optional<FlowNodeState> optFlowNodeState =
+          processInstance.getFlowNodeStates().get(flowElementTrigger.getElementId());
+      FlowNodeState flowNodeState =
+          optFlowNodeState.orElse(
+              ((Gateway) element)
+                  .getInitialState(
+                      flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0));
+
+      return triggerStartFlowElement(
+          flowElementTrigger,
+          processInstance,
+          definition,
+          (G) element,
+          (S) flowNodeState,
+          variables);
+    } else if (trigger instanceof TerminateTrigger terminateTrigger) {
+      Optional<FlowNodeState> flowNodeState =
+          processInstance.getFlowNodeStates().get(terminateTrigger.getElementInstanceId());
+      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.ACTIVE) {
+        return terminate(terminateTrigger, (G) element, (S) flowNodeState.get());
+      } else {
+        return TriggerResult.EMPTY;
+      }
+    } else {
+      throw new IllegalStateException("Unknown trigger type: " + trigger);
+    }
+  }
+
+  public TriggerResult terminate(TerminateTrigger terminateTrigger, G flowElement, S elementState) {
+    return TriggerResult.builder()
+        .newFlowNodeStates(List.of(getTerminateElementState(elementState)))
+        .build();
+  }
+
+  protected abstract S getTerminateElementState(S elementState);
+
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -39,7 +87,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
         || oldState.getState() == FlowNodeStateEnum.ACTIVE) {
       return triggerDecision(trigger, processInstance, definition, element, oldState, variables);
     }
-    return TriggerResult.builder().newFlowNodeState(oldState).build();
+    return TriggerResult.builder().newFlowNodeStates(List.of(oldState)).build();
   }
 
   protected abstract TriggerResult triggerDecision(
@@ -93,6 +141,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
       ProcessDefinition definition,
       ProcessInstance processInstance,
       Gateway element,
+      GatewayState oldState,
       ScopedVars variables) {
     Set<String> outgoingFlows =
         getOutgoingFlowsMatchingConditionOrDefault(
@@ -108,6 +157,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
                       .getFlowNodeWithIncomingFlow(flowId);
               return new StartFlowElementTrigger(
                   processInstance.getProcessInstanceKey(),
+                  oldState.getElementInstanceId(),
                   flowNodeWithIncomingFlow.get().getId(),
                   flowId,
                   variables.getCurrentScopeVariables());

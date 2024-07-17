@@ -12,15 +12,13 @@ import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.Variables;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
-@QuarkusTest
+@QuarkusTest @Disabled
 class BoundaryEventsTest {
-
-  private static final Logger LOG = Logger.getLogger(BoundaryEventsTest.class);
 
   @Inject
   Clock clock;

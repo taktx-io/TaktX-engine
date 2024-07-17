@@ -8,12 +8,12 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -106,9 +106,10 @@ public class MessageEventProcessor
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
                   UUID rootInstanceKey = subscription.getRootInstanceKey();
                   UUID processInstanceKey = subscription.getProcessInstanceKey();
-                  StartFlowElementTrigger flowElementTrigger =
-                      new StartFlowElementTrigger(
+                  ContinueFlowElementTrigger flowElementTrigger =
+                      new ContinueFlowElementTrigger(
                           processInstanceKey,
+                          subscription.getElementInstanceId1(),
                           subscription.getElementId(),
                           Constants.NONE,
                           messageEvent.getVariables());
@@ -139,8 +140,10 @@ public class MessageEventProcessor
                       new StartCommand(
                           UUID.randomUUID(),
                           Constants.NONE_UUID,
+                          Constants.NONE_UUID,
                           value.getElementId(),
                           Constants.NONE,
+                          Constants.NONE_UUID,
                           processDefinitionKey.getProcessDefinitionId(),
                           messageEvent.getVariables());
 

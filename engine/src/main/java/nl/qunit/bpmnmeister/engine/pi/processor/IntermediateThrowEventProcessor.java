@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
@@ -26,10 +27,11 @@ public class IntermediateThrowEventProcessor
     IntermediateThrowEventState newState =
         new IntermediateThrowEventState(
             oldState.getElementInstanceId(),
+            oldState.getElementId(),
             oldState.getPassedCnt() + 1,
             FlowNodeStateEnum.FINISHED,
             oldState.getInputFlowId());
-    triggerResultBuilder.newFlowNodeState(newState);
+    triggerResultBuilder.newFlowNodeStates(List.of(newState));
   }
 
   @Override
@@ -37,6 +39,7 @@ public class IntermediateThrowEventProcessor
       IntermediateThrowEventState elementState) {
     return new IntermediateThrowEventState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,
         elementState.getInputFlowId());

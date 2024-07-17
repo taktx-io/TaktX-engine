@@ -5,7 +5,6 @@ import static nl.qunit.bpmnmeister.Topics.EXTERNAL_TASK_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.MESSAGE_EVENT_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINITION_PARSED_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC;
-import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_MIGRATION_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_TRIGGER_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.PROCESS_INSTANCE_UPDATE_TOPIC;
 import static nl.qunit.bpmnmeister.Topics.SCHEDULE_COMMANDS;
@@ -31,7 +30,6 @@ import jakarta.inject.Inject;
 import java.time.Clock;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
-import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMigrationProcessor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesParentPair;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
@@ -47,7 +45,6 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceMigrationTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -135,8 +132,6 @@ public class ProcessDefinitionTopologyProducer {
     setupScheduleCommandStream(builder);
 
     setupProcessInstanceStream(builder);
-
-    setupProcessInstanceMigrationStream(builder);
 
     return builder.build();
   }
@@ -244,15 +239,6 @@ public class ProcessDefinitionTopologyProducer {
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
-  }
-
-  private void setupProcessInstanceMigrationStream(StreamsBuilder builder) {
-    builder.stream(
-            PROCESS_INSTANCE_MIGRATION_TOPIC.getTopicName(),
-            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_MIGRATION_SERDE))
-        .process(
-            () -> new ProcessInstanceMigrationProcessor(processorProvider),
-            PROCESS_INSTANCE_STORE_NAME);
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -370,7 +356,7 @@ public class ProcessDefinitionTopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (k, v) -> v instanceof StartFlowElementTrigger,
+            (k, v) -> v instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
                 ks ->
                     ks.map(

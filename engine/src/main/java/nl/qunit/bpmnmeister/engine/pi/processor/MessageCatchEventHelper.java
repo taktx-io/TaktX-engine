@@ -12,9 +12,9 @@ import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -56,6 +56,7 @@ public class MessageCatchEventHelper {
                       processInstance.getProcessInstanceKey(),
                       correlationKey,
                       element.getId(),
+                      newStateBuilder.build().getElementInstanceId(),
                       messageName);
                 })
             .collect(Collectors.toSet());
@@ -65,7 +66,7 @@ public class MessageCatchEventHelper {
   }
 
   public void processWhenActive(
-      StartFlowElementTrigger trigger,
+      ContinueFlowElementTrigger trigger,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       IntermediateCatchEvent element,
@@ -83,7 +84,7 @@ public class MessageCatchEventHelper {
 
     triggerResultBuilder.processInstanceTriggers(
         TriggerHelper.getProcessInstanceTriggersForOutputFlows(
-            processInstance, processDefinition, element));
+            processInstance, processDefinition, oldState, element));
     newStateBuilder.passedCnt(oldState.getPassedCnt() + 1);
     newStateBuilder.state(FlowNodeStateEnum.FINISHED);
   }

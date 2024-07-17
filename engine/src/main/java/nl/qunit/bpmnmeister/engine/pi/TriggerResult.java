@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 public class TriggerResult {
   public static final TriggerResult EMPTY = TriggerResult.builder().build();
 
-  @Builder.Default private FlowNodeState newFlowNodeState = null;
+  @Builder.Default private List<FlowNodeState> newFlowNodeStates = List.of();
   @Builder.Default private Set<ExternalTaskInfo> externalTasks = Set.of();
   @Builder.Default private List<ProcessInstanceTrigger> processInstanceTriggers = List.of();
   @Builder.Default private Set<StartCommand> newStartCommands = Set.of();
@@ -33,7 +33,7 @@ public class TriggerResult {
 
   @JsonCreator
   public TriggerResult(
-      @Nonnull @JsonProperty("newFlowNodeState") FlowNodeState newFlowNodeState,
+      @Nonnull @JsonProperty("newFlowNodeStates") List<FlowNodeState> newFlowNodeStates,
       @Nonnull @JsonProperty("externalTasks") Set<ExternalTaskInfo> externalTasks,
       @Nonnull @JsonProperty("processInstanceTriggers")
           List<ProcessInstanceTrigger> processInstanceTriggers,
@@ -44,7 +44,7 @@ public class TriggerResult {
       @Nonnull @JsonProperty("newMessageSubscriptions") Set<MessageEvent> newMessageSubscriptions,
       @Nonnull @JsonProperty("cancelMessageSubscriptions")
           Set<MessageEventKey> cancelMessageSubscriptions) {
-    this.newFlowNodeState = newFlowNodeState;
+    this.newFlowNodeStates = newFlowNodeStates;
     this.externalTasks = externalTasks;
     this.processInstanceTriggers = processInstanceTriggers;
     this.newStartCommands = newStartCommands;

@@ -14,30 +14,13 @@ public class ReceiveTaskState extends TaskState {
   @JsonCreator
   public ReceiveTaskState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputflowId) {
-    super(state, elementInstanceId, passedCnt, loopCnt, inputflowId);
+    super(state, parentElementInstanceId, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
   }
 
-  @Override
-  public ActivityState getNextLoopState() {
-    return new ReceiveTaskState(
-        FlowNodeStateEnum.ACTIVE,
-        this.getElementInstanceId(),
-        this.getPassedCnt(),
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
-
-  @Override
-  public ActivityState getFinishedLoopState() {
-    return new ReceiveTaskState(
-        FlowNodeStateEnum.FINISHED,
-        this.getElementInstanceId(),
-        this.getPassedCnt() + 1,
-        this.getLoopCnt() + 1,
-        this.getInputFlowId());
-  }
 }

@@ -21,4 +21,7 @@ public abstract class Gateway<S extends GatewayState> extends FlowNode<S> {
     super(id, parentId, incoming, outgoing);
     this.defaultFlow = defaultFlow;
   }
+
+  public abstract S getInitialState(String elementId, String inputFlowId, int passedCnt);
+
 }

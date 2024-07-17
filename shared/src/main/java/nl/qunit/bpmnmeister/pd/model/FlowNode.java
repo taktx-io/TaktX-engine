@@ -22,5 +22,4 @@ public abstract class FlowNode<S extends FlowNodeState> extends FlowElement {
     this.outgoing = outgoing;
   }
 
-  public abstract S getInitialState(String inputFlowId, int passedCnt);
 }

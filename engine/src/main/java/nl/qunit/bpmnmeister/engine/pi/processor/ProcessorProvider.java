@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pi.processor.flowelement.BoundaryEventProcessor;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
@@ -13,6 +14,7 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.pd.model.SendTask;
@@ -40,6 +42,7 @@ public class ProcessorProvider {
   @Inject CallActivityProcessor callActivityProcessor;
   @Inject SendTaskProcessor sendTaskProcessor;
   @Inject ReceiveTaskProcessor receiveTaskProcessor;
+  @Inject FeelExpressionHandler feelExpressionHandler;
 
   public StateProcessor<?, ?> getProcessor(BaseElement element) {
     if (element instanceof ThrowEvent<?> throwEvent) {
@@ -95,6 +98,14 @@ public class ProcessorProvider {
     } else if (element instanceof Task) {
       // This must be the last check, as Task is the superclass of all other tasks
       processor = taskProcessor;
+    }
+    if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
+      // Wrap in MultiInstance processor when the element has loop characteristics
+      if (element.getLoopCharacteristics().isSequential()) {
+        return new SequentialMultiInstanceProcessor(feelExpressionHandler, processor);
+      } else {
+        return new ParallelMultiInstanceProcessor(feelExpressionHandler, processor);
+      }
     }
     return processor;
   }

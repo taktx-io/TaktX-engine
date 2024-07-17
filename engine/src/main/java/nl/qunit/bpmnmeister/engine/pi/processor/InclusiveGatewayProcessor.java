@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -42,29 +43,33 @@ public class InclusiveGatewayProcessor
           getOutgoingFlowsMatchingConditionOrDefault(
               definition, element, variables, feelExpressionHandler);
       return TriggerResult.builder()
-          .newFlowNodeState(
-              new InclusiveGatewayState(
-                  oldState.getElementInstanceId(),
-                  oldState.getPassedCnt() + 1,
-                  FlowNodeStateEnum.FINISHED,
-                  oldState.getInputFlowId(),
-                  triggeredInputFlows,
-                  newActiveFlows))
+          .newFlowNodeStates(
+              List.of(
+                  new InclusiveGatewayState(
+                      oldState.getElementInstanceId(),
+                      oldState.getElementId(),
+                      oldState.getPassedCnt() + 1,
+                      FlowNodeStateEnum.FINISHED,
+                      oldState.getInputFlowId(),
+                      triggeredInputFlows,
+                      newActiveFlows)))
           .processInstanceTriggers(
-              getProcessInstanceTriggers(definition, processInstance, element, variables))
+              getProcessInstanceTriggers(definition, processInstance, element, oldState, variables))
           .build();
 
     } else {
       // Not all incoming flows have been triggered, so we will not trigger the output flows
       return TriggerResult.builder()
-          .newFlowNodeState(
-              new InclusiveGatewayState(
-                  oldState.getElementInstanceId(),
-                  oldState.getPassedCnt(),
-                  FlowNodeStateEnum.ACTIVE,
-                  oldState.getInputFlowId(),
-                  triggeredInputFlows,
-                  oldState.getSelectedOutputFlows()))
+          .newFlowNodeStates(
+              List.of(
+                  new InclusiveGatewayState(
+                      oldState.getElementInstanceId(),
+                      oldState.getElementId(),
+                      oldState.getPassedCnt(),
+                      FlowNodeStateEnum.ACTIVE,
+                      oldState.getInputFlowId(),
+                      triggeredInputFlows,
+                      oldState.getSelectedOutputFlows())))
           .build();
     }
   }
@@ -157,6 +162,7 @@ public class InclusiveGatewayProcessor
   protected InclusiveGatewayState getTerminateElementState(InclusiveGatewayState elementState) {
     return new InclusiveGatewayState(
         elementState.getElementInstanceId(),
+        elementState.getElementId(),
         elementState.getPassedCnt(),
         FlowNodeStateEnum.TERMINATED,
         elementState.getInputFlowId(),
