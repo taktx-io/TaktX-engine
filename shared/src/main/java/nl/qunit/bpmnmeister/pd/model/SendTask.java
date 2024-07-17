@@ -35,18 +35,4 @@ public class SendTask extends ExternalTask<SendTaskState> {
         FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, 0, inputFlowId);
   }
 
-  @Override
-  protected FlowElement withoutLoopCharacteristics() {
-    return new SendTask(
-        getId(),
-        getId(),
-        getWorkerDefinition(),
-        getRetries(),
-        getIncoming(),
-        getOutgoing(),
-        getImplementation(),
-        LoopCharacteristics.NONE,
-        getHeaders(),
-        getIoMapping());
-  }
 }

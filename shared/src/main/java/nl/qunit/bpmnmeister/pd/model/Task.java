@@ -31,7 +31,7 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    elements.put(getId(), withoutLoopCharacteristics());
+    elements.put(getId(), this);
 
     // Wrap in Process element
     String parentProcessDefinitionId =
@@ -52,10 +52,6 @@ public class Task<S extends TaskState> extends Activity<TaskState> {
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
-  }
-
-  protected FlowElement withoutLoopCharacteristics() {
-    return new Task<>(getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, getIoMapping());
   }
 
   @Override

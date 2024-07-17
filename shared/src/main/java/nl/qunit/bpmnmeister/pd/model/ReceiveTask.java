@@ -35,9 +35,4 @@ public class ReceiveTask extends Task<ReceiveTaskState> {
         FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, inputFlowId);
   }
 
-  @Override
-  protected FlowElement withoutLoopCharacteristics() {
-    return new ReceiveTask(
-        getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, getMessageRef(), getIoMapping());
-  }
 }

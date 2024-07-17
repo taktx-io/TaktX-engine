@@ -35,19 +35,4 @@ public class ServiceTask extends ExternalTask<ServiceTaskState> {
     return new ServiceTaskState(
         FlowNodeStateEnum.READY, parentElementInstanceId, UUID.randomUUID(), elementId, passedCnt, 0, 0, inputFlowId);
   }
-
-  @Override
-  protected FlowElement withoutLoopCharacteristics() {
-    return new ServiceTask(
-        getId(),
-        getId(),
-        getWorkerDefinition(),
-        getRetries(),
-        getIncoming(),
-        getOutgoing(),
-        getImplementation(),
-        LoopCharacteristics.NONE,
-        getHeaders(),
-        getIoMapping());
-  }
 }

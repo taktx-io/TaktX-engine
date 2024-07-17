@@ -37,7 +37,7 @@ public class CallActivity extends Activity<CallActivityState> {
   @Override
   public ProcessDefinition getAsSubProcessDefinition(ProcessDefinition parentProcessDefinition) {
     Map<String, FlowElement> elements = new HashMap<>();
-    elements.put(getId(), withoutLoopCharacteristics());
+    elements.put(getId(), this);
 
     // Wrap in Process element
     DefinitionsKey existingDefinitionsKey =
@@ -59,11 +59,6 @@ public class CallActivity extends Activity<CallActivityState> {
 
     Integer version = parentProcessDefinition.getVersion();
     return new ProcessDefinition(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
-  }
-
-  protected FlowElement withoutLoopCharacteristics() {
-    return new CallActivity(
-        getId(), getId(), getIncoming(), getOutgoing(), LoopCharacteristics.NONE, calledElement, getIoMapping());
   }
 
   @Override
