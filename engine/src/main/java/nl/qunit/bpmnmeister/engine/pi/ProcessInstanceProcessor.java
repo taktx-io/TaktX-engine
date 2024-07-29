@@ -305,7 +305,7 @@ public class ProcessInstanceProcessor
     for (ProcessInstanceTrigger nextTrigger : triggerResult.getProcessInstanceTriggers()) {
 
       if (nextTrigger instanceof StartNewProcessInstanceTrigger
-          || nextTrigger instanceof TerminateTrigger) {
+          || triggerIsTerminateProcessInstance(nextTrigger)) {
         processTrigger(nextTrigger);
       } else {
         updatedProcessInstance =
@@ -313,6 +313,13 @@ public class ProcessInstanceProcessor
       }
     }
     return updatedProcessInstance;
+  }
+
+  private boolean triggerIsTerminateProcessInstance(ProcessInstanceTrigger nextTrigger) {
+    if (nextTrigger instanceof TerminateTrigger terminateTrigger) {
+      return terminateTrigger.getElementInstanceId().equals(Constants.NONE_UUID);
+    }
+    return false;
   }
 
   private void processTriggerResultForwards(

@@ -16,8 +16,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
+import nl.qunit.bpmnmeister.engine.pi.processor.MultiInstanceState;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.state.CallActivityState;
+import nl.qunit.bpmnmeister.pi.state.SubProcessState;
+import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
@@ -56,9 +60,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 1)
-        .hasPassedElement("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("task-id", TaskState.class, 3)
+        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -73,9 +78,10 @@ class MultiInstanceTest {
         .waitUntilCompleted(Duration.ofSeconds(120))
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 1)
-        .hasPassedElement("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("task-id", TaskState.class, 1000)
+        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
   }
 
 
@@ -89,9 +95,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2", "dxxx3", "exxx4", "fxxx5"))
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 1)
-        .hasPassedElement("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("task-id", TaskState.class, 6)
+        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -104,9 +111,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("task-id", 1)
-        .hasPassedElement("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
+        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -120,9 +128,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("callactivity-id", 1)
-        .hasPassedElement("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
+        .hasPassedElementWithId("callactivity-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
 
   }
 

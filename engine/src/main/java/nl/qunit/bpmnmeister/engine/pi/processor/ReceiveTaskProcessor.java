@@ -19,7 +19,7 @@ import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, ReceiveTaskState> {
 
   @Override
-  protected TriggerResult triggerStartFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,

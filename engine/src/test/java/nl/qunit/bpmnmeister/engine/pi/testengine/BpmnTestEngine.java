@@ -12,9 +12,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -499,8 +499,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   private static int getPassedCnt(String elementId, ProcessInstanceUpdate poll) {
-    Optional<FlowNodeState> flowNodeState = poll.getFlowNodeStates().get(elementId);
-    return flowNodeState.map(FlowNodeState::getPassedCnt).orElse(0);
+    List<FlowNodeState> flowNodeState = poll.getFlowNodeStates().get(elementId).stream().filter(e -> e.getPassedCnt() > 0).toList();
+
+    return flowNodeState.size();
   }
 
   public BpmnTestEngine sendMessage(String messageName, Variables variables) {
@@ -581,8 +582,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             if (poll != null &&
                 poll.getProcessInstanceKey() != null &&
                 poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
-                 poll.getFlowNodeStates().get(elementId).isPresent() &&
-                FlowNodeStateEnum.ACTIVE == poll.getFlowNodeStates().get(elementId).get().getState()) {
+                 !poll.getFlowNodeStates().get(elementId).isEmpty() &&
+                FlowNodeStateEnum.ACTIVE == poll.getFlowNodeStates().get(elementId).get(0).getState()) {
               return poll;
             }
           } while (poll != null);

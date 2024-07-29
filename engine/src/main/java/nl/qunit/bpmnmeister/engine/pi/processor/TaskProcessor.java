@@ -17,7 +17,7 @@ import nl.qunit.bpmnmeister.pi.state.TaskState;
 public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
 
   @Override
-  protected TriggerResult triggerStartFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,

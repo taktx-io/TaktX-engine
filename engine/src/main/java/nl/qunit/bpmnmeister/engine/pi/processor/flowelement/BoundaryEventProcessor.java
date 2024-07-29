@@ -49,8 +49,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
         getMessageSubscriptions(processInstance, processDefinition, element, oldState, variables);
     Set<MessageEventKey> messageEventKeys =
         subscriptions.stream().map(MessageEvent::getKey).collect(Collectors.toSet());
-    Set<MessageScheduler> schedules =
-        getSchedules(triggerResultBuilder, processInstance, element, oldState, variables);
+    Set<MessageScheduler> schedules = getSchedules(processInstance, element, oldState, variables);
     Set<ScheduleKey> scheduleKeys =
         schedules.stream().map(MessageScheduler::getScheduleKey).collect(Collectors.toSet());
 
@@ -161,7 +160,6 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   }
 
   private Set<MessageScheduler> getSchedules(
-      TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
       BoundaryEvent element,
       BoundaryEventState oldState,
@@ -195,17 +193,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       BoundaryEventState boundaryEventState) {
 
     return TriggerResult.builder()
-        .newFlowNodeStates(
-            List.of(
-                new BoundaryEventState(
-                    boundaryEventState.getElementInstanceId(),
-                    boundaryEventState.getElementId(),
-                    boundaryEventState.getPassedCnt(),
-                    FlowNodeStateEnum.TERMINATED,
-                    boundaryEventState.getAttachedInstanceId(),
-                    boundaryEventState.getScheduleKeys(),
-                    boundaryEventState.getMessageEventKeys(),
-                    boundaryEventState.getInputFlowId())))
+        .newFlowNodeStates(List.of(getTerminateElementState(boundaryEventState)))
         .cancelSchedules(boundaryEventState.getScheduleKeys())
         .cancelMessageSubscriptions(boundaryEventState.getMessageEventKeys())
         .build();

@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallActivityState> {
 
   @Override
-  protected TriggerResult triggerStartFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,

@@ -40,13 +40,14 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
     log.info("Trigger processor: " + this);
 
     if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
-      Optional<FlowNodeState> optFlowNodeState =
+      List<FlowNodeState> optFlowNodeState =
           processInstance.getFlowNodeStates().get(flowElementTrigger.getElementId());
       FlowNodeState flowNodeState =
-          optFlowNodeState.orElse(
-              ((Gateway) element)
+          optFlowNodeState.isEmpty()
+              ? ((Gateway) element)
                   .getInitialState(
-                      flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0));
+                      flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0)
+              : optFlowNodeState.get(0);
 
       return triggerStartFlowElement(
           flowElementTrigger,
@@ -68,7 +69,8 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
     }
   }
 
-  public TriggerResult terminate(TerminateTrigger terminateTrigger, G flowElement, S elementState) {
+  protected TriggerResult terminate(
+      TerminateTrigger terminateTrigger, G flowElement, S elementState) {
     return TriggerResult.builder()
         .newFlowNodeStates(List.of(getTerminateElementState(elementState)))
         .build();

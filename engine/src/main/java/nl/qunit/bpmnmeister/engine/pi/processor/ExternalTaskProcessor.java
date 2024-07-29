@@ -58,7 +58,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
   }
 
   @Override
-  protected TriggerResult triggerStartFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,

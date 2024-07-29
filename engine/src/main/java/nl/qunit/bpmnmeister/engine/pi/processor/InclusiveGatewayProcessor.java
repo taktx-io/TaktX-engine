@@ -92,10 +92,11 @@ public class InclusiveGatewayProcessor
       Set<GatewayOutgoingFlowPair> pairs =
           inclusiveGateways.getOrDefault(incomingFlow, new HashSet<>());
       for (GatewayOutgoingFlowPair pair : pairs) {
-        Optional<FlowNodeState> flowNodeState =
+        List<FlowNodeState> flowNodeStates =
             processInstance.getFlowNodeStates().get(pair.inclusiveGateway.getId());
-        if (flowNodeState.isPresent()) {
-          InclusiveGatewayState inclusiveGatewayState = (InclusiveGatewayState) flowNodeState.get();
+        if (!flowNodeStates.isEmpty()) {
+          InclusiveGatewayState inclusiveGatewayState =
+              (InclusiveGatewayState) flowNodeStates.get(0);
           if (inclusiveGatewayState.getSelectedOutputFlows().contains(pair.outputFlowId)) {
             allIncomingFlowsTriggered = false;
             break;

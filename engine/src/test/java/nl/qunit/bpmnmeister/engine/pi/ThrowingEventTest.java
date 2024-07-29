@@ -54,12 +54,12 @@ class ThrowingEventTest {
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElement("StartEvent_1")
-        .hasPassedElement("Timer_1")
-        .hasPassedElement("Task_2")
-        .hasPassedElement("EndEvent_2")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("Timer_1")
+        .hasPassedElementWithId("Task_2")
+        .hasPassedElementWithId("EndEvent_2")
         .hasTerminatedElement("Task_1")
-        .hasNotPassedElement("EndEvent_1")
+        .hasNotPassedElementWithId("EndEvent_1")
         .isTerminated();
   }
 

@@ -56,9 +56,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("MappedOutputVariable", "value1")
-        .hasPassedElement("StartEvent_2")
-        .hasPassedElement("service-task-id")
-        .hasPassedElement("EndEvent_2");
+        .hasPassedElementWithId("StartEvent_2")
+        .hasPassedElementWithId("service-task-id")
+        .hasPassedElementWithId("EndEvent_2");
   }
 
 
@@ -74,9 +74,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
-        .hasPassedElement("StartEvent_2")
-        .hasPassedElement("service-task-id")
-        .hasPassedElement("EndEvent_2");
+        .hasPassedElementWithId("StartEvent_2")
+        .hasPassedElementWithId("service-task-id")
+        .hasPassedElementWithId("EndEvent_2");
   }
 
   @Test
@@ -160,9 +160,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
-        .hasPassedElement("StartEvent_2")
-        .hasPassedElement("send-task-id")
-        .hasPassedElement("EndEvent_2");
+        .hasPassedElementWithId("StartEvent_2")
+        .hasPassedElementWithId("send-task-id")
+        .hasPassedElementWithId("EndEvent_2");
   }
 
 }

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
@@ -33,8 +34,13 @@ public class FlowNodeStates {
   }
 
   @JsonIgnore
-  public Optional<FlowNodeState> get(String elementId) {
-    return elementStateMap.values().stream().filter(state -> state.getElementId().equals(elementId)).findFirst();
+  public List<FlowNodeState> filter(Predicate<FlowNodeState> predicate) {
+    return elementStateMap.values().stream().filter(predicate).toList();
+  }
+
+  @JsonIgnore
+  public List<FlowNodeState> get(String elementId) {
+    return elementStateMap.values().stream().filter(state -> state.getElementId().equals(elementId)).toList();
   }
 
   @JsonIgnore

@@ -23,7 +23,7 @@ import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProcessState> {
 
   @Override
-  protected TriggerResult triggerStartFlowElementWithoutLoop(
+  protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,

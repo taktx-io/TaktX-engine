@@ -22,6 +22,7 @@ import nl.qunit.bpmnmeister.pi.StartFlowElementTriggerIteration;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
+import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
@@ -39,9 +40,10 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       FlowNode<?> element,
       ScopedVars variables) {
     log.info("Trigger activity processor: " + this);
-
+    TriggerResult triggerResult;
+    S oldState = null;
     if (trigger instanceof StartFlowElementTriggerIteration flowElementTriggerIteration) {
-      S initialState =
+      oldState =
           (S)
               ((E) element)
                   .getInitialState(
@@ -49,49 +51,61 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                       element.getId(),
                       flowElementTriggerIteration.getInputFlowId(),
                       0);
-      return triggerStartFlowElementWithoutLoop(
-          flowElementTriggerIteration,
-          processInstance,
-          definition,
-          (E) element,
-          initialState,
-          variables);
+      triggerResult =
+          triggerStartFlowElement(
+              flowElementTriggerIteration,
+              processInstance,
+              definition,
+              (E) element,
+              oldState,
+              variables);
     } else if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
-      S initialState =
+      oldState =
           (S)
               ((E) element)
                   .getInitialState(
                       Constants.NONE_UUID, element.getId(), flowElementTrigger.getInputFlowId(), 0);
-      return triggerStartFlowElementWithoutLoop(
-          flowElementTrigger, processInstance, definition, (E) element, initialState, variables);
+      triggerResult =
+          triggerStartFlowElement(
+              flowElementTrigger, processInstance, definition, (E) element, oldState, variables);
     } else if (trigger instanceof ContinueFlowElementTrigger continueFlowElementTrigger) {
       Optional<FlowNodeState> flowNodeState =
           processInstance
               .getFlowNodeStates()
               .get(continueFlowElementTrigger.getElementInstanceId());
       if (flowNodeState.isPresent()) {
-        TriggerResult triggerResult =
+        oldState = (S) flowNodeState.get();
+        triggerResult =
             triggerContinueFlowElement(
                 continueFlowElementTrigger,
                 processInstance,
                 definition,
                 (E) element,
-                (S) flowNodeState.get(),
+                oldState,
                 variables);
-        return triggerResult;
       } else {
-        return TriggerResult.EMPTY;
+        triggerResult = TriggerResult.EMPTY;
       }
     } else if (trigger instanceof TerminateTrigger terminateTrigger) {
       Optional<FlowNodeState> flowNodeState =
           processInstance.getFlowNodeStates().get(terminateTrigger.getElementInstanceId());
       if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.ACTIVE) {
-        return terminate(terminateTrigger, (E) element, (S) flowNodeState.get());
+        oldState = (S) flowNodeState.get();
+        triggerResult = terminate(terminateTrigger, (E) element, oldState);
       } else {
-        return TriggerResult.EMPTY;
+        triggerResult = TriggerResult.EMPTY;
       }
+    } else {
+      triggerResult = TriggerResult.EMPTY;
     }
-    throw new IllegalStateException("Unknown trigger type: " + trigger);
+
+    List<ProcessInstanceTrigger> triggersForBoundaryEvents =
+        getTriggerResultForBoundaryEvents(
+            processInstance, definition, element, oldState, triggerResult);
+    List<ProcessInstanceTrigger> allProcessInstanceTriggers =
+        new ArrayList<>(triggerResult.getProcessInstanceTriggers());
+    allProcessInstanceTriggers.addAll(triggersForBoundaryEvents);
+    return triggerResult.toBuilder().processInstanceTriggers(allProcessInstanceTriggers).build();
   }
 
   protected abstract TriggerResult triggerContinueFlowElement(
@@ -102,7 +116,8 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
       S s,
       ScopedVars variables);
 
-  public TriggerResult terminate(TerminateTrigger terminateTrigger, E flowElement, S elementState) {
+  protected TriggerResult terminate(
+      TerminateTrigger terminateTrigger, E flowElement, S elementState) {
     return TriggerResult.builder()
         .newFlowNodeStates(List.of(getTerminateElementState(elementState)))
         .build();
@@ -110,7 +125,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
   protected abstract S getTerminateElementState(S elementState);
 
-  protected abstract TriggerResult triggerStartFlowElementWithoutLoop(
+  protected abstract TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
       ProcessDefinition definition,
@@ -135,49 +150,24 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
         .build();
   }
 
-  protected TriggerResult getTriggerResultForBoundaryEventsStart(
+  private List<ProcessInstanceTrigger> getTriggerResultForBoundaryEvents(
       ProcessInstance processInstance,
       ProcessDefinition definition,
-      E element,
+      FlowNode element,
       S oldState,
       TriggerResult triggerResult) {
-    List<BoundaryEvent> boundaryEvents =
-        definition
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getBoundaryEventsAttachedToElement(element.getId());
-
-    List<ProcessInstanceTrigger> triggers = new ArrayList<>();
-    for (BoundaryEvent boundaryEvent : boundaryEvents) {
-      triggers.add(
-          new StartFlowElementTrigger(
-              processInstance.getProcessInstanceKey(),
-              oldState.getElementInstanceId(),
-              boundaryEvent.getId(),
-              Constants.NONE,
-              Variables.empty()));
+    if (triggerResult.getNewFlowNodeStates().isEmpty()) {
+      return List.of();
     }
-    triggers.addAll(triggerResult.getProcessInstanceTriggers());
-
-    return triggerResult.toBuilder().processInstanceTriggers(triggers).build();
-  }
-
-  protected TriggerResult getTriggerResultForBoundaryEventsFinish(
-      ProcessInstance processInstance,
-      ProcessDefinition definition,
-      E element,
-      S oldState,
-      TriggerResult triggerResult) {
-    List<BoundaryEvent> boundaryEvents =
-        definition
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getBoundaryEventsAttachedToElement(element.getId());
-    S newElementState = (S) triggerResult.getNewFlowNodeStates();
+    S newElementState = (S) triggerResult.getNewFlowNodeStates().get(0);
     List<ProcessInstanceTrigger> triggers = new ArrayList<>();
     if (elementActivated(oldState, newElementState)) {
+      List<BoundaryEvent> boundaryEvents =
+          definition
+              .getDefinitions()
+              .getRootProcess()
+              .getFlowElements()
+              .getBoundaryEventsAttachedToElement(element.getId());
       for (BoundaryEvent boundaryEvent : boundaryEvents) {
         triggers.add(
             new StartFlowElementTrigger(
@@ -188,17 +178,27 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
                 Variables.empty()));
       }
     } else if (elementFinished(oldState, newElementState)) {
-      for (BoundaryEvent boundaryEvent : boundaryEvents) {
-        triggers.add(
-            new TerminateTrigger(
-                processInstance.getProcessInstanceKey(),
-                boundaryEvent.getId(),
-                oldState.getElementInstanceId()));
-      }
+      // Find all boundary event instances attached to the element instance
+      processInstance
+          .getFlowNodeStates()
+          .filter(
+              fn ->
+                  fn instanceof BoundaryEventState boundaryEventState
+                      && boundaryEventState
+                          .getAttachedInstanceId()
+                          .equals(newElementState.getElementInstanceId()))
+          .stream()
+          .map(fn -> (BoundaryEventState) fn)
+          .forEach(
+              bes -> {
+                triggers.add(
+                    new TerminateTrigger(
+                        processInstance.getProcessInstanceKey(),
+                        bes.getElementId(),
+                        bes.getElementInstanceId()));
+              });
     }
-    triggers.addAll(triggerResult.getProcessInstanceTriggers());
-
-    return triggerResult.toBuilder().processInstanceTriggers(triggers).build();
+    return triggers;
   }
 
   private boolean elementActivated(S oldState, S newState) {
@@ -207,7 +207,6 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   }
 
   protected boolean elementFinished(S oldState, S newState) {
-    return oldState.getState() == FlowNodeStateEnum.ACTIVE
-        && newState.getState() == FlowNodeStateEnum.FINISHED;
+    return oldState.getState() == FlowNodeStateEnum.ACTIVE && newState.getState().isFinished();
   }
 }
