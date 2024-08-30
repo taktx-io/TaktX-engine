@@ -9,21 +9,21 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pd.model.Event;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.EventDTO;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.EventState;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Slf4j
-public abstract class EventProcessor<E extends Event<?>, S extends EventState>
+public abstract class EventProcessor<E extends EventDTO<?>, S extends EventState>
     extends StateProcessor<E, S> {
 
   @Inject protected FeelExpressionHandler feelExpressionHandler;
@@ -32,14 +32,14 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
   public final TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables) {
     log.info("Trigger processor: " + this);
 
     if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
-      Event event = (Event) element;
-      FlowNodeState flowNodeState =
+      EventDTO event = (EventDTO) element;
+      FlowNodeStateDTO flowNodeState =
           event.getInitialState(
               flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0);
       return triggerStartFlowElement(
@@ -50,7 +50,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
           (S) flowNodeState,
           variables);
     } else if (trigger instanceof ContinueFlowElementTrigger continueFlowElementTrigger) {
-      Optional<FlowNodeState> flowNodeState =
+      Optional<FlowNodeStateDTO> flowNodeState =
           processInstance
               .getFlowNodeStates()
               .get(continueFlowElementTrigger.getElementInstanceId());
@@ -68,9 +68,9 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
         return TriggerResult.EMPTY;
       }
     } else if (trigger instanceof TerminateTrigger terminateTrigger) {
-      Optional<FlowNodeState> flowNodeState =
+      Optional<FlowNodeStateDTO> flowNodeState =
           processInstance.getFlowNodeStates().get(terminateTrigger.getElementInstanceId());
-      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.ACTIVE) {
+      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.WAITING) {
         return terminate(terminateTrigger, (E) element, (S) flowNodeState.get());
       } else {
         return TriggerResult.EMPTY;
@@ -90,7 +90,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
   public TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       E element,
       S oldState,
       ScopedVars variables) {
@@ -98,7 +98,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
     UUID childProcessInstanceKey = UUID.randomUUID();
     variables.push(
         childProcessInstanceKey, processInstance.getProcessInstanceKey(), trigger.getVariables());
-    Variables outputVariables = ioMappingProcessor.getOutputVariables(element, variables);
+    VariablesDTO outputVariables = ioMappingProcessor.getOutputVariables(element, variables);
     variables.pop();
     variables.merge(outputVariables);
 
@@ -110,7 +110,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       E element,
       S s,
       ScopedVars variables) {
@@ -130,7 +130,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
       ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables);
@@ -139,7 +139,7 @@ public abstract class EventProcessor<E extends Event<?>, S extends EventState>
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables);

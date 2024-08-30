@@ -9,7 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -48,14 +48,14 @@ class ProcessInstanceProcessorVariableTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.gen1.bpmn")
-        .startProcessInstance(Variables.of("var1", "value1"))
+        .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilServiceTaskIsWaitingForResponse("service-task-id")
         .assertThatExternalTask()
         .doesNotHaveVariable("StartEvent_Output_1")
         .doesNotHaveVariable("StartEvent_Output_2")
         .hasVariableWithValue("inputVariable", "123.0")
         .toProcessLevel()
-        .andRespondWithSuccess(Variables.of("var2", "value2"))
+        .andRespondWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")

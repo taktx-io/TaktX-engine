@@ -10,10 +10,15 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 
 @Getter
 @ToString(callSuper = true)
-public class StartFlowElementTriggerIteration extends StartFlowElementTrigger  {
+public class StartFlowElementTriggerIteration extends StartFlowElementTrigger {
   public static final StartFlowElementTriggerIteration NONE =
       new StartFlowElementTriggerIteration(
-          Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
+          Constants.NONE_UUID,
+          Constants.NONE_UUID,
+          Constants.NONE_UUID,
+          Constants.NONE,
+          Constants.NONE,
+          VariablesDTO.empty());
 
   private final UUID parentElementInstance;
   private final UUID elementInstanceId;
@@ -25,11 +30,9 @@ public class StartFlowElementTriggerIteration extends StartFlowElementTrigger  {
       @JsonProperty("elementInstanceId") @Nonnull UUID elementInstanceId,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
-      @JsonProperty("variables") @Nonnull Variables variables
-      ) {
+      @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, Constants.NONE_UUID, elementId, inputFlowId, variables);
     this.parentElementInstance = parentElementInstance;
     this.elementInstanceId = elementInstanceId;
   }
-
 }

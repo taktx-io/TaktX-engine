@@ -4,11 +4,12 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.TLoopCharacteristics;
 import nl.qunit.bpmnmeister.bpmn.TMultiInstanceLoopCharacteristics;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
 
 public class ZeebeLoopCharacteristicsMapper implements LoopCharacteristicsMapper {
 
-  public LoopCharacteristics map(JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
+  public LoopCharacteristicsDTO map(
+      JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
     if (loopCharacteristics != null) {
       TLoopCharacteristics tLoopCharacteristics = loopCharacteristics.getValue();
       if (tLoopCharacteristics
@@ -19,7 +20,7 @@ public class ZeebeLoopCharacteristicsMapper implements LoopCharacteristicsMapper
                 nl.qunit.bpmnmeister.bpmn.LoopCharacteristics.class);
         if (optLoop.isPresent()) {
           nl.qunit.bpmnmeister.bpmn.LoopCharacteristics zeebeLoop = optLoop.get();
-          return new LoopCharacteristics(
+          return new LoopCharacteristicsDTO(
               multiInstanceLoopCharacteristics.isIsSequential(),
               zeebeLoop.getInputCollection(),
               zeebeLoop.getInputElement(),
@@ -28,6 +29,6 @@ public class ZeebeLoopCharacteristicsMapper implements LoopCharacteristicsMapper
         }
       }
     }
-    return LoopCharacteristics.NONE;
+    return LoopCharacteristicsDTO.NONE;
   }
 }

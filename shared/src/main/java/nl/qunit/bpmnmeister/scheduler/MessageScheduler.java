@@ -20,7 +20,8 @@ public interface MessageScheduler {
   List<SchedulableMessage<?>> getMessages();
 
   @JsonIgnore
-  MessageScheduler evaluate(Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> triggerConsumer);
+  MessageScheduler evaluate(
+      Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> triggerConsumer);
 
   ScheduleType getScheduleType();
 

@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -18,21 +18,21 @@ import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
-public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallActivityState> {
+public class CallActivityProcessor extends ActivityProcessor<CallActivityDTO, CallActivityState> {
 
   @Override
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      CallActivity element,
+      ProcessDefinitionDTO definition,
+      CallActivityDTO element,
       CallActivityState oldState,
       ScopedVars variables) {
     return TriggerResult.builder()
         .newFlowNodeStates(
             List.of(
                 new CallActivityState(
-                    FlowNodeStateEnum.ACTIVE,
+                    FlowNodeStateEnum.WAITING,
                     oldState.getChildProcessInstanceId(),
                     oldState.getParentElementInstanceId(),
                     oldState.getElementInstanceId(),
@@ -58,8 +58,8 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      CallActivity element,
+      ProcessDefinitionDTO definition,
+      CallActivityDTO element,
       CallActivityState oldState,
       ScopedVars variables) {
     CallActivityState newState =
@@ -78,7 +78,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivity, CallA
 
   @Override
   public TriggerResult terminate(
-      TerminateTrigger terminateTrigger, CallActivity flowElement, CallActivityState elementState) {
+      TerminateTrigger terminateTrigger, CallActivityDTO flowElement, CallActivityState elementState) {
     ProcessInstanceTrigger terminateSubProcessTrigger =
         new TerminateTrigger(
             elementState.getChildProcessInstanceId(), Constants.NONE, Constants.NONE_UUID);

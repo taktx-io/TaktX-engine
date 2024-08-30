@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.pd.model;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import java.lang.reflect.Modifier;
@@ -12,17 +12,17 @@ import org.reflections.Reflections;
 class BaseElementTest {
   @Test
   void testAllSubTypesAreMappedToJackson() {
-    Reflections reflections = new Reflections(BaseElement.class.getPackageName());
-    Set<Class<? extends BaseElement>> allClasses = reflections.getSubTypesOf(BaseElement.class);
+    Reflections reflections = new Reflections(BaseElementDTO.class.getPackageName());
+    Set<Class<? extends BaseElementDTO>> allClasses = reflections.getSubTypesOf(BaseElementDTO.class);
 
-    Set<Class<? extends BaseElement>> nonAbstractClasses = allClasses.stream()
+    Set<Class<? extends BaseElementDTO>> nonAbstractClasses = allClasses.stream()
         .filter(aClass -> !Modifier.isAbstract(aClass.getModifiers()))
         .collect(Collectors.toSet());
 
-    JsonSubTypes jsonSubTypes = BaseElement.class.getAnnotation(JsonSubTypes.class);
+    JsonSubTypes jsonSubTypes = BaseElementDTO.class.getAnnotation(JsonSubTypes.class);
     JsonSubTypes.Type[] types = jsonSubTypes.value();
 
-    for (Class<? extends BaseElement> nonAbstractClass : nonAbstractClasses) {
+    for (Class<? extends BaseElementDTO> nonAbstractClass : nonAbstractClasses) {
       boolean isMapped = false;
       for (JsonSubTypes.Type type : types) {
         if (type.value().equals(nonAbstractClass)) {

@@ -9,25 +9,25 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pi.processor.flowelement.BoundaryEventProcessor;
-import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
+import nl.qunit.bpmnmeister.pd.model.ActivityDTO;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEventDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTriggerIteration;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Slf4j
-public abstract class ActivityProcessor<E extends Activity, S extends ActivityState>
+public abstract class ActivityProcessor<E extends ActivityDTO, S extends ActivityState>
     extends StateProcessor<E, S> {
 
   @Inject FeelExpressionHandler feelExpressionHandler;
@@ -36,8 +36,8 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   public final TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables) {
     log.info("Trigger activity processor: " + this);
     TriggerResult triggerResult;
@@ -69,7 +69,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
           triggerStartFlowElement(
               flowElementTrigger, processInstance, definition, (E) element, oldState, variables);
     } else if (trigger instanceof ContinueFlowElementTrigger continueFlowElementTrigger) {
-      Optional<FlowNodeState> flowNodeState =
+      Optional<FlowNodeStateDTO> flowNodeState =
           processInstance
               .getFlowNodeStates()
               .get(continueFlowElementTrigger.getElementInstanceId());
@@ -87,9 +87,9 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
         triggerResult = TriggerResult.EMPTY;
       }
     } else if (trigger instanceof TerminateTrigger terminateTrigger) {
-      Optional<FlowNodeState> flowNodeState =
+      Optional<FlowNodeStateDTO> flowNodeState =
           processInstance.getFlowNodeStates().get(terminateTrigger.getElementInstanceId());
-      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.ACTIVE) {
+      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.WAITING) {
         oldState = (S) flowNodeState.get();
         triggerResult = terminate(terminateTrigger, (E) element, oldState);
       } else {
@@ -111,7 +111,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   protected abstract TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       E element,
       S s,
       ScopedVars variables);
@@ -128,7 +128,7 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   protected abstract TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       E element,
       S oldState,
       ScopedVars variables);
@@ -136,8 +136,8 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
   protected TriggerResult finishActivity(
       TriggerResult triggerResult,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
-      Activity<?> element,
+      ProcessDefinitionDTO processDefinition,
+      ActivityDTO<?> element,
       ActivityState newState,
       ScopedVars variables) {
     List<ProcessInstanceTrigger> triggers =
@@ -152,8 +152,8 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
   private List<ProcessInstanceTrigger> getTriggerResultForBoundaryEvents(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       S oldState,
       TriggerResult triggerResult) {
     if (triggerResult.getNewFlowNodeStates().isEmpty()) {
@@ -162,20 +162,20 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
     S newElementState = (S) triggerResult.getNewFlowNodeStates().get(0);
     List<ProcessInstanceTrigger> triggers = new ArrayList<>();
     if (elementActivated(oldState, newElementState)) {
-      List<BoundaryEvent> boundaryEvents =
+      List<BoundaryEventDTO> boundaryEvents =
           definition
               .getDefinitions()
               .getRootProcess()
               .getFlowElements()
               .getBoundaryEventsAttachedToElement(element.getId());
-      for (BoundaryEvent boundaryEvent : boundaryEvents) {
+      for (BoundaryEventDTO boundaryEvent : boundaryEvents) {
         triggers.add(
             new StartFlowElementTrigger(
                 processInstance.getProcessInstanceKey(),
                 oldState.getElementInstanceId(),
                 boundaryEvent.getId(),
                 Constants.NONE,
-                Variables.empty()));
+                VariablesDTO.empty()));
       }
     } else if (elementFinished(oldState, newElementState)) {
       // Find all boundary event instances attached to the element instance
@@ -203,10 +203,10 @@ public abstract class ActivityProcessor<E extends Activity, S extends ActivitySt
 
   private boolean elementActivated(S oldState, S newState) {
     return oldState.getState() == FlowNodeStateEnum.READY
-        && newState.getState() == FlowNodeStateEnum.ACTIVE;
+        && newState.getState() == FlowNodeStateEnum.WAITING;
   }
 
   protected boolean elementFinished(S oldState, S newState) {
-    return oldState.getState() == FlowNodeStateEnum.ACTIVE && newState.getState().isFinished();
+    return oldState.getState() == FlowNodeStateEnum.WAITING && newState.getState().isFinished();
   }
 }

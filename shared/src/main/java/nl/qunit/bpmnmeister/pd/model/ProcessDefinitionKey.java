@@ -22,10 +22,9 @@ public class ProcessDefinitionKey {
     this.version = version;
   }
 
-  public static ProcessDefinitionKey of(ProcessDefinition processDefinition) {
+  public static ProcessDefinitionKey of(ProcessDefinitionDTO processDefinition) {
     return new ProcessDefinitionKey(
         processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         processDefinition.getVersion());
   }
-
 }

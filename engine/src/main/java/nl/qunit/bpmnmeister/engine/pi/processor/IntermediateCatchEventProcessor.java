@@ -6,7 +6,7 @@ import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
@@ -27,7 +27,7 @@ public class IntermediateCatchEventProcessor
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState,
       ScopedVars variables) {
@@ -74,7 +74,7 @@ public class IntermediateCatchEventProcessor
       ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState,
       ScopedVars variables) {

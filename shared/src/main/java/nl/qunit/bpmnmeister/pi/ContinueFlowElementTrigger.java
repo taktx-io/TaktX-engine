@@ -15,7 +15,11 @@ public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
     implements SchedulableMessage<UUID> {
   public static final ContinueFlowElementTrigger NONE =
       new ContinueFlowElementTrigger(
-          Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
+          Constants.NONE_UUID,
+          Constants.NONE_UUID,
+          Constants.NONE,
+          Constants.NONE,
+          VariablesDTO.empty());
 
   private final UUID elementInstanceId;
   private final String inputFlowId;
@@ -26,7 +30,7 @@ public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
       @JsonProperty("elementInstanceId") @Nonnull UUID elementInstanceId,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
-      @JsonProperty("variables") @Nonnull Variables variables) {
+      @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, elementId, variables);
     this.elementInstanceId = elementInstanceId;
     this.inputFlowId = inputFlowId;

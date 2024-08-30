@@ -8,8 +8,8 @@ import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
+import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.Process;
 
 public class GenericRootElementMapper implements RootElementMapper {
@@ -28,15 +28,15 @@ public class GenericRootElementMapper implements RootElementMapper {
     return Process.NONE;
   }
 
-  private FlowElements mapFlowElements(
+  private FlowElementsDTO mapFlowElements(
       List<JAXBElement<? extends TFlowElement>> jaxbFlowElementList) {
-    Map<String, FlowElement> flowElements = new HashMap<>();
+    Map<String, FlowElementDTO> flowElements = new HashMap<>();
     for (JAXBElement<? extends TFlowElement> jaxbFlowElement : jaxbFlowElementList) {
       TFlowElement tFlowElement = jaxbFlowElement.getValue();
-      FlowElement flowElement =
+      FlowElementDTO flowElement =
           bpmnMapperFactory.createFlowElementMapper().map(tFlowElement, Constants.NONE);
       flowElements.put(flowElement.getId(), flowElement);
     }
-    return new FlowElements(flowElements);
+    return new FlowElementsDTO(flowElements);
   }
 }

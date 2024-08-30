@@ -10,7 +10,7 @@ import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 public class TriggerResult {
   public static final TriggerResult EMPTY = TriggerResult.builder().build();
 
-  @Builder.Default private List<FlowNodeState> newFlowNodeStates = List.of();
+  @Builder.Default private List<FlowNodeStateDTO> newFlowNodeStates = List.of();
   @Builder.Default private Set<ExternalTaskInfo> externalTasks = Set.of();
   @Builder.Default private List<ProcessInstanceTrigger> processInstanceTriggers = List.of();
   @Builder.Default private Set<StartCommand> newStartCommands = Set.of();
@@ -33,7 +33,7 @@ public class TriggerResult {
 
   @JsonCreator
   public TriggerResult(
-      @Nonnull @JsonProperty("newFlowNodeStates") List<FlowNodeState> newFlowNodeStates,
+      @Nonnull @JsonProperty("newFlowNodeStates") List<FlowNodeStateDTO> newFlowNodeStates,
       @Nonnull @JsonProperty("externalTasks") Set<ExternalTaskInfo> externalTasks,
       @Nonnull @JsonProperty("processInstanceTriggers")
           List<ProcessInstanceTrigger> processInstanceTriggers,

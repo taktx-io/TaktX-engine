@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 
 public interface ScopedVars {
 
@@ -15,17 +15,17 @@ public interface ScopedVars {
 
   JsonNode get(String name);
 
-  Variables getCurrentScopeVariables();
+  VariablesDTO getCurrentScopeVariables();
 
-  Variables select(UUID processInstanceKey);
+  VariablesDTO select(UUID processInstanceKey);
 
-  Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars);
+  VariablesDTO push(UUID processInstanceKey, UUID parentProcessInstanceKey, VariablesDTO vars);
 
   JsonNode put(String name, JsonNode node);
 
-  Variables pop();
+  VariablesDTO pop();
 
-  void merge(Variables outputVariables);
+  void merge(VariablesDTO outputVariables);
 
   int size();
 
@@ -53,17 +53,17 @@ public interface ScopedVars {
     }
 
     @Override
-    public Variables getCurrentScopeVariables() {
-      return Variables.of(of);
+    public VariablesDTO getCurrentScopeVariables() {
+      return VariablesDTO.of(of);
     }
 
     @Override
-    public Variables select(UUID processInstanceKey) {
-      return Variables.of(of);
+    public VariablesDTO select(UUID processInstanceKey) {
+      return VariablesDTO.of(of);
     }
 
     @Override
-    public Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars) {
+    public VariablesDTO push(UUID processInstanceKey, UUID parentProcessInstanceKey, VariablesDTO vars) {
       of.clear();
       of.putAll(vars.getVariables());
       return vars;
@@ -75,12 +75,12 @@ public interface ScopedVars {
     }
 
     @Override
-    public Variables pop() {
-      return Variables.of(of);
+    public VariablesDTO pop() {
+      return VariablesDTO.of(of);
     }
 
     @Override
-    public void merge(Variables outputVariables) {
+    public void merge(VariablesDTO outputVariables) {
       of.putAll(outputVariables.getVariables());
     }
 

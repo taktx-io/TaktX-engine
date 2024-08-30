@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ class IntermediateEventsTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .setTime(Instant.parse("2024-02-29T07:59:59Z"))
         .waitFor(Duration.ofSeconds(1))
         .assertThatProcess()
@@ -71,9 +71,9 @@ class IntermediateEventsTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
         .waitForProcessDeployment()
-        .startProcessInstance(Variables.of("correlationKey", "key1"))
+        .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitForMessageSubscription("IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
-        .andSendMessageWithCorrelationKey("IntermediateCatchMessage", "key1", Variables.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
@@ -89,7 +89,7 @@ class IntermediateEventsTest {
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/link-intermediate-catch-throw.bpmn")
-        .startProcessInstance(Variables.of("input", "value"))
+        .startProcessInstance(VariablesDTO.of("input", "value"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")

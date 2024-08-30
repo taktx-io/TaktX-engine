@@ -1,0 +1,11 @@
+package nl.qunit.bpmnmeister.engine.pi.testengine;
+
+import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
+import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+
+public class MessageEventDeserializer extends ObjectMapperDeserializer<MessageEvent> {
+
+  public MessageEventDeserializer() {
+    super(MessageEvent.class);
+  }
+}

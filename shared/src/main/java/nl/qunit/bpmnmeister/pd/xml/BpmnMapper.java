@@ -1,8 +1,8 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
-import nl.qunit.bpmnmeister.pd.model.Definitions;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 
 public interface BpmnMapper {
-  Definitions map(TDefinitions definitions, String hash);
+  DefinitionsDTO map(TDefinitions definitions, String hash);
 }

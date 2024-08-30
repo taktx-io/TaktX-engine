@@ -9,7 +9,7 @@ import lombok.ToString;
 
 @ToString
 @Getter
-public class TerminateTrigger extends ProcessInstanceTrigger {
+public class TerminateTrigger extends ProcessInstanceTrigger2 {
 
   private final UUID elementInstanceId;
 
@@ -18,7 +18,7 @@ public class TerminateTrigger extends ProcessInstanceTrigger {
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("elementId") String elementId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId) {
-    super(processInstanceKey, elementId, Variables.empty());
+    super(processInstanceKey, elementId, VariablesDTO.empty());
     this.elementInstanceId = elementInstanceId;
   }
 }

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
-public abstract class EventState extends FlowNodeState {
+public abstract class EventState extends FlowNodeStateDTO {
   @JsonCreator
   protected EventState(
       UUID elementInstanceId,

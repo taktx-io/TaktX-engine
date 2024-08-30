@@ -3,9 +3,9 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.Definitions;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
@@ -23,8 +23,8 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, Integer> definitionCountByIdStore;
-  private KeyValueStore<String, Definitions> xmlByHashStore;
-  private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processDefinitionStore;
+  private KeyValueStore<String, DefinitionsDTO> xmlByHashStore;
+  private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -37,7 +37,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
   @Override
   public void process(Record<String, DefinitionsTrigger> definitionsRecord) {
     String definitionId = definitionsRecord.key();
-    if (definitionsRecord.value() instanceof Definitions definitions) {
+    if (definitionsRecord.value() instanceof DefinitionsDTO definitions) {
       processDefinitionsRecord(definitionsRecord, definitions, definitionId);
     } else if (definitionsRecord.value() instanceof StartCommand startCommand) {
       processStartCommandRecord(definitionsRecord, startCommand, definitionId);
@@ -60,7 +60,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
       return;
     }
 
-    ProcessDefinition processDefinition =
+    ProcessDefinitionDTO processDefinition =
         processDefinitionStore.get(new ProcessDefinitionKey(definitionId, latestVersion));
     String startEventId =
         !startCommand.getElementId().equals(Constants.NONE)
@@ -96,10 +96,10 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
   private void processDefinitionsRecord(
       Record<String, DefinitionsTrigger> definitionsRecord,
-      Definitions definitions,
+      DefinitionsDTO definitions,
       String definitionId) {
     String hash = definitions.getDefinitionsKey().getHash();
-    ProcessDefinition processDefinition;
+    ProcessDefinitionDTO processDefinition;
     if (xmlByHashStore.get(hash) != null) {
       // known hash, do not store but forward as existing processdefinition
       int version = definitionCountByIdStore.get(definitionId);
@@ -116,10 +116,10 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
       int newVersion = existingVersion + 1;
 
       // deactivated definition and send deactivatinon message for previous version
-      ProcessDefinition previousDefinition = processDefinitionStore.get(previousKey);
+      ProcessDefinitionDTO previousDefinition = processDefinitionStore.get(previousKey);
       if (previousDefinition != null) {
-        ProcessDefinition dactivatedProcessDefinition =
-            new ProcessDefinition(
+        ProcessDefinitionDTO dactivatedProcessDefinition =
+            new ProcessDefinitionDTO(
                 definitions, existingVersion, ProcessDefinitionStateEnum.INACTIVE);
         ProcessDefinitionActivation deactivationMessage =
             new ProcessDefinitionActivation(
@@ -131,7 +131,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
       definitionCountByIdStore.put(definitionId, newVersion);
       processDefinition =
-          new ProcessDefinition(definitions, newVersion, ProcessDefinitionStateEnum.ACTIVE);
+          new ProcessDefinitionDTO(definitions, newVersion, ProcessDefinitionStateEnum.ACTIVE);
       ProcessDefinitionKey key = new ProcessDefinitionKey(definitionId, newVersion);
       processDefinitionStore.put(key, processDefinition);
       ProcessDefinitionActivation activationMessage =

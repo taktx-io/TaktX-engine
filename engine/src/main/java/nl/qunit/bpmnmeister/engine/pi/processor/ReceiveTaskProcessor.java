@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTaskDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -16,14 +16,14 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 
 @ApplicationScoped
-public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, ReceiveTaskState> {
+public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTaskDTO, ReceiveTaskState> {
 
   @Override
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ReceiveTask element,
+      ProcessDefinitionDTO definition,
+      ReceiveTaskDTO element,
       ReceiveTaskState oldState,
       ScopedVars variables) {
     return subscribeToMessage(processInstance, definition, element, oldState, variables);
@@ -33,8 +33,8 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ReceiveTask element,
+      ProcessDefinitionDTO definition,
+      ReceiveTaskDTO element,
       ReceiveTaskState receiveTaskState,
       ScopedVars variables) {
     return messageReceived(processInstance, definition, element, receiveTaskState, variables);
@@ -42,8 +42,8 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
 
   private TriggerResult messageReceived(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ReceiveTask element,
+      ProcessDefinitionDTO definition,
+      ReceiveTaskDTO element,
       ReceiveTaskState oldState,
       ScopedVars variables) {
 
@@ -62,8 +62,8 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
 
   private TriggerResult subscribeToMessage(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ReceiveTask element,
+      ProcessDefinitionDTO definition,
+      ReceiveTaskDTO element,
       ReceiveTaskState oldState,
       ScopedVars variables) {
     String correlationKeyExpression =
@@ -77,7 +77,7 @@ public class ReceiveTaskProcessor extends ActivityProcessor<ReceiveTask, Receive
         .newFlowNodeStates(
             List.of(
                 new ReceiveTaskState(
-                    FlowNodeStateEnum.ACTIVE,
+                    FlowNodeStateEnum.WAITING,
                     oldState.getParentElementInstanceId(),
                     oldState.getElementInstanceId(),
                     oldState.getElementId(),

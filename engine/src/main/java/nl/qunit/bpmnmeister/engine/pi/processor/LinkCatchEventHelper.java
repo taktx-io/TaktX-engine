@@ -5,7 +5,7 @@ import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -15,7 +15,7 @@ import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCat
 public class LinkCatchEventHelper {
 
   public void processWhenReady(
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       ProcessInstance processInstance,

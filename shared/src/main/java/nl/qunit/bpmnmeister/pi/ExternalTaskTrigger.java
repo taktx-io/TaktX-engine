@@ -13,24 +13,21 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 @ToString
 public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
 
-  private final UUID rootInstanceKey;
   private final UUID processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
   private final String externalTaskId;
   private final String elementId;
   private final UUID elementInstanceId;
-  private final Variables variables;
+  private final VariablesDTO variables;
 
   @JsonCreator
   public ExternalTaskTrigger(
-      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @JsonProperty("externalTaskId") String externalTaskId,
       @JsonProperty("elementId") String elementId,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @JsonProperty("variables") Variables variables) {
-    this.rootInstanceKey = rootInstanceKey;
+      @JsonProperty("variables") VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
     this.externalTaskId = externalTaskId;

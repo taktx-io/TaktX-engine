@@ -1,17 +1,17 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import nl.qunit.bpmnmeister.pd.model.SendTask;
+import nl.qunit.bpmnmeister.pd.model.SendTaskDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 
 @ApplicationScoped
-public class SendTaskProcessor extends ExternalTaskProcessor<SendTask, SendTaskState> {
+public class SendTaskProcessor extends ExternalTaskProcessor<SendTaskDTO, SendTaskState> {
 
   @Override
   protected SendTaskState getNewAttempExternalTaskState(SendTaskState oldState) {
     return new SendTaskState(
-        FlowNodeStateEnum.ACTIVE,
+        FlowNodeStateEnum.WAITING,
         oldState.getParentElementInstanceId(),
         oldState.getElementInstanceId(),
         oldState.getElementId(),

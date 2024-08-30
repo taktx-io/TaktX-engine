@@ -6,9 +6,11 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder
 public class IntermediateThrowEventState extends ThrowEventState {
   @JsonCreator
   public IntermediateThrowEventState(

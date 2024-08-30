@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.processor.MultiInstanceState;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
@@ -56,7 +56,7 @@ class MultiInstanceTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
@@ -72,7 +72,7 @@ class MultiInstanceTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", IntStream.range(0, 1000)
+        .startProcessInstance(VariablesDTO.of("inputCollection", IntStream.range(0, 1000)
             .mapToObj(Integer::toString)
             .collect(Collectors.toList())))
         .waitUntilCompleted(Duration.ofSeconds(120))
@@ -91,7 +91,8 @@ class MultiInstanceTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
+        .startProcessInstance(
+            VariablesDTO.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2", "dxxx3", "exxx4", "fxxx5"))
@@ -107,7 +108,7 @@ class MultiInstanceTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
@@ -124,7 +125,7 @@ class MultiInstanceTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.gen1.bpmn")
-        .startProcessInstance(Variables.of("inputCollection", List.of("a", "b", "c")))
+        .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
@@ -141,13 +142,13 @@ class MultiInstanceTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("1", "2", "3", "4", "5"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "5", Variables.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "3", Variables.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "1", Variables.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "2", Variables.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "4", Variables.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "5", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "3", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "1", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "2", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "4", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted();
   }
 

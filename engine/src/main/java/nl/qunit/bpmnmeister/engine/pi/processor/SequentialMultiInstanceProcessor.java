@@ -12,22 +12,22 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pd.model.ActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTriggerIteration;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @RequiredArgsConstructor
-public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, ActivityState> {
+public class SequentialMultiInstanceProcessor extends StateProcessor<ActivityDTO, ActivityState> {
 
   final FeelExpressionHandler feelExpressionHandler;
   final ActivityProcessor activityProcessor;
@@ -36,17 +36,17 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
   public TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables) {
-    Activity activity = (Activity) element;
+    ActivityDTO activity = (ActivityDTO) element;
     if (trigger instanceof ContinueFlowElementTrigger continueFlowElementTrigger) {
-      Optional<FlowNodeState> optFlowNodeState =
+      Optional<FlowNodeStateDTO> optFlowNodeState =
           processInstance
               .getFlowNodeStates()
               .get(continueFlowElementTrigger.getElementInstanceId());
       if (optFlowNodeState.isPresent()) {
-        FlowNodeState flowNodeState = optFlowNodeState.get();
+        FlowNodeStateDTO flowNodeState = optFlowNodeState.get();
         if (flowNodeState instanceof ActivityState activityState) {
           TriggerResult triggerResult =
               activityProcessor.trigger(trigger, processInstance, definition, element, variables);
@@ -80,11 +80,11 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
   private TriggerResult handleFinishedIterationResult(
       TriggerResult triggerResult,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      Activity activity,
+      ProcessDefinitionDTO definition,
+      ActivityDTO activity,
       ScopedVars variables,
       UUID parentElementInstanceId) {
-    FlowNodeState iterationTriggerState = triggerResult.getNewFlowNodeStates().get(0);
+    FlowNodeStateDTO iterationTriggerState = triggerResult.getNewFlowNodeStates().get(0);
     if (iterationTriggerState.getState() == FlowNodeStateEnum.FINISHED) {
 
       // Store the output element in the output collection
@@ -104,7 +104,7 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
       JsonNode inputCollection =
           feelExpressionHandler.processFeelExpression(
               activity.getLoopCharacteristics().getInputCollection(), variables);
-      Optional<FlowNodeState> optLoopFlowNodeState =
+      Optional<FlowNodeStateDTO> optLoopFlowNodeState =
           processInstance.getFlowNodeStates().get(parentElementInstanceId);
       if (optLoopFlowNodeState.isPresent()) {
         MultiInstanceState oldState = (MultiInstanceState) optLoopFlowNodeState.get();
@@ -136,11 +136,11 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
 
   private TriggerResult startNewMultiInstanceSequence(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables,
       StartFlowElementTrigger flowElementTrigger,
-      Activity activity) {
+      ActivityDTO activity) {
     MultiInstanceState state =
         getInitialState(flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0);
     // Create ArrayNode as new OutputCollection and add it to the variables in the current scope
@@ -172,15 +172,15 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
 
   public static List<ProcessInstanceTrigger> getChildElementTriggers(
       ProcessInstance processInstance,
-      Activity<?> element,
+      ActivityDTO<?> element,
       JsonNode inputCollection,
       MultiInstanceState state) {
 
     List<ProcessInstanceTrigger> childElementTriggers = new ArrayList<>();
 
     JsonNode inputElement = inputCollection.get(state.getLoopCnt());
-    Variables iterationVars =
-        Variables.of(
+    VariablesDTO iterationVars =
+        VariablesDTO.of(
             "loopCnt",
             new IntNode(state.getLoopCnt()),
             element.getLoopCharacteristics().getInputElement(),
@@ -199,7 +199,7 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
 
   private MultiInstanceState getNextLoopState(MultiInstanceState oldState) {
     return oldState.toBuilder()
-        .state(FlowNodeStateEnum.ACTIVE)
+        .state(FlowNodeStateEnum.WAITING)
         .loopCnt(oldState.getLoopCnt() + 1)
         .build();
   }
@@ -213,6 +213,6 @@ public class SequentialMultiInstanceProcessor extends StateProcessor<Activity, A
 
   private MultiInstanceState getInitialState(String elementId, String inputFlowId, int i) {
     return new MultiInstanceState(
-        UUID.randomUUID(), elementId, 0, FlowNodeStateEnum.ACTIVE, inputFlowId, 0);
+        UUID.randomUUID(), elementId, 0, FlowNodeStateEnum.WAITING, inputFlowId, 0);
   }
 }

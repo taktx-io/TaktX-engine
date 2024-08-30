@@ -4,8 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
@@ -13,14 +13,14 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
 public class ExclusiveGatewayProcessor
-    extends GatewayProcessor<ExclusiveGateway, ExclusiveGatewayState> {
+    extends GatewayProcessor<ExclusiveGatewayDTO, ExclusiveGatewayState> {
 
   @Override
   protected TriggerResult triggerDecision(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ExclusiveGateway element,
+      ProcessDefinitionDTO definition,
+      ExclusiveGatewayDTO element,
       ExclusiveGatewayState oldState,
       ScopedVars variables) {
 

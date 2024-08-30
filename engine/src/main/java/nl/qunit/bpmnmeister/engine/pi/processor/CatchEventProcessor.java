@@ -2,14 +2,14 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
-import nl.qunit.bpmnmeister.pd.model.CatchEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.CatchEventDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.CatchEventState;
 
-public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends CatchEventState>
+public abstract class CatchEventProcessor<E extends CatchEventDTO<?>, S extends CatchEventState>
     extends EventProcessor<E, S> {
 
   @Override
@@ -17,7 +17,7 @@ public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends Cat
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables) {
@@ -37,7 +37,7 @@ public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends Cat
       ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables) {
@@ -48,7 +48,7 @@ public abstract class CatchEventProcessor<E extends CatchEvent<?>, S extends Cat
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables);

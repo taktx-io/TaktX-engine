@@ -10,11 +10,13 @@ import java.util.concurrent.CompletableFuture;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
 import nl.qunit.bpmnmeister.engine.pi.processor.StateProcessor;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.SubProcessDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeStates;
@@ -24,7 +26,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -40,7 +42,7 @@ public class ProcessInstanceProcessor
   final ProcessorProvider processorProvider;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<UUID, ProcessInstance> processInstanceStore;
-  private KeyValueStore<ProcessDefinitionKey, ProcessDefinition> processInstanceDefinitionStore;
+  private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processInstanceDefinitionStore;
   private final Cache processInstanceCache;
   private final Cache processInstanceDefinitionCache;
   private KeyValueStore<UUID, VariablesParentPair> variablesStore;
@@ -72,7 +74,7 @@ public class ProcessInstanceProcessor
 
   private void processTrigger(ProcessInstanceTrigger trigger) {
     ProcessInstance processInstance;
-    ProcessDefinition definition;
+    ProcessDefinitionDTO definition;
     KeyValueStoreScopedVars scopedVars = new KeyValueStoreScopedVars(variablesStore);
     if (trigger instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger) {
       definition = startNewProcessInstanceTrigger.getProcessDefinition();
@@ -124,7 +126,7 @@ public class ProcessInstanceProcessor
         updatedProcessInstance.getProcessInstanceKey(), updatedProcessInstance);
   }
 
-  private void storeProcessDefinition(ProcessDefinition definition) {
+  private void storeProcessDefinition(ProcessDefinitionDTO definition) {
     processInstanceDefinitionCache
         .as(CaffeineCache.class)
         .put(ProcessDefinitionKey.of(definition), CompletableFuture.completedFuture(definition));
@@ -137,13 +139,13 @@ public class ProcessInstanceProcessor
   }
 
   @CacheResult(cacheName = "process-instance-definition-cache")
-  ProcessDefinition getProcessInstanceDefinition(ProcessDefinitionKey key) {
+  ProcessDefinitionDTO getProcessInstanceDefinition(ProcessDefinitionKey key) {
     return processInstanceDefinitionStore.get(key);
   }
 
   public ProcessInstance trigger(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       ProcessInstanceTrigger trigger,
       ScopedVars variables) {
     variables.select(trigger.getProcessInstanceKey());
@@ -161,7 +163,7 @@ public class ProcessInstanceProcessor
       if (!updatedProcessInstance.getProcessInstanceState().isFinished()
           && updatedProcessInstance
               .getFlowNodeStates()
-              .getWithState(FlowNodeStateEnum.ACTIVE)
+              .getWithState(FlowNodeStateEnum.WAITING)
               .isEmpty()) {
         updatedProcessInstance =
             updatedProcessInstance.toBuilder()
@@ -187,7 +189,7 @@ public class ProcessInstanceProcessor
   private ProcessInstance handleTerminate(
       ProcessInstance processInstance,
       ScopedVars variables,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       TerminateTrigger terminateProcessInstanceTrigger) {
     LOG.info(
         "Terminating process instance "
@@ -197,7 +199,7 @@ public class ProcessInstanceProcessor
     ProcessInstance updatedProcessInstance = processInstance;
     if (terminateProcessInstanceTrigger.getElementInstanceId().equals(Constants.NONE_UUID)) {
       // Terminate all elements in this process
-      for (FlowNodeState flowNodeState :
+      for (FlowNodeStateDTO flowNodeState :
           processInstance.getFlowNodeStates().getElementStateMap().values()) {
         updatedProcessInstance =
             handleElementTrigger(
@@ -216,17 +218,16 @@ public class ProcessInstanceProcessor
       return updatedProcessInstance;
     } else {
       // Terminate the element indicated in the trigger.
-      Optional<FlowNodeState> optFlowNodeState =
+      Optional<FlowNodeStateDTO> optFlowNodeState =
           processInstance
               .getFlowNodeStates()
               .get(terminateProcessInstanceTrigger.getElementInstanceId());
       if (optFlowNodeState.isPresent()) {
         String elementId = optFlowNodeState.get().getElementId();
-        Optional<FlowNode> optFlowNode =
-            definition.getDefinitions().getRootProcess().getFlowElements().getFlowNode(elementId);
+        Optional<FlowNodeDTO> optFlowNode = getFlowNode(definition, elementId);
         if (optFlowNode.isPresent()) {
-          FlowNode<?> flowNode = optFlowNode.get();
-          StateProcessor<? extends BaseElement, ? extends FlowNodeState> processor =
+          FlowNodeDTO flowNode = optFlowNode.get();
+          StateProcessor<? extends BaseElementDTO, ? extends FlowNodeStateDTO> processor =
               processorProvider.getProcessor(flowNode);
           TriggerResult triggerResult =
               processor.trigger(
@@ -250,16 +251,15 @@ public class ProcessInstanceProcessor
   private ProcessInstance handleElementTrigger(
       ProcessInstance processInstance,
       ScopedVars scopedVars,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       ProcessInstanceTrigger trigger) {
     ProcessInstance updatedProcessInstance = processInstance;
 
     String elementId = trigger.getElementId();
-    Optional<FlowNode> optFlowNode =
-        definition.getDefinitions().getRootProcess().getFlowElements().getFlowNode(elementId);
+    Optional<FlowNodeDTO> optFlowNode = getFlowNode(definition, elementId);
     if (optFlowNode.isPresent()) {
-      FlowNode flowNode = optFlowNode.get();
-      StateProcessor<? extends BaseElement, ? extends FlowNodeState> processor =
+      FlowNodeDTO flowNode = optFlowNode.get();
+      StateProcessor<? extends BaseElementDTO, ? extends FlowNodeStateDTO> processor =
           processorProvider.getProcessor(flowNode);
       TriggerResult triggerResult =
           processor.trigger(trigger, processInstance, definition, flowNode, scopedVars);
@@ -274,12 +274,26 @@ public class ProcessInstanceProcessor
     return updatedProcessInstance;
   }
 
+  private static Optional<FlowNodeDTO> getFlowNode(ProcessDefinitionDTO definition, String elementId) {
+    String[] splittedElementIds = elementId.split("/");
+    FlowElementsDTO flowElements = definition.getDefinitions().getRootProcess().getFlowElements();
+
+    Optional<FlowNodeDTO> optFlowNode = Optional.empty();
+    for(String splittedElementId : splittedElementIds) {
+      optFlowNode = flowElements.getFlowNode(splittedElementId);
+      if(optFlowNode.isPresent() && optFlowNode.get() instanceof SubProcessDTO subProcess) {
+        flowElements = subProcess.getElements();
+      }
+    }
+    return optFlowNode;
+  }
+
   private ProcessInstance processTriggerResult(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       TriggerResult triggerResult,
       ScopedVars variables,
-      BaseElement flowElement) {
+      BaseElementDTO flowElement) {
     ProcessInstance updatedProcessInstance;
     FlowNodeStates newFlowNodeStates =
         processInstance.getFlowNodeStates().putAll(triggerResult.getNewFlowNodeStates());
@@ -324,9 +338,9 @@ public class ProcessInstanceProcessor
 
   private void processTriggerResultForwards(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       TriggerResult triggerResult,
-      BaseElement flowElement) {
+      BaseElementDTO flowElement) {
     triggerResult
         .getExternalTasks()
         .forEach(

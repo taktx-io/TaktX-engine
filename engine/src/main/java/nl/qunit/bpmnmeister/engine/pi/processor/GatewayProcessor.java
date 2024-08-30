@@ -10,23 +10,23 @@ import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.Gateway;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.GatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlowDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.GatewayState;
 
 @Slf4j
-public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewayState>
+public abstract class GatewayProcessor<G extends GatewayDTO<S>, S extends GatewayState>
     extends StateProcessor<G, S> {
 
   @Inject FeelExpressionHandler feelExpressionHandler;
@@ -34,17 +34,17 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
   public final TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables) {
     log.info("Trigger processor: " + this);
 
     if (trigger instanceof StartFlowElementTrigger flowElementTrigger) {
-      List<FlowNodeState> optFlowNodeState =
+      List<FlowNodeStateDTO> optFlowNodeState =
           processInstance.getFlowNodeStates().get(flowElementTrigger.getElementId());
-      FlowNodeState flowNodeState =
+      FlowNodeStateDTO flowNodeState =
           optFlowNodeState.isEmpty()
-              ? ((Gateway) element)
+              ? ((GatewayDTO) element)
                   .getInitialState(
                       flowElementTrigger.getElementId(), flowElementTrigger.getInputFlowId(), 0)
               : optFlowNodeState.get(0);
@@ -57,9 +57,9 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
           (S) flowNodeState,
           variables);
     } else if (trigger instanceof TerminateTrigger terminateTrigger) {
-      Optional<FlowNodeState> flowNodeState =
+      Optional<FlowNodeStateDTO> flowNodeState =
           processInstance.getFlowNodeStates().get(terminateTrigger.getElementInstanceId());
-      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.ACTIVE) {
+      if (flowNodeState.isPresent() && flowNodeState.get().getState() == FlowNodeStateEnum.WAITING) {
         return terminate(terminateTrigger, (G) element, (S) flowNodeState.get());
       } else {
         return TriggerResult.EMPTY;
@@ -81,12 +81,12 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       G element,
       S oldState,
       ScopedVars variables) {
     if (oldState.getState() == FlowNodeStateEnum.READY
-        || oldState.getState() == FlowNodeStateEnum.ACTIVE) {
+        || oldState.getState() == FlowNodeStateEnum.WAITING) {
       return triggerDecision(trigger, processInstance, definition, element, oldState, variables);
     }
     return TriggerResult.builder().newFlowNodeStates(List.of(oldState)).build();
@@ -95,17 +95,17 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
   protected abstract TriggerResult triggerDecision(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       G element,
       S oldState,
       ScopedVars variables);
 
   protected Set<String> getOutgoingFlowsMatchingConditionOrDefault(
-      ProcessDefinition definition,
-      Gateway element,
+      ProcessDefinitionDTO definition,
+      GatewayDTO element,
       ScopedVars variables,
       FeelExpressionHandler feelExpressionHandler) {
-    List<SequenceFlow> sequenceFlows =
+    List<SequenceFlowDTO> sequenceFlows =
         definition
             .getDefinitions()
             .getRootProcess()
@@ -120,7 +120,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
                         .processFeelExpression(
                             sequenceFlow.getCondition().getExpression(), variables)
                         .asBoolean())
-            .map(BaseElement::getId)
+            .map(BaseElementDTO::getId)
             .collect(Collectors.toSet());
     Set<String> outgoingFlows = new HashSet<>(flowsWithCondition);
 
@@ -140,9 +140,9 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
   }
 
   protected List<ProcessInstanceTrigger> getProcessInstanceTriggers(
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       ProcessInstance processInstance,
-      Gateway element,
+      GatewayDTO element,
       GatewayState oldState,
       ScopedVars variables) {
     Set<String> outgoingFlows =
@@ -151,7 +151,7 @@ public abstract class GatewayProcessor<G extends Gateway<S>, S extends GatewaySt
     return outgoingFlows.stream()
         .map(
             flowId -> {
-              Optional<FlowNode<?>> flowNodeWithIncomingFlow =
+              Optional<FlowNodeDTO> flowNodeWithIncomingFlow =
                   definition
                       .getDefinitions()
                       .getRootProcess()

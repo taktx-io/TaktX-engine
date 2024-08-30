@@ -5,7 +5,7 @@ import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -20,7 +20,7 @@ public class IntermediateThrowEventProcessor
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       IntermediateThrowEvent element,
       IntermediateThrowEventState oldState,
       ScopedVars variables) {

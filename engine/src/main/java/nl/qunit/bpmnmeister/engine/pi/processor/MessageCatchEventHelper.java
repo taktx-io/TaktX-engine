@@ -10,12 +10,12 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.Message;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCatchEventStateBuilder;
@@ -29,7 +29,7 @@ public class MessageCatchEventHelper {
   @Inject IoMappingProcessor ioMappingProcessor;
 
   public void processWhenReady(
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       TriggerResultBuilder triggerResultBuilder,
       IntermediateCatchEventStateBuilder<?, ?> newStateBuilder,
       ProcessInstance processInstance,
@@ -40,7 +40,7 @@ public class MessageCatchEventHelper {
         element.getMessageventDefinitions().stream()
             .map(
                 messageEventDefinition -> {
-                  Message message =
+                  MessageDTO message =
                       definition
                           .getDefinitions()
                           .getMessages()
@@ -61,7 +61,7 @@ public class MessageCatchEventHelper {
                 })
             .collect(Collectors.toSet());
 
-    newStateBuilder.state(FlowNodeStateEnum.ACTIVE);
+    newStateBuilder.state(FlowNodeStateEnum.WAITING);
     triggerResultBuilder.newMessageSubscriptions(subscriptions);
   }
 
@@ -72,13 +72,13 @@ public class MessageCatchEventHelper {
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       ScopedVars variables) {
 
     UUID childProcessInstanceKey = UUID.randomUUID();
     variables.push(
         childProcessInstanceKey, processInstance.getProcessInstanceKey(), trigger.getVariables());
-    Variables outputVariables = ioMappingProcessor.getOutputVariables(element, variables);
+    VariablesDTO outputVariables = ioMappingProcessor.getOutputVariables(element, variables);
     variables.pop();
     variables.merge(outputVariables);
 

@@ -14,13 +14,13 @@ import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 public class CorrelationMessageEventTrigger extends MessageEvent {
 
   private final String correlationKey;
-  private final Variables variables;
+  private final VariablesDTO variables;
 
   @JsonCreator
   public CorrelationMessageEventTrigger(
       @Nonnull @JsonProperty("messageName") String messageName,
       @Nonnull @JsonProperty("correlationKey") String correlationKey,
-      @Nonnull @JsonProperty("variables") Variables variables) {
+      @Nonnull @JsonProperty("variables") VariablesDTO variables) {
     super(messageName);
     this.correlationKey = correlationKey;
     this.variables = variables;

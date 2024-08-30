@@ -10,7 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/gateway-parallel.bpmn")
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementHasPassed("Task_1")
         .assertThatProcess()
         .hasNotPassedElementWithId("Task_2")
@@ -67,7 +67,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 1))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 1))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("Task_3")
@@ -80,7 +80,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 2))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 2))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("Task_1")
@@ -93,7 +93,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 3))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 3))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("Task_1")
@@ -106,7 +106,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 3, "inputVariable2", "a"))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 3, "inputVariable2", "a"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("Task_1")
@@ -119,7 +119,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 2, "inputVariable3", "a"))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 2, "inputVariable3", "a"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasNotPassedElementWithId("Task_1")
@@ -133,7 +133,8 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 2, "inputVariable2", "a", "inputVariable3", "a"))
+        .startProcessInstance(
+            VariablesDTO.of("inputVariable", 2, "inputVariable2", "a", "inputVariable3", "a"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("Task_1")
@@ -148,7 +149,7 @@ class GatewayTest {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/sequence-flow-condition.bpmn")
-        .startProcessInstance(Variables.of("inputVariable", 1))
+        .startProcessInstance(VariablesDTO.of("inputVariable", 1))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
@@ -158,7 +159,7 @@ class GatewayTest {
 
         // now test the alternative default flow
         .toProcessLevel()
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")

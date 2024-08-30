@@ -15,7 +15,11 @@ public class StartFlowElementTrigger extends ProcessInstanceTrigger
     implements SchedulableMessage<UUID> {
   public static final StartFlowElementTrigger NONE =
       new StartFlowElementTrigger(
-          Constants.NONE_UUID, Constants.NONE_UUID, Constants.NONE, Constants.NONE, Variables.empty());
+          Constants.NONE_UUID,
+          Constants.NONE_UUID,
+          Constants.NONE,
+          Constants.NONE,
+          VariablesDTO.empty());
 
   private final UUID sourceInstanceId;
   private final String elementId;
@@ -27,7 +31,7 @@ public class StartFlowElementTrigger extends ProcessInstanceTrigger
       @JsonProperty("sourceInstanceId") @Nonnull UUID sourceInstanceId,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
-      @JsonProperty("variables") @Nonnull Variables variables) {
+      @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, elementId, variables);
     this.sourceInstanceId = sourceInstanceId;
     this.elementId = elementId;

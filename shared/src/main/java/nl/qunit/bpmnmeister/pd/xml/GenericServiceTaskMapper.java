@@ -2,17 +2,19 @@ package nl.qunit.bpmnmeister.pd.xml;
 
 import java.util.Map;
 import nl.qunit.bpmnmeister.bpmn.TServiceTask;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
-import nl.qunit.bpmnmeister.pd.model.ServiceTask;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
+import nl.qunit.bpmnmeister.pd.model.ServiceTaskDTO;
 
 public class GenericServiceTaskMapper implements ServiceTaskMapper {
 
   @Override
-  public ServiceTask map(
-      TServiceTask serviceTask, String parentId, LoopCharacteristics loopCharacteristics,
-      InputOutputMapping ioMapping) {
-    return new ServiceTask(
+  public ServiceTaskDTO map(
+      TServiceTask serviceTask,
+      String parentId,
+      LoopCharacteristicsDTO loopCharacteristics,
+      InputOutputMappingDTO ioMapping) {
+    return new ServiceTaskDTO(
         serviceTask.getId(),
         parentId,
         serviceTask.getId(),

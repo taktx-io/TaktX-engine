@@ -25,30 +25,27 @@ import nl.qunit.bpmnmeister.bpmn.TStartEvent;
 import nl.qunit.bpmnmeister.bpmn.TSubProcess;
 import nl.qunit.bpmnmeister.bpmn.TTask;
 import nl.qunit.bpmnmeister.bpmn.TThrowEvent;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
-import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEventDTO;
+import nl.qunit.bpmnmeister.pd.model.CatchEventDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.EndEvent;
-import nl.qunit.bpmnmeister.pd.model.EventDefinition;
-import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.Gateway;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
+import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
+import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
+import nl.qunit.bpmnmeister.pd.model.GatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
-import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pd.model.StartEvent;
-import nl.qunit.bpmnmeister.pd.model.SubProcess;
-import nl.qunit.bpmnmeister.pd.model.Task;
-import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
-import nl.qunit.bpmnmeister.pi.state.EventState;
-import nl.qunit.bpmnmeister.pi.state.GatewayState;
-import nl.qunit.bpmnmeister.pi.state.ThrowEventState;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
+import nl.qunit.bpmnmeister.pd.model.ParallelGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlowDTO;
+import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
+import nl.qunit.bpmnmeister.pd.model.SubProcessDTO;
+import nl.qunit.bpmnmeister.pd.model.TaskDTO;
+import nl.qunit.bpmnmeister.pd.model.ThrowEventDTO;
 
 public class GenericFlowElementMapper implements FlowElementMapper {
 
@@ -58,7 +55,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     this.bpmnMapperFactory = bpmnMapperFactory;
   }
 
-  public FlowElement map(TFlowElement tFlowElement, String parentId) {
+  public FlowElementDTO map(TFlowElement tFlowElement, String parentId) {
     if (tFlowElement instanceof TSequenceFlow tSequenceFlow) {
       return mapSequenceFlow(parentId, tSequenceFlow);
     } else if (tFlowElement instanceof TActivity activity) {
@@ -75,14 +72,16 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
-  private ThrowEvent<? extends ThrowEventState> mapThrowEvent(String parentId,
-      TThrowEvent throwEvent) {
-    Set<EventDefinition> eventDefinitions = bpmnMapperFactory.createEventDefinitionMapper()
-        .map(throwEvent.getEventDefinition(), parentId);
+  private ThrowEventDTO mapThrowEvent(
+      String parentId, TThrowEvent throwEvent) {
+    Set<EventDefinitionDTO> eventDefinitions =
+        bpmnMapperFactory
+            .createEventDefinitionMapper()
+            .map(throwEvent.getEventDefinition(), parentId);
 
     if (throwEvent instanceof TEndEvent endEvent) {
-      InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(endEvent);
-      return new EndEvent(
+      InputOutputMappingDTO ioMapping = bpmnMapperFactory.getIoMappingMapper().map(endEvent);
+      return new EndEventDTO(
           endEvent.getId(),
           parentId,
           mapQNameList(endEvent.getIncoming()),
@@ -90,7 +89,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           ioMapping,
           eventDefinitions);
     } else if (throwEvent instanceof TIntermediateThrowEvent intermediateThrowEvent) {
-      InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
+      InputOutputMappingDTO ioMapping =
+          bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
       return new IntermediateThrowEvent(
           intermediateThrowEvent.getId(),
           parentId,
@@ -104,15 +104,15 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         "Unknown flow element type: " + throwEvent.getClass().getName());
   }
 
-  private Gateway<? extends GatewayState> mapGateway(TGateway gateway, String parentId) {
+  private GatewayDTO mapGateway(TGateway gateway, String parentId) {
     if (gateway instanceof TParallelGateway parallelGateway) {
-      return new ParallelGateway(
+      return new ParallelGatewayDTO(
           parallelGateway.getId(),
           parentId,
           mapQNameList(parallelGateway.getIncoming()),
           mapQNameList(parallelGateway.getOutgoing()));
     } else if (gateway instanceof TExclusiveGateway exclusiveGateway) {
-      return new ExclusiveGateway(
+      return new ExclusiveGatewayDTO(
           exclusiveGateway.getId(),
           parentId,
           mapQNameList(exclusiveGateway.getIncoming()),
@@ -121,7 +121,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               ? sequenceFlow.getId()
               : Constants.NONE);
     } else if (gateway instanceof TInclusiveGateway inclusiveGateway) {
-      return new InclusiveGateway(
+      return new InclusiveGatewayDTO(
           inclusiveGateway.getId(),
           parentId,
           mapQNameList(inclusiveGateway.getIncoming()),
@@ -134,10 +134,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     throw new IllegalStateException("Unknown flow element type: " + gateway.getClass().getName());
   }
 
-  private CatchEvent<? extends EventState> mapCatchEvent(String parentId, TCatchEvent tCatchEvent) {
-    InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(tCatchEvent);
+  private CatchEventDTO mapCatchEvent(
+      String parentId, TCatchEvent tCatchEvent) {
+    InputOutputMappingDTO ioMapping = bpmnMapperFactory.getIoMappingMapper().map(tCatchEvent);
     if (tCatchEvent instanceof TStartEvent startEvent) {
-      return new StartEvent(
+      return new StartEventDTO(
           startEvent.getId(),
           parentId,
           mapQNameList(startEvent.getIncoming()),
@@ -147,7 +148,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .map(startEvent.getEventDefinition(), parentId),
           ioMapping);
     } else if (tCatchEvent instanceof TBoundaryEvent boundaryEvent) {
-      return new BoundaryEvent(
+      return new BoundaryEventDTO(
           boundaryEvent.getId(),
           parentId,
           mapQNameList(boundaryEvent.getIncoming()),
@@ -174,8 +175,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         "Unknown flow element type: " + tCatchEvent.getClass().getName());
   }
 
-  private SequenceFlow mapSequenceFlow(String parentId, TSequenceFlow tSequenceFlow) {
-    return new SequenceFlow(
+  private SequenceFlowDTO mapSequenceFlow(String parentId, TSequenceFlow tSequenceFlow) {
+    return new SequenceFlowDTO(
         tSequenceFlow.getId(),
         parentId,
         ((TBaseElement) tSequenceFlow.getSourceRef()).getId(),
@@ -188,12 +189,12 @@ public class GenericFlowElementMapper implements FlowElementMapper {
             : FlowCondition.NONE);
   }
 
-  private FlowElement mapActivity(TActivity activity, String parentId) {
-    InputOutputMapping ioMapping = bpmnMapperFactory.getIoMappingMapper().map(activity);
+  private FlowElementDTO mapActivity(TActivity activity, String parentId) {
+    InputOutputMappingDTO ioMapping = bpmnMapperFactory.getIoMappingMapper().map(activity);
 
-    LoopCharacteristics loopCharacteristics =
+    LoopCharacteristicsDTO loopCharacteristics =
         bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
-    FlowElement activityFlowElement = null;
+    FlowElementDTO activityFlowElement = null;
     if (activity instanceof TServiceTask serviceTask) {
       activityFlowElement =
           bpmnMapperFactory
@@ -201,7 +202,9 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .map(serviceTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TSendTask sendTask) {
       activityFlowElement =
-          bpmnMapperFactory.createSendTaskMapper().map(sendTask, parentId, loopCharacteristics, ioMapping);
+          bpmnMapperFactory
+              .createSendTaskMapper()
+              .map(sendTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TReceiveTask receiveTask) {
       activityFlowElement =
           bpmnMapperFactory
@@ -209,30 +212,32 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               .map(receiveTask, parentId, loopCharacteristics, ioMapping);
     } else if (activity instanceof TTask task) {
       activityFlowElement =
-          new Task<>(
+          new TaskDTO(
               task.getId(),
               parentId,
               mapQNameList(task.getIncoming()),
               mapQNameList(task.getOutgoing()),
-              loopCharacteristics, ioMapping);
+              loopCharacteristics,
+              ioMapping);
     } else if (activity instanceof TSubProcess subProcess) {
-      Map<String, FlowElement> elements =
+      String parentPrefix = parentId.equals(Constants.NONE) ? "" : parentId + "/";
+      Map<String, FlowElementDTO> elements =
           subProcess.getFlowElement().stream()
               .map(
                   flowElement ->
                       bpmnMapperFactory
                           .createFlowElementMapper()
-                          .map(flowElement.getValue(), activity.getId()))
-              .collect(Collectors.toMap(FlowElement::getId, Function.identity()));
+                          .map(flowElement.getValue(), parentPrefix + activity.getId()))
+              .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
 
       activityFlowElement =
-          new SubProcess(
+          new SubProcessDTO(
               activity.getId(),
               parentId,
               mapQNameList(subProcess.getIncoming()),
               mapQNameList(subProcess.getOutgoing()),
               loopCharacteristics,
-              new FlowElements(elements),
+              new FlowElementsDTO(elements),
               ioMapping);
     } else if (activity instanceof TCallActivity callActivity) {
       activityFlowElement =

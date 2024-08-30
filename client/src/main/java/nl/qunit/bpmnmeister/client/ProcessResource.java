@@ -14,7 +14,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -58,7 +58,7 @@ public class ProcessResource {
             Constants.NONE,
             Constants.NONE_UUID,
             processId,
-            new Variables(variablesMap));
+            new VariablesDTO(variablesMap));
     KafkaProducer<String, StartCommand> startCommandEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(

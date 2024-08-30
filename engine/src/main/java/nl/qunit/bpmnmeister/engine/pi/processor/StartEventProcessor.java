@@ -4,8 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.StartEvent;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.StartThrowingEvent;
@@ -13,15 +13,15 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 
 @ApplicationScoped
-public class StartEventProcessor extends CatchEventProcessor<StartEvent, StartEventState> {
+public class StartEventProcessor extends CatchEventProcessor<StartEventDTO, StartEventState> {
 
   @Override
   protected void triggerCatchEventStart(
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
-      StartEvent element,
+      ProcessDefinitionDTO processDefinition,
+      StartEventDTO element,
       StartEventState oldState,
       ScopedVars variables) {
     triggerResultBuilder

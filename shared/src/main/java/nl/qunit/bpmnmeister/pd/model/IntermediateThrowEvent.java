@@ -4,26 +4,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
-import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
 
 @Getter
-public class IntermediateThrowEvent extends ThrowEvent<IntermediateThrowEventState> {
+public class IntermediateThrowEvent extends ThrowEventDTO {
   @JsonCreator
   public IntermediateThrowEvent(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
-      @Nonnull @JsonProperty("ioMapping") InputOutputMapping ioMapping,
-      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinition> eventDefinitions) {
+      @Nonnull @JsonProperty("ioMapping") InputOutputMappingDTO ioMapping,
+      @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinitionDTO> eventDefinitions) {
     super(id, parentId, incoming, outgoing, ioMapping, eventDefinitions);
   }
 
-  @Override
-  public IntermediateThrowEventState getInitialState(String elementId, String inputFlowId, int passedCnt) {
-    return new IntermediateThrowEventState(UUID.randomUUID(), elementId, passedCnt, FlowNodeStateEnum.READY, inputFlowId);
-  }
 }

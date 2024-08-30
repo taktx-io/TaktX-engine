@@ -2,12 +2,18 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import java.util.UUID;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
-public abstract class GatewayState extends FlowNodeState {
+@SuperBuilder(toBuilder = true)
+public abstract class GatewayState extends FlowNodeStateDTO {
 
   protected GatewayState(
-      UUID elementInstanceId, String elementId, int passedCnt, FlowNodeStateEnum state, String inputFlowId) {
+      UUID elementInstanceId,
+      String elementId,
+      int passedCnt,
+      FlowNodeStateEnum state,
+      String inputFlowId) {
     super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
   }
 }

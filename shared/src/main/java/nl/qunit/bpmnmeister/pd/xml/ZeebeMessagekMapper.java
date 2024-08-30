@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.pd.xml;
 import nl.qunit.bpmnmeister.bpmn.Subscription;
 import nl.qunit.bpmnmeister.bpmn.TMessage;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.Message;
+import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 
 public class ZeebeMessagekMapper implements MessageMapper {
 
@@ -12,7 +12,7 @@ public class ZeebeMessagekMapper implements MessageMapper {
   }
 
   @Override
-  public Message map(TMessage tMessage) {
+  public MessageDTO map(TMessage tMessage) {
     String correlationKey = Constants.NONE;
     if (tMessage.getExtensionElements() != null) {
       correlationKey =
@@ -22,6 +22,6 @@ public class ZeebeMessagekMapper implements MessageMapper {
               .findFirst()
               .orElse(Constants.NONE);
     }
-    return new Message(tMessage.getId(), tMessage.getName(), correlationKey);
+    return new MessageDTO(tMessage.getId(), tMessage.getName(), correlationKey);
   }
 }

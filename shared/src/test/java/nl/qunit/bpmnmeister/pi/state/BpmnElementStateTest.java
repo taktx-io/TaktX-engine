@@ -12,17 +12,17 @@ import org.reflections.Reflections;
 class BpmnElementStateTest {
   @Test
   void testAllSubTypesAreMappedToJackson() {
-    Reflections reflections = new Reflections(FlowNodeState.class.getPackageName());
-    Set<Class<? extends FlowNodeState>> allClasses = reflections.getSubTypesOf(FlowNodeState.class);
+    Reflections reflections = new Reflections(FlowNodeStateDTO.class.getPackageName());
+    Set<Class<? extends FlowNodeStateDTO>> allClasses = reflections.getSubTypesOf(FlowNodeStateDTO.class);
 
-    Set<Class<? extends FlowNodeState>> nonAbstractClasses = allClasses.stream()
+    Set<Class<? extends FlowNodeStateDTO>> nonAbstractClasses = allClasses.stream()
         .filter(aClass -> !Modifier.isAbstract(aClass.getModifiers()))
         .collect(Collectors.toSet());
 
-    JsonSubTypes jsonSubTypes = FlowNodeState.class.getAnnotation(JsonSubTypes.class);
+    JsonSubTypes jsonSubTypes = FlowNodeStateDTO.class.getAnnotation(JsonSubTypes.class);
     JsonSubTypes.Type[] types = jsonSubTypes.value();
 
-    for (Class<? extends FlowNodeState> nonAbstractClass : nonAbstractClasses) {
+    for (Class<? extends FlowNodeStateDTO> nonAbstractClass : nonAbstractClasses) {
       boolean isMapped = false;
       for (JsonSubTypes.Type type : types) {
         if (type.value().equals(nonAbstractClass)) {

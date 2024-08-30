@@ -33,9 +33,9 @@ import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesParentPair;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessorProvider;
-import nl.qunit.bpmnmeister.pd.model.Definitions;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
@@ -87,12 +87,12 @@ public class ProcessDefinitionTopologyProducer {
   public static final ObjectMapperSerde<ProcessInstanceMigrationTrigger>
       PROCESS_INSTANCE_MIGRATION_SERDE =
           new ObjectMapperSerde<>(ProcessInstanceMigrationTrigger.class);
-  public static final ObjectMapperSerde<ProcessDefinition> PROCESS_DEFINITION_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinition.class);
+  public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
+      new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
-  public static final ObjectMapperSerde<Definitions> DEFINITIONS_SERDE =
-      new ObjectMapperSerde<>(Definitions.class);
+  public static final ObjectMapperSerde<DefinitionsDTO> DEFINITIONS_SERDE =
+      new ObjectMapperSerde<>(DefinitionsDTO.class);
   public static final ObjectMapperSerde<DefinitionsTrigger> DEFINITIONS_TRIGGER_SERDE =
       new ObjectMapperSerde<>(DefinitionsTrigger.class);
   public static final ObjectMapperSerde<ProcessInstance> PROCESS_INSTANCE_SERDE =
@@ -206,13 +206,13 @@ public class ProcessDefinitionTopologyProducer {
             PROCESS_DEFINITION_STORE_NAME)
         .split()
         .branch(
-            (key, value) -> value instanceof ProcessDefinition,
+            (key, value) -> value instanceof ProcessDefinitionDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
-                                    (ProcessDefinitionKey) key, (ProcessDefinition) value))
+                                    (ProcessDefinitionKey) key, (ProcessDefinitionDTO) value))
                         .to(
                             PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))

@@ -5,9 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder(toBuilder = true)
 public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
@@ -18,6 +20,13 @@ public class TaskState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementId, parentElementInstanceId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    super(
+        state,
+        elementId,
+        parentElementInstanceId,
+        elementInstanceId,
+        passedCnt,
+        loopCnt,
+        inputFlowId);
   }
 }

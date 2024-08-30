@@ -13,10 +13,10 @@ import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.engine.pi.processor.CatchEventProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.TriggerHelper;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEventDTO;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.Message;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
@@ -32,7 +32,7 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 
 @ApplicationScoped
-public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, BoundaryEventState> {
+public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEventDTO, BoundaryEventState> {
   @Inject MessageSchedulerFactory messageSchedulerFactory;
 
   @Override
@@ -40,8 +40,8 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
-      BoundaryEvent element,
+      ProcessDefinitionDTO processDefinition,
+      BoundaryEventDTO element,
       BoundaryEventState oldState,
       ScopedVars variables) {
 
@@ -60,7 +60,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
                     oldState.getElementInstanceId(),
                     oldState.getElementId(),
                     oldState.getPassedCnt(),
-                    FlowNodeStateEnum.ACTIVE,
+                    FlowNodeStateEnum.WAITING,
                     trigger.getSourceInstanceId(),
                     scheduleKeys,
                     messageEventKeys,
@@ -72,14 +72,14 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
 
   private Set<MessageEvent> getMessageSubscriptions(
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      BoundaryEvent element,
+      ProcessDefinitionDTO definition,
+      BoundaryEventDTO element,
       BoundaryEventState oldState,
       ScopedVars variables) {
     return element.getMessageventDefinitions().stream()
         .map(
             messageEventDefinition -> {
-              Message message =
+              MessageDTO message =
                   definition
                       .getDefinitions()
                       .getMessages()
@@ -105,8 +105,8 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
       ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
-      BoundaryEvent element,
+      ProcessDefinitionDTO processDefinition,
+      BoundaryEventDTO element,
       BoundaryEventState oldState,
       ScopedVars variables) {
     // Trigger by timer or by message.
@@ -149,7 +149,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
                       oldState.getElementInstanceId(),
                       oldState.getElementId(),
                       oldState.getPassedCnt() + 1,
-                      FlowNodeStateEnum.ACTIVE,
+                      FlowNodeStateEnum.WAITING,
                       oldState.getAttachedInstanceId(),
                       oldState.getScheduleKeys(),
                       oldState.getMessageEventKeys(),
@@ -161,7 +161,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
 
   private Set<MessageScheduler> getSchedules(
       ProcessInstance processInstance,
-      BoundaryEvent element,
+      BoundaryEventDTO element,
       BoundaryEventState oldState,
       ScopedVars variables) {
     ContinueFlowElementTrigger timeoutMessage =
@@ -189,7 +189,7 @@ public class BoundaryEventProcessor extends CatchEventProcessor<BoundaryEvent, B
   @Override
   public TriggerResult terminate(
       TerminateTrigger terminateTrigger,
-      BoundaryEvent boundaryEvent,
+      BoundaryEventDTO boundaryEvent,
       BoundaryEventState boundaryEventState) {
 
     return TriggerResult.builder()

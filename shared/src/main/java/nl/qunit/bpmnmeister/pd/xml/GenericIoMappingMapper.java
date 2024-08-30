@@ -2,14 +2,14 @@ package nl.qunit.bpmnmeister.pd.xml;
 
 import java.util.Set;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
 
 public class GenericIoMappingMapper implements IoMappingMapper {
 
   @Override
-  public InputOutputMapping map(TBaseElement tCatchEvent) {
+  public InputOutputMappingDTO map(TBaseElement tCatchEvent) {
 
     // TODO Implement generic io mapping
-    return new InputOutputMapping(Set.of(), Set.of());
+    return new InputOutputMappingDTO(Set.of(), Set.of());
   }
 }

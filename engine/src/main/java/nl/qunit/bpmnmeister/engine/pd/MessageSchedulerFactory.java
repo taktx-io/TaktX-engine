@@ -15,7 +15,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.TimerEventDefinitionDTO;
 import nl.qunit.bpmnmeister.scheduler.FixedRateMessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -34,7 +34,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
     if (timerEventDefinition.getTimeCycle() != null
@@ -76,7 +76,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
 
@@ -102,7 +102,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
     String timeDate =
@@ -124,7 +124,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
@@ -153,7 +153,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
 
@@ -182,7 +182,7 @@ public class MessageSchedulerFactory {
       UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
-      TimerEventDefinition timerEventDefinition,
+      TimerEventDefinitionDTO timerEventDefinition,
       List<SchedulableMessage<?>> messages,
       ScopedVars variables) {
     String timeCycle =

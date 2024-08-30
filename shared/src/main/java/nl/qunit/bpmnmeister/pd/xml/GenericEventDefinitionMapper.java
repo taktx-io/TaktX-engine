@@ -9,15 +9,15 @@ import nl.qunit.bpmnmeister.bpmn.TLinkEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTerminateEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.EventDefinition;
-import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.MessageEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.TimerEventDefinitionDTO;
 
 public class GenericEventDefinitionMapper implements EventDefinitionMapper {
 
-  public Set<EventDefinition> map(
+  public Set<EventDefinitionDTO> map(
       List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId) {
     return eventDefinition.stream()
         .map(JAXBElement::getValue)
@@ -25,7 +25,7 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
         .collect(Collectors.toSet());
   }
 
-  private EventDefinition mapEventDefinition(TEventDefinition ed, String parentId) {
+  private EventDefinitionDTO mapEventDefinition(TEventDefinition ed, String parentId) {
     if (ed instanceof TTimerEventDefinition timerEventDefinition) {
       return mapTimerEventDefinition(parentId, timerEventDefinition);
     } else if (ed instanceof TMessageEventDefinition messageEventDefinition) {
@@ -38,23 +38,22 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }
 
-  private EventDefinition mapTerminateEventDefinition(
+  private EventDefinitionDTO mapTerminateEventDefinition(
       TTerminateEventDefinition terminateEventDefinition) {
-    return new TerminateEventDefinition(terminateEventDefinition.getId());
+    return new TerminateEventDefinitionDTO(terminateEventDefinition.getId());
   }
 
-  private EventDefinition mapLinkEventDefinition(TLinkEventDefinition linkEventDefinition) {
-    return new LinkEventDefinition(
-        linkEventDefinition.getId(), linkEventDefinition.getName());
+  private EventDefinitionDTO mapLinkEventDefinition(TLinkEventDefinition linkEventDefinition) {
+    return new LinkEventDefinitionDTO(linkEventDefinition.getId(), linkEventDefinition.getName());
   }
 
-  private static MessageEventDefinition mapMessageEventDefinition(
+  private static MessageEventDefinitionDTO mapMessageEventDefinition(
       TMessageEventDefinition messageEventDefinition) {
-    return new MessageEventDefinition(
+    return new MessageEventDefinitionDTO(
         messageEventDefinition.getId(), messageEventDefinition.getMessageRef().getLocalPart());
   }
 
-  private TimerEventDefinition mapTimerEventDefinition(
+  private TimerEventDefinitionDTO mapTimerEventDefinition(
       String parentId, TTimerEventDefinition timerEventDefinition) {
     String duration =
         timerEventDefinition.getTimeDuration() != null
@@ -74,7 +73,7 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
                 .map(Object::toString)
                 .collect(Collectors.joining(""))
             : "";
-    return new TimerEventDefinition(
+    return new TimerEventDefinitionDTO(
         timerEventDefinition.getId(), parentId, timeDate, duration, cycle);
   }
 }

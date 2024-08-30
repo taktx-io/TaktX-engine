@@ -15,7 +15,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 public class OneTimeScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final UUID rootInstanceKey;
   private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerEventDefinitionId;
@@ -25,14 +24,12 @@ public class OneTimeScheduler implements MessageScheduler {
   @JsonCreator
   public OneTimeScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId,
       @JsonProperty("messages") List<SchedulableMessage<?>> messages,
       @JsonProperty("when") String when) {
     this.processDefinitionKey = processDefinitionKey;
-    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerEventDefinitionId = timerEventDefinitionId;
@@ -41,10 +38,11 @@ public class OneTimeScheduler implements MessageScheduler {
   }
 
   @Override
-  public OneTimeScheduler evaluate(Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> consumer) {
+  public OneTimeScheduler evaluate(
+      Instant now, BiConsumer<UUID, List<SchedulableMessage<?>>> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
-      consumer.accept(rootInstanceKey, messages);
+      consumer.accept(processInstanceKey, messages);
 
       // Return null to indicate that this command is done
       return null;

@@ -1,0 +1,31 @@
+package nl.qunit.bpmnmeister.pd.model;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.annotation.Nonnull;
+import java.util.Set;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+
+@Getter
+@EqualsAndHashCode(callSuper = true)
+public abstract class ActivityDTO extends FlowNodeDTO
+    implements WithIoMappingDTO {
+  private final LoopCharacteristicsDTO loopCharacteristics;
+  private final InputOutputMappingDTO ioMapping;
+
+  protected ActivityDTO(
+      @Nonnull String id,
+      @Nonnull String parentId,
+      @Nonnull Set<String> incoming,
+      @Nonnull Set<String> outgoing,
+      @Nonnull LoopCharacteristicsDTO loopCharacteristics,
+      @Nonnull InputOutputMappingDTO ioMapping) {
+    super(id, parentId, incoming, outgoing);
+    this.loopCharacteristics = loopCharacteristics;
+    this.ioMapping = ioMapping;
+  }
+
+  @JsonIgnore
+  public abstract ProcessDefinitionDTO getAsSubProcessDefinition(
+      ProcessDefinitionDTO parentProcessDefinition);
+}

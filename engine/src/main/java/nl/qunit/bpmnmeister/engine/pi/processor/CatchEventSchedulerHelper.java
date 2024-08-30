@@ -10,10 +10,10 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState.IntermediateCatchEventStateBuilder;
@@ -39,7 +39,7 @@ public class CatchEventSchedulerHelper {
                 oldState.getElementInstanceId(),
                 element.getId(),
                 Constants.NONE,
-                Variables.empty()));
+                VariablesDTO.empty()));
 
     Set<MessageScheduler> messageSchedulers =
         element.getTimerEventDefinitions().stream()
@@ -56,7 +56,7 @@ public class CatchEventSchedulerHelper {
             .collect(Collectors.toSet());
 
     newStateBuilder
-        .state(FlowNodeStateEnum.ACTIVE)
+        .state(FlowNodeStateEnum.WAITING)
         .scheduledKeys(
             messageSchedulers.stream()
                 .map(MessageScheduler::getScheduleKey)
@@ -74,7 +74,7 @@ public class CatchEventSchedulerHelper {
       IntermediateCatchEvent element,
       IntermediateCatchEventState oldState,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition) {
+      ProcessDefinitionDTO processDefinition) {
     if (trigger.getInputFlowId().equals(Constants.NONE)) {
       newStateBuilder.passedCnt(oldState.getPassedCnt() + 1);
       newStateBuilder.state(FlowNodeStateEnum.FINISHED);

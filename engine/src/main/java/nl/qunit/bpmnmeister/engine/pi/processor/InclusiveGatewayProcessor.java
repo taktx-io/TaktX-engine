@@ -10,25 +10,25 @@ import java.util.Optional;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayState;
 
 @ApplicationScoped
 public class InclusiveGatewayProcessor
-    extends GatewayProcessor<InclusiveGateway, InclusiveGatewayState> {
+    extends GatewayProcessor<InclusiveGatewayDTO, InclusiveGatewayState> {
 
   @Override
   protected TriggerResult triggerDecision(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      InclusiveGateway element,
+      ProcessDefinitionDTO definition,
+      InclusiveGatewayDTO element,
       InclusiveGatewayState oldState,
       ScopedVars variables) {
 
@@ -66,7 +66,7 @@ public class InclusiveGatewayProcessor
                       oldState.getElementInstanceId(),
                       oldState.getElementId(),
                       oldState.getPassedCnt(),
-                      FlowNodeStateEnum.ACTIVE,
+                      FlowNodeStateEnum.WAITING,
                       oldState.getInputFlowId(),
                       triggeredInputFlows,
                       oldState.getSelectedOutputFlows())))
@@ -76,7 +76,7 @@ public class InclusiveGatewayProcessor
 
   private boolean canTriggerOutputFlows(
       Set<String> remainingIncomingFlows,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       ProcessInstance processInstance) {
     // Collect all Inclusive gateway for each incoming flow for this current flowNode.
 
@@ -92,7 +92,7 @@ public class InclusiveGatewayProcessor
       Set<GatewayOutgoingFlowPair> pairs =
           inclusiveGateways.getOrDefault(incomingFlow, new HashSet<>());
       for (GatewayOutgoingFlowPair pair : pairs) {
-        List<FlowNodeState> flowNodeStates =
+        List<FlowNodeStateDTO> flowNodeStates =
             processInstance.getFlowNodeStates().get(pair.inclusiveGateway.getId());
         if (!flowNodeStates.isEmpty()) {
           InclusiveGatewayState inclusiveGatewayState =
@@ -116,7 +116,7 @@ public class InclusiveGatewayProcessor
   }
 
   private Map<String, Set<GatewayOutgoingFlowPair>> findPreviousInclusiveGatewaysForFlows(
-      ProcessDefinition definition, Set<String> incomingFlows) {
+      ProcessDefinitionDTO definition, Set<String> incomingFlows) {
     Map<String, Set<GatewayOutgoingFlowPair>> inclusiveGateways = new HashMap<>();
     for (String incomingFlow : incomingFlows) {
       Set<GatewayOutgoingFlowPair> previousInclusiveGateway =
@@ -133,17 +133,17 @@ public class InclusiveGatewayProcessor
   }
 
   private Set<GatewayOutgoingFlowPair> findPreviousInclusiveGatewayState(
-      String flowId, ProcessDefinition definition) {
+      String flowId, ProcessDefinitionDTO definition) {
     Set<GatewayOutgoingFlowPair> inclusiveGateways = new HashSet<>();
-    Optional<FlowNode<?>> optElementWithOutgoingFlow =
+    Optional<FlowNodeDTO> optElementWithOutgoingFlow =
         definition
             .getDefinitions()
             .getRootProcess()
             .getFlowElements()
             .getFlowNodeWithOutgoingFlow(flowId);
     if (optElementWithOutgoingFlow.isPresent()) {
-      FlowNode<?> flowNode = optElementWithOutgoingFlow.get();
-      if (flowNode instanceof InclusiveGateway inclusiveGateway) {
+      FlowNodeDTO flowNode = optElementWithOutgoingFlow.get();
+      if (flowNode instanceof InclusiveGatewayDTO inclusiveGateway) {
         inclusiveGateways.add(new GatewayOutgoingFlowPair(inclusiveGateway, flowId));
       } else {
         // Not an inclusive gateway, so we need to look further upstream
@@ -171,5 +171,5 @@ public class InclusiveGatewayProcessor
         elementState.getSelectedOutputFlows());
   }
 
-  private record GatewayOutgoingFlowPair(InclusiveGateway inclusiveGateway, String outputFlowId) {}
+  private record GatewayOutgoingFlowPair(InclusiveGatewayDTO inclusiveGateway, String outputFlowId) {}
 }

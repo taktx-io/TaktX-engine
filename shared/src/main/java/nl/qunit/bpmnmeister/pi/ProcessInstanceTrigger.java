@@ -21,12 +21,10 @@ public abstract class ProcessInstanceTrigger {
 
   private final UUID processInstanceKey;
   private final String elementId;
-  private final Variables variables;
+  private final VariablesDTO variables;
 
   protected ProcessInstanceTrigger(
-      UUID processInstanceKey,
-      String elementId,
-      Variables variables) {
+      UUID processInstanceKey, String elementId, VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
     this.elementId = elementId;
     this.variables = variables;

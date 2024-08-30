@@ -7,9 +7,9 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 public class EndThrowingEvent extends ThrowingEvent {
 
   @Override
-  public ProcessInstanceState process(ProcessInstance processInstance,
-      FlowNodeStates newFlowNodeStates) {
-    if (newFlowNodeStates.getWithState(FlowNodeStateEnum.ACTIVE).isEmpty()) {
+  public ProcessInstanceState process(
+      ProcessInstance processInstance, FlowNodeStates newFlowNodeStates) {
+    if (newFlowNodeStates.getWithState(FlowNodeStateEnum.WAITING).isEmpty()) {
       return ProcessInstanceState.COMPLETED;
     } else {
       return processInstance.getProcessInstanceState();

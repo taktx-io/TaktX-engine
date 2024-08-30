@@ -4,9 +4,9 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.List;
 import java.util.Set;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.EventDefinition;
+import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
 
 public interface EventDefinitionMapper {
-  Set<EventDefinition> map(
+  Set<EventDefinitionDTO> map(
       List<JAXBElement<? extends TEventDefinition>> eventDefinition, String parentId);
 }

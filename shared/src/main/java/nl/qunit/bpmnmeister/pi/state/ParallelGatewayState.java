@@ -6,8 +6,10 @@ import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
+@SuperBuilder(toBuilder = true)
 public class ParallelGatewayState extends GatewayState {
   Set<String> triggeredFlows;
 

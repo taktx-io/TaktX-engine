@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.pi.state;
 
 public enum FlowNodeStateEnum {
   READY,
-  ACTIVE,
+  WAITING,
   TERMINATED,
   FINISHED;
 

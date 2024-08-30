@@ -4,20 +4,20 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.BaseElement;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 
 @Slf4j
 @ToString(callSuper = true)
-public abstract class StateProcessor<E extends BaseElement, S extends FlowNodeState> {
+public abstract class StateProcessor<E extends BaseElementDTO, S extends FlowNodeStateDTO> {
   public abstract TriggerResult trigger(
       ProcessInstanceTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      FlowNode<?> element,
+      ProcessDefinitionDTO definition,
+      FlowNodeDTO element,
       ScopedVars variables);
 }

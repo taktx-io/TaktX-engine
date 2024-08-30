@@ -7,9 +7,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pd.model.ParallelGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlowDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
@@ -18,14 +18,14 @@ import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 
 @ApplicationScoped
 public class ParallelGatewayProcessor
-    extends GatewayProcessor<ParallelGateway, ParallelGatewayState> {
+    extends GatewayProcessor<ParallelGatewayDTO, ParallelGatewayState> {
 
   @Override
   protected TriggerResult triggerDecision(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      ParallelGateway element,
+      ProcessDefinitionDTO definition,
+      ParallelGatewayDTO element,
       ParallelGatewayState oldState,
       ScopedVars variables) {
 
@@ -33,7 +33,7 @@ public class ParallelGatewayProcessor
     newTriggeredFlows.add(trigger.getInputFlowId());
 
     final Set<String> outputFlows = new HashSet<>();
-    FlowNodeStateEnum newState = FlowNodeStateEnum.ACTIVE;
+    FlowNodeStateEnum newState = FlowNodeStateEnum.WAITING;
     if (element.getIncoming().equals(newTriggeredFlows)) {
       newTriggeredFlows.clear();
       outputFlows.addAll(element.getOutgoing());
@@ -43,8 +43,8 @@ public class ParallelGatewayProcessor
         outputFlows.stream()
             .map(
                 flowId -> {
-                  SequenceFlow flow =
-                      (SequenceFlow)
+                  SequenceFlowDTO flow =
+                      (SequenceFlowDTO)
                           definition
                               .getDefinitions()
                               .getRootProcess()

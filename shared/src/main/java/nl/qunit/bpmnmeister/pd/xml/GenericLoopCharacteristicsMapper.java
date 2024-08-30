@@ -3,15 +3,16 @@ package nl.qunit.bpmnmeister.pd.xml;
 import jakarta.xml.bind.JAXBElement;
 import nl.qunit.bpmnmeister.bpmn.TLoopCharacteristics;
 import nl.qunit.bpmnmeister.bpmn.TMultiInstanceLoopCharacteristics;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
 
 public class GenericLoopCharacteristicsMapper implements LoopCharacteristicsMapper {
 
-  public LoopCharacteristics map(JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
+  public LoopCharacteristicsDTO map(
+      JAXBElement<? extends TLoopCharacteristics> loopCharacteristics) {
     if (loopCharacteristics != null) {
       TLoopCharacteristics tLoopCharacteristics = loopCharacteristics.getValue();
       if (tLoopCharacteristics instanceof TMultiInstanceLoopCharacteristics tLoopCharacteristics1) {
-        return new LoopCharacteristics(
+        return new LoopCharacteristicsDTO(
             tLoopCharacteristics1.isIsSequential(),
             tLoopCharacteristics1.getLoopDataInputRef().toString(),
             tLoopCharacteristics1.getInputDataItem().getName(),
@@ -19,6 +20,6 @@ public class GenericLoopCharacteristicsMapper implements LoopCharacteristicsMapp
             tLoopCharacteristics1.getOutputDataItem().getName());
       }
     }
-    return LoopCharacteristics.NONE;
+    return LoopCharacteristicsDTO.NONE;
   }
 }

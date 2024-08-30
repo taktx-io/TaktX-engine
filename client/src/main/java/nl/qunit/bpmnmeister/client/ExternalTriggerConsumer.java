@@ -34,14 +34,14 @@ import java.util.concurrent.CompletableFuture;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.Topics;
-import nl.qunit.bpmnmeister.pd.model.Definitions;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -65,7 +65,7 @@ public class ExternalTriggerConsumer {
   @Inject KafkaPropertiesHelper kafkaPropertiesHelper;
 
   private final Map<String, Object> definitionMap = new HashMap<>();
-  private KafkaConsumer<ProcessDefinitionKey, ProcessDefinition> parsedDefinitionConsumer;
+  private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> parsedDefinitionConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTrigger> responseEmitter;
 
   public ExternalTriggerConsumer(ObjectMapper objectMapper) {
@@ -97,9 +97,9 @@ public class ExternalTriggerConsumer {
     CompletableFuture.runAsync(
         () -> {
           while (true) {
-            ConsumerRecords<ProcessDefinitionKey, ProcessDefinition> records =
+            ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records =
                 parsedDefinitionConsumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinition> record : records) {
+            for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record : records) {
               consumeDefinition(record.key());
             }
           }
@@ -131,7 +131,7 @@ public class ExternalTriggerConsumer {
           URL url = Thread.currentThread().getContextClassLoader().getResource(resource);
           Path bpmnPath = Paths.get(url.getPath());
           String xml = Files.readString(bpmnPath);
-          Definitions definitions = new BpmnParser().parse(xml);
+          DefinitionsDTO definitions = new BpmnParser().parse(xml);
 
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
           log.info("deploying {}", bpmnPath);
@@ -235,7 +235,7 @@ public class ExternalTriggerConsumer {
                       externalTaskId,
                       externalTaskTrigger.getElementInstanceId(),
                       externalTaskResponseResult,
-                      new Variables(variablesMap));
+                      new VariablesDTO(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
             } catch (Throwable e) {
               LOG.error("Error invoking method", e);
@@ -245,7 +245,7 @@ public class ExternalTriggerConsumer {
                       externalTaskId,
                       externalTaskTrigger.getElementInstanceId(),
                       new ExternalTaskResponseResult(false, true, e.getMessage()),
-                      Variables.empty());
+                      VariablesDTO.empty());
             }
             responseEmitter.send(
                 new ProducerRecord<>(
@@ -263,7 +263,7 @@ public class ExternalTriggerConsumer {
     // This method has the matching annotation
     Parameter[] parameters = method.getParameters();
     Object[] args = new Object[parameters.length];
-    Variables variables = externalTaskTrigger.getVariables();
+    VariablesDTO variables = externalTaskTrigger.getVariables();
     for (int i = 0; i < parameters.length; i++) {
       if (parameters[i].getType().equals(ExternalTaskTrigger.class)) {
         args[i] = externalTaskTrigger;

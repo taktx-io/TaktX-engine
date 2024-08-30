@@ -13,12 +13,12 @@ public abstract class ThrowingEvent {
   public static final ThrowingEvent NOOP =
       new ThrowingEvent() {
         @Override
-        public ProcessInstanceState process(ProcessInstance processInstance,
-            FlowNodeStates newFlowNodeStates) {
+        public ProcessInstanceState process(
+            ProcessInstance processInstance, FlowNodeStates newFlowNodeStates) {
           return processInstance.getProcessInstanceState();
         }
       };
 
-  public abstract ProcessInstanceState process(ProcessInstance processInstance,
-      FlowNodeStates newFlowNodeStates);
+  public abstract ProcessInstanceState process(
+      ProcessInstance processInstance, FlowNodeStates newFlowNodeStates);
 }

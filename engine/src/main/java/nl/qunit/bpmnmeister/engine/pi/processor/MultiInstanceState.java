@@ -6,12 +6,12 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeState;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 @SuperBuilder(toBuilder = true)
-public class MultiInstanceState extends FlowNodeState {
+public class MultiInstanceState extends FlowNodeStateDTO {
 
   private final int loopCnt;
 

@@ -6,8 +6,8 @@ import lombok.Getter;
 public class TerminateThrowingEvent extends ThrowingEvent {
 
   @Override
-  public ProcessInstanceState process(ProcessInstance processInstance,
-      FlowNodeStates newFlowNodeStates) {
+  public ProcessInstanceState process(
+      ProcessInstance processInstance, FlowNodeStates newFlowNodeStates) {
     return ProcessInstanceState.TERMINATED;
   }
 }

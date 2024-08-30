@@ -8,10 +8,10 @@ import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
+import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.ThrowEventDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -19,7 +19,7 @@ import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.state.ThrowEventState;
 
-public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends ThrowEventState>
+public abstract class ThrowEventProcessor<E extends ThrowEventDTO<?>, S extends ThrowEventState>
     extends EventProcessor<E, S> {
 
   @Override
@@ -27,7 +27,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables) {
@@ -43,7 +43,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
         .forEach(allTriggers::add);
 
     element.getTerminateEventDefinitions().stream()
-        .map(TerminateEventDefinition::getId)
+        .map(TerminateEventDefinitionDTO::getId)
         .map(ted -> getTerminateTrigger(processInstance.getProcessInstanceKey()))
         .forEach(allTriggers::add);
 
@@ -64,7 +64,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
       ContinueFlowElementTrigger continueFlowElementTrigger,
       TriggerResultBuilder triggerResultBuilder,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables) {
@@ -77,8 +77,8 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
 
   private Optional<ProcessInstanceTrigger> getProcessInstanceTrigger(
       UUID processInstanceKey,
-      ProcessDefinition processDefinition,
-      LinkEventDefinition led,
+      ProcessDefinitionDTO processDefinition,
+      LinkEventDefinitionDTO led,
       ScopedVars variables) {
     Optional<IntermediateCatchEvent> linkedCatchElement =
         processDefinition
@@ -100,7 +100,7 @@ public abstract class ThrowEventProcessor<E extends ThrowEvent<?>, S extends Thr
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       E element,
       S oldState,
       ScopedVars variables);

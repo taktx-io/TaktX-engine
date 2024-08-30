@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+    id "com.diffplug.spotless" version "6.23.3"
+    id 'com.github.bjornvester.xjc' version "1.8.1"
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:quarkus-camel-bom:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-cache'
+    implementation 'io.quarkus:quarkus-kafka-streams'
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
+    implementation 'io.quarkus:quarkus-jaxb'
+    implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-resteasy-jackson'
+    implementation 'io.quarkiverse.logging.logback:quarkus-logging-logback:1.1.2'
+    implementation 'org.jboss.slf4j:slf4j-jboss-logmanager'
+
+    implementation 'nl.qunit.bpmnmeister:shared'
+    implementation 'org.camunda.feel:feel-engine:1.17.5'
+    implementation 'com.cronutils:cron-utils:9.2.1'
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.quarkus:quarkus-junit5-mockito'
+
+    testImplementation 'io.quarkus:quarkus-jacoco'
+
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation "org.testcontainers:junit-jupiter"
+
+    testImplementation 'org.awaitility:awaitility:4.2.1'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    implementation 'org.mapstruct:mapstruct:1.6.0'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.0'
+}
+
+
+spotless {
+    java {
+        target fileTree('src/main/java') {
+            include '**/*.java'
+            exclude '**/generated/**'
+        }
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+
+group = "nl.qunit.bpmnmeister"
+version '1.0.0-SNAPSHOT'
+
+xjc {
+    markGenerated.set(true)
+    defaultPackage.set("nl.qunit.bpmnmeister.bpmn")
+}
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}

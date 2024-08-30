@@ -3,21 +3,23 @@ package nl.qunit.bpmnmeister.pd.xml;
 import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.CalledElement;
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
-import nl.qunit.bpmnmeister.pd.model.CallActivity;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
+import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
 
 public class ZeebeCallActivityMapper implements CallActivityMapper {
 
   @Override
-  public CallActivity map(
-      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics,
-      InputOutputMapping ioMapping) {
+  public CallActivityDTO map(
+      TCallActivity callActivity,
+      String parentId,
+      LoopCharacteristicsDTO loopCharacteristics,
+      InputOutputMappingDTO ioMapping) {
     Optional<CalledElement> optCalledElement =
         ExtensionElementHelper.extractExtensionElement(
             callActivity.getExtensionElements(), CalledElement.class);
     String calledElement = optCalledElement.isEmpty() ? "" : optCalledElement.get().getProcessId();
-    return new CallActivity(
+    return new CallActivityDTO(
         callActivity.getId(),
         parentId,
         mapQNameList(callActivity.getIncoming()),

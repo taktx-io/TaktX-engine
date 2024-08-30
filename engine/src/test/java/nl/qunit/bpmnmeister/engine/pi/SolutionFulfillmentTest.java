@@ -10,7 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -48,20 +48,21 @@ class SolutionFulfillmentTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/SolutionFulfillment.bpmn")
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilServiceTaskIsWaitingForResponse("DetermineTimeoutTask")
-        .andRespondWithSuccess(Variables.of("waitForSafetyDossierObtained", "PT5M", "waitForSafetyDossierEnd", "PT10M"))
+        .andRespondWithSuccess(
+            VariablesDTO.of("waitForSafetyDossierObtained", "PT5M", "waitForSafetyDossierEnd", "PT10M"))
         .waitUntilChildProcessIsStarted()
         .waitUntilElementIsActive("SafetyDossierObtainedTimeoutBoundaryEvent")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
         .waitFor(Duration.ofSeconds(1))
         .waitUntilServiceTaskIsWaitingForResponse("SendTimeoutOccurredExceptionSubProcessTask")
-        .andRespondWithSuccess(Variables.empty())
+        .andRespondWithSuccess(VariablesDTO.empty())
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
         .waitFor(Duration.ofSeconds(1))
         .parentProcess()
         .waitUntilServiceTaskIsWaitingForResponse("SendTimeoutOccurredExceptionTask")
-        .andRespondWithSuccess(Variables.empty())
+        .andRespondWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted();
   }
 

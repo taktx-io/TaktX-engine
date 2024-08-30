@@ -16,8 +16,8 @@ import nl.qunit.bpmnmeister.engine.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ExternalTask;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.ExternalTaskDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
@@ -26,7 +26,7 @@ import nl.qunit.bpmnmeister.pi.FailThrowingEvent;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ThrowingEvent;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.ActivityState;
 import nl.qunit.bpmnmeister.pi.state.ExternalTaskState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
@@ -34,7 +34,7 @@ import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
 import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 
-public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends ExternalTaskState>
+public abstract class ExternalTaskProcessor<T extends ExternalTaskDTO, S extends ExternalTaskState>
     extends ActivityProcessor<T, S> {
 
   @Inject Clock clock;
@@ -45,7 +45,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       T element,
       S s,
       ScopedVars variables) {
@@ -61,7 +61,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       T element,
       S oldState,
       ScopedVars variables) {
@@ -78,7 +78,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
         .build();
   }
 
-  private Variables getExternalTaskVariables(WithIoMapping element, ScopedVars variables) {
+  private VariablesDTO getExternalTaskVariables(WithIoMapping element, ScopedVars variables) {
     return ioMappingProcessor.getInputVariables(element, variables);
   }
 
@@ -90,31 +90,30 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
   private TriggerResult triggerExternalTaskResponse(
       ExternalTaskResponseTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       T element,
       S oldState,
       ScopedVars variables) {
 
     variables.push(UUID.randomUUID(), trigger.getProcessInstanceKey(), trigger.getVariables());
-    Variables mappedVariables = ioMappingProcessor.getOutputVariables(element, variables);
+    VariablesDTO mappedVariables = ioMappingProcessor.getOutputVariables(element, variables);
     variables.pop();
     variables.merge(mappedVariables);
 
-    if (oldState.getState() != FlowNodeStateEnum.ACTIVE) {
+    if (oldState.getState() != FlowNodeStateEnum.WAITING) {
       return TriggerResult.builder().newFlowNodeStates(List.of(oldState)).build();
     }
 
-    TriggerResult triggerResult =
+    return
         getTriggerResultForExternalTaskResponse(
             trigger, processInstance, definition, element, oldState, variables);
 
-    return triggerResult;
   }
 
   private TriggerResult getTriggerResultForExternalTaskResponse(
       ExternalTaskResponseTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
+      ProcessDefinitionDTO definition,
       T element,
       S oldState,
       ScopedVars variables) {
@@ -230,7 +229,7 @@ public abstract class ExternalTaskProcessor<T extends ExternalTask, S extends Ex
       T element,
       S oldState,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
+      ProcessDefinitionDTO processDefinition,
       ScopedVars variables) {
     return finishActivity(
         TriggerResult.EMPTY,

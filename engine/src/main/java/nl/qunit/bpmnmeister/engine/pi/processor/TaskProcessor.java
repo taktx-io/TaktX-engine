@@ -4,8 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.TaskDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
@@ -14,14 +14,14 @@ import nl.qunit.bpmnmeister.pi.state.TaskState;
 
 @ApplicationScoped
 @ToString(callSuper = true)
-public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState> {
+public class TaskProcessor extends ActivityProcessor<TaskDTO<TaskState>, TaskState> {
 
   @Override
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      Task<TaskState> element,
+      ProcessDefinitionDTO definition,
+      TaskDTO<TaskState> element,
       TaskState oldState,
       ScopedVars variables) {
     TaskState finishedTaskState =
@@ -41,8 +41,8 @@ public class TaskProcessor extends ActivityProcessor<Task<TaskState>, TaskState>
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      Task<TaskState> element,
+      ProcessDefinitionDTO definition,
+      TaskDTO<TaskState> element,
       TaskState taskState,
       ScopedVars variables) {
     return TriggerResult.EMPTY;

@@ -3,10 +3,12 @@ package nl.qunit.bpmnmeister.pi.state;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
-public abstract class ActivityState extends FlowNodeState {
+@SuperBuilder(toBuilder = true)
+public abstract class ActivityState extends FlowNodeStateDTO {
 
   private final FlowNodeStateEnum state;
   private final UUID parentElementInstanceId;

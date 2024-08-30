@@ -1,0 +1,12 @@
+package nl.qunit.bpmnmeister.pi;
+
+import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
+
+@NoArgsConstructor
+public class TaskInstance extends ActivityInstance {
+
+  public TaskInstance(String flowNode) {
+    super(flowNode);
+  }
+}

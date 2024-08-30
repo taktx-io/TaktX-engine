@@ -1,13 +1,15 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
-import nl.qunit.bpmnmeister.pd.model.CallActivity;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
+import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
 
 public interface CallActivityMapper extends Mapper {
 
-  CallActivity map(
-      TCallActivity callActivity, String parentId, LoopCharacteristics loopCharacteristics,
-      InputOutputMapping ioMapping);
+  CallActivityDTO map(
+      TCallActivity callActivity,
+      String parentId,
+      LoopCharacteristicsDTO loopCharacteristics,
+      InputOutputMappingDTO ioMapping);
 }

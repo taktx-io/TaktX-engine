@@ -10,7 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class ThrowingEventTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/terminate-end-event.bpmn")
         .waitForProcessDeployment()
-        .startProcessInstance(Variables.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilServiceTaskIsWaitingForResponse("Task_1")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitUntilCompleted()

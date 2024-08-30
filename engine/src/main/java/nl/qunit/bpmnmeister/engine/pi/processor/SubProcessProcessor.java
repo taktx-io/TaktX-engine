@@ -1,56 +1,59 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
-import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pd.model.FlowNodeDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.SubProcessDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 
 @ApplicationScoped
-public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProcessState> {
+public class SubProcessProcessor extends ActivityProcessor<SubProcessDTO, SubProcessState> {
 
   @Override
   protected TriggerResult triggerStartFlowElement(
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      SubProcess element,
+      ProcessDefinitionDTO definition,
+      SubProcessDTO element,
       SubProcessState oldState,
       ScopedVars variables) {
-    List<ProcessInstanceTrigger> subProcessTriggers = new ArrayList<>();
-    String startElement = getStartEvent(element);
-    UUID childProcessInstanceKey = UUID.randomUUID();
-    UUID parentProcessInstanceKey = processInstance.getProcessInstanceKey();
-    variables.push(childProcessInstanceKey, parentProcessInstanceKey, Variables.empty());
-    StartNewProcessInstanceTrigger subProcessTrigger =
-        new StartNewProcessInstanceTrigger(
-            processInstance.getRootInstanceKey(),
-            childProcessInstanceKey,
-            parentProcessInstanceKey,
-            element.getAsSubProcessDefinition(definition),
-            element.getId(),
+
+    Optional<FlowNodeDTO> optStartElement = getStartEvent(element);
+    if (optStartElement.isEmpty()) {
+      return TriggerResult.builder()
+          .newFlowNodeStates(List.of(getFinishedSubProcessState(oldState)))
+          .processInstanceTriggers(List.of())
+          .build();
+    }
+
+    FlowNodeDTO startElement = optStartElement.get();
+    String parentPrefix =
+        startElement.getParentId().equals(Constants.NONE) ? "" : startElement.getParentId() + "/";
+
+    StartFlowElementTrigger startSubProcessTrigger =
+        new StartFlowElementTrigger(
+            processInstance.getProcessInstanceKey(),
             oldState.getElementInstanceId(),
-            startElement,
+            parentPrefix + startElement.getId(),
             Constants.NONE,
             variables.getCurrentScopeVariables());
-    subProcessTriggers.add(subProcessTrigger);
+
     SubProcessState newSubProcessState =
         new SubProcessState(
-            FlowNodeStateEnum.ACTIVE,
-            childProcessInstanceKey,
+            FlowNodeStateEnum.WAITING,
+            UUID.randomUUID(),
             oldState.getParentElementInstanceId(),
             oldState.getElementInstanceId(),
             oldState.getElementId(),
@@ -59,7 +62,7 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             oldState.getInputFlowId());
     return TriggerResult.builder()
         .newFlowNodeStates(List.of(newSubProcessState))
-        .processInstanceTriggers(subProcessTriggers)
+        .processInstanceTriggers(List.of(startSubProcessTrigger))
         .build();
   }
 
@@ -67,10 +70,22 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
   protected TriggerResult triggerContinueFlowElement(
       ContinueFlowElementTrigger continueFlowElementTrigger,
       ProcessInstance processInstance,
-      ProcessDefinition definition,
-      SubProcess element,
+      ProcessDefinitionDTO definition,
+      SubProcessDTO element,
       SubProcessState subProcessState,
       ScopedVars variables) {
+    SubProcessState newSubProcessState = getFinishedSubProcessState(
+        subProcessState);
+    return finishActivity(
+        TriggerResult.EMPTY,
+        processInstance,
+        definition,
+        element,
+        newSubProcessState,
+        ScopedVars.EMPTY);
+  }
+
+  private static SubProcessState getFinishedSubProcessState(SubProcessState subProcessState) {
     SubProcessState newSubProcessState =
         new SubProcessState(
             FlowNodeStateEnum.FINISHED,
@@ -81,26 +96,24 @@ public class SubProcessProcessor extends ActivityProcessor<SubProcess, SubProces
             subProcessState.getPassedCnt() + 1,
             subProcessState.getLoopCnt(),
             subProcessState.getInputFlowId());
-    return finishActivity(
-        TriggerResult.EMPTY,
-        processInstance,
-        definition,
-        element,
-        newSubProcessState,
-        ScopedVars.EMPTY);
+    return newSubProcessState;
   }
 
-  private String getStartEvent(SubProcess subProcess) {
+  private Optional<FlowNodeDTO> getStartEvent(SubProcessDTO subProcess) {
     if (!subProcess.getElements().getStartEvents().isEmpty()) {
-      return subProcess.getElements().getStartEvents().get(0).getId();
+      return Optional.of(subProcess.getElements().getStartEvents().get(0));
     } else {
-      return subProcess.getElements().values().get(0).getId();
+      // get the first element without incoming flow. If that is not available
+      // get the first element. If no element is available return optional empty.
+      return subProcess.getElements().getFlowNodes().stream()
+          .filter(flowNode -> flowNode.getIncoming().isEmpty())
+          .findFirst();
     }
   }
 
   @Override
   public TriggerResult terminate(
-      TerminateTrigger terminateTrigger, SubProcess flowElement, SubProcessState elementState) {
+      TerminateTrigger terminateTrigger, SubProcessDTO flowElement, SubProcessState elementState) {
     ProcessInstanceTrigger terminateSubProcessTrigger =
         new TerminateTrigger(
             elementState.getChildProcessInstanceId(), Constants.NONE, Constants.NONE_UUID);

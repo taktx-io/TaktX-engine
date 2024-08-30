@@ -6,9 +6,11 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder(toBuilder = true)
 public class SubProcessState extends ActivityState {
 
   private final UUID childProcessInstanceId;
@@ -23,8 +25,14 @@ public class SubProcessState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementId, parentElementInstanceId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+    super(
+        state,
+        elementId,
+        parentElementInstanceId,
+        elementInstanceId,
+        passedCnt,
+        loopCnt,
+        inputFlowId);
     this.childProcessInstanceId = childProcessInstanceId;
   }
-
 }

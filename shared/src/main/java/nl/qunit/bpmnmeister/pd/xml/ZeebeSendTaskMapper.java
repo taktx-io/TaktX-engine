@@ -6,16 +6,18 @@ import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.TSendTask;
 import nl.qunit.bpmnmeister.bpmn.TaskDefinition;
 import nl.qunit.bpmnmeister.bpmn.TaskHeaders;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
-import nl.qunit.bpmnmeister.pd.model.SendTask;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
+import nl.qunit.bpmnmeister.pd.model.SendTaskDTO;
 
 public class ZeebeSendTaskMapper implements SendTaskMapper {
 
   @Override
-  public SendTask map(
-      TSendTask sendTask, String parentId, LoopCharacteristics loopCharacteristics,
-      InputOutputMapping ioMapping) {
+  public SendTaskDTO map(
+      TSendTask sendTask,
+      String parentId,
+      LoopCharacteristicsDTO loopCharacteristics,
+      InputOutputMappingDTO ioMapping) {
     Optional<TaskDefinition> taskDefinition =
         ExtensionElementHelper.extractExtensionElement(
             sendTask.getExtensionElements(), TaskDefinition.class);
@@ -36,7 +38,7 @@ public class ZeebeSendTaskMapper implements SendTaskMapper {
                 .getHeader()
                 .forEach(header -> headers.put(header.getKey(), header.getValue())));
 
-    return new SendTask(
+    return new SendTaskDTO(
         sendTask.getId(),
         parentId,
         taskDefinitionId,

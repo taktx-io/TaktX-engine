@@ -5,15 +5,15 @@ import java.util.Optional;
 import java.util.Set;
 import nl.qunit.bpmnmeister.bpmn.IoMapping;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMapping;
-import nl.qunit.bpmnmeister.pd.model.IoVariableMapping;
+import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.IoVariableMappingDTO;
 
 public class ZeebeIoMappingMapper implements IoMappingMapper {
 
   @Override
-  public InputOutputMapping map(TBaseElement tCatchEvent) {
-    Set<IoVariableMapping> inputMappings = new HashSet<>();
-    Set<IoVariableMapping> outputMappings = new HashSet<>();
+  public InputOutputMappingDTO map(TBaseElement tCatchEvent) {
+    Set<IoVariableMappingDTO> inputMappings = new HashSet<>();
+    Set<IoVariableMappingDTO> outputMappings = new HashSet<>();
 
     if (tCatchEvent.getExtensionElements() != null) {
       Optional<IoMapping> optCalledElement =
@@ -23,14 +23,14 @@ public class ZeebeIoMappingMapper implements IoMappingMapper {
         IoMapping ioMapping = optCalledElement.get();
         for (IoMapping.Input variableMapping : ioMapping.getInput()) {
           inputMappings.add(
-              new IoVariableMapping(variableMapping.getSource(), variableMapping.getTarget()));
+              new IoVariableMappingDTO(variableMapping.getSource(), variableMapping.getTarget()));
         }
         for (IoMapping.Output variableMapping : ioMapping.getOutput()) {
           outputMappings.add(
-              new IoVariableMapping(variableMapping.getSource(), variableMapping.getTarget()));
+              new IoVariableMappingDTO(variableMapping.getSource(), variableMapping.getTarget()));
         }
       }
     }
-    return new InputOutputMapping(inputMappings, outputMappings);
+    return new InputOutputMappingDTO(inputMappings, outputMappings);
   }
 }

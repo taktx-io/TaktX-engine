@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
+@SuperBuilder(toBuilder = true)
 public class InclusiveGatewayState extends GatewayState {
 
   private final Set<String> triggeredInputFlows;

@@ -4,23 +4,23 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.engine.pi.TriggerResult.TriggerResultBuilder;
-import nl.qunit.bpmnmeister.pd.model.EndEvent;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
-public class EndEventProcessor extends ThrowEventProcessor<EndEvent, EndEventState> {
+public class EndEventProcessor extends ThrowEventProcessor<EndEventDTO, EndEventState> {
 
   @Override
   protected void triggerThrowEvent(
       TriggerResultBuilder triggerResultBuilder,
       StartFlowElementTrigger trigger,
       ProcessInstance processInstance,
-      ProcessDefinition processDefinition,
-      EndEvent element,
+      ProcessDefinitionDTO processDefinition,
+      EndEventDTO element,
       EndEventState oldState,
       ScopedVars variables) {
     EndEventState newState =

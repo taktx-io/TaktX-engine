@@ -5,9 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder(toBuilder = true)
 public class ExternalTaskState extends TaskState {
   private final int attempt;
 
@@ -20,10 +22,15 @@ public class ExternalTaskState extends TaskState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId,
-      @JsonProperty("attempt") int attempt
-      ) {
-    super(state, parentElementInstanceId, elementInstanceId, elementId, passedCnt, loopCnt, inputFlowId);
+      @JsonProperty("attempt") int attempt) {
+    super(
+        state,
+        parentElementInstanceId,
+        elementInstanceId,
+        elementId,
+        passedCnt,
+        loopCnt,
+        inputFlowId);
     this.attempt = attempt;
   }
-
 }

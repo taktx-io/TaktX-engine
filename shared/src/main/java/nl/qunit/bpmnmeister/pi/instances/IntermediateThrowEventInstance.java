@@ -1,0 +1,11 @@
+package nl.qunit.bpmnmeister.pi.instances;
+
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class IntermediateThrowEventInstance extends ThrowEventInstance {
+
+  public IntermediateThrowEventInstance(String flowNode) {
+    super(flowNode);
+  }
+}

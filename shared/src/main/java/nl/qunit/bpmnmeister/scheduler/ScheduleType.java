@@ -5,14 +5,14 @@ import static com.cronutils.model.CronType.QUARTZ;
 import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
-import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.TimerEventDefinitionDTO;
 
 public enum ScheduleType {
   RECURRING,
   ONE_TIME,
   FIXED_RATE;
 
-  public static ScheduleType from(TimerEventDefinition timerEventDefinition) {
+  public static ScheduleType from(TimerEventDefinitionDTO timerEventDefinition) {
     if (timerEventDefinition.getTimeCycle() != null) {
       return cycleType(timerEventDefinition);
     } else if (timerEventDefinition.getTimeDate() != null) {
@@ -23,7 +23,7 @@ public enum ScheduleType {
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
 
-  private static ScheduleType cycleType(TimerEventDefinition timerEventDefinition) {
+  private static ScheduleType cycleType(TimerEventDefinitionDTO timerEventDefinition) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
       return ScheduleType.RECURRING;
     } else {

@@ -5,16 +5,16 @@ import java.util.List;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pi.ScopedVars;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.Message;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinition;
+import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
-import nl.qunit.bpmnmeister.pd.model.StartEvent;
+import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -41,7 +41,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private static List<SchedulableMessage<?>> getStartCommands(
-      ProcessDefinition processDefinition, StartEvent startEvent) {
+      ProcessDefinitionDTO processDefinition, StartEventDTO startEvent) {
     List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
         new StartCommand(
@@ -52,7 +52,7 @@ public class ProcessDefinitionActivationProcessor
             Constants.NONE,
             Constants.NONE_UUID,
             processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
-            Variables.empty()));
+            VariablesDTO.empty()));
 
     return processInstanceStartCommand;
   }
@@ -62,7 +62,7 @@ public class ProcessDefinitionActivationProcessor
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord) {
     if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
       ProcessDefinitionActivation processActivation = processActivationRecord.value();
-      ProcessDefinition processDefinition = processActivation.getProcessDefinition();
+      ProcessDefinitionDTO processDefinition = processActivation.getProcessDefinition();
       processDefinition
           .getDefinitions()
           .getRootProcess()
@@ -76,7 +76,7 @@ public class ProcessDefinitionActivationProcessor
               });
     } else if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.INACTIVE) {
       ProcessDefinitionActivation processActivation = processActivationRecord.value();
-      ProcessDefinition processDefinition = processActivation.getProcessDefinition();
+      ProcessDefinitionDTO processDefinition = processActivation.getProcessDefinition();
       processDefinition
           .getDefinitions()
           .getRootProcess()
@@ -93,14 +93,14 @@ public class ProcessDefinitionActivationProcessor
 
   private void subscribetoStartMessageEvents(
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
-      StartEvent startEvent,
-      ProcessDefinition processDefinition) {
+      StartEventDTO startEvent,
+      ProcessDefinitionDTO processDefinition) {
     startEvent
         .getMessageventDefinitions()
         .forEach(
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();
-              Message message = processDefinition.getDefinitions().getMessages().get(messageRef);
+              MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
               MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent messageSubscription =
@@ -114,14 +114,14 @@ public class ProcessDefinitionActivationProcessor
 
   private void unsubscribeFromStartMessageEvents(
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
-      StartEvent startEvent,
-      ProcessDefinition processDefinition) {
+      StartEventDTO startEvent,
+      ProcessDefinitionDTO processDefinition) {
     startEvent
         .getMessageventDefinitions()
         .forEach(
             messageStartEventDefinition -> {
               String messageRef = messageStartEventDefinition.getMessageRef();
-              Message message = processDefinition.getDefinitions().getMessages().get(messageRef);
+              MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
               MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent cancelSubscription =
@@ -133,7 +133,7 @@ public class ProcessDefinitionActivationProcessor
 
   private void cancelScheduledStartCommands(
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
-      StartEvent startEvent) {
+      StartEventDTO startEvent) {
     startEvent
         .getTimerEventDefinitions()
         .forEach(
@@ -151,8 +151,8 @@ public class ProcessDefinitionActivationProcessor
 
   private void scheduleStartCommands(
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
-      StartEvent startEvent,
-      ProcessDefinition processDefinition) {
+      StartEventDTO startEvent,
+      ProcessDefinitionDTO processDefinition) {
     startEvent
         .getTimerEventDefinitions()
         .forEach(

@@ -1,18 +1,18 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import nl.qunit.bpmnmeister.pd.model.ServiceTask;
+import nl.qunit.bpmnmeister.pd.model.ServiceTaskDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 
 @ApplicationScoped
-public class ServiceTaskProcessor extends ExternalTaskProcessor<ServiceTask, ServiceTaskState> {
+public class ServiceTaskProcessor extends ExternalTaskProcessor<ServiceTaskDTO, ServiceTaskState> {
 
   @Override
   protected ServiceTaskState getNewAttempExternalTaskState(ServiceTaskState oldState) {
     return new ServiceTaskState(
-        FlowNodeStateEnum.ACTIVE,
+        FlowNodeStateEnum.WAITING,
         oldState.getParentElementInstanceId(),
         oldState.getElementInstanceId(),
         oldState.getElementId(),

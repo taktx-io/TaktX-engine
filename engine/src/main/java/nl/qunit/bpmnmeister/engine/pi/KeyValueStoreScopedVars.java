@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class KeyValueStoreScopedVars implements ScopedVars {
@@ -23,14 +23,14 @@ public class KeyValueStoreScopedVars implements ScopedVars {
   }
 
   @Override
-  public Variables select(UUID processInstanceKey) {
+  public VariablesDTO select(UUID processInstanceKey) {
     currentScope = variableStore.get(processInstanceKey);
     currentScopeKey = processInstanceKey;
     return currentScope.getVariables();
   }
 
   @Override
-  public Variables push(UUID processInstanceKey, UUID parentProcessInstanceKey, Variables vars) {
+  public VariablesDTO push(UUID processInstanceKey, UUID parentProcessInstanceKey, VariablesDTO vars) {
     currentScope = new VariablesParentPair(parentProcessInstanceKey, vars);
     currentScopeKey = processInstanceKey;
     variableStore.put(processInstanceKey, currentScope);
@@ -38,18 +38,18 @@ public class KeyValueStoreScopedVars implements ScopedVars {
   }
 
   @Override
-  public Variables pop() {
+  public VariablesDTO pop() {
     variableStore.delete(currentScopeKey);
     return select(currentScope.getParent());
   }
 
   @Override
-  public void merge(Variables outputVariables) {
+  public void merge(VariablesDTO outputVariables) {
     currentScope.getVariables().merge(outputVariables);
     variableStore.put(currentScopeKey, currentScope);
   }
 
-  public Variables getCurrentScopeVariables() {
+  public VariablesDTO getCurrentScopeVariables() {
     return currentScope.getVariables();
   }
 

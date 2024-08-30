@@ -6,9 +6,11 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @ToString(callSuper = true)
+@SuperBuilder(toBuilder = true)
 public class ReceiveTaskState extends TaskState {
 
   @JsonCreator
@@ -20,7 +22,13 @@ public class ReceiveTaskState extends TaskState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputflowId) {
-    super(state, parentElementInstanceId, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
+    super(
+        state,
+        parentElementInstanceId,
+        elementInstanceId,
+        elementId,
+        passedCnt,
+        loopCnt,
+        inputflowId);
   }
-
 }

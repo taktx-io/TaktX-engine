@@ -11,12 +11,12 @@ import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 @EqualsAndHashCode(callSuper = true)
 public class DefinitionMessageEventTrigger extends MessageEvent {
 
-  private final Variables variables;
+  private final VariablesDTO variables;
 
   @JsonCreator
   public DefinitionMessageEventTrigger(
       @Nonnull @JsonProperty("messageName") String messageName,
-      @Nonnull @JsonProperty("variables") Variables variables) {
+      @Nonnull @JsonProperty("variables") VariablesDTO variables) {
     super(messageName);
     this.variables = variables;
   }
