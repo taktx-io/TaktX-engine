@@ -31,7 +31,7 @@ public class StartFlowElementTriggerIteration extends StartFlowElementTrigger {
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
-    super(processInstanceKey, Constants.NONE_UUID, elementId, inputFlowId, variables);
+    super(processInstanceKey, Constants.NONE, elementId, variables);
     this.parentElementInstance = parentElementInstance;
     this.elementInstanceId = elementInstanceId;
   }

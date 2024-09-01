@@ -2,15 +2,25 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.IoVariableMapping2;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables2;
 
 @ApplicationScoped
+@NoArgsConstructor
+@Setter
 public class IoMappingProcessor {
 
-  FeelExpressionHandler feelExpressionHandler;
+  private FeelExpressionHandler feelExpressionHandler;
+
+  @Inject
+  public IoMappingProcessor(FeelExpressionHandler feelExpressionHandler) {
+    this.feelExpressionHandler = feelExpressionHandler;
+  }
 
   public Variables2 getOutputVariables(WithIoMapping element, Variables2 inputVariables) {
     if (element.getIoMapping().getOutputMappings().isEmpty()) {

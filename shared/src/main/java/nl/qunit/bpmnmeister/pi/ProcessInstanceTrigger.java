@@ -12,7 +12,6 @@ import lombok.ToString;
   @JsonSubTypes.Type(value = StartFlowElementTrigger.class),
   @JsonSubTypes.Type(value = ContinueFlowElementTrigger.class),
   @JsonSubTypes.Type(value = ExternalTaskResponseTrigger.class),
-  @JsonSubTypes.Type(value = StartNewProcessInstanceTrigger.class),
   @JsonSubTypes.Type(value = TerminateTrigger.class)
 })
 @ToString

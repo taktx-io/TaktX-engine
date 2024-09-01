@@ -6,11 +6,12 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 
 @Getter
 @ToString(callSuper = true)
-public class StartNewProcessInstanceTrigger2 extends ProcessInstanceTrigger2 {
+public class StartNewProcessInstanceTrigger2 extends StartFlowElementTrigger2 {
 
   private final ProcessDefinitionDTO processDefinition;
 
@@ -20,7 +21,7 @@ public class StartNewProcessInstanceTrigger2 extends ProcessInstanceTrigger2 {
       @JsonProperty("processDefinition") @Nonnull ProcessDefinitionDTO processDefinition,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
-    super(processInstanceKey, elementId, variables);
+    super(processInstanceKey, elementId, Constants.NONE, variables);
     this.processDefinition = processDefinition;
   }
 }

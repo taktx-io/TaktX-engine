@@ -4,9 +4,10 @@ public enum FlowNodeStateEnum {
   READY,
   WAITING,
   TERMINATED,
+  FAILED,
   FINISHED;
 
   public boolean isFinished() {
-    return this == FINISHED || this == TERMINATED;
+    return this == FAILED || this == FINISHED || this == TERMINATED;
   }
 }

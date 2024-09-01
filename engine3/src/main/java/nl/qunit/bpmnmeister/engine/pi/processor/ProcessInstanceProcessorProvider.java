@@ -6,6 +6,7 @@ import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
+import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
 import nl.qunit.bpmnmeister.pd.model.Task2;
@@ -27,7 +28,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject TaskInstanceProcessor taskProcessor;
   //  @Inject SubProcessProcessor subProcessProcessor;
   //  @Inject CallActivityProcessor callActivityProcessor;
-  //  @Inject SendTaskProcessor sendTaskProcessor;
+  @Inject SendTaskInstanceProcessor sendTaskProcessor;
   //  @Inject ReceiveTaskProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
 
@@ -73,8 +74,8 @@ public class ProcessInstanceProcessorProvider {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
     if (element instanceof ServiceTask2) {
       processor = serviceTaskProcessor;
-      //    } else if (element instanceof SendTaskDTO) {
-      //      processor = sendTaskProcessor;
+    } else if (element instanceof SendTask2) {
+      processor = sendTaskProcessor;
       //    } else if (element instanceof SubProcessDTO) {
       //      processor = subProcessProcessor;
       //    } else if (element instanceof CallActivityDTO) {

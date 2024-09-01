@@ -301,7 +301,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine waitUntilServiceTaskIsWaitingForResponse(String elementId) {
+  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(String elementId) {
     activeExternalTaskTrigger = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(this::pollExternalTask,
             externalTaskTrigger -> externalTaskTrigger != null &&
@@ -352,7 +352,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine   waitUntilCompleted() {
+  public BpmnTestEngine waitUntilCompleted() {
     return waitUntilCompleted(DEFAULT_DURATION);
   }
 
@@ -559,7 +559,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return processInstanceMap.get(parentInstanceKey);
   }
 
-  public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
+  public BpmnTestEngine waitUntilElementHasState(String elementId, FlowNodeStateEnum state, Duration duration) {
 
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
@@ -576,7 +576,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                 poll.getProcessInstanceKey() != null &&
                 poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
                  !poll.getFlowNodeStates().get(elementId).isEmpty() &&
-                FlowNodeStateEnum.WAITING == poll.getFlowNodeStates().get(elementId).get(0).getState()) {
+                state == poll.getFlowNodeStates().get(elementId).get(0).getState()) {
               return poll;
             }
           } while (poll != null);
@@ -584,7 +584,15 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         }, Objects::nonNull);
     return this;  }
 
+  public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
+    return waitUntilElementHasState(elementId, FlowNodeStateEnum.WAITING, duration);
+  }
+
   public BpmnTestEngine waitUntilElementIsActive(String elementId) {
     return waitUntilElementIsActive(elementId, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
+    return waitUntilElementHasState(elementId, FlowNodeStateEnum.FAILED, DEFAULT_DURATION);
   }
 }

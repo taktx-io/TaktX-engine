@@ -10,6 +10,8 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
@@ -18,32 +20,37 @@ import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 
 @NoArgsConstructor
+@Setter
 public abstract class ExternalTaskInstanceProcessor<
-        S extends ExternalTask2, I extends ExternalTaskInstance>
-    extends ActivityInstanceProcessor<S, I, ExternalTaskResponseTrigger2> {
+        E extends ExternalTask2, I extends ExternalTaskInstance, S extends StartFlowElementTrigger>
+    extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTrigger2> {
 
   private FeelExpressionHandler feelExpressionHandler;
   private Clock clock;
-  private IoMappingProcessor ioMappingProcessor;
+  private VariablesMapper variablesMapper;
 
   protected ExternalTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
-      IoMappingProcessor ioMappingProcessor) {
+      IoMappingProcessor ioMappingProcessor,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor);
     this.feelExpressionHandler = feelExpressionHandler;
     this.clock = clock;
-    this.ioMappingProcessor = ioMappingProcessor;
+    this.variablesMapper = variablesMapper;
   }
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, S flowNode, I flownodeInstance) {
+      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables) {
     InstanceResult instanceResult = InstanceResult.empty();
     ExternalTaskInfo externalTaskInfo =
         ExternalTaskInfo.builder()
@@ -60,18 +67,29 @@ public abstract class ExternalTaskInstanceProcessor<
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
       FlowElements2 flowElements,
-      S externalTask,
+      E externalTask,
       I externalTaskInstance,
       ExternalTaskResponseTrigger2 trigger,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
+    VariablesDTO variablesDTO = trigger.getVariables();
+    Variables2 variables = variablesMapper.fromDTO(variablesDTO);
+    processInstanceVariables.merge(variables);
+
     InstanceResult instanceResult = InstanceResult.empty();
     if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
-      processSucessfulResponse(flowElements, externalTask, externalTaskInstance, instanceResult);
+      processSucessfulResponse(
+          flowElements,
+          externalTask,
+          externalTaskInstance,
+          instanceResult,
+          trigger,
+          processInstanceVariables);
     } else {
       if (!externalTask.getRetries().equals(Constants.NONE)) {
         // We have some kind of retry definition
         JsonNode jsonNode =
-            feelExpressionHandler.processFeelExpression(externalTask.getRetries(), variables);
+            feelExpressionHandler.processFeelExpression(
+                externalTask.getRetries(), processInstanceVariables);
         String retryString = jsonNode.asText();
 
         // Analyze the retry definition
@@ -102,30 +120,30 @@ public abstract class ExternalTaskInstanceProcessor<
                 backoff.get(),
                 externalTask.getId(),
                 externalTaskInstance.getElementInstanceId(),
-                variables,
+                processInstanceVariables,
                 instanceResult);
           } else {
             // No backoff time defined, retry directly
             String externalTaskId =
-                getExternalTaskId(externalTask.getWorkerDefinition(), variables);
+                getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
 
             ExternalTaskInfo externalTaskInfo =
                 ExternalTaskInfo.builder()
                     .externalTaskId(externalTaskId)
                     .elementId(trigger.getElementId())
                     .elementInstanceId(externalTaskInstance.getElementInstanceId())
-                    .variables(getExternalTaskVariables(externalTask, variables))
+                    .variables(getExternalTaskVariables(externalTask, processInstanceVariables))
                     .build();
             instanceResult.addExternalTaskRequest(externalTaskInfo);
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker
-          // fail the task and the processInstance
-          externalTaskInstance.setState(FlowNodeStateEnum.TERMINATED);
+          // fail the task
+          externalTaskInstance.setState(FlowNodeStateEnum.FAILED);
         }
       } else {
-        // No retries allowed, fail the task and the processInstance
-        externalTaskInstance.setState(FlowNodeStateEnum.TERMINATED);
+        // No retries allowed, fail the task
+        externalTaskInstance.setState(FlowNodeStateEnum.FAILED);
       }
     }
     return instanceResult;
@@ -142,10 +160,12 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private void processSucessfulResponse(
       FlowElements2 flowElements,
-      ExternalTask2 externalTask,
-      ExternalTaskInstance flownodeInstance,
-      InstanceResult instanceResult) {
-    flownodeInstance.setState(FlowNodeStateEnum.FINISHED);
+      E externalTask,
+      I externalTaskInstance,
+      InstanceResult instanceResult,
+      ExternalTaskResponseTrigger2 trigger,
+      Variables2 processInstanceVariables) {
+    externalTaskInstance.setState(FlowNodeStateEnum.FINISHED);
   }
 
   private void scheduleNextExternalTask(

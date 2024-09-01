@@ -70,6 +70,20 @@ public class ProcessInstanceAssert {
     return this;
   }
 
+  public ProcessInstanceAssert hasFailedElement(String elementId) {
+    List<FlowNodeStateDTO> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
+    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
+    assertThat(bpmnElementState.get(0).getState()).as("element " + elementId + " was not terminated").isEqualTo(
+        FlowNodeStateEnum.FAILED);
+    return this;
+  }
+
+  public ProcessInstanceAssert doesNotHaveVariable(String var1) {
+    JsonNode jsonNode = processInstance.getVariables().get(var1);
+    assertThat(jsonNode).isNull();
+    return this;
+  }
+
   public ProcessInstanceAssert hasVariableWithValue(String var1, Object value1) {
     JsonNode jsonNode = processInstance.getVariables().get(var1);
     JsonNode expectedNode = new ObjectMapper().valueToTree(value1);

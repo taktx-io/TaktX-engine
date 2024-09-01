@@ -5,18 +5,17 @@ import jakarta.inject.Inject;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
+import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
+import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
-public class ServiceTaskInstanceProcessor
-    extends ExternalTaskInstanceProcessor<
-        ServiceTask2, ServiceTaskInstance, StartFlowElementTrigger> {
+public class SendTaskInstanceProcessor
+    extends ExternalTaskInstanceProcessor<SendTask2, SendTaskInstance, StartFlowElementTrigger> {
   @Inject
-  public ServiceTaskInstanceProcessor(
+  public SendTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
       IoMappingProcessor ioMappingProcessor,

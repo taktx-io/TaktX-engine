@@ -5,6 +5,8 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.SendTask2;
+import nl.qunit.bpmnmeister.pd.model.SendTaskDTO;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlowDTO;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
@@ -24,6 +26,7 @@ public interface DtoMapper {
   @SubclassMapping(source = StartEventDTO.class, target = StartEvent2.class)
   @SubclassMapping(source = EndEventDTO.class, target = EndEvent2.class)
   @SubclassMapping(source = ServiceTaskDTO.class, target = ServiceTask2.class)
+  @SubclassMapping(source = SendTaskDTO.class, target = SendTask2.class)
   @SubclassMapping(source = TaskDTO.class, target = Task2.class)
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow2.class)
   BaseElement2 map(BaseElementDTO flowElementDTO);

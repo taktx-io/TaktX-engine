@@ -16,6 +16,7 @@ import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_DEFINITION_STORE_NAM
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.PROCESS_INSTANCE_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.SCHEDULES_STORE_NAME;
+import static nl.qunit.bpmnmeister.engine.pd.Stores.VARIABLES_STORE_NAME;
 import static nl.qunit.bpmnmeister.engine.pd.Stores.XML_BY_HASH_STORE_NAME;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
@@ -51,6 +52,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger2;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -90,6 +92,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ProcessInstanceTrigger2.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
+  public static final ObjectMapperSerde<VariablesDTO> VARIABLES_SERDE =
+      new ObjectMapperSerde<>(VariablesDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
   public static final ObjectMapperSerde<DefinitionsDTO> DEFINITIONS_SERDE =
@@ -142,16 +146,27 @@ public class TopologyProducer {
             keyValueStoreSupplier.get(PROCESS_INSTANCE_DEFINITION_STORE_NAME),
             PROCESS_DEFINITION_KEY_SERDE,
             PROCESS_DEFINITION_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(VARIABLES_STORE_NAME),
+            PROCESS_INSTANCE_KEY_SERDE,
+            VARIABLES_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(
                 PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                 Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
             .process(
-                () -> new ProcessInstanceProcessor2(definitionMapper, instanceMapper, variablesMapper,
-                    processInstanceProcessorProvider, forwarder),
+                () ->
+                    new ProcessInstanceProcessor2(
+                        definitionMapper,
+                        instanceMapper,
+                        variablesMapper,
+                        processInstanceProcessorProvider,
+                        forwarder),
                 PROCESS_INSTANCE_STORE_NAME,
-                PROCESS_INSTANCE_DEFINITION_STORE_NAME)
+                PROCESS_INSTANCE_DEFINITION_STORE_NAME,
+                VARIABLES_STORE_NAME)
             .branch(
                 (key, value) -> value instanceof ProcessInstanceTrigger2,
                 (key, value) -> value instanceof ProcessInstanceUpdate,
