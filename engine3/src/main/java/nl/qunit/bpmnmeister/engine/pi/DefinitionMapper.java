@@ -19,9 +19,10 @@ public class DefinitionMapper {
         .getElements()
         .values()
         .forEach(
-            flowElementDTO -> result
-                .getElements()
-                .put(flowElementDTO.getId(), (FlowElement2) dtoMapper.map(flowElementDTO)));
+            flowElementDTO ->
+                result
+                    .getElements()
+                    .put(flowElementDTO.getId(), (FlowElement2) dtoMapper.map(flowElementDTO)));
 
     return result;
   }

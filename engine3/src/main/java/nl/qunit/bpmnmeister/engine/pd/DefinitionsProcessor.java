@@ -74,10 +74,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
         new StartNewProcessInstanceTrigger2(
             processInstanceKey, processDefinition, startEventId, startCommand.getVariables());
     context.forward(
-        new Record<>(
-            processInstanceKey,
-            processInstanceTrigger,
-            definitionsRecord.timestamp()));
+        new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
   }
 
   private void processDefinitionsRecord(
