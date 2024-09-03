@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 
 @Getter
@@ -11,7 +12,7 @@ import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 public class ServiceTask2 extends ExternalTask2 {
 
   @Override
-  public ServiceTaskInstance newInstance() {
-    return new ServiceTaskInstance(getId());
+  public ServiceTaskInstance newInstance(FLowNodeInstance parentInstance) {
+    return new ServiceTaskInstance(getId(), parentInstance);
   }
 }

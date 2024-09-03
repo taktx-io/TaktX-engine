@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ServiceTaskInstance extends ExternalTaskInstance {
 
-  public ServiceTaskInstance(String flowNode) {
-    super(flowNode);
+  public ServiceTaskInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 }

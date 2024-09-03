@@ -10,7 +10,7 @@
       <bpmn:incoming>Flow_00uez6y</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="SubProcess_1" targetRef="EndEvent_1" />
-    <bpmn:subProcess id="SubProcess_1" name="ServiceTask">
+    <bpmn:subProcess id="SubProcess_1" name="Subprocess">
       <bpmn:extensionElements />
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>
@@ -38,6 +38,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_1qy82ug_di" bpmnElement="SubProcess_1" isExpanded="true">
         <dc:Bounds x="240" y="80" width="360" height="210" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_08u1k5a_di" bpmnElement="SubStartEvent_1">
         <dc:Bounds x="282" y="169" width="36" height="36" />

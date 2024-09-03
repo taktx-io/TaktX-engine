@@ -4,13 +4,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @Getter
 @SuperBuilder
 @NoArgsConstructor
 public class EndEvent2 extends ThrowEvent2 {
 
-  public EndEventInstance newInstance() {
-    return new EndEventInstance(getId());
+  public EndEventInstance newInstance(FLowNodeInstance parentInstance) {
+    return new EndEventInstance(getId(), parentInstance);
   }
 }

@@ -16,7 +16,6 @@ public class ReceiveTaskState extends TaskState {
   @JsonCreator
   public ReceiveTaskState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
-      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
@@ -24,7 +23,6 @@ public class ReceiveTaskState extends TaskState {
       @JsonProperty("inputFlowId") String inputflowId) {
     super(
         state,
-        parentElementInstanceId,
         elementInstanceId,
         elementId,
         passedCnt,

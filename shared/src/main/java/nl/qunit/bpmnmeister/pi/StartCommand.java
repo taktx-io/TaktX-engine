@@ -15,8 +15,6 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
 
   private final UUID processInstanceKey;
   private final String elementId;
-  private final String parentElementId;
-  private final UUID parentElementInstanceId;
   private final String processDefinitionId;
   private final VariablesDTO variables;
 
@@ -24,14 +22,10 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
   public StartCommand(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("elementId") String elementId,
-      @Nonnull @JsonProperty("parentElementId") String parentElementId,
-      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("processDefinitionId") String processDefinitionId,
       @Nonnull @JsonProperty("variables") VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
     this.elementId = elementId;
-    this.parentElementId = parentElementId;
-    this.parentElementInstanceId = parentElementInstanceId;
     this.processDefinitionId = processDefinitionId;
     this.variables = variables;
   }

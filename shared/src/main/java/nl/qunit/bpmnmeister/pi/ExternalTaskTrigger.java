@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -15,24 +16,24 @@ public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
 
   private final UUID processInstanceKey;
   private final ProcessDefinitionKey processDefinitionKey;
+  private final List<String> elementIdPath;
   private final String externalTaskId;
-  private final String elementId;
-  private final UUID elementInstanceId;
+  private final List<UUID> elementInstanceIdPath;
   private final VariablesDTO variables;
 
   @JsonCreator
   public ExternalTaskTrigger(
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
+      @JsonProperty("parentElementIds") List<String> elementIdPath,
       @JsonProperty("externalTaskId") String externalTaskId,
-      @JsonProperty("elementId") String elementId,
-      @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @JsonProperty("elementInstanceId") List<UUID> elementInstanceIdPath,
       @JsonProperty("variables") VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
+    this.elementIdPath = elementIdPath;
     this.externalTaskId = externalTaskId;
-    this.elementId = elementId;
-    this.elementInstanceId = elementInstanceId;
+    this.elementInstanceIdPath = elementInstanceIdPath;
     this.variables = variables;
   }
 

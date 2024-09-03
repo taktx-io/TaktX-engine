@@ -19,7 +19,6 @@ public class CallActivityState extends ActivityState {
   public CallActivityState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
       @Nonnull @JsonProperty("childProcessInstanceId") UUID childProcessInstanceId,
-      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
@@ -28,7 +27,6 @@ public class CallActivityState extends ActivityState {
     super(
         state,
         elementId,
-        parentElementInstanceId,
         elementInstanceId,
         passedCnt,
         loopCnt,

@@ -46,8 +46,6 @@ public class ProcessDefinitionActivationProcessor
         new StartCommand(
             Constants.NONE_UUID,
             startEvent.getParentId(),
-            Constants.NONE,
-            Constants.NONE_UUID,
             processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
             VariablesDTO.empty()));
 

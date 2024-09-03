@@ -104,8 +104,8 @@ public class MessageEventProcessor
                   ContinueFlowElementTrigger flowElementTrigger =
                       new ContinueFlowElementTrigger(
                           processInstanceKey,
-                          subscription.getElementInstanceId1(),
-                          subscription.getElementId(),
+                          subscription.getElementInstanceIdPath(),
+                          subscription.getElementIdPath(),
                           Constants.NONE,
                           messageEvent.getVariables());
 
@@ -133,8 +133,6 @@ public class MessageEventProcessor
                       new StartCommand(
                           Constants.NONE_UUID,
                           value.getElementId(),
-                          Constants.NONE,
-                          Constants.NONE_UUID,
                           processDefinitionKey.getProcessDefinitionId(),
                           messageEvent.getVariables());
 

@@ -206,7 +206,7 @@ public class ExternalTriggerConsumer {
       return;
     }
     LOG.info("Received external task trigger: " + externalTaskTrigger);
-    String externalTaskId = externalTaskTrigger.getElementId();
+    String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance == null) {
       return;
@@ -232,8 +232,8 @@ public class ExternalTriggerConsumer {
               processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
-                      externalTaskId,
-                      externalTaskTrigger.getElementInstanceId(),
+                      externalTaskTrigger.getElementIdPath(),
+                      externalTaskTrigger.getElementInstanceIdPath(),
                       externalTaskResponseResult,
                       new VariablesDTO(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
@@ -242,15 +242,15 @@ public class ExternalTriggerConsumer {
               processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
-                      externalTaskId,
-                      externalTaskTrigger.getElementInstanceId(),
+                      externalTaskTrigger.getElementIdPath(),
+                      externalTaskTrigger.getElementInstanceIdPath(),
                       new ExternalTaskResponseResult(false, true, e.getMessage()),
                       VariablesDTO.empty());
             }
             responseEmitter.send(
                 new ProducerRecord<>(
                     Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-                    externalTaskTrigger.getRootInstanceKey(),
+                    externalTaskTrigger.getProcessInstanceKey(),
                     processInstanceTrigger));
           });
 

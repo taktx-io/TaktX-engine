@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class CatchEventInstance extends EventInstance {
 
-  protected CatchEventInstance(String flowNode) {
-    super(flowNode);
+  protected CatchEventInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 }

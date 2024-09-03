@@ -34,7 +34,6 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivityDTO, Ca
                 new CallActivityState(
                     FlowNodeStateEnum.WAITING,
                     oldState.getChildProcessInstanceId(),
-                    oldState.getParentElementInstanceId(),
                     oldState.getElementInstanceId(),
                     oldState.getElementId(),
                     oldState.getPassedCnt(),
@@ -44,7 +43,6 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivityDTO, Ca
             Set.of(
                 new StartCommand(
                     processInstance.getRootInstanceKey(),
-                    processInstance.getProcessInstanceKey(),
                     oldState.getChildProcessInstanceId(),
                     Constants.NONE,
                     element.getId(),

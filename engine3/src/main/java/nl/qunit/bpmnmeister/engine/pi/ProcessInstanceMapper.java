@@ -1,6 +1,8 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.lang.reflect.InvocationTargetException;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
+import nl.qunit.bpmnmeister.pi.FlowNodeStatesDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.TaskInstance;
@@ -12,6 +14,7 @@ import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
@@ -20,8 +23,10 @@ import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
+import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
@@ -40,6 +45,8 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = ServiceTaskInstance.class, source = ServiceTaskState.class)
   @SubclassMapping(target = SendTaskInstance.class, source = SendTaskState.class)
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
+  @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
+  @Mapping(target = "parentInstance", ignore = true)
   FLowNodeInstance map(FlowNodeStateDTO sourceDto);
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventState.class)
@@ -54,7 +61,10 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = ServiceTaskInstance.class, target = ServiceTaskState.class)
   @SubclassMapping(source = SendTaskInstance.class, target = SendTaskState.class)
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
+  @SubclassMapping(source = SubProcessInstance.class, target = SubProcessState.class)
   FlowNodeStateDTO map(FLowNodeInstance source);
+
+  FlowNodeStatesDTO map(FlowNodeStates2 source);
 
   ProcessInstanceDTO map(ProcessInstance2 source);
 

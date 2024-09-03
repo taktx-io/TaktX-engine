@@ -16,7 +16,6 @@ public class ServiceTaskState extends ExternalTaskState {
   @JsonCreator
   public ServiceTaskState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
-      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
@@ -25,7 +24,6 @@ public class ServiceTaskState extends ExternalTaskState {
       @JsonProperty("inputFlowId") String inputflowId) {
     super(
         state,
-        parentElementInstanceId,
         elementInstanceId,
         elementId,
         passedCnt,

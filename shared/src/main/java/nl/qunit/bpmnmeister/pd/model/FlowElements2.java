@@ -36,6 +36,19 @@ public class FlowElements2 {
         .toList();
   }
 
+  public FlowElements2 getChildElements(List<String> parentIds) {
+    FlowElements2 elements = this;
+    for (String parentId : parentIds) {
+      FlowElement2 element = elements.get(parentId);
+      if (element instanceof SubProcess2 subProcess) {
+        elements = subProcess.getElements();
+      } else {
+        return elements;
+      }
+    }
+    return elements;
+  }
+
   public Optional<FlowNode2> getFlowNode(String id) {
     return elements.values().stream()
         .filter(FlowNode2.class::isInstance)

@@ -137,7 +137,7 @@ public abstract class ActivityProcessor<E extends ActivityDTO, S extends Activit
       TriggerResult triggerResult,
       ProcessInstance processInstance,
       ProcessDefinitionDTO processDefinition,
-      ActivityDTO<?> element,
+      ActivityDTO element,
       ActivityState newState,
       ScopedVars variables) {
     List<ProcessInstanceTrigger> triggers =
@@ -172,7 +172,6 @@ public abstract class ActivityProcessor<E extends ActivityDTO, S extends Activit
         triggers.add(
             new StartFlowElementTrigger(
                 processInstance.getProcessInstanceKey(),
-                oldState.getElementInstanceId(),
                 boundaryEvent.getId(),
                 Constants.NONE,
                 VariablesDTO.empty()));

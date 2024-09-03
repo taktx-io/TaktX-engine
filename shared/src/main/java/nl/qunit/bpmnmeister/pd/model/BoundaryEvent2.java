@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @Getter
 @SuperBuilder
@@ -11,7 +12,7 @@ public class BoundaryEvent2 extends CatchEvent2 {
   private boolean cancelActivity;
 
   @Override
-  public BoundaryEventInstance newInstance() {
-    return new BoundaryEventInstance(getId());
+  public BoundaryEventInstance newInstance(FLowNodeInstance parentInstance) {
+    return new BoundaryEventInstance(getId(), parentInstance);
   }
 }

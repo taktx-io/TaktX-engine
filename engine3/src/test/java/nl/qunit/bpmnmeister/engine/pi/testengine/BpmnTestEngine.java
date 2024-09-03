@@ -216,7 +216,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       ExternalTaskResponseResult2 externalTaskResponseResult, VariablesDTO variables) {
       triggerEmitter.send(rootInstanceKey,
           new ExternalTaskResponseTrigger2(externalTaskTrigger.getProcessInstanceKey(),
-          externalTaskTrigger.getElementId(), externalTaskTrigger.getElementInstanceId(), externalTaskResponseResult, variables)
+          externalTaskTrigger.getElementIdPath(), externalTaskTrigger.getElementInstanceIdPath(), externalTaskResponseResult, variables)
       );
   }
 
@@ -251,8 +251,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     StartCommand startCommand = new StartCommand(
         Constants.NONE_UUID,
         Constants.NONE,
-        Constants.NONE,
-        Constants.NONE_UUID,
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
     startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
@@ -305,7 +303,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     activeExternalTaskTrigger = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(this::pollExternalTask,
             externalTaskTrigger -> externalTaskTrigger != null &&
-                                   externalTaskTrigger.getElementId().equals(elementId));
+                                   externalTaskTrigger.getElementIdPath().contains(elementId));
     return this;
   }
 
@@ -449,11 +447,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateProcessWithChildProcesses() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), Constants.NONE, Constants.NONE_UUID));
-    return this;
-  }
-  public BpmnTestEngine terminateChildProcessesForElement(String elementId) {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), elementId, Constants.NONE_UUID));
+    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(), Constants.NONE_UUID));
     return this;
   }
 
@@ -533,7 +527,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         poll = messageEvents.poll();
         if (poll instanceof CorrelationMessageSubscription correlationMessageSubscription) {
             remainingCorrelationKeys.remove(correlationMessageSubscription.getCorrelationKey());
-            return correlationMessageSubscription.getElementId().equals(elementId) && remainingCorrelationKeys.isEmpty();
+            return correlationMessageSubscription.getElementIdPath().contains(elementId) && remainingCorrelationKeys.isEmpty();
         }
       } while (poll != null);
 

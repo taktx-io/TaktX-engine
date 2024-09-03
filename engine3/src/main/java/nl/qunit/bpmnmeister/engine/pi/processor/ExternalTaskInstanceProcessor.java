@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
@@ -50,14 +49,18 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables) {
+      FlowElements2 flowElements,
+      E flowNode,
+      I flownodeInstance,
+      Variables2 processInstanceVariables) {
     InstanceResult instanceResult = InstanceResult.empty();
     ExternalTaskInfo externalTaskInfo =
-        ExternalTaskInfo.builder()
-            .externalTaskId(flowNode.getWorkerDefinition())
-            .elementId(flowNode.getId())
-            .elementInstanceId(flownodeInstance.getElementInstanceId())
-            .build();
+        getExternalTaskInfo(
+            flowNode.getWorkerDefinition(),
+            flowNode,
+            flownodeInstance,
+            getExternalTaskVariables(flowNode, processInstanceVariables),
+            null);
     instanceResult.addExternalTaskRequest(externalTaskInfo);
     flownodeInstance.setState(FlowNodeStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
@@ -66,6 +69,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
+      int subProcessLevel,
       FlowElements2 flowElements,
       E externalTask,
       I externalTaskInstance,
@@ -113,27 +117,27 @@ public abstract class ExternalTaskInstanceProcessor<
         if (externalTaskInstance.increaseAttempt() <= retries
             && Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getAllowRetry())) {
           // Retry allowed, possibly with backoff
+          String externalTaskId =
+              getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
+
           if (backoff.isPresent()) {
             // This means for now we do nothing, the retry will be scheduled by the scheduler
             scheduleNextExternalTask(
-                trigger.getElementId(),
+                externalTaskId,
                 backoff.get(),
-                externalTask.getId(),
-                externalTaskInstance.getElementInstanceId(),
-                processInstanceVariables,
+                externalTask,
+                externalTaskInstance,
+                getExternalTaskVariables(externalTask, processInstanceVariables),
                 instanceResult);
           } else {
             // No backoff time defined, retry directly
-            String externalTaskId =
-                getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
-
             ExternalTaskInfo externalTaskInfo =
-                ExternalTaskInfo.builder()
-                    .externalTaskId(externalTaskId)
-                    .elementId(trigger.getElementId())
-                    .elementInstanceId(externalTaskInstance.getElementInstanceId())
-                    .variables(getExternalTaskVariables(externalTask, processInstanceVariables))
-                    .build();
+                getExternalTaskInfo(
+                    externalTaskId,
+                    externalTask,
+                    externalTaskInstance,
+                    getExternalTaskVariables(externalTask, processInstanceVariables),
+                    null);
             instanceResult.addExternalTaskRequest(externalTaskInfo);
           }
         } else {
@@ -150,6 +154,7 @@ public abstract class ExternalTaskInstanceProcessor<
   }
 
   private Variables2 getExternalTaskVariables(WithIoMapping element, Variables2 variables) {
+    // TODO When no mapping is defined, we should return the variables as is
     return ioMappingProcessor.getInputVariables(element, variables);
   }
 
@@ -171,20 +176,23 @@ public abstract class ExternalTaskInstanceProcessor<
   private void scheduleNextExternalTask(
       String workerDefinition,
       String backoff,
-      String elementId,
-      UUID elementInstanceId,
+      ExternalTask2 externalTask,
+      ExternalTaskInstance instance,
       Variables2 variables,
       InstanceResult instanceResult) {
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     ExternalTaskInfo externalTaskInfo =
-        ExternalTaskInfo.builder()
-            .externalTaskId(workerDefinition)
-            .elementId(elementId)
-            .elementInstanceId(elementInstanceId)
-            .variables(variables)
-            .startTime(triggerTime)
-            .build();
+        getExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
 
     instanceResult.addExternalTaskRequest(externalTaskInfo);
+  }
+
+  private static ExternalTaskInfo getExternalTaskInfo(
+      String workerDefinition,
+      ExternalTask2 externalTask,
+      ExternalTaskInstance instance,
+      Variables2 variables,
+      String triggerTime) {
+    return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
   }
 }

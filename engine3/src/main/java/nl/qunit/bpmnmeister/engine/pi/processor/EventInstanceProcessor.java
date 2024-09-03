@@ -24,6 +24,7 @@ public abstract class EventInstanceProcessor<E extends Event2, I extends EventIn
 
   @Override
   protected final InstanceResult processContinueSpecificFlowNodeInstance(
+      int subProcessLevel,
       FlowElements2 flowElements,
       E flowNode,
       I flowNodeInstance,

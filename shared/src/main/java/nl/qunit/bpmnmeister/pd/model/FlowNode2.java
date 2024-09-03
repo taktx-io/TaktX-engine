@@ -15,5 +15,5 @@ public abstract class FlowNode2 extends FlowElement2 {
   @Builder.Default private Set<String> incoming = new HashSet<>();
   @Builder.Default private Set<String> outgoing = new HashSet<>();
 
-  public abstract FLowNodeInstance newInstance();
+  public abstract FLowNodeInstance newInstance(FLowNodeInstance parentInstance);
 }

@@ -101,13 +101,12 @@ class ProcessInstanceProcessorTest {
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testSubProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-single.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-//        .waitUntilChildProcessIsStarted()
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
@@ -115,11 +114,26 @@ class ProcessInstanceProcessorTest {
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
+  void testSubProcessServiceTaskSingle()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
+        .andRespondWithSuccess(VariablesDTO.empty())
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("SubProcess_1")
+        .hasPassedElementWithId("EndEvent_1");
+  }
+
+  @Test
   void testSubProcessTaskNested()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-nested.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-task-nested.bpmn")
         .startProcessInstance(VariablesDTO.empty())
 //        .waitUntilChildProcessIsStarted()
         .waitUntilCompleted()

@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class EndEventInstance extends ThrowEventInstance {
 
-  public EndEventInstance(String flowNode) {
-    super(flowNode);
+  public EndEventInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 }

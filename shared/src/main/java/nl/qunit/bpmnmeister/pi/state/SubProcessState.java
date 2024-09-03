@@ -7,32 +7,31 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.pi.FlowNodeStatesDTO;
 
 @Getter
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
 public class SubProcessState extends ActivityState {
 
-  private final UUID childProcessInstanceId;
+  private final FlowNodeStatesDTO flowNodeStates;
 
   @JsonCreator
   public SubProcessState(
-      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
-      @Nonnull @JsonProperty("childProcessInstanceId") UUID childProcessInstanceId,
-      @Nonnull @JsonProperty("parentElementInstanceId") UUID parentElementInstanceId,
-      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("flowNodeStates") FlowNodeStatesDTO flowNodeStates,
       @Nonnull @JsonProperty("elementId") String elementId,
+      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
+      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
     super(
         state,
         elementId,
-        parentElementInstanceId,
         elementInstanceId,
         passedCnt,
         loopCnt,
         inputFlowId);
-    this.childProcessInstanceId = childProcessInstanceId;
+    this.flowNodeStates = flowNodeStates;
   }
 }

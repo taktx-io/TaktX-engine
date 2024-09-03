@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BoundaryEventInstance extends CatchEventInstance {
 
-  public BoundaryEventInstance(String flowNode) {
-    super(flowNode);
+  public BoundaryEventInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 }

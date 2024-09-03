@@ -33,6 +33,7 @@ public class TaskInstanceProcessor
 
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
+      int subProcessLevel,
       FlowElements2 flowElements,
       Task2 externalTask,
       TaskInstance externalTaskInstance,

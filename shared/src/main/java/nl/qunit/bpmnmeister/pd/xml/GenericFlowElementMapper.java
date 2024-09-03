@@ -220,14 +220,14 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               loopCharacteristics,
               ioMapping);
     } else if (activity instanceof TSubProcess subProcess) {
-      String parentPrefix = parentId.equals(Constants.NONE) ? "" : parentId + "/";
+
       Map<String, FlowElementDTO> elements =
           subProcess.getFlowElement().stream()
               .map(
                   flowElement ->
                       bpmnMapperFactory
                           .createFlowElementMapper()
-                          .map(flowElement.getValue(), parentPrefix + activity.getId()))
+                          .map(flowElement.getValue(), activity.getId()))
               .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
 
       activityFlowElement =

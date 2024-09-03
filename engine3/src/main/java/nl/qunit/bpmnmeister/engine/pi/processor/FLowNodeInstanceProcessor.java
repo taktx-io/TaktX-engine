@@ -73,12 +73,13 @@ public abstract class FLowNodeInstanceProcessor<
           .map(sequenceFlow2 -> flowElements.getFlowNode(sequenceFlow2.getTarget()))
           .filter(Optional::isPresent)
           .map(Optional::get)
-          .map(FlowNode2::newInstance)
+          .map(node -> node.newInstance(flownodeInstance.getParentInstance()))
           .forEach(instanceResult::addNewFlowNodeInstance);
     }
   }
 
   public final InstanceResult processContinue(
+      int subProcessLevel,
       FlowElements2 flowElements,
       FlowNode2 flowNode,
       FLowNodeInstance flowNodeInstance,
@@ -90,7 +91,12 @@ public abstract class FLowNodeInstanceProcessor<
 
     InstanceResult instanceResult =
         this.processContinueSpecificFlowNodeInstance(
-            flowElements, (E) flowNode, (I) flowNodeInstance, trigger, processInstanceVariables);
+            subProcessLevel,
+            flowElements,
+            (E) flowNode,
+            (I) flowNodeInstance,
+            trigger,
+            processInstanceVariables);
 
     processNodeIfFinished(
         flowElements, flowNode, flowNodeInstance, instanceResult, processInstanceVariables);
@@ -105,5 +111,10 @@ public abstract class FLowNodeInstanceProcessor<
       Variables2 processInstanceVariables);
 
   protected abstract InstanceResult processContinueSpecificFlowNodeInstance(
-      FlowElements2 flowElements, E flowNode, I flowNodeInstance, C trigger, Variables2 variables);
+      int subProcessLevel,
+      FlowElements2 flowElements,
+      E flowNode,
+      I flowNodeInstance,
+      C trigger,
+      Variables2 variables);
 }

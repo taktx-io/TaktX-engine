@@ -26,15 +26,21 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final InstanceResult processContinueSpecificFlowNodeInstance(
-      FlowElements2 flowElements, E flowNode, I flowNodeInstance, C trigger, Variables2 variables) {
+      int subProcessLevel,
+      FlowElements2 flowElements,
+      E flowNode,
+      I flowNodeInstance,
+      C trigger,
+      Variables2 variables) {
     return processContinueSpecificActivityInstance(
-        flowElements, flowNode, flowNodeInstance, trigger, variables);
+        subProcessLevel, flowElements, flowNode, flowNodeInstance, trigger, variables);
   }
 
   protected abstract InstanceResult processStartSpecificActivityInstance(
       FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
 
   protected abstract InstanceResult processContinueSpecificActivityInstance(
+      int subProcessLevel,
       FlowElements2 flowElements,
       E externalTask,
       I externalTaskInstance,

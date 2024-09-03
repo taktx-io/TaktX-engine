@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -16,23 +17,23 @@ public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
   public static final ContinueFlowElementTrigger NONE =
       new ContinueFlowElementTrigger(
           Constants.NONE_UUID,
-          Constants.NONE_UUID,
-          Constants.NONE,
+          List.of(),
+          List.of(),
           Constants.NONE,
           VariablesDTO.empty());
 
-  private final UUID elementInstanceId;
+  private final List<UUID> elementInstanceIdPath;
   private final String inputFlowId;
 
   @JsonCreator
   public ContinueFlowElementTrigger(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
-      @JsonProperty("elementInstanceId") @Nonnull UUID elementInstanceId,
-      @JsonProperty("elementId") @Nonnull String elementId,
+      @JsonProperty("elementInstanceIdPath") @Nonnull List<UUID> elementInstanceIdPath,
+      @JsonProperty("elementIdPath") @Nonnull List<String> elementIdPath,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
-    super(processInstanceKey, elementId, variables);
-    this.elementInstanceId = elementInstanceId;
+    super(processInstanceKey, elementIdPath, variables);
+    this.elementInstanceIdPath = elementInstanceIdPath;
     this.inputFlowId = inputFlowId;
   }
 

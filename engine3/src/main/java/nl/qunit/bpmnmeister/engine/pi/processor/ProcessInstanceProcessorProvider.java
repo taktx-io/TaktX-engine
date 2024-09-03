@@ -9,6 +9,7 @@ import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
+import nl.qunit.bpmnmeister.pd.model.SubProcess2;
 import nl.qunit.bpmnmeister.pd.model.Task2;
 import nl.qunit.bpmnmeister.pd.model.ThrowEvent2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -26,7 +27,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   //  @Inject BoundaryEventProcessor boundaryEventProcessor;
   @Inject TaskInstanceProcessor taskProcessor;
-  //  @Inject SubProcessProcessor subProcessProcessor;
+  @Inject SubProcessInstanceProcessor subProcessProcessor;
   //  @Inject CallActivityProcessor callActivityProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   //  @Inject ReceiveTaskProcessor receiveTaskProcessor;
@@ -76,8 +77,8 @@ public class ProcessInstanceProcessorProvider {
       processor = serviceTaskProcessor;
     } else if (element instanceof SendTask2) {
       processor = sendTaskProcessor;
-      //    } else if (element instanceof SubProcessDTO) {
-      //      processor = subProcessProcessor;
+    } else if (element instanceof SubProcess2) {
+      processor = subProcessProcessor;
       //    } else if (element instanceof CallActivityDTO) {
       //      processor = callActivityProcessor;
       //    } else if (element instanceof ReceiveTaskDTO) {

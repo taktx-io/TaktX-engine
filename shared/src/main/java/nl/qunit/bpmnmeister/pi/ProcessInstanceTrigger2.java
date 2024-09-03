@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -16,13 +17,13 @@ import lombok.ToString;
 public abstract class ProcessInstanceTrigger2 {
 
   private final UUID processInstanceKey;
-  private final String elementId;
+  private final List<String> elementIdPath;
   private final VariablesDTO variables;
 
   protected ProcessInstanceTrigger2(
-      UUID processInstanceKey, String elementId, VariablesDTO variables) {
+      UUID processInstanceKey, List<String> elementIdPath, VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
-    this.elementId = elementId;
+    this.elementIdPath = elementIdPath;
     this.variables = variables;
   }
 }

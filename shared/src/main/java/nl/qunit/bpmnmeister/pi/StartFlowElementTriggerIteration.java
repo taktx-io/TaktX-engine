@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -31,7 +32,7 @@ public class StartFlowElementTriggerIteration extends StartFlowElementTrigger {
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
-    super(processInstanceKey, Constants.NONE, elementId, variables);
+    super(processInstanceKey, List.of(), elementId, variables);
     this.parentElementInstance = parentElementInstance;
     this.elementInstanceId = elementInstanceId;
   }

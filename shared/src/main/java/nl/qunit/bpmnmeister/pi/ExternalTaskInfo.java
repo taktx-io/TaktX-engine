@@ -1,16 +1,14 @@
 package nl.qunit.bpmnmeister.pi;
 
-import java.util.UUID;
-import lombok.Builder;
-import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.ExternalTask2;
+import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
 
-@Getter
-@Builder
-public class ExternalTaskInfo {
 
-  private final String externalTaskId;
-  private final String elementId;
-  private final UUID elementInstanceId;
-  private final Variables2 variables;
-  private final String startTime;
+public record ExternalTaskInfo(
+    String externalTaskId,
+    ExternalTask2 element,
+    ExternalTaskInstance instance,
+    Variables2 variables,
+    String startTime) {
+
 }

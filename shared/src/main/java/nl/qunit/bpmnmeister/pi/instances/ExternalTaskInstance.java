@@ -10,8 +10,8 @@ import lombok.Setter;
 public class ExternalTaskInstance extends ActivityInstance {
   private int attempt;
 
-  public ExternalTaskInstance(String flowNode) {
-    super(flowNode);
+  public ExternalTaskInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 
   public int increaseAttempt() {

@@ -97,7 +97,7 @@ public class ProcessInstanceProcessor2
             flowNodeStates);
 
     FlowNode2 flowNode = flowElements.getStartNode(startNewProcessInstanceTrigger.getElementId());
-    FLowNodeInstance flowNodeInstance = flowNode.newInstance();
+    FLowNodeInstance flowNodeInstance = flowNode.newInstance(null);
     flowNodeStates.putInstance(flowNodeInstance);
 
     FLowNodeInstanceProcessor processor = processInstanceProcessorProvider.getProcessor(flowNode);
@@ -127,9 +127,10 @@ public class ProcessInstanceProcessor2
 
         VariablesDTO variablesDTO = variablesStore.get(trigger.getProcessInstanceKey());
         ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO);
-        FlowNode2 flowNode = flowElements.getFlowNode(trigger.getElementId()).get();
+        FlowNode2 flowNode = flowElements.getFlowNode(trigger.getElementIdPath().get(0)).get();
         FlowNodeStates2 flowNodeStates = processInstance.getFlowNodeStates();
-        FLowNodeInstance flowNodeInstance = flowNodeStates.get(trigger.getElementInstanceId());
+        FLowNodeInstance flowNodeInstance =
+            flowNodeStates.get(trigger.getElementInstanceIdPath().get(0));
         Variables2 processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
 
         FLowNodeInstanceProcessor processor =
@@ -137,7 +138,7 @@ public class ProcessInstanceProcessor2
 
         InstanceResult instanceResult =
             processor.processContinue(
-                flowElements, flowNode, flowNodeInstance, trigger, processInstanceVariables);
+                0, flowElements, flowNode, flowNodeInstance, trigger, processInstanceVariables);
 
         continueNewInstances(
             instanceResult,

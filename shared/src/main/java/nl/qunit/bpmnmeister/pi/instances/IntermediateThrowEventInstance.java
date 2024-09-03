@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class IntermediateThrowEventInstance extends ThrowEventInstance {
 
-  public IntermediateThrowEventInstance(String flowNode) {
-    super(flowNode);
+  public IntermediateThrowEventInstance(String flowNode, FLowNodeInstance parentInstance) {
+    super(flowNode, parentInstance);
   }
 }

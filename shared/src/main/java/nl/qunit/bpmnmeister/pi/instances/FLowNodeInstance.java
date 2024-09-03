@@ -16,8 +16,10 @@ public abstract class FLowNodeInstance {
   private FlowNodeStateEnum state;
   private String inputFlowId;
   private String elementId;
+  private FLowNodeInstance parentInstance;
 
-  protected FLowNodeInstance(String elementId) {
+  protected FLowNodeInstance(String elementId, FLowNodeInstance parentInstance) {
+    this.parentInstance = parentInstance;
     this.state = FlowNodeStateEnum.READY;
     this.elementInstanceId = UUID.randomUUID();
     this.elementId = elementId;

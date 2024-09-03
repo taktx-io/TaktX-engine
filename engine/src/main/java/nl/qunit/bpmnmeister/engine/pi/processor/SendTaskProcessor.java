@@ -12,7 +12,6 @@ public class SendTaskProcessor extends ExternalTaskProcessor<SendTaskDTO, SendTa
   protected SendTaskState getNewAttempExternalTaskState(SendTaskState oldState) {
     return new SendTaskState(
         FlowNodeStateEnum.WAITING,
-        oldState.getParentElementInstanceId(),
         oldState.getElementInstanceId(),
         oldState.getElementId(),
         oldState.getPassedCnt(),
@@ -25,7 +24,6 @@ public class SendTaskProcessor extends ExternalTaskProcessor<SendTaskDTO, SendTa
   protected SendTaskState getFinishedState(SendTaskState oldState) {
     return new SendTaskState(
         FlowNodeStateEnum.FINISHED,
-        oldState.getParentElementInstanceId(),
         oldState.getElementInstanceId(),
         oldState.getElementId(),
         oldState.getPassedCnt() + 1,
@@ -38,7 +36,6 @@ public class SendTaskProcessor extends ExternalTaskProcessor<SendTaskDTO, SendTa
   protected SendTaskState getTerminateElementState(SendTaskState elementState) {
     return new SendTaskState(
         FlowNodeStateEnum.TERMINATED,
-        elementState.getParentElementInstanceId(),
         elementState.getElementInstanceId(),
         elementState.getElementId(),
         elementState.getPassedCnt(),
