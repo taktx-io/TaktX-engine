@@ -73,7 +73,7 @@ public class SubProcessInstanceProcessor
       SubProcess2 subProcess,
       SubProcessInstance subProcessInstance,
       ContinueFlowElementTrigger2 trigger,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
     subProcessLevel++;
 
     FlowElements2 subProcessElements = subProcess.getElements();
@@ -93,11 +93,14 @@ public class SubProcessInstanceProcessor
             flowElement2,
             flowNodeInstance,
             trigger,
-            variables);
+            processInstanceVariables);
 
     instanceResult =
         continueNewInstances(
-            instanceResult, subProcessInstance.getFlowNodeStates(), subProcessElements, variables);
+            instanceResult,
+            subProcessInstance.getFlowNodeStates(),
+            subProcessElements,
+            processInstanceVariables);
 
     if (subProcessInstance.getFlowNodeStates().getState().isFinished()) {
       subProcessInstance.setState(FlowNodeStateEnum.FINISHED);

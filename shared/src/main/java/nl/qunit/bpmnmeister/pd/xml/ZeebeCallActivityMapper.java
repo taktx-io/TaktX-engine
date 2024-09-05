@@ -18,14 +18,34 @@ public class ZeebeCallActivityMapper implements CallActivityMapper {
     Optional<CalledElement> optCalledElement =
         ExtensionElementHelper.extractExtensionElement(
             callActivity.getExtensionElements(), CalledElement.class);
-    String calledElement = optCalledElement.isEmpty() ? "" : optCalledElement.get().getProcessId();
+    String calledElementId = "";
+    boolean propagateAllParentVariables = false;
+    boolean propagateAllChildVariables = false;
+    if (optCalledElement.isPresent()) {
+      CalledElement calledElement = optCalledElement.get();
+      if (calledElement.getProcessId().isEmpty()) {
+        throw new IllegalArgumentException("Called element must not be empty");
+      }
+      calledElementId = calledElement.getProcessId();
+      propagateAllParentVariables =
+          calledElement.isPropagateAllParentVariables() != null
+              ? calledElement.isPropagateAllParentVariables()
+              : true;
+      propagateAllChildVariables =
+          calledElement.isPropagateAllChildVariables() != null
+              ? calledElement.isPropagateAllChildVariables()
+              : false;
+    }
+
     return new CallActivityDTO(
         callActivity.getId(),
         parentId,
         mapQNameList(callActivity.getIncoming()),
         mapQNameList(callActivity.getOutgoing()),
         loopCharacteristics,
-        calledElement,
+        calledElementId,
+        propagateAllParentVariables,
+        propagateAllChildVariables,
         ioMapping);
   }
 }

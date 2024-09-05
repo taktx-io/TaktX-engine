@@ -14,15 +14,24 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 @ToString(callSuper = true)
 public class StartNewProcessInstanceTrigger2 extends StartFlowElementTrigger2 {
 
+  private final UUID parentProcessInstanceKey;
+  private final List<String> parentElementIdPath;
+  private final List<UUID> parentElementInstancePath;
   private final ProcessDefinitionDTO processDefinition;
 
   @JsonCreator
   public StartNewProcessInstanceTrigger2(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
+      @JsonProperty("parentProcessInstanceKey") @Nonnull UUID parentProcessInstanceKey,
+      @JsonProperty("parentElementIdPath") @Nonnull List<String> parentElementIdPath,
+      @JsonProperty("parentElementInstancePath") @Nonnull List<UUID> parentElementInstancePath,
       @JsonProperty("processDefinition") @Nonnull ProcessDefinitionDTO processDefinition,
       @JsonProperty("elementId") @Nonnull String elementId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, List.of(elementId), Constants.NONE, variables);
+    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.parentElementIdPath = parentElementIdPath;
+    this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinition = processDefinition;
   }
 

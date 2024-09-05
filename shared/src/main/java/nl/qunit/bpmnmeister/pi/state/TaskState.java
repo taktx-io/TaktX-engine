@@ -19,12 +19,6 @@ public class TaskState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(
-        state,
-        elementId,
-        elementInstanceId,
-        passedCnt,
-        loopCnt,
-        inputFlowId);
+    super(state, elementId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
   }
 }

@@ -35,5 +35,4 @@ public class SendTaskDTO extends ExternalTaskDTO {
         implementation,
         headers);
   }
-
 }

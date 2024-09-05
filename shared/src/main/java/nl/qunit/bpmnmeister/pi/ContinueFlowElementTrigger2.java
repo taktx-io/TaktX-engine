@@ -16,11 +16,7 @@ public class ContinueFlowElementTrigger2 extends ProcessInstanceTrigger2
     implements SchedulableMessage<UUID> {
   public static final ContinueFlowElementTrigger2 NONE =
       new ContinueFlowElementTrigger2(
-          Constants.NONE_UUID,
-          List.of(),
-          List.of(),
-          Constants.NONE,
-          VariablesDTO.empty());
+          Constants.NONE_UUID, List.of(), List.of(), Constants.NONE, VariablesDTO.empty());
 
   private final List<String> elementIdPath;
   private final String inputFlowId;

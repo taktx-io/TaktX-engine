@@ -3,6 +3,8 @@ package nl.qunit.bpmnmeister.engine.pi;
 import java.lang.reflect.InvocationTargetException;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
+import nl.qunit.bpmnmeister.pd.model.CallActivity2;
+import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
@@ -42,6 +44,7 @@ public interface DtoMapper {
   @SubclassMapping(source = TaskDTO.class, target = Task2.class)
   @SubclassMapping(source = SubProcessDTO.class, target = SubProcess2.class)
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow2.class)
+  @SubclassMapping(source = CallActivityDTO.class, target = CallActivity2.class)
   @Mapping(target = "parentElement", ignore = true)
   FlowElement2 getFlowElement(FlowElementDTO flowElements);
 

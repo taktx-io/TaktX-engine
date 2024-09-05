@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
   <bpmn:process id="subprocess-task-single" isExecutable="true">
     <bpmn:documentation>documen</bpmn:documentation>
     <bpmn:startEvent id="StartEvent_1">
@@ -16,10 +16,6 @@
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>
       <bpmn:subProcess id="SubSubProcess_1.aaa" name="SubSubProcess">
         <bpmn:subProcess id="SubSubSubProcess_1" name="SubSubSubProcess">
-          <bpmn:task id="SubTask_1" name="task">
-            <bpmn:incoming>Flow_0gmja57</bpmn:incoming>
-            <bpmn:outgoing>Flow_10nh6nv</bpmn:outgoing>
-          </bpmn:task>
           <bpmn:endEvent id="SubEndEvent_1">
             <bpmn:incoming>Flow_10nh6nv</bpmn:incoming>
           </bpmn:endEvent>
@@ -28,6 +24,13 @@
             <bpmn:outgoing>Flow_0gmja57</bpmn:outgoing>
           </bpmn:startEvent>
           <bpmn:sequenceFlow id="Flow_0gmja57" sourceRef="SubStartEvent_1" targetRef="SubTask_1" />
+          <bpmn:serviceTask id="SubTask_1" name="task">
+            <bpmn:extensionElements>
+              <zeebe:taskDefinition type="service-task" />
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_0gmja57</bpmn:incoming>
+            <bpmn:outgoing>Flow_10nh6nv</bpmn:outgoing>
+          </bpmn:serviceTask>
         </bpmn:subProcess>
       </bpmn:subProcess>
     </bpmn:subProcess>
@@ -52,15 +55,14 @@
         <dc:Bounds x="530" y="210" width="350" height="200" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_0va9c59_di" bpmnElement="SubTask_1">
-        <dc:Bounds x="630" y="270" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_19x57bw_di" bpmnElement="SubEndEvent_1">
         <dc:Bounds x="782" y="292" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_08u1k5a_di" bpmnElement="SubStartEvent_1">
         <dc:Bounds x="552" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_08n5hwx_di" bpmnElement="SubTask_1">
+        <dc:Bounds x="630" y="270" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_10nh6nv_di" bpmnElement="Flow_10nh6nv">
         <di:waypoint x="730" y="310" />

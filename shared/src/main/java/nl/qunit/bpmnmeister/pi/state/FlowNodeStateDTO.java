@@ -39,8 +39,7 @@ public abstract class FlowNodeStateDTO {
       String elementId,
       int passedCnt,
       FlowNodeStateEnum state,
-      String inputFlowId
-  ) {
+      String inputFlowId) {
     this.elementInstanceId = elementInstanceId;
     this.elementId = elementId;
     this.passedCnt = passedCnt;

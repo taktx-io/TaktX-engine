@@ -25,5 +25,4 @@ public class ReceiveTaskDTO extends TaskDTO {
     super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.messageRef = messageRef;
   }
-
 }

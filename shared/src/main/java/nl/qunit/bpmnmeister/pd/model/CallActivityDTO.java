@@ -1,11 +1,8 @@
 package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -14,7 +11,9 @@ import lombok.Getter;
 @EqualsAndHashCode(callSuper = true)
 public class CallActivityDTO extends ActivityDTO {
 
-  @Nonnull private final String calledElement;
+  private final String calledElement;
+  private final boolean propagateAllParentVariables;
+  private final boolean propagateAllChildVariables;
 
   @JsonCreator
   public CallActivityDTO(
@@ -24,38 +23,12 @@ public class CallActivityDTO extends ActivityDTO {
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing,
       @Nonnull @JsonProperty("loopCharacteristics") LoopCharacteristicsDTO loopCharacteristics,
       @Nonnull @JsonProperty("calledElement") String calledElement,
+      @JsonProperty("propagateAllParentVariables") boolean propagateAllParentVariables,
+      @JsonProperty("propagateAllChildVariables") boolean propagateAllChildVariables,
       @Nonnull @JsonProperty("ioMapping") InputOutputMappingDTO ioMapping) {
     super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.calledElement = calledElement;
+    this.propagateAllParentVariables = propagateAllParentVariables;
+    this.propagateAllChildVariables = propagateAllChildVariables;
   }
-
-  @JsonIgnore
-  @Override
-  public ProcessDefinitionDTO getAsSubProcessDefinition(
-      ProcessDefinitionDTO parentProcessDefinition) {
-    Map<String, FlowElementDTO> elements = new HashMap<>();
-    elements.put(getId(), this);
-
-    // Wrap in Process element
-    DefinitionsKey existingDefinitionsKey =
-        parentProcessDefinition.getDefinitions().getDefinitionsKey();
-    String parentProcessDefinitionId = existingDefinitionsKey.getProcessDefinitionId();
-    Process process =
-        new Process(
-            parentProcessDefinitionId, parentProcessDefinitionId, new FlowElementsDTO(elements));
-
-    DefinitionsKey subDefinitionsKey =
-        new DefinitionsKey(
-            parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
-                + "/"
-                + getId(),
-            parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash());
-    DefinitionsDTO definitions =
-        new DefinitionsDTO(
-            subDefinitionsKey, process, parentProcessDefinition.getDefinitions().getMessages());
-
-    Integer version = parentProcessDefinition.getVersion();
-    return new ProcessDefinitionDTO(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
-  }
-
 }

@@ -7,8 +7,7 @@ import lombok.Getter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class EventDTO extends FlowNodeDTO
-    implements WithIoMappingDTO {
+public abstract class EventDTO extends FlowNodeDTO implements WithIoMappingDTO {
 
   private final InputOutputMappingDTO ioMapping;
 
@@ -21,5 +20,4 @@ public abstract class EventDTO extends FlowNodeDTO
     super(id, parentId, incoming, outgoing);
     this.ioMapping = ioMapping;
   }
-
 }

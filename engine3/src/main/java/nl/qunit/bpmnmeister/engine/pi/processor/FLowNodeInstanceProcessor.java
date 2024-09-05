@@ -34,20 +34,25 @@ public abstract class FLowNodeInstanceProcessor<
       throw new IllegalStateException("FlowNodeInstance is not in READY state");
     }
 
-    if (flowNode instanceof WithIoMapping withIoMapping) {
-      Variables2 mappedInputVariables =
-          ioMappingProcessor.getInputVariables(withIoMapping, processInstanceVariables);
-      processInstanceVariables.merge(mappedInputVariables);
-    }
+    Variables2 inputVariables = getInputVariables((E) flowNode, processInstanceVariables);
 
     InstanceResult instanceResult =
         this.processStartSpecificFlowNodeInstance(
-            flowElements, (E) flowNode, (I) flownodeInstance, processInstanceVariables);
+            flowElements, (E) flowNode, (I) flownodeInstance, inputVariables);
 
     processNodeIfFinished(
         flowElements, flowNode, flownodeInstance, instanceResult, processInstanceVariables);
 
     return instanceResult;
+  }
+
+  protected Variables2 getInputVariables(E flowNode, Variables2 processInstanceVariables) {
+    Variables2 inputVariables = processInstanceVariables;
+    if (flowNode instanceof WithIoMapping withIoMapping) {
+      inputVariables =
+          ioMappingProcessor.getInputVariables(withIoMapping, processInstanceVariables);
+    }
+    return inputVariables;
   }
 
   protected void processNodeIfFinished(
@@ -60,7 +65,7 @@ public abstract class FLowNodeInstanceProcessor<
 
       if (flowNode instanceof WithIoMapping withIoMapping) {
         Variables2 mappedOutputVariables =
-            ioMappingProcessor.getOutputVariables(withIoMapping, processInstanceVariables);
+            getOutputVariables(processInstanceVariables, withIoMapping);
         processInstanceVariables.merge(mappedOutputVariables);
       }
 
@@ -76,6 +81,11 @@ public abstract class FLowNodeInstanceProcessor<
           .map(node -> node.newInstance(flownodeInstance.getParentInstance()))
           .forEach(instanceResult::addNewFlowNodeInstance);
     }
+  }
+
+  protected Variables2 getOutputVariables(
+      Variables2 processInstanceVariables, WithIoMapping withIoMapping) {
+    return ioMappingProcessor.getOutputVariables(withIoMapping, processInstanceVariables);
   }
 
   public final InstanceResult processContinue(
@@ -105,10 +115,7 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected abstract InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements,
-      E flowNode,
-      I flownodeInstance,
-      Variables2 processInstanceVariables);
+      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
 
   protected abstract InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,

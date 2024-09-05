@@ -7,12 +7,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
+import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -31,6 +34,48 @@ public class Forwarder {
       ProcessInstance2 processInstance) {
 
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
+    forwardNewStartCommands(context, instanceResult, processInstance);
+    forwardContinuations(context, instanceResult);
+  }
+
+  private void forwardContinuations(
+      ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
+    instanceResult
+        .getContinuations()
+        .forEach(
+            continuation -> {
+              context.forward(
+                  new Record<>(
+                      continuation.getProcessInstanceKey(),
+                      continuation,
+                      Instant.now().toEpochMilli()));
+            });
+  }
+
+  private void forwardNewStartCommands(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstance2 processInstance) {
+    instanceResult
+        .getNewStartCommands()
+        .forEach(
+            newStartCommand -> {
+              StartCommand startCommand =
+                  new StartCommand(
+                      newStartCommand.processInstanceKey(),
+                      processInstance.getProcessInstanceKey(),
+                      Constants.NONE,
+                      getElementIdPath(newStartCommand.flowNode()),
+                      getInstancePath(newStartCommand.instance()),
+                      newStartCommand.calledElement(),
+                      variablesMapper.toDTO(newStartCommand.variables()));
+
+              context.forward(
+                  new Record<>(
+                      startCommand.getProcessDefinitionId(),
+                      startCommand,
+                      Instant.now().toEpochMilli()));
+            });
   }
 
   private void forwardExternalTaskRequests(
@@ -81,17 +126,17 @@ public class Forwarder {
     return new ExternalTaskTrigger(
         processInstanceKey,
         processDefinitionKey,
-        getElementIdPath(externalTaskInfo),
+        getElementIdPath(externalTaskInfo.element()),
         externalTaskInfo.externalTaskId(),
-        getInstancePath(externalTaskInfo),
+        getInstancePath(externalTaskInfo.instance()),
         variablesMapper.toDTO(externalTaskInfo.variables()));
   }
 
-  private List<UUID> getInstancePath(ExternalTaskInfo externalTaskInfo) {
+  private List<UUID> getInstancePath(FLowNodeInstance fLowNodeInstance) {
     List<UUID> instancePath = new ArrayList<>();
-    instancePath.add(externalTaskInfo.instance().getElementInstanceId());
+    instancePath.add(fLowNodeInstance.getElementInstanceId());
 
-    FLowNodeInstance parent = externalTaskInfo.instance().getParentInstance();
+    FLowNodeInstance parent = fLowNodeInstance.getParentInstance();
     while (parent != null) {
       instancePath.add(parent.getElementInstanceId());
       parent = parent.getParentInstance();
@@ -100,12 +145,12 @@ public class Forwarder {
     return instancePath;
   }
 
-  private static List<String> getElementIdPath(ExternalTaskInfo externalTaskInfo) {
+  private static List<String> getElementIdPath(FlowNode2 flowNode) {
     // Create a list of parent element IDs recursively from the element's parent, the order of the
     // list is from the root to the parent of the element
     List<String> elementIdPath = new ArrayList<>();
-    elementIdPath.add(externalTaskInfo.element().getId());
-    FlowElement2 parent = externalTaskInfo.element().getParentElement();
+    elementIdPath.add(flowNode.getId());
+    FlowElement2 parent = flowNode.getParentElement();
     while (parent != null) {
       elementIdPath.add(parent.getId());
       parent = parent.getParentElement();

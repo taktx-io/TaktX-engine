@@ -42,9 +42,7 @@ public class CallActivityProcessor extends ActivityProcessor<CallActivityDTO, Ca
         .newStartCommands(
             Set.of(
                 new StartCommand(
-                    processInstance.getRootInstanceKey(),
                     oldState.getChildProcessInstanceId(),
-                    Constants.NONE,
                     element.getId(),
                     oldState.getElementInstanceId(),
                     element.getCalledElement(),

@@ -31,9 +31,14 @@ public abstract class ActivityInstanceProcessor<
       E flowNode,
       I flowNodeInstance,
       C trigger,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
     return processContinueSpecificActivityInstance(
-        subProcessLevel, flowElements, flowNode, flowNodeInstance, trigger, variables);
+        subProcessLevel,
+        flowElements,
+        flowNode,
+        flowNodeInstance,
+        trigger,
+        processInstanceVariables);
   }
 
   protected abstract InstanceResult processStartSpecificActivityInstance(
@@ -45,5 +50,5 @@ public abstract class ActivityInstanceProcessor<
       E externalTask,
       I externalTaskInstance,
       C trigger,
-      Variables2 variables);
+      Variables2 processInstanceVariables);
 }

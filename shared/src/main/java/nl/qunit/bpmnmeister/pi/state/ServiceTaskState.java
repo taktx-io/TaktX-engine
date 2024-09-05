@@ -22,13 +22,6 @@ public class ServiceTaskState extends ExternalTaskState {
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("attempt") int attempt,
       @JsonProperty("inputFlowId") String inputflowId) {
-    super(
-        state,
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        loopCnt,
-        inputflowId,
-        attempt);
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId, attempt);
   }
 }

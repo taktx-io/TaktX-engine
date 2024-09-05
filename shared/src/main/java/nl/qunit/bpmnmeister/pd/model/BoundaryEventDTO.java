@@ -28,5 +28,4 @@ public class BoundaryEventDTO extends CatchEventDTO {
     this.attachedToRef = attachedToRef;
     this.cancelActivity = cancelActivity;
   }
-
 }

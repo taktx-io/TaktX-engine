@@ -9,8 +9,7 @@ import lombok.Getter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public abstract class CatchEventDTO extends EventDTO
-    implements WithIoMappingDTO {
+public abstract class CatchEventDTO extends EventDTO implements WithIoMappingDTO {
   protected final Set<EventDefinitionDTO> eventDefinitions;
 
   protected CatchEventDTO(

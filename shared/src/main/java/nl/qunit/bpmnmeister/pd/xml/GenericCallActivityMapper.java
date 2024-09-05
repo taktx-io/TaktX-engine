@@ -20,6 +20,8 @@ public class GenericCallActivityMapper implements CallActivityMapper {
         mapQNameList(callActivity.getOutgoing()),
         loopCharacteristics,
         callActivity.getCalledElement().toString(),
+        true,
+        false,
         ioMapping);
   }
 }

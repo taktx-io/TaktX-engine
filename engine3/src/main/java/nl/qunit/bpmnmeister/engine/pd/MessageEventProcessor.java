@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
@@ -132,7 +133,10 @@ public class MessageEventProcessor
                   StartCommand startCommand =
                       new StartCommand(
                           Constants.NONE_UUID,
+                          Constants.NONE_UUID,
                           value.getElementId(),
+                          List.of(),
+                          List.of(),
                           processDefinitionKey.getProcessDefinitionId(),
                           messageEvent.getVariables());
 

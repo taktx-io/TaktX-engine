@@ -98,12 +98,13 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public void init() {
     String kafkaBootstrapServers = ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
-    AdminClient adminClient = AdminClient.create(
-        Map.of("bootstrap.servers", kafkaBootstrapServers));
-    adminClient.createTopics(
-        Arrays.stream(Topics.values())
-            .map(topic -> new NewTopic(topic.getTopicName(), 5, (short) 1))
-            .toList());
+    try (AdminClient adminClient = AdminClient.create(
+        Map.of("bootstrap.servers", kafkaBootstrapServers))) {
+      adminClient.createTopics(
+          Arrays.stream(Topics.values())
+              .map(topic -> new NewTopic(topic.getTopicName(), 5, (short) 1))
+              .toList());
+    }
 
     triggerEmitter = new KafkaProducerUtil(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
@@ -164,6 +165,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     if (trigger instanceof StartNewProcessInstanceTrigger2 startNewProcessInstanceTrigger) {
       ProcessDefinitionKey ProcessDefinitionKey = nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
           startNewProcessInstanceTrigger.getProcessDefinition());
+      Set<UUID> uuids1 = processInstanceParentChildMap.computeIfAbsent(
+          startNewProcessInstanceTrigger.getParentProcessInstanceKey(), k -> new HashSet<>());
+      uuids1.add(startNewProcessInstanceTrigger.getProcessInstanceKey());
       ConcurrentLinkedQueue<ProcessInstanceTrigger2> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
           ProcessDefinitionKey, k -> new ConcurrentLinkedQueue<>());
       processInstanceKeyList.add(trigger);
@@ -207,8 +211,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     if (externalTaskTriggers == null) {
       return null;
     }
-    ExternalTaskTrigger externalTaskTrigger = externalTaskTriggers.poll();
-    return externalTaskTrigger;
+    return externalTaskTriggers.poll();
   }
 
 
@@ -232,9 +235,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine waitForProcessDeployment() {
     activeProcessDefintion = Awaitility.await()
-        .until(() -> {
-          return hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash());
-        }, Objects::nonNull);
+        .until(() -> hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash()), Objects::nonNull);
 
     return this;
   }
@@ -250,7 +251,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
     StartCommand startCommand = new StartCommand(
         Constants.NONE_UUID,
+        Constants.NONE_UUID,
         Constants.NONE,
+        List.of(),
+        List.of(),
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
     startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
@@ -316,6 +320,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
+  public BpmnTestEngine waitUntilChildProcessIsCompleted() {
+    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.COMPLETED);
+  }
   public BpmnTestEngine waitUntilChildProcessIsStarted() {
     return waitUntilChildProcessesHaveState(1, ProcessInstanceState.ACTIVE);
   }
@@ -368,7 +375,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             if (processInstances == null || processInstances.isEmpty()) {
               return null;
             }
-            ProcessInstanceUpdate poll = null;
+            ProcessInstanceUpdate poll;
             do {
               poll = processInstances.poll();
               if (poll != null && poll.getProcessInstanceKey() != null
@@ -406,16 +413,14 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine parentProcess() {
-//    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
-//    activeProcessInstance = parentProcessInstance;
+    activeProcessInstance = processInstanceMap.get(activeProcessInstance.getParentProcessInstanceKey());
     return this;
   }
 
   public ProcessInstanceAssert assertThatParentProcess() {
-//    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentInstanceKey());
-//    activeProcessInstance = parentProcessInstance;
-//    return new ProcessInstanceAssert(parentProcessInstance, this);
-    return new ProcessInstanceAssert(activeProcessInstance, this);
+    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentProcessInstanceKey());
+    activeProcessInstance = parentProcessInstance;
+    return new ProcessInstanceAssert(parentProcessInstance, this);
   }
 
   public ProcessDefinitionDTO deployedProcessDefinition() {
@@ -441,8 +446,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine doNotExpectNewProcessInstance() {
-    Assertions.assertThrows(ConditionTimeoutException.class, () ->
-      waitForNewProcessInstance());
+    Assertions.assertThrows(ConditionTimeoutException.class, this::waitForNewProcessInstance);
     return this;
   }
 
@@ -470,7 +474,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstanceUpdate poll = null;
+          ProcessInstanceUpdate poll;
           do {
             poll = processInstances.poll();
             LOG.info("Poll: " + poll);
@@ -522,7 +526,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       if (messageEvents == null) {
         return false;
       }
-      MessageEvent poll = null;
+      MessageEvent poll;
       do {
         poll = messageEvents.poll();
         if (poll instanceof CorrelationMessageSubscription correlationMessageSubscription) {
@@ -563,14 +567,14 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           if (processInstances == null || processInstances.isEmpty()) {
             return null;
           }
-          ProcessInstanceUpdate poll = null;
+          ProcessInstanceUpdate poll;
           do {
             poll = processInstances.poll();
             if (poll != null &&
                 poll.getProcessInstanceKey() != null &&
                 poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
                  !poll.getFlowNodeStates().get(elementId).isEmpty() &&
-                state == poll.getFlowNodeStates().get(elementId).get(0).getState()) {
+                state == poll.getFlowNodeStates().get(elementId).getFirst().getState()) {
               return poll;
             }
           } while (poll != null);

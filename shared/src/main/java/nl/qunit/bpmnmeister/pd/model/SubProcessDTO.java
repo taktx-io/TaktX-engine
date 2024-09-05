@@ -1,7 +1,6 @@
 package nl.qunit.bpmnmeister.pd.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
@@ -27,28 +26,4 @@ public class SubProcessDTO extends ActivityDTO {
     super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.elements = elements;
   }
-
-  @JsonIgnore
-  @Override
-  public ProcessDefinitionDTO getAsSubProcessDefinition(
-      ProcessDefinitionDTO parentProcessDefinition) {
-    Integer version = parentProcessDefinition.getVersion();
-    String parentProcessDefinitionId =
-        parentProcessDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
-    Process process = new Process(parentProcessDefinitionId, parentProcessDefinitionId, elements);
-    DefinitionsDTO definitions =
-        new DefinitionsDTO(
-            new DefinitionsKey(
-                parentProcessDefinition
-                        .getDefinitions()
-                        .getDefinitionsKey()
-                        .getProcessDefinitionId()
-                    + "/"
-                    + getId(),
-                parentProcessDefinition.getDefinitions().getDefinitionsKey().getHash()),
-            process,
-            parentProcessDefinition.getDefinitions().getMessages());
-    return new ProcessDefinitionDTO(definitions, version, ProcessDefinitionStateEnum.ACTIVE);
-  }
-
 }

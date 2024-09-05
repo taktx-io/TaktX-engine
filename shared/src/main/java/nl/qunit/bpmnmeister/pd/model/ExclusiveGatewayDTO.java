@@ -20,5 +20,4 @@ public class ExclusiveGatewayDTO extends GatewayDTO {
       @Nonnull @JsonProperty("default") String defaultFlow) {
     super(id, parentId, incoming, outgoing, defaultFlow);
   }
-
 }

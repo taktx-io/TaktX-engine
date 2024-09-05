@@ -133,9 +133,10 @@ class ProcessInstanceProcessorTest {
   void testSubProcessTaskNested()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-task-nested.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-//        .waitUntilChildProcessIsStarted()
+        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
+        .andRespondWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
@@ -143,26 +144,25 @@ class ProcessInstanceProcessorTest {
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testProcessCallActivitySingle()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
-        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.gen1.bpmn")
-        .startProcessInstance(VariablesDTO.empty())
-//        .waitUntilChildProcessIsStarted()
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.bpmn")
+        .startProcessInstance(VariablesDTO.of("startVariable", "valueStart"))
+        .waitUntilChildProcessIsCompleted()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_CalledElement")
+        .hasPassedElementWithId("task_CalledElement")
+        .hasPassedElementWithId("EndEvent_CalledElement")
+        .toProcessLevel()
+        .assertThatParentProcess()
+        .hasPassedElementWithId("StartEvent_1")
+        .toProcessLevel()
         .waitUntilCompleted()
         .assertThatProcess()
-//        .hasPassedElement("StartEvent_CalledElement")
-//        .hasPassedElement("task_CalledElement")
-//        .hasPassedElement("EndEvent_CalledElement")
-//        .toProcessLevel()
-//        .assertThatParentProcess()
-        .hasPassedElementWithId("StartEvent_1")
-//        .toProcessLevel()
-//        .waitUntilCompleted()
-//        .assertThatProcess()
         .hasPassedElementWithId("callactivity-id")
         .hasPassedElementWithId("EndEvent_1");
 

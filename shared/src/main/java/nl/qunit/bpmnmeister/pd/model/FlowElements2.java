@@ -73,23 +73,19 @@ public class FlowElements2 {
     if (flowNode == null) {
       List<StartEvent2> startEvents = getStartEvents();
       if (startEvents.isEmpty()) {
-        Optional<FlowNode2> withoutInputFlow = elements.values().stream()
-            .filter(e -> e instanceof FlowNode2)
-            .map(e -> (FlowNode2)e)
-            .filter(node -> !node.getIncoming().isEmpty())
-            .findFirst();
-        if (withoutInputFlow.isPresent()) {
-          flowNode = withoutInputFlow.get();
-        } else {
-          flowNode = getFlowNodes().iterator().next();
-        }
+        Optional<FlowNode2> withoutInputFlow =
+            elements.values().stream()
+                .filter(e -> e instanceof FlowNode2)
+                .map(e -> (FlowNode2) e)
+                .filter(node -> !node.getIncoming().isEmpty())
+                .findFirst();
+        flowNode = withoutInputFlow.orElseGet(() -> getFlowNodes().iterator().next());
       } else {
-        flowNode = startEvents.get(0);
+        flowNode = startEvents.getFirst();
       }
     }
     return flowNode;
   }
-
 
   public Iterable<Activity2> getActivities() {
     return elements.values().stream()

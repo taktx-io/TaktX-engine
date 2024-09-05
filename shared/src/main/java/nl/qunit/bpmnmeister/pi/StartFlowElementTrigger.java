@@ -16,10 +16,7 @@ public class StartFlowElementTrigger extends ProcessInstanceTrigger
     implements SchedulableMessage<UUID> {
   public static final StartFlowElementTrigger NONE =
       new StartFlowElementTrigger(
-          Constants.NONE_UUID,
-          List.of(),
-          Constants.NONE,
-          VariablesDTO.empty());
+          Constants.NONE_UUID, List.of(), Constants.NONE, VariablesDTO.empty());
 
   private final List<String> elementIdPath;
   private final String inputFlowId;

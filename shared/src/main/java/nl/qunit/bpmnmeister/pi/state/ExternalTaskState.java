@@ -22,13 +22,7 @@ public class ExternalTaskState extends TaskState {
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId,
       @JsonProperty("attempt") int attempt) {
-    super(
-        state,
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        loopCnt,
-        inputFlowId);
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputFlowId);
     this.attempt = attempt;
   }
 }

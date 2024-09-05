@@ -7,6 +7,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstance2;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.TaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.CallActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
@@ -16,6 +17,7 @@ import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
+import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
@@ -46,6 +48,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = SendTaskInstance.class, source = SendTaskState.class)
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
+  @SubclassMapping(target = CallActivityInstance.class, source = CallActivityState.class)
   @Mapping(target = "parentInstance", ignore = true)
   FLowNodeInstance map(FlowNodeStateDTO sourceDto);
 
@@ -62,6 +65,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = SendTaskInstance.class, target = SendTaskState.class)
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessState.class)
+  @SubclassMapping(source = CallActivityInstance.class, target = CallActivityState.class)
   FlowNodeStateDTO map(FLowNodeInstance source);
 
   FlowNodeStatesDTO map(FlowNodeStates2 source);

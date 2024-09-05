@@ -24,13 +24,7 @@ public class CallActivityState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
-    super(
-        state,
-        elementId,
-        elementInstanceId,
-        passedCnt,
-        loopCnt,
-        inputFlowId);
+    super(state, elementId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
     this.childProcessInstanceId = childProcessInstanceId;
   }
 }

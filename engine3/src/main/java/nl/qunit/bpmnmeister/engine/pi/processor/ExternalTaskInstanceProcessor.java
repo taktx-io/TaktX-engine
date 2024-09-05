@@ -15,7 +15,6 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -49,18 +48,11 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
-      E flowNode,
-      I flownodeInstance,
-      Variables2 processInstanceVariables) {
+      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables) {
     InstanceResult instanceResult = InstanceResult.empty();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(
-            flowNode.getWorkerDefinition(),
-            flowNode,
-            flownodeInstance,
-            getExternalTaskVariables(flowNode, processInstanceVariables),
-            null);
+            flowNode.getWorkerDefinition(), flowNode, flownodeInstance, variables, null);
     instanceResult.addExternalTaskRequest(externalTaskInfo);
     flownodeInstance.setState(FlowNodeStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
@@ -127,7 +119,7 @@ public abstract class ExternalTaskInstanceProcessor<
                 backoff.get(),
                 externalTask,
                 externalTaskInstance,
-                getExternalTaskVariables(externalTask, processInstanceVariables),
+                ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
                 instanceResult);
           } else {
             // No backoff time defined, retry directly
@@ -136,7 +128,7 @@ public abstract class ExternalTaskInstanceProcessor<
                     externalTaskId,
                     externalTask,
                     externalTaskInstance,
-                    getExternalTaskVariables(externalTask, processInstanceVariables),
+                    ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
                     null);
             instanceResult.addExternalTaskRequest(externalTaskInfo);
           }
@@ -151,11 +143,6 @@ public abstract class ExternalTaskInstanceProcessor<
       }
     }
     return instanceResult;
-  }
-
-  private Variables2 getExternalTaskVariables(WithIoMapping element, Variables2 variables) {
-    // TODO When no mapping is defined, we should return the variables as is
-    return ioMappingProcessor.getInputVariables(element, variables);
   }
 
   private String getExternalTaskId(String workerDefinition, Variables2 variables) {

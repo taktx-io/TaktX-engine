@@ -30,8 +30,7 @@ public abstract class FLowNodeInstance {
   }
 
   public boolean isNotAwaiting() {
-    return state == FlowNodeStateEnum.FINISHED
-        || state == FlowNodeStateEnum.TERMINATED;
+    return state == FlowNodeStateEnum.FINISHED || state == FlowNodeStateEnum.TERMINATED;
   }
 
   public void increasePassedCnt() {

@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
+import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
@@ -28,7 +29,7 @@ public class ProcessInstanceProcessorProvider {
   //  @Inject BoundaryEventProcessor boundaryEventProcessor;
   @Inject TaskInstanceProcessor taskProcessor;
   @Inject SubProcessInstanceProcessor subProcessProcessor;
-  //  @Inject CallActivityProcessor callActivityProcessor;
+  @Inject CallActivityInstanceProcessor callActivityProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   //  @Inject ReceiveTaskProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
@@ -79,8 +80,8 @@ public class ProcessInstanceProcessorProvider {
       processor = sendTaskProcessor;
     } else if (element instanceof SubProcess2) {
       processor = subProcessProcessor;
-      //    } else if (element instanceof CallActivityDTO) {
-      //      processor = callActivityProcessor;
+    } else if (element instanceof CallActivity2) {
+      processor = callActivityProcessor;
       //    } else if (element instanceof ReceiveTaskDTO) {
       //      processor = receiveTaskProcessor;
     } else if (element instanceof Task2) {

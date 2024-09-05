@@ -38,7 +38,7 @@ public class TaskInstanceProcessor
       Task2 externalTask,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTrigger2 trigger,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
     return InstanceResult.empty();
   }
 }

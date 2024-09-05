@@ -72,8 +72,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
-  private ThrowEventDTO mapThrowEvent(
-      String parentId, TThrowEvent throwEvent) {
+  private ThrowEventDTO mapThrowEvent(String parentId, TThrowEvent throwEvent) {
     Set<EventDefinitionDTO> eventDefinitions =
         bpmnMapperFactory
             .createEventDefinitionMapper()
@@ -134,8 +133,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     throw new IllegalStateException("Unknown flow element type: " + gateway.getClass().getName());
   }
 
-  private CatchEventDTO mapCatchEvent(
-      String parentId, TCatchEvent tCatchEvent) {
+  private CatchEventDTO mapCatchEvent(String parentId, TCatchEvent tCatchEvent) {
     InputOutputMappingDTO ioMapping = bpmnMapperFactory.getIoMappingMapper().map(tCatchEvent);
     if (tCatchEvent instanceof TStartEvent startEvent) {
       return new StartEventDTO(
@@ -195,23 +193,20 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     LoopCharacteristicsDTO loopCharacteristics =
         bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
     FlowElementDTO activityFlowElement = null;
-    if (activity instanceof TServiceTask serviceTask) {
-      activityFlowElement =
+    switch (activity) {
+      case TServiceTask serviceTask -> activityFlowElement =
           bpmnMapperFactory
               .createServiceTaskMapper()
               .map(serviceTask, parentId, loopCharacteristics, ioMapping);
-    } else if (activity instanceof TSendTask sendTask) {
-      activityFlowElement =
+      case TSendTask sendTask -> activityFlowElement =
           bpmnMapperFactory
               .createSendTaskMapper()
               .map(sendTask, parentId, loopCharacteristics, ioMapping);
-    } else if (activity instanceof TReceiveTask receiveTask) {
-      activityFlowElement =
+      case TReceiveTask receiveTask -> activityFlowElement =
           bpmnMapperFactory
               .createReceiveTaskMapper()
               .map(receiveTask, parentId, loopCharacteristics, ioMapping);
-    } else if (activity instanceof TTask task) {
-      activityFlowElement =
+      case TTask task -> activityFlowElement =
           new TaskDTO(
               task.getId(),
               parentId,
@@ -219,31 +214,31 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               mapQNameList(task.getOutgoing()),
               loopCharacteristics,
               ioMapping);
-    } else if (activity instanceof TSubProcess subProcess) {
+      case TSubProcess subProcess -> {
+        Map<String, FlowElementDTO> elements =
+            subProcess.getFlowElement().stream()
+                .map(
+                    flowElement ->
+                        bpmnMapperFactory
+                            .createFlowElementMapper()
+                            .map(flowElement.getValue(), activity.getId()))
+                .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
 
-      Map<String, FlowElementDTO> elements =
-          subProcess.getFlowElement().stream()
-              .map(
-                  flowElement ->
-                      bpmnMapperFactory
-                          .createFlowElementMapper()
-                          .map(flowElement.getValue(), activity.getId()))
-              .collect(Collectors.toMap(FlowElementDTO::getId, Function.identity()));
-
-      activityFlowElement =
-          new SubProcessDTO(
-              activity.getId(),
-              parentId,
-              mapQNameList(subProcess.getIncoming()),
-              mapQNameList(subProcess.getOutgoing()),
-              loopCharacteristics,
-              new FlowElementsDTO(elements),
-              ioMapping);
-    } else if (activity instanceof TCallActivity callActivity) {
-      activityFlowElement =
+        activityFlowElement =
+            new SubProcessDTO(
+                activity.getId(),
+                parentId,
+                mapQNameList(subProcess.getIncoming()),
+                mapQNameList(subProcess.getOutgoing()),
+                loopCharacteristics,
+                new FlowElementsDTO(elements),
+                ioMapping);
+      }
+      case TCallActivity callActivity -> activityFlowElement =
           bpmnMapperFactory
               .createCallActivityMapper()
               .map(callActivity, parentId, loopCharacteristics, ioMapping);
+      default -> {}
     }
     return activityFlowElement;
   }

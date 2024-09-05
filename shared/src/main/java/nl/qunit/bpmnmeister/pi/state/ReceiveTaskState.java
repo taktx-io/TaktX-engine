@@ -21,12 +21,6 @@ public class ReceiveTaskState extends TaskState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputflowId) {
-    super(
-        state,
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        loopCnt,
-        inputflowId);
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
   }
 }

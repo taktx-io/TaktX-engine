@@ -9,5 +9,4 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class BaseElement2 {
   private String id;
-
 }

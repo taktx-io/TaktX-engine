@@ -23,5 +23,4 @@ public class InclusiveGatewayDTO extends GatewayDTO {
     super(id, parentId, incoming, outgoing, defaultFlow);
     this.defaultFlow = defaultFlow;
   }
-
 }

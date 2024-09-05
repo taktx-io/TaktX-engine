@@ -9,6 +9,5 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class FlowElement2 extends BaseElement2 {
-  @Setter
-  private FlowElement2 parentElement;
+  @Setter private FlowElement2 parentElement;
 }

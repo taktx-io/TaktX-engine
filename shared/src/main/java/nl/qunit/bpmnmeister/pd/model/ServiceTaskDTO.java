@@ -10,7 +10,7 @@ import lombok.Getter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class ServiceTaskDTO extends ExternalTaskDTO{
+public class ServiceTaskDTO extends ExternalTaskDTO {
 
   @JsonCreator
   public ServiceTaskDTO(
@@ -36,5 +36,4 @@ public class ServiceTaskDTO extends ExternalTaskDTO{
         implementation,
         headers);
   }
-
 }

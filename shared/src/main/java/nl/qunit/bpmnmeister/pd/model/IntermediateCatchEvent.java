@@ -19,5 +19,4 @@ public class IntermediateCatchEvent extends CatchEventDTO {
       @Nonnull @JsonProperty("ioMapping") InputOutputMappingDTO ioMapping) {
     super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
   }
-
 }

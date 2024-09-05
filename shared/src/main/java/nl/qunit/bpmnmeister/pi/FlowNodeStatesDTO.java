@@ -17,9 +17,6 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 @ToString
 public class FlowNodeStatesDTO {
 
-  public static final FlowNodeStatesDTO EMPTY =
-      new FlowNodeStatesDTO(ProcessInstanceState.START, Map.of());
-
   private final ProcessInstanceState state;
   private final Map<UUID, FlowNodeStateDTO> flowNodeInstances;
 
@@ -33,7 +30,8 @@ public class FlowNodeStatesDTO {
 
   @JsonIgnore
   public List<FlowNodeStateDTO> get(String elementId) {
-    return flowNodeInstances.values().stream().filter(state -> state.getElementId().equals(elementId)).toList();
+    return flowNodeInstances.values().stream()
+        .filter(state -> state.getElementId().equals(elementId))
+        .toList();
   }
-
 }

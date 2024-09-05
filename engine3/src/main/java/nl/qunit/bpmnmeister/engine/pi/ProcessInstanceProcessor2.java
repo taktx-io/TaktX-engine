@@ -6,6 +6,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -93,6 +94,9 @@ public class ProcessInstanceProcessor2
     ProcessInstance2 processInstance =
         new ProcessInstance2(
             startNewProcessInstanceTrigger.getProcessInstanceKey(),
+            startNewProcessInstanceTrigger.getParentProcessInstanceKey(),
+            startNewProcessInstanceTrigger.getParentElementIdPath(),
+            startNewProcessInstanceTrigger.getParentElementInstancePath(),
             processDefinitionKey,
             flowNodeStates);
 
@@ -127,10 +131,10 @@ public class ProcessInstanceProcessor2
 
         VariablesDTO variablesDTO = variablesStore.get(trigger.getProcessInstanceKey());
         ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO);
-        FlowNode2 flowNode = flowElements.getFlowNode(trigger.getElementIdPath().get(0)).get();
+        FlowNode2 flowNode = flowElements.getFlowNode(trigger.getElementIdPath().getFirst()).get();
         FlowNodeStates2 flowNodeStates = processInstance.getFlowNodeStates();
         FLowNodeInstance flowNodeInstance =
-            flowNodeStates.get(trigger.getElementInstanceIdPath().get(0));
+            flowNodeStates.get(trigger.getElementInstanceIdPath().getFirst());
         Variables2 processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
 
         FLowNodeInstanceProcessor processor =
@@ -157,18 +161,23 @@ public class ProcessInstanceProcessor2
       FlowElements2 flowElements,
       ProcessInstance2 processInstance,
       ProcessDefinitionKey processDefinitionKey,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
     while (instanceResult.hasNewFlowNodeInstances()) {
       instanceResult =
-          processInstanceResult(flowNodeStates, instanceResult, flowElements, variables);
+          processInstanceResult(
+              flowNodeStates, instanceResult, flowElements, processInstanceVariables);
     }
 
     determineImplicitCompletedState(flowNodeStates);
 
-    ProcessInstanceDTO piDto = instanceMapper.map(processInstance);
+    if (flowNodeStates.getState() == ProcessInstanceState.COMPLETED) {
+      processInstanceFinished(
+          instanceResult, processInstance, processDefinitionKey, processInstanceVariables);
+    }
 
+    ProcessInstanceDTO piDto = instanceMapper.map(processInstance);
     processInstanceStore.put(processInstance.getProcessInstanceKey(), piDto);
-    VariablesDTO variablesDTO = variablesMapper.toDTO(variables);
+    VariablesDTO variablesDTO = variablesMapper.toDTO(processInstanceVariables);
     variablesStore.put(processInstance.getProcessInstanceKey(), variablesDTO);
 
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
@@ -178,6 +187,22 @@ public class ProcessInstanceProcessor2
             processInstance.getProcessInstanceKey(),
             new ProcessInstanceUpdate(piDto, variablesDTO),
             Instant.now().toEpochMilli()));
+  }
+
+  private void processInstanceFinished(
+      InstanceResult instanceResult,
+      ProcessInstance2 processInstance,
+      ProcessDefinitionKey processDefinitionKey,
+      Variables2 processInstanceVariables) {
+    if (!processInstance.getParentProcessInstanceKey().equals(Constants.NONE_UUID)) {
+      instanceResult.addContinuation(
+          new ContinueFlowElementTrigger2(
+              processInstance.getParentProcessInstanceKey(),
+              processInstance.getParentElementIdPath(),
+              processInstance.getParentElementInstancePath(),
+              Constants.NONE,
+              variablesMapper.toDTO(processInstanceVariables)));
+    }
   }
 
   private void determineImplicitCompletedState(FlowNodeStates2 flowNodeStates) {
@@ -190,7 +215,7 @@ public class ProcessInstanceProcessor2
       FlowNodeStates2 flowNodeStates2,
       InstanceResult instanceResult,
       FlowElements2 flowElements,
-      Variables2 variables) {
+      Variables2 processInstanceVariables) {
     InstanceResult newInstanceResult = new InstanceResult();
     List<FLowNodeInstance> newFlowNodeInstances = instanceResult.getNewFlowNodeInstances();
     for (FLowNodeInstance instance : newFlowNodeInstances) {
@@ -198,7 +223,7 @@ public class ProcessInstanceProcessor2
       FlowNode2 node = flowElements.getFlowNode(instance.getElementId()).get();
       FLowNodeInstanceProcessor processor = processInstanceProcessorProvider.getProcessor(node);
       InstanceResult subInstanceResult =
-          processor.processStart(flowElements, node, instance, variables);
+          processor.processStart(flowElements, node, instance, processInstanceVariables);
       newInstanceResult.merge(subInstanceResult);
     }
     return newInstanceResult;

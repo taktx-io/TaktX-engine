@@ -46,24 +46,25 @@ public class FlowElementsDTO {
 
   @JsonIgnore
   public FlowElementDTO getStartNode(String elementId) {
-    FlowElementDTO flowNodeDTO = null;
+    FlowElementDTO flowNodeDTO;
     if (!elementId.equals(Constants.NONE)) {
       flowNodeDTO = elements.get(elementId);
     } else {
       List<StartEventDTO> startEvents = getStartEvents();
       if (startEvents.isEmpty()) {
-        Optional<FlowNodeDTO> withoutInputFlow = elements.values().stream()
-            .filter(e -> e instanceof FlowNodeDTO)
-            .map(e -> (FlowNodeDTO) e)
-            .filter(flowNode -> !flowNode.getIncoming().isEmpty())
-            .findFirst();
+        Optional<FlowNodeDTO> withoutInputFlow =
+            elements.values().stream()
+                .filter(e -> e instanceof FlowNodeDTO)
+                .map(e -> (FlowNodeDTO) e)
+                .filter(flowNode -> !flowNode.getIncoming().isEmpty())
+                .findFirst();
         if (withoutInputFlow.isPresent()) {
           flowNodeDTO = withoutInputFlow.get();
         } else {
           flowNodeDTO = elements.values().iterator().next();
         }
       } else {
-        flowNodeDTO = startEvents.get(0);
+        flowNodeDTO = startEvents.getFirst();
       }
     }
     return flowNodeDTO;

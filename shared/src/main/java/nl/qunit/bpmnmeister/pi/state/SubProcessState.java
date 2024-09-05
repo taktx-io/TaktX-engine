@@ -25,13 +25,7 @@ public class SubProcessState extends ActivityState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(
-        state,
-        elementId,
-        elementInstanceId,
-        passedCnt,
-        loopCnt,
-        inputFlowId);
+    super(state, elementId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
     this.flowNodeStates = flowNodeStates;
   }
 }

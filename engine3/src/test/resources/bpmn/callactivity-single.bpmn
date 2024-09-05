@@ -13,6 +13,9 @@
     <bpmn:callActivity id="callactivity-id" name="CallActivity">
       <bpmn:extensionElements>
         <zeebe:calledElement processId="calledActivity" propagateAllChildVariables="true" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=&#34;123&#34;" target="InputVariable" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>

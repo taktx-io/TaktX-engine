@@ -18,5 +18,4 @@ public class EndEventDTO extends ThrowEventDTO {
       @Nonnull @JsonProperty("eventDefinitions") Set<EventDefinitionDTO> eventDefinitions) {
     super(id, parentId, incoming, outgoing, ioMapping, eventDefinitions);
   }
-
 }

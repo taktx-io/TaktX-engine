@@ -18,5 +18,4 @@ public class ParallelGatewayDTO extends GatewayDTO {
       @Nonnull @JsonProperty("outgoing") Set<String> outgoing) {
     super(id, parentId, incoming, outgoing, Constants.NONE);
   }
-
 }
