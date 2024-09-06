@@ -41,6 +41,11 @@ public abstract class ActivityInstanceProcessor<
         processInstanceVariables);
   }
 
+  @Override
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(E flowNode, I instance) {
+    return processTerminateSpecificActivityInstance(flowNode, instance);
+  }
+
   protected abstract InstanceResult processStartSpecificActivityInstance(
       FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
 
@@ -51,4 +56,7 @@ public abstract class ActivityInstanceProcessor<
       I externalTaskInstance,
       C trigger,
       Variables2 processInstanceVariables);
+
+  protected abstract InstanceResult processTerminateSpecificActivityInstance(
+      E flowNode, I instance);
 }

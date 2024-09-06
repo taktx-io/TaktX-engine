@@ -22,6 +22,13 @@ public class TaskInstanceProcessor
   }
 
   @Override
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      Task2 flowNode, TaskInstance instance) {
+    // Nothing to do here
+    return InstanceResult.empty();
+  }
+
+  @Override
   protected InstanceResult processStartSpecificActivityInstance(
       FlowElements2 flowElements,
       Task2 flowNode2,

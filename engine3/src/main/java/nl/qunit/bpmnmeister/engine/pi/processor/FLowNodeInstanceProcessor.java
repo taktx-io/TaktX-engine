@@ -46,6 +46,43 @@ public abstract class FLowNodeInstanceProcessor<
     return instanceResult;
   }
 
+  public final InstanceResult processContinue(
+      int subProcessLevel,
+      FlowElements2 flowElements,
+      FlowNode2 flowNode,
+      FLowNodeInstance flowNodeInstance,
+      C trigger,
+      Variables2 processInstanceVariables) {
+    if (flowNodeInstance.getState() != FlowNodeStateEnum.WAITING) {
+      throw new IllegalStateException("FlowNodeInstance is not in ACTIVE state");
+    }
+
+    InstanceResult instanceResult =
+        this.processContinueSpecificFlowNodeInstance(
+            subProcessLevel,
+            flowElements,
+            (E) flowNode,
+            (I) flowNodeInstance,
+            trigger,
+            processInstanceVariables);
+
+    processNodeIfFinished(
+        flowElements, flowNode, flowNodeInstance, instanceResult, processInstanceVariables);
+
+    return instanceResult;
+  }
+
+  public InstanceResult processTerminate(FlowNode2 flowNode, FLowNodeInstance instance) {
+    // Only terminate if the instance is ready or waiting
+    if (instance.isAwaiting()) {
+      InstanceResult instanceResult =
+          processTerminateSpecificFlowNodeInstance((E) flowNode, (I) instance);
+      instance.setState(FlowNodeStateEnum.TERMINATED);
+      return instanceResult;
+    }
+    return InstanceResult.empty();
+  }
+
   protected Variables2 getInputVariables(E flowNode, Variables2 processInstanceVariables) {
     Variables2 inputVariables = processInstanceVariables;
     if (flowNode instanceof WithIoMapping withIoMapping) {
@@ -88,32 +125,6 @@ public abstract class FLowNodeInstanceProcessor<
     return ioMappingProcessor.getOutputVariables(withIoMapping, processInstanceVariables);
   }
 
-  public final InstanceResult processContinue(
-      int subProcessLevel,
-      FlowElements2 flowElements,
-      FlowNode2 flowNode,
-      FLowNodeInstance flowNodeInstance,
-      C trigger,
-      Variables2 processInstanceVariables) {
-    if (flowNodeInstance.getState() != FlowNodeStateEnum.WAITING) {
-      throw new IllegalStateException("FlowNodeInstance is not in ACTIVE state");
-    }
-
-    InstanceResult instanceResult =
-        this.processContinueSpecificFlowNodeInstance(
-            subProcessLevel,
-            flowElements,
-            (E) flowNode,
-            (I) flowNodeInstance,
-            trigger,
-            processInstanceVariables);
-
-    processNodeIfFinished(
-        flowElements, flowNode, flowNodeInstance, instanceResult, processInstanceVariables);
-
-    return instanceResult;
-  }
-
   protected abstract InstanceResult processStartSpecificFlowNodeInstance(
       FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
 
@@ -124,4 +135,7 @@ public abstract class FLowNodeInstanceProcessor<
       I flowNodeInstance,
       C trigger,
       Variables2 variables);
+
+  protected abstract InstanceResult processTerminateSpecificFlowNodeInstance(
+      E flowNode, I instance);
 }

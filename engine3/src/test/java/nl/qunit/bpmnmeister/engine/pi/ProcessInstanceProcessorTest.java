@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
@@ -185,22 +184,20 @@ class ProcessInstanceProcessorTest {
         .hasPassedElementWithId("Task", 1);
   }
 
-  @Test @Disabled
-  void testTerminateParentAndChildProcesses()
+  @Test
+  void testTerminateSingleElementInstances()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/terminate-child-processes.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
         .startProcessInstance(
-            VariablesDTO.of("inputCollection", List.of("a", "b", "c", "d", "e", "f")))
-        .waitUntilChildProcessesHaveState(6, ProcessInstanceState.ACTIVE)
-        .parentProcess()
-        .terminateProcessWithChildProcesses()
+            VariablesDTO.empty())
+        .waitUntilElementInstancesHaveState("SubTask_1", ProcessInstanceState.ACTIVE)
+        .terminateProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .isTerminated()
-        .toProcessLevel()
-        .waitUntilChildProcessesHaveState(6, ProcessInstanceState.TERMINATED);
+        .hasTerminatedElements("SubProcess_1")
+        .isTerminated();
   }
 
   @Test @Disabled

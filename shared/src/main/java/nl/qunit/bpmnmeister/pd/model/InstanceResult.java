@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pd.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
@@ -14,6 +15,7 @@ public class InstanceResult {
   private final List<FLowNodeInstance> newFlowNodeInstances = new ArrayList<>();
   private final List<ExternalTaskInfo> externalTaskRequests = new ArrayList<>();
   private final List<NewStartCommand> newStartCommands = new ArrayList<>();
+  private final List<UUID> newTerminateCommands = new ArrayList<>();
   private final List<ContinueFlowElementTrigger2> continuations = new ArrayList<>();
 
   public static InstanceResult empty() {
@@ -40,10 +42,15 @@ public class InstanceResult {
     continuations.add(continueFlowElementTrigger2);
   }
 
+  public void addTerminateCommand(UUID childProcessInstanceId) {
+    newTerminateCommands.add(childProcessInstanceId);
+  }
+
   public void merge(InstanceResult toMerge) {
     newFlowNodeInstances.addAll(toMerge.getNewFlowNodeInstances());
     externalTaskRequests.addAll(toMerge.getExternalTaskRequests());
     newStartCommands.addAll(toMerge.getNewStartCommands());
     continuations.addAll(toMerge.getContinuations());
+    newTerminateCommands.addAll(toMerge.getNewTerminateCommands());
   }
 }

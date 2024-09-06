@@ -16,6 +16,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
 import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -36,6 +37,20 @@ public class Forwarder {
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
     forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
+    forwardTerminateCommands(context, instanceResult);
+  }
+
+  private void forwardTerminateCommands(
+      ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
+    instanceResult
+        .getNewTerminateCommands()
+        .forEach(
+            processInstanceKey -> {
+              TerminateTrigger terminateTrigger =
+                  new TerminateTrigger(processInstanceKey, List.of(), List.of());
+              context.forward(
+                  new Record<>(processInstanceKey, terminateTrigger, Instant.now().toEpochMilli()));
+            });
   }
 
   private void forwardContinuations(

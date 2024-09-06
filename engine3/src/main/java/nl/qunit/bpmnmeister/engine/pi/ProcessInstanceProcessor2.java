@@ -20,6 +20,7 @@ import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger2;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger2;
+import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
@@ -72,6 +73,8 @@ public class ProcessInstanceProcessor2
       handleStartNewProcessInstance(startNewProcessInstanceTrigger);
     } else if (trigger instanceof ContinueFlowElementTrigger2 continueFlowElementTrigger2) {
       handleContinue(continueFlowElementTrigger2);
+    } else if (trigger instanceof TerminateTrigger terminateTrigger) {
+      handleTerminate(terminateTrigger);
     } else {
       throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
     }
@@ -155,6 +158,51 @@ public class ProcessInstanceProcessor2
     }
   }
 
+  private void handleTerminate(TerminateTrigger trigger) {
+    ProcessInstanceDTO processInstanceDTO =
+        processInstanceStore.get(trigger.getProcessInstanceKey());
+    if (processInstanceDTO != null) {
+      ProcessDefinitionDTO processDefinitionDTO =
+          processInstanceDefinitionStore.get(processInstanceDTO.getProcessDefinitionKey());
+      if (processDefinitionDTO != null) {
+        FlowElements2 flowElements =
+            definitionMapper.getFlowElements(
+                processDefinitionDTO.getDefinitions().getRootProcess().getFlowElements());
+
+        ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO);
+        InstanceResult instanceResult = InstanceResult.empty();
+        if (trigger.getElementIdPath().isEmpty() && trigger.getElementInstanceIdPath().isEmpty()) {
+          // Terminate all elements in the process instance and the process instance itself
+          processInstance
+              .getFlowNodeStates()
+              .getFlowNodeInstances()
+              .values()
+              .forEach(
+                  instance -> {
+                    flowElements
+                        .getFlowNode(instance.getElementId())
+                        .ifPresent(
+                            flowNode -> {
+                              FLowNodeInstanceProcessor processor =
+                                  processInstanceProcessorProvider.getProcessor(flowNode);
+                              instanceResult.merge(processor.processTerminate(flowNode, instance));
+                            });
+                  });
+          processInstance.getFlowNodeStates().setState(ProcessInstanceState.TERMINATED);
+        } else {
+          // Terminate the specific element instance in the process instance
+        }
+        continueNewInstances(
+            instanceResult,
+            processInstance.getFlowNodeStates(),
+            flowElements,
+            processInstance,
+            processInstanceDTO.getProcessDefinitionKey(),
+            variablesMapper.fromDTO(variablesStore.get(trigger.getProcessInstanceKey())));
+      }
+    }
+  }
+
   protected void continueNewInstances(
       InstanceResult instanceResult,
       FlowNodeStates2 flowNodeStates,
@@ -206,7 +254,8 @@ public class ProcessInstanceProcessor2
   }
 
   private void determineImplicitCompletedState(FlowNodeStates2 flowNodeStates) {
-    if (flowNodeStates.allMatch(FLowNodeInstance::isNotAwaiting)) {
+    if (flowNodeStates.getState() == ProcessInstanceState.ACTIVE
+        && flowNodeStates.allMatch(FLowNodeInstance::isNotAwaiting)) {
       flowNodeStates.setState(ProcessInstanceState.COMPLETED);
     }
   }

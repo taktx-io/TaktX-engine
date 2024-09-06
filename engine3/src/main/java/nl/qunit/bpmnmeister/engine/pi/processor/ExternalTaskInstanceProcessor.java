@@ -145,6 +145,12 @@ public abstract class ExternalTaskInstanceProcessor<
     return instanceResult;
   }
 
+  @Override
+  protected InstanceResult processTerminateSpecificActivityInstance(E externalTask, I instance) {
+    // Nothing to do here
+    return InstanceResult.empty();
+  }
+
   private String getExternalTaskId(String workerDefinition, Variables2 variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();

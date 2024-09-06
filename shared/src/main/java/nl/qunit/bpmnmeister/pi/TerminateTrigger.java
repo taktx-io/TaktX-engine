@@ -12,14 +12,14 @@ import lombok.ToString;
 @Getter
 public class TerminateTrigger extends ProcessInstanceTrigger2 {
 
-  private final UUID elementInstanceId;
+  private final List<UUID> elementInstanceIdPath;
 
   @JsonCreator
   public TerminateTrigger(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("elementId") List<String> elementIdPath,
-      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId) {
+      @Nonnull @JsonProperty("elementInstanceIdPath") List<UUID> elementInstanceIdPath) {
     super(processInstanceKey, elementIdPath, VariablesDTO.empty());
-    this.elementInstanceId = elementInstanceId;
+    this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }

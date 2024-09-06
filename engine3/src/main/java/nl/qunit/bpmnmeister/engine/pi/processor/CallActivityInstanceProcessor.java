@@ -40,6 +40,7 @@ public class CallActivityInstanceProcessor
 
     InstanceResult instanceResult = InstanceResult.empty();
     UUID newProcessInstanceKey = UUID.randomUUID();
+    callActivityInstance.setChildProcessInstanceId(newProcessInstanceKey);
     instanceResult.addNewStartCommand(
         new NewStartCommand(
             newProcessInstanceKey,
@@ -64,6 +65,14 @@ public class CallActivityInstanceProcessor
       processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
     }
     return InstanceResult.empty();
+  }
+
+  @Override
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      CallActivity2 flowNode, CallActivityInstance instance) {
+    InstanceResult instanceResult = InstanceResult.empty();
+    instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
+    return instanceResult;
   }
 
   @Override

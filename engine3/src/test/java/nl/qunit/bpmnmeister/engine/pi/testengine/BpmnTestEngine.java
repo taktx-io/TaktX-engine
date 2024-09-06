@@ -450,8 +450,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine terminateProcessWithChildProcesses() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(), Constants.NONE_UUID));
+  public BpmnTestEngine terminateProcessInstance() {
+    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(), List.of()));
     return this;
   }
 
@@ -592,5 +592,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
     return waitUntilElementHasState(elementId, FlowNodeStateEnum.FAILED, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilElementInstancesHaveState(String elementId,
+      ProcessInstanceState processInstanceState) {
+    // TODO
+    return this;
   }
 }
