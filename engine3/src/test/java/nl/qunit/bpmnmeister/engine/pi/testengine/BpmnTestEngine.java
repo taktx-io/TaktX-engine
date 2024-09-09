@@ -91,6 +91,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private KafkaProducerUtil<String, String> xmlEmitter;
   private KafkaProducerUtil<String, StartCommand>  startCommandEmitter;
   private KafkaProducerUtil<MessageEventKey, MessageEvent> messageEventEmitter;
+  private FlowNodeStateDTO selectedFlowNodeState;
 
   public BpmnTestEngine(Clock clock) {
     this.mutableClock = (MutableClock) clock;
@@ -340,7 +341,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           if (childKeys.size() >= expectedCount) {
             UUID processInstanceKey = childKeys.iterator().next();
             ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
-            return processInstance != null && processInstance.getFlowNodeStates().getState() == processInstanceState ? processInstance : null;
+            ProcessInstanceUpdate processInstanceUpdate =
+                processInstance != null && processInstance.getFlowNodeStates().getState() == processInstanceState
+                    ? processInstance : null;
+            return processInstanceUpdate;
           }
           return null;
         }, Objects::nonNull);
@@ -451,7 +455,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateProcessInstance() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(), List.of()));
+    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of()));
     return this;
   }
 
@@ -573,9 +577,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             if (poll != null &&
                 poll.getProcessInstanceKey() != null &&
                 poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
-                 !poll.getFlowNodeStates().get(elementId).isEmpty() &&
-                state == poll.getFlowNodeStates().get(elementId).getFirst().getState()) {
-              return poll;
+                !poll.getFlowNodeStates().get(elementId).isEmpty()) {
+              selectedFlowNodeState = poll.getFlowNodeStates().get(elementId).getFirst();
+              if (state == selectedFlowNodeState.getState()) {
+                return poll;
+              }
             }
           } while (poll != null);
           return null;
@@ -594,9 +600,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return waitUntilElementHasState(elementId, FlowNodeStateEnum.FAILED, DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine waitUntilElementInstancesHaveState(String elementId,
-      ProcessInstanceState processInstanceState) {
-    // TODO
+  public BpmnTestEngine waitUntilElementIsWaiting(String elementId) {
+    return waitUntilElementHasState(elementId, FlowNodeStateEnum.WAITING, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine terminateElemeent() {
+    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(selectedFlowNodeState.getElementInstanceId())));
     return this;
   }
 }

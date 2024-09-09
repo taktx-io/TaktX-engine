@@ -7,6 +7,7 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
@@ -88,14 +89,10 @@ public class ProcessInstanceProcessorProvider {
       // This must be the last check, as Task is the superclass of all other tasks
       processor = taskProcessor;
     }
-    //    if (!element.getLoopCharacteristics().equals(LoopCharacteristicsDTO.NONE)) {
-    //      // Wrap in MultiInstance processor when the element has loop characteristics
-    //      if (element.getLoopCharacteristics().isSequential()) {
-    //        return new SequentialMultiInstanceProcessor(feelExpressionHandler, processor);
-    //      } else {
-    //        return new ParallelMultiInstanceProcessor(feelExpressionHandler, processor);
-    //      }
-    //    }
+    if (!element.getLoopCharacteristics().equals(LoopCharacteristics2.NONE)) {
+      // Wrap in MultiInstance processor when the element has loop characteristics
+      return new MultiInstanceProcessor(feelExpressionHandler, processor);
+    }
     return processor;
   }
 }

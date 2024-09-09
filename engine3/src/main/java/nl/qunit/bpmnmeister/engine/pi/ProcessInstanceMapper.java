@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.MultiInstanceInstance;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
@@ -22,6 +23,7 @@ import nl.qunit.bpmnmeister.pi.state.EndEventState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
+import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
@@ -49,6 +51,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityState.class)
+  @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceState.class)
   @Mapping(target = "parentInstance", ignore = true)
   FLowNodeInstance map(FlowNodeStateDTO sourceDto);
 
@@ -66,6 +69,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessState.class)
   @SubclassMapping(source = CallActivityInstance.class, target = CallActivityState.class)
+  @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceState.class)
   FlowNodeStateDTO map(FLowNodeInstance source);
 
   FlowNodeStatesDTO map(FlowNodeStates2 source);

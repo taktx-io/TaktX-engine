@@ -6,7 +6,6 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @NoArgsConstructor
 public class TaskInstance extends ActivityInstance {
-
   public TaskInstance(String flowNode, FLowNodeInstance parentInstance) {
     super(flowNode, parentInstance);
   }

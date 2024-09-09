@@ -29,7 +29,8 @@ public abstract class FLowNodeInstanceProcessor<
       FlowElements2 flowElements,
       FlowNode2 flowNode,
       FLowNodeInstance flownodeInstance,
-      Variables2 processInstanceVariables) {
+      Variables2 processInstanceVariables,
+      boolean isIterationInMultiInstance) {
     if (flownodeInstance.getState() != FlowNodeStateEnum.READY) {
       throw new IllegalStateException("FlowNodeInstance is not in READY state");
     }
@@ -41,7 +42,12 @@ public abstract class FLowNodeInstanceProcessor<
             flowElements, (E) flowNode, (I) flownodeInstance, inputVariables);
 
     processNodeIfFinished(
-        flowElements, flowNode, flownodeInstance, instanceResult, processInstanceVariables);
+        flowElements,
+        flowNode,
+        flownodeInstance,
+        instanceResult,
+        processInstanceVariables,
+        isIterationInMultiInstance);
 
     return instanceResult;
   }
@@ -52,7 +58,8 @@ public abstract class FLowNodeInstanceProcessor<
       FlowNode2 flowNode,
       FLowNodeInstance flowNodeInstance,
       C trigger,
-      Variables2 processInstanceVariables) {
+      Variables2 processInstanceVariables,
+      Boolean isIterationInMultiInstance) {
     if (flowNodeInstance.getState() != FlowNodeStateEnum.WAITING) {
       throw new IllegalStateException("FlowNodeInstance is not in ACTIVE state");
     }
@@ -67,7 +74,12 @@ public abstract class FLowNodeInstanceProcessor<
             processInstanceVariables);
 
     processNodeIfFinished(
-        flowElements, flowNode, flowNodeInstance, instanceResult, processInstanceVariables);
+        flowElements,
+        flowNode,
+        flowNodeInstance,
+        instanceResult,
+        processInstanceVariables,
+        isIterationInMultiInstance);
 
     return instanceResult;
   }
@@ -97,7 +109,8 @@ public abstract class FLowNodeInstanceProcessor<
       FlowNode2 flowNode,
       FLowNodeInstance flownodeInstance,
       InstanceResult instanceResult,
-      Variables2 processInstanceVariables) {
+      Variables2 processInstanceVariables,
+      boolean isIterationInMultiInstance) {
     if (flownodeInstance.getState() == FlowNodeStateEnum.FINISHED) {
 
       if (flowNode instanceof WithIoMapping withIoMapping) {
@@ -108,15 +121,17 @@ public abstract class FLowNodeInstanceProcessor<
 
       flownodeInstance.increasePassedCnt();
       Set<String> outgoing = flowNode.getOutgoing();
-      outgoing.stream()
-          .map(flowElements::getSequenceFlow)
-          .filter(Optional::isPresent)
-          .map(Optional::get)
-          .map(sequenceFlow2 -> flowElements.getFlowNode(sequenceFlow2.getTarget()))
-          .filter(Optional::isPresent)
-          .map(Optional::get)
-          .map(node -> node.newInstance(flownodeInstance.getParentInstance()))
-          .forEach(instanceResult::addNewFlowNodeInstance);
+      if (!isIterationInMultiInstance) {
+        outgoing.stream()
+            .map(flowElements::getSequenceFlow)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .map(sequenceFlow2 -> flowElements.getFlowNode(sequenceFlow2.getTarget()))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .map(node -> node.newInstance(flownodeInstance.getParentInstance()))
+            .forEach(instanceResult::addNewFlowNodeInstance);
+      }
     }
   }
 

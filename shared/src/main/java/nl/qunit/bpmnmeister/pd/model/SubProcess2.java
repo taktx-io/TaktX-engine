@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 
@@ -13,7 +14,7 @@ public class SubProcess2 extends Activity2 {
   private FlowElements2 elements;
 
   @Override
-  public FLowNodeInstance newInstance(FLowNodeInstance parentInstance) {
-    return new SubProcessInstance(getId(), parentInstance);
+  public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
+    return new SubProcessInstance(this.getId(), parentInstance);
   }
 }

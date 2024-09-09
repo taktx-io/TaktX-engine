@@ -20,7 +20,7 @@
       <bpmn:incoming>Flow_00uez6y</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_00uez6y" sourceRef="task-id" targetRef="EndEvent_1" />
-    <bpmn:task id="task-id" name="ServiceTask">
+    <bpmn:task id="task-id" name="Task">
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>
       <bpmn:multiInstanceLoopCharacteristics isSequential="true">
@@ -40,6 +40,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0jbzg6l_di" bpmnElement="task-id">
         <dc:Bounds x="370" y="77" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0v3edbs_di" bpmnElement="Flow_0v3edbs">
         <di:waypoint x="215" y="117" />

@@ -53,7 +53,7 @@ public class SubProcessInstanceProcessor
 
     InstanceResult instanceResult =
         processor.processStart(
-            subProcessElements, startNode, flowNodeInstance, processInstanceVariables);
+            subProcessElements, startNode, flowNodeInstance, processInstanceVariables, false);
 
     instanceResult =
         continueNewInstances(
@@ -93,7 +93,8 @@ public class SubProcessInstanceProcessor
             flowElement2,
             flowNodeInstance,
             trigger,
-            processInstanceVariables);
+            processInstanceVariables,
+            false);
 
     instanceResult =
         continueNewInstances(
@@ -167,7 +168,7 @@ public class SubProcessInstanceProcessor
       FlowNode2 node = flowElements.getFlowNode(instance.getElementId()).get();
       FLowNodeInstanceProcessor processor = processInstanceProcessorProvider.getProcessor(node);
       InstanceResult subInstanceResult =
-          processor.processStart(flowElements, node, instance, variables);
+          processor.processStart(flowElements, node, instance, variables, false);
       newInstanceResult.merge(subInstanceResult);
     }
     return newInstanceResult;

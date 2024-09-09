@@ -47,7 +47,7 @@ public class Forwarder {
         .forEach(
             processInstanceKey -> {
               TerminateTrigger terminateTrigger =
-                  new TerminateTrigger(processInstanceKey, List.of(), List.of());
+                  new TerminateTrigger(processInstanceKey, List.of());
               context.forward(
                   new Record<>(processInstanceKey, terminateTrigger, Instant.now().toEpochMilli()));
             });
@@ -58,13 +58,11 @@ public class Forwarder {
     instanceResult
         .getContinuations()
         .forEach(
-            continuation -> {
-              context.forward(
-                  new Record<>(
-                      continuation.getProcessInstanceKey(),
-                      continuation,
-                      Instant.now().toEpochMilli()));
-            });
+            continuation -> context.forward(
+                new Record<>(
+                    continuation.getProcessInstanceKey(),
+                    continuation,
+                    Instant.now().toEpochMilli())));
   }
 
   private void forwardNewStartCommands(

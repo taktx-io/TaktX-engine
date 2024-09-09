@@ -17,9 +17,8 @@ public class TerminateTrigger extends ProcessInstanceTrigger2 {
   @JsonCreator
   public TerminateTrigger(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
-      @Nonnull @JsonProperty("elementId") List<String> elementIdPath,
       @Nonnull @JsonProperty("elementInstanceIdPath") List<UUID> elementInstanceIdPath) {
-    super(processInstanceKey, elementIdPath, VariablesDTO.empty());
+    super(processInstanceKey, List.of(), VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }

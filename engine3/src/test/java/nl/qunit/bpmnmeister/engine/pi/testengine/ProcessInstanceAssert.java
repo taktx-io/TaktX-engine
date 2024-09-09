@@ -6,16 +6,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 
 public class ProcessInstanceAssert {
 
   private final ProcessInstanceUpdate processInstance;
   private final BpmnTestEngine bpmnTestEngine;
+  private Optional<MultiInstanceState> selectedMultiInstanceElement;
 
   public ProcessInstanceAssert(ProcessInstanceUpdate processInstance, BpmnTestEngine bpmnTestEngine) {
     this.processInstance = processInstance;

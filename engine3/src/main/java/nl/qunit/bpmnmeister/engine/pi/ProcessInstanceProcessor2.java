@@ -110,7 +110,8 @@ public class ProcessInstanceProcessor2
     FLowNodeInstanceProcessor processor = processInstanceProcessorProvider.getProcessor(flowNode);
 
     InstanceResult instanceResult =
-        processor.processStart(flowElements, flowNode, flowNodeInstance, processInstanceVariablee);
+        processor.processStart(
+            flowElements, flowNode, flowNodeInstance, processInstanceVariablee, false);
 
     continueNewInstances(
         instanceResult,
@@ -145,7 +146,13 @@ public class ProcessInstanceProcessor2
 
         InstanceResult instanceResult =
             processor.processContinue(
-                0, flowElements, flowNode, flowNodeInstance, trigger, processInstanceVariables);
+                0,
+                flowElements,
+                flowNode,
+                flowNodeInstance,
+                trigger,
+                processInstanceVariables,
+                false);
 
         continueNewInstances(
             instanceResult,
@@ -191,6 +198,16 @@ public class ProcessInstanceProcessor2
           processInstance.getFlowNodeStates().setState(ProcessInstanceState.TERMINATED);
         } else {
           // Terminate the specific element instance in the process instance
+          FLowNodeInstance instance =
+              processInstance
+                  .getFlowNodeStates()
+                  .get(trigger.getElementInstanceIdPath().getFirst());
+          if (instance != null) {
+            FlowNode2 flowNode = flowElements.getFlowNode(instance.getElementId()).get();
+            FLowNodeInstanceProcessor processor =
+                processInstanceProcessorProvider.getProcessor(flowNode);
+            instanceResult.merge(processor.processTerminate(flowNode, instance));
+          }
         }
         continueNewInstances(
             instanceResult,
@@ -272,7 +289,7 @@ public class ProcessInstanceProcessor2
       FlowNode2 node = flowElements.getFlowNode(instance.getElementId()).get();
       FLowNodeInstanceProcessor processor = processInstanceProcessorProvider.getProcessor(node);
       InstanceResult subInstanceResult =
-          processor.processStart(flowElements, node, instance, processInstanceVariables);
+          processor.processStart(flowElements, node, instance, processInstanceVariables, false);
       newInstanceResult.merge(subInstanceResult);
     }
     return newInstanceResult;
