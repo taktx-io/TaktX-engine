@@ -34,7 +34,7 @@ public class ZeebeCallActivityMapper implements CallActivityMapper {
       propagateAllChildVariables =
           calledElement.isPropagateAllChildVariables() != null
               ? calledElement.isPropagateAllChildVariables()
-              : false;
+              : true;
     }
 
     return new CallActivityDTO(

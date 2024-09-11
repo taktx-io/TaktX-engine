@@ -1,26 +1,19 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 
 @NoArgsConstructor
 @Getter
+@Setter
 public class MultiInstanceInstance extends ActivityInstance {
-  private List<FLowNodeInstance> instances;
+  private FlowNodeStates2 flowNodeStates;
 
   public MultiInstanceInstance(Activity2 activity2, FLowNodeInstance parentInstance) {
     super(activity2.getId(), parentInstance);
-    this.instances = new ArrayList<>();
-  }
-
-  public void addInstance(FLowNodeInstance instance) {
-    instances.add(instance);
-  }
-
-  public boolean allCompleted() {
-    return instances.stream().allMatch(FLowNodeInstance::isNotAwaiting);
+    this.flowNodeStates = new FlowNodeStates2();
   }
 }

@@ -29,6 +29,10 @@ public abstract class FLowNodeInstance {
     return state == FlowNodeStateEnum.READY || state == FlowNodeStateEnum.WAITING;
   }
 
+  public boolean isCompleted() {
+    return state == FlowNodeStateEnum.FINISHED || state == FlowNodeStateEnum.TERMINATED;
+  }
+
   public boolean isNotAwaiting() {
     return state == FlowNodeStateEnum.FINISHED || state == FlowNodeStateEnum.TERMINATED;
   }

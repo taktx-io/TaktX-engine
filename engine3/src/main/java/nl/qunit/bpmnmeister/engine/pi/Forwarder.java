@@ -58,11 +58,12 @@ public class Forwarder {
     instanceResult
         .getContinuations()
         .forEach(
-            continuation -> context.forward(
-                new Record<>(
-                    continuation.getProcessInstanceKey(),
-                    continuation,
-                    Instant.now().toEpochMilli())));
+            continuation ->
+                context.forward(
+                    new Record<>(
+                        continuation.getProcessInstanceKey(),
+                        continuation,
+                        Instant.now().toEpochMilli())));
   }
 
   private void forwardNewStartCommands(

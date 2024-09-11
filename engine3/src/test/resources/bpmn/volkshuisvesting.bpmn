@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0">
+  <process id="houseRentalProcess" name="House Rental Process" isExecutable="true">
+    <startEvent id="startTenantApplication" name="Nieuwe huurder meld zich aan">
+      <outgoing>Flow_17kko9k</outgoing>
+    </startEvent>
+    <exclusiveGateway id="tenantEligibilityGateway" name="Huurder ok?">
+      <incoming>flow2</incoming>
+      <outgoing>flow4</outgoing>
+      <outgoing>Flow_1icz3ej</outgoing>
+      <outgoing>Flow_02h88ab</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="flow4" name="Gioedgekeurd" sourceRef="tenantEligibilityGateway" targetRef="approveTenant" />
+    <endEvent id="endLeaseSigned">
+      <incoming>Flow_0dd9331</incoming>
+    </endEvent>
+    <sequenceFlow id="flow2" sourceRef="verifyTenantDetails" targetRef="tenantEligibilityGateway" />
+    <sequenceFlow id="Flow_1icz3ej" name="Extra info nodig" sourceRef="tenantEligibilityGateway" targetRef="Activity_10dkak5" />
+    <exclusiveGateway id="Gateway_0pnr5jm">
+      <incoming>Flow_17kko9k</incoming>
+      <incoming>Flow_0kxg3w8</incoming>
+      <outgoing>Flow_0bms3og</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_17kko9k" sourceRef="startTenantApplication" targetRef="Gateway_0pnr5jm" />
+    <sequenceFlow id="Flow_0bms3og" sourceRef="Gateway_0pnr5jm" targetRef="verifyTenantDetails" />
+    <sequenceFlow id="Flow_0kxg3w8" sourceRef="Activity_10dkak5" targetRef="Gateway_0pnr5jm" />
+    <sequenceFlow id="Flow_190onul" sourceRef="approveTenant" targetRef="Activity_0i8vpfv" />
+    <sequenceFlow id="Flow_0gdixog" sourceRef="Activity_0i8vpfv" targetRef="Activity_0w2ta5k" />
+    <sequenceFlow id="Flow_0k82ted" sourceRef="Activity_0w2ta5k" targetRef="Activity_1dnkahn" />
+    <sequenceFlow id="Flow_0dd9331" sourceRef="Activity_1dnkahn" targetRef="endLeaseSigned" />
+    <boundaryEvent id="Event_1knqpnx" attachedToRef="Activity_0i8vpfv">
+      <outgoing>Flow_05szlna</outgoing>
+      <timerEventDefinition id="TimerEventDefinition_1gcul3v" />
+    </boundaryEvent>
+    <userTask id="approveTenant" name="Stel huurcontract samen en verstuur">
+      <incoming>flow4</incoming>
+      <outgoing>Flow_190onul</outgoing>
+    </userTask>
+    <boundaryEvent id="Event_1qjmm2x" name="30 dagen" attachedToRef="Activity_0i8vpfv">
+      <outgoing>Flow_0x1eg4i</outgoing>
+      <timerEventDefinition id="TimerEventDefinition_06glx8b" />
+    </boundaryEvent>
+    <task id="Activity_1dtsv8b" name="Verstuur herinnering">
+      <incoming>Flow_05szlna</incoming>
+    </task>
+    <sequenceFlow id="Flow_05szlna" name="7 dagen" sourceRef="Event_1knqpnx" targetRef="Activity_1dtsv8b" />
+    <exclusiveGateway id="Gateway_08ydsc8">
+      <incoming>Flow_02h88ab</incoming>
+      <incoming>Flow_0x1eg4i</incoming>
+      <outgoing>Flow_0skz4rx</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_02h88ab" sourceRef="tenantEligibilityGateway" targetRef="Gateway_08ydsc8" />
+    <sequenceFlow id="Flow_0x1eg4i" sourceRef="Event_1qjmm2x" targetRef="Gateway_08ydsc8" />
+    <sequenceFlow id="Flow_0skz4rx" sourceRef="Gateway_08ydsc8" targetRef="Activity_1ns5606" />
+    <userTask id="verifyTenantDetails" name="Controleer huurder details">
+      <incoming>Flow_0bms3og</incoming>
+      <outgoing>flow2</outgoing>
+    </userTask>
+    <userTask id="Activity_10dkak5" name="Vraag extra details">
+      <incoming>Flow_1icz3ej</incoming>
+      <outgoing>Flow_0kxg3w8</outgoing>
+    </userTask>
+    <receiveTask id="Activity_0i8vpfv" name="Wacht op getekend contract">
+      <incoming>Flow_190onul</incoming>
+      <outgoing>Flow_0gdixog</outgoing>
+    </receiveTask>
+    <sendTask id="Activity_0w2ta5k" name="Plan externe partijen">
+      <incoming>Flow_0gdixog</incoming>
+      <outgoing>Flow_0k82ted</outgoing>
+    </sendTask>
+    <serviceTask id="Activity_1dnkahn" name="Plan overdracht">
+      <incoming>Flow_0k82ted</incoming>
+      <outgoing>Flow_0dd9331</outgoing>
+    </serviceTask>
+    <serviceTask id="Activity_1ns5606" name="Stuur afkeuring">
+      <incoming>Flow_0skz4rx</incoming>
+    </serviceTask>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_houseRentalProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_houseRentalProcess" bpmnElement="houseRentalProcess">
+      <bpmndi:BPMNShape id="eligibilityGatewayShape" bpmnElement="tenantEligibilityGateway" isMarkerVisible="true">
+        <dc:Bounds x="560" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="555" y="221" width="61" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="startEventShape" bpmnElement="startTenantApplication">
+        <dc:Bounds x="172" y="247" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="151" y="283" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0pnr5jm_di" bpmnElement="Gateway_0pnr5jm" isMarkerVisible="true">
+        <dc:Bounds x="285" y="240" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ltjqrs_di" bpmnElement="approveTenant">
+        <dc:Bounds x="690" y="245" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1dtsv8b_di" bpmnElement="Activity_1dtsv8b">
+        <dc:Bounds x="860" y="400" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_08ydsc8_di" bpmnElement="Gateway_08ydsc8" isMarkerVisible="true">
+        <dc:Bounds x="885" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="endEventShape" bpmnElement="endLeaseSigned">
+        <dc:Bounds x="1392" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1186" y="116" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1usb0ob_di" bpmnElement="verifyTenantDetails">
+        <dc:Bounds x="410" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ngrgg4_di" bpmnElement="Activity_10dkak5">
+        <dc:Bounds x="410" y="340" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1tsk05l_di" bpmnElement="Activity_0i8vpfv">
+        <dc:Bounds x="860" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1n6f04t_di" bpmnElement="Activity_0w2ta5k">
+        <dc:Bounds x="1050" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0wbubkf_di" bpmnElement="Activity_1dnkahn">
+        <dc:Bounds x="1220" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1faqxv3_di" bpmnElement="Activity_1ns5606">
+        <dc:Bounds x="1000" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1knqpnx_di" bpmnElement="Event_1knqpnx">
+        <dc:Bounds x="892" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1qjmm2x_di" bpmnElement="Event_1qjmm2x">
+        <dc:Bounds x="892" y="212" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="847" y="193" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flowEdge4" bpmnElement="flow4">
+        <di:waypoint x="608" y="268" />
+        <di:waypoint x="690" y="268" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="614" y="250" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flowEdge2" bpmnElement="flow2">
+        <di:waypoint x="510" y="268" />
+        <di:waypoint x="562" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1icz3ej_di" bpmnElement="Flow_1icz3ej">
+        <di:waypoint x="585" y="295" />
+        <di:waypoint x="585" y="380" />
+        <di:waypoint x="510" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="591" y="353" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17kko9k_di" bpmnElement="Flow_17kko9k">
+        <di:waypoint x="208" y="265" />
+        <di:waypoint x="285" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0bms3og_di" bpmnElement="Flow_0bms3og">
+        <di:waypoint x="335" y="265" />
+        <di:waypoint x="410" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0kxg3w8_di" bpmnElement="Flow_0kxg3w8">
+        <di:waypoint x="410" y="380" />
+        <di:waypoint x="310" y="380" />
+        <di:waypoint x="310" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_190onul_di" bpmnElement="Flow_190onul">
+        <di:waypoint x="790" y="270" />
+        <di:waypoint x="860" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gdixog_di" bpmnElement="Flow_0gdixog">
+        <di:waypoint x="960" y="270" />
+        <di:waypoint x="1050" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0k82ted_di" bpmnElement="Flow_0k82ted">
+        <di:waypoint x="1150" y="270" />
+        <di:waypoint x="1220" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dd9331_di" bpmnElement="Flow_0dd9331">
+        <di:waypoint x="1320" y="270" />
+        <di:waypoint x="1392" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05szlna_di" bpmnElement="Flow_05szlna">
+        <di:waypoint x="910" y="328" />
+        <di:waypoint x="910" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="860" y="323" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02h88ab_di" bpmnElement="Flow_02h88ab">
+        <di:waypoint x="585" y="245" />
+        <di:waypoint x="585" y="120" />
+        <di:waypoint x="885" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0x1eg4i_di" bpmnElement="Flow_0x1eg4i">
+        <di:waypoint x="910" y="212" />
+        <di:waypoint x="910" y="145" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0skz4rx_di" bpmnElement="Flow_0skz4rx">
+        <di:waypoint x="935" y="120" />
+        <di:waypoint x="1000" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

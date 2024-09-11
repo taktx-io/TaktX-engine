@@ -32,4 +32,8 @@ public class FlowNodeStates2 {
   public boolean allMatch(Predicate<FLowNodeInstance> predicate) {
     return flowNodeInstances.values().stream().allMatch(predicate);
   }
+
+  public boolean allCompleted() {
+    return flowNodeInstances.values().stream().allMatch(FLowNodeInstance::isCompleted);
+  }
 }

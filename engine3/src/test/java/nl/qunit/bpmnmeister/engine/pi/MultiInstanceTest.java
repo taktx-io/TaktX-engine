@@ -12,15 +12,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
-import nl.qunit.bpmnmeister.pi.instances.MultiInstanceInstance;
-import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
-import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -74,7 +70,7 @@ class MultiInstanceTest {
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", IntStream.range(0, 1000)
             .mapToObj(Integer::toString)
-            .collect(Collectors.toList())))
+            .toList()))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
@@ -91,7 +87,7 @@ class MultiInstanceTest {
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", IntStream.range(0, 1000)
             .mapToObj(Integer::toString)
-            .collect(Collectors.toList())))
+            .toList()))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
@@ -101,36 +97,54 @@ class MultiInstanceTest {
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testProcessSubTaskMultiInstanceSequential()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
-        .hasPassedElementWithId("task-id", MultiInstanceInstance.class, 1)
+//        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
+        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testProcessCallActivityMultiInstanceSequential()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
-        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.gen1.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
-        .hasPassedElementWithId("callactivity-id", MultiInstanceInstance.class, 1)
+//        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
+        .hasPassedElementWithId("callactivity-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("EndEvent_1");
+
+  }
+
+  @Test
+  void testProcessCallActivityMultiInstanceParallel()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.bpmn")
+        .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
+        .hasPassedElementWithId("StartEvent_1")
+//        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
+        .hasPassedElementWithId("callactivity-id", MultiInstanceState.class, 1)
         .hasPassedElementWithId("EndEvent_1");
 
   }

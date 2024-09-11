@@ -57,7 +57,7 @@ public abstract class FLowNodeInstanceProcessor<
       FlowElements2 flowElements,
       FlowNode2 flowNode,
       FLowNodeInstance flowNodeInstance,
-      C trigger,
+      ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables,
       Boolean isIterationInMultiInstance) {
     if (flowNodeInstance.getState() != FlowNodeStateEnum.WAITING) {
@@ -70,7 +70,7 @@ public abstract class FLowNodeInstanceProcessor<
             flowElements,
             (E) flowNode,
             (I) flowNodeInstance,
-            trigger,
+            (C) trigger,
             processInstanceVariables);
 
     processNodeIfFinished(
