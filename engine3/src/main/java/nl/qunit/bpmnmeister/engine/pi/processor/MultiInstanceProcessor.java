@@ -202,6 +202,13 @@ public class MultiInstanceProcessor
   @Override
   protected InstanceResult processTerminateSpecificFlowNodeInstance(
       Activity2 flowNode, MultiInstanceInstance instance) {
-    return null;
+    InstanceResult instanceResult = InstanceResult.empty();
+    instance
+        .getFlowNodeStates()
+        .getFlowNodeInstances()
+        .values()
+        .forEach(
+            iteration -> instanceResult.merge(processor.processTerminate(flowNode, iteration)));
+    return instanceResult;
   }
 }

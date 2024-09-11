@@ -32,7 +32,7 @@ public abstract class FLowNodeInstanceProcessor<
       Variables2 processInstanceVariables,
       boolean isIterationInMultiInstance) {
     if (flownodeInstance.getState() != FlowNodeStateEnum.READY) {
-      throw new IllegalStateException("FlowNodeInstance is not in READY state");
+      return InstanceResult.empty();
     }
 
     Variables2 inputVariables = getInputVariables((E) flowNode, processInstanceVariables);
@@ -61,7 +61,7 @@ public abstract class FLowNodeInstanceProcessor<
       Variables2 processInstanceVariables,
       Boolean isIterationInMultiInstance) {
     if (flowNodeInstance.getState() != FlowNodeStateEnum.WAITING) {
-      throw new IllegalStateException("FlowNodeInstance is not in ACTIVE state");
+      return InstanceResult.empty();
     }
 
     InstanceResult instanceResult =
