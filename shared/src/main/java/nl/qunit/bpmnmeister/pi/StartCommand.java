@@ -41,7 +41,7 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
   }
 
   @Override
-  public String getRecordKey(UUID rootInstanceKey) {
+  public String getRecordKey(UUID processInstanceKey) {
     return processDefinitionId;
   }
 }

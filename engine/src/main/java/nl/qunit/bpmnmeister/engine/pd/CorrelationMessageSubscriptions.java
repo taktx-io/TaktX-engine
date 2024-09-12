@@ -12,7 +12,6 @@ import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 
 @Getter
-@ToString
 public class CorrelationMessageSubscriptions {
   private final Map<MessageEventKey, CorrelationMessageSubscription> instances;
 

@@ -40,12 +40,12 @@ public class ScheduleProcessor
                     MessageScheduler updatedScheduleCommand =
                         scheduleCommand.evaluate(
                             Instant.now(clock),
-                            (rootInstanceKey, schedulableMessages) ->
+                            (processInstanceKey, schedulableMessages) ->
                                 schedulableMessages.forEach(
                                     message -> {
                                       context.forward(
                                           new Record<>(
-                                              message.getRecordKey(rootInstanceKey),
+                                              message.getRecordKey(processInstanceKey),
                                               message,
                                               Instant.now(clock).toEpochMilli()));
                                     }));

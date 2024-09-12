@@ -5,13 +5,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 
 @Getter
+@Setter
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class DefinitionMessageEventTrigger extends MessageEvent {
 
-  private final VariablesDTO variables;
+  private VariablesDTO variables;
 
   @JsonCreator
   public DefinitionMessageEventTrigger(

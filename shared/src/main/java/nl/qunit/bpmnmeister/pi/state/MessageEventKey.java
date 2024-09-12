@@ -2,10 +2,26 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public record MessageEventKey(@JsonProperty("messageName") String messageName) {
+@Getter
+@Setter
+@NoArgsConstructor
+@EqualsAndHashCode
+public class MessageEventKey {
+
+  private String messageName;
+
   @JsonCreator
-  public MessageEventKey {
-    // For @JsonCreator
+  public MessageEventKey(@JsonProperty("messageName") String messageName) {
+    this.messageName = messageName;
+  }
+
+  @Override
+  public String toString() {
+    return super.toString();
   }
 }

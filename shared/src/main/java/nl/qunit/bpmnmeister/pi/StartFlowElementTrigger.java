@@ -33,7 +33,7 @@ public class StartFlowElementTrigger extends ProcessInstanceTrigger
   }
 
   @Override
-  public UUID getRecordKey(UUID rootInstanceKey) {
-    return rootInstanceKey;
+  public UUID getRecordKey(UUID processInstanceKey) {
+    return processInstanceKey;
   }
 }

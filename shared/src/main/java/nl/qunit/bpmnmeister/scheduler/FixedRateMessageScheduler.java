@@ -16,7 +16,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 public class FixedRateMessageScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final UUID rootInstanceKey;
   private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerDefinitionId;
@@ -29,7 +28,6 @@ public class FixedRateMessageScheduler implements MessageScheduler {
   @JsonCreator
   public FixedRateMessageScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerDefinitionId") String timerDefinitionId,
@@ -39,7 +37,6 @@ public class FixedRateMessageScheduler implements MessageScheduler {
       @JsonProperty("repeatedCnt") int repeatedCnt,
       @JsonProperty("instantiation") String instantiation) {
     this.processDefinitionKey = processDefinitionKey;
-    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerDefinitionId = timerDefinitionId;
@@ -56,7 +53,7 @@ public class FixedRateMessageScheduler implements MessageScheduler {
     Instant instant = Instant.parse(this.instantiation);
     if (now.isAfter(instant)) {
       // Time reached, return triggers
-      triggerConsumer.accept(rootInstanceKey, messages);
+      triggerConsumer.accept(processInstanceKey, messages);
 
       if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
         // Return a new command with the next execution time
@@ -67,7 +64,6 @@ public class FixedRateMessageScheduler implements MessageScheduler {
         }
         return new FixedRateMessageScheduler(
             processDefinitionKey,
-            rootInstanceKey,
             processInstanceKey,
             targetElementId,
             timerDefinitionId,

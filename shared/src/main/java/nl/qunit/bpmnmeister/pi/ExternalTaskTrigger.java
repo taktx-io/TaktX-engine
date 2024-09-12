@@ -39,7 +39,7 @@ public class ExternalTaskTrigger implements SchedulableMessage<UUID> {
 
   @JsonIgnore
   @Override
-  public UUID getRecordKey(UUID rootInstanceKey) {
-    return processInstanceKey;
+  public UUID getRecordKey(UUID processInstanceKey) {
+    return this.processInstanceKey;
   }
 }

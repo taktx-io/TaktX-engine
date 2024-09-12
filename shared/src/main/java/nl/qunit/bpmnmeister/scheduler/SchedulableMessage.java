@@ -11,5 +11,5 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
   @JsonSubTypes.Type(value = StartCommand.class),
 })
 public interface SchedulableMessage<T> {
-  T getRecordKey(UUID rootInstanceKey);
+  T getRecordKey(UUID processInstanceKey);
 }

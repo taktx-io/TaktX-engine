@@ -13,6 +13,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder(toBuilder = true)
 public class ReceiveTaskState extends TaskState {
 
+  private String correlationKey;
+
   @JsonCreator
   public ReceiveTaskState(
       @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
@@ -20,7 +22,9 @@ public class ReceiveTaskState extends TaskState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("inputFlowId") String inputflowId) {
+      @JsonProperty("inputFlowId") String inputflowId,
+      @JsonProperty("correlationKey") String correlationKey) {
     super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
+    this.correlationKey = correlationKey;
   }
 }

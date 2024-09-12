@@ -9,16 +9,18 @@ import jakarta.annotation.Nonnull;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
 @Getter
 @Setter
 @ToString
+@NoArgsConstructor
 @EqualsAndHashCode
 public class VariablesDTO {
 
-  private final Map<String, JsonNode> variables;
+  private Map<String, JsonNode> variables;
 
   @JsonCreator
   public VariablesDTO(@Nonnull @JsonProperty("variables") Map<String, JsonNode> variables) {

@@ -36,7 +36,7 @@ public class ContinueFlowElementTrigger2 extends ProcessInstanceTrigger2
   }
 
   @Override
-  public UUID getRecordKey(UUID rootInstanceKey) {
-    return rootInstanceKey;
+  public UUID getRecordKey(UUID processInstanceKey) {
+    return processInstanceKey;
   }
 }

@@ -12,6 +12,8 @@ import nl.qunit.bpmnmeister.pd.model.FlowElement2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
@@ -38,6 +40,43 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
     forwardTerminateCommands(context, instanceResult);
+    forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
+  }
+
+  private void forwardMessageSubscriptionCommands(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstance2 processInstance) {
+    instanceResult
+        .getNewCorrelationSubscriptionMessageEventInfos()
+        .forEach(
+            messageEvent -> {
+              CorrelationMessageSubscription correlationMessageSubscriptionTrigger =
+                  new CorrelationMessageSubscription(
+                      processInstance.getProcessInstanceKey(),
+                      messageEvent.correlationKey(),
+                      getElementIdPath(messageEvent.flowNode()),
+                      getInstancePath(messageEvent.instance()),
+                      messageEvent.messageName());
+              context.forward(
+                  new Record<>(
+                      correlationMessageSubscriptionTrigger.toMessageEventKey(),
+                      correlationMessageSubscriptionTrigger,
+                      Instant.now().toEpochMilli()));
+            });
+    instanceResult
+        .getTerminateCorrelationSubscriptionMessageEventInfos()
+        .forEach(
+            messageEvent -> {
+              CancelCorrelationMessageSubscription terminateSubscriptionTrigger =
+                  new CancelCorrelationMessageSubscription(
+                      messageEvent.messageName(), messageEvent.correlationKey());
+              context.forward(
+                  new Record<>(
+                      terminateSubscriptionTrigger.toMessageEventKey(),
+                      terminateSubscriptionTrigger,
+                      Instant.now().toEpochMilli()));
+            });
   }
 
   private void forwardTerminateCommands(

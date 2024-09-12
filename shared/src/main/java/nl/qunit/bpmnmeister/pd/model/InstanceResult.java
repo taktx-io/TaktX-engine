@@ -17,6 +17,10 @@ public class InstanceResult {
   private final List<NewStartCommand> newStartCommands = new ArrayList<>();
   private final List<UUID> newTerminateCommands = new ArrayList<>();
   private final List<ContinueFlowElementTrigger2> continuations = new ArrayList<>();
+  private final List<NewCorrelationSubscriptionMessageEventInfo>
+      newCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
+  private final List<TerminateCorrelationSubscriptionMessageEventInfo>
+      terminateCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -52,5 +56,19 @@ public class InstanceResult {
     newStartCommands.addAll(toMerge.getNewStartCommands());
     continuations.addAll(toMerge.getContinuations());
     newTerminateCommands.addAll(toMerge.getNewTerminateCommands());
+    newCorrelationSubscriptionMessageEventInfos.addAll(
+        toMerge.getNewCorrelationSubscriptionMessageEventInfos());
+    terminateCorrelationSubscriptionMessageEventInfos.addAll(
+        toMerge.getTerminateCorrelationSubscriptionMessageEventInfos());
+  }
+
+  public void addNewCorrelationSubcriptionMessageEvent(
+      NewCorrelationSubscriptionMessageEventInfo messageEvent) {
+    newCorrelationSubscriptionMessageEventInfos.add(messageEvent);
+  }
+
+  public void addTerminateCorrelationSubscriptionMessageEvent(
+      TerminateCorrelationSubscriptionMessageEventInfo messageEvent) {
+    terminateCorrelationSubscriptionMessageEventInfos.add(messageEvent);
   }
 }

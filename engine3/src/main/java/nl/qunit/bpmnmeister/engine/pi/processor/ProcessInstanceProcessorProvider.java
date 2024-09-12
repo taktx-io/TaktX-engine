@@ -8,6 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
@@ -32,7 +33,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject SubProcessInstanceProcessor subProcessProcessor;
   @Inject CallActivityInstanceProcessor callActivityProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
-  //  @Inject ReceiveTaskProcessor receiveTaskProcessor;
+  @Inject ReceiveTaskInstanceProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
 
   public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement2 element) {
@@ -83,8 +84,8 @@ public class ProcessInstanceProcessorProvider {
       processor = subProcessProcessor;
     } else if (element instanceof CallActivity2) {
       processor = callActivityProcessor;
-      //    } else if (element instanceof ReceiveTaskDTO) {
-      //      processor = receiveTaskProcessor;
+    } else if (element instanceof ReceiveTask2) {
+      processor = receiveTaskProcessor;
     } else if (element instanceof Task2) {
       // This must be the last check, as Task is the superclass of all other tasks
       processor = taskProcessor;

@@ -31,7 +31,6 @@ public class MessageSchedulerFactory {
 
   public MessageScheduler schedule(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -41,7 +40,6 @@ public class MessageSchedulerFactory {
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
       return scheduleCycle(
           processDefinitionKey,
-          rootInstanceKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
@@ -51,7 +49,6 @@ public class MessageSchedulerFactory {
         && !timerEventDefinition.getTimeDate().isEmpty()) {
       return scheduleOneTime(
           processDefinitionKey,
-          rootInstanceKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
@@ -61,7 +58,6 @@ public class MessageSchedulerFactory {
         && !timerEventDefinition.getTimeDuration().isEmpty()) {
       return scheduleDuration(
           processDefinitionKey,
-          rootInstanceKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
@@ -73,7 +69,6 @@ public class MessageSchedulerFactory {
 
   private MessageScheduler scheduleDuration(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -98,7 +93,6 @@ public class MessageSchedulerFactory {
 
   private MessageScheduler scheduleOneTime(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -119,7 +113,6 @@ public class MessageSchedulerFactory {
 
   private MessageScheduler scheduleCycle(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -128,7 +121,6 @@ public class MessageSchedulerFactory {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
       return scheduleCron(
           processDefinitionKey,
-          rootInstanceKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
@@ -137,7 +129,6 @@ public class MessageSchedulerFactory {
     } else {
       return scheduleFixedRate(
           processDefinitionKey,
-          rootInstanceKey,
           processInstanceKey,
           targetElementId,
           timerEventDefinition,
@@ -148,7 +139,6 @@ public class MessageSchedulerFactory {
 
   private MessageScheduler scheduleFixedRate(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -164,7 +154,6 @@ public class MessageSchedulerFactory {
     Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageScheduler(
         processDefinitionKey,
-        rootInstanceKey,
         processInstanceKey,
         targetElementId,
         timerEventDefinition.getId(),
@@ -177,7 +166,6 @@ public class MessageSchedulerFactory {
 
   private MessageScheduler scheduleCron(
       ProcessDefinitionKey processDefinitionKey,
-      UUID rootInstanceKey,
       UUID processInstanceKey,
       String targetElementId,
       TimerEventDefinitionDTO timerEventDefinition,
@@ -189,7 +177,6 @@ public class MessageSchedulerFactory {
             .asText();
     return new RecurringMessageScheduler(
         processDefinitionKey,
-        rootInstanceKey,
         processInstanceKey,
         targetElementId,
         timerEventDefinition.getId(),

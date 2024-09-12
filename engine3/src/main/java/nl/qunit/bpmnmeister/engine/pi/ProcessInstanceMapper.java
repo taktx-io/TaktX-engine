@@ -13,6 +13,7 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.MultiInstanceInstance;
+import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
@@ -24,6 +25,7 @@ import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
+import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
@@ -48,10 +50,12 @@ public interface ProcessInstanceMapper {
       source = IntermediateThrowEventState.class)
   @SubclassMapping(target = ServiceTaskInstance.class, source = ServiceTaskState.class)
   @SubclassMapping(target = SendTaskInstance.class, source = SendTaskState.class)
-  @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
+  @SubclassMapping(target = ReceiveTaskInstance.class, source = ReceiveTaskState.class)
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityState.class)
   @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceState.class)
+  // Task state should come last
+  @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @Mapping(target = "parentInstance", ignore = true)
   FLowNodeInstance map(FlowNodeStateDTO sourceDto);
 
@@ -66,10 +70,12 @@ public interface ProcessInstanceMapper {
       target = IntermediateThrowEventState.class)
   @SubclassMapping(source = ServiceTaskInstance.class, target = ServiceTaskState.class)
   @SubclassMapping(source = SendTaskInstance.class, target = SendTaskState.class)
-  @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
+  @SubclassMapping(source = ReceiveTaskInstance.class, target = ReceiveTaskState.class)
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessState.class)
   @SubclassMapping(source = CallActivityInstance.class, target = CallActivityState.class)
   @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceState.class)
+  // Task state should come last
+  @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
   FlowNodeStateDTO map(FLowNodeInstance source);
 
   FlowNodeStatesDTO map(FlowNodeStates2 source);

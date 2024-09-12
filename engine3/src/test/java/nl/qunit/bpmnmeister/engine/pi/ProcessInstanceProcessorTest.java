@@ -238,7 +238,7 @@ class ProcessInstanceProcessorTest {
         .isTerminated();
   }
 
-  @Test @Disabled
+  @Test 
   void testMessageStartEvent()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -273,7 +273,7 @@ class ProcessInstanceProcessorTest {
         .toProcessLevel();
   }
 
-  @Test @Disabled
+  @Test
   void testReceiveTask()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine

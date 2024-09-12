@@ -15,7 +15,6 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
@@ -100,13 +99,15 @@ public class ProcessDefinitionActivationProcessor
               String messageRef = messageStartEventDefinition.getMessageRef();
               MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
-              MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent messageSubscription =
                   new DefinitionMessageSubscription(
                       processActivationRecord.key(), startEvent.getId(), messageName);
 
               context.forward(
-                  new Record<>(key, messageSubscription, processActivationRecord.timestamp()));
+                  new Record<>(
+                      messageSubscription.toMessageEventKey(),
+                      messageSubscription,
+                      processActivationRecord.timestamp()));
             });
   }
 
@@ -121,11 +122,13 @@ public class ProcessDefinitionActivationProcessor
               String messageRef = messageStartEventDefinition.getMessageRef();
               MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
-              MessageEventKey key = new MessageEventKey(messageName);
               MessageEvent cancelSubscription =
                   new CancelDefinitionMessageSubscription(messageName);
               context.forward(
-                  new Record<>(key, cancelSubscription, processActivationRecord.timestamp()));
+                  new Record<>(
+                      cancelSubscription.toMessageEventKey(),
+                      cancelSubscription,
+                      processActivationRecord.timestamp()));
             });
   }
 
@@ -158,7 +161,6 @@ public class ProcessDefinitionActivationProcessor
               MessageScheduler schedule =
                   messageSchedulerFactory.schedule(
                       processActivationRecord.key(),
-                      Constants.NONE_UUID,
                       Constants.NONE_UUID,
                       startEvent.getId(),
                       timerEventDefinition,

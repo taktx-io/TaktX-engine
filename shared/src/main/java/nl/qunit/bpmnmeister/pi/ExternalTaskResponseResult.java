@@ -4,11 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 
 @Getter
-@ToString
 public class ExternalTaskResponseResult {
 
   public static final ExternalTaskResponseResult NONE =

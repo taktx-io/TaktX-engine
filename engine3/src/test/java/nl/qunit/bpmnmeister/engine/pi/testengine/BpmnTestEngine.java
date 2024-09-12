@@ -178,7 +178,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public void consume(MessageEvent messageEvent) {
     LOG.info("Received message event: " + messageEvent);
     ConcurrentLinkedQueue<MessageEvent> messageEvents = messageSubscriptionMap.computeIfAbsent(
-        messageEvent.getKey().messageName(), k -> new ConcurrentLinkedQueue<>());
+        messageEvent.getMessageName(), k -> new ConcurrentLinkedQueue<>());
     messageEvents.add(messageEvent);
   }
 
@@ -216,9 +216,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
 
-  public void triggerExternalTaskResponse(UUID rootInstanceKey, ExternalTaskTrigger externalTaskTrigger,
+  public void triggerExternalTaskResponse(UUID processInstanceKey, ExternalTaskTrigger externalTaskTrigger,
       ExternalTaskResponseResult2 externalTaskResponseResult, VariablesDTO variables) {
-      triggerEmitter.send(rootInstanceKey,
+      triggerEmitter.send(processInstanceKey,
           new ExternalTaskResponseTrigger2(externalTaskTrigger.getProcessInstanceKey(),
           externalTaskTrigger.getElementIdPath(), externalTaskTrigger.getElementInstanceIdPath(), externalTaskResponseResult, variables)
       );
@@ -502,7 +502,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public BpmnTestEngine sendMessage(String messageName, VariablesDTO variables) {
     LOG.info("Sending message: " + messageName);
     DefinitionMessageEventTrigger messageEvent = new DefinitionMessageEventTrigger(messageName, variables);
-    messageEventEmitter.send(new MessageEventKey(messageEvent.getMessageName()), messageEvent);
+    messageEventEmitter.send(messageEvent.toMessageEventKey(), messageEvent);
     return this;
   }
 
@@ -548,7 +548,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       VariablesDTO variables) {
     LOG.info("Sending message: " + messageName);
     CorrelationMessageEventTrigger messageEvent = new CorrelationMessageEventTrigger(messageName, correlationKey, variables);
-    messageEventEmitter.send(new MessageEventKey(messageEvent.getMessageName()), messageEvent);
+    messageEventEmitter.send(messageEvent.toMessageEventKey(), messageEvent);
     return this;
 
   }

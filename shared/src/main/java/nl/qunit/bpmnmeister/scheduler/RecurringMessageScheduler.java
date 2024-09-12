@@ -24,7 +24,6 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 public class RecurringMessageScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;
-  private final UUID rootInstanceKey;
   private final UUID processInstanceKey;
   private final String targetElementId;
   private final String timerEventDefinitionId;
@@ -35,7 +34,6 @@ public class RecurringMessageScheduler implements MessageScheduler {
   @JsonCreator
   public RecurringMessageScheduler(
       @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @JsonProperty("rootInstanceKey") UUID rootInstanceKey,
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("targetElementId") String targetElementId,
       @JsonProperty("timerEventDefinitionId") String timerEventDefinitionId,
@@ -43,7 +41,6 @@ public class RecurringMessageScheduler implements MessageScheduler {
       @JsonProperty("cron") String cron,
       @JsonProperty("instantiation") String instantiation) {
     this.processDefinitionKey = processDefinitionKey;
-    this.rootInstanceKey = rootInstanceKey;
     this.processInstanceKey = processInstanceKey;
     this.targetElementId = targetElementId;
     this.timerEventDefinitionId = timerEventDefinitionId;
@@ -64,12 +61,11 @@ public class RecurringMessageScheduler implements MessageScheduler {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(rootInstanceKey, messages);
+        triggerConsumer.accept(processInstanceKey, messages);
 
         // Return a new command with the next execution time
         return new RecurringMessageScheduler(
             processDefinitionKey,
-            rootInstanceKey,
             processInstanceKey,
             targetElementId,
             timerEventDefinitionId,

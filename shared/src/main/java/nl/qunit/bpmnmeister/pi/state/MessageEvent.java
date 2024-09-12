@@ -1,11 +1,14 @@
 package nl.qunit.bpmnmeister.pi.state;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
@@ -23,16 +26,19 @@ import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
   @JsonSubTypes.Type(value = CancelCorrelationMessageSubscription.class)
 })
 @Getter
+@Setter
 @EqualsAndHashCode
+@NoArgsConstructor
 public abstract class MessageEvent {
 
-  private final String messageName;
+  private String messageName;
 
   protected MessageEvent(@Nonnull String messageName) {
     this.messageName = messageName;
   }
 
-  public MessageEventKey getKey() {
+  @JsonIgnore
+  public MessageEventKey toMessageEventKey() {
     return new MessageEventKey(messageName);
   }
 }

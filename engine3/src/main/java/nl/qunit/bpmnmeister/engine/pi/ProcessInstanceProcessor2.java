@@ -86,9 +86,7 @@ public class ProcessInstanceProcessor2
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(definitionDTO);
     processInstanceDefinitionStore.putIfAbsent(processDefinitionKey, definitionDTO);
 
-    FlowElements2 flowElements =
-        definitionMapper.getFlowElements(
-            definitionDTO.getDefinitions().getRootProcess().getFlowElements());
+    FlowElements2 flowElements = definitionMapper.getFlowElements(definitionDTO.getDefinitions());
 
     FlowNodeStates2 flowNodeStates = new FlowNodeStates2();
     Variables2 processInstanceVariablee =
@@ -130,8 +128,7 @@ public class ProcessInstanceProcessor2
           processInstanceDefinitionStore.get(processInstanceDTO.getProcessDefinitionKey());
       if (processDefinitionDTO != null) {
         FlowElements2 flowElements =
-            definitionMapper.getFlowElements(
-                processDefinitionDTO.getDefinitions().getRootProcess().getFlowElements());
+            definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
 
         VariablesDTO variablesDTO = variablesStore.get(trigger.getProcessInstanceKey());
         ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO);
@@ -173,8 +170,7 @@ public class ProcessInstanceProcessor2
           processInstanceDefinitionStore.get(processInstanceDTO.getProcessDefinitionKey());
       if (processDefinitionDTO != null) {
         FlowElements2 flowElements =
-            definitionMapper.getFlowElements(
-                processDefinitionDTO.getDefinitions().getRootProcess().getFlowElements());
+            definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
 
         ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO);
         InstanceResult instanceResult = InstanceResult.empty();
@@ -228,6 +224,8 @@ public class ProcessInstanceProcessor2
       ProcessDefinitionKey processDefinitionKey,
       Variables2 processInstanceVariables) {
     while (instanceResult.hasNewFlowNodeInstances()) {
+      forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
+
       instanceResult =
           processInstanceResult(
               flowNodeStates, instanceResult, flowElements, processInstanceVariables);

@@ -18,7 +18,6 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
@@ -149,7 +148,7 @@ class MultiInstanceTest {
 
   }
 
-  @Test @Disabled
+  @Test
   void testReceiveTask_multiInstance()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine

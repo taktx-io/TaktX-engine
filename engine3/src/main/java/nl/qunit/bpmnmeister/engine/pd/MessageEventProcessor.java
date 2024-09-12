@@ -8,7 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
@@ -83,7 +83,8 @@ public class MessageEventProcessor
     CorrelationMessageSubscriptions messageSubscriptions =
         this.correlationMessageSubscriptionStore.get(messageEventKey);
     if (messageSubscriptions != null) {
-      CorrelationMessageSubscriptions removed = messageSubscriptions.remove(messageEventKey);
+      CorrelationMessageSubscriptions removed =
+          messageSubscriptions.remove(cancelCorrelatingMessageSubscription.getCorrelationKey());
       this.correlationMessageSubscriptionStore.put(messageEventKey, removed);
     }
   }
@@ -100,19 +101,18 @@ public class MessageEventProcessor
           .forEach(
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
-                  UUID rootInstanceKey = subscription.getRootInstanceKey();
                   UUID processInstanceKey = subscription.getProcessInstanceKey();
-                  ContinueFlowElementTrigger flowElementTrigger =
-                      new ContinueFlowElementTrigger(
+                  ContinueFlowElementTrigger2 flowElementTrigger =
+                      new ContinueFlowElementTrigger2(
                           processInstanceKey,
-                          subscription.getElementInstanceIdPath(),
                           subscription.getElementIdPath(),
+                          subscription.getElementInstanceIdPath(),
                           Constants.NONE,
                           messageEvent.getVariables());
 
                   context.forward(
                       new Record<>(
-                          rootInstanceKey, flowElementTrigger, Instant.now().toEpochMilli()));
+                          processInstanceKey, flowElementTrigger, Instant.now().toEpochMilli()));
                 }
               });
     }
