@@ -28,10 +28,7 @@ public class StartEventInstanceProcessor
 
   @Override
   protected InstanceResult processSpecificCatchEventInstance(
-      FlowElements2 flowElements,
-      StartEvent2 flowNode,
-      StartEventInstance flowNodeInstance,
-      Variables2 variables) {
+      FlowElements2 flowElements, StartEventInstance flowNodeInstance, Variables2 variables) {
     flowNodeInstance.setState(FlowNodeStateEnum.FINISHED);
     return new InstanceResult();
   }

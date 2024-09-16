@@ -14,6 +14,6 @@ public class SendTask2 extends ExternalTask2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new SendTaskInstance(this.getId(), parentInstance);
+    return new SendTaskInstance(parentInstance, this);
   }
 }

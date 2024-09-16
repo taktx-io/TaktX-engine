@@ -7,9 +7,9 @@ import java.util.Set;
 import lombok.Getter;
 
 @Getter
-public class IntermediateThrowEvent extends ThrowEventDTO {
+public class IntermediateThrowEventDTO extends ThrowEventDTO {
   @JsonCreator
-  public IntermediateThrowEvent(
+  public IntermediateThrowEventDTO(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,

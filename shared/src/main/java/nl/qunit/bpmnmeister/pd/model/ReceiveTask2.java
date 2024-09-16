@@ -18,6 +18,6 @@ public class ReceiveTask2 extends Activity2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new ReceiveTaskInstance(this.getId(), parentInstance);
+    return new ReceiveTaskInstance(parentInstance, this);
   }
 }

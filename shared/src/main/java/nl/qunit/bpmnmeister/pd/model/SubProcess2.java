@@ -15,6 +15,6 @@ public class SubProcess2 extends Activity2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new SubProcessInstance(this.getId(), parentInstance);
+    return new SubProcessInstance(parentInstance, this);
   }
 }

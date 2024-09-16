@@ -18,7 +18,6 @@ import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
@@ -28,7 +27,7 @@ import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 @NoArgsConstructor
 @Setter
 public abstract class ExternalTaskInstanceProcessor<
-        E extends ExternalTask2, I extends ExternalTaskInstance, S extends StartFlowElementTrigger>
+        E extends ExternalTask2, I extends ExternalTaskInstance<E>>
     extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTrigger2> {
 
   private FeelExpressionHandler feelExpressionHandler;
@@ -48,8 +47,9 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables) {
+      FlowElements2 flowElements, I flownodeInstance, Variables2 variables) {
     InstanceResult instanceResult = InstanceResult.empty();
+    ExternalTask2 flowNode = flownodeInstance.getFlowNode();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(
             flowNode.getWorkerDefinition(), flowNode, flownodeInstance, variables, null);
@@ -63,7 +63,6 @@ public abstract class ExternalTaskInstanceProcessor<
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      E externalTask,
       I externalTaskInstance,
       ExternalTaskResponseTrigger2 trigger,
       Variables2 processInstanceVariables) {
@@ -73,14 +72,9 @@ public abstract class ExternalTaskInstanceProcessor<
 
     InstanceResult instanceResult = InstanceResult.empty();
     if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
-      processSucessfulResponse(
-          flowElements,
-          externalTask,
-          externalTaskInstance,
-          instanceResult,
-          trigger,
-          processInstanceVariables);
+      externalTaskInstance.setState(FlowNodeStateEnum.FINISHED);
     } else {
+      E externalTask = externalTaskInstance.getFlowNode();
       if (!externalTask.getRetries().equals(Constants.NONE)) {
         // We have some kind of retry definition
         JsonNode jsonNode =
@@ -156,21 +150,11 @@ public abstract class ExternalTaskInstanceProcessor<
     return jsonNode.asText();
   }
 
-  private void processSucessfulResponse(
-      FlowElements2 flowElements,
-      E externalTask,
-      I externalTaskInstance,
-      InstanceResult instanceResult,
-      ExternalTaskResponseTrigger2 trigger,
-      Variables2 processInstanceVariables) {
-    externalTaskInstance.setState(FlowNodeStateEnum.FINISHED);
-  }
-
   private void scheduleNextExternalTask(
       String workerDefinition,
       String backoff,
       ExternalTask2 externalTask,
-      ExternalTaskInstance instance,
+      ExternalTaskInstance<?> instance,
       Variables2 variables,
       InstanceResult instanceResult) {
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
@@ -183,7 +167,7 @@ public abstract class ExternalTaskInstanceProcessor<
   private static ExternalTaskInfo getExternalTaskInfo(
       String workerDefinition,
       ExternalTask2 externalTask,
-      ExternalTaskInstance instance,
+      ExternalTaskInstance<?> instance,
       Variables2 variables,
       String triggerTime) {
     return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);

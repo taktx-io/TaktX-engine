@@ -12,6 +12,6 @@ import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
 public class StartEvent2 extends CatchEvent2 {
 
   public StartEventInstance newInstance(FLowNodeInstance parentInstance) {
-    return new StartEventInstance(getId(), parentInstance);
+    return new StartEventInstance(parentInstance, this);
   }
 }

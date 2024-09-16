@@ -7,10 +7,10 @@ import java.util.Set;
 import lombok.Getter;
 
 @Getter
-public class IntermediateCatchEvent extends CatchEventDTO {
+public class IntermediateCatchEventDTO extends CatchEventDTO {
 
   @JsonCreator
-  public IntermediateCatchEvent(
+  public IntermediateCatchEventDTO(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("incoming") Set<String> incoming,

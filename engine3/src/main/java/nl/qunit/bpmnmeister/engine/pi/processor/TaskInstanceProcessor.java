@@ -30,10 +30,7 @@ public class TaskInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
-      Task2 flowNode2,
-      TaskInstance flownodeInstance,
-      Variables2 variables) {
+      FlowElements2 flowElements, TaskInstance flownodeInstance, Variables2 variables) {
     flownodeInstance.setState(FlowNodeStateEnum.FINISHED);
     return InstanceResult.empty();
   }
@@ -42,7 +39,6 @@ public class TaskInstanceProcessor
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      Task2 externalTask,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables) {

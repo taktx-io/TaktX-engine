@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 @Getter
 public class InstanceResult {
 
-  private final List<FLowNodeInstance> newFlowNodeInstances = new ArrayList<>();
+  private final List<FLowNodeInstance<?>> newFlowNodeInstances = new ArrayList<>();
   private final List<ExternalTaskInfo> externalTaskRequests = new ArrayList<>();
   private final List<NewStartCommand> newStartCommands = new ArrayList<>();
   private final List<UUID> newTerminateCommands = new ArrayList<>();

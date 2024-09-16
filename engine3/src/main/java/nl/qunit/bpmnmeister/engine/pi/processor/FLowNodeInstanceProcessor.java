@@ -27,23 +27,22 @@ public abstract class FLowNodeInstanceProcessor<
 
   public InstanceResult processStart(
       FlowElements2 flowElements,
-      FlowNode2 flowNode,
-      FLowNodeInstance flownodeInstance,
+      FLowNodeInstance<?> flownodeInstance,
       Variables2 processInstanceVariables,
       boolean isIterationInMultiInstance) {
     if (flownodeInstance.getState() != FlowNodeStateEnum.READY) {
       return InstanceResult.empty();
     }
 
-    Variables2 inputVariables = getInputVariables((E) flowNode, processInstanceVariables);
+    E flowNode = (E) flownodeInstance.getFlowNode();
+    Variables2 inputVariables = getInputVariables(flowNode, processInstanceVariables);
 
     InstanceResult instanceResult =
         this.processStartSpecificFlowNodeInstance(
-            flowElements, (E) flowNode, (I) flownodeInstance, inputVariables);
+            flowElements, (I) flownodeInstance, inputVariables);
 
     processNodeIfFinished(
         flowElements,
-        flowNode,
         flownodeInstance,
         instanceResult,
         processInstanceVariables,
@@ -55,8 +54,7 @@ public abstract class FLowNodeInstanceProcessor<
   public final InstanceResult processContinue(
       int subProcessLevel,
       FlowElements2 flowElements,
-      FlowNode2 flowNode,
-      FLowNodeInstance flowNodeInstance,
+      FLowNodeInstance<?> flowNodeInstance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables,
       Boolean isIterationInMultiInstance) {
@@ -68,14 +66,12 @@ public abstract class FLowNodeInstanceProcessor<
         this.processContinueSpecificFlowNodeInstance(
             subProcessLevel,
             flowElements,
-            (E) flowNode,
             (I) flowNodeInstance,
             (C) trigger,
             processInstanceVariables);
 
     processNodeIfFinished(
         flowElements,
-        flowNode,
         flowNodeInstance,
         instanceResult,
         processInstanceVariables,
@@ -84,7 +80,7 @@ public abstract class FLowNodeInstanceProcessor<
     return instanceResult;
   }
 
-  public InstanceResult processTerminate(FlowNode2 flowNode, FLowNodeInstance instance) {
+  public InstanceResult processTerminate(FlowNode2 flowNode, FLowNodeInstance<?> instance) {
     // Only terminate if the instance is ready or waiting
     if (instance.isAwaiting()) {
       InstanceResult instanceResult =
@@ -106,13 +102,13 @@ public abstract class FLowNodeInstanceProcessor<
 
   protected void processNodeIfFinished(
       FlowElements2 flowElements,
-      FlowNode2 flowNode,
-      FLowNodeInstance flownodeInstance,
+      FLowNodeInstance<?> flownodeInstance,
       InstanceResult instanceResult,
       Variables2 processInstanceVariables,
       boolean isIterationInMultiInstance) {
     if (flownodeInstance.getState() == FlowNodeStateEnum.FINISHED) {
 
+      FlowNode2 flowNode = flownodeInstance.getFlowNode();
       if (flowNode instanceof WithIoMapping withIoMapping) {
         Variables2 mappedOutputVariables =
             getOutputVariables(processInstanceVariables, withIoMapping);
@@ -141,12 +137,12 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected abstract InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
+      FlowElements2 flowElements, I flownodeInstance, Variables2 variables);
 
   protected abstract InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      E flowNode,
+      //      E flowNode,
       I flowNodeInstance,
       C trigger,
       Variables2 variables);

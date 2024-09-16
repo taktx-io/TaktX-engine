@@ -28,10 +28,7 @@ public class EndEventInstanceProcessor
 
   @Override
   protected InstanceResult processSpecificThrowEventInstance(
-      FlowElements2 flowElements,
-      EndEvent2 flowNode2,
-      EndEventInstance flowNodeInstance,
-      Variables2 variables) {
+      FlowElements2 flowElements, EndEventInstance flowNodeInstance, Variables2 variables) {
     flowNodeInstance.setState(FlowNodeStateEnum.FINISHED);
     return new InstanceResult();
   }

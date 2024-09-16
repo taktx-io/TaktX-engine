@@ -4,25 +4,30 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
-@Setter
 @NoArgsConstructor
-public abstract class FLowNodeInstance {
+public abstract class FLowNodeInstance<N extends FlowNode2> {
 
-  private UUID elementInstanceId;
-  private int passedCnt;
-  private FlowNodeStateEnum state;
-  private String inputFlowId;
-  private String elementId;
-  private FLowNodeInstance parentInstance;
+  @Setter private UUID elementInstanceId;
 
-  protected FLowNodeInstance(String elementId, FLowNodeInstance parentInstance) {
+  @Setter private int passedCnt;
+
+  @Setter private FlowNodeStateEnum state;
+
+  @Setter private String inputFlowId;
+
+  @Setter private N flowNode;
+
+  @Setter private FLowNodeInstance<?> parentInstance;
+
+  protected FLowNodeInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     this.parentInstance = parentInstance;
     this.state = FlowNodeStateEnum.READY;
     this.elementInstanceId = UUID.randomUUID();
-    this.elementId = elementId;
+    this.flowNode = flowNode;
   }
 
   public boolean isAwaiting() {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
@@ -29,7 +30,9 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder(toBuilder = true)
 public abstract class FlowNodeStateDTO {
   private final UUID elementInstanceId;
-  private final String elementId;
+
+  @Setter private String elementId;
+
   private final int passedCnt;
   private final FlowNodeStateEnum state;
   private final String inputFlowId;

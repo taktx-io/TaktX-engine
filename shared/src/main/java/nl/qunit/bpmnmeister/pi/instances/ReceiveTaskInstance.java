@@ -3,13 +3,16 @@ package nl.qunit.bpmnmeister.pi.instances;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
 
 @NoArgsConstructor
-public class ReceiveTaskInstance extends ActivityInstance {
+@Getter
+@Setter
+public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask2> {
 
-  @Setter @Getter private String correlationKey;
+  private String correlationKey;
 
-  public ReceiveTaskInstance(String flowNode, FLowNodeInstance parentInstance) {
-    super(flowNode, parentInstance);
+  public ReceiveTaskInstance(FLowNodeInstance<?> parentInstance, ReceiveTask2 flowNode) {
+    super(parentInstance, flowNode);
   }
 }

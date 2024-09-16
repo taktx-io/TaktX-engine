@@ -13,6 +13,6 @@ public class BoundaryEvent2 extends CatchEvent2 {
 
   @Override
   public BoundaryEventInstance newInstance(FLowNodeInstance parentInstance) {
-    return new BoundaryEventInstance(getId(), parentInstance);
+    return new BoundaryEventInstance(parentInstance, this);
   }
 }

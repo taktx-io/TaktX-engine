@@ -32,15 +32,13 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
-      CallActivity2 flowNode,
-      CallActivityInstance callActivityInstance,
-      Variables2 variables) {
+      FlowElements2 flowElements, CallActivityInstance callActivityInstance, Variables2 variables) {
     callActivityInstance.setState(FlowNodeStateEnum.WAITING);
 
     InstanceResult instanceResult = InstanceResult.empty();
     UUID newProcessInstanceKey = UUID.randomUUID();
     callActivityInstance.setChildProcessInstanceId(newProcessInstanceKey);
+    CallActivity2 flowNode = callActivityInstance.getFlowNode();
     instanceResult.addNewStartCommand(
         new NewStartCommand(
             newProcessInstanceKey,
@@ -56,12 +54,12 @@ public class CallActivityInstanceProcessor
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      CallActivity2 callActivity,
+      //      CallActivity2 callActivity,
       CallActivityInstance instance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables) {
     instance.setState(FlowNodeStateEnum.FINISHED);
-    if (callActivity.isPropagateAllChildVariables()) {
+    if (instance.getFlowNode().isPropagateAllChildVariables()) {
       processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
     }
     return InstanceResult.empty();

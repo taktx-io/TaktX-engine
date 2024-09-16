@@ -54,7 +54,7 @@ public class FlowElementsDTO {
       if (startEvents.isEmpty()) {
         Optional<FlowNodeDTO> withoutInputFlow =
             elements.values().stream()
-                .filter(e -> e instanceof FlowNodeDTO)
+                .filter(FlowNodeDTO.class::isInstance)
                 .map(e -> (FlowNodeDTO) e)
                 .filter(flowNode -> !flowNode.getIncoming().isEmpty())
                 .findFirst();
@@ -140,10 +140,10 @@ public class FlowElementsDTO {
     return Optional.empty();
   }
 
-  public Optional<IntermediateCatchEvent> getLinkedCatchElement(String name) {
+  public Optional<IntermediateCatchEventDTO> getLinkedCatchElement(String name) {
     return elements.values().stream()
-        .filter(IntermediateCatchEvent.class::isInstance)
-        .map(IntermediateCatchEvent.class::cast)
+        .filter(IntermediateCatchEventDTO.class::isInstance)
+        .map(IntermediateCatchEventDTO.class::cast)
         .filter(
             imce ->
                 imce.getLinkventDefinitions().stream().anyMatch(def -> def.getName().equals(name)))

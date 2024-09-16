@@ -12,6 +12,6 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 public class EndEvent2 extends ThrowEvent2 {
 
   public EndEventInstance newInstance(FLowNodeInstance parentInstance) {
-    return new EndEventInstance(getId(), parentInstance);
+    return new EndEventInstance(parentInstance, this);
   }
 }

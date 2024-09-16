@@ -7,13 +7,12 @@ import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.StartFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class SendTaskInstanceProcessor
-    extends ExternalTaskInstanceProcessor<SendTask2, SendTaskInstance, StartFlowElementTrigger> {
+    extends ExternalTaskInstanceProcessor<SendTask2, SendTaskInstance> {
   @Inject
   public SendTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,

@@ -18,15 +18,14 @@ public abstract class EventInstanceProcessor<E extends Event2, I extends EventIn
 
   @Override
   protected InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, E flowNode2, I flowNodeInstance, Variables2 variables) {
-    return processStartSpecificEventInstance(flowElements, flowNode2, flowNodeInstance, variables);
+      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables) {
+    return processStartSpecificEventInstance(flowElements, flowNodeInstance, variables);
   }
 
   @Override
   protected final InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      E flowNode,
       I flowNodeInstance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 variables) {
@@ -35,5 +34,5 @@ public abstract class EventInstanceProcessor<E extends Event2, I extends EventIn
   }
 
   protected abstract InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, E flowNode2, I flowNodeInstance, Variables2 variables);
+      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables);
 }

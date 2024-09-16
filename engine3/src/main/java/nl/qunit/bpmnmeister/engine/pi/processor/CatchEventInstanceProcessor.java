@@ -18,10 +18,10 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, E flowNode2, I flowNodeInstance, Variables2 variables) {
-    return processSpecificCatchEventInstance(flowElements, flowNode2, flowNodeInstance, variables);
+      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables) {
+    return processSpecificCatchEventInstance(flowElements, flowNodeInstance, variables);
   }
 
   protected abstract InstanceResult processSpecificCatchEventInstance(
-      FlowElements2 flowElements, E flowNode2, I flowNodeInstance, Variables2 variables);
+      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables);
 }

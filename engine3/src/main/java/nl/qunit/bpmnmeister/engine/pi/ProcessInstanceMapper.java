@@ -1,6 +1,9 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.lang.reflect.InvocationTargetException;
+import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.SubProcess2;
 import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 import nl.qunit.bpmnmeister.pi.FlowNodeStatesDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
@@ -31,6 +34,7 @@ import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
 import nl.qunit.bpmnmeister.pi.state.StartEventState;
 import nl.qunit.bpmnmeister.pi.state.SubProcessState;
 import nl.qunit.bpmnmeister.pi.state.TaskState;
+import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ObjectFactory;
@@ -39,6 +43,102 @@ import org.mapstruct.TargetType;
 
 @Mapper(componentModel = "jakarta")
 public interface ProcessInstanceMapper {
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.BoundaryEvent2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  BoundaryEventInstance map(BoundaryEventState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.StartEvent2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  StartEventInstance map(StartEventState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  IntermediateCatchEventInstance map(
+      IntermediateCatchEventState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.EndEvent2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  EndEventInstance map(EndEventState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  IntermediateThrowEventInstance map(
+      IntermediateThrowEventState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.ServiceTask2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  ServiceTaskInstance map(ServiceTaskState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.SendTask2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  SendTaskInstance map(SendTaskState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.ReceiveTask2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  ReceiveTaskInstance map(ReceiveTaskState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.SubProcess2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(
+      target = "flowNodeStates",
+      expression =
+          "java(flowNodeStatesDTOToFlowNodeStates2( source.getFlowNodeStates(), getChildElements(source, flowElements)))")
+  SubProcessInstance map(SubProcessState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.CallActivity2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  CallActivityInstance map(CallActivityState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.Activity2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  MultiInstanceInstance map(MultiInstanceState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.Task2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  TaskInstance map(TaskState source, @Context FlowElements2 flowElements);
+
+  default FlowElements2 getChildElements(SubProcessState source, FlowElements2 flowElements) {
+    FlowNode2 flowNode = flowElements.getFlowNode(source.getElementId()).orElseThrow();
+    SubProcess2 subProcess2 = (SubProcess2) flowNode;
+    return subProcess2.getElements();
+  }
+
   @SubclassMapping(target = BoundaryEventInstance.class, source = BoundaryEventState.class)
   @SubclassMapping(target = StartEventInstance.class, source = StartEventState.class)
   @SubclassMapping(
@@ -54,10 +154,13 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityState.class)
   @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceState.class)
+
   // Task state should come last
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @Mapping(target = "parentInstance", ignore = true)
-  FLowNodeInstance map(FlowNodeStateDTO sourceDto);
+  FLowNodeInstance map(FlowNodeStateDTO source, @Context FlowElements2 flowElements);
+
+  ProcessInstance2 map(ProcessInstanceDTO source, @Context FlowElements2 flowElements);
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventState.class)
   @SubclassMapping(source = StartEventInstance.class, target = StartEventState.class)
@@ -76,23 +179,22 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceState.class)
   // Task state should come last
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
+  @Mapping(target = "elementId", source = "flowNode.id")
   FlowNodeStateDTO map(FLowNodeInstance source);
 
   FlowNodeStatesDTO map(FlowNodeStates2 source);
 
   ProcessInstanceDTO map(ProcessInstance2 source);
 
-  ProcessInstance2 map(ProcessInstanceDTO source);
-
   @ObjectFactory
-  default <T extends FLowNodeInstance> T resolveEquipment(
+  default <T extends FLowNodeInstance<?>> T resolveEquipment(
       FlowNodeStateDTO sourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 
   @ObjectFactory
   default <T extends FlowNodeStateDTO> T resolveEquipment(
-      FLowNodeInstance sourceDto, @TargetType Class<T> type) {
+      FLowNodeInstance<?> sourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 

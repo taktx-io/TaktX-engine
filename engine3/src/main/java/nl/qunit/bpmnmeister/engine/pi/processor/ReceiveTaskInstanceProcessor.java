@@ -29,12 +29,10 @@ public class ReceiveTaskInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
-      ReceiveTask2 receiveTask,
-      ReceiveTaskInstance receiveTaskInstance,
-      Variables2 variables) {
+      FlowElements2 flowElements, ReceiveTaskInstance receiveTaskInstance, Variables2 variables) {
     receiveTaskInstance.setState(FlowNodeStateEnum.WAITING);
 
+    ReceiveTask2 receiveTask = receiveTaskInstance.getFlowNode();
     String correlationKeyExpression = receiveTask.getMessage().correlationKey();
     JsonNode jsonNode =
         feelExpressionHandler.processFeelExpression(correlationKeyExpression, variables);
@@ -52,23 +50,22 @@ public class ReceiveTaskInstanceProcessor
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      ReceiveTask2 receiveTask,
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables) {
     receiveTaskInstance.setState(FlowNodeStateEnum.FINISHED);
-    return terminatingSubscriptionInstanceResult(receiveTask, receiveTaskInstance);
+    return terminatingSubscriptionInstanceResult(receiveTaskInstance);
   }
 
   @Override
   protected InstanceResult processTerminateSpecificActivityInstance(
       ReceiveTask2 receiveTask, ReceiveTaskInstance instance) {
-    return terminatingSubscriptionInstanceResult(receiveTask, instance);
+    return terminatingSubscriptionInstanceResult(instance);
   }
 
   private static InstanceResult terminatingSubscriptionInstanceResult(
-      ReceiveTask2 receiveTask, ReceiveTaskInstance receiveTaskInstance) {
-    String messageName = receiveTask.getMessage().name();
+      ReceiveTaskInstance receiveTaskInstance) {
+    String messageName = receiveTaskInstance.getFlowNode().getMessage().name();
     InstanceResult instanceResult = InstanceResult.empty();
     instanceResult.addTerminateCorrelationSubscriptionMessageEvent(
         new TerminateCorrelationSubscriptionMessageEventInfo(

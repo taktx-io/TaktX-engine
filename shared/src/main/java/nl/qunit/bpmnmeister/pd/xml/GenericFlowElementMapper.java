@@ -37,8 +37,8 @@ import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.GatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEventDTO;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEventDTO;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
 import nl.qunit.bpmnmeister.pd.model.ParallelGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlowDTO;
@@ -90,7 +90,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
     } else if (throwEvent instanceof TIntermediateThrowEvent intermediateThrowEvent) {
       InputOutputMappingDTO ioMapping =
           bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
-      return new IntermediateThrowEvent(
+      return new IntermediateThrowEventDTO(
           intermediateThrowEvent.getId(),
           parentId,
           mapQNameList(intermediateThrowEvent.getIncoming()),
@@ -158,7 +158,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           boundaryEvent.isCancelActivity(),
           ioMapping);
     } else if (tCatchEvent instanceof TIntermediateCatchEvent intermediateCatchEvent) {
-      return new IntermediateCatchEvent(
+      return new IntermediateCatchEventDTO(
           intermediateCatchEvent.getId(),
           parentId,
           mapQNameList(intermediateCatchEvent.getIncoming()),
@@ -238,7 +238,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           bpmnMapperFactory
               .createCallActivityMapper()
               .map(callActivity, parentId, loopCharacteristics, ioMapping);
-      default -> {}
+      default -> throw new IllegalStateException(
+          "Unknown activity type: " + activity.getClass().getName());
     }
     return activityFlowElement;
   }

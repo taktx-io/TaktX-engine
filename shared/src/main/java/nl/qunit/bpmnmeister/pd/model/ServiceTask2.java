@@ -14,6 +14,6 @@ public class ServiceTask2 extends ExternalTask2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new ServiceTaskInstance(this.getId(), parentInstance);
+    return new ServiceTaskInstance(parentInstance, this);
   }
 }

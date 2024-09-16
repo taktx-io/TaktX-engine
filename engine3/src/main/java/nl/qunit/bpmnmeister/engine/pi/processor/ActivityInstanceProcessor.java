@@ -19,23 +19,22 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables) {
-    return processStartSpecificActivityInstance(
-        flowElements, flowNode, flownodeInstance, variables);
+      FlowElements2 flowElements, I flownodeInstance, Variables2 variables) {
+    return processStartSpecificActivityInstance(flowElements, flownodeInstance, variables);
   }
 
   @Override
   protected final InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      E flowNode,
+      //      E flowNode,
       I flowNodeInstance,
       C trigger,
       Variables2 processInstanceVariables) {
     return processContinueSpecificActivityInstance(
         subProcessLevel,
         flowElements,
-        flowNode,
+        //        flowNode,
         flowNodeInstance,
         trigger,
         processInstanceVariables);
@@ -47,12 +46,12 @@ public abstract class ActivityInstanceProcessor<
   }
 
   protected abstract InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, E flowNode, I flownodeInstance, Variables2 variables);
+      FlowElements2 flowElements, I flownodeInstance, Variables2 variables);
 
   protected abstract InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
-      E externalTask,
+      //      E externalTask,
       I externalTaskInstance,
       C trigger,
       Variables2 processInstanceVariables);

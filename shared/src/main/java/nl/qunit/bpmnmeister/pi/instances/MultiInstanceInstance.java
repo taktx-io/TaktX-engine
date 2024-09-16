@@ -9,11 +9,11 @@ import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 @NoArgsConstructor
 @Getter
 @Setter
-public class MultiInstanceInstance extends ActivityInstance {
+public class MultiInstanceInstance extends ActivityInstance<Activity2> {
   private FlowNodeStates2 flowNodeStates;
 
-  public MultiInstanceInstance(Activity2 activity2, FLowNodeInstance parentInstance) {
-    super(activity2.getId(), parentInstance);
+  public MultiInstanceInstance(Activity2 activity2, FLowNodeInstance<?> parentInstance) {
+    super(parentInstance, activity2);
     this.flowNodeStates = new FlowNodeStates2();
   }
 }

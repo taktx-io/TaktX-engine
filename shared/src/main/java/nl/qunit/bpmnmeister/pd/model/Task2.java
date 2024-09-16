@@ -14,6 +14,6 @@ public class Task2 extends Activity2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new TaskInstance(this.getId(), parentInstance);
+    return new TaskInstance(parentInstance, this);
   }
 }

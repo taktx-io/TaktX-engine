@@ -19,7 +19,7 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = SubProcessDTO.class),
   @JsonSubTypes.Type(value = SequenceFlowDTO.class),
   @JsonSubTypes.Type(value = StartEventDTO.class),
-  @JsonSubTypes.Type(value = IntermediateCatchEvent.class),
+  @JsonSubTypes.Type(value = IntermediateCatchEventDTO.class),
   @JsonSubTypes.Type(value = CallActivityDTO.class),
   @JsonSubTypes.Type(value = ServiceTaskDTO.class),
   @JsonSubTypes.Type(value = SendTaskDTO.class),

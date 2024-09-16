@@ -1,11 +1,12 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.pd.model.Event2;
 
 @NoArgsConstructor
-public abstract class EventInstance extends FLowNodeInstance {
+public abstract class EventInstance<N extends Event2> extends FLowNodeInstance<N> {
 
-  protected EventInstance(String flowNode, FLowNodeInstance parentInstance) {
-    super(flowNode, parentInstance);
+  protected EventInstance(FLowNodeInstance parentInstance, N flowNode) {
+    super(parentInstance, flowNode);
   }
 }

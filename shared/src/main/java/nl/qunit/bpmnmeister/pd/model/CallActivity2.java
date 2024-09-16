@@ -18,6 +18,6 @@ public class CallActivity2 extends Activity2 {
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {
-    return new CallActivityInstance(this.getId(), parentInstance);
+    return new CallActivityInstance(parentInstance, this);
   }
 }
