@@ -1,7 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
@@ -37,6 +36,7 @@ public class ProcessInstanceProcessor2
   private final VariablesMapper variablesMapper;
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
+  private final FlowInstanceRunner flowInstanceRunner;
 
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<UUID, VariablesDTO> variablesStore;
@@ -48,12 +48,14 @@ public class ProcessInstanceProcessor2
       ProcessInstanceMapper instanceMapper,
       VariablesMapper variablesMapper,
       ProcessInstanceProcessorProvider processInstanceProcessorProvider,
-      Forwarder forwarder) {
+      Forwarder forwarder,
+      FlowInstanceRunner flowInstanceRunner) {
     this.definitionMapper = definitionMapper;
     this.instanceMapper = instanceMapper;
     this.variablesMapper = variablesMapper;
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
     this.forwarder = forwarder;
+    this.flowInstanceRunner = flowInstanceRunner;
   }
 
   @Override
@@ -219,11 +221,11 @@ public class ProcessInstanceProcessor2
       forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
 
       instanceResult =
-          processInstanceResult(
+          flowInstanceRunner.processInstanceResult(
               flowNodeStates, instanceResult, flowElements, processInstanceVariables);
     }
 
-    determineImplicitCompletedState(flowNodeStates);
+    flowNodeStates.determineImplicitCompletedState();
 
     if (flowNodeStates.getState() == ProcessInstanceState.COMPLETED) {
       processInstanceFinished(
@@ -257,31 +259,5 @@ public class ProcessInstanceProcessor2
               Constants.NONE,
               variablesMapper.toDTO(processInstanceVariables)));
     }
-  }
-
-  private void determineImplicitCompletedState(FlowNodeStates2 flowNodeStates) {
-    if (flowNodeStates.getState() == ProcessInstanceState.ACTIVE
-        && flowNodeStates.allMatch(FLowNodeInstance::isNotAwaiting)) {
-      flowNodeStates.setState(ProcessInstanceState.COMPLETED);
-    }
-  }
-
-  private InstanceResult processInstanceResult(
-      FlowNodeStates2 flowNodeStates2,
-      InstanceResult instanceResult,
-      FlowElements2 flowElements,
-      Variables2 processInstanceVariables) {
-    InstanceResult newInstanceResult = new InstanceResult();
-    List<FLowNodeInstance<?>> newFlowNodeInstances = instanceResult.getNewFlowNodeInstances();
-    for (FLowNodeInstance<?> instance : newFlowNodeInstances) {
-      flowNodeStates2.putInstance(instance);
-      FlowNode2 node = flowElements.getFlowNode(instance.getFlowNode().getId()).orElseThrow();
-      FLowNodeInstanceProcessor<?, ?, ?> processor =
-          processInstanceProcessorProvider.getProcessor(node);
-      InstanceResult subInstanceResult =
-          processor.processStart(flowElements, instance, processInstanceVariables, false);
-      newInstanceResult.merge(subInstanceResult);
-    }
-    return newInstanceResult;
   }
 }

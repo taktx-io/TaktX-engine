@@ -10,8 +10,6 @@ import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
@@ -175,7 +173,7 @@ public class MultiInstanceProcessor
                 inputCollection);
       }
 
-      determineImplicitCompletedState(multiInstanceInstance.getFlowNodeStates());
+      multiInstanceInstance.getFlowNodeStates().determineImplicitCompletedState();
 
       if (multiInstanceInstance.getFlowNodeStates().getState().isFinished()) {
         multiInstanceInstance.setState(FlowNodeStateEnum.FINISHED);
@@ -183,12 +181,6 @@ public class MultiInstanceProcessor
       return instanceResult;
     }
     return InstanceResult.empty();
-  }
-
-  private void determineImplicitCompletedState(FlowNodeStates2 flowNodeStates) {
-    if (flowNodeStates.allMatch(FLowNodeInstance::isNotAwaiting)) {
-      flowNodeStates.setState(ProcessInstanceState.COMPLETED);
-    }
   }
 
   @Override

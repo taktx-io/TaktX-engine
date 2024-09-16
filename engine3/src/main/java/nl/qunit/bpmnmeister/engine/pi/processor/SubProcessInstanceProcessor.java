@@ -2,8 +2,8 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.List;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
@@ -24,13 +24,16 @@ public class SubProcessInstanceProcessor
         SubProcess2, SubProcessInstance, ContinueFlowElementTrigger2> {
 
   private ProcessInstanceProcessorProvider processInstanceProcessorProvider;
+  private FlowInstanceRunner flowInstanceRunner;
 
   @Inject
   public SubProcessInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
-      ProcessInstanceProcessorProvider processInstanceProcessorProvider) {
+      ProcessInstanceProcessorProvider processInstanceProcessorProvider,
+      FlowInstanceRunner flowInstanceRunner) {
     super(ioMappingProcessor);
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
+    this.flowInstanceRunner = flowInstanceRunner;
   }
 
   @Override
@@ -139,35 +142,12 @@ public class SubProcessInstanceProcessor
       Variables2 variables) {
     while (instanceResult.hasNewFlowNodeInstances()) {
       instanceResult =
-          processInstanceResult(flowNodeStates, instanceResult, flowElements, variables);
+          flowInstanceRunner.processInstanceResult(flowNodeStates, instanceResult, flowElements, variables);
     }
 
-    determineImplicitCompletedState(flowNodeStates);
+    flowNodeStates.determineImplicitCompletedState();
     return instanceResult;
   }
 
-  private void determineImplicitCompletedState(FlowNodeStates2 flowNodeStates) {
-    if (flowNodeStates.allMatch(FLowNodeInstance::isNotAwaiting)) {
-      flowNodeStates.setState(ProcessInstanceState.COMPLETED);
-    }
-  }
 
-  private InstanceResult processInstanceResult(
-      FlowNodeStates2 flowNodeStates2,
-      InstanceResult instanceResult,
-      FlowElements2 flowElements,
-      Variables2 variables) {
-    InstanceResult newInstanceResult = new InstanceResult();
-    List<FLowNodeInstance<?>> newFlowNodeInstances = instanceResult.getNewFlowNodeInstances();
-    for (FLowNodeInstance<?> instance : newFlowNodeInstances) {
-      flowNodeStates2.putInstance(instance);
-      FlowNode2 node = flowElements.getFlowNode(instance.getFlowNode().getId()).orElseThrow();
-      FLowNodeInstanceProcessor<?, ?, ?> processor =
-          processInstanceProcessorProvider.getProcessor(node);
-      InstanceResult subInstanceResult =
-          processor.processStart(flowElements, instance, variables, false);
-      newInstanceResult.merge(subInstanceResult);
-    }
-    return newInstanceResult;
-  }
 }

@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pi;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
@@ -29,11 +28,14 @@ public class FlowNodeStates2 {
     return flowNodeInstances.get(elementInstanceId);
   }
 
-  public boolean allMatch(Predicate<FLowNodeInstance> predicate) {
-    return flowNodeInstances.values().stream().allMatch(predicate);
-  }
-
   public boolean allCompleted() {
     return flowNodeInstances.values().stream().allMatch(FLowNodeInstance::isCompleted);
+  }
+
+  public void determineImplicitCompletedState() {
+    if (state == ProcessInstanceState.ACTIVE
+        && flowNodeInstances.values().stream().allMatch(FLowNodeInstance::isNotAwaiting)) {
+      this.state = ProcessInstanceState.COMPLETED;
+    }
   }
 }
