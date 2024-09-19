@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor
@@ -29,8 +29,11 @@ public class ReceiveTaskInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, ReceiveTaskInstance receiveTaskInstance, Variables2 variables) {
-    receiveTaskInstance.setState(FlowNodeStateEnum.WAITING);
+      FlowElements2 flowElements,
+      ReceiveTaskInstance receiveTaskInstance,
+      String inputFlowId,
+      Variables2 variables) {
+    receiveTaskInstance.setState(ActtivityStateEnum.WAITING);
 
     ReceiveTask2 receiveTask = receiveTaskInstance.getFlowNode();
     String correlationKeyExpression = receiveTask.getMessage().correlationKey();
@@ -53,13 +56,12 @@ public class ReceiveTaskInstanceProcessor
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables) {
-    receiveTaskInstance.setState(FlowNodeStateEnum.FINISHED);
+    receiveTaskInstance.setState(ActtivityStateEnum.FINISHED);
     return terminatingSubscriptionInstanceResult(receiveTaskInstance);
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(
-      ReceiveTask2 receiveTask, ReceiveTaskInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(ReceiveTaskInstance instance) {
     return terminatingSubscriptionInstanceResult(instance);
   }
 

@@ -12,11 +12,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class EventState extends FlowNodeStateDTO {
   @JsonCreator
   protected EventState(
-      UUID elementInstanceId,
-      String elementId,
-      int passedCnt,
-      FlowNodeStateEnum flowNodeStateEnum,
-      String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, flowNodeStateEnum, inputFlowId);
+      UUID elementInstanceId, String elementId, int passedCnt, String inputFlowId) {
+    super(elementInstanceId, elementId, passedCnt, inputFlowId);
   }
 }

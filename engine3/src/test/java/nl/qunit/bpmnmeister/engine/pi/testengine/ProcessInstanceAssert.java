@@ -6,19 +6,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
-import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
 
 public class ProcessInstanceAssert {
 
   private final ProcessInstanceUpdate processInstance;
   private final BpmnTestEngine bpmnTestEngine;
-  private Optional<MultiInstanceState> selectedMultiInstanceElement;
 
   public ProcessInstanceAssert(ProcessInstanceUpdate processInstance, BpmnTestEngine bpmnTestEngine) {
     this.processInstance = processInstance;
@@ -69,23 +65,21 @@ public class ProcessInstanceAssert {
     List<FlowNodeStateDTO> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
     bpmnElementState.forEach(state ->
-        assertThat(state.getState()).as("element " + elementId + " was not terminated").isEqualTo(FlowNodeStateEnum.TERMINATED));
+        assertThat(state.isTerminated()).as("element " + elementId + " was not terminated").isTrue());
     return this;
   }
 
   public ProcessInstanceAssert hasTerminatedElement(String elementId) {
     List<FlowNodeStateDTO> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.get(0).getState()).as("element " + elementId + " was not terminated").isEqualTo(
-        FlowNodeStateEnum.TERMINATED);
+    assertThat(bpmnElementState.get(0).isTerminated()).as("element " + elementId + " was not terminated").isTrue();
     return this;
   }
 
   public ProcessInstanceAssert hasFailedElement(String elementId) {
     List<FlowNodeStateDTO> bpmnElementState = processInstance.getFlowNodeStates().get(elementId);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.get(0).getState()).as("element " + elementId + " was not terminated").isEqualTo(
-        FlowNodeStateEnum.FAILED);
+    assertThat(bpmnElementState.get(0).isFailed()).as("element " + elementId + " was not terminated").isTrue();
     return this;
   }
 
@@ -116,10 +110,6 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert hasVariableMatching(String var1, Consumer<Object> consumer)
       throws JsonProcessingException {
     JsonNode jsonNode = processInstance.getVariables().get(var1);
-//    while (jsonNode == null && !processInstance.getParentInstanceKey().equals(Constants.NONE_UUID)) {
-//      ProcessInstanceUpdate parentProcessInstance = bpmnTestEngine.getProcessInstance(processInstance.getParentInstanceKey());
-//      jsonNode = parentProcessInstance.getVariables().get(var1);
-//    }
     consumer.accept(new ObjectMapper().treeToValue(jsonNode, Object.class));
     return this;
   }

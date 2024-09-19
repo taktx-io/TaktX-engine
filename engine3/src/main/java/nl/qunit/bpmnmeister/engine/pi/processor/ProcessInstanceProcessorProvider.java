@@ -7,7 +7,10 @@ import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.Gateway2;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
+import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
 import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
@@ -24,8 +27,8 @@ public class ProcessInstanceProcessorProvider {
   //  @Inject IntermediateCatchEventProcessor intermediateCatchEventProcessor;
   //  @Inject IntermediateThrowEventProcessor intermediateThrowEventProcessor;
   @Inject EndEventInstanceProcessor endEventProcessor;
-  //  @Inject ExclusiveGatewayProcessor exclusiveGatewayProcessor;
-  //  @Inject ParallelGatewayProcessor parallelGatewayProcessor;
+  @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
+  @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;
   //  @Inject InclusiveGatewayProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   //  @Inject BoundaryEventProcessor boundaryEventProcessor;
@@ -41,7 +44,8 @@ public class ProcessInstanceProcessorProvider {
       return getProcessorForThrowEvent(throwEvent);
     } else if (element instanceof CatchEvent2 catchEvent) {
       return getProcessorForCatchEvent(catchEvent);
-      //    } else if (element instanceof ExclusiveGateway2) {
+    } else if (element instanceof Gateway2 gateway) {
+      return getProcessorForGateway(gateway);
       //      return exclusiveGatewayProcessor;
       //    } else if (element instanceof InclusiveGatewayD2) {
       //      return inclusiveGatewayProcessor;
@@ -52,6 +56,18 @@ public class ProcessInstanceProcessorProvider {
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
+  }
+
+  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForGateway(Gateway2 gateway) {
+
+    if (gateway instanceof ExclusiveGateway2) {
+      return exclusiveGatewayProcessor;
+      //    } else if (gateway instanceof InclusiveGatewayD2) {
+      //      return inclusiveGatewayProcessor;
+    } else if (gateway instanceof ParallelGateway2) {
+      return parallelGatewayProcessor;
+    }
+    throw new IllegalStateException("Unknown gateway element type: " + gateway.getClass());
   }
 
   private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent2 throwEvent) {

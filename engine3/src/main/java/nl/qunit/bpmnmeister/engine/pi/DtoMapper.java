@@ -7,10 +7,16 @@ import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
+import nl.qunit.bpmnmeister.pd.model.ParallelGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTaskDTO;
 import nl.qunit.bpmnmeister.pd.model.SendTask2;
@@ -39,6 +45,9 @@ public interface DtoMapper {
   @Mapping(target = "flowNodes", ignore = true)
   FlowElements2 getFlowElements(FlowElementsDTO flowElements);
 
+  @SubclassMapping(source = ExclusiveGatewayDTO.class, target = ExclusiveGateway2.class)
+  @SubclassMapping(source = ParallelGatewayDTO.class, target = ParallelGateway2.class)
+  @SubclassMapping(source = InclusiveGatewayDTO.class, target = InclusiveGateway2.class)
   @SubclassMapping(source = StartEventDTO.class, target = StartEvent2.class)
   @SubclassMapping(source = EndEventDTO.class, target = EndEvent2.class)
   @SubclassMapping(source = ServiceTaskDTO.class, target = ServiceTask2.class)
@@ -49,7 +58,7 @@ public interface DtoMapper {
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow2.class)
   @SubclassMapping(source = CallActivityDTO.class, target = CallActivity2.class)
   @Mapping(target = "parentElement", ignore = true)
-  FlowElement2 getFlowElement(FlowElementDTO flowElements);
+  FlowElement2 getFlowElement(FlowElementDTO flowElement);
 
   @ObjectFactory
   default <T extends BaseElement2> T resolveEquipment(

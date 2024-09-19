@@ -9,7 +9,7 @@ import nl.qunit.bpmnmeister.pi.instances.CatchEventInstance;
 
 @NoArgsConstructor
 public abstract class CatchEventInstanceProcessor<
-        E extends CatchEvent2, I extends CatchEventInstance>
+        E extends CatchEvent2, I extends CatchEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
 
   protected CatchEventInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
@@ -18,7 +18,7 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables) {
+      FlowElements2 flowElements, I flowNodeInstance, String inputFlowId, Variables2 variables) {
     return processSpecificCatchEventInstance(flowElements, flowNodeInstance, variables);
   }
 

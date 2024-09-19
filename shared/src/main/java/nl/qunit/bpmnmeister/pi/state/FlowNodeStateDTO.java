@@ -34,19 +34,21 @@ public abstract class FlowNodeStateDTO {
   @Setter private String elementId;
 
   private final int passedCnt;
-  private final FlowNodeStateEnum state;
   private final String inputFlowId;
 
   protected FlowNodeStateDTO(
-      UUID elementInstanceId,
-      String elementId,
-      int passedCnt,
-      FlowNodeStateEnum state,
-      String inputFlowId) {
+      UUID elementInstanceId, String elementId, int passedCnt, String inputFlowId) {
     this.elementInstanceId = elementInstanceId;
     this.elementId = elementId;
     this.passedCnt = passedCnt;
-    this.state = state;
     this.inputFlowId = inputFlowId;
+  }
+
+  public boolean isTerminated() {
+    return false;
+  }
+
+  public boolean isFailed() {
+    return false;
   }
 }

@@ -9,11 +9,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class GatewayState extends FlowNodeStateDTO {
 
   protected GatewayState(
-      UUID elementInstanceId,
-      String elementId,
-      int passedCnt,
-      FlowNodeStateEnum state,
-      String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
+      UUID elementInstanceId, String elementId, int passedCnt, String inputFlowId) {
+    super(elementInstanceId, elementId, passedCnt, inputFlowId);
   }
 }

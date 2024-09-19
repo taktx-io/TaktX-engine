@@ -4,18 +4,51 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @NoArgsConstructor
 @Setter
 @Getter
 public abstract class ActivityInstance<N extends FlowNode2> extends FLowNodeInstance<N> {
   private int loopCnt;
+  private ActtivityStateEnum state;
 
   protected ActivityInstance(FLowNodeInstance parentInstance, N flowNode) {
     super(parentInstance, flowNode);
+    this.state = ActtivityStateEnum.READY;
   }
 
   public void increaseLoopCnt() {
     loopCnt++;
+  }
+
+  @Override
+  public boolean stateAllowsStart() {
+    return state == ActtivityStateEnum.READY;
+  }
+
+  @Override
+  public boolean stateAllowsContinue() {
+    return state == ActtivityStateEnum.WAITING;
+  }
+
+  @Override
+  public boolean stateAllowsTerminate() {
+    return state == ActtivityStateEnum.READY || state == ActtivityStateEnum.WAITING;
+  }
+
+  @Override
+  public boolean isNotAwaiting() {
+    return state == ActtivityStateEnum.FINISHED || state == ActtivityStateEnum.TERMINATED;
+  }
+
+  @Override
+  public boolean isCompleted() {
+    return state == ActtivityStateEnum.FINISHED || state == ActtivityStateEnum.TERMINATED;
+  }
+
+  @Override
+  public void terminate() {
+    state = ActtivityStateEnum.TERMINATED;
   }
 }

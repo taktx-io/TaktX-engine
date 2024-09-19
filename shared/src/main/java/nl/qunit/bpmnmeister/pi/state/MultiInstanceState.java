@@ -19,7 +19,7 @@ public class MultiInstanceState extends ActivityState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("state") ActtivityStateEnum state,
       @Nonnull @JsonProperty("inputFlowId") String inputFlowId,
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStatesDTO flowNodeStates) {
     super(state, elementId, elementInstanceId, passedCnt, loopCnt, inputFlowId);

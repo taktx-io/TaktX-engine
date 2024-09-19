@@ -10,7 +10,7 @@ import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public class SubProcess2 extends Activity2 {
+public class SubProcess2 extends Activity2 implements WIthChildElements {
   private FlowElements2 elements;
 
   @Override

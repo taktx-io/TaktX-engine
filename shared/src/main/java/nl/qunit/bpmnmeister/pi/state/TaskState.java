@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 public class TaskState extends ActivityState {
   @JsonCreator
   public TaskState(
-      @JsonProperty("state") FlowNodeStateEnum state,
+      @JsonProperty("state") ActtivityStateEnum state,
       @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,

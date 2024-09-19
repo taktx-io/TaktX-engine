@@ -7,12 +7,11 @@ import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.NewStartCommand;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @Getter
 public class InstanceResult {
 
-  private final List<FLowNodeInstance<?>> newFlowNodeInstances = new ArrayList<>();
+  private final List<FLowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayList<>();
   private final List<ExternalTaskInfo> externalTaskRequests = new ArrayList<>();
   private final List<NewStartCommand> newStartCommands = new ArrayList<>();
   private final List<UUID> newTerminateCommands = new ArrayList<>();
@@ -26,12 +25,12 @@ public class InstanceResult {
     return new InstanceResult();
   }
 
-  public void addNewFlowNodeInstance(FLowNodeInstance flowNodeInstance) {
-    newFlowNodeInstances.add(flowNodeInstance);
+  public void addNewFlowNodeInstance(FLowNodeInstanceInfo flowNodeInstanceInfo) {
+    newFlowNodeInstanceInfos.add(flowNodeInstanceInfo);
   }
 
   public boolean hasNewFlowNodeInstances() {
-    return !newFlowNodeInstances.isEmpty();
+    return !newFlowNodeInstanceInfos.isEmpty();
   }
 
   public void addExternalTaskRequest(ExternalTaskInfo externalTaskInfo) {
@@ -51,7 +50,7 @@ public class InstanceResult {
   }
 
   public void merge(InstanceResult toMerge) {
-    newFlowNodeInstances.addAll(toMerge.getNewFlowNodeInstances());
+    newFlowNodeInstanceInfos.addAll(toMerge.getNewFlowNodeInstanceInfos());
     externalTaskRequests.addAll(toMerge.getExternalTaskRequests());
     newStartCommands.addAll(toMerge.getNewStartCommands());
     continuations.addAll(toMerge.getContinuations());

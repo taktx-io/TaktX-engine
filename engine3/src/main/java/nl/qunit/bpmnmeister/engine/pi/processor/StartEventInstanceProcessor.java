@@ -8,7 +8,6 @@ import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -21,15 +20,13 @@ public class StartEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      StartEvent2 flowNode, StartEventInstance instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(StartEventInstance instance) {
     return InstanceResult.empty();
   }
 
   @Override
   protected InstanceResult processSpecificCatchEventInstance(
       FlowElements2 flowElements, StartEventInstance flowNodeInstance, Variables2 variables) {
-    flowNodeInstance.setState(FlowNodeStateEnum.FINISHED);
     return new InstanceResult();
   }
 }

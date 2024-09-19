@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 
 @NoArgsConstructor
@@ -47,14 +47,14 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, I flownodeInstance, Variables2 variables) {
+      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables) {
     InstanceResult instanceResult = InstanceResult.empty();
     ExternalTask2 flowNode = flownodeInstance.getFlowNode();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(
             flowNode.getWorkerDefinition(), flowNode, flownodeInstance, variables, null);
     instanceResult.addExternalTaskRequest(externalTaskInfo);
-    flownodeInstance.setState(FlowNodeStateEnum.WAITING);
+    flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
     return instanceResult;
   }
@@ -72,7 +72,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
     InstanceResult instanceResult = InstanceResult.empty();
     if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
-      externalTaskInstance.setState(FlowNodeStateEnum.FINISHED);
+      externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
     } else {
       E externalTask = externalTaskInstance.getFlowNode();
       if (!externalTask.getRetries().equals(Constants.NONE)) {
@@ -129,18 +129,18 @@ public abstract class ExternalTaskInstanceProcessor<
         } else {
           // No more retries, either by limit or by disallowing retry by the worker
           // fail the task
-          externalTaskInstance.setState(FlowNodeStateEnum.FAILED);
+          externalTaskInstance.setState(ActtivityStateEnum.FAILED);
         }
       } else {
         // No retries allowed, fail the task
-        externalTaskInstance.setState(FlowNodeStateEnum.FAILED);
+        externalTaskInstance.setState(ActtivityStateEnum.FAILED);
       }
     }
     return instanceResult;
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(E externalTask, I instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(I instance) {
     // Nothing to do here
     return InstanceResult.empty();
   }

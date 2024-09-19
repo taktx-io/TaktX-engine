@@ -1,12 +1,16 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import nl.qunit.bpmnmeister.pd.model.Event2;
+import lombok.Setter;
+import nl.qunit.bpmnmeister.pd.model.Gateway2;
 
+@Setter
+@Getter
 @NoArgsConstructor
-public abstract class EventInstance<N extends Event2> extends FLowNodeInstance<N> {
+public abstract class GatewayInstance<N extends Gateway2> extends FLowNodeInstance<N> {
 
-  protected EventInstance(FLowNodeInstance parentInstance, N flowNode) {
+  protected GatewayInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
   }
 

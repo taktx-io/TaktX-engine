@@ -17,7 +17,7 @@ public class CallActivityState extends ActivityState {
 
   @JsonCreator
   public CallActivityState(
-      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("state") ActtivityStateEnum state,
       @Nonnull @JsonProperty("childProcessInstanceId") UUID childProcessInstanceId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,

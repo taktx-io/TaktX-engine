@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @Getter
 @NoArgsConstructor
@@ -15,8 +14,6 @@ public abstract class FLowNodeInstance<N extends FlowNode2> {
 
   @Setter private int passedCnt;
 
-  @Setter private FlowNodeStateEnum state;
-
   @Setter private String inputFlowId;
 
   @Setter private N flowNode;
@@ -25,24 +22,23 @@ public abstract class FLowNodeInstance<N extends FlowNode2> {
 
   protected FLowNodeInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     this.parentInstance = parentInstance;
-    this.state = FlowNodeStateEnum.READY;
     this.elementInstanceId = UUID.randomUUID();
     this.flowNode = flowNode;
-  }
-
-  public boolean isAwaiting() {
-    return state == FlowNodeStateEnum.READY || state == FlowNodeStateEnum.WAITING;
-  }
-
-  public boolean isCompleted() {
-    return state == FlowNodeStateEnum.FINISHED || state == FlowNodeStateEnum.TERMINATED;
-  }
-
-  public boolean isNotAwaiting() {
-    return state == FlowNodeStateEnum.FINISHED || state == FlowNodeStateEnum.TERMINATED;
   }
 
   public void increasePassedCnt() {
     this.passedCnt++;
   }
+
+  public abstract boolean stateAllowsStart();
+
+  public abstract boolean stateAllowsTerminate();
+
+  public abstract boolean stateAllowsContinue();
+
+  public abstract boolean isNotAwaiting();
+
+  public abstract boolean isCompleted();
+
+  public abstract void terminate();
 }

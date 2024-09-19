@@ -9,7 +9,7 @@ import nl.qunit.bpmnmeister.pd.model.Task2;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.TaskInstance;
 import nl.qunit.bpmnmeister.pi.Variables2;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -22,16 +22,18 @@ public class TaskInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(
-      Task2 flowNode, TaskInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(TaskInstance instance) {
     // Nothing to do here
     return InstanceResult.empty();
   }
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, TaskInstance flownodeInstance, Variables2 variables) {
-    flownodeInstance.setState(FlowNodeStateEnum.FINISHED);
+      FlowElements2 flowElements,
+      TaskInstance flowNodeInstance,
+      String inputFlowId,
+      Variables2 variables) {
+    flowNodeInstance.setState(ActtivityStateEnum.FINISHED);
     return InstanceResult.empty();
   }
 

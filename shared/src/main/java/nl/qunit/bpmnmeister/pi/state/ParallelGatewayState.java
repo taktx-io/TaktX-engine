@@ -19,9 +19,8 @@ public class ParallelGatewayState extends GatewayState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @Nonnull @JsonProperty("triggeredFlows") Set<String> triggeredFlows,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("state") FlowNodeStateEnum state,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, inputFlowId);
     this.triggeredFlows = triggeredFlows;
   }
 }

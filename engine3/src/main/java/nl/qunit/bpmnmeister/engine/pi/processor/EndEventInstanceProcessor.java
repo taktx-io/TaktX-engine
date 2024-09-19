@@ -8,7 +8,6 @@ import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -21,15 +20,13 @@ public class EndEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      EndEvent2 flowNode, EndEventInstance instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(EndEventInstance instance) {
     return InstanceResult.empty();
   }
 
   @Override
   protected InstanceResult processSpecificThrowEventInstance(
       FlowElements2 flowElements, EndEventInstance flowNodeInstance, Variables2 variables) {
-    flowNodeInstance.setState(FlowNodeStateEnum.FINISHED);
     return new InstanceResult();
   }
 }

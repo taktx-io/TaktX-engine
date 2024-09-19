@@ -42,8 +42,9 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger2;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.ActivityState;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import org.apache.commons.io.IOUtils;
@@ -91,7 +92,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private KafkaProducerUtil<String, String> xmlEmitter;
   private KafkaProducerUtil<String, StartCommand>  startCommandEmitter;
   private KafkaProducerUtil<MessageEventKey, MessageEvent> messageEventEmitter;
-  private FlowNodeStateDTO selectedFlowNodeState;
+  private FlowNodeStateDTO selectedFlowNodeInstance;
 
   public BpmnTestEngine(Clock clock) {
     this.mutableClock = (MutableClock) clock;
@@ -341,10 +342,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           if (childKeys.size() >= expectedCount) {
             UUID processInstanceKey = childKeys.iterator().next();
             ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
-            ProcessInstanceUpdate processInstanceUpdate =
+            return
                 processInstance != null && processInstance.getFlowNodeStates().getState() == processInstanceState
                     ? processInstance : null;
-            return processInstanceUpdate;
           }
           return null;
         }, Objects::nonNull);
@@ -561,7 +561,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return processInstanceMap.get(parentInstanceKey);
   }
 
-  public BpmnTestEngine waitUntilElementHasState(String elementId, FlowNodeStateEnum state, Duration duration) {
+  public BpmnTestEngine waitUntilActivityHasState(String elementId, ActtivityStateEnum state, Duration duration) {
 
     activeProcessInstance = Awaitility.await()
         .atMost(duration)
@@ -578,8 +578,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                 poll.getProcessInstanceKey() != null &&
                 poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
                 !poll.getFlowNodeStates().get(elementId).isEmpty()) {
-              selectedFlowNodeState = poll.getFlowNodeStates().get(elementId).getFirst();
-              if (state == selectedFlowNodeState.getState()) {
+              selectedFlowNodeInstance = poll.getFlowNodeStates().get(elementId).getFirst();
+              if (selectedFlowNodeInstance instanceof ActivityState activityState && state == activityState.getState()) {
                 return poll;
               }
             }
@@ -589,7 +589,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;  }
 
   public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
-    return waitUntilElementHasState(elementId, FlowNodeStateEnum.WAITING, duration);
+    return waitUntilActivityHasState(elementId, ActtivityStateEnum.WAITING, duration);
   }
 
   public BpmnTestEngine waitUntilElementIsActive(String elementId) {
@@ -597,15 +597,16 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
-    return waitUntilElementHasState(elementId, FlowNodeStateEnum.FAILED, DEFAULT_DURATION);
+    return waitUntilActivityHasState(elementId, ActtivityStateEnum.FAILED, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilElementIsWaiting(String elementId) {
-    return waitUntilElementHasState(elementId, FlowNodeStateEnum.WAITING, DEFAULT_DURATION);
+    return waitUntilActivityHasState(elementId, ActtivityStateEnum.WAITING, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine terminateElemeent() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(selectedFlowNodeState.getElementInstanceId())));
+    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(
+        selectedFlowNodeInstance.getElementInstanceId())));
     return this;
   }
 }

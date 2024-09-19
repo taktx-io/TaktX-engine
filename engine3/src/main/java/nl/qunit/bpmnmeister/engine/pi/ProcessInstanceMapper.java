@@ -12,10 +12,13 @@ import nl.qunit.bpmnmeister.pi.TaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.CallActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.ExclusiveGatewayInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
+import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.MultiInstanceInstance;
+import nl.qunit.bpmnmeister.pi.instances.ParallelGatewayInstance;
 import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
@@ -24,10 +27,13 @@ import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
+import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayState;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeStateDTO;
+import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventState;
 import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventState;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
+import nl.qunit.bpmnmeister.pi.state.ParallelGatewayState;
 import nl.qunit.bpmnmeister.pi.state.ReceiveTaskState;
 import nl.qunit.bpmnmeister.pi.state.SendTaskState;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskState;
@@ -43,6 +49,27 @@ import org.mapstruct.TargetType;
 
 @Mapper(componentModel = "jakarta")
 public interface ProcessInstanceMapper {
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.ParallelGateway2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  ParallelGatewayInstance map(ParallelGatewayState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.InclusiveGateway2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  InclusiveGatewayInstance map(InclusiveGatewayState source, @Context FlowElements2 flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  ExclusiveGatewayInstance map(ExclusiveGatewayState source, @Context FlowElements2 flowElements);
+
   @Mapping(
       target = "flowNode",
       expression =
@@ -154,10 +181,14 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessState.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityState.class)
   @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceState.class)
+  @SubclassMapping(target = ExclusiveGatewayInstance.class, source = ExclusiveGatewayState.class)
+  @SubclassMapping(target = InclusiveGatewayInstance.class, source = InclusiveGatewayState.class)
+  @SubclassMapping(target = ParallelGatewayInstance.class, source = ParallelGatewayState.class)
 
   // Task state should come last
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "flowNode", ignore = true)
   FLowNodeInstance map(FlowNodeStateDTO source, @Context FlowElements2 flowElements);
 
   ProcessInstance2 map(ProcessInstanceDTO source, @Context FlowElements2 flowElements);
@@ -177,6 +208,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessState.class)
   @SubclassMapping(source = CallActivityInstance.class, target = CallActivityState.class)
   @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceState.class)
+  @SubclassMapping(source = ExclusiveGatewayInstance.class, target = ExclusiveGatewayState.class)
+  @SubclassMapping(source = InclusiveGatewayInstance.class, target = InclusiveGatewayState.class)
+  @SubclassMapping(source = ParallelGatewayInstance.class, target = ParallelGatewayState.class)
   // Task state should come last
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
   @Mapping(target = "elementId", source = "flowNode.id")

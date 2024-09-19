@@ -13,7 +13,7 @@ import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.NewStartCommand;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.CallActivityInstance;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeStateEnum;
+import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -32,8 +32,11 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, CallActivityInstance callActivityInstance, Variables2 variables) {
-    callActivityInstance.setState(FlowNodeStateEnum.WAITING);
+      FlowElements2 flowElements,
+      CallActivityInstance callActivityInstance,
+      String inputFlowId,
+      Variables2 variables) {
+    callActivityInstance.setState(ActtivityStateEnum.WAITING);
 
     InstanceResult instanceResult = InstanceResult.empty();
     UUID newProcessInstanceKey = UUID.randomUUID();
@@ -58,7 +61,7 @@ public class CallActivityInstanceProcessor
       CallActivityInstance instance,
       ContinueFlowElementTrigger2 trigger,
       Variables2 processInstanceVariables) {
-    instance.setState(FlowNodeStateEnum.FINISHED);
+    instance.setState(ActtivityStateEnum.FINISHED);
     if (instance.getFlowNode().isPropagateAllChildVariables()) {
       processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
     }
@@ -66,8 +69,7 @@ public class CallActivityInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(
-      CallActivity2 flowNode, CallActivityInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(CallActivityInstance instance) {
     InstanceResult instanceResult = InstanceResult.empty();
     instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
     return instanceResult;

@@ -7,10 +7,13 @@ import nl.qunit.bpmnmeister.pd.model.FlowElement2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.Gateway2;
 import nl.qunit.bpmnmeister.pd.model.Message2;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
 import nl.qunit.bpmnmeister.pd.model.SubProcess2;
+import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
 
 @ApplicationScoped
 public class DefinitionMapper {
@@ -27,7 +30,38 @@ public class DefinitionMapper {
 
     setParentReferences(flowElements1.getElements(), null);
     setMessageReferences(flowElements1.getElements(), definitionsDTO.getMessages());
+    setSequenceFlowReferences(flowElements1);
     return flowElements1;
+  }
+
+  private void setSequenceFlowReferences(FlowElements2 flowElements) {
+    Map<String, SequenceFlow2> sequenceFlows = flowElements.getSequenceFlows();
+    flowElements.getElements().values().stream()
+        .filter(FlowNode2.class::isInstance)
+        .map(FlowNode2.class::cast)
+        .forEach(
+            flowNode -> {
+              flowNode
+                  .getIncoming()
+                  .forEach(id -> flowNode.getIncomingSequenceFlows().add(sequenceFlows.get(id)));
+              flowNode
+                  .getOutgoing()
+                  .forEach(id -> flowNode.getOutGoingSequenceFlows().add(sequenceFlows.get(id)));
+              if (flowNode instanceof Gateway2 gateway2) {
+                gateway2.setDefaultSequenceFlow(sequenceFlows.get(gateway2.getDefaultFlow()));
+              }
+              if (flowNode instanceof WIthChildElements withChildElements) {
+                setSequenceFlowReferences(withChildElements.getElements());
+              }
+            });
+
+    sequenceFlows
+        .values()
+        .forEach(
+            sequenceFlow -> {
+              sequenceFlow.setSourceNode(flowElements.getFlowNode(sequenceFlow.getSource()).get());
+              sequenceFlow.setTargetNode(flowElements.getFlowNode(sequenceFlow.getTarget()).get());
+            });
   }
 
   private void setMessageReferences(

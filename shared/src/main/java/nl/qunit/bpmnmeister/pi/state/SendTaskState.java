@@ -15,7 +15,7 @@ public class SendTaskState extends ExternalTaskState {
 
   @JsonCreator
   public SendTaskState(
-      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("state") ActtivityStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,

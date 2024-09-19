@@ -17,8 +17,7 @@ public class IntermediateThrowEventState extends ThrowEventState {
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("state") FlowNodeStateEnum flowNodeStateEnum,
       @JsonProperty("inputFlowId") String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, flowNodeStateEnum, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, inputFlowId);
   }
 }

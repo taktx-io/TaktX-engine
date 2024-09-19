@@ -10,16 +10,28 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder(toBuilder = true)
 public abstract class ActivityState extends FlowNodeStateDTO {
 
+  private final ActtivityStateEnum state;
   private final int loopCnt;
 
   protected ActivityState(
-      FlowNodeStateEnum state,
+      ActtivityStateEnum state,
       String elementId,
       UUID elementInstanceId,
       int passedCnt,
       int loopCnt,
       String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, state, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+    this.state = state;
     this.loopCnt = loopCnt;
+  }
+
+  @Override
+  public boolean isTerminated() {
+    return state == ActtivityStateEnum.TERMINATED;
+  }
+
+  @Override
+  public boolean isFailed() {
+    return state == ActtivityStateEnum.FAILED;
   }
 }

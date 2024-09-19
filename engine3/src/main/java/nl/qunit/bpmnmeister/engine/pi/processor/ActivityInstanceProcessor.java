@@ -1,16 +1,19 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
+import java.util.Set;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 
 @NoArgsConstructor
 public abstract class ActivityInstanceProcessor<
-        E extends Activity2, I extends ActivityInstance, C extends ContinueFlowElementTrigger2>
+        E extends Activity2, I extends ActivityInstance<?>, C extends ContinueFlowElementTrigger2>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   protected ActivityInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
@@ -19,8 +22,9 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, I flownodeInstance, Variables2 variables) {
-    return processStartSpecificActivityInstance(flowElements, flownodeInstance, variables);
+      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables) {
+    return processStartSpecificActivityInstance(
+        flowElements, flownodeInstance, inputFlowId, variables);
   }
 
   @Override
@@ -30,7 +34,8 @@ public abstract class ActivityInstanceProcessor<
       //      E flowNode,
       I flowNodeInstance,
       C trigger,
-      Variables2 processInstanceVariables) {
+      Variables2 processInstanceVariables,
+      FlowNodeStates2 flowNodeStates) {
     return processContinueSpecificActivityInstance(
         subProcessLevel,
         flowElements,
@@ -41,12 +46,12 @@ public abstract class ActivityInstanceProcessor<
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(E flowNode, I instance) {
-    return processTerminateSpecificActivityInstance(flowNode, instance);
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
+    return processTerminateSpecificActivityInstance(instance);
   }
 
   protected abstract InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, I flownodeInstance, Variables2 variables);
+      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables);
 
   protected abstract InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
@@ -56,6 +61,10 @@ public abstract class ActivityInstanceProcessor<
       C trigger,
       Variables2 processInstanceVariables);
 
-  protected abstract InstanceResult processTerminateSpecificActivityInstance(
-      E flowNode, I instance);
+  protected abstract InstanceResult processTerminateSpecificActivityInstance(I instance);
+
+  @Override
+  protected Set<SequenceFlow2> getSelectedSequenceFlows(I flowNodeInstance, Variables2 variables) {
+    return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
+  }
 }

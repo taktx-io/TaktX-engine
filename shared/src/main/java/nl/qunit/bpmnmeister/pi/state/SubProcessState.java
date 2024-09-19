@@ -21,7 +21,7 @@ public class SubProcessState extends ActivityState {
       @Nonnull @JsonProperty("flowNodeStates") FlowNodeStatesDTO flowNodeStates,
       @Nonnull @JsonProperty("elementId") String elementId,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @Nonnull @JsonProperty("state") FlowNodeStateEnum state,
+      @Nonnull @JsonProperty("state") ActtivityStateEnum state,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputFlowId) {

@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-public enum FlowNodeStateEnum {
+public enum ActtivityStateEnum {
   READY,
   WAITING,
   TERMINATED,

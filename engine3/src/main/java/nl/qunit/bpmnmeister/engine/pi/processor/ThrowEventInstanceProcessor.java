@@ -9,7 +9,7 @@ import nl.qunit.bpmnmeister.pi.instances.ThrowEventInstance;
 
 @NoArgsConstructor
 public abstract class ThrowEventInstanceProcessor<
-        E extends ThrowEvent2, I extends ThrowEventInstance>
+        E extends ThrowEvent2, I extends ThrowEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
 
   protected ThrowEventInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
@@ -18,7 +18,7 @@ public abstract class ThrowEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables) {
+      FlowElements2 flowElements, I flowNodeInstance, String inputFlowId, Variables2 variables) {
     return processSpecificThrowEventInstance(flowElements, flowNodeInstance, variables);
   }
 
