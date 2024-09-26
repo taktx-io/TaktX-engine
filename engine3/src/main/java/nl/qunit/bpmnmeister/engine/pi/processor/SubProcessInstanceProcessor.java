@@ -90,7 +90,7 @@ public class SubProcessInstanceProcessor
     FLowNodeInstance<?> flowNodeInstance =
         subProcessInstance
             .getFlowNodeStates()
-            .get(trigger.getElementInstanceIdPath().get(subProcessLevel));
+            .getInstanceWithInstanceId(trigger.getElementInstanceIdPath().get(subProcessLevel));
     FLowNodeInstanceProcessor<?, ?, ?> processor =
         processInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 

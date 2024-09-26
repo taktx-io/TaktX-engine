@@ -35,8 +35,6 @@ public class InclusiveGatewayProcessor
     Set<String> incomingFlows = element.getIncoming();
     Set<String> triggeredInputFlows = new HashSet<>(oldState.getTriggeredInputFlows());
     triggeredInputFlows.add(trigger.getInputFlowId());
-    Set<String> remainingIncomingFlows = new HashSet<>(incomingFlows);
-    remainingIncomingFlows.removeAll(triggeredInputFlows);
 
     if (canTriggerOutputFlows(remainingIncomingFlows, definition, processInstance)) {
       Set<String> newActiveFlows =

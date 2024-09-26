@@ -1,5 +1,7 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,6 +11,7 @@ import nl.qunit.bpmnmeister.pd.model.Gateway2;
 @Getter
 @NoArgsConstructor
 public abstract class GatewayInstance<N extends Gateway2> extends FLowNodeInstance<N> {
+  private Set<String> selectedOutputFlows = new HashSet<>();
 
   protected GatewayInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);

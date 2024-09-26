@@ -11,8 +11,6 @@ import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
 @NoArgsConstructor
 public class InclusiveGateway2 extends Gateway2 {
 
-  private String defaultFlow;
-
   @Override
   protected InclusiveGatewayInstance newSpecificGatewayInstance(
       FLowNodeInstance<?> parentInstance) {

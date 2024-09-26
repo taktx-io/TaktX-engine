@@ -49,34 +49,46 @@ public abstract class GatewayInstanceProcessor<
   }
 
   @Override
-  public Set<SequenceFlow2> getSelectedSequenceFlows(I gatewayInstance, Variables2 variables) {
-    E gatewayNode = gatewayInstance.getFlowNode();
-    Set<SequenceFlow2> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
-    Set<SequenceFlow2> flowsWithCondition =
-        sequenceFlows.stream()
-            .filter(sequenceFlow -> !FlowCondition.NONE.equals(sequenceFlow.getCondition()))
-            .filter(
-                sequenceFlow ->
-                    feelExpressionHandler
-                        .processFeelExpression(
-                            sequenceFlow.getCondition().getExpression(), variables)
-                        .asBoolean())
-            .collect(Collectors.toSet());
+  protected Set<SequenceFlow2> getSelectedSequenceFlows(
+      I gatewayInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates,
+      Variables2 variables) {
+    Set<SequenceFlow2> outgoingFlows = new HashSet<>();
+    if (canTriggerOutputFlows(gatewayInstance, flowElements, flowNodeStates)) {
+      E gatewayNode = gatewayInstance.getFlowNode();
+      Set<SequenceFlow2> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
+      Set<SequenceFlow2> flowsWithCondition =
+          sequenceFlows.stream()
+              .filter(sequenceFlow -> !FlowCondition.NONE.equals(sequenceFlow.getCondition()))
+              .filter(
+                  sequenceFlow ->
+                      feelExpressionHandler
+                          .processFeelExpression(
+                              sequenceFlow.getCondition().getExpression(), variables)
+                          .asBoolean())
+              .collect(Collectors.toSet());
 
-    Set<SequenceFlow2> outgoingFlows = new HashSet<>(flowsWithCondition);
-
-    if (outgoingFlows.isEmpty() && !Constants.NONE.equals(gatewayNode.getDefaultFlow())) {
-      outgoingFlows.add(gatewayNode.getDefaultSequenceFlow());
-    } else if (outgoingFlows.isEmpty() && !sequenceFlows.isEmpty()) {
-      // Last chance, if no condition is met and no default flow is set, take the outgoing flows
-      outgoingFlows.addAll(sequenceFlows);
+      outgoingFlows.addAll(flowsWithCondition);
+      if (outgoingFlows.isEmpty() && !Constants.NONE.equals(gatewayNode.getDefaultFlow())) {
+        outgoingFlows.add(gatewayNode.getDefaultSequenceFlow());
+      } else if (outgoingFlows.isEmpty() && !sequenceFlows.isEmpty()) {
+        // Last chance, if no condition is met and no default flow is set, take the outgoing flows
+        outgoingFlows.addAll(sequenceFlows);
+      }
+      if (outgoingFlows.isEmpty()) {
+        throw new IllegalStateException(
+            "No outgoing flow could be selected found for exclusive gateway: "
+                + gatewayNode.getId());
+      }
     }
-    if (outgoingFlows.isEmpty()) {
-      throw new IllegalStateException(
-          "No outgoing flow could be selected found for exclusive gateway: " + gatewayNode.getId());
-    }
+    gatewayInstance.setSelectedOutputFlows(
+        outgoingFlows.stream().map(SequenceFlow2::getId).collect(Collectors.toSet()));
     return outgoingFlows;
   }
+
+  protected abstract boolean canTriggerOutputFlows(
+      I gatewayInstance, FlowElements2 flowElements, FlowNodeStates2 flowNodeStates);
 
   @Override
   protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {

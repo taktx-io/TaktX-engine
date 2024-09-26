@@ -9,6 +9,7 @@ import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.Gateway2;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
@@ -29,7 +30,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject EndEventInstanceProcessor endEventProcessor;
   @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;
-  //  @Inject InclusiveGatewayProcessor inclusiveGatewayProcessor;
+  @Inject InclusiveGatewayInstanceProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   //  @Inject BoundaryEventProcessor boundaryEventProcessor;
   @Inject TaskInstanceProcessor taskProcessor;
@@ -62,8 +63,8 @@ public class ProcessInstanceProcessorProvider {
 
     if (gateway instanceof ExclusiveGateway2) {
       return exclusiveGatewayProcessor;
-      //    } else if (gateway instanceof InclusiveGatewayD2) {
-      //      return inclusiveGatewayProcessor;
+    } else if (gateway instanceof InclusiveGateway2) {
+      return inclusiveGatewayProcessor;
     } else if (gateway instanceof ParallelGateway2) {
       return parallelGatewayProcessor;
     }

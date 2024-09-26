@@ -141,7 +141,7 @@ public class ProcessInstanceProcessor2
         ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO, flowElements);
         FlowNodeStates2 flowNodeStates = processInstance.getFlowNodeStates();
         FLowNodeInstance<?> flowNodeInstance =
-            flowNodeStates.get(trigger.getElementInstanceIdPath().getFirst());
+            flowNodeStates.getInstanceWithInstanceId(trigger.getElementInstanceIdPath().getFirst());
         Variables2 processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
 
         FLowNodeInstanceProcessor<?, ?, ?> processor =
@@ -198,7 +198,7 @@ public class ProcessInstanceProcessor2
           FLowNodeInstance<?> instance =
               processInstance
                   .getFlowNodeStates()
-                  .get(trigger.getElementInstanceIdPath().getFirst());
+                  .getInstanceWithInstanceId(trigger.getElementInstanceIdPath().getFirst());
           if (instance != null) {
             FLowNodeInstanceProcessor<?, ?, ?> processor =
                 processInstanceProcessorProvider.getProcessor(instance.getFlowNode());

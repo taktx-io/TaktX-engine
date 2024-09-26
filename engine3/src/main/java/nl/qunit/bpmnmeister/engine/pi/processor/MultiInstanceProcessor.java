@@ -35,7 +35,10 @@ public class MultiInstanceProcessor
 
   @Override
   protected Set<SequenceFlow2> getSelectedSequenceFlows(
-      MultiInstanceInstance flowNodeInstance, Variables2 variables) {
+      MultiInstanceInstance flowNodeInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates,
+      Variables2 variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
@@ -168,7 +171,7 @@ public class MultiInstanceProcessor
 
     UUID subElementId = trigger.getElementInstanceIdPath().get(subProcessLevel);
     FLowNodeInstance<?> iterationInstance =
-        multiInstanceInstance.getFlowNodeStates().get(subElementId);
+        multiInstanceInstance.getFlowNodeStates().getInstanceWithInstanceId(subElementId);
     FlowElements2 subFlowElements = new FlowElements2();
     Activity2 activity = multiInstanceInstance.getFlowNode();
     subFlowElements.addFlowElement(activity);

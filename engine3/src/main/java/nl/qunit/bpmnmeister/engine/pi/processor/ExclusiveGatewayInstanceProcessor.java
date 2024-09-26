@@ -8,6 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 import nl.qunit.bpmnmeister.pi.Variables2;
 import nl.qunit.bpmnmeister.pi.instances.ExclusiveGatewayInstance;
 
@@ -21,6 +22,14 @@ public class ExclusiveGatewayInstanceProcessor
   public ExclusiveGatewayInstanceProcessor(
       IoMappingProcessor ioMappingProcessor, FeelExpressionHandler feelExpressionHandler) {
     super(ioMappingProcessor, feelExpressionHandler);
+  }
+
+  @Override
+  protected boolean canTriggerOutputFlows(
+      ExclusiveGatewayInstance gatewayInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates) {
+    return true;
   }
 
   @Override

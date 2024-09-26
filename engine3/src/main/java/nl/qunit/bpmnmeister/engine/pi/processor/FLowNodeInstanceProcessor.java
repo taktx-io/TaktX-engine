@@ -50,6 +50,7 @@ public abstract class FLowNodeInstanceProcessor<
         instanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
+        flowElements,
         flowNodeStates);
 
     return instanceResult;
@@ -81,6 +82,7 @@ public abstract class FLowNodeInstanceProcessor<
         instanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
+        flowElements,
         flowNodeStates);
 
     return instanceResult;
@@ -110,6 +112,7 @@ public abstract class FLowNodeInstanceProcessor<
       InstanceResult instanceResult,
       Variables2 processInstanceVariables,
       boolean isIterationInMultiInstance,
+      FlowElements2 flowElements,
       FlowNodeStates2 flowNodeStates) {
     if (flownodeInstance.isCompleted()) {
 
@@ -122,7 +125,8 @@ public abstract class FLowNodeInstanceProcessor<
 
       flownodeInstance.increasePassedCnt();
       if (!isIterationInMultiInstance) {
-        getSelectedSequenceFlows(flownodeInstance, processInstanceVariables)
+        getSelectedSequenceFlows(
+                flownodeInstance, flowElements, flowNodeStates, processInstanceVariables)
             .forEach(
                 sequenceFlow -> {
                   FLowNodeInstance<?> fLowNodeInstance =
@@ -138,7 +142,10 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected abstract Set<SequenceFlow2> getSelectedSequenceFlows(
-      I flowNodeInstance, Variables2 variables);
+      I flowNodeInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates,
+      Variables2 variables);
 
   protected Variables2 getOutputVariables(
       Variables2 processInstanceVariables, WithIoMapping withIoMapping) {

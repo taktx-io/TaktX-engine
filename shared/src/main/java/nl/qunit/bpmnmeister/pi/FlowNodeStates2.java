@@ -2,9 +2,11 @@ package nl.qunit.bpmnmeister.pi;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @Getter
@@ -24,7 +26,7 @@ public class FlowNodeStates2 {
     flowNodeInstances.put(fLowNodeInstance.getElementInstanceId(), fLowNodeInstance);
   }
 
-  public FLowNodeInstance get(UUID elementInstanceId) {
+  public FLowNodeInstance getInstanceWithInstanceId(UUID elementInstanceId) {
     return flowNodeInstances.get(elementInstanceId);
   }
 
@@ -37,5 +39,11 @@ public class FlowNodeStates2 {
         && flowNodeInstances.values().stream().allMatch(FLowNodeInstance::isNotAwaiting)) {
       this.state = ProcessInstanceState.COMPLETED;
     }
+  }
+
+  public Optional<FLowNodeInstance> getInstanceWithFlowNode(FlowNode2 flowNode) {
+    return flowNodeInstances.values().stream()
+        .filter(flowNodeInstance -> flowNodeInstance.getFlowNode().equals(flowNode))
+        .findFirst();
   }
 }

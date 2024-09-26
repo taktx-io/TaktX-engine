@@ -12,7 +12,6 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
@@ -56,7 +55,7 @@ class GatewayTest {
         .hasPassedElementWithId("EndEvent_1");
   }
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_DefaultFlow()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -69,7 +68,7 @@ class GatewayTest {
         .hasNotPassedElementWithId("Task_2");
   }
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_SingleFlow()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -82,7 +81,7 @@ class GatewayTest {
         .hasNotPassedElementWithId("Task_3");
   }
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_MultipleFlows()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -95,7 +94,7 @@ class GatewayTest {
         .hasNotPassedElementWithId("Task_3");
   }
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_MultipleFlows_Deep()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -108,7 +107,7 @@ class GatewayTest {
         .hasNotPassedElementWithId("Task_3");
   }
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_MultipleFlows_Deep2()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine
@@ -122,7 +121,7 @@ class GatewayTest {
   }
 
 
-  @Test @Disabled
+  @Test
   void testInclusiveGateway_MultipleFlows_Deep3()
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     bpmnTestEngine

@@ -12,7 +12,6 @@ import lombok.experimental.SuperBuilder;
 public class InclusiveGatewayState extends GatewayState {
 
   private final Set<String> triggeredInputFlows;
-  private final Set<String> selectedOutputFlows;
 
   @JsonCreator
   public InclusiveGatewayState(
@@ -20,10 +19,9 @@ public class InclusiveGatewayState extends GatewayState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("inputFlowId") String inputFlowId,
-      @Nonnull @JsonProperty("triggeInputFlows") Set<String> triggeredInputFlows,
+      @Nonnull @JsonProperty("triggeredInputFlows") Set<String> triggeredInputFlows,
       @Nonnull @JsonProperty("selectedOutputFlows") Set<String> selectedOutputFlows) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt, inputFlowId, selectedOutputFlows);
     this.triggeredInputFlows = triggeredInputFlows;
-    this.selectedOutputFlows = selectedOutputFlows;
   }
 }

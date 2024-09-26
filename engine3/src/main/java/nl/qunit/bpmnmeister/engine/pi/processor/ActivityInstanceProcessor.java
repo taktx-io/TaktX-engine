@@ -64,7 +64,11 @@ public abstract class ActivityInstanceProcessor<
   protected abstract InstanceResult processTerminateSpecificActivityInstance(I instance);
 
   @Override
-  protected Set<SequenceFlow2> getSelectedSequenceFlows(I flowNodeInstance, Variables2 variables) {
+  protected Set<SequenceFlow2> getSelectedSequenceFlows(
+      I flowNodeInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates,
+      Variables2 variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 }

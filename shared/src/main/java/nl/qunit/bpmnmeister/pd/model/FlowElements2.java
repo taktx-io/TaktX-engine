@@ -81,6 +81,14 @@ public class FlowElements2 {
         .findFirst();
   }
 
+  public Optional<FlowNode2> getFlowNodeWithOutgoingFlow(String sequenceFlowId) {
+    FlowElement2 flowElement = elements.get(sequenceFlowId);
+    if (flowElement instanceof SequenceFlow2 sequenceFlow) {
+      return Optional.of(sequenceFlow.getSourceNode());
+    }
+    return Optional.empty();
+  }
+
   public Map<String, SequenceFlow2> getSequenceFlows() {
     return elements.values().stream()
         .filter(SequenceFlow2.class::isInstance)
