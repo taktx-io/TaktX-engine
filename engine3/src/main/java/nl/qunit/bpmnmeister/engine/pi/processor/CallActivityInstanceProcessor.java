@@ -21,13 +21,10 @@ public class CallActivityInstanceProcessor
     extends ActivityInstanceProcessor<
         CallActivity2, CallActivityInstance, ContinueFlowElementTrigger2> {
 
-  private VariablesMapper variablesMapper;
-
   @Inject
   public CallActivityInstanceProcessor(
       IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor);
-    this.variablesMapper = variablesMapper;
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override

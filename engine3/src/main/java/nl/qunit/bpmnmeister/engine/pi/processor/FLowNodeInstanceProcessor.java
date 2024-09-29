@@ -4,6 +4,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
@@ -21,9 +22,12 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 public abstract class FLowNodeInstanceProcessor<
     E extends FlowNode2, I extends FLowNodeInstance, C extends ContinueFlowElementTrigger2> {
   protected IoMappingProcessor ioMappingProcessor;
+  protected VariablesMapper variablesMapper;
 
-  protected FLowNodeInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
+  protected FLowNodeInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
     this.ioMappingProcessor = ioMappingProcessor;
+    this.variablesMapper = variablesMapper;
   }
 
   public InstanceResult processStart(
@@ -67,6 +71,8 @@ public abstract class FLowNodeInstanceProcessor<
     if (!flowNodeInstance.stateAllowsContinue()) {
       return InstanceResult.empty();
     }
+
+    processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
 
     InstanceResult instanceResult =
         this.processContinueSpecificFlowNodeInstance(

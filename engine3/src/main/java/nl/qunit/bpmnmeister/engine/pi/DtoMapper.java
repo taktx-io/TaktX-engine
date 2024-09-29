@@ -3,10 +3,14 @@ package nl.qunit.bpmnmeister.engine.pi;
 import java.lang.reflect.InvocationTargetException;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEventDTO;
 import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.EventDefinition2;
+import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
@@ -15,6 +19,12 @@ import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEventDTO;
+import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition2;
+import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition2;
+import nl.qunit.bpmnmeister.pd.model.MessageEventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
 import nl.qunit.bpmnmeister.pd.model.ParallelGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
@@ -31,6 +41,8 @@ import nl.qunit.bpmnmeister.pd.model.SubProcess2;
 import nl.qunit.bpmnmeister.pd.model.SubProcessDTO;
 import nl.qunit.bpmnmeister.pd.model.Task2;
 import nl.qunit.bpmnmeister.pd.model.TaskDTO;
+import nl.qunit.bpmnmeister.pd.model.TimerEventDefinition2;
+import nl.qunit.bpmnmeister.pd.model.TimerEventDefinitionDTO;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -57,8 +69,17 @@ public interface DtoMapper {
   @SubclassMapping(source = SubProcessDTO.class, target = SubProcess2.class)
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow2.class)
   @SubclassMapping(source = CallActivityDTO.class, target = CallActivity2.class)
+  @SubclassMapping(source = BoundaryEventDTO.class, target = BoundaryEvent2.class)
+  @SubclassMapping(source = IntermediateCatchEventDTO.class, target = IntermediateCatchEvent2.class)
   @Mapping(target = "parentElement", ignore = true)
   FlowElement2 getFlowElement(FlowElementDTO flowElement);
+
+  @SubclassMapping(source = MessageEventDefinitionDTO.class, target = MessageEventDefinition2.class)
+  @SubclassMapping(source = TimerEventDefinitionDTO.class, target = TimerEventDefinition2.class)
+  @SubclassMapping(source = LinkEventDefinitionDTO.class, target = LinkEventDefinition2.class)
+  EventDefinition2 map(EventDefinitionDTO eventDefinition);
+
+  TimerEventDefinitionDTO map(TimerEventDefinition2 eventDefinition);
 
   @ObjectFactory
   default <T extends BaseElement2> T resolveEquipment(

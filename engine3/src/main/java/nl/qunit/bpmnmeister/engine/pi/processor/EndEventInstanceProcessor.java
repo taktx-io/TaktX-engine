@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -15,8 +16,9 @@ public class EndEventInstanceProcessor
     extends ThrowEventInstanceProcessor<EndEvent2, EndEventInstance> {
 
   @Inject
-  public EndEventInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
-    super(ioMappingProcessor);
+  public EndEventInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override

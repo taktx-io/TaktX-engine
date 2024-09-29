@@ -39,6 +39,7 @@ import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.engine.pi.Forwarder;
+import nl.qunit.bpmnmeister.engine.pi.PathExtractor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor2;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
@@ -119,6 +120,7 @@ public class TopologyProducer {
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
+  private final PathExtractor pathExtractor;
 
   @Produces
   public Topology buildTopology() {
@@ -166,7 +168,8 @@ public class TopologyProducer {
                         variablesMapper,
                         processInstanceProcessorProvider,
                         forwarder,
-                        flowInstanceRunner),
+                        flowInstanceRunner,
+                        pathExtractor),
                 PROCESS_INSTANCE_STORE_NAME,
                 PROCESS_INSTANCE_DEFINITION_STORE_NAME,
                 VARIABLES_STORE_NAME)

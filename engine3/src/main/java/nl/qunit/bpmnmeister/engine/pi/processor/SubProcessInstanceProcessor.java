@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
@@ -30,8 +31,9 @@ public class SubProcessInstanceProcessor
   public SubProcessInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceProcessorProvider processInstanceProcessorProvider,
-      FlowInstanceRunner flowInstanceRunner) {
-    super(ioMappingProcessor);
+      FlowInstanceRunner flowInstanceRunner,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
   }

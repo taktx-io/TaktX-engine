@@ -39,7 +39,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private static List<SchedulableMessage<?>> getStartCommands(
-      ProcessDefinitionDTO processDefinition, StartEventDTO startEvent) {
+      String processDefinitionId, StartEventDTO startEvent) {
     List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
         new StartCommand(
@@ -48,7 +48,7 @@ public class ProcessDefinitionActivationProcessor
             startEvent.getParentId(),
             List.of(),
             List.of(),
-            processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
+            processDefinitionId,
             VariablesDTO.empty()));
 
     return processInstanceStartCommand;
@@ -60,6 +60,7 @@ public class ProcessDefinitionActivationProcessor
     if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
       ProcessDefinitionActivation processActivation = processActivationRecord.value();
       ProcessDefinitionDTO processDefinition = processActivation.getProcessDefinition();
+
       processDefinition
           .getDefinitions()
           .getRootProcess()
@@ -67,7 +68,13 @@ public class ProcessDefinitionActivationProcessor
           .getStartEvents()
           .forEach(
               startEvent -> {
-                scheduleStartCommands(processActivationRecord, startEvent, processDefinition);
+                scheduleStartCommands(
+                    processActivationRecord,
+                    startEvent,
+                    processDefinition
+                        .getDefinitions()
+                        .getDefinitionsKey()
+                        .getProcessDefinitionId());
                 subscribetoStartMessageEvents(
                     processActivationRecord, startEvent, processDefinition);
               });
@@ -153,7 +160,7 @@ public class ProcessDefinitionActivationProcessor
   private void scheduleStartCommands(
       Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
       StartEventDTO startEvent,
-      ProcessDefinitionDTO processDefinition) {
+      String processDefinitionId) {
     startEvent
         .getTimerEventDefinitions()
         .forEach(
@@ -164,7 +171,7 @@ public class ProcessDefinitionActivationProcessor
                       Constants.NONE_UUID,
                       startEvent.getId(),
                       timerEventDefinition,
-                      getStartCommands(processDefinition, startEvent),
+                      getStartCommands(processDefinitionId, startEvent),
                       Variables2.empty());
               context.forward(
                   new Record<>(

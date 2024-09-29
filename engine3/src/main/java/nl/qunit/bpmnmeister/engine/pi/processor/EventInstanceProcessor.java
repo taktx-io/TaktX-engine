@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Event2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -15,8 +16,9 @@ import nl.qunit.bpmnmeister.pi.instances.EventInstance;
 public abstract class EventInstanceProcessor<E extends Event2, I extends EventInstance<?>>
     extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTrigger2> {
 
-  protected EventInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
-    super(ioMappingProcessor);
+  protected EventInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override
@@ -27,7 +29,7 @@ public abstract class EventInstanceProcessor<E extends Event2, I extends EventIn
   }
 
   @Override
-  protected final InstanceResult processContinueSpecificFlowNodeInstance(
+  protected InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
       FlowElements2 flowElements,
       I flowNodeInstance,

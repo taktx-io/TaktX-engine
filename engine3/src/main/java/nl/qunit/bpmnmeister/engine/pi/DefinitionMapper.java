@@ -2,18 +2,20 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.Gateway2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.Message2;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
-import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
 import nl.qunit.bpmnmeister.pd.model.SubProcess2;
 import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
+import nl.qunit.bpmnmeister.pd.model.WithMessageReference;
 
 @ApplicationScoped
 public class DefinitionMapper {
@@ -53,6 +55,10 @@ public class DefinitionMapper {
               if (flowNode instanceof WIthChildElements withChildElements) {
                 setSequenceFlowReferences(withChildElements.getElements());
               }
+              if (flowNode instanceof BoundaryEvent2 boundaryEvent) {
+                boundaryEvent.setAttachedActivity(
+                    flowElements.getFlowNode(boundaryEvent.getAttachedToRef()).get());
+              }
             });
 
     sequenceFlows
@@ -66,11 +72,22 @@ public class DefinitionMapper {
 
   private void setMessageReferences(
       Map<String, FlowElement2> elements, Map<String, MessageDTO> messages) {
-    for (FlowElement2 flowElement2 : elements.values()) {
-      if (flowElement2 instanceof ReceiveTask2 receiveTask) {
-        MessageDTO messageDTO = messages.get(receiveTask.getMessageRef());
-        receiveTask.setMessage(
+    for (FlowElement2 flowElement : elements.values()) {
+      if (flowElement instanceof WithMessageReference withMessageReference) {
+        MessageDTO messageDTO = messages.get(withMessageReference.getMessageRef());
+        withMessageReference.setReferencedMessage(
             new Message2(messageDTO.getId(), messageDTO.getName(), messageDTO.getCorrelationKey()));
+      } else if (flowElement instanceof IntermediateCatchEvent2 intermediateCatchEvent) {
+        intermediateCatchEvent.getMessageventDefinitions().stream()
+            .forEach(
+                messageEventDefinition -> {
+                  MessageDTO messageDTO = messages.get(messageEventDefinition.getMessageRef());
+                  messageEventDefinition.setReferencedMessage(
+                      new Message2(
+                          messageDTO.getId(),
+                          messageDTO.getName(),
+                          messageDTO.getCorrelationKey()));
+                });
       }
     }
   }

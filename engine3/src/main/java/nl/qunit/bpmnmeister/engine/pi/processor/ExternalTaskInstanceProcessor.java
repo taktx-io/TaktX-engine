@@ -39,7 +39,7 @@ public abstract class ExternalTaskInstanceProcessor<
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor);
+    super(ioMappingProcessor, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
     this.clock = clock;
     this.variablesMapper = variablesMapper;

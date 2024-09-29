@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
@@ -24,8 +25,10 @@ public abstract class GatewayInstanceProcessor<
   private FeelExpressionHandler feelExpressionHandler;
 
   protected GatewayInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor);
+      IoMappingProcessor ioMappingProcessor,
+      FeelExpressionHandler feelExpressionHandler,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 

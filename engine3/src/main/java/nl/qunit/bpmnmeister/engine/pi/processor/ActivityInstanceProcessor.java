@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -16,8 +17,9 @@ public abstract class ActivityInstanceProcessor<
         E extends Activity2, I extends ActivityInstance<?>, C extends ContinueFlowElementTrigger2>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
-  protected ActivityInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
-    super(ioMappingProcessor);
+  protected ActivityInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override

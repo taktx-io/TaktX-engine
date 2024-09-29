@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
@@ -22,8 +23,10 @@ public class ParallelGatewayInstanceProcessor
 
   @Inject
   public ParallelGatewayInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, feelExpressionHandler);
+      IoMappingProcessor ioMappingProcessor,
+      FeelExpressionHandler feelExpressionHandler,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
   }
 
   @Override

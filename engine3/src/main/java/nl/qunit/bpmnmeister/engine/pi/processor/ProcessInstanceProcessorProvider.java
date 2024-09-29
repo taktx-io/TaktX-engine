@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
 import nl.qunit.bpmnmeister.pd.model.CallActivity2;
@@ -10,6 +11,7 @@ import nl.qunit.bpmnmeister.pd.model.EndEvent2;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.Gateway2;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
@@ -25,7 +27,7 @@ import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 public class ProcessInstanceProcessorProvider {
 
   @Inject StartEventInstanceProcessor startEventProcessor;
-  //  @Inject IntermediateCatchEventProcessor intermediateCatchEventProcessor;
+  @Inject IntermediateCatchEventInstanceProcessor intermediateCatchEventProcessor;
   //  @Inject IntermediateThrowEventProcessor intermediateThrowEventProcessor;
   @Inject EndEventInstanceProcessor endEventProcessor;
   @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
@@ -39,6 +41,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   @Inject ReceiveTaskInstanceProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
+  @Inject VariablesMapper variablesMapper;
 
   public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement2 element) {
     if (element instanceof ThrowEvent2 throwEvent) {
@@ -47,11 +50,6 @@ public class ProcessInstanceProcessorProvider {
       return getProcessorForCatchEvent(catchEvent);
     } else if (element instanceof Gateway2 gateway) {
       return getProcessorForGateway(gateway);
-      //      return exclusiveGatewayProcessor;
-      //    } else if (element instanceof InclusiveGatewayD2) {
-      //      return inclusiveGatewayProcessor;
-      //    } else if (element instanceof Parallel) {
-      //      return parallelGatewayProcessor;
     } else if (element instanceof Activity2 activity) {
       return getStateProcessorForActivity(activity);
     }
@@ -83,8 +81,8 @@ public class ProcessInstanceProcessorProvider {
   private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForCatchEvent(CatchEvent2 element) {
     if (element instanceof StartEvent2) {
       return startEventProcessor;
-      //    } else if (element instanceof IntermediateCatchEvent) {
-      //      return intermediateCatchEventProcessor;
+    } else if (element instanceof IntermediateCatchEvent2) {
+      return intermediateCatchEventProcessor;
       //    } else if (element instanceof BoundaryEventDTO) {
       //      return boundaryEventProcessor;
     }
@@ -109,7 +107,7 @@ public class ProcessInstanceProcessorProvider {
     }
     if (!element.getLoopCharacteristics().equals(LoopCharacteristics2.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
-      return new MultiInstanceProcessor(feelExpressionHandler, processor);
+      return new MultiInstanceProcessor(feelExpressionHandler, processor, variablesMapper);
     }
     return processor;
   }

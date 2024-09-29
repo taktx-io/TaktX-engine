@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -20,8 +21,10 @@ public class ExclusiveGatewayInstanceProcessor
 
   @Inject
   public ExclusiveGatewayInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, feelExpressionHandler);
+      IoMappingProcessor ioMappingProcessor,
+      FeelExpressionHandler feelExpressionHandler,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
   }
 
   @Override

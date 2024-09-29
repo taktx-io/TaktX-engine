@@ -2,24 +2,22 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.MessageSchedulerFactory;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowElement2;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
+import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
 import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -29,18 +27,51 @@ import org.apache.kafka.streams.processor.api.Record;
 @RequiredArgsConstructor
 public class Forwarder {
   private final VariablesMapper variablesMapper;
+  private final PathExtractor pathExtractor;
+  private final MessageSchedulerFactory messageSchedulerFactory;
+  private final DtoMapper dtoMapper;
 
   public void forward(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
       ProcessInstance2 processInstance) {
-
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
     forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
+    forwardScheduledContinuations(context, instanceResult, processInstance);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
+  }
+
+  private void forwardScheduledContinuations(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstance2 processInstance) {
+    instanceResult
+        .getScheduledContinuationInfos()
+        .forEach(
+            info -> {
+              ContinueFlowElementTrigger2 continueFlowElementTrigger =
+                  new ContinueFlowElementTrigger2(
+                      processInstance.getProcessInstanceKey(),
+                      pathExtractor.getElementIdPath(info.flowNodeInstance().getFlowNode()),
+                      pathExtractor.getInstancePath(info.flowNodeInstance()),
+                      Constants.NONE,
+                      variablesMapper.toDTO(info.variables()));
+
+              MessageScheduler schedule =
+                  messageSchedulerFactory.schedule(
+                      processInstance.getProcessDefinitionKey(),
+                      processInstance.getProcessInstanceKey(),
+                      info.flowNodeInstance().getFlowNode().getId(),
+                      dtoMapper.map(info.timerEventDefinition()),
+                      List.of(continueFlowElementTrigger),
+                      info.variables());
+
+              context.forward(
+                  new Record<>(schedule.getScheduleKey(), schedule, Instant.now().toEpochMilli()));
+            });
   }
 
   private void forwardMessageSubscriptionCommands(
@@ -55,8 +86,8 @@ public class Forwarder {
                   new CorrelationMessageSubscription(
                       processInstance.getProcessInstanceKey(),
                       messageEvent.correlationKey(),
-                      getElementIdPath(messageEvent.flowNode()),
-                      getInstancePath(messageEvent.instance()),
+                      pathExtractor.getElementIdPath(messageEvent.instance().getFlowNode()),
+                      pathExtractor.getInstancePath(messageEvent.instance()),
                       messageEvent.messageName());
               context.forward(
                   new Record<>(
@@ -118,8 +149,8 @@ public class Forwarder {
                       newStartCommand.processInstanceKey(),
                       processInstance.getProcessInstanceKey(),
                       Constants.NONE,
-                      getElementIdPath(newStartCommand.flowNode()),
-                      getInstancePath(newStartCommand.instance()),
+                      pathExtractor.getElementIdPath(newStartCommand.flowNode()),
+                      pathExtractor.getInstancePath(newStartCommand.instance()),
                       newStartCommand.calledElement(),
                       variablesMapper.toDTO(newStartCommand.variables()));
 
@@ -179,36 +210,9 @@ public class Forwarder {
     return new ExternalTaskTrigger(
         processInstanceKey,
         processDefinitionKey,
-        getElementIdPath(externalTaskInfo.element()),
+        pathExtractor.getElementIdPath(externalTaskInfo.element()),
         externalTaskInfo.externalTaskId(),
-        getInstancePath(externalTaskInfo.instance()),
+        pathExtractor.getInstancePath(externalTaskInfo.instance()),
         variablesMapper.toDTO(externalTaskInfo.variables()));
-  }
-
-  private List<UUID> getInstancePath(FLowNodeInstance fLowNodeInstance) {
-    List<UUID> instancePath = new ArrayList<>();
-    instancePath.add(fLowNodeInstance.getElementInstanceId());
-
-    FLowNodeInstance parent = fLowNodeInstance.getParentInstance();
-    while (parent != null) {
-      instancePath.add(parent.getElementInstanceId());
-      parent = parent.getParentInstance();
-    }
-    Collections.reverse(instancePath);
-    return instancePath;
-  }
-
-  private static List<String> getElementIdPath(FlowNode2 flowNode) {
-    // Create a list of parent element IDs recursively from the element's parent, the order of the
-    // list is from the root to the parent of the element
-    List<String> elementIdPath = new ArrayList<>();
-    elementIdPath.add(flowNode.getId());
-    FlowElement2 parent = flowNode.getParentElement();
-    while (parent != null) {
-      elementIdPath.add(parent.getId());
-      parent = parent.getParentElement();
-    }
-    Collections.reverse(elementIdPath);
-    return elementIdPath;
   }
 }

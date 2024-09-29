@@ -20,6 +20,7 @@ public class InstanceResult {
       newCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
   private final List<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
+  private final List<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayList<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -49,6 +50,20 @@ public class InstanceResult {
     newTerminateCommands.add(childProcessInstanceId);
   }
 
+  public void addNewCorrelationSubcriptionMessageEvent(
+      NewCorrelationSubscriptionMessageEventInfo messageEvent) {
+    newCorrelationSubscriptionMessageEventInfos.add(messageEvent);
+  }
+
+  public void addTerminateCorrelationSubscriptionMessageEvent(
+      TerminateCorrelationSubscriptionMessageEventInfo messageEvent) {
+    terminateCorrelationSubscriptionMessageEventInfos.add(messageEvent);
+  }
+
+  public void addNewScheduledContinuation(ScheduledContinuationInfo scheduledContinuationInfo) {
+    scheduledContinuationInfos.add(scheduledContinuationInfo);
+  }
+
   public void merge(InstanceResult toMerge) {
     newFlowNodeInstanceInfos.addAll(toMerge.getNewFlowNodeInstanceInfos());
     externalTaskRequests.addAll(toMerge.getExternalTaskRequests());
@@ -59,15 +74,6 @@ public class InstanceResult {
         toMerge.getNewCorrelationSubscriptionMessageEventInfos());
     terminateCorrelationSubscriptionMessageEventInfos.addAll(
         toMerge.getTerminateCorrelationSubscriptionMessageEventInfos());
-  }
-
-  public void addNewCorrelationSubcriptionMessageEvent(
-      NewCorrelationSubscriptionMessageEventInfo messageEvent) {
-    newCorrelationSubscriptionMessageEventInfos.add(messageEvent);
-  }
-
-  public void addTerminateCorrelationSubscriptionMessageEvent(
-      TerminateCorrelationSubscriptionMessageEventInfo messageEvent) {
-    terminateCorrelationSubscriptionMessageEventInfos.add(messageEvent);
+    scheduledContinuationInfos.addAll(toMerge.getScheduledContinuationInfos());
   }
 }

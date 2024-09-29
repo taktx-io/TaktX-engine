@@ -37,6 +37,7 @@ public class ProcessInstanceProcessor2
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
+  private final PathExtractor pathExtractor;
 
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<UUID, VariablesDTO> variablesStore;
@@ -49,13 +50,15 @@ public class ProcessInstanceProcessor2
       VariablesMapper variablesMapper,
       ProcessInstanceProcessorProvider processInstanceProcessorProvider,
       Forwarder forwarder,
-      FlowInstanceRunner flowInstanceRunner) {
+      FlowInstanceRunner flowInstanceRunner,
+      PathExtractor pathExtractor) {
     this.definitionMapper = definitionMapper;
     this.instanceMapper = instanceMapper;
     this.variablesMapper = variablesMapper;
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
     this.forwarder = forwarder;
     this.flowInstanceRunner = flowInstanceRunner;
+    this.pathExtractor = pathExtractor;
   }
 
   @Override

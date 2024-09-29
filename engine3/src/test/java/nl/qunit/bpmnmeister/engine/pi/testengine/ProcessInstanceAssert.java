@@ -91,6 +91,7 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasVariableWithValue(String var1, Object value1) {
     JsonNode jsonNode = processInstance.getVariables().get(var1);
+    assertThat(jsonNode).isNotNull();
     JsonNode expectedNode = new ObjectMapper().valueToTree(value1);
     assertThat(jsonNode).isEqualTo(expectedNode);
     return this;

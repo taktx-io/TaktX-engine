@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
@@ -29,8 +30,10 @@ public class InclusiveGatewayInstanceProcessor
 
   @Inject
   public InclusiveGatewayInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, feelExpressionHandler);
+      IoMappingProcessor ioMappingProcessor,
+      FeelExpressionHandler feelExpressionHandler,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
   }
 
   @Override
@@ -68,8 +71,7 @@ public class InclusiveGatewayInstanceProcessor
             .collect(Collectors.toSet());
     if (previousTriggeredInstancePairs.isEmpty()) {
       return true;
-    } else
-      return collect.containsAll(gatewayInstance.getTriggeredInputFlows());
+    } else return collect.containsAll(gatewayInstance.getTriggeredInputFlows());
   }
 
   private Map<SequenceFlow2, Set<InclusiveGatewayInstance>> findPreviousInclusiveGatewayInstances(

@@ -14,11 +14,12 @@ import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
 public class IntermediateCatchEventState extends CatchEventState {
-
+  private final IntermediateCatchEventStateEnum state;
   private final Set<ScheduleKey> scheduledKeys;
 
   @JsonCreator
   public IntermediateCatchEventState(
+      @Nonnull @JsonProperty("state") IntermediateCatchEventStateEnum state,
       @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
@@ -26,5 +27,6 @@ public class IntermediateCatchEventState extends CatchEventState {
       @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
     super(elementInstanceId, elementId, passedCnt, inputFlowId);
     this.scheduledKeys = scheduledKeys;
+    this.state = state;
   }
 }

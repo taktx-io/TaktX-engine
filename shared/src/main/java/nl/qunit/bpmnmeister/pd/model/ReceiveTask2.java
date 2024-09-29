@@ -11,10 +11,10 @@ import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public class ReceiveTask2 extends Activity2 {
+public class ReceiveTask2 extends Activity2 implements WithMessageReference {
   private String messageRef;
 
-  @Setter private Message2 message;
+  @Setter private Message2 referencedMessage;
 
   @Override
   public ActivityInstance newActivityInstance(FLowNodeInstance parentInstance) {

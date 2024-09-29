@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ThrowEvent2;
@@ -12,8 +13,9 @@ public abstract class ThrowEventInstanceProcessor<
         E extends ThrowEvent2, I extends ThrowEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
 
-  protected ThrowEventInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
-    super(ioMappingProcessor);
+  protected ThrowEventInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override

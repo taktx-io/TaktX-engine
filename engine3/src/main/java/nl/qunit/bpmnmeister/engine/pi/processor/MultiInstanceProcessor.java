@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import java.util.Set;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
@@ -27,8 +28,10 @@ public class MultiInstanceProcessor
   private final ActivityInstanceProcessor<?, ?, ?> processor;
 
   public MultiInstanceProcessor(
-      FeelExpressionHandler feelExpressionHandler, ActivityInstanceProcessor<?, ?, ?> processor) {
-    super(processor.getIoMappingProcessor());
+      FeelExpressionHandler feelExpressionHandler,
+      ActivityInstanceProcessor<?, ?, ?> processor,
+      VariablesMapper variablesMapper) {
+    super(processor.getIoMappingProcessor(), variablesMapper);
     this.processor = processor;
     this.feelExpressionHandler = feelExpressionHandler;
   }

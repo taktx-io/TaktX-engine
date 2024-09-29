@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Task2;
@@ -17,8 +18,9 @@ public class TaskInstanceProcessor
     extends ActivityInstanceProcessor<Task2, TaskInstance, ContinueFlowElementTrigger2> {
 
   @Inject
-  public TaskInstanceProcessor(IoMappingProcessor ioMappingProcessor) {
-    super(ioMappingProcessor);
+  public TaskInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, variablesMapper);
   }
 
   @Override
