@@ -15,7 +15,6 @@ import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
@@ -83,7 +82,7 @@ class IntermediateEventsTest {
         .hasVariableWithValue("var1", "value1");
   }
 
-  @Test @Disabled
+  @Test
   void testLinkIntermediateThrowCatch()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine

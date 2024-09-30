@@ -9,34 +9,4 @@ public abstract class EventInstance<N extends Event2> extends FLowNodeInstance<N
   protected EventInstance(FLowNodeInstance parentInstance, N flowNode) {
     super(parentInstance, flowNode);
   }
-
-  @Override
-  public boolean stateAllowsStart() {
-    return true;
-  }
-
-  @Override
-  public boolean stateAllowsContinue() {
-    return false;
-  }
-
-  @Override
-  public boolean stateAllowsTerminate() {
-    return true;
-  }
-
-  @Override
-  public boolean isNotAwaiting() {
-    return true;
-  }
-
-  @Override
-  public boolean isCompleted() {
-    return true;
-  }
-
-  @Override
-  public void terminate() {
-    // Do nothing
-  }
 }

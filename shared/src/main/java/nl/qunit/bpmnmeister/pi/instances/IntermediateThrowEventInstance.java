@@ -10,4 +10,34 @@ public class IntermediateThrowEventInstance extends ThrowEventInstance<Intermedi
       FLowNodeInstance parentInstance, IntermediateThrowEvent2 flowNode) {
     super(parentInstance, flowNode);
   }
+
+  @Override
+  public boolean stateAllowsStart() {
+    return true;
+  }
+
+  @Override
+  public boolean stateAllowsTerminate() {
+    return false;
+  }
+
+  @Override
+  public boolean stateAllowsContinue() {
+    return false;
+  }
+
+  @Override
+  public boolean isNotAwaiting() {
+    return true;
+  }
+
+  @Override
+  public boolean isCompleted() {
+    return true;
+  }
+
+  @Override
+  public void terminate() {
+    // Do nothing
+  }
 }

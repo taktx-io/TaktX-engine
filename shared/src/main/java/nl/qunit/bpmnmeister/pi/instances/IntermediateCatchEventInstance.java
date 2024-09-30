@@ -15,6 +15,12 @@ public class IntermediateCatchEventInstance extends CatchEventInstance<Intermedi
   public IntermediateCatchEventInstance(
       FLowNodeInstance parentInstance, IntermediateCatchEvent2 flowNode) {
     super(parentInstance, flowNode);
+    state = IntermediateCatchEventStateEnum.READY;
+  }
+
+  @Override
+  public boolean stateAllowsStart() {
+    return state == IntermediateCatchEventStateEnum.READY;
   }
 
   @Override
@@ -25,5 +31,20 @@ public class IntermediateCatchEventInstance extends CatchEventInstance<Intermedi
   @Override
   public boolean isNotAwaiting() {
     return state != IntermediateCatchEventStateEnum.WAITING;
+  }
+
+  @Override
+  public boolean isCompleted() {
+    return state == IntermediateCatchEventStateEnum.FINISHED || state == IntermediateCatchEventStateEnum.TERMINATED;
+  }
+
+  @Override
+  public boolean stateAllowsTerminate() {
+    return state == IntermediateCatchEventStateEnum.WAITING || state == IntermediateCatchEventStateEnum.READY;
+  }
+
+  @Override
+  public void terminate() {
+    // Do nothing
   }
 }

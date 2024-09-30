@@ -17,4 +17,8 @@ public class IntermediateCatchEvent2 extends CatchEvent2 {
       FLowNodeInstance parentInstance, FlowNodeStates2 flowNodeStates) {
     return new IntermediateCatchEventInstance(parentInstance, this);
   }
+
+  public boolean hasLinkEventDefinition(String name) {
+    return getLinkventDefinitions().stream().anyMatch(e -> e.getName().equals(name));
+  }
 }

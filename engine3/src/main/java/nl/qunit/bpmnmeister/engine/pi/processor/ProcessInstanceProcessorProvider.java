@@ -12,6 +12,7 @@ import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.Gateway2;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent2;
 import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
 import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
@@ -28,7 +29,8 @@ public class ProcessInstanceProcessorProvider {
 
   @Inject StartEventInstanceProcessor startEventProcessor;
   @Inject IntermediateCatchEventInstanceProcessor intermediateCatchEventProcessor;
-  //  @Inject IntermediateThrowEventProcessor intermediateThrowEventProcessor;
+  @Inject
+  IntermediateThrowEventInstanceProcessor intermediateThrowEventProcessor;
   @Inject EndEventInstanceProcessor endEventProcessor;
   @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;
@@ -72,8 +74,8 @@ public class ProcessInstanceProcessorProvider {
   private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent2 throwEvent) {
     if (throwEvent instanceof EndEvent2) {
       return endEventProcessor;
-      //    } else if (throwEvent instanceof IntermediateThrowEvent) {
-      //      return intermediateThrowEventProcessor;
+    } else if (throwEvent instanceof IntermediateThrowEvent2) {
+      return intermediateThrowEventProcessor;
     }
     throw new IllegalStateException("Unknown throw element type: " + throwEvent.getClass());
   }

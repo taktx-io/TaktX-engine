@@ -95,4 +95,11 @@ public class FlowElements2 {
         .map(SequenceFlow2.class::cast)
         .collect(Collectors.toMap(SequenceFlow2::getId, Function.identity()));
   }
+
+  public Optional<IntermediateCatchEvent2> getIntermediateCatchEventWithName(String name) {
+    return elements.values().stream().filter(IntermediateCatchEvent2.class::isInstance)
+        .map(IntermediateCatchEvent2.class::cast)
+        .filter(intermediateCatchEvent -> intermediateCatchEvent.hasLinkEventDefinition(name))
+        .findFirst();
+  }
 }

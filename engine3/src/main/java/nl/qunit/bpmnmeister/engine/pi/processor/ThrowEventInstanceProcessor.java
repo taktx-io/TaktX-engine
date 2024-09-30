@@ -21,9 +21,9 @@ public abstract class ThrowEventInstanceProcessor<
   @Override
   protected InstanceResult processStartSpecificEventInstance(
       FlowElements2 flowElements, I flowNodeInstance, String inputFlowId, Variables2 variables) {
-    return processSpecificThrowEventInstance(flowElements, flowNodeInstance, variables);
+    return processStartSpecificThrowEventInstance(flowElements, flowNodeInstance, variables);
   }
 
-  protected abstract InstanceResult processSpecificThrowEventInstance(
+  protected abstract InstanceResult processStartSpecificThrowEventInstance(
       FlowElements2 flowElements, I flowNodeInstance, Variables2 variables);
 }

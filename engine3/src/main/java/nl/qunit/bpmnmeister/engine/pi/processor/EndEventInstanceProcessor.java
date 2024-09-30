@@ -27,7 +27,7 @@ public class EndEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processSpecificThrowEventInstance(
+  protected InstanceResult processStartSpecificThrowEventInstance(
       FlowElements2 flowElements, EndEventInstance flowNodeInstance, Variables2 variables) {
     return new InstanceResult();
   }

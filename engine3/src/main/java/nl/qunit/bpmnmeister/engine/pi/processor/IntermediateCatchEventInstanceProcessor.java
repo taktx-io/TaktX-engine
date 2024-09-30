@@ -40,20 +40,22 @@ public class IntermediateCatchEventInstanceProcessor
       IntermediateCatchEventInstance flowNodeInstance,
       Variables2 variables) {
     InstanceResult result = new InstanceResult();
-    flowNodeInstance.setState(IntermediateCatchEventStateEnum.WAITING);
+
+    flowNodeInstance.setState(IntermediateCatchEventStateEnum.FINISHED);
 
     flowNodeInstance
         .getFlowNode()
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
+              flowNodeInstance.setState(IntermediateCatchEventStateEnum.WAITING);
               result.addNewScheduledContinuation(
                   new ScheduledContinuationInfo(flowNodeInstance, timerEventDefinition, variables));
             });
 
-    flowNodeInstance.getFlowNode().getMessageventDefinitions().stream()
-        .forEach(
+    flowNodeInstance.getFlowNode().getMessageventDefinitions().forEach(
             messageEventDefinition -> {
+              flowNodeInstance.setState(IntermediateCatchEventStateEnum.WAITING);
               Message2 message = messageEventDefinition.getReferencedMessage();
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =

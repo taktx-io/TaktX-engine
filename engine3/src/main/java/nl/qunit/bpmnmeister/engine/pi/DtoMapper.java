@@ -21,6 +21,8 @@ import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGatewayDTO;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEventDTO;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEventDTO;
 import nl.qunit.bpmnmeister.pd.model.LinkEventDefinition2;
 import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.MessageEventDefinition2;
@@ -71,6 +73,7 @@ public interface DtoMapper {
   @SubclassMapping(source = CallActivityDTO.class, target = CallActivity2.class)
   @SubclassMapping(source = BoundaryEventDTO.class, target = BoundaryEvent2.class)
   @SubclassMapping(source = IntermediateCatchEventDTO.class, target = IntermediateCatchEvent2.class)
+  @SubclassMapping(source = IntermediateThrowEventDTO.class, target = IntermediateThrowEvent2.class)
   @Mapping(target = "parentElement", ignore = true)
   FlowElement2 getFlowElement(FlowElementDTO flowElement);
 
