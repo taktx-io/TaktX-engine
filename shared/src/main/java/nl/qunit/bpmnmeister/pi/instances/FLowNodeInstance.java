@@ -7,18 +7,19 @@ import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 
 @Getter
+@Setter
 @NoArgsConstructor
-public abstract class FLowNodeInstance<N extends FlowNode2> {
+public abstract class FLowNodeInstance<N extends FlowNode2> implements IFlowNodeInstance {
 
-  @Setter private UUID elementInstanceId;
+  private UUID elementInstanceId;
 
-  @Setter private int passedCnt;
+  private int passedCnt;
 
-  @Setter private String inputFlowId;
+  private String inputFlowId;
 
-  @Setter private N flowNode;
+  private N flowNode;
 
-  @Setter private FLowNodeInstance<?> parentInstance;
+  private FLowNodeInstance<?> parentInstance;
 
   protected FLowNodeInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     this.parentInstance = parentInstance;

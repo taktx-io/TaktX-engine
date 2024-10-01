@@ -17,9 +17,12 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstance2;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
+import nl.qunit.bpmnmeister.pi.instances.CatchEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.ReceivingMessageInstance;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
-import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
@@ -40,8 +43,18 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
     forwardScheduledContinuations(context, instanceResult, processInstance);
+    forwardCancelSchedules(context, instanceResult);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
+  }
+
+  private void forwardCancelSchedules(
+      ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
+    instanceResult
+        .getCancelSchedules()
+        .forEach(
+            scheduledKey ->
+                context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli())));
   }
 
   private void forwardScheduledContinuations(
@@ -52,11 +65,12 @@ public class Forwarder {
         .getScheduledContinuationInfos()
         .forEach(
             info -> {
+              CatchEventInstance<?> catchEventInstance = info.catchEventInstance();
               ContinueFlowElementTrigger2 continueFlowElementTrigger =
                   new ContinueFlowElementTrigger2(
                       processInstance.getProcessInstanceKey(),
-                      pathExtractor.getElementIdPath(info.flowNodeInstance().getFlowNode()),
-                      pathExtractor.getInstancePath(info.flowNodeInstance()),
+                      pathExtractor.getElementIdPath(catchEventInstance.getFlowNode()),
+                      pathExtractor.getInstancePath(catchEventInstance),
                       Constants.NONE,
                       variablesMapper.toDTO(info.variables()));
 
@@ -64,13 +78,13 @@ public class Forwarder {
                   messageSchedulerFactory.schedule(
                       processInstance.getProcessDefinitionKey(),
                       processInstance.getProcessInstanceKey(),
-                      info.flowNodeInstance().getFlowNode().getId(),
+                      catchEventInstance.getFlowNode().getId(),
                       dtoMapper.map(info.timerEventDefinition()),
                       List.of(continueFlowElementTrigger),
                       info.variables());
-
+              catchEventInstance.addScheduledKey(schedule.getScheduledKey());
               context.forward(
-                  new Record<>(schedule.getScheduleKey(), schedule, Instant.now().toEpochMilli()));
+                  new Record<>(schedule.getScheduledKey(), schedule, Instant.now().toEpochMilli()));
             });
   }
 
@@ -82,16 +96,21 @@ public class Forwarder {
         .getNewCorrelationSubscriptionMessageEventInfos()
         .forEach(
             messageEvent -> {
+              ReceivingMessageInstance instance = messageEvent.instance();
               CorrelationMessageSubscription correlationMessageSubscriptionTrigger =
                   new CorrelationMessageSubscription(
                       processInstance.getProcessInstanceKey(),
                       messageEvent.correlationKey(),
-                      pathExtractor.getElementIdPath(messageEvent.instance().getFlowNode()),
-                      pathExtractor.getInstancePath(messageEvent.instance()),
+                      pathExtractor.getElementIdPath(instance.getFlowNode()),
+                      pathExtractor.getInstancePath(instance),
                       messageEvent.messageName());
+              MessageEventKey messageEventKey =
+                  correlationMessageSubscriptionTrigger.toMessageEventKey();
+              instance.addMessageSubscriptionWithCorrelationKey(
+                  messageEventKey, messageEvent.correlationKey());
               context.forward(
                   new Record<>(
-                      correlationMessageSubscriptionTrigger.toMessageEventKey(),
+                      messageEventKey,
                       correlationMessageSubscriptionTrigger,
                       Instant.now().toEpochMilli()));
             });
@@ -190,15 +209,15 @@ public class Forwarder {
                         externalTask.element().getId(),
                         List.of(newExternalTaskTrigger),
                         externalTask.startTime());
-                ScheduleKey scheduleKey =
-                    new ScheduleKey(
+                ScheduledKey scheduledKey =
+                    new ScheduledKey(
                         definitionKey,
                         processInstance.getProcessInstanceKey(),
                         oneTimeScheduler.getScheduleType(),
                         externalTask.element().getId(),
                         "");
                 context.forward(
-                    new Record<>(scheduleKey, oneTimeScheduler, Instant.now().toEpochMilli()));
+                    new Record<>(scheduledKey, oneTimeScheduler, Instant.now().toEpochMilli()));
               }
             });
   }

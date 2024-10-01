@@ -17,8 +17,8 @@ import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduleType;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -146,14 +146,15 @@ public class ProcessDefinitionActivationProcessor
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              ScheduleKey scheduleKey =
-                  new ScheduleKey(
+              ScheduledKey scheduledKey =
+                  new ScheduledKey(
                       processActivationRecord.key(),
                       Constants.NONE_UUID,
                       ScheduleType.from(timerEventDefinition),
                       startEvent.getId(),
                       timerEventDefinition.getId());
-              context.forward(new Record<>(scheduleKey, null, processActivationRecord.timestamp()));
+              context.forward(
+                  new Record<>(scheduledKey, null, processActivationRecord.timestamp()));
             });
   }
 
@@ -175,7 +176,7 @@ public class ProcessDefinitionActivationProcessor
                       Variables2.empty());
               context.forward(
                   new Record<>(
-                      schedule.getScheduleKey(), schedule, processActivationRecord.timestamp()));
+                      schedule.getScheduledKey(), schedule, processActivationRecord.timestamp()));
             });
   }
 }

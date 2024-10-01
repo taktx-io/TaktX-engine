@@ -37,7 +37,6 @@ public class ProcessInstanceProcessor2
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
-  private final PathExtractor pathExtractor;
 
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<UUID, VariablesDTO> variablesStore;
@@ -50,15 +49,13 @@ public class ProcessInstanceProcessor2
       VariablesMapper variablesMapper,
       ProcessInstanceProcessorProvider processInstanceProcessorProvider,
       Forwarder forwarder,
-      FlowInstanceRunner flowInstanceRunner,
-      PathExtractor pathExtractor) {
+      FlowInstanceRunner flowInstanceRunner) {
     this.definitionMapper = definitionMapper;
     this.instanceMapper = instanceMapper;
     this.variablesMapper = variablesMapper;
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
     this.forwarder = forwarder;
     this.flowInstanceRunner = flowInstanceRunner;
-    this.pathExtractor = pathExtractor;
   }
 
   @Override
@@ -244,12 +241,12 @@ public class ProcessInstanceProcessor2
       processInstanceFinished(instanceResult, processInstance, processInstanceVariables);
     }
 
+    forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
+
     ProcessInstanceDTO piDto = instanceMapper.map(processInstance);
     processInstanceStore.put(processInstance.getProcessInstanceKey(), piDto);
     VariablesDTO variablesDTO = variablesMapper.toDTO(processInstanceVariables);
     variablesStore.put(processInstance.getProcessInstanceKey(), variablesDTO);
-
-    forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
 
     context.forward(
         new Record<>(

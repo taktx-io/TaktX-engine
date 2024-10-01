@@ -7,6 +7,7 @@ import lombok.Getter;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.NewStartCommand;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 
 @Getter
 public class InstanceResult {
@@ -21,6 +22,7 @@ public class InstanceResult {
   private final List<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
   private final List<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayList<>();
+  private final List<ScheduledKey> cancelSchedules = new ArrayList<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -75,5 +77,10 @@ public class InstanceResult {
     terminateCorrelationSubscriptionMessageEventInfos.addAll(
         toMerge.getTerminateCorrelationSubscriptionMessageEventInfos());
     scheduledContinuationInfos.addAll(toMerge.getScheduledContinuationInfos());
+    cancelSchedules.addAll(toMerge.getCancelSchedules());
+  }
+
+  public void cancelSchedule(ScheduledKey scheduledKey) {
+    cancelSchedules.add(scheduledKey);
   }
 }

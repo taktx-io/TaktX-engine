@@ -29,8 +29,7 @@ public class ProcessInstanceProcessorProvider {
 
   @Inject StartEventInstanceProcessor startEventProcessor;
   @Inject IntermediateCatchEventInstanceProcessor intermediateCatchEventProcessor;
-  @Inject
-  IntermediateThrowEventInstanceProcessor intermediateThrowEventProcessor;
+  @Inject IntermediateThrowEventInstanceProcessor intermediateThrowEventProcessor;
   @Inject EndEventInstanceProcessor endEventProcessor;
   @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;

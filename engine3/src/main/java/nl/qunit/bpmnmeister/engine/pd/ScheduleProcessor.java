@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -14,7 +14,7 @@ import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ScheduleProcessor
-    implements Processor<ScheduleKey, MessageScheduler, Object, SchedulableMessage> {
+    implements Processor<ScheduledKey, MessageScheduler, Object, SchedulableMessage> {
   private ProcessorContext<Object, SchedulableMessage> context;
   private final Clock clock;
 
@@ -29,30 +29,29 @@ public class ScheduleProcessor
         Duration.ofMillis(100),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
-          KeyValueStore<ScheduleKey, MessageScheduler> scheduleStore =
+          KeyValueStore<ScheduledKey, MessageScheduler> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
-          try (KeyValueIterator<ScheduleKey, MessageScheduler> all = scheduleStore.all()) {
+          try (KeyValueIterator<ScheduledKey, MessageScheduler> all = scheduleStore.all()) {
             all.forEachRemaining(
-                scheduleKeyValue -> {
-                  ScheduleKey scheduleKey = scheduleKeyValue.key;
-                  MessageScheduler scheduleCommand = scheduleKeyValue.value;
+                scheduledKeyValue -> {
+                  ScheduledKey scheduledKey = scheduledKeyValue.key;
+                  MessageScheduler scheduleCommand = scheduledKeyValue.value;
                   if (scheduleCommand != null) {
                     MessageScheduler updatedScheduleCommand =
                         scheduleCommand.evaluate(
                             Instant.now(clock),
                             (processInstanceKey, schedulableMessages) ->
                                 schedulableMessages.forEach(
-                                    message -> {
-                                      context.forward(
-                                          new Record<>(
-                                              message.getRecordKey(processInstanceKey),
-                                              message,
-                                              Instant.now(clock).toEpochMilli()));
-                                    }));
+                                    message ->
+                                        context.forward(
+                                            new Record<>(
+                                                message.getRecordKey(processInstanceKey),
+                                                message,
+                                                Instant.now(clock).toEpochMilli()))));
                     if (updatedScheduleCommand != null) {
-                      scheduleStore.put(scheduleKey, updatedScheduleCommand);
+                      scheduleStore.put(scheduledKey, updatedScheduleCommand);
                     } else {
-                      scheduleStore.delete(scheduleKey);
+                      scheduleStore.delete(scheduledKey);
                     }
                   }
                 });
@@ -61,8 +60,8 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduleKey, MessageScheduler> scheduleRecord) {
-    KeyValueStore<ScheduleKey, MessageScheduler> stateStore =
+  public void process(Record<ScheduledKey, MessageScheduler> scheduleRecord) {
+    KeyValueStore<ScheduledKey, MessageScheduler> stateStore =
         context.getStateStore(Stores.SCHEDULES_STORE_NAME);
     if (scheduleRecord.value() != null) {
       stateStore.put(scheduleRecord.key(), scheduleRecord.value());

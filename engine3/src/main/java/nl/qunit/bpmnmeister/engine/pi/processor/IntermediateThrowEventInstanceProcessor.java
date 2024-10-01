@@ -28,24 +28,35 @@ public class IntermediateThrowEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(IntermediateThrowEventInstance instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(
+      IntermediateThrowEventInstance instance) {
     return InstanceResult.empty();
   }
 
   @Override
   protected InstanceResult processStartSpecificThrowEventInstance(
-      FlowElements2 flowElements, IntermediateThrowEventInstance flowNodeInstance, Variables2 variables) {
+      FlowElements2 flowElements,
+      IntermediateThrowEventInstance flowNodeInstance,
+      Variables2 variables) {
     InstanceResult result = InstanceResult.empty();
 
-    flowNodeInstance.getFlowNode().getLinkventDefinitions().forEach(linkEventDefinition -> {
-      Optional<IntermediateCatchEvent2> intermediateCatchEvent = flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());
-      intermediateCatchEvent.ifPresent(event -> {
-        FLowNodeInstance<?> catchEventInstance = new IntermediateCatchEventInstance(flowNodeInstance.getParentInstance(), event);
-        FLowNodeInstanceInfo flowNodeInstanceInfo = new FLowNodeInstanceInfo(catchEventInstance, Constants.NONE);
-        result.addNewFlowNodeInstance(flowNodeInstanceInfo);
-      });
-    });
+    flowNodeInstance
+        .getFlowNode()
+        .getLinkventDefinitions()
+        .forEach(
+            linkEventDefinition -> {
+              Optional<IntermediateCatchEvent2> intermediateCatchEvent =
+                  flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());
+              intermediateCatchEvent.ifPresent(
+                  event -> {
+                    FLowNodeInstance<?> catchEventInstance =
+                        new IntermediateCatchEventInstance(
+                            flowNodeInstance.getParentInstance(), event);
+                    FLowNodeInstanceInfo flowNodeInstanceInfo =
+                        new FLowNodeInstanceInfo(catchEventInstance, Constants.NONE);
+                    result.addNewFlowNodeInstance(flowNodeInstanceInfo);
+                  });
+            });
     return result;
   }
-
 }

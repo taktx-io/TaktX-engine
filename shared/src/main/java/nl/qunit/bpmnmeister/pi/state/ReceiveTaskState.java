@@ -3,6 +3,8 @@ package nl.qunit.bpmnmeister.pi.state;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -14,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 public class ReceiveTaskState extends TaskState {
 
   private String correlationKey;
+  private Map<MessageEventKey, Set<String>> messageEventKeys;
 
   @JsonCreator
   public ReceiveTaskState(
@@ -23,8 +26,10 @@ public class ReceiveTaskState extends TaskState {
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("inputFlowId") String inputflowId,
-      @JsonProperty("correlationKey") String correlationKey) {
+      @JsonProperty("correlationKey") String correlationKey,
+      @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys) {
     super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
     this.correlationKey = correlationKey;
+    this.messageEventKeys = messageEventKeys;
   }
 }

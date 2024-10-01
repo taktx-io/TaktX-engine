@@ -39,7 +39,6 @@ import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.engine.pi.Forwarder;
-import nl.qunit.bpmnmeister.engine.pi.PathExtractor;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor2;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
@@ -59,7 +58,7 @@ import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleKey;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
@@ -83,8 +82,8 @@ public class TopologyProducer {
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  public static final ObjectMapperSerde<ScheduleKey> SCHEDULE_KEY_SERDE =
-      new ObjectMapperSerde<>(ScheduleKey.class);
+  public static final ObjectMapperSerde<ScheduledKey> SCHEDULE_KEY_SERDE =
+      new ObjectMapperSerde<>(ScheduledKey.class);
   public static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKey.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
@@ -120,7 +119,6 @@ public class TopologyProducer {
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
-  private final PathExtractor pathExtractor;
 
   @Produces
   public Topology buildTopology() {
@@ -168,8 +166,7 @@ public class TopologyProducer {
                         variablesMapper,
                         processInstanceProcessorProvider,
                         forwarder,
-                        flowInstanceRunner,
-                        pathExtractor),
+                        flowInstanceRunner),
                 PROCESS_INSTANCE_STORE_NAME,
                 PROCESS_INSTANCE_DEFINITION_STORE_NAME,
                 VARIABLES_STORE_NAME)
@@ -179,7 +176,7 @@ public class TopologyProducer {
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
                 (key, value) -> value instanceof MessageScheduler,
-                (key, value) -> key instanceof ScheduleKey,
+                (key, value) -> key instanceof ScheduledKey,
                 (key, value) -> value instanceof MessageEvent);
 
     branches[0]
@@ -204,12 +201,12 @@ public class TopologyProducer {
                     ((StartCommand) value).getProcessDefinitionId(), (StartCommand) value))
         .to(DEFINITIONS_TOPIC.getTopicName(), Produced.with(Serdes.String(), START_COMMAND_SERDE));
     branches[4]
-        .map((key, value) -> KeyValue.pair(((ScheduleKey) key), (MessageScheduler) value))
+        .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
         .to(
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     branches[5]
-        .map((key, value) -> KeyValue.pair(((ScheduleKey) key), (MessageScheduler) value))
+        .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
         .to(
             SCHEDULE_COMMANDS.getTopicName(),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
@@ -333,7 +330,7 @@ public class TopologyProducer {
                 SCHEDULE_KEY_SERDE,
                 MESSAGE_SCHEDULER_SERDE));
 
-    KStream<ScheduleKey, MessageScheduler> scheduleCommandStream =
+    KStream<ScheduledKey, MessageScheduler> scheduleCommandStream =
         stateStore.stream(
             Topics.SCHEDULE_COMMANDS.getTopicName(),
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
@@ -388,7 +385,7 @@ public class TopologyProducer {
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((ScheduleKey) key, (MessageScheduler) value))
+                                KeyValue.pair((ScheduledKey) key, (MessageScheduler) value))
                         .to(
                             Topics.SCHEDULE_COMMANDS.getTopicName(),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))

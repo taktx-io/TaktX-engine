@@ -3,13 +3,13 @@ package nl.qunit.bpmnmeister.engine.pi;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
+import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElement2;
 import nl.qunit.bpmnmeister.pd.model.FlowElements2;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowNode2;
 import nl.qunit.bpmnmeister.pd.model.Gateway2;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.Message2;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
@@ -77,8 +77,8 @@ public class DefinitionMapper {
         MessageDTO messageDTO = messages.get(withMessageReference.getMessageRef());
         withMessageReference.setReferencedMessage(
             new Message2(messageDTO.getId(), messageDTO.getName(), messageDTO.getCorrelationKey()));
-      } else if (flowElement instanceof IntermediateCatchEvent2 intermediateCatchEvent) {
-        intermediateCatchEvent.getMessageventDefinitions().stream()
+      } else if (flowElement instanceof CatchEvent2 catchEvent) {
+        catchEvent.getMessageventDefinitions().stream()
             .forEach(
                 messageEventDefinition -> {
                   MessageDTO messageDTO = messages.get(messageEventDefinition.getMessageRef());

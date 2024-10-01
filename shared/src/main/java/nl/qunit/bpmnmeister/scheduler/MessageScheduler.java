@@ -25,5 +25,5 @@ public interface MessageScheduler {
 
   ScheduleType getScheduleType();
 
-  ScheduleKey getScheduleKey();
+  ScheduledKey getScheduledKey();
 }

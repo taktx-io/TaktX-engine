@@ -88,8 +88,8 @@ public class FixedRateMessageScheduler implements MessageScheduler {
   }
 
   @Override
-  public ScheduleKey getScheduleKey() {
-    return new ScheduleKey(
+  public ScheduledKey getScheduledKey() {
+    return new ScheduledKey(
         processDefinitionKey,
         processInstanceKey,
         ScheduleType.FIXED_RATE,

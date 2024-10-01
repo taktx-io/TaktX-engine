@@ -6,13 +6,15 @@ import jakarta.annotation.Nonnull;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @ToString
 @Getter
+@Setter
 @EqualsAndHashCode
-public class ScheduleKey {
+public class ScheduledKey {
   private final ProcessDefinitionKey processDefinitionKey;
   private final UUID processInstanceKey;
   private final ScheduleType scheduleType;
@@ -20,7 +22,7 @@ public class ScheduleKey {
   private final String timerEventDefinitionId;
 
   @JsonCreator
-  public ScheduleKey(
+  public ScheduledKey(
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("scheduleType") ScheduleType scheduleType,

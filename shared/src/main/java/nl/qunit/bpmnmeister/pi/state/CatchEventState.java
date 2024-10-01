@@ -1,23 +1,34 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.annotation.Nonnull;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 
 @Getter
+@Setter
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
-public class CatchEventState extends EventState {
-  @JsonCreator
-  public CatchEventState(
-      @Nonnull @JsonProperty("elementInstanceId") UUID elementInstanceId,
-      @Nonnull @JsonProperty("elementId") String elementId,
-      @JsonProperty("passedCnt") int passedCnt,
-      @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
+public abstract class CatchEventState extends EventState {
+  private CatchEventStateEnum state;
+  private Set<ScheduledKey> scheduledKeys;
+  private Map<MessageEventKey, Set<String>> messageEventKeys;
+
+  protected CatchEventState(
+      UUID elementInstanceId,
+      String elementId,
+      int passedCnt,
+      String inputFlowId,
+      CatchEventStateEnum state,
+      Set<ScheduledKey> scheduledKeys,
+      Map<MessageEventKey, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt, inputFlowId);
+    this.state = state;
+    this.scheduledKeys = scheduledKeys;
+    this.messageEventKeys = messageEventKeys;
   }
 }

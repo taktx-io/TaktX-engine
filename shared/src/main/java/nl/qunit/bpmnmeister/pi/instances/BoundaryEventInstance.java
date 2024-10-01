@@ -10,7 +10,6 @@ public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent2> {
     super(parentInstance, flowNode);
   }
 
-
   @Override
   public boolean stateAllowsStart() {
     return true;

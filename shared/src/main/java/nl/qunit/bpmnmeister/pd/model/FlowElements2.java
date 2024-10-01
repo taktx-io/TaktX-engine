@@ -97,7 +97,8 @@ public class FlowElements2 {
   }
 
   public Optional<IntermediateCatchEvent2> getIntermediateCatchEventWithName(String name) {
-    return elements.values().stream().filter(IntermediateCatchEvent2.class::isInstance)
+    return elements.values().stream()
+        .filter(IntermediateCatchEvent2.class::isInstance)
         .map(IntermediateCatchEvent2.class::cast)
         .filter(intermediateCatchEvent -> intermediateCatchEvent.hasLinkEventDefinition(name))
         .findFirst();

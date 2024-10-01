@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-public enum IntermediateCatchEventStateEnum {
+public enum CatchEventStateEnum {
   READY,
   WAITING,
   FINISHED,

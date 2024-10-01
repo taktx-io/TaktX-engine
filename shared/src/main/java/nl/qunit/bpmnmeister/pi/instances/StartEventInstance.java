@@ -10,7 +10,6 @@ public class StartEventInstance extends CatchEventInstance<StartEvent2> {
     super(parentInstance, flowNode);
   }
 
-
   @Override
   public boolean stateAllowsStart() {
     return true;
