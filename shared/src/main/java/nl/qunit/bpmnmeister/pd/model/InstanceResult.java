@@ -13,6 +13,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 public class InstanceResult {
 
   private final List<FLowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayList<>();
+  private final List<UUID> terminateInstances = new ArrayList<>();
   private final List<ExternalTaskInfo> externalTaskRequests = new ArrayList<>();
   private final List<NewStartCommand> newStartCommands = new ArrayList<>();
   private final List<UUID> newTerminateCommands = new ArrayList<>();
@@ -32,8 +33,8 @@ public class InstanceResult {
     newFlowNodeInstanceInfos.add(flowNodeInstanceInfo);
   }
 
-  public boolean hasNewFlowNodeInstances() {
-    return !newFlowNodeInstanceInfos.isEmpty();
+  public boolean hasDirectTriggers() {
+    return !newFlowNodeInstanceInfos.isEmpty() || !terminateInstances.isEmpty();
   }
 
   public void addExternalTaskRequest(ExternalTaskInfo externalTaskInfo) {
@@ -78,9 +79,19 @@ public class InstanceResult {
         toMerge.getTerminateCorrelationSubscriptionMessageEventInfos());
     scheduledContinuationInfos.addAll(toMerge.getScheduledContinuationInfos());
     cancelSchedules.addAll(toMerge.getCancelSchedules());
+    terminateInstances.addAll(toMerge.getTerminateInstances());
   }
 
   public void cancelSchedule(ScheduledKey scheduledKey) {
     cancelSchedules.add(scheduledKey);
+  }
+
+  public void addTerminateInstance(UUID terminateInstanceId) {
+    this.terminateInstances.add(terminateInstanceId);
+  }
+
+  public void clearDirectTriggers() {
+    this.terminateInstances.clear();
+    this.newFlowNodeInstanceInfos.clear();
   }
 }

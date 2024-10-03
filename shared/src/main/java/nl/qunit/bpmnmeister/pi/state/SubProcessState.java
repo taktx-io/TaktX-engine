@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pi.state;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -12,7 +13,7 @@ import nl.qunit.bpmnmeister.pi.FlowNodeStatesDTO;
 @Getter
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
-public class SubProcessState extends ActivityState {
+public class SubProcessState extends ActivityState implements WithFlowNodeStatesDTO {
 
   private final FlowNodeStatesDTO flowNodeStates;
 
@@ -24,8 +25,8 @@ public class SubProcessState extends ActivityState {
       @Nonnull @JsonProperty("state") ActtivityStateEnum state,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("inputFlowId") String inputFlowId) {
-    super(state, elementId, elementInstanceId, passedCnt, loopCnt, inputFlowId);
+      @JsonProperty("boundaryEventIds") Set<UUID> boundaryEventIds) {
+    super(state, elementId, elementInstanceId, passedCnt, loopCnt, boundaryEventIds);
     this.flowNodeStates = flowNodeStates;
   }
 }

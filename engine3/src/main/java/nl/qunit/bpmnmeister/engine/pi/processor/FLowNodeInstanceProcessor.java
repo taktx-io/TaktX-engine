@@ -49,7 +49,7 @@ public abstract class FLowNodeInstanceProcessor<
         this.processStartSpecificFlowNodeInstance(
             flowElements, (I) flownodeInstance, inputFlowId, inputVariables);
 
-    processNodeIfFinished(
+    selectNextNodeIfAllowedStart(
         (I) flownodeInstance,
         instanceResult,
         processInstanceVariables,
@@ -83,7 +83,7 @@ public abstract class FLowNodeInstanceProcessor<
             processInstanceVariables,
             flowNodeStates);
 
-    processNodeIfFinished(
+    selectNextNodeIfAllowedContinue(
         (I) flowNodeInstance,
         instanceResult,
         processInstanceVariables,
@@ -113,37 +113,72 @@ public abstract class FLowNodeInstanceProcessor<
     return inputVariables;
   }
 
-  protected void processNodeIfFinished(
+  protected void selectNextNodeIfAllowedStart(
       I flownodeInstance,
       InstanceResult instanceResult,
       Variables2 processInstanceVariables,
       boolean isIterationInMultiInstance,
       FlowElements2 flowElements,
       FlowNodeStates2 flowNodeStates) {
-    if (flownodeInstance.isCompleted()) {
+    if (flownodeInstance.canSelectNextNodeStart()) {
 
-      FlowNode2 flowNode = flownodeInstance.getFlowNode();
-      if (flowNode instanceof WithIoMapping withIoMapping) {
-        Variables2 mappedOutputVariables =
-            getOutputVariables(processInstanceVariables, withIoMapping);
-        processInstanceVariables.merge(mappedOutputVariables);
-      }
+      processNode(
+          flownodeInstance,
+          instanceResult,
+          processInstanceVariables,
+          isIterationInMultiInstance,
+          flowElements,
+          flowNodeStates);
+    }
+  }
 
-      flownodeInstance.increasePassedCnt();
-      if (!isIterationInMultiInstance) {
-        getSelectedSequenceFlows(
-                flownodeInstance, flowElements, flowNodeStates, processInstanceVariables)
-            .forEach(
-                sequenceFlow -> {
-                  FLowNodeInstance<?> fLowNodeInstance =
-                      sequenceFlow
-                          .getTargetNode()
-                          .createAndStoreNewInstance(
-                              flownodeInstance.getParentInstance(), flowNodeStates);
-                  instanceResult.addNewFlowNodeInstance(
-                      new FLowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
-                });
-      }
+  protected void selectNextNodeIfAllowedContinue(
+      I flownodeInstance,
+      InstanceResult instanceResult,
+      Variables2 processInstanceVariables,
+      boolean isIterationInMultiInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates) {
+    if (flownodeInstance.canSelectNextNodeContinue()) {
+
+      processNode(
+          flownodeInstance,
+          instanceResult,
+          processInstanceVariables,
+          isIterationInMultiInstance,
+          flowElements,
+          flowNodeStates);
+    }
+  }
+
+  protected void processNode(
+      I flownodeInstance,
+      InstanceResult instanceResult,
+      Variables2 processInstanceVariables,
+      boolean isIterationInMultiInstance,
+      FlowElements2 flowElements,
+      FlowNodeStates2 flowNodeStates) {
+    FlowNode2 flowNode = flownodeInstance.getFlowNode();
+    if (flowNode instanceof WithIoMapping withIoMapping) {
+      Variables2 mappedOutputVariables =
+          getOutputVariables(processInstanceVariables, withIoMapping);
+      processInstanceVariables.merge(mappedOutputVariables);
+    }
+
+    flownodeInstance.increasePassedCnt();
+    if (!isIterationInMultiInstance) {
+      getSelectedSequenceFlows(
+              flownodeInstance, flowElements, flowNodeStates, processInstanceVariables)
+          .forEach(
+              sequenceFlow -> {
+                FLowNodeInstance<?> fLowNodeInstance =
+                    sequenceFlow
+                        .getTargetNode()
+                        .createAndStoreNewInstance(
+                            flownodeInstance.getParentInstance(), flowNodeStates);
+                instanceResult.addNewFlowNodeInstance(
+                    new FLowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
+              });
     }
   }
 

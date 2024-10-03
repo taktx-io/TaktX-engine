@@ -138,7 +138,8 @@ public class ProcessInstanceProcessor2
             definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
 
         VariablesDTO variablesDTO = variablesStore.get(trigger.getProcessInstanceKey());
-        ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+        ProcessInstance2 processInstance =
+            instanceMapper.mapAndSetReferences(processInstanceDTO, flowElements);
         FlowNodeStates2 flowNodeStates = processInstance.getFlowNodeStates();
         FLowNodeInstance<?> flowNodeInstance =
             flowNodeStates.getInstanceWithInstanceId(trigger.getElementInstanceIdPath().getFirst());
@@ -178,7 +179,8 @@ public class ProcessInstanceProcessor2
         FlowElements2 flowElements =
             definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
 
-        ProcessInstance2 processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+        ProcessInstance2 processInstance =
+            instanceMapper.mapAndSetReferences(processInstanceDTO, flowElements);
         InstanceResult instanceResult = InstanceResult.empty();
         if (trigger.getElementIdPath().isEmpty() && trigger.getElementInstanceIdPath().isEmpty()) {
           // Terminate all elements in the process instance and the process instance itself
@@ -223,11 +225,11 @@ public class ProcessInstanceProcessor2
       ProcessInstance2 processInstance,
       ProcessDefinitionKey processDefinitionKey,
       Variables2 processInstanceVariables) {
-    while (instanceResult.hasNewFlowNodeInstances()) {
+    while (instanceResult.hasDirectTriggers()) {
       forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
 
       instanceResult =
-          flowInstanceRunner.processInstanceResult(
+          flowInstanceRunner.processDirectTriggers(
               flowNodeStates,
               instanceResult,
               flowElements,

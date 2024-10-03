@@ -23,15 +23,8 @@ public class IntermediateCatchEventState extends CatchEventState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("scheduledKeys") Set<ScheduledKey> scheduledKeys,
-      @Nonnull @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys,
-      @Nonnull @JsonProperty("inputFlowId") String inputFlowId) {
-    super(
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        inputFlowId,
-        state,
-        scheduledKeys,
-        messageEventKeys);
+      @Nonnull @JsonProperty("messageEventKeys")
+          Map<MessageEventKey, Set<String>> messageEventKeys) {
+    super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
   }
 }

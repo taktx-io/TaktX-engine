@@ -15,8 +15,7 @@ public class ExclusiveGatewayState extends GatewayState {
       @Nonnull @JsonProperty("elementInstanceId") java.util.UUID elementInstanceId,
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
-      @JsonProperty("inputFlowId") String inputFlowId,
       @JsonProperty("selectedOutputFlows") Set<String> selectedOutputFlows) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId, selectedOutputFlows);
+    super(elementInstanceId, elementId, passedCnt, selectedOutputFlows);
   }
 }

@@ -24,6 +24,7 @@ import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
+import nl.qunit.bpmnmeister.pi.instances.WithFlowNodeStates;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventState;
 import nl.qunit.bpmnmeister.pi.state.CallActivityState;
 import nl.qunit.bpmnmeister.pi.state.EndEventState;
@@ -184,7 +185,6 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = ExclusiveGatewayInstance.class, source = ExclusiveGatewayState.class)
   @SubclassMapping(target = InclusiveGatewayInstance.class, source = InclusiveGatewayState.class)
   @SubclassMapping(target = ParallelGatewayInstance.class, source = ParallelGatewayState.class)
-
   // Task state should come last
   @SubclassMapping(target = TaskInstance.class, source = TaskState.class)
   @Mapping(target = "parentInstance", ignore = true)
@@ -192,6 +192,23 @@ public interface ProcessInstanceMapper {
   FLowNodeInstance map(FlowNodeStateDTO source, @Context FlowElements2 flowElements);
 
   ProcessInstance2 map(ProcessInstanceDTO source, @Context FlowElements2 flowElements);
+
+  default ProcessInstance2 mapAndSetReferences(
+      ProcessInstanceDTO source, FlowElements2 flowElements) {
+    ProcessInstance2 processInstance = map(source, flowElements);
+    setParentInstances(processInstance.getFlowNodeStates(), null);
+    return processInstance;
+  }
+
+  private static void setParentInstances(
+      FlowNodeStates2 flowNodeStates2, FLowNodeInstance<?> parentInstance) {
+    for (FLowNodeInstance<?> value : flowNodeStates2.getFlowNodeInstances().values()) {
+      value.setParentInstance(parentInstance);
+      if (value instanceof WithFlowNodeStates withFlowNodeStates) {
+        setParentInstances(withFlowNodeStates.getFlowNodeStates(), value);
+      }
+    }
+  }
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventState.class)
   @SubclassMapping(source = StartEventInstance.class, target = StartEventState.class)
@@ -214,6 +231,7 @@ public interface ProcessInstanceMapper {
   // Task state should come last
   @SubclassMapping(source = TaskInstance.class, target = TaskState.class)
   @Mapping(target = "elementId", source = "flowNode.id")
+  @Mapping(target = "parentElementInstanceId", source = "parentInstance.elementInstanceId")
   FlowNodeStateDTO map(FLowNodeInstance source);
 
   FlowNodeStatesDTO map(FlowNodeStates2 source);

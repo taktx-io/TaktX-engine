@@ -25,17 +25,9 @@ public class BoundaryEventState extends CatchEventState {
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("attachedInstanceId") UUID attachedInstanceId,
       @Nonnull @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys,
-      @Nonnull @JsonProperty("inputFlowId") String inputFlowId,
       @Nonnull @JsonProperty("state") CatchEventStateEnum state,
       @Nonnull @JsonProperty("scheduledKeys") Set<ScheduledKey> scheduledKeys) {
-    super(
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        inputFlowId,
-        state,
-        scheduledKeys,
-        messageEventKeys);
+    super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
     this.attachedInstanceId = attachedInstanceId;
   }
 }

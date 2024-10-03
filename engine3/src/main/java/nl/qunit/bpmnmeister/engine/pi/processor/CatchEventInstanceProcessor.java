@@ -78,30 +78,46 @@ public abstract class CatchEventInstanceProcessor<
       ContinueFlowElementTrigger2 trigger,
       Variables2 variables,
       FlowNodeStates2 flowNodeStates) {
-    flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
     InstanceResult result = InstanceResult.empty();
-    if (shoudCancelSchedulesAndScubscriptions()) {
-      flowNodeInstance.getScheduledKeys().forEach(result::cancelSchedule);
 
-      flowNodeInstance
-          .getMessageEventKeys()
-          .forEach(
-              (messageEventKey, correlationKeys) ->
-                  correlationKeys.forEach(
-                      correlationKey -> {
-                        TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
-                            new TerminateCorrelationSubscriptionMessageEventInfo(
-                                messageEventKey.getMessageName(), correlationKey);
-                        result.addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
-                      }));
+    if (shouldCancel(flowNodeInstance)) {
+      flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
+      terminateScheduleKeys(flowNodeInstance, result);
+      terminateMessageSubscriptions(flowNodeInstance, result);
     }
+    result.merge(processContinueSpecificCatchEventInstance(flowNodeInstance));
     return result;
   }
 
-  protected abstract boolean shoudCancelSchedulesAndScubscriptions();
+  private static <I extends CatchEventInstance<? extends CatchEvent2>>
+      void terminateMessageSubscriptions(I flowNodeInstance, InstanceResult result) {
+    flowNodeInstance
+        .getMessageEventKeys()
+        .forEach(
+            (messageEventKey, correlationKeys) ->
+                correlationKeys.forEach(
+                    correlationKey -> {
+                      TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
+                          new TerminateCorrelationSubscriptionMessageEventInfo(
+                              messageEventKey.getMessageName(), correlationKey);
+                      result.addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
+                    }));
+  }
+
+  private static <I extends CatchEventInstance<? extends CatchEvent2>> void terminateScheduleKeys(
+      I flowNodeInstance, InstanceResult result) {
+    flowNodeInstance.getScheduledKeys().forEach(result::cancelSchedule);
+  }
+
+  protected abstract InstanceResult processContinueSpecificCatchEventInstance(I flowNodeInstance);
+
+  protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
   protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
-    return InstanceResult.empty();
+    InstanceResult result = InstanceResult.empty();
+    terminateScheduleKeys(instance, result);
+    terminateMessageSubscriptions(instance, result);
+    return result;
   }
 }

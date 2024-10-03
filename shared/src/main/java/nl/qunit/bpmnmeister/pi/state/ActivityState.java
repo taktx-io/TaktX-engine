@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.pi.state;
 
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -12,6 +13,7 @@ public abstract class ActivityState extends FlowNodeStateDTO {
 
   private final ActtivityStateEnum state;
   private final int loopCnt;
+  private final Set<UUID> boundaryEventIds;
 
   protected ActivityState(
       ActtivityStateEnum state,
@@ -19,10 +21,11 @@ public abstract class ActivityState extends FlowNodeStateDTO {
       UUID elementInstanceId,
       int passedCnt,
       int loopCnt,
-      String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+      Set<UUID> boundaryEventIds) {
+    super(elementInstanceId, elementId, passedCnt);
     this.state = state;
     this.loopCnt = loopCnt;
+    this.boundaryEventIds = boundaryEventIds;
   }
 
   @Override

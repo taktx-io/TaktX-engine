@@ -25,10 +25,10 @@ public class ReceiveTaskState extends TaskState {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("inputFlowId") String inputflowId,
       @JsonProperty("correlationKey") String correlationKey,
+      @JsonProperty("boundaryEventIds") Set<UUID> boundaryEventIds,
       @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys) {
-    super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputflowId);
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
     this.correlationKey = correlationKey;
     this.messageEventKeys = messageEventKeys;
   }

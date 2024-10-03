@@ -4,18 +4,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
+import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
-public class IntermediateCatchEventInstanceProcessor
-    extends CatchEventInstanceProcessor<IntermediateCatchEvent2, IntermediateCatchEventInstance> {
+public class BoundaryEventInstanceProcessor
+    extends CatchEventInstanceProcessor<BoundaryEvent2, BoundaryEventInstance> {
 
   @Inject
-  IntermediateCatchEventInstanceProcessor(
+  BoundaryEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
       VariablesMapper variablesMapper) {
@@ -24,12 +24,16 @@ public class IntermediateCatchEventInstanceProcessor
 
   @Override
   protected InstanceResult processContinueSpecificCatchEventInstance(
-      IntermediateCatchEventInstance flowNodeInstance) {
-    return InstanceResult.empty();
+      BoundaryEventInstance boundaryEventInstance) {
+    InstanceResult result = InstanceResult.empty();
+    if (shouldCancel(boundaryEventInstance)) {
+      result.addTerminateInstance(boundaryEventInstance.getAttachedInstanceId());
+    }
+    return result;
   }
 
   @Override
-  protected boolean shouldCancel(IntermediateCatchEventInstance flowNodeInstance) {
-    return true;
+  protected boolean shouldCancel(BoundaryEventInstance flowNodeInstance) {
+    return flowNodeInstance.getFlowNode().isCancelActivity();
   }
 }

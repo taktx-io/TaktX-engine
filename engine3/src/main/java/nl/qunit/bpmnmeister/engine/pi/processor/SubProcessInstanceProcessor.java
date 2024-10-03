@@ -143,9 +143,9 @@ public class SubProcessInstanceProcessor
       FlowNodeStates2 flowNodeStates,
       FlowElements2 flowElements,
       Variables2 variables) {
-    while (instanceResult.hasNewFlowNodeInstances()) {
+    while (instanceResult.hasDirectTriggers()) {
       instanceResult =
-          flowInstanceRunner.processInstanceResult(
+          flowInstanceRunner.processDirectTriggers(
               flowNodeStates, instanceResult, flowElements, variables, flowNodeStates);
     }
 

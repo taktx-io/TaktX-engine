@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.pi.state;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
@@ -20,9 +21,9 @@ public class ExternalTaskState extends TaskState {
       @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @JsonProperty("loopCnt") int loopCnt,
-      @JsonProperty("inputFlowId") String inputFlowId,
+      @JsonProperty("boundaryEventIds") Set<UUID> boundaryEventIds,
       @JsonProperty("attempt") int attempt) {
-    super(state, elementInstanceId, elementId, passedCnt, loopCnt, inputFlowId);
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
     this.attempt = attempt;
   }
 }

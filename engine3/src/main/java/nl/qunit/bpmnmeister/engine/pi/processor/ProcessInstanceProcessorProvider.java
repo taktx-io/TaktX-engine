@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.BaseElement2;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
 import nl.qunit.bpmnmeister.pd.model.CallActivity2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.EndEvent2;
@@ -35,7 +36,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;
   @Inject InclusiveGatewayInstanceProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
-  //  @Inject BoundaryEventProcessor boundaryEventProcessor;
+  @Inject BoundaryEventInstanceProcessor boundaryEventProcessor;
   @Inject TaskInstanceProcessor taskProcessor;
   @Inject SubProcessInstanceProcessor subProcessProcessor;
   @Inject CallActivityInstanceProcessor callActivityProcessor;
@@ -84,8 +85,8 @@ public class ProcessInstanceProcessorProvider {
       return startEventProcessor;
     } else if (element instanceof IntermediateCatchEvent2) {
       return intermediateCatchEventProcessor;
-      //    } else if (element instanceof BoundaryEventDTO) {
-      //      return boundaryEventProcessor;
+    } else if (element instanceof BoundaryEvent2) {
+      return boundaryEventProcessor;
     }
     throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }

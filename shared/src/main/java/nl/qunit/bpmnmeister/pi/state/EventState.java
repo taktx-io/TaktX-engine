@@ -11,8 +11,7 @@ import lombok.experimental.SuperBuilder;
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
 public abstract class EventState extends FlowNodeStateDTO {
-  protected EventState(
-      UUID elementInstanceId, String elementId, int passedCnt, String inputFlowId) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+  protected EventState(UUID elementInstanceId, String elementId, int passedCnt) {
+    super(elementInstanceId, elementId, passedCnt);
   }
 }

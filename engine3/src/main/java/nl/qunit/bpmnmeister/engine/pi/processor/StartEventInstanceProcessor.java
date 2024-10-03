@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.StartEvent2;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
@@ -22,7 +23,13 @@ public class StartEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudCancelSchedulesAndScubscriptions() {
+  protected InstanceResult processContinueSpecificCatchEventInstance(
+      StartEventInstance flowNodeInstance) {
+    return InstanceResult.empty();
+  }
+
+  @Override
+  protected boolean shouldCancel(StartEventInstance flowNodeInstance) {
     return true;
   }
 }

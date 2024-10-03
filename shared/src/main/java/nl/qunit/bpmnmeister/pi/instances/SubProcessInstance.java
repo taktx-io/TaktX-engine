@@ -9,7 +9,8 @@ import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
 @NoArgsConstructor
 @Setter
 @Getter
-public class SubProcessInstance extends ActivityInstance<SubProcess2> {
+public class SubProcessInstance extends ActivityInstance<SubProcess2>
+    implements WithFlowNodeStates {
 
   private FlowNodeStates2 flowNodeStates = new FlowNodeStates2();
 

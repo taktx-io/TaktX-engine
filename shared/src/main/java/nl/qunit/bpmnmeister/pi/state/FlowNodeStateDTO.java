@@ -30,18 +30,15 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder(toBuilder = true)
 public abstract class FlowNodeStateDTO {
   private final UUID elementInstanceId;
-
+  @Setter private UUID parentElementInstanceId;
   @Setter private String elementId;
 
   private final int passedCnt;
-  private final String inputFlowId;
 
-  protected FlowNodeStateDTO(
-      UUID elementInstanceId, String elementId, int passedCnt, String inputFlowId) {
+  protected FlowNodeStateDTO(UUID elementInstanceId, String elementId, int passedCnt) {
     this.elementInstanceId = elementInstanceId;
     this.elementId = elementId;
     this.passedCnt = passedCnt;
-    this.inputFlowId = inputFlowId;
   }
 
   public boolean isTerminated() {

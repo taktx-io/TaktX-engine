@@ -57,6 +57,9 @@ public abstract class CatchEventInstance<N extends Event2> extends EventInstance
   @Override
   public void terminate() {
     // Do nothing
+    if (stateAllowsTerminate()) {
+      state = CatchEventStateEnum.TERMINATED;
+    }
   }
 
   public void addScheduledKey(ScheduledKey scheduledKey) {

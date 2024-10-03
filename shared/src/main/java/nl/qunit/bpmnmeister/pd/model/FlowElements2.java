@@ -44,6 +44,14 @@ public class FlowElements2 {
         .findFirst();
   }
 
+  public Optional<Activity2> getActivity(String id) {
+    return elements.values().stream()
+        .filter(Activity2.class::isInstance)
+        .map(Activity2.class::cast)
+        .filter(flowNode -> flowNode.getId().equals(id))
+        .findFirst();
+  }
+
   public FlowNode2 getStartNode(String elementId) {
     FlowNode2 flowNode = null;
     if (!elementId.equals(Constants.NONE)) {

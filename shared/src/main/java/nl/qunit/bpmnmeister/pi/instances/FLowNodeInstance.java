@@ -15,9 +15,9 @@ public abstract class FLowNodeInstance<N extends FlowNode2> implements IFlowNode
 
   private int passedCnt;
 
-  private String inputFlowId;
-
   private N flowNode;
+
+  private UUID parentElementInstanceId;
 
   private FLowNodeInstance<?> parentInstance;
 
@@ -42,4 +42,8 @@ public abstract class FLowNodeInstance<N extends FlowNode2> implements IFlowNode
   public abstract boolean isCompleted();
 
   public abstract void terminate();
+
+  public abstract boolean canSelectNextNodeStart();
+
+  public abstract boolean canSelectNextNodeContinue();
 }

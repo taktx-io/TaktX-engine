@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
+import nl.qunit.bpmnmeister.pd.model.Activity2;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
@@ -56,8 +57,10 @@ public class DefinitionMapper {
                 setSequenceFlowReferences(withChildElements.getElements());
               }
               if (flowNode instanceof BoundaryEvent2 boundaryEvent) {
-                boundaryEvent.setAttachedActivity(
-                    flowElements.getFlowNode(boundaryEvent.getAttachedToRef()).get());
+                Activity2 attachedActivity =
+                    flowElements.getActivity(boundaryEvent.getAttachedToRef()).get();
+                boundaryEvent.setAttachedActivity(attachedActivity);
+                attachedActivity.addBoundaryEvent(boundaryEvent);
               }
             });
 

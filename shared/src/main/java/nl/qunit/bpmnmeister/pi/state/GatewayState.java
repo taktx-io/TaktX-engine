@@ -13,12 +13,8 @@ public abstract class GatewayState extends FlowNodeStateDTO {
   private Set<String> selectedOutputFlows;
 
   protected GatewayState(
-      UUID elementInstanceId,
-      String elementId,
-      int passedCnt,
-      String inputFlowId,
-      Set<String> selectedOutputFlows) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+      UUID elementInstanceId, String elementId, int passedCnt, Set<String> selectedOutputFlows) {
+    super(elementInstanceId, elementId, passedCnt);
     this.selectedOutputFlows = selectedOutputFlows;
   }
 }

@@ -1,5 +1,8 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,10 +15,16 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 public abstract class ActivityInstance<N extends FlowNode2> extends FLowNodeInstance<N> {
   private int loopCnt;
   private ActtivityStateEnum state;
+  private Set<UUID> boundaryEventIds;
 
   protected ActivityInstance(FLowNodeInstance parentInstance, N flowNode) {
     super(parentInstance, flowNode);
     this.state = ActtivityStateEnum.READY;
+    this.boundaryEventIds = new HashSet<>();
+  }
+
+  public void addBoundaryEventId(UUID boundaryEventId) {
+    boundaryEventIds.add(boundaryEventId);
   }
 
   public void increaseLoopCnt() {
@@ -50,5 +59,15 @@ public abstract class ActivityInstance<N extends FlowNode2> extends FLowNodeInst
   @Override
   public void terminate() {
     state = ActtivityStateEnum.TERMINATED;
+  }
+
+  @Override
+  public boolean canSelectNextNodeStart() {
+    return isCompleted();
+  }
+
+  @Override
+  public boolean canSelectNextNodeContinue() {
+    return isCompleted();
   }
 }

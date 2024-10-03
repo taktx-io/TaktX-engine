@@ -46,4 +46,14 @@ public abstract class GatewayInstance<N extends Gateway2> extends FLowNodeInstan
   public void terminate() {
     // Do nothing
   }
+
+  @Override
+  public boolean canSelectNextNodeStart() {
+    return isCompleted();
+  }
+
+  @Override
+  public boolean canSelectNextNodeContinue() {
+    return isCompleted();
+  }
 }

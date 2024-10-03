@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
@@ -19,13 +20,24 @@ public class FlowInstanceRunner {
 
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
 
-  public InstanceResult processInstanceResult(
+  public InstanceResult processDirectTriggers(
       FlowNodeStates2 flowNodeStates2,
       InstanceResult instanceResult,
       FlowElements2 flowElements,
       Variables2 variables,
       FlowNodeStates2 flowNodeStates) {
     InstanceResult newInstanceResult = new InstanceResult();
+
+    List<UUID> terminateInstances = instanceResult.getTerminateInstances();
+    for (UUID terminateInstance : terminateInstances) {
+      FLowNodeInstance<?> activityInstance =
+          flowNodeStates2.getInstanceWithInstanceId(terminateInstance);
+      FlowNode2 node = activityInstance.getFlowNode();
+      FLowNodeInstanceProcessor<?, ?, ?> processor =
+          processInstanceProcessorProvider.getProcessor(node);
+      newInstanceResult.merge(processor.processTerminate(activityInstance));
+    }
+
     List<FLowNodeInstanceInfo> newFlowNodeInstances = instanceResult.getNewFlowNodeInstanceInfos();
     for (FLowNodeInstanceInfo instanceInfo : newFlowNodeInstances) {
       FLowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
@@ -44,6 +56,8 @@ public class FlowInstanceRunner {
               flowNodeStates);
       newInstanceResult.merge(subInstanceResult);
     }
+    instanceResult.clearDirectTriggers();
+    newInstanceResult.merge(instanceResult);
     return newInstanceResult;
   }
 }

@@ -355,6 +355,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(), activeExternalTaskTrigger, new ExternalTaskResponseResult2(true, null, null), of);
     return this;
   }
+
   public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String errorMessage, VariablesDTO of) {
     triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
         activeExternalTaskTrigger, new ExternalTaskResponseResult2(false, allowRetry, errorMessage), of);

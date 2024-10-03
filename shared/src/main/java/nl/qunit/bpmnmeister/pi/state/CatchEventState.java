@@ -22,11 +22,10 @@ public abstract class CatchEventState extends EventState {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      String inputFlowId,
       CatchEventStateEnum state,
       Set<ScheduledKey> scheduledKeys,
       Map<MessageEventKey, Set<String>> messageEventKeys) {
-    super(elementInstanceId, elementId, passedCnt, inputFlowId);
+    super(elementInstanceId, elementId, passedCnt);
     this.state = state;
     this.scheduledKeys = scheduledKeys;
     this.messageEventKeys = messageEventKeys;
