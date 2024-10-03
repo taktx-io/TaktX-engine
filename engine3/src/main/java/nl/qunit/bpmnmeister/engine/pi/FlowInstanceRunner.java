@@ -20,7 +20,22 @@ public class FlowInstanceRunner {
 
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
 
-  public InstanceResult processDirectTriggers(
+  public InstanceResult continueNewInstances(
+      InstanceResult instanceResult,
+      FlowNodeInstances flowNodeInstances,
+      FlowElements flowElements,
+      Variables processInstanceVariables) {
+    while (instanceResult.hasDirectTriggers()) {
+      instanceResult =
+          processDirectTriggers(
+              flowNodeInstances, instanceResult, flowElements, processInstanceVariables);
+    }
+
+    flowNodeInstances.determineImplicitCompletedState();
+    return instanceResult;
+  }
+
+  private InstanceResult processDirectTriggers(
       FlowNodeInstances flowNodeInstances,
       InstanceResult instanceResult,
       FlowElements flowElements,

@@ -67,7 +67,7 @@ public class SubProcessInstanceProcessor
             flowNodeInstances);
 
     instanceResult =
-        continueNewInstances(
+        flowInstanceRunner.continueNewInstances(
             instanceResult, flowNodeInstances, subProcessElements, processInstanceVariables);
 
     if (flowNodeInstances.getState().isFinished()) {
@@ -106,7 +106,7 @@ public class SubProcessInstanceProcessor
             subProcessInstance.getFlowNodeInstances());
 
     instanceResult =
-        continueNewInstances(
+        flowInstanceRunner.continueNewInstances(
             instanceResult,
             subProcessInstance.getFlowNodeInstances(),
             subProcessElements,
@@ -134,21 +134,6 @@ public class SubProcessInstanceProcessor
                   processInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
               instanceResult.merge(processor.processTerminate(flowNodeInstance));
             });
-    return instanceResult;
-  }
-
-  private InstanceResult continueNewInstances(
-      InstanceResult instanceResult,
-      FlowNodeInstances flowNodeInstances,
-      FlowElements flowElements,
-      Variables variables) {
-    while (instanceResult.hasDirectTriggers()) {
-      instanceResult =
-          flowInstanceRunner.processDirectTriggers(
-              flowNodeInstances, instanceResult, flowElements, variables);
-    }
-
-    flowNodeInstances.determineImplicitCompletedState();
     return instanceResult;
   }
 }

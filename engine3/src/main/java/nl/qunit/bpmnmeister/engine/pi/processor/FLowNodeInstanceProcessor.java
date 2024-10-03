@@ -20,7 +20,7 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 @Setter
 @NoArgsConstructor
 public abstract class FLowNodeInstanceProcessor<
-    E extends FlowNode, I extends FLowNodeInstance<E>, C extends ContinueFlowElementTrigger> {
+    E extends FlowNode, I extends FLowNodeInstance<?>, C extends ContinueFlowElementTrigger> {
   protected IoMappingProcessor ioMappingProcessor;
   protected VariablesMapper variablesMapper;
 

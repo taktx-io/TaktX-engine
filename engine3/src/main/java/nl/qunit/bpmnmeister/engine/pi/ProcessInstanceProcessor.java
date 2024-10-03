@@ -227,15 +227,9 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance,
       ProcessDefinitionKey processDefinitionKey,
       Variables processInstanceVariables) {
-    while (instanceResult.hasDirectTriggers()) {
-      forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
-
-      instanceResult =
-          flowInstanceRunner.processDirectTriggers(
-              flowNodeInstances, instanceResult, flowElements, processInstanceVariables);
-    }
-
-    flowNodeInstances.determineImplicitCompletedState();
+    instanceResult =
+        flowInstanceRunner.continueNewInstances(
+            instanceResult, flowNodeInstances, flowElements, processInstanceVariables);
 
     if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
       processInstanceFinished(instanceResult, processInstance, processInstanceVariables);
