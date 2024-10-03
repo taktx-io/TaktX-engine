@@ -40,7 +40,7 @@ import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
-import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor2;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
@@ -50,7 +50,7 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger2;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
@@ -89,8 +89,8 @@ public class TopologyProducer {
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
   public static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
-  public static final ObjectMapperSerde<ProcessInstanceTrigger2> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTrigger2.class);
+  public static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final ObjectMapperSerde<VariablesDTO> VARIABLES_SERDE =
@@ -160,7 +160,7 @@ public class TopologyProducer {
                 Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
             .process(
                 () ->
-                    new ProcessInstanceProcessor2(
+                    new ProcessInstanceProcessor(
                         definitionMapper,
                         instanceMapper,
                         variablesMapper,
@@ -171,7 +171,7 @@ public class TopologyProducer {
                 PROCESS_INSTANCE_DEFINITION_STORE_NAME,
                 VARIABLES_STORE_NAME)
             .branch(
-                (key, value) -> value instanceof ProcessInstanceTrigger2,
+                (key, value) -> value instanceof ProcessInstanceTrigger,
                 (key, value) -> value instanceof ProcessInstanceUpdate,
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
@@ -180,7 +180,7 @@ public class TopologyProducer {
                 (key, value) -> value instanceof MessageEvent);
 
     branches[0]
-        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTrigger2) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
         .to(
             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE));
@@ -246,12 +246,12 @@ public class TopologyProducer {
                             DEFINITIONS_TOPIC.getTopicName(),
                             Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTrigger2,
+            (key, value) -> value instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger2) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
@@ -310,12 +310,12 @@ public class TopologyProducer {
                             PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName(),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTrigger2,
+            (key, value) -> value instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger2) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(
@@ -356,12 +356,12 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (k, v) -> v instanceof ProcessInstanceTrigger2,
+            (k, v) -> v instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger2) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
                         .to(
                             PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
                             Produced.with(

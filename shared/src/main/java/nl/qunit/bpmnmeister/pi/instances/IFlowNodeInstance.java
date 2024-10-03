@@ -1,7 +1,7 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 
 public interface IFlowNodeInstance {
 
@@ -9,5 +9,5 @@ public interface IFlowNodeInstance {
 
   FLowNodeInstance<?> getParentInstance();
 
-  FlowNode2 getFlowNode();
+  FlowNode getFlowNode();
 }

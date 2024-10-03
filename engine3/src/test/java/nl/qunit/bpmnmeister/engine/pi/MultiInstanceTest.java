@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
-import nl.qunit.bpmnmeister.pi.state.MultiInstanceState;
+import nl.qunit.bpmnmeister.pi.state.MultiInstanceInstanceDTO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
@@ -57,7 +57,7 @@ class MultiInstanceTest {
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
         .hasPassedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("task-id", TaskState.class, 3)
-        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
         .hasPassedElementWithId("EndEvent_1");
   }
 
@@ -74,7 +74,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
         .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
 //        .hasPassedElementWithId("task-id", TaskState.class, 1000)
         .hasPassedElementWithId("EndEvent_1");
   }
@@ -91,7 +91,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
         .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
 //        .hasPassedElementWithId("task-id", TaskState.class, 1000)
         .hasPassedElementWithId("EndEvent_1");
   }
@@ -108,7 +108,7 @@ class MultiInstanceTest {
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasPassedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
-        .hasPassedElementWithId("task-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
         .hasPassedElementWithId("EndEvent_1");
   }
 
@@ -125,7 +125,7 @@ class MultiInstanceTest {
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasPassedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
-        .hasPassedElementWithId("callactivity-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
         .hasPassedElementWithId("EndEvent_1");
 
   }
@@ -143,7 +143,7 @@ class MultiInstanceTest {
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasPassedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
-        .hasPassedElementWithId("callactivity-id", MultiInstanceState.class, 1)
+        .hasPassedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
         .hasPassedElementWithId("EndEvent_1");
 
   }

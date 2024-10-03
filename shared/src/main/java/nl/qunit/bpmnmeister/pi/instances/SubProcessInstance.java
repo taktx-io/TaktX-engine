@@ -3,18 +3,18 @@ package nl.qunit.bpmnmeister.pi.instances;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.SubProcess2;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
+import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 
 @NoArgsConstructor
 @Setter
 @Getter
-public class SubProcessInstance extends ActivityInstance<SubProcess2>
-    implements WithFlowNodeStates {
+public class SubProcessInstance extends ActivityInstance<SubProcess>
+    implements WithFlowNodeInstances {
 
-  private FlowNodeStates2 flowNodeStates = new FlowNodeStates2();
+  private FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
 
-  public SubProcessInstance(FLowNodeInstance parentInstance, SubProcess2 flowNode) {
+  public SubProcessInstance(FLowNodeInstance<?> parentInstance, SubProcess flowNode) {
     super(parentInstance, flowNode);
   }
 }

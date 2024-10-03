@@ -4,12 +4,12 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 
 @Getter
 @Setter
 @NoArgsConstructor
-public abstract class FLowNodeInstance<N extends FlowNode2> implements IFlowNodeInstance {
+public abstract class FLowNodeInstance<N extends FlowNode> implements IFlowNodeInstance {
 
   private UUID elementInstanceId;
 

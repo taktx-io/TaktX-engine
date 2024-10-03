@@ -3,23 +3,23 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.Message2;
+import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.NewCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.pd.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.pd.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.CatchEventInstance;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
 
 @NoArgsConstructor
 public abstract class CatchEventInstanceProcessor<
-        E extends CatchEvent2, I extends CatchEventInstance<? extends CatchEvent2>>
+        E extends CatchEvent, I extends CatchEventInstance<? extends CatchEvent>>
     extends EventInstanceProcessor<E, I> {
 
   private FeelExpressionHandler feelExpressionHandler;
@@ -34,7 +34,7 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, I flowNodeInstance, String inputFlowId, Variables2 variables) {
+      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables) {
     InstanceResult result = new InstanceResult();
 
     flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
@@ -55,7 +55,7 @@ public abstract class CatchEventInstanceProcessor<
         .forEach(
             messageEventDefinition -> {
               flowNodeInstance.setState(CatchEventStateEnum.WAITING);
-              Message2 message = messageEventDefinition.getReferencedMessage();
+              Message message = messageEventDefinition.getReferencedMessage();
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =
                   feelExpressionHandler.processFeelExpression(correlationKeyExpression, variables);
@@ -73,11 +73,11 @@ public abstract class CatchEventInstanceProcessor<
   @Override
   protected InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       I flowNodeInstance,
-      ContinueFlowElementTrigger2 trigger,
-      Variables2 variables,
-      FlowNodeStates2 flowNodeStates) {
+      ContinueFlowElementTrigger trigger,
+      Variables variables,
+      FlowNodeInstances flowNodeInstances) {
     InstanceResult result = InstanceResult.empty();
 
     if (shouldCancel(flowNodeInstance)) {
@@ -89,7 +89,7 @@ public abstract class CatchEventInstanceProcessor<
     return result;
   }
 
-  private static <I extends CatchEventInstance<? extends CatchEvent2>>
+  private static <I extends CatchEventInstance<? extends CatchEvent>>
       void terminateMessageSubscriptions(I flowNodeInstance, InstanceResult result) {
     flowNodeInstance
         .getMessageEventKeys()
@@ -104,7 +104,7 @@ public abstract class CatchEventInstanceProcessor<
                     }));
   }
 
-  private static <I extends CatchEventInstance<? extends CatchEvent2>> void terminateScheduleKeys(
+  private static <I extends CatchEventInstance<? extends CatchEvent>> void terminateScheduleKeys(
       I flowNodeInstance, InstanceResult result) {
     flowNodeInstance.getScheduledKeys().forEach(result::cancelSchedule);
   }

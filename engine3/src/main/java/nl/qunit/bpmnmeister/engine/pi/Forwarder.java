@@ -10,11 +10,11 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstance2;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.instances.CatchEventInstance;
@@ -38,7 +38,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstance2 processInstance) {
+      ProcessInstance processInstance) {
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
     forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
@@ -60,14 +60,14 @@ public class Forwarder {
   private void forwardScheduledContinuations(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstance2 processInstance) {
+      ProcessInstance processInstance) {
     instanceResult
         .getScheduledContinuationInfos()
         .forEach(
             info -> {
               CatchEventInstance<?> catchEventInstance = info.catchEventInstance();
-              ContinueFlowElementTrigger2 continueFlowElementTrigger =
-                  new ContinueFlowElementTrigger2(
+              ContinueFlowElementTrigger continueFlowElementTrigger =
+                  new ContinueFlowElementTrigger(
                       processInstance.getProcessInstanceKey(),
                       pathExtractor.getElementIdPath(catchEventInstance.getFlowNode()),
                       pathExtractor.getInstancePath(catchEventInstance),
@@ -91,7 +91,7 @@ public class Forwarder {
   private void forwardMessageSubscriptionCommands(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstance2 processInstance) {
+      ProcessInstance processInstance) {
     instanceResult
         .getNewCorrelationSubscriptionMessageEventInfos()
         .forEach(
@@ -158,7 +158,7 @@ public class Forwarder {
   private void forwardNewStartCommands(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstance2 processInstance) {
+      ProcessInstance processInstance) {
     instanceResult
         .getNewStartCommands()
         .forEach(
@@ -185,7 +185,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstance2 processInstance) {
+      ProcessInstance processInstance) {
     instanceResult
         .getExternalTaskRequests()
         .forEach(

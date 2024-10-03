@@ -25,7 +25,7 @@ public class ProcessInstanceUpdate extends ProcessInstanceDTO {
       @Nonnull @JsonProperty("parentElementIdPath") List<String> parentElementIdPath,
       @Nonnull @JsonProperty("parentElementInstancePath") List<UUID> parentElementInstancePath,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @Nonnull @JsonProperty("flowNodeStates") FlowNodeStatesDTO flowNodeStates,
+      @Nonnull @JsonProperty("flowNodeInstances") FlowNodeInstancesDTO flowNodeInstances,
       @Nonnull @JsonProperty("variables") VariablesDTO variables) {
     super(
         processInstanceKey,
@@ -33,7 +33,7 @@ public class ProcessInstanceUpdate extends ProcessInstanceDTO {
         parentElementIdPath,
         parentElementInstancePath,
         processDefinitionKey,
-        flowNodeStates);
+        flowNodeInstances);
     this.variables = variables;
   }
 
@@ -44,7 +44,7 @@ public class ProcessInstanceUpdate extends ProcessInstanceDTO {
         processInstance.getParentElementIdPath(),
         processInstance.getParentElementInstancePath(),
         processInstance.getProcessDefinitionKey(),
-        processInstance.getFlowNodeStates(),
+        processInstance.getFlowNodeInstances(),
         variables);
   }
 }

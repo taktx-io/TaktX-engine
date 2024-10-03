@@ -8,17 +8,17 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 
 public class WrappedInMap implements Map<String, Object> {
 
-  private final Variables2 vars;
+  private final Variables vars;
 
-  private WrappedInMap(Variables2 vars) {
+  private WrappedInMap(Variables vars) {
     this.vars = vars;
   }
 
-  public static Map<String, Object> of(Variables2 variables) {
+  public static Map<String, Object> of(Variables variables) {
     return new WrappedInMap(variables);
   }
 

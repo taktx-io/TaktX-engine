@@ -21,7 +21,7 @@ public class ProcessInstanceDTO {
   private final List<String> parentElementIdPath;
   private final List<UUID> parentElementInstancePath;
   private final ProcessDefinitionKey processDefinitionKey;
-  private final FlowNodeStatesDTO flowNodeStates;
+  private final FlowNodeInstancesDTO flowNodeInstances;
 
   @JsonCreator
   public ProcessInstanceDTO(
@@ -30,12 +30,12 @@ public class ProcessInstanceDTO {
       @Nonnull @JsonProperty("parentElementIdPath") List<String> parentElementIdPath,
       @Nonnull @JsonProperty("parentElementInstancePath") List<UUID> parentElementInstancePath,
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
-      @Nonnull @JsonProperty("flowNodeStates") FlowNodeStatesDTO flowNodeStates) {
+      @Nonnull @JsonProperty("flowNodeInstances") FlowNodeInstancesDTO flowNodeInstances) {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
-    this.flowNodeStates = flowNodeStates;
+    this.flowNodeInstances = flowNodeInstances;
   }
 }

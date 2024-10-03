@@ -1,12 +1,12 @@
 package nl.qunit.bpmnmeister.pi.instances;
 
 import lombok.NoArgsConstructor;
-import nl.qunit.bpmnmeister.pd.model.SendTask2;
+import nl.qunit.bpmnmeister.pd.model.SendTask;
 
 @NoArgsConstructor
-public class SendTaskInstance extends ExternalTaskInstance<SendTask2> {
+public class SendTaskInstance extends ExternalTaskInstance<SendTask> {
 
-  public SendTaskInstance(FLowNodeInstance<?> parentInstance, SendTask2 flowNode) {
+  public SendTaskInstance(FLowNodeInstance<?> parentInstance, SendTask flowNode) {
     super(parentInstance, flowNode);
   }
 }

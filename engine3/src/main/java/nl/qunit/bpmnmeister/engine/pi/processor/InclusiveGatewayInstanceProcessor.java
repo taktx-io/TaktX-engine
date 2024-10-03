@@ -10,15 +10,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
 
@@ -26,7 +26,7 @@ import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
 @NoArgsConstructor
 public class InclusiveGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-        InclusiveGateway2, InclusiveGatewayInstance, ContinueFlowElementTrigger2> {
+        InclusiveGateway, InclusiveGatewayInstance, ContinueFlowElementTrigger> {
 
   @Inject
   public InclusiveGatewayInstanceProcessor(
@@ -38,10 +38,10 @@ public class InclusiveGatewayInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificGatewayInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       InclusiveGatewayInstance gatewayInstance,
       String inputFlowId,
-      Variables2 variables) {
+      Variables variables) {
     gatewayInstance.addTriggeredInputFlow(inputFlowId);
     return InstanceResult.empty();
   }
@@ -55,33 +55,33 @@ public class InclusiveGatewayInstanceProcessor
   @Override
   protected boolean canTriggerOutputFlows(
       InclusiveGatewayInstance gatewayInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
     // For each incoming flow check if the corresponding output flows have been triggered,
     // if any of them hasnt, we will not trigger the output flows
     // If there are no corresponding gateways, we assume we are a diverging and allow the flow to
     // trigger the output flows.
 
-    Map<SequenceFlow2, Set<InclusiveGatewayInstance>> previousTriggeredInstancePairs =
+    Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousTriggeredInstancePairs =
         findPreviousInclusiveGatewayInstances(
-            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), flowNodeStates);
+            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), flowNodeInstances);
     Set<String> collect =
         previousTriggeredInstancePairs.keySet().stream()
-            .map(SequenceFlow2::getId)
+            .map(SequenceFlow::getId)
             .collect(Collectors.toSet());
     if (previousTriggeredInstancePairs.isEmpty()) {
       return true;
     } else return collect.containsAll(gatewayInstance.getTriggeredInputFlows());
   }
 
-  private Map<SequenceFlow2, Set<InclusiveGatewayInstance>> findPreviousInclusiveGatewayInstances(
-      Set<SequenceFlow2> incomingSequenceFlows, FlowNodeStates2 flowNodeStates) {
-    Map<SequenceFlow2, Set<InclusiveGatewayInstance>> instanceMap = new HashMap<>();
-    for (SequenceFlow2 incomingSequenceFlow : incomingSequenceFlows) {
-      FlowNode2 sourceNode = incomingSequenceFlow.getSourceNode();
-      if (sourceNode instanceof InclusiveGateway2 inclusiveGateway) {
-        Optional<FLowNodeInstance> instanceWithFlowNode =
-            flowNodeStates.getInstanceWithFlowNode(inclusiveGateway);
+  private Map<SequenceFlow, Set<InclusiveGatewayInstance>> findPreviousInclusiveGatewayInstances(
+      Set<SequenceFlow> incomingSequenceFlows, FlowNodeInstances flowNodeInstances) {
+    Map<SequenceFlow, Set<InclusiveGatewayInstance>> instanceMap = new HashMap<>();
+    for (SequenceFlow incomingSequenceFlow : incomingSequenceFlows) {
+      FlowNode sourceNode = incomingSequenceFlow.getSourceNode();
+      if (sourceNode instanceof InclusiveGateway inclusiveGateway) {
+        Optional<FLowNodeInstance<?>> instanceWithFlowNode =
+            flowNodeInstances.getInstanceWithFlowNode(inclusiveGateway);
         if (instanceWithFlowNode.isPresent()) {
           InclusiveGatewayInstance gatewayInstance =
               (InclusiveGatewayInstance) instanceWithFlowNode.get();
@@ -92,9 +92,9 @@ public class InclusiveGatewayInstanceProcessor
           }
         }
       } else {
-        Map<SequenceFlow2, Set<InclusiveGatewayInstance>> previousInclusiveGatewayInstances =
+        Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousInclusiveGatewayInstances =
             findPreviousInclusiveGatewayInstances(
-                sourceNode.getIncomingSequenceFlows(), flowNodeStates);
+                sourceNode.getIncomingSequenceFlows(), flowNodeInstances);
         if (!previousInclusiveGatewayInstances.isEmpty()) {
           instanceMap
               .computeIfAbsent(incomingSequenceFlow, k -> new HashSet<>())

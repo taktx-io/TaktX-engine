@@ -5,10 +5,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.IoVariableMapping2;
+import nl.qunit.bpmnmeister.pd.model.IoVariableMapping;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -22,14 +22,14 @@ public class IoMappingProcessor {
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
-  public Variables2 getOutputVariables(WithIoMapping element, Variables2 inputVariables) {
+  public Variables getOutputVariables(WithIoMapping element, Variables inputVariables) {
     if (element.getIoMapping().getOutputMappings().isEmpty()) {
       // No mappings, return all input variables unmodified
       return inputVariables;
     }
 
-    Variables2 outputVariables = Variables2.empty();
-    for (IoVariableMapping2 mapping : element.getIoMapping().getOutputMappings()) {
+    Variables outputVariables = Variables.empty();
+    for (IoVariableMapping mapping : element.getIoMapping().getOutputMappings()) {
       String varName = mapping.getTarget();
       JsonNode jsonNode =
           feelExpressionHandler.processFeelExpression(mapping.getSource(), inputVariables);
@@ -38,14 +38,14 @@ public class IoMappingProcessor {
     return outputVariables;
   }
 
-  public Variables2 getInputVariables(WithIoMapping element, Variables2 variables) {
+  public Variables getInputVariables(WithIoMapping element, Variables variables) {
     if (element.getIoMapping().getInputMappings().isEmpty()) {
       // No mappings, return all input variables unmodified
       return variables;
     }
 
-    Variables2 inputVariables = Variables2.empty();
-    for (IoVariableMapping2 mapping : element.getIoMapping().getInputMappings()) {
+    Variables inputVariables = Variables.empty();
+    for (IoVariableMapping mapping : element.getIoMapping().getInputMappings()) {
       String varName = mapping.getTarget();
       JsonNode jsonNode =
           feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);

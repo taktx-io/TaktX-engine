@@ -4,21 +4,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.NewCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.pd.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor
     extends ActivityInstanceProcessor<
-        ReceiveTask2, ReceiveTaskInstance, ContinueFlowElementTrigger2> {
+        ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTrigger> {
   private final FeelExpressionHandler feelExpressionHandler;
 
   @Inject
@@ -32,13 +32,13 @@ public class ReceiveTaskInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       ReceiveTaskInstance receiveTaskInstance,
       String inputFlowId,
-      Variables2 variables) {
+      Variables variables) {
     receiveTaskInstance.setState(ActtivityStateEnum.WAITING);
 
-    ReceiveTask2 receiveTask = receiveTaskInstance.getFlowNode();
+    ReceiveTask receiveTask = receiveTaskInstance.getFlowNode();
     String correlationKeyExpression = receiveTask.getReferencedMessage().correlationKey();
     JsonNode jsonNode =
         feelExpressionHandler.processFeelExpression(correlationKeyExpression, variables);
@@ -55,10 +55,10 @@ public class ReceiveTaskInstanceProcessor
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       ReceiveTaskInstance receiveTaskInstance,
-      ContinueFlowElementTrigger2 trigger,
-      Variables2 processInstanceVariables) {
+      ContinueFlowElementTrigger trigger,
+      Variables processInstanceVariables) {
     receiveTaskInstance.setState(ActtivityStateEnum.FINISHED);
     return terminatingSubscriptionInstanceResult(receiveTaskInstance);
   }

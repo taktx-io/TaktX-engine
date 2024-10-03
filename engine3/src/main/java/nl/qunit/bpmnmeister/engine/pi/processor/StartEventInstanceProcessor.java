@@ -5,14 +5,14 @@ import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.StartEvent2;
+import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class StartEventInstanceProcessor
-    extends CatchEventInstanceProcessor<StartEvent2, StartEventInstance> {
+    extends CatchEventInstanceProcessor<StartEvent, StartEventInstance> {
 
   @Inject
   public StartEventInstanceProcessor(

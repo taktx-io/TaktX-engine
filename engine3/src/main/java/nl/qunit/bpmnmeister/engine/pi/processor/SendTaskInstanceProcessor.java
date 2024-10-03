@@ -5,14 +5,14 @@ import jakarta.inject.Inject;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.SendTask2;
+import nl.qunit.bpmnmeister.pd.model.SendTask;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class SendTaskInstanceProcessor
-    extends ExternalTaskInstanceProcessor<SendTask2, SendTaskInstance> {
+    extends ExternalTaskInstanceProcessor<SendTask, SendTaskInstance> {
   @Inject
   public SendTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,

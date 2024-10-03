@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.pd.model;
 public interface WithMessageReference {
   String getMessageRef();
 
-  Message2 getReferencedMessage();
+  Message getReferencedMessage();
 
-  void setReferencedMessage(Message2 message);
+  void setReferencedMessage(Message message);
 }

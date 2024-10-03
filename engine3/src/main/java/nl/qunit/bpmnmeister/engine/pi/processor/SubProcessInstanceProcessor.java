@@ -6,14 +6,14 @@ import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.SubProcess2;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
+import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
@@ -21,8 +21,7 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 @ApplicationScoped
 @NoArgsConstructor
 public class SubProcessInstanceProcessor
-    extends ActivityInstanceProcessor<
-        SubProcess2, SubProcessInstance, ContinueFlowElementTrigger2> {
+    extends ActivityInstanceProcessor<SubProcess, SubProcessInstance, ContinueFlowElementTrigger> {
 
   private ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private FlowInstanceRunner flowInstanceRunner;
@@ -40,20 +39,20 @@ public class SubProcessInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       SubProcessInstance subProcessInstance,
       String inputFlowId,
-      Variables2 processInstanceVariables) {
+      Variables processInstanceVariables) {
 
-    FlowNodeStates2 flowNodeStates = new FlowNodeStates2();
-    subProcessInstance.setFlowNodeStates(flowNodeStates);
+    FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
+    subProcessInstance.setFlowNodeInstances(flowNodeInstances);
     subProcessInstance.setState(ActtivityStateEnum.WAITING);
 
-    FlowElements2 subProcessElements = subProcessInstance.getFlowNode().getElements();
-    FlowNode2 startNode = subProcessElements.getStartNode(Constants.NONE);
+    FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
+    FlowNode startNode = subProcessElements.getStartNode(Constants.NONE);
     FLowNodeInstance<?> flowNodeInstance =
         startNode.createAndStoreNewInstance(
-            subProcessInstance, subProcessInstance.getFlowNodeStates());
+            subProcessInstance, subProcessInstance.getFlowNodeInstances());
 
     FLowNodeInstanceProcessor<?, ?, ?> processor =
         processInstanceProcessorProvider.getProcessor(startNode);
@@ -65,13 +64,13 @@ public class SubProcessInstanceProcessor
             Constants.NONE,
             processInstanceVariables,
             false,
-            flowNodeStates);
+            flowNodeInstances);
 
     instanceResult =
         continueNewInstances(
-            instanceResult, flowNodeStates, subProcessElements, processInstanceVariables);
+            instanceResult, flowNodeInstances, subProcessElements, processInstanceVariables);
 
-    if (flowNodeStates.getState().isFinished()) {
+    if (flowNodeInstances.getState().isFinished()) {
       subProcessInstance.setState(ActtivityStateEnum.FINISHED);
     }
 
@@ -81,17 +80,17 @@ public class SubProcessInstanceProcessor
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       SubProcessInstance subProcessInstance,
-      ContinueFlowElementTrigger2 trigger,
-      Variables2 processInstanceVariables) {
+      ContinueFlowElementTrigger trigger,
+      Variables processInstanceVariables) {
     subProcessLevel++;
 
-    FlowElements2 subProcessElements = subProcessInstance.getFlowNode().getElements();
+    FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
 
     FLowNodeInstance<?> flowNodeInstance =
         subProcessInstance
-            .getFlowNodeStates()
+            .getFlowNodeInstances()
             .getInstanceWithInstanceId(trigger.getElementInstanceIdPath().get(subProcessLevel));
     FLowNodeInstanceProcessor<?, ?, ?> processor =
         processInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
@@ -104,16 +103,16 @@ public class SubProcessInstanceProcessor
             trigger,
             processInstanceVariables,
             false,
-            subProcessInstance.getFlowNodeStates());
+            subProcessInstance.getFlowNodeInstances());
 
     instanceResult =
         continueNewInstances(
             instanceResult,
-            subProcessInstance.getFlowNodeStates(),
+            subProcessInstance.getFlowNodeInstances(),
             subProcessElements,
             processInstanceVariables);
 
-    if (subProcessInstance.getFlowNodeStates().getState().isFinished()) {
+    if (subProcessInstance.getFlowNodeInstances().getState().isFinished()) {
       subProcessInstance.setState(ActtivityStateEnum.FINISHED);
     }
 
@@ -124,10 +123,10 @@ public class SubProcessInstanceProcessor
   protected InstanceResult processTerminateSpecificActivityInstance(SubProcessInstance instance) {
     // Terminate all childelements
     InstanceResult instanceResult = InstanceResult.empty();
-    FlowNodeStates2 flowNodeStates = instance.getFlowNodeStates();
-    flowNodeStates.setState(ProcessInstanceState.TERMINATED);
-    flowNodeStates
-        .getFlowNodeInstances()
+    FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
+    flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
+    flowNodeInstances
+        .getInstances()
         .values()
         .forEach(
             flowNodeInstance -> {
@@ -140,16 +139,16 @@ public class SubProcessInstanceProcessor
 
   private InstanceResult continueNewInstances(
       InstanceResult instanceResult,
-      FlowNodeStates2 flowNodeStates,
-      FlowElements2 flowElements,
-      Variables2 variables) {
+      FlowNodeInstances flowNodeInstances,
+      FlowElements flowElements,
+      Variables variables) {
     while (instanceResult.hasDirectTriggers()) {
       instanceResult =
           flowInstanceRunner.processDirectTriggers(
-              flowNodeStates, instanceResult, flowElements, variables, flowNodeStates);
+              flowNodeInstances, instanceResult, flowElements, variables);
     }
 
-    flowNodeStates.determineImplicitCompletedState();
+    flowNodeInstances.determineImplicitCompletedState();
     return instanceResult;
   }
 }

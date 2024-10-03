@@ -4,14 +4,14 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
 
 @Getter
 @Setter
-public class InclusiveGatewayInstance extends GatewayInstance<InclusiveGateway2> {
+public class InclusiveGatewayInstance extends GatewayInstance<InclusiveGateway> {
   private Set<String> triggeredInputFlows = new HashSet<>();
 
-  public InclusiveGatewayInstance(FLowNodeInstance<?> parentInstance, InclusiveGateway2 flowNode) {
+  public InclusiveGatewayInstance(FLowNodeInstance<?> parentInstance, InclusiveGateway flowNode) {
     super(parentInstance, flowNode);
   }
 

@@ -6,18 +6,18 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @NoArgsConstructor
 @Setter
 @Getter
-public abstract class ActivityInstance<N extends FlowNode2> extends FLowNodeInstance<N> {
+public abstract class ActivityInstance<N extends FlowNode> extends FLowNodeInstance<N> {
   private int loopCnt;
   private ActtivityStateEnum state;
   private Set<UUID> boundaryEventIds;
 
-  protected ActivityInstance(FLowNodeInstance parentInstance, N flowNode) {
+  protected ActivityInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
     this.state = ActtivityStateEnum.READY;
     this.boundaryEventIds = new HashSet<>();

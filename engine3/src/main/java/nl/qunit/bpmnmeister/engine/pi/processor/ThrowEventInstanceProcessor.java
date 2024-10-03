@@ -2,15 +2,15 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.ThrowEvent2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ThrowEventInstance;
 
 @NoArgsConstructor
 public abstract class ThrowEventInstanceProcessor<
-        E extends ThrowEvent2, I extends ThrowEventInstance<?>>
+        E extends ThrowEvent, I extends ThrowEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
 
   protected ThrowEventInstanceProcessor(
@@ -20,10 +20,10 @@ public abstract class ThrowEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements2 flowElements, I flowNodeInstance, String inputFlowId, Variables2 variables) {
+      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables) {
     return processStartSpecificThrowEventInstance(flowElements, flowNodeInstance, variables);
   }
 
   protected abstract InstanceResult processStartSpecificThrowEventInstance(
-      FlowElements2 flowElements, I flowNodeInstance, Variables2 variables);
+      FlowElements flowElements, I flowNodeInstance, Variables variables);
 }

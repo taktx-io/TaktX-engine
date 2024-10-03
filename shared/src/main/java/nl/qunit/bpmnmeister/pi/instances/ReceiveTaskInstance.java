@@ -7,19 +7,19 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 
 @NoArgsConstructor
 @Getter
 @Setter
-public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask2>
+public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask>
     implements ReceivingMessageInstance {
   private Map<MessageEventKey, Set<String>> messageEventKeys;
 
   private String correlationKey;
 
-  public ReceiveTaskInstance(FLowNodeInstance<?> parentInstance, ReceiveTask2 flowNode) {
+  public ReceiveTaskInstance(FLowNodeInstance<?> parentInstance, ReceiveTask flowNode) {
     super(parentInstance, flowNode);
     messageEventKeys = new HashMap<>();
   }

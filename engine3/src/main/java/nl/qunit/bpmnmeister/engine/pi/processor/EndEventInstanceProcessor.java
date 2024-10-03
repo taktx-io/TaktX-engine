@@ -4,16 +4,16 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.EndEvent2;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.EndEvent;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class EndEventInstanceProcessor
-    extends ThrowEventInstanceProcessor<EndEvent2, EndEventInstance> {
+    extends ThrowEventInstanceProcessor<EndEvent, EndEventInstance> {
 
   @Inject
   public EndEventInstanceProcessor(
@@ -28,7 +28,7 @@ public class EndEventInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificThrowEventInstance(
-      FlowElements2 flowElements, EndEventInstance flowNodeInstance, Variables2 variables) {
+      FlowElements flowElements, EndEventInstance flowNodeInstance, Variables variables) {
     return new InstanceResult();
   }
 }

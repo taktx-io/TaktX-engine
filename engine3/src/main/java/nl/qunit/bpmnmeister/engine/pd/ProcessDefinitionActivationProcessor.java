@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -173,7 +173,7 @@ public class ProcessDefinitionActivationProcessor
                       startEvent.getId(),
                       timerEventDefinition,
                       getStartCommands(processDefinitionId, startEvent),
-                      Variables2.empty());
+                      Variables.empty());
               context.forward(
                   new Record<>(
                       schedule.getScheduledKey(), schedule, processActivationRecord.timestamp()));

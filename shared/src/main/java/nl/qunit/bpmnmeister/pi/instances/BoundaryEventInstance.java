@@ -4,13 +4,15 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 
 @NoArgsConstructor
-public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent2> {
-  @Setter @Getter private UUID attachedInstanceId;
+@Getter
+@Setter
+public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent> {
+  private UUID attachedInstanceId;
 
-  public BoundaryEventInstance(FLowNodeInstance parentInstance, BoundaryEvent2 flowNode) {
+  public BoundaryEventInstance(FLowNodeInstance<?> parentInstance, BoundaryEvent flowNode) {
     super(parentInstance, flowNode);
   }
 

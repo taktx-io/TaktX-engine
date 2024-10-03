@@ -3,26 +3,26 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.Activity2;
-import nl.qunit.bpmnmeister.pd.model.BaseElement2;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent2;
-import nl.qunit.bpmnmeister.pd.model.CallActivity2;
-import nl.qunit.bpmnmeister.pd.model.CatchEvent2;
-import nl.qunit.bpmnmeister.pd.model.EndEvent2;
-import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
-import nl.qunit.bpmnmeister.pd.model.Gateway2;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway2;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
-import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent2;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics2;
-import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
-import nl.qunit.bpmnmeister.pd.model.ReceiveTask2;
-import nl.qunit.bpmnmeister.pd.model.SendTask2;
-import nl.qunit.bpmnmeister.pd.model.ServiceTask2;
-import nl.qunit.bpmnmeister.pd.model.StartEvent2;
-import nl.qunit.bpmnmeister.pd.model.SubProcess2;
-import nl.qunit.bpmnmeister.pd.model.Task2;
-import nl.qunit.bpmnmeister.pd.model.ThrowEvent2;
+import nl.qunit.bpmnmeister.pd.model.Activity;
+import nl.qunit.bpmnmeister.pd.model.BaseElement;
+import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
+import nl.qunit.bpmnmeister.pd.model.CallActivity;
+import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.EndEvent;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.Gateway;
+import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
+import nl.qunit.bpmnmeister.pd.model.LoopCharacteristics;
+import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
+import nl.qunit.bpmnmeister.pd.model.ReceiveTask;
+import nl.qunit.bpmnmeister.pd.model.SendTask;
+import nl.qunit.bpmnmeister.pd.model.ServiceTask;
+import nl.qunit.bpmnmeister.pd.model.StartEvent;
+import nl.qunit.bpmnmeister.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.pd.model.Task;
+import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 
 @ApplicationScoped
@@ -45,69 +45,71 @@ public class ProcessInstanceProcessorProvider {
   @Inject FeelExpressionHandler feelExpressionHandler;
   @Inject VariablesMapper variablesMapper;
 
-  public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement2 element) {
-    if (element instanceof ThrowEvent2 throwEvent) {
+  public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
+    if (element instanceof ThrowEvent throwEvent) {
       return getProcessorForThrowEvent(throwEvent);
-    } else if (element instanceof CatchEvent2 catchEvent) {
+    } else if (element instanceof CatchEvent catchEvent) {
       return getProcessorForCatchEvent(catchEvent);
-    } else if (element instanceof Gateway2 gateway) {
+    } else if (element instanceof Gateway gateway) {
       return getProcessorForGateway(gateway);
-    } else if (element instanceof Activity2 activity) {
+    } else if (element instanceof Activity activity) {
       return getStateProcessorForActivity(activity);
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForGateway(Gateway2 gateway) {
+  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForGateway(Gateway gateway) {
 
-    if (gateway instanceof ExclusiveGateway2) {
+    if (gateway instanceof ExclusiveGateway) {
       return exclusiveGatewayProcessor;
-    } else if (gateway instanceof InclusiveGateway2) {
+    } else if (gateway instanceof InclusiveGateway) {
       return inclusiveGatewayProcessor;
-    } else if (gateway instanceof ParallelGateway2) {
+    } else if (gateway instanceof ParallelGateway) {
       return parallelGatewayProcessor;
     }
     throw new IllegalStateException("Unknown gateway element type: " + gateway.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent2 throwEvent) {
-    if (throwEvent instanceof EndEvent2) {
+  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent throwEvent) {
+    if (throwEvent instanceof EndEvent) {
       return endEventProcessor;
-    } else if (throwEvent instanceof IntermediateThrowEvent2) {
+    } else if (throwEvent instanceof IntermediateThrowEvent) {
       return intermediateThrowEventProcessor;
     }
     throw new IllegalStateException("Unknown throw element type: " + throwEvent.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForCatchEvent(CatchEvent2 element) {
-    if (element instanceof StartEvent2) {
+  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForCatchEvent(CatchEvent element) {
+    if (element instanceof StartEvent) {
       return startEventProcessor;
-    } else if (element instanceof IntermediateCatchEvent2) {
+    } else if (element instanceof IntermediateCatchEvent) {
       return intermediateCatchEventProcessor;
-    } else if (element instanceof BoundaryEvent2) {
+    } else if (element instanceof BoundaryEvent) {
       return boundaryEventProcessor;
     }
     throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(Activity2 element) {
+  private FLowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(Activity element) {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
-    if (element instanceof ServiceTask2) {
+    if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
-    } else if (element instanceof SendTask2) {
+    } else if (element instanceof SendTask) {
       processor = sendTaskProcessor;
-    } else if (element instanceof SubProcess2) {
+    } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
-    } else if (element instanceof CallActivity2) {
+    } else if (element instanceof CallActivity) {
       processor = callActivityProcessor;
-    } else if (element instanceof ReceiveTask2) {
+    } else if (element instanceof ReceiveTask) {
       processor = receiveTaskProcessor;
-    } else if (element instanceof Task2) {
+    } else if (element instanceof Task) {
       // This must be the last check, as Task is the superclass of all other tasks
       processor = taskProcessor;
+    } else {
+      throw new IllegalStateException("Unknown activity event element type: " + element.getClass());
     }
-    if (!element.getLoopCharacteristics().equals(LoopCharacteristics2.NONE)) {
+    if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
       return new MultiInstanceProcessor(feelExpressionHandler, processor, variablesMapper);
     }

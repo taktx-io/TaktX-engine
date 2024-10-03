@@ -7,19 +7,19 @@ import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
-import nl.qunit.bpmnmeister.pd.model.Gateway2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.Gateway;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.GatewayInstance;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
-        E extends Gateway2, I extends GatewayInstance<E>, C extends ContinueFlowElementTrigger2>
+        E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTrigger>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   private FeelExpressionHandler feelExpressionHandler;
@@ -34,7 +34,7 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, I gatewayInstance, String inputFlowId, Variables2 variables) {
+      FlowElements flowElements, I gatewayInstance, String inputFlowId, Variables variables) {
     return processStartSpecificGatewayInstance(
         flowElements, gatewayInstance, inputFlowId, variables);
   }
@@ -42,26 +42,26 @@ public abstract class GatewayInstanceProcessor<
   @Override
   protected final InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       I flowNodeInstance,
       C trigger,
-      Variables2 processInstanceVariables,
-      FlowNodeStates2 flowNodeStates) {
+      Variables processInstanceVariables,
+      FlowNodeInstances flowNodeInstances) {
     // Should never happen
     return InstanceResult.empty();
   }
 
   @Override
-  protected Set<SequenceFlow2> getSelectedSequenceFlows(
+  protected Set<SequenceFlow> getSelectedSequenceFlows(
       I gatewayInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates,
-      Variables2 variables) {
-    Set<SequenceFlow2> outgoingFlows = new HashSet<>();
-    if (canTriggerOutputFlows(gatewayInstance, flowElements, flowNodeStates)) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
+    Set<SequenceFlow> outgoingFlows = new HashSet<>();
+    if (canTriggerOutputFlows(gatewayInstance, flowElements, flowNodeInstances)) {
       E gatewayNode = gatewayInstance.getFlowNode();
-      Set<SequenceFlow2> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
-      Set<SequenceFlow2> flowsWithCondition =
+      Set<SequenceFlow> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
+      Set<SequenceFlow> flowsWithCondition =
           sequenceFlows.stream()
               .filter(sequenceFlow -> !FlowCondition.NONE.equals(sequenceFlow.getCondition()))
               .filter(
@@ -86,12 +86,12 @@ public abstract class GatewayInstanceProcessor<
       }
     }
     gatewayInstance.setSelectedOutputFlows(
-        outgoingFlows.stream().map(SequenceFlow2::getId).collect(Collectors.toSet()));
+        outgoingFlows.stream().map(SequenceFlow::getId).collect(Collectors.toSet()));
     return outgoingFlows;
   }
 
   protected abstract boolean canTriggerOutputFlows(
-      I gatewayInstance, FlowElements2 flowElements, FlowNodeStates2 flowNodeStates);
+      I gatewayInstance, FlowElements flowElements, FlowNodeInstances flowNodeInstances);
 
   @Override
   protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
@@ -99,7 +99,7 @@ public abstract class GatewayInstanceProcessor<
   }
 
   protected abstract InstanceResult processStartSpecificGatewayInstance(
-      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables);
+      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables);
 
   protected abstract InstanceResult processTerminateSpecificGatewayInstance(I instance);
 }

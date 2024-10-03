@@ -7,7 +7,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.Event2;
+import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
@@ -15,14 +15,14 @@ import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 @Getter
 @Setter
 @NoArgsConstructor
-public abstract class CatchEventInstance<N extends Event2> extends EventInstance<N>
+public abstract class CatchEventInstance<N extends Event> extends EventInstance<N>
     implements ReceivingMessageInstance {
   private CatchEventStateEnum state;
 
   private Set<ScheduledKey> scheduledKeys;
   private Map<MessageEventKey, Set<String>> messageEventKeys;
 
-  protected CatchEventInstance(FLowNodeInstance parentInstance, N flowNode) {
+  protected CatchEventInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
     state = CatchEventStateEnum.READY;
     scheduledKeys = new HashSet<>();

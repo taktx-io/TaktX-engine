@@ -26,11 +26,11 @@ public class ExternalTaskResponseTrigger extends ContinueFlowElementTrigger {
   public ExternalTaskResponseTrigger(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("elementIdPath") @Nonnull List<String> elementIdPath,
-      @JsonProperty("elementInstanceId") @Nonnull List<UUID> elementInstanceIdPath,
+      @JsonProperty("elementInstanceIdPath") @Nonnull List<UUID> elementInstanceIdPath,
       @JsonProperty("externalTaskResponseResult") @Nonnull
           ExternalTaskResponseResult externalTaskResponseResult,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
-    super(processInstanceKey, elementInstanceIdPath, elementIdPath, Constants.NONE, variables);
+    super(processInstanceKey, elementIdPath, elementInstanceIdPath, Constants.NONE, variables);
     this.externalTaskResponseResult = externalTaskResponseResult;
   }
 }

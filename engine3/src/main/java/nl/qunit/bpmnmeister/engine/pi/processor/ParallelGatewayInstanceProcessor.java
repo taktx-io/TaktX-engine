@@ -5,21 +5,21 @@ import jakarta.inject.Inject;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.ParallelGateway2;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ParallelGatewayInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class ParallelGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-        ParallelGateway2, ParallelGatewayInstance, ContinueFlowElementTrigger2> {
+        ParallelGateway, ParallelGatewayInstance, ContinueFlowElementTrigger> {
 
   @Inject
   public ParallelGatewayInstanceProcessor(
@@ -32,17 +32,17 @@ public class ParallelGatewayInstanceProcessor
   @Override
   protected boolean canTriggerOutputFlows(
       ParallelGatewayInstance gatewayInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
     return true;
   }
 
   @Override
   protected InstanceResult processStartSpecificGatewayInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       ParallelGatewayInstance flownodeInstance,
       String inputFlowId,
-      Variables2 variables) {
+      Variables variables) {
     flownodeInstance.addTriggeredFlow(inputFlowId);
     if (flownodeInstance.getFlowNode().getIncoming().equals(flownodeInstance.getTriggeredFlows())) {
       flownodeInstance.clearTriggeredFlows();
@@ -57,11 +57,11 @@ public class ParallelGatewayInstanceProcessor
   }
 
   @Override
-  protected Set<SequenceFlow2> getSelectedSequenceFlows(
+  protected Set<SequenceFlow> getSelectedSequenceFlows(
       ParallelGatewayInstance flowNodeInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates,
-      Variables2 variables) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 }

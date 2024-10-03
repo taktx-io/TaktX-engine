@@ -7,11 +7,11 @@ import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
-import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
@@ -19,7 +19,7 @@ import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
 @ApplicationScoped
 @NoArgsConstructor
 public class IntermediateThrowEventInstanceProcessor
-    extends ThrowEventInstanceProcessor<IntermediateThrowEvent2, IntermediateThrowEventInstance> {
+    extends ThrowEventInstanceProcessor<IntermediateThrowEvent, IntermediateThrowEventInstance> {
 
   @Inject
   public IntermediateThrowEventInstanceProcessor(
@@ -35,9 +35,9 @@ public class IntermediateThrowEventInstanceProcessor
 
   @Override
   protected InstanceResult processStartSpecificThrowEventInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      Variables2 variables) {
+      Variables variables) {
     InstanceResult result = InstanceResult.empty();
 
     flowNodeInstance
@@ -45,7 +45,7 @@ public class IntermediateThrowEventInstanceProcessor
         .getLinkventDefinitions()
         .forEach(
             linkEventDefinition -> {
-              Optional<IntermediateCatchEvent2> intermediateCatchEvent =
+              Optional<IntermediateCatchEvent> intermediateCatchEvent =
                   flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());
               intermediateCatchEvent.ifPresent(
                   event -> {

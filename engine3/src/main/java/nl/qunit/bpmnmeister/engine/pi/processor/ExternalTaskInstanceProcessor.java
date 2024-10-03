@@ -12,13 +12,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ExternalTask2;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.ExternalTask;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger2;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
@@ -27,8 +27,8 @@ import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 @NoArgsConstructor
 @Setter
 public abstract class ExternalTaskInstanceProcessor<
-        E extends ExternalTask2, I extends ExternalTaskInstance<E>>
-    extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTrigger2> {
+        E extends ExternalTask, I extends ExternalTaskInstance<E>>
+    extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTrigger> {
 
   private FeelExpressionHandler feelExpressionHandler;
   private Clock clock;
@@ -47,9 +47,9 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables) {
+      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables) {
     InstanceResult instanceResult = InstanceResult.empty();
-    ExternalTask2 flowNode = flownodeInstance.getFlowNode();
+    ExternalTask flowNode = flownodeInstance.getFlowNode();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(
             flowNode.getWorkerDefinition(), flowNode, flownodeInstance, variables, null);
@@ -62,12 +62,12 @@ public abstract class ExternalTaskInstanceProcessor<
   @Override
   protected InstanceResult processContinueSpecificActivityInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       I externalTaskInstance,
-      ExternalTaskResponseTrigger2 trigger,
-      Variables2 processInstanceVariables) {
+      ExternalTaskResponseTrigger trigger,
+      Variables processInstanceVariables) {
     VariablesDTO variablesDTO = trigger.getVariables();
-    Variables2 variables = variablesMapper.fromDTO(variablesDTO);
+    Variables variables = variablesMapper.fromDTO(variablesDTO);
     processInstanceVariables.merge(variables);
 
     InstanceResult instanceResult = InstanceResult.empty();
@@ -145,7 +145,7 @@ public abstract class ExternalTaskInstanceProcessor<
     return InstanceResult.empty();
   }
 
-  private String getExternalTaskId(String workerDefinition, Variables2 variables) {
+  private String getExternalTaskId(String workerDefinition, Variables variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();
   }
@@ -153,9 +153,9 @@ public abstract class ExternalTaskInstanceProcessor<
   private void scheduleNextExternalTask(
       String workerDefinition,
       String backoff,
-      ExternalTask2 externalTask,
+      ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      Variables2 variables,
+      Variables variables,
       InstanceResult instanceResult) {
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     ExternalTaskInfo externalTaskInfo =
@@ -166,9 +166,9 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private static ExternalTaskInfo getExternalTaskInfo(
       String workerDefinition,
-      ExternalTask2 externalTask,
+      ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      Variables2 variables,
+      Variables variables,
       String triggerTime) {
     return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
   }

@@ -4,20 +4,20 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway2;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
+import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ExclusiveGatewayInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class ExclusiveGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-        ExclusiveGateway2, ExclusiveGatewayInstance, ContinueFlowElementTrigger2> {
+        ExclusiveGateway, ExclusiveGatewayInstance, ContinueFlowElementTrigger> {
 
   @Inject
   public ExclusiveGatewayInstanceProcessor(
@@ -30,17 +30,17 @@ public class ExclusiveGatewayInstanceProcessor
   @Override
   protected boolean canTriggerOutputFlows(
       ExclusiveGatewayInstance gatewayInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
     return true;
   }
 
   @Override
   protected InstanceResult processStartSpecificGatewayInstance(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       ExclusiveGatewayInstance flownodeInstance,
       String inputFlowId,
-      Variables2 variables) {
+      Variables variables) {
     return InstanceResult.empty();
   }
 

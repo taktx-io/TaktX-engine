@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.pi.instances;
 
 import java.util.Map;
 import java.util.Set;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 
 public interface ReceivingMessageInstance extends IFlowNodeInstance {
@@ -10,5 +10,5 @@ public interface ReceivingMessageInstance extends IFlowNodeInstance {
 
   Map<MessageEventKey, Set<String>> getMessageEventKeys();
 
-  FlowNode2 getFlowNode();
+  FlowNode getFlowNode();
 }

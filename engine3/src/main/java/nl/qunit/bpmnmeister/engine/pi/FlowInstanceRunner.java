@@ -7,11 +7,11 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @ApplicationScoped
@@ -21,18 +21,17 @@ public class FlowInstanceRunner {
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
 
   public InstanceResult processDirectTriggers(
-      FlowNodeStates2 flowNodeStates2,
+      FlowNodeInstances flowNodeInstances,
       InstanceResult instanceResult,
-      FlowElements2 flowElements,
-      Variables2 variables,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      Variables variables) {
     InstanceResult newInstanceResult = new InstanceResult();
 
     List<UUID> terminateInstances = instanceResult.getTerminateInstances();
     for (UUID terminateInstance : terminateInstances) {
       FLowNodeInstance<?> activityInstance =
-          flowNodeStates2.getInstanceWithInstanceId(terminateInstance);
-      FlowNode2 node = activityInstance.getFlowNode();
+          flowNodeInstances.getInstanceWithInstanceId(terminateInstance);
+      FlowNode node = activityInstance.getFlowNode();
       FLowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
       newInstanceResult.merge(processor.processTerminate(activityInstance));
@@ -41,8 +40,8 @@ public class FlowInstanceRunner {
     List<FLowNodeInstanceInfo> newFlowNodeInstances = instanceResult.getNewFlowNodeInstanceInfos();
     for (FLowNodeInstanceInfo instanceInfo : newFlowNodeInstances) {
       FLowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
-      flowNodeStates2.putInstance(fLowNodeInstance);
-      FlowNode2 node =
+      flowNodeInstances.putInstance(fLowNodeInstance);
+      FlowNode node =
           flowElements.getFlowNode(fLowNodeInstance.getFlowNode().getId()).orElseThrow();
       FLowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
@@ -53,7 +52,7 @@ public class FlowInstanceRunner {
               instanceInfo.inputSequenceFlowId(),
               variables,
               false,
-              flowNodeStates);
+              flowNodeInstances);
       newInstanceResult.merge(subInstanceResult);
     }
     instanceResult.clearDirectTriggers();

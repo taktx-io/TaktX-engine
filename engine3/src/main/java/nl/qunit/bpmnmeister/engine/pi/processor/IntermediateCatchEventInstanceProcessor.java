@@ -5,14 +5,14 @@ import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent2;
+import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class IntermediateCatchEventInstanceProcessor
-    extends CatchEventInstanceProcessor<IntermediateCatchEvent2, IntermediateCatchEventInstance> {
+    extends CatchEventInstanceProcessor<IntermediateCatchEvent, IntermediateCatchEventInstance> {
 
   @Inject
   IntermediateCatchEventInstanceProcessor(

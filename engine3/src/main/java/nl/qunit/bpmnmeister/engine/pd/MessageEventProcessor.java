@@ -8,7 +8,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
@@ -102,8 +102,8 @@ public class MessageEventProcessor
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
                   UUID processInstanceKey = subscription.getProcessInstanceKey();
-                  ContinueFlowElementTrigger2 flowElementTrigger =
-                      new ContinueFlowElementTrigger2(
+                  ContinueFlowElementTrigger flowElementTrigger =
+                      new ContinueFlowElementTrigger(
                           processInstanceKey,
                           subscription.getElementIdPath(),
                           subscription.getElementInstanceIdPath(),

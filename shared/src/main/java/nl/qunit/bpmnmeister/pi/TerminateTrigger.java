@@ -10,7 +10,7 @@ import lombok.ToString;
 
 @ToString
 @Getter
-public class TerminateTrigger extends ProcessInstanceTrigger2 {
+public class TerminateTrigger extends ProcessInstanceTrigger {
 
   private final List<UUID> elementInstanceIdPath;
 

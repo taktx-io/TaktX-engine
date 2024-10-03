@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.Variables;
 import org.camunda.feel.FeelEngine;
 import org.camunda.feel.api.EvaluationResult;
 import org.camunda.feel.api.FeelEngineApi;
@@ -21,7 +21,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     this.feelEngineProvider = feelEngineProvider;
   }
 
-  public JsonNode processFeelExpression(String expression, Variables2 variables) {
+  public JsonNode processFeelExpression(String expression, Variables variables) {
     JsonNode resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {

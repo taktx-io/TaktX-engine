@@ -18,18 +18,20 @@ public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
       new ContinueFlowElementTrigger(
           Constants.NONE_UUID, List.of(), List.of(), Constants.NONE, VariablesDTO.empty());
 
-  private final List<UUID> elementInstanceIdPath;
+  private final List<String> elementIdPath;
   private final String inputFlowId;
+  private final List<UUID> elementInstanceIdPath;
 
   @JsonCreator
   public ContinueFlowElementTrigger(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
-      @JsonProperty("elementInstanceIdPath") @Nonnull List<UUID> elementInstanceIdPath,
-      @JsonProperty("elementIdPath") @Nonnull List<String> elementIdPath,
+      @JsonProperty("parentElementIds") @Nonnull List<String> elementIdPath,
+      @JsonProperty("elementInstanceId") @Nonnull List<UUID> elementInstanceIdPath,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, elementIdPath, variables);
     this.elementInstanceIdPath = elementInstanceIdPath;
+    this.elementIdPath = elementIdPath;
     this.inputFlowId = inputFlowId;
   }
 

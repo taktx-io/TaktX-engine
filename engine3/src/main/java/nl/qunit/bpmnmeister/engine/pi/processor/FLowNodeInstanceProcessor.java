@@ -6,21 +6,21 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements2;
-import nl.qunit.bpmnmeister.pd.model.FlowNode2;
+import nl.qunit.bpmnmeister.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow2;
+import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger2;
-import nl.qunit.bpmnmeister.pi.FlowNodeStates2;
-import nl.qunit.bpmnmeister.pi.Variables2;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public abstract class FLowNodeInstanceProcessor<
-    E extends FlowNode2, I extends FLowNodeInstance, C extends ContinueFlowElementTrigger2> {
+    E extends FlowNode, I extends FLowNodeInstance<E>, C extends ContinueFlowElementTrigger> {
   protected IoMappingProcessor ioMappingProcessor;
   protected VariablesMapper variablesMapper;
 
@@ -31,19 +31,19 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   public InstanceResult processStart(
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       FLowNodeInstance<?> flownodeInstance,
       String inputFlowId,
-      Variables2 processInstanceVariables,
+      Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowNodeStates2 flowNodeStates) {
+      FlowNodeInstances flowNodeInstances) {
 
     if (!flownodeInstance.stateAllowsStart()) {
       return InstanceResult.empty();
     }
 
     E flowNode = (E) flownodeInstance.getFlowNode();
-    Variables2 inputVariables = getInputVariables(flowNode, processInstanceVariables);
+    Variables inputVariables = getInputVariables(flowNode, processInstanceVariables);
 
     InstanceResult instanceResult =
         this.processStartSpecificFlowNodeInstance(
@@ -55,19 +55,19 @@ public abstract class FLowNodeInstanceProcessor<
         processInstanceVariables,
         isIterationInMultiInstance,
         flowElements,
-        flowNodeStates);
+        flowNodeInstances);
 
     return instanceResult;
   }
 
   public final InstanceResult processContinue(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       FLowNodeInstance<?> flowNodeInstance,
-      ContinueFlowElementTrigger2 trigger,
-      Variables2 processInstanceVariables,
+      ContinueFlowElementTrigger trigger,
+      Variables processInstanceVariables,
       Boolean isIterationInMultiInstance,
-      FlowNodeStates2 flowNodeStates) {
+      FlowNodeInstances flowNodeInstances) {
     if (!flowNodeInstance.stateAllowsContinue()) {
       return InstanceResult.empty();
     }
@@ -81,7 +81,7 @@ public abstract class FLowNodeInstanceProcessor<
             (I) flowNodeInstance,
             (C) trigger,
             processInstanceVariables,
-            flowNodeStates);
+            flowNodeInstances);
 
     selectNextNodeIfAllowedContinue(
         (I) flowNodeInstance,
@@ -89,7 +89,7 @@ public abstract class FLowNodeInstanceProcessor<
         processInstanceVariables,
         isIterationInMultiInstance,
         flowElements,
-        flowNodeStates);
+        flowNodeInstances);
 
     return instanceResult;
   }
@@ -104,8 +104,8 @@ public abstract class FLowNodeInstanceProcessor<
     return InstanceResult.empty();
   }
 
-  protected Variables2 getInputVariables(E flowNode, Variables2 processInstanceVariables) {
-    Variables2 inputVariables = processInstanceVariables;
+  protected Variables getInputVariables(E flowNode, Variables processInstanceVariables) {
+    Variables inputVariables = processInstanceVariables;
     if (flowNode instanceof WithIoMapping withIoMapping) {
       inputVariables =
           ioMappingProcessor.getInputVariables(withIoMapping, processInstanceVariables);
@@ -116,10 +116,10 @@ public abstract class FLowNodeInstanceProcessor<
   protected void selectNextNodeIfAllowedStart(
       I flownodeInstance,
       InstanceResult instanceResult,
-      Variables2 processInstanceVariables,
+      Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
     if (flownodeInstance.canSelectNextNodeStart()) {
 
       processNode(
@@ -128,17 +128,17 @@ public abstract class FLowNodeInstanceProcessor<
           processInstanceVariables,
           isIterationInMultiInstance,
           flowElements,
-          flowNodeStates);
+          flowNodeInstances);
     }
   }
 
   protected void selectNextNodeIfAllowedContinue(
       I flownodeInstance,
       InstanceResult instanceResult,
-      Variables2 processInstanceVariables,
+      Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
     if (flownodeInstance.canSelectNextNodeContinue()) {
 
       processNode(
@@ -147,62 +147,61 @@ public abstract class FLowNodeInstanceProcessor<
           processInstanceVariables,
           isIterationInMultiInstance,
           flowElements,
-          flowNodeStates);
+          flowNodeInstances);
     }
   }
 
   protected void processNode(
       I flownodeInstance,
       InstanceResult instanceResult,
-      Variables2 processInstanceVariables,
+      Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates) {
-    FlowNode2 flowNode = flownodeInstance.getFlowNode();
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances) {
+    FlowNode flowNode = flownodeInstance.getFlowNode();
     if (flowNode instanceof WithIoMapping withIoMapping) {
-      Variables2 mappedOutputVariables =
-          getOutputVariables(processInstanceVariables, withIoMapping);
+      Variables mappedOutputVariables = getOutputVariables(processInstanceVariables, withIoMapping);
       processInstanceVariables.merge(mappedOutputVariables);
     }
 
     flownodeInstance.increasePassedCnt();
     if (!isIterationInMultiInstance) {
       getSelectedSequenceFlows(
-              flownodeInstance, flowElements, flowNodeStates, processInstanceVariables)
+              flownodeInstance, flowElements, flowNodeInstances, processInstanceVariables)
           .forEach(
               sequenceFlow -> {
                 FLowNodeInstance<?> fLowNodeInstance =
                     sequenceFlow
                         .getTargetNode()
                         .createAndStoreNewInstance(
-                            flownodeInstance.getParentInstance(), flowNodeStates);
+                            flownodeInstance.getParentInstance(), flowNodeInstances);
                 instanceResult.addNewFlowNodeInstance(
                     new FLowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
               });
     }
   }
 
-  protected abstract Set<SequenceFlow2> getSelectedSequenceFlows(
+  protected abstract Set<SequenceFlow> getSelectedSequenceFlows(
       I flowNodeInstance,
-      FlowElements2 flowElements,
-      FlowNodeStates2 flowNodeStates,
-      Variables2 variables);
+      FlowElements flowElements,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables);
 
-  protected Variables2 getOutputVariables(
-      Variables2 processInstanceVariables, WithIoMapping withIoMapping) {
+  protected Variables getOutputVariables(
+      Variables processInstanceVariables, WithIoMapping withIoMapping) {
     return ioMappingProcessor.getOutputVariables(withIoMapping, processInstanceVariables);
   }
 
   protected abstract InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements2 flowElements, I flownodeInstance, String inputFlowId, Variables2 variables);
+      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables);
 
   protected abstract InstanceResult processContinueSpecificFlowNodeInstance(
       int subProcessLevel,
-      FlowElements2 flowElements,
+      FlowElements flowElements,
       I flowNodeInstance,
       C trigger,
-      Variables2 variables,
-      FlowNodeStates2 flowNodeStates);
+      Variables variables,
+      FlowNodeInstances flowNodeInstances);
 
   protected abstract InstanceResult processTerminateSpecificFlowNodeInstance(I instance);
 }
