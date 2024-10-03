@@ -25,6 +25,9 @@ import lombok.experimental.SuperBuilder;
   @JsonSubTypes.Type(value = InclusiveGatewayState.class),
   @JsonSubTypes.Type(value = BoundaryEventState.class),
   @JsonSubTypes.Type(value = ReceiveTaskState.class),
+  @JsonSubTypes.Type(value = MultiInstanceState.class),
+  @JsonSubTypes.Type(value = ThrowEventState.class),
+  @JsonSubTypes.Type(value = IntermediateThrowEventState.class),
 })
 @ToString
 @SuperBuilder(toBuilder = true)

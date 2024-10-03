@@ -11,7 +11,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ToString(callSuper = true)
 @SuperBuilder(toBuilder = true)
-public class ExternalTaskState extends TaskState {
+public abstract class ExternalTaskState extends TaskState {
   private final int attempt;
 
   @JsonCreator
