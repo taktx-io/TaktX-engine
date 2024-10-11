@@ -78,4 +78,8 @@ public class BpmnMapperFactory {
       return new GenericIoMappingMapper();
     }
   }
+
+  public EscalationMapper createEscalationMapper() {
+    return new GenericEscalationMapper();
+  }
 }

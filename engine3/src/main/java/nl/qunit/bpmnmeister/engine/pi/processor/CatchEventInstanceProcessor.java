@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NoArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Message;
@@ -34,27 +35,37 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected InstanceResult processStartSpecificEventInstance(
-      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables) {
+      FlowElements flowElements, I catchEventInstance, String inputFlowId, Variables variables) {
     InstanceResult result = new InstanceResult();
 
-    flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
+    catchEventInstance.setState(CatchEventStateEnum.FINISHED);
 
-    flowNodeInstance
+    catchEventInstance
+        .getFlowNode()
+        .getEscalationEventDefinitions()
+        .forEach(
+            escalationEventDefinition -> {
+              catchEventInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.addEscalationSubscription(escalationEventDefinition);
+            });
+
+    catchEventInstance
         .getFlowNode()
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              flowNodeInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.setState(CatchEventStateEnum.WAITING);
               result.addNewScheduledContinuation(
-                  new ScheduledContinuationInfo(flowNodeInstance, timerEventDefinition, variables));
+                  new ScheduledContinuationInfo(
+                      catchEventInstance, timerEventDefinition, variables));
             });
 
-    flowNodeInstance
+    catchEventInstance
         .getFlowNode()
         .getMessageventDefinitions()
         .forEach(
             messageEventDefinition -> {
-              flowNodeInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.setState(CatchEventStateEnum.WAITING);
               Message message = messageEventDefinition.getReferencedMessage();
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =
@@ -63,7 +74,7 @@ public abstract class CatchEventInstanceProcessor<
               String messageName = message.name();
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
                   new NewCorrelationSubscriptionMessageEventInfo(
-                      messageName, correlationKey, flowNodeInstance);
+                      messageName, correlationKey, catchEventInstance);
               result.addNewCorrelationSubcriptionMessageEvent(messageInfo);
             });
 
@@ -78,15 +89,28 @@ public abstract class CatchEventInstanceProcessor<
       ContinueFlowElementTrigger trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
+    return getInstanceResultForContinue(flowNodeInstance);
+  }
+
+  private InstanceResult getInstanceResultForContinue(I flowNodeInstance) {
     InstanceResult result = InstanceResult.empty();
 
     if (shouldCancel(flowNodeInstance)) {
       flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
-      terminateScheduleKeys(flowNodeInstance, result);
-      terminateMessageSubscriptions(flowNodeInstance, result);
+      terminateSubscriptions(flowNodeInstance, result);
     }
     result.merge(processContinueSpecificCatchEventInstance(flowNodeInstance));
     return result;
+  }
+
+  private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
+    terminateScheduleKeys(flowNodeInstance, result);
+    terminateMessageSubscriptions(flowNodeInstance, result);
+    terminateEscalationSubscriptions(flowNodeInstance, result);
+  }
+
+  private void terminateEscalationSubscriptions(I flowNodeInstance, InstanceResult result) {
+    flowNodeInstance.clearEscalationSubscriptions();
   }
 
   private static <I extends CatchEventInstance<? extends CatchEvent>>
@@ -114,10 +138,25 @@ public abstract class CatchEventInstanceProcessor<
   protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(
+      I instance, Variables variables) {
     InstanceResult result = InstanceResult.empty();
-    terminateScheduleKeys(instance, result);
-    terminateMessageSubscriptions(instance, result);
+    terminateSubscriptions(instance, result);
     return result;
+  }
+
+  public boolean processEvent(
+      I catchEventInstance,
+      EventSignal event,
+      InstanceResult newInstanceResult,
+      Variables variables,
+      FlowNodeInstances flowNodeInstances) {
+    if (catchEventInstance.matchesEvent(event)) {
+      newInstanceResult.merge(getInstanceResultForContinue(catchEventInstance));
+      selectNextNodeIfAllowedContinue(
+          catchEventInstance, newInstanceResult, variables, false, flowNodeInstances);
+      return true;
+    }
+    return false;
   }
 }

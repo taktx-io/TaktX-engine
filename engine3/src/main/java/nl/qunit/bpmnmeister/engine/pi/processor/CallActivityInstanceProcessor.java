@@ -66,7 +66,8 @@ public class CallActivityInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(CallActivityInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      CallActivityInstance instance, Variables processInstanceVariables) {
     InstanceResult instanceResult = InstanceResult.empty();
     instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
     return instanceResult;

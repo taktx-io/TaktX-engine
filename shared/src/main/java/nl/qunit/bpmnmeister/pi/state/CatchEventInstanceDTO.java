@@ -17,6 +17,7 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   private CatchEventStateEnum state;
   private Set<ScheduledKey> scheduledKeys;
   private Map<MessageEventKey, Set<String>> messageEventKeys;
+  private Set<EscalationSubscriptionDTO> escalationSubscriptions;
 
   protected CatchEventInstanceDTO(
       UUID elementInstanceId,

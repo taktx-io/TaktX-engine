@@ -7,7 +7,9 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pd.model.Event;
+import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
@@ -15,18 +17,20 @@ import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 @Getter
 @Setter
 @NoArgsConstructor
-public abstract class CatchEventInstance<N extends Event> extends EventInstance<N>
+public abstract class CatchEventInstance<N extends CatchEvent> extends EventInstance<N>
     implements ReceivingMessageInstance {
   private CatchEventStateEnum state;
 
   private Set<ScheduledKey> scheduledKeys;
   private Map<MessageEventKey, Set<String>> messageEventKeys;
+  private Set<EscalationSubscription> escalationSubscriptions;
 
   protected CatchEventInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
     state = CatchEventStateEnum.READY;
     scheduledKeys = new HashSet<>();
     messageEventKeys = new HashMap<>();
+    escalationSubscriptions = new HashSet<>();
   }
 
   @Override
@@ -71,5 +75,25 @@ public abstract class CatchEventInstance<N extends Event> extends EventInstance<
     this.messageEventKeys
         .computeIfAbsent(messageEventKey, k -> new HashSet<>())
         .add(correlationKey);
+  }
+
+  public void addEscalationSubscription(EscalationEventDefinition escalationEventDefinition) {
+    escalationSubscriptions.add(
+        new EscalationSubscription(
+            escalationEventDefinition.getReferencedEscalation().name(),
+            escalationEventDefinition.getReferencedEscalation().escalationCode()));
+  }
+
+  public void clearEscalationSubscriptions() {
+    escalationSubscriptions.clear();
+  }
+
+  public boolean matchesEvent(EventSignal event) {
+    if (event instanceof EscalationEventSignal escalationEventSignal) {
+      return escalationSubscriptions.stream()
+          .anyMatch(
+              escalationSubscription -> escalationSubscription.matchesEvent(escalationEventSignal));
+    }
+    return false;
   }
 }

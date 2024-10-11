@@ -120,20 +120,25 @@ public class SubProcessInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(SubProcessInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      SubProcessInstance subProcessInstance, Variables processInstanceVariables) {
     // Terminate all childelements
     InstanceResult instanceResult = InstanceResult.empty();
-    FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
+    FlowNodeInstances flowNodeInstances = subProcessInstance.getFlowNodeInstances();
     flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
-    flowNodeInstances
-        .getInstances()
-        .values()
-        .forEach(
-            flowNodeInstance -> {
-              FLowNodeInstanceProcessor<?, ?, ?> processor =
-                  processInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
-              instanceResult.merge(processor.processTerminate(flowNodeInstance));
-            });
+    for (FLowNodeInstance<?> fLowNodeInstance : flowNodeInstances.getInstances().values()) {
+      FLowNodeInstanceProcessor<?, ?, ?> processor =
+          processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
+
+      instanceResult = processor.processTerminate(fLowNodeInstance, processInstanceVariables);
+
+      instanceResult =
+          flowInstanceRunner.continueNewInstances(
+              instanceResult,
+              flowNodeInstances,
+              subProcessInstance.getFlowNode().getElements(),
+              processInstanceVariables);
+    }
     return instanceResult;
   }
 }

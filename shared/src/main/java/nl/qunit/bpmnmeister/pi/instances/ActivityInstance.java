@@ -16,15 +16,32 @@ public abstract class ActivityInstance<N extends FlowNode> extends FLowNodeInsta
   private int loopCnt;
   private ActtivityStateEnum state;
   private Set<UUID> boundaryEventIds;
+  private Set<BoundaryEventInstance> attachedBoundaryEventInstances;
 
   protected ActivityInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
     this.state = ActtivityStateEnum.READY;
     this.boundaryEventIds = new HashSet<>();
+    this.attachedBoundaryEventInstances = new HashSet<>();
   }
 
-  public void addBoundaryEventId(UUID boundaryEventId) {
-    boundaryEventIds.add(boundaryEventId);
+  public void addBoundaryEvent(BoundaryEventInstance boundaryEventInstance) {
+    getBoundaryEventIds().add(boundaryEventInstance.getElementInstanceId());
+    getAttachedBoundaryEventInstances().add(boundaryEventInstance);
+  }
+
+  public Set<UUID> getBoundaryEventIds() {
+    if (boundaryEventIds == null) {
+      boundaryEventIds = new HashSet<>();
+    }
+    return boundaryEventIds;
+  }
+
+  public Set<BoundaryEventInstance> getAttachedBoundaryEventInstances() {
+    if (attachedBoundaryEventInstances == null) {
+      attachedBoundaryEventInstances = new HashSet<>();
+    }
+    return attachedBoundaryEventInstances;
   }
 
   public void increaseLoopCnt() {

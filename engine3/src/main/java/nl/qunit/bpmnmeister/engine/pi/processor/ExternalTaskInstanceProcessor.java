@@ -12,14 +12,18 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.ErrorSignal;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.instances.EscalationEventSignal;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
@@ -71,9 +75,17 @@ public abstract class ExternalTaskInstanceProcessor<
     processInstanceVariables.merge(variables);
 
     InstanceResult instanceResult = InstanceResult.empty();
-    if (Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getSuccess())) {
+    ExternalTaskResponseResult responseResult = trigger.getExternalTaskResponseResult();
+    if (ExternalTaskResponseTypeEnum.SUCCESS == responseResult.getResponseType()) {
       externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
-    } else {
+    } else if (ExternalTaskResponseTypeEnum.ESCALATION == responseResult.getResponseType()) {
+      instanceResult.addEvent(
+          new EscalationEventSignal(
+              externalTaskInstance,
+              responseResult.getName(),
+              responseResult.getCode(),
+              responseResult.getMessage()));
+    } else if (ExternalTaskResponseTypeEnum.ERROR == responseResult.getResponseType()) {
       E externalTask = externalTaskInstance.getFlowNode();
       if (!externalTask.getRetries().equals(Constants.NONE)) {
         // We have some kind of retry definition
@@ -101,7 +113,7 @@ public abstract class ExternalTaskInstanceProcessor<
         }
 
         if (externalTaskInstance.increaseAttempt() <= retries
-            && Boolean.TRUE.equals(trigger.getExternalTaskResponseResult().getAllowRetry())) {
+            && Boolean.TRUE.equals(responseResult.getAllowRetry())) {
           // Retry allowed, possibly with backoff
           String externalTaskId =
               getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
@@ -129,10 +141,16 @@ public abstract class ExternalTaskInstanceProcessor<
         } else {
           // No more retries, either by limit or by disallowing retry by the worker
           // fail the task
+          instanceResult.addEvent(
+              new ErrorSignal(
+                  externalTaskInstance, responseResult.getName(), responseResult.getMessage()));
           externalTaskInstance.setState(ActtivityStateEnum.FAILED);
         }
       } else {
         // No retries allowed, fail the task
+        instanceResult.addEvent(
+            new ErrorSignal(
+                externalTaskInstance, responseResult.getName(), responseResult.getMessage()));
         externalTaskInstance.setState(ActtivityStateEnum.FAILED);
       }
     }
@@ -140,7 +158,8 @@ public abstract class ExternalTaskInstanceProcessor<
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(I instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      I instance, Variables variables) {
     // Nothing to do here
     return InstanceResult.empty();
   }

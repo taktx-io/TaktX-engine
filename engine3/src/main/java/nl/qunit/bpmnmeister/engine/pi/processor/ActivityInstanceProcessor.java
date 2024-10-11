@@ -45,7 +45,7 @@ public abstract class ActivityInstanceProcessor<
                     new BoundaryEventInstance(flownodeInstance.getParentInstance(), boundaryEvent);
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
-                flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());
+                flownodeInstance.addBoundaryEvent(boundaryEventInstance);
                 result.addNewFlowNodeInstance(
                     new FLowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
               });
@@ -69,15 +69,23 @@ public abstract class ActivityInstanceProcessor<
             subProcessLevel, flowElements, flowNodeInstance, trigger, processInstanceVariables));
 
     if (flowNodeInstance.getState() == ActtivityStateEnum.FINISHED) {
-      flowNodeInstance.getBoundaryEventIds().forEach(result::addTerminateInstance);
+      flowNodeInstance
+          .getAttachedBoundaryEventInstances()
+          .forEach(bi -> result.addTerminateInstance(bi.getElementInstanceId()));
     }
 
     return result;
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
-    return processTerminateSpecificActivityInstance(instance);
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(
+      I instance, Variables variables) {
+    InstanceResult result = InstanceResult.empty();
+    instance
+        .getAttachedBoundaryEventInstances()
+        .forEach(bi -> result.addTerminateInstance(bi.getElementInstanceId()));
+    result.merge(processTerminateSpecificActivityInstance(instance, variables));
+    return result;
   }
 
   protected abstract InstanceResult processStartSpecificActivityInstance(
@@ -91,14 +99,12 @@ public abstract class ActivityInstanceProcessor<
       C trigger,
       Variables processInstanceVariables);
 
-  protected abstract InstanceResult processTerminateSpecificActivityInstance(I instance);
+  protected abstract InstanceResult processTerminateSpecificActivityInstance(
+      I instance, Variables variables);
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 }

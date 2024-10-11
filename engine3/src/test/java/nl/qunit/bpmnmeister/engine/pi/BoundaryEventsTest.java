@@ -163,7 +163,7 @@ class BoundaryEventsTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
-        .hasTerminatedElement("Subprocess_1")
+        .hasTerminatedElementWithId("Subprocess_1")
         .hasPassedElementWithId("EndEvent_1")
         .hasPassedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
@@ -231,7 +231,7 @@ class BoundaryEventsTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
-        .hasTerminatedElement("Subprocess_1")
+        .hasTerminatedElementWithId("Subprocess_1")
         .hasPassedElementWithId("EndEvent_1")
         .hasPassedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");

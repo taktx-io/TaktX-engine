@@ -53,12 +53,9 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I gatewayInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      I gatewayInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
-    if (canTriggerOutputFlows(gatewayInstance, flowElements, flowNodeInstances)) {
+    if (canTriggerOutputFlows(gatewayInstance, flowNodeInstances)) {
       E gatewayNode = gatewayInstance.getFlowNode();
       Set<SequenceFlow> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
       Set<SequenceFlow> flowsWithCondition =
@@ -91,10 +88,11 @@ public abstract class GatewayInstanceProcessor<
   }
 
   protected abstract boolean canTriggerOutputFlows(
-      I gatewayInstance, FlowElements flowElements, FlowNodeInstances flowNodeInstances);
+      I gatewayInstance, FlowNodeInstances flowNodeInstances);
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(I instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(
+      I instance, Variables variables) {
     return processTerminateSpecificGatewayInstance(instance);
   }
 

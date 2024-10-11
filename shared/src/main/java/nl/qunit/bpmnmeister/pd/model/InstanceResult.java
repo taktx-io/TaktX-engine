@@ -24,6 +24,8 @@ public class InstanceResult {
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayList<>();
   private final List<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayList<>();
   private final List<ScheduledKey> cancelSchedules = new ArrayList<>();
+  private final List<EventSignal> events = new ArrayList<>();
+  private final List<EventSignal> bubbleUpEvents = new ArrayList<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -31,10 +33,6 @@ public class InstanceResult {
 
   public void addNewFlowNodeInstance(FLowNodeInstanceInfo flowNodeInstanceInfo) {
     newFlowNodeInstanceInfos.add(flowNodeInstanceInfo);
-  }
-
-  public boolean hasDirectTriggers() {
-    return !newFlowNodeInstanceInfos.isEmpty() || !terminateInstances.isEmpty();
   }
 
   public void addExternalTaskRequest(ExternalTaskInfo externalTaskInfo) {
@@ -80,6 +78,8 @@ public class InstanceResult {
     scheduledContinuationInfos.addAll(toMerge.getScheduledContinuationInfos());
     cancelSchedules.addAll(toMerge.getCancelSchedules());
     terminateInstances.addAll(toMerge.getTerminateInstances());
+    events.addAll(toMerge.getEvents());
+    bubbleUpEvents.addAll(toMerge.getBubbleUpEvents());
   }
 
   public void cancelSchedule(ScheduledKey scheduledKey) {
@@ -91,7 +91,22 @@ public class InstanceResult {
   }
 
   public void clearDirectTriggers() {
+    this.events.clear();
     this.terminateInstances.clear();
     this.newFlowNodeInstanceInfos.clear();
+  }
+
+  public boolean hasDirectTriggers() {
+    return !newFlowNodeInstanceInfos.isEmpty()
+        || !terminateInstances.isEmpty()
+        || !events.isEmpty();
+  }
+
+  public void addEvent(EventSignal event) {
+    events.add(event);
+  }
+
+  public void bubbleUp(EventSignal event) {
+    bubbleUpEvents.add(event);
   }
 }

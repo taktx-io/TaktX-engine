@@ -7,10 +7,13 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 public class FlowElements {
   private final Map<String, FlowElement> elements = new HashMap<>();
+
+  @Setter private FlowElements parentElements;
 
   public FlowElement get(String id) {
     return elements.get(id);

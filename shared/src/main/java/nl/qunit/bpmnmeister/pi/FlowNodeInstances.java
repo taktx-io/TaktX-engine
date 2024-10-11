@@ -17,6 +17,8 @@ public class FlowNodeInstances {
 
   private ProcessInstanceState state;
 
+  private FlowNodeInstances parentFlowNodeInstances;
+
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
     this.state = ProcessInstanceState.ACTIVE;

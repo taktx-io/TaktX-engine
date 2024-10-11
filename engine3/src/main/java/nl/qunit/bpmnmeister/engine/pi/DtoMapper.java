@@ -9,6 +9,10 @@ import nl.qunit.bpmnmeister.pd.model.CallActivity;
 import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
 import nl.qunit.bpmnmeister.pd.model.EndEvent;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
+import nl.qunit.bpmnmeister.pd.model.ErrorEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.ErrorEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.EventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
@@ -54,7 +58,6 @@ import org.mapstruct.TargetType;
 
 @Mapper(componentModel = "jakarta", builder = @Builder(disableBuilder = false))
 public interface DtoMapper {
-
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)
   @Mapping(target = "sequenceFlows", ignore = true)
@@ -81,6 +84,10 @@ public interface DtoMapper {
   @SubclassMapping(source = MessageEventDefinitionDTO.class, target = MessageEventDefinition.class)
   @SubclassMapping(source = TimerEventDefinitionDTO.class, target = TimerEventDefinition.class)
   @SubclassMapping(source = LinkEventDefinitionDTO.class, target = LinkEventDefinition.class)
+  @SubclassMapping(
+      source = EscalationEventDefinitionDTO.class,
+      target = EscalationEventDefinition.class)
+  @SubclassMapping(source = ErrorEventDefinitionDTO.class, target = ErrorEventDefinition.class)
   EventDefinition map(EventDefinitionDTO eventDefinition);
 
   TimerEventDefinitionDTO map(TimerEventDefinition eventDefinition);

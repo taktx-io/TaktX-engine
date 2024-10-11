@@ -54,9 +54,7 @@ public class InclusiveGatewayInstanceProcessor
 
   @Override
   protected boolean canTriggerOutputFlows(
-      InclusiveGatewayInstance gatewayInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances) {
+      InclusiveGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
     // For each incoming flow check if the corresponding output flows have been triggered,
     // if any of them hasnt, we will not trigger the output flows
     // If there are no corresponding gateways, we assume we are a diverging and allow the flow to

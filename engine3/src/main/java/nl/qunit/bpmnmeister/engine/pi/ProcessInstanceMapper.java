@@ -8,6 +8,7 @@ import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstancesDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
 import nl.qunit.bpmnmeister.pi.instances.CallActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
@@ -205,16 +206,38 @@ public interface ProcessInstanceMapper {
   default ProcessInstance mapAndSetReferences(
       ProcessInstanceDTO source, FlowElements flowElements) {
     ProcessInstance processInstance = map(source, flowElements);
-    setParentInstances(processInstance.getFlowNodeInstances(), null);
+    setParentInstances(processInstance.getFlowNodeInstances(), null, null);
+    setAttachedBoundaryEventInstances(processInstance.getFlowNodeInstances());
     return processInstance;
   }
 
+  default void setAttachedBoundaryEventInstances(FlowNodeInstances flowNodeInstances) {
+    for (FLowNodeInstance<?> value : flowNodeInstances.getInstances().values()) {
+      if (value instanceof ActivityInstance activityInstance) {
+        activityInstance
+            .getBoundaryEventIds()
+            .forEach(
+                boundaryEventId -> {
+                  BoundaryEventInstance boundaryEventInstance =
+                      (BoundaryEventInstance) flowNodeInstances.getInstances().get(boundaryEventId);
+                  activityInstance.addBoundaryEvent(boundaryEventInstance);
+                });
+      }
+      if (value instanceof WithFlowNodeInstances withFlowNodeInstances) {
+        setAttachedBoundaryEventInstances(withFlowNodeInstances.getFlowNodeInstances());
+      }
+    }
+  }
+
   private static void setParentInstances(
-      FlowNodeInstances flowNodeInstances, FLowNodeInstance<?> parentInstance) {
+      FlowNodeInstances flowNodeInstances,
+      FLowNodeInstance<?> parentInstance,
+      FlowNodeInstances parentInstances) {
+    flowNodeInstances.setParentFlowNodeInstances(parentInstances);
     for (FLowNodeInstance<?> value : flowNodeInstances.getInstances().values()) {
       value.setParentInstance(parentInstance);
       if (value instanceof WithFlowNodeInstances withFlowNodeInstances) {
-        setParentInstances(withFlowNodeInstances.getFlowNodeInstances(), value);
+        setParentInstances(withFlowNodeInstances.getFlowNodeInstances(), value, flowNodeInstances);
       }
     }
   }

@@ -24,7 +24,8 @@ public class TaskInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(TaskInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      TaskInstance instance, Variables processInstanceVariables) {
     // Nothing to do here
     return InstanceResult.empty();
   }

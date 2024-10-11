@@ -4,11 +4,15 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import nl.qunit.bpmnmeister.bpmn.TErrorEventDefinition;
+import nl.qunit.bpmnmeister.bpmn.TEscalationEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TLinkEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTerminateEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
+import nl.qunit.bpmnmeister.pd.model.ErrorEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.MessageEventDefinitionDTO;
@@ -34,8 +38,24 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
       return mapLinkEventDefinition(linkEventDefinition);
     } else if (ed instanceof TTerminateEventDefinition terminateEventDefinition) {
       return mapTerminateEventDefinition(terminateEventDefinition);
+    } else if (ed instanceof TEscalationEventDefinition escalationEventDefinition) {
+      return mapEscalationEventDefinition(escalationEventDefinition);
+    } else if (ed instanceof TErrorEventDefinition errorEventDefinition) {
+      return mapErrorEventDefinition(errorEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
+  }
+
+  private EventDefinitionDTO mapErrorEventDefinition(TErrorEventDefinition errorEventDefinition) {
+    return new ErrorEventDefinitionDTO(
+        errorEventDefinition.getId(), errorEventDefinition.getErrorRef().getLocalPart());
+  }
+
+  private EventDefinitionDTO mapEscalationEventDefinition(
+      TEscalationEventDefinition escalationEventDefinition) {
+    return new EscalationEventDefinitionDTO(
+        escalationEventDefinition.getId(),
+        escalationEventDefinition.getEscalationRef().getLocalPart());
   }
 
   private EventDefinitionDTO mapTerminateEventDefinition(

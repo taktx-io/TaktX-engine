@@ -33,6 +33,7 @@ import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
 import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
@@ -352,13 +353,20 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine andRespondWithSuccess(VariablesDTO of) {
-    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(), activeExternalTaskTrigger, new ExternalTaskResponseResult(true, null, null), of);
+    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(), activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.SUCCESS, true,
+        Constants.NONE, Constants.NONE, Constants.NONE), of);
     return this;
   }
 
-  public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String errorMessage, VariablesDTO of) {
+  public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String name, String message, VariablesDTO variables) {
     triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
-        activeExternalTaskTrigger, new ExternalTaskResponseResult(false, allowRetry, errorMessage), of);
+        activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, allowRetry, name, message, Constants.NONE), variables);
+    return this;
+  }
+
+  public BpmnTestEngine andRespondWithEscalation(String name, String code, String message, VariablesDTO variables) {
+    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
+        activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ESCALATION, true, name, message, code), variables);
     return this;
   }
 

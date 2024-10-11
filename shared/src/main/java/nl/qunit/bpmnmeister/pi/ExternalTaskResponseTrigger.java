@@ -12,13 +12,6 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 @Getter
 @ToString(callSuper = true)
 public class ExternalTaskResponseTrigger extends ContinueFlowElementTrigger {
-  public static final ExternalTaskResponseTrigger NONE =
-      new ExternalTaskResponseTrigger(
-          Constants.NONE_UUID,
-          List.of(),
-          List.of(),
-          ExternalTaskResponseResult.NONE,
-          VariablesDTO.empty());
 
   private final ExternalTaskResponseResult externalTaskResponseResult;
 

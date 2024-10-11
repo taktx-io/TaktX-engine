@@ -34,12 +34,14 @@ import java.util.concurrent.CompletableFuture;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.Topics;
+import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -228,7 +230,7 @@ public class ExternalTriggerConsumer {
                       ? Map.of()
                       : objectMapper.convertValue(result, LinkedHashMap.class);
               ExternalTaskResponseResult externalTaskResponseResult =
-                  new ExternalTaskResponseResult(true, true, null);
+                  new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.SUCCESS, true, Constants.NONE, Constants.NONE, Constants.NONE);
               processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
@@ -237,6 +239,14 @@ public class ExternalTriggerConsumer {
                       externalTaskResponseResult,
                       new VariablesDTO(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
+            } catch(EscalationEventException escalationEvent) {
+              processInstanceTrigger =
+                  new ExternalTaskResponseTrigger(
+                      externalTaskTrigger.getProcessInstanceKey(),
+                      externalTaskTrigger.getElementIdPath(),
+                      externalTaskTrigger.getElementInstanceIdPath(),
+                      new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ESCALATION, true, escalationEvent.getName(), escalationEvent.getMessage(), escalationEvent.getCode()),
+                      VariablesDTO.empty());
             } catch (Throwable e) {
               LOG.error("Error invoking method", e);
               processInstanceTrigger =
@@ -244,7 +254,7 @@ public class ExternalTriggerConsumer {
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResult(false, true, e.getMessage()),
+                      new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, true, Constants.NONE, e.getMessage(), Constants.NONE),
                       VariablesDTO.empty());
             }
             responseEmitter.send(

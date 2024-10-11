@@ -9,27 +9,38 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public abstract class CatchEvent extends Event implements WithIoMapping {
+public abstract class CatchEvent extends Event
+    implements WithIoMapping, WithEscalationEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Set<TimerEventDefinition> getTimerEventDefinitions() {
-    return eventDefinitions.stream()
-        .filter(TimerEventDefinition.class::isInstance)
-        .map(TimerEventDefinition.class::cast)
-        .collect(Collectors.toSet());
+    return getDefinitions(TimerEventDefinition.class);
   }
 
   public Set<MessageEventDefinition> getMessageventDefinitions() {
-    return eventDefinitions.stream()
-        .filter(MessageEventDefinition.class::isInstance)
-        .map(MessageEventDefinition.class::cast)
-        .collect(Collectors.toSet());
+    return getDefinitions(MessageEventDefinition.class);
   }
 
   public Set<LinkEventDefinition> getLinkventDefinitions() {
+    return getDefinitions(LinkEventDefinition.class);
+  }
+
+  public Set<TerminateEventDefinition> getTerminateEventDefinitions() {
+    return getDefinitions(TerminateEventDefinition.class);
+  }
+
+  public Set<EscalationEventDefinition> getEscalationEventDefinitions() {
+    return getDefinitions(EscalationEventDefinition.class);
+  }
+
+  public Set<ErrorEventDefinition> getErrorEventDefinitions() {
+    return getDefinitions(ErrorEventDefinition.class);
+  }
+
+  private <T> Set<T> getDefinitions(Class<T> clazz) {
     return eventDefinitions.stream()
-        .filter(LinkEventDefinition.class::isInstance)
-        .map(LinkEventDefinition.class::cast)
+        .filter(clazz::isInstance)
+        .map(clazz::cast)
         .collect(Collectors.toSet());
   }
 }

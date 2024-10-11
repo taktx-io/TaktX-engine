@@ -54,7 +54,6 @@ public abstract class FLowNodeInstanceProcessor<
         instanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
-        flowElements,
         flowNodeInstances);
 
     return instanceResult;
@@ -88,16 +87,16 @@ public abstract class FLowNodeInstanceProcessor<
         instanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
-        flowElements,
         flowNodeInstances);
 
     return instanceResult;
   }
 
-  public InstanceResult processTerminate(FLowNodeInstance<?> instance) {
+  public InstanceResult processTerminate(FLowNodeInstance<?> instance, Variables variables) {
     // Only terminate if the instance is ready or waiting
     if (instance.stateAllowsTerminate()) {
-      InstanceResult instanceResult = processTerminateSpecificFlowNodeInstance((I) instance);
+      InstanceResult instanceResult =
+          processTerminateSpecificFlowNodeInstance((I) instance, variables);
       instance.terminate();
       return instanceResult;
     }
@@ -118,7 +117,6 @@ public abstract class FLowNodeInstanceProcessor<
       InstanceResult instanceResult,
       Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements flowElements,
       FlowNodeInstances flowNodeInstances) {
     if (flownodeInstance.canSelectNextNodeStart()) {
 
@@ -127,7 +125,6 @@ public abstract class FLowNodeInstanceProcessor<
           instanceResult,
           processInstanceVariables,
           isIterationInMultiInstance,
-          flowElements,
           flowNodeInstances);
     }
   }
@@ -137,7 +134,6 @@ public abstract class FLowNodeInstanceProcessor<
       InstanceResult instanceResult,
       Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements flowElements,
       FlowNodeInstances flowNodeInstances) {
     if (flownodeInstance.canSelectNextNodeContinue()) {
 
@@ -146,7 +142,6 @@ public abstract class FLowNodeInstanceProcessor<
           instanceResult,
           processInstanceVariables,
           isIterationInMultiInstance,
-          flowElements,
           flowNodeInstances);
     }
   }
@@ -156,7 +151,6 @@ public abstract class FLowNodeInstanceProcessor<
       InstanceResult instanceResult,
       Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
-      FlowElements flowElements,
       FlowNodeInstances flowNodeInstances) {
     FlowNode flowNode = flownodeInstance.getFlowNode();
     if (flowNode instanceof WithIoMapping withIoMapping) {
@@ -166,8 +160,7 @@ public abstract class FLowNodeInstanceProcessor<
 
     flownodeInstance.increasePassedCnt();
     if (!isIterationInMultiInstance) {
-      getSelectedSequenceFlows(
-              flownodeInstance, flowElements, flowNodeInstances, processInstanceVariables)
+      getSelectedSequenceFlows(flownodeInstance, flowNodeInstances, processInstanceVariables)
           .forEach(
               sequenceFlow -> {
                 FLowNodeInstance<?> fLowNodeInstance =
@@ -182,10 +175,7 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected abstract Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances,
-      Variables variables);
+      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables);
 
   protected Variables getOutputVariables(
       Variables processInstanceVariables, WithIoMapping withIoMapping) {
@@ -203,5 +193,6 @@ public abstract class FLowNodeInstanceProcessor<
       Variables variables,
       FlowNodeInstances flowNodeInstances);
 
-  protected abstract InstanceResult processTerminateSpecificFlowNodeInstance(I instance);
+  protected abstract InstanceResult processTerminateSpecificFlowNodeInstance(
+      I instance, Variables variables);
 }

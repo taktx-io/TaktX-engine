@@ -38,7 +38,6 @@ public class MultiInstanceProcessor
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
       MultiInstanceInstance flowNodeInstance,
-      FlowElements flowElements,
       FlowNodeInstances flowNodeInstances,
       Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
@@ -175,6 +174,8 @@ public class MultiInstanceProcessor
     FLowNodeInstance<?> iterationInstance =
         multiInstanceInstance.getFlowNodeInstances().getInstanceWithInstanceId(subElementId);
     FlowElements subFlowElements = new FlowElements();
+    subFlowElements.setParentElements(flowElements);
+
     Activity activity = multiInstanceInstance.getFlowNode();
     subFlowElements.addFlowElement(activity);
 
@@ -219,13 +220,14 @@ public class MultiInstanceProcessor
 
   @Override
   protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      MultiInstanceInstance instance) {
+      MultiInstanceInstance instance, Variables variables) {
     InstanceResult instanceResult = InstanceResult.empty();
     instance
         .getFlowNodeInstances()
         .getInstances()
         .values()
-        .forEach(iteration -> instanceResult.merge(processor.processTerminate(iteration)));
+        .forEach(
+            iteration -> instanceResult.merge(processor.processTerminate(iteration, variables)));
     return instanceResult;
   }
 }

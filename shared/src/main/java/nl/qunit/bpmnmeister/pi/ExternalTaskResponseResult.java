@@ -4,24 +4,26 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.Constants;
 
 @Getter
 public class ExternalTaskResponseResult {
-
-  public static final ExternalTaskResponseResult NONE =
-      new ExternalTaskResponseResult(false, false, Constants.NONE);
-  private final Boolean success;
-  private final String errorMessage;
+  private final ExternalTaskResponseTypeEnum responseType;
+  private final String name;
+  private final String code;
+  private final String message;
   private final Boolean allowRetry;
 
   @JsonCreator
   public ExternalTaskResponseResult(
-      @Nonnull @JsonProperty("success") Boolean success,
+      @Nonnull @JsonProperty("success") ExternalTaskResponseTypeEnum responseType,
       @JsonProperty("allowRetry") Boolean allowRetry,
-      @JsonProperty("errorMessage") String errorMessage) {
-    this.success = success;
-    this.errorMessage = errorMessage;
+      @JsonProperty("name") String name,
+      @JsonProperty("message") String message,
+      @JsonProperty("code") String code) {
+    this.responseType = responseType;
+    this.name = name;
+    this.code = code;
+    this.message = message;
     this.allowRetry = allowRetry;
   }
 }

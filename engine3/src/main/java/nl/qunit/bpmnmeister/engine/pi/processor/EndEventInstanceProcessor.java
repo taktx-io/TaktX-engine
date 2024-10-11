@@ -22,7 +22,8 @@ public class EndEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(EndEventInstance instance) {
+  protected InstanceResult processTerminateSpecificFlowNodeInstance(
+      EndEventInstance instance, Variables processInstanceVariables) {
     return InstanceResult.empty();
   }
 

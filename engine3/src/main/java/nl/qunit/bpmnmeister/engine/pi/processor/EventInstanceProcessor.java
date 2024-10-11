@@ -42,10 +42,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 

@@ -180,6 +180,8 @@ public class ProcessInstanceProcessor
       if (processDefinitionDTO != null) {
         FlowElements flowElements =
             definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
+        VariablesDTO variablesDTO = variablesStore.get(trigger.getProcessInstanceKey());
+        Variables processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
 
         ProcessInstance processInstance =
             instanceMapper.mapAndSetReferences(processInstanceDTO, flowElements);
@@ -194,7 +196,8 @@ public class ProcessInstanceProcessor
                   instance -> {
                     FLowNodeInstanceProcessor<?, ?, ?> processor =
                         processInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-                    instanceResult.merge(processor.processTerminate(instance));
+                    instanceResult.merge(
+                        processor.processTerminate(instance, processInstanceVariables));
                   });
           processInstance.getFlowNodeInstances().setState(ProcessInstanceState.TERMINATED);
         } else {
@@ -206,7 +209,7 @@ public class ProcessInstanceProcessor
           if (instance != null) {
             FLowNodeInstanceProcessor<?, ?, ?> processor =
                 processInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-            instanceResult.merge(processor.processTerminate(instance));
+            instanceResult.merge(processor.processTerminate(instance, processInstanceVariables));
           }
         }
         continueNewInstances(

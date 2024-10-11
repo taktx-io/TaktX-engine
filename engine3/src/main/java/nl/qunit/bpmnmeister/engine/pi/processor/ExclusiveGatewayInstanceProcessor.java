@@ -29,9 +29,7 @@ public class ExclusiveGatewayInstanceProcessor
 
   @Override
   protected boolean canTriggerOutputFlows(
-      ExclusiveGatewayInstance gatewayInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances) {
+      ExclusiveGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
     return true;
   }
 

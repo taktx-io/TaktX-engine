@@ -31,9 +31,7 @@ public class ParallelGatewayInstanceProcessor
 
   @Override
   protected boolean canTriggerOutputFlows(
-      ParallelGatewayInstance gatewayInstance,
-      FlowElements flowElements,
-      FlowNodeInstances flowNodeInstances) {
+      ParallelGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
     return true;
   }
 
@@ -59,7 +57,6 @@ public class ParallelGatewayInstanceProcessor
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
       ParallelGatewayInstance flowNodeInstance,
-      FlowElements flowElements,
       FlowNodeInstances flowNodeInstances,
       Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();

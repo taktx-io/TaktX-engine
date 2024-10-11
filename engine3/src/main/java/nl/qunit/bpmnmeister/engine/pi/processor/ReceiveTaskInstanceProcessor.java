@@ -64,7 +64,8 @@ public class ReceiveTaskInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(ReceiveTaskInstance instance) {
+  protected InstanceResult processTerminateSpecificActivityInstance(
+      ReceiveTaskInstance instance, Variables processInstanceVariables) {
     return terminatingSubscriptionInstanceResult(instance);
   }
 
