@@ -56,9 +56,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("MappedOutputVariable", "value1")
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("ServiceTask_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("ServiceTask_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
 
@@ -74,9 +74,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("ServiceTask_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("ServiceTask_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -100,7 +100,7 @@ class ExternalTaskTest {
         .andRespondWithFailure(true, "fail","failure", VariablesDTO.of("failed5", "true"))
         .waitUntilElementHasFailed("ServiceTask_1")
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("ServiceTask_1")
         .doesNotHaveVariable("MappedOutputVariable")
@@ -169,9 +169,9 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
-        .hasPassedElementWithId("StartEvent_2")
-        .hasPassedElementWithId("send-task-id")
-        .hasPassedElementWithId("EndEvent_2");
+        .hasInstantiatedElementWithId("StartEvent_2")
+        .hasInstantiatedElementWithId("send-task-id")
+        .hasInstantiatedElementWithId("EndEvent_2");
   }
 
 }

@@ -106,10 +106,10 @@ public abstract class CatchEventInstanceProcessor<
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
-    terminateEscalationSubscriptions(flowNodeInstance, result);
+    terminateEscalationSubscriptions(flowNodeInstance);
   }
 
-  private void terminateEscalationSubscriptions(I flowNodeInstance, InstanceResult result) {
+  private void terminateEscalationSubscriptions(I flowNodeInstance) {
     flowNodeInstance.clearEscalationSubscriptions();
   }
 

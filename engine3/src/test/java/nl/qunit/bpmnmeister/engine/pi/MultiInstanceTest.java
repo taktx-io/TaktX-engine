@@ -55,10 +55,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("task-id", TaskState.class, 3)
-        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -73,10 +73,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
 //        .hasPassedElementWithId("task-id", TaskState.class, 1000)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
   @Test
   void testProcessTaskMultiInstanceSequentialMany()
@@ -90,10 +90,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
 //        .hasPassedElementWithId("task-id", TaskState.class, 1000)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -106,10 +106,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
-        .hasPassedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -123,10 +123,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
-        .hasPassedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("EndEvent_1");
 
   }
 
@@ -141,10 +141,10 @@ class MultiInstanceTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
 //        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
-        .hasPassedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
+        .hasInstantiatedElementWithId("EndEvent_1");
 
   }
 

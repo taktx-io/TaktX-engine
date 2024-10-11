@@ -94,9 +94,9 @@ class ProcessInstanceProcessorTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("key1", "value1")
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Task_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -107,9 +107,9 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("SubProcess_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("SubProcess_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -122,9 +122,9 @@ class ProcessInstanceProcessorTest {
         .andRespondWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("SubProcess_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("SubProcess_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -137,9 +137,9 @@ class ProcessInstanceProcessorTest {
         .andRespondWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("SubProcess_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("SubProcess_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -152,17 +152,17 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.of("startVariable", "valueStart"))
         .waitUntilChildProcessIsCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_CalledElement")
-        .hasPassedElementWithId("task_CalledElement")
-        .hasPassedElementWithId("EndEvent_CalledElement")
+        .hasInstantiatedElementWithId("StartEvent_CalledElement")
+        .hasInstantiatedElementWithId("task_CalledElement")
+        .hasInstantiatedElementWithId("EndEvent_CalledElement")
         .toProcessLevel()
         .assertThatParentProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .toProcessLevel()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("callactivity-id")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("callactivity-id")
+        .hasInstantiatedElementWithId("EndEvent_1");
 
   }
 
@@ -180,7 +180,7 @@ class ProcessInstanceProcessorTest {
         .waitForNewProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task", 1);
+        .hasInstantiatedElementWithId("Task", 1);
   }
 
   @Test @Disabled
@@ -249,16 +249,16 @@ class ProcessInstanceProcessorTest {
         .waitForNewProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasVariableWithValue("var1", "value1")
         .toProcessLevel()
         .sendMessage("StartMessage2", VariablesDTO.of("var2", "value2"))
         .waitForNewProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasVariableWithValue("var2", "value2")
         .toProcessLevel()
         .deployProcessDefinitionAndWait("/bpmn/message_start_2.bpmn")
@@ -267,8 +267,8 @@ class ProcessInstanceProcessorTest {
         .waitForNewProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_2")
-        .hasPassedElementWithId("EndEvent_2")
+        .hasInstantiatedElementWithId("StartEvent_2")
+        .hasInstantiatedElementWithId("EndEvent_2")
         .hasVariableWithValue("var3", "value3")
         .toProcessLevel();
   }

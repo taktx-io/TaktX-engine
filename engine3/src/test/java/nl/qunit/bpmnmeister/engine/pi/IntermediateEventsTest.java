@@ -59,10 +59,10 @@ class IntermediateEventsTest {
         .moveTimeForward(Duration.ofMillis(1001))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("CatchEvent_1")
-        .hasPassedElementWithId("Task_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("CatchEvent_1")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -76,9 +76,9 @@ class IntermediateEventsTest {
         .andSendMessageWithCorrelationKey("IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("MessageIntermediateCatchEvent_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("MessageIntermediateCatchEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasVariableWithValue("var1", "value1");
   }
 
@@ -90,10 +90,10 @@ class IntermediateEventsTest {
         .startProcessInstance(VariablesDTO.of("input", "value"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Throw_1")
-        .hasPassedElementWithId("Catch_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Throw_1")
+        .hasInstantiatedElementWithId("Catch_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("Catch_2")
         .hasVariableWithValue("input", "value")
         .hasVariableWithValue("linkOutput_1", 123.0)

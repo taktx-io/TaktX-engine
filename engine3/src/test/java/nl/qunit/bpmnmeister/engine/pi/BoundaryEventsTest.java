@@ -52,9 +52,9 @@ class BoundaryEventsTest {
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitUntilCompleted()
         .assertThatProcess().isCompleted()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Boundary_Timer_1")
-        .hasPassedElementWithId("EndEvent_2")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Boundary_Timer_1")
+        .hasInstantiatedElementWithId("EndEvent_2")
         .hasNotPassedElementWithId("EndEvent_1");
   }
 
@@ -70,8 +70,8 @@ class BoundaryEventsTest {
         .waitUntilCompleted()
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .assertThatProcess().isCompleted()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("EndEvent_2");
   }
@@ -93,10 +93,10 @@ class BoundaryEventsTest {
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("EndEvent_1")
-        .hasPassedElementWithId("Interrupted_Task_1", 3)
-        .hasPassedElementWithId("Boundary_Timer_1", 1);
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("Interrupted_Task_1", 3)
+        .hasInstantiatedElementWithId("Boundary_Timer_1", 1);
   }
 
 
@@ -113,9 +113,9 @@ class BoundaryEventsTest {
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("BoundaryEvent_1")
-        .hasPassedElementWithId("EndEvent_2")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("BoundaryEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_2")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("service-task-id")
         .hasVariableWithValue("var1", "value1");
@@ -140,10 +140,10 @@ class BoundaryEventsTest {
         .andRespondWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("service-task-id")
-        .hasPassedElementWithId("BoundaryEvent_1", 1)
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("service-task-id")
+        .hasInstantiatedElementWithId("BoundaryEvent_1", 1)
+        .hasInstantiatedElementWithId("EndEvent_1")
         .hasVariableWithValue("var1", "value1")
         .hasVariableWithValue("var2", "value2");
 
@@ -162,10 +162,10 @@ class BoundaryEventsTest {
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .hasTerminatedElementWithId("Subprocess_1")
-        .hasPassedElementWithId("EndEvent_1")
-        .hasPassedElementWithId("Boundary_Timer_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
   }
 
@@ -183,12 +183,12 @@ class BoundaryEventsTest {
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Subprocess_1")
-        .hasPassedElementWithId("EndEvent_2")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Subprocess_1")
+        .hasInstantiatedElementWithId("EndEvent_2")
         .hasNotPassedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("EndEvent_1")
-        .hasPassedElementWithId("OkTask");
+        .hasInstantiatedElementWithId("OkTask");
   }
 
   @Test
@@ -207,10 +207,10 @@ class BoundaryEventsTest {
 //        .hasPassedElementWithId("Service_Task_1")
 //        .hasPassedElementWithId("SubEndEvent_1")
         .hasNotPassedElementWithId("Service_Task_2")
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Subprocess_1")
-        .hasPassedElementWithId("EndEvent_2")
-        .hasPassedElementWithId("OkTask")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Subprocess_1")
+        .hasInstantiatedElementWithId("EndEvent_2")
+        .hasInstantiatedElementWithId("OkTask")
         .hasNotPassedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("EndEvent_1");
   }
@@ -230,10 +230,10 @@ class BoundaryEventsTest {
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .hasTerminatedElementWithId("Subprocess_1")
-        .hasPassedElementWithId("EndEvent_1")
-        .hasPassedElementWithId("Boundary_Timer_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
   }
 }

@@ -49,10 +49,10 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Task_1")
-        .hasPassedElementWithId("Task_2")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("Task_2")
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -63,7 +63,7 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.of("inputVariable", 1))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task_3")
+        .hasInstantiatedElementWithId("Task_3")
         .hasNotPassedElementWithId("Task_1")
         .hasNotPassedElementWithId("Task_2");
   }
@@ -76,7 +76,7 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.of("inputVariable", 2))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("Task_1")
         .hasNotPassedElementWithId("Task_2")
         .hasNotPassedElementWithId("Task_3");
   }
@@ -89,8 +89,8 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.of("inputVariable", 3))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task_1")
-        .hasPassedElementWithId("Task_2")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("Task_2")
         .hasNotPassedElementWithId("Task_3");
   }
 
@@ -102,8 +102,8 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.of("inputVariable", 3, "inputVariable2", "a"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task_1")
-        .hasPassedElementWithId("Task_2")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("Task_2")
         .hasNotPassedElementWithId("Task_3");
   }
 
@@ -117,7 +117,7 @@ class GatewayTest {
         .assertThatProcess()
         .hasNotPassedElementWithId("Task_1")
         .hasNotPassedElementWithId("Task_2")
-        .hasPassedElementWithId("Task_3");
+        .hasInstantiatedElementWithId("Task_3");
   }
 
 
@@ -130,9 +130,9 @@ class GatewayTest {
             VariablesDTO.of("inputVariable", 2, "inputVariable2", "a", "inputVariable3", "a"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("Task_1")
         .hasNotPassedElementWithId("Task_2")
-        .hasPassedElementWithId("Task_3");
+        .hasInstantiatedElementWithId("Task_3");
   }
 
 
@@ -145,20 +145,20 @@ class GatewayTest {
         .startProcessInstance(VariablesDTO.of("inputVariable", 1))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Task_1")
         .hasNotPassedElementWithId("Task_2")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
 
         // now test the alternative default flow
         .toProcessLevel()
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("Task_2")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Task_2")
         .hasNotPassedElementWithId("Task_1")
-        .hasPassedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
 }

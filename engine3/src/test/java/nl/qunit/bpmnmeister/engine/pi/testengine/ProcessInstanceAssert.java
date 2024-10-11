@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
@@ -31,7 +32,16 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasPassedElementWithId(String elementId, Class<?> clazz, int count) {
+  public ProcessInstanceAssert hasPassedElementWithId(String elementId, int count) {
+    Optional<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
+        .findFirst();
+
+    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
+    assertThat(bpmnElementState.get().getPassedCnt()).as("element " + elementId + " has not passed " + count + " times ").isEqualTo(count);
+    return this;
+  }
+
+  public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, Class<?> clazz, int count) {
     List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
         .filter(s -> s.getPassedCnt() > 0)
         .filter(s -> s.getClass().equals(clazz))
@@ -42,7 +52,7 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasPassedElementWithId(String elementId, int count) {
+  public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, int count) {
     List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
         .filter(s -> s.getPassedCnt() > 0)
         .toList();
@@ -51,7 +61,7 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasPassedElementWithId(String elementId) {
+  public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances()
         .get(elementId).stream()
         .filter(s -> s.getPassedCnt() > 0)

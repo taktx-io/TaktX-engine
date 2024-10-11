@@ -51,10 +51,10 @@ class EscalationsTest {
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
-        .hasPassedElementWithId("BoundaryEvent_Interrupting")
-        .hasPassedElementWithId("EndEvent_Interrupting")
+        .hasInstantiatedElementWithId("BoundaryEvent_Interrupting")
+        .hasInstantiatedElementWithId("EndEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_NonInterrupting")
         .hasTerminatedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
@@ -75,12 +75,12 @@ class EscalationsTest {
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
-        .hasPassedElementWithId("EndEvent_Normal")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_Normal")
         .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting")
-        .hasPassedElementWithId("EndEvent_NonInterrupting", 2)
-        .hasPassedElementWithId("ServiceTask_1")
+        .hasInstantiatedElementWithId("EndEvent_NonInterrupting", 2)
+        .hasInstantiatedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "value_noninterrupting")
         .hasVariableWithValue("MappedOutputVariable2", "value_normal");
   }
@@ -98,11 +98,37 @@ class EscalationsTest {
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
-        .hasPassedElementWithId("EscalationBoundaryEvent_Interrupting")
-        .hasPassedElementWithId("EndEvent_Interrupting_1")
+        .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
+        .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
         .hasNotPassedElementWithId("EndEvent_Noninterrupting");
+//        .hasTerminatedElementWithId("ServiceTask_1")
+//        .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
+  }
+
+  @Test
+  void testNonInterruptingEscalationTriggeredInSubprocess()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
+        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+            VariablesDTO.of("var1", "value1"))
+        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+            VariablesDTO.of("var1", "value1"))
+        .andRespondWithEscalation("Escalation_02db004", "interrupting", "escalation message",
+            VariablesDTO.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
+        .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
+        .hasInstantiatedElementWithId("EndEvent_Noninterrupting", 2)
+        .hasPassedElementWithId("EscalationBoundaryEvent_Noninterrupting", 2);
 //        .hasTerminatedElementWithId("ServiceTask_1")
 //        .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
   }
