@@ -233,20 +233,32 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     definitionsBeingDeployed = new BpmnParser().parse(xml);
     xmlEmitter.send(filename, xml);
+    hashToDefinitionMap.clear();
     return this;
   }
 
   public BpmnTestEngine waitForProcessDeployment() {
-    activeProcessDefintion = Awaitility.await()
-        .until(() -> hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash()), Objects::nonNull);
+    return this.waitForProcessDeployment(DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitForProcessDeployment(Duration duration) {
+    activeProcessDefintion = Awaitility.await().atMost(duration)
+        .until(() ->
+            hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash()),
+            Objects::nonNull);
 
     return this;
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+    return deployProcessDefinitionAndWait(filename, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)
+      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     deployProcessDefinition(filename);
-    waitForProcessDeployment();
+    waitForProcessDeployment(duration);
     return this;
   }
 

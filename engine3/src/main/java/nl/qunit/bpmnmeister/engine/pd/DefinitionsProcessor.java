@@ -21,7 +21,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, Integer> definitionCountByIdStore;
-  private KeyValueStore<String, DefinitionsDTO> xmlByHashStore;
+  private KeyValueStore<String, DefinitionsDTO> definitionsByHashStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
 
   @Override
@@ -29,16 +29,15 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
     this.context = context;
     this.definitionCountByIdStore = context.getStateStore(Stores.DEFINITION_COUNT_BY_ID_STORE_NAME);
     this.processDefinitionStore = context.getStateStore(Stores.PROCESS_DEFINITION_STORE_NAME);
-    this.xmlByHashStore = context.getStateStore(Stores.XML_BY_HASH_STORE_NAME);
+    this.definitionsByHashStore = context.getStateStore(Stores.XML_BY_HASH_STORE_NAME);
   }
 
   @Override
   public void process(Record<String, DefinitionsTrigger> definitionsRecord) {
-    String definitionId = definitionsRecord.key();
     if (definitionsRecord.value() instanceof DefinitionsDTO definitions) {
-      processDefinitionsRecord(definitionsRecord, definitions, definitionId);
+      processDefinitionsRecord(definitionsRecord, definitions);
     } else if (definitionsRecord.value() instanceof StartCommand startCommand) {
-      processStartCommandRecord(definitionsRecord, startCommand, definitionId);
+      processStartCommandRecord(definitionsRecord, startCommand);
     } else {
       throw new IllegalStateException("Unsupported trigger: " + definitionsRecord.value());
     }
@@ -46,8 +45,8 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
   private void processStartCommandRecord(
       Record<String, DefinitionsTrigger> definitionsRecord,
-      StartCommand startCommand,
-      String definitionId) {
+      StartCommand startCommand) {
+    String definitionId = definitionsRecord.key();
     Integer latestVersion = this.definitionCountByIdStore.get(definitionId);
     if (latestVersion == null) {
       StringBuilder storedDefinitions = new StringBuilder("Available definitions: ");
@@ -85,52 +84,76 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
   private void processDefinitionsRecord(
       Record<String, DefinitionsTrigger> definitionsRecord,
-      DefinitionsDTO definitions,
-      String definitionId) {
+      DefinitionsDTO definitions) {
     String hash = definitions.getDefinitionsKey().getHash();
-    ProcessDefinitionDTO processDefinition;
-    if (xmlByHashStore.get(hash) != null) {
-      // known hash, do not store but forward as existing processdefinition
-      int version = definitionCountByIdStore.get(definitionId);
-      ProcessDefinitionKey key = new ProcessDefinitionKey(definitionId, version);
-      processDefinition = processDefinitionStore.get(key);
-    } else {
-      // unknwn hash, store and forward as new process definition
-      xmlByHashStore.put(hash, definitions);
-      Integer existingVersion = definitionCountByIdStore.get(definitionId);
-      if (existingVersion == null) {
-        existingVersion = 0;
-      }
-      ProcessDefinitionKey previousKey = new ProcessDefinitionKey(definitionId, existingVersion);
-      int newVersion = existingVersion + 1;
+    String definitionId = definitionsRecord.key();
 
-      // deactivated definition and send deactivatinon message for previous version
-      ProcessDefinitionDTO previousDefinition = processDefinitionStore.get(previousKey);
-      if (previousDefinition != null) {
-        ProcessDefinitionDTO dactivatedProcessDefinition =
-            new ProcessDefinitionDTO(
-                definitions, existingVersion, ProcessDefinitionStateEnum.INACTIVE);
-        ProcessDefinitionActivation deactivationMessage =
-            new ProcessDefinitionActivation(
-                previousDefinition, ProcessDefinitionStateEnum.INACTIVE);
-        processDefinitionStore.put(previousKey, dactivatedProcessDefinition);
-        context.forward(
-            new Record<>(previousKey, deactivationMessage, definitionsRecord.timestamp()));
-      }
-
+    Integer latestExistingVersion = definitionCountByIdStore.get(definitionId);
+    DefinitionsDTO definitionsDTO = definitionsByHashStore.get(hash);
+    if (latestExistingVersion == null && definitionsDTO == null) {
+      // first version
+      Integer newVersion = 1;
+      definitionsByHashStore.put(hash, definitions);
       definitionCountByIdStore.put(definitionId, newVersion);
-      processDefinition =
+      ProcessDefinitionDTO processDefinition =
           new ProcessDefinitionDTO(definitions, newVersion, ProcessDefinitionStateEnum.ACTIVE);
       ProcessDefinitionKey key = new ProcessDefinitionKey(definitionId, newVersion);
       processDefinitionStore.put(key, processDefinition);
       ProcessDefinitionActivation activationMessage =
           new ProcessDefinitionActivation(processDefinition, ProcessDefinitionStateEnum.ACTIVE);
       context.forward(new Record<>(key, activationMessage, definitionsRecord.timestamp()));
+      context.forward(
+          new Record<>(
+              new ProcessDefinitionKey(definitionId, processDefinition.getVersion()),
+              processDefinition,
+              definitionsRecord.timestamp()));
+
+    } else {
+      // Versions already exist
+      ProcessDefinitionKey existingKey = new ProcessDefinitionKey(definitionId, latestExistingVersion);
+
+      // known hash, check if it corresponds to the latest version
+      ProcessDefinitionDTO processDefinition = processDefinitionStore.get(existingKey);
+      if (hash.equals(processDefinition.getDefinitions().getDefinitionsKey().getHash())) {
+        // hash corresponds to latest version, forward as is
+        context.forward(
+            new Record<>(
+                new ProcessDefinitionKey(definitionId, processDefinition.getVersion()),
+                processDefinition,
+                definitionsRecord.timestamp()));
+      } else {
+        // different hash, store and process and forward as a new version and deactivate previous
+
+        // deactivated definition and send deactivatinon message for previous version
+        ProcessDefinitionDTO previousDefinition = processDefinitionStore.get(existingKey);
+        if (previousDefinition != null) {
+          ProcessDefinitionDTO dactivatedProcessDefinition =
+              new ProcessDefinitionDTO(
+                  definitions, latestExistingVersion, ProcessDefinitionStateEnum.INACTIVE);
+          ProcessDefinitionActivation deactivationMessage =
+              new ProcessDefinitionActivation(
+                  previousDefinition, ProcessDefinitionStateEnum.INACTIVE);
+          processDefinitionStore.put(existingKey, dactivatedProcessDefinition);
+
+          Integer newVersion = latestExistingVersion + 1;
+          definitionsByHashStore.put(hash, definitions);
+          definitionCountByIdStore.put(definitionId, newVersion);
+          processDefinition =
+              new ProcessDefinitionDTO(definitions, newVersion, ProcessDefinitionStateEnum.ACTIVE);
+          ProcessDefinitionKey key = new ProcessDefinitionKey(definitionId, newVersion);
+          processDefinitionStore.put(key, processDefinition);
+          ProcessDefinitionActivation activationMessage =
+              new ProcessDefinitionActivation(processDefinition, ProcessDefinitionStateEnum.ACTIVE);
+          context.forward(new Record<>(key, activationMessage, definitionsRecord.timestamp()));
+          context.forward(
+              new Record<>(
+                  new ProcessDefinitionKey(definitionId, processDefinition.getVersion()),
+                  processDefinition,
+                  definitionsRecord.timestamp()));
+        }
     }
-    context.forward(
-        new Record<>(
-            new ProcessDefinitionKey(definitionId, processDefinition.getVersion()),
-            processDefinition,
-            definitionsRecord.timestamp()));
+
+
+    }
   }
 }

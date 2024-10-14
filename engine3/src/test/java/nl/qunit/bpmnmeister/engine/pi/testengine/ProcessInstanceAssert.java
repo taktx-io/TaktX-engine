@@ -8,9 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstancesDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.WithFlowNodeInstancesDTO;
 
 public class ProcessInstanceAssert {
 
@@ -33,7 +36,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasPassedElementWithId(String elementId, int count) {
-    Optional<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
+    Optional<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0).stream()
         .findFirst();
 
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isPresent();
@@ -42,7 +45,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, Class<?> clazz, int count) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0).stream()
         .filter(s -> s.getPassedCnt() > 0)
         .filter(s -> s.getClass().equals(clazz))
         .toList();
@@ -53,7 +56,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, int count) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream()
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0).stream()
         .filter(s -> s.getPassedCnt() > 0)
         .toList();
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
@@ -72,7 +75,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasTerminatedElements(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId);
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
     bpmnElementState.forEach(state ->
         assertThat(state.isTerminated()).as("element " + elementId + " was not terminated").isTrue());
@@ -80,14 +83,27 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasTerminatedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId);
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
     assertThat(bpmnElementState.get(0).isTerminated()).as("element " + elementId + " was not terminated").isTrue();
     return this;
   }
 
+  private List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(FlowNodeInstancesDTO flowNodeInstances,
+      String elementId, int index) {
+    String[] split = elementId.split("/");
+    String elementIdSubPath = split[index];
+    return flowNodeInstances.get(elementIdSubPath).stream().flatMap(flowNodeInstanceDTO -> {
+      if (split.length > index + 1 && flowNodeInstanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
+        return getFlowNodeInstancesWithElementId(withFlowNodeInstances.getFlowNodeInstances(), elementId, index + 1).stream();
+      } else {
+        return Stream.of(flowNodeInstanceDTO);
+      }
+    }).toList();
+  }
+
   public ProcessInstanceAssert hasFailedElement(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId);
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
     assertThat(bpmnElementState.get(0).isFailed()).as("element " + elementId + " was not terminated").isTrue();
     return this;
@@ -112,7 +128,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasNotPassedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances().get(elementId).stream().filter(s -> s.getPassedCnt() > 0).toList();
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstancesWithElementId(processInstance.getFlowNodeInstances(), elementId, 0).stream().filter(s -> s.getPassedCnt() > 0).toList();
 
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isEmpty();
     return this;

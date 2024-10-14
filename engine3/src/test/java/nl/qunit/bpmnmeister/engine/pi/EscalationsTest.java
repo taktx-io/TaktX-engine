@@ -102,9 +102,8 @@ class EscalationsTest {
         .hasNotPassedElementWithId("EndEvent_Normal")
         .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
-        .hasNotPassedElementWithId("EndEvent_Noninterrupting");
-//        .hasTerminatedElementWithId("ServiceTask_1")
-//        .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
+        .hasNotPassedElementWithId("EndEvent_Noninterrupting")
+        .hasTerminatedElementWithId("Subprocess_1/SubServiceTask_1");
   }
 
   @Test
@@ -132,5 +131,27 @@ class EscalationsTest {
 //        .hasTerminatedElementWithId("ServiceTask_1")
 //        .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
   }
+
+  @Test
+  void testNoEscalationTriggeredInSubprocess()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
+        .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Subprocess_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasNotPassedElementWithId("EscalationBoundaryEvent_Interrupting")
+        .hasNotPassedElementWithId("EndEvent_Interrupting_1")
+        .hasNotPassedElementWithId("EndEvent_Noninterrupting")
+        .hasNotPassedElementWithId("EscalationBoundaryEvent_Noninterrupting")
+        .hasVariableWithValue("var1", "value1");
+  }
+
 
 }

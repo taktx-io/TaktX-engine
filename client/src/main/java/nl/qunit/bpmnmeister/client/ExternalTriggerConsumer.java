@@ -137,7 +137,7 @@ public class ExternalTriggerConsumer {
 
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
           log.info("deploying {}", bpmnPath);
-          xmlEmitter.send(new ProducerRecord<>(Topics.XML_TOPIC.getTopicName(), xml));
+          xmlEmitter.send(new ProducerRecord<>(Topics.XML_TOPIC.getTopicName(), definitions.getDefinitionsKey().getProcessDefinitionId(), xml));
         }
       }
 

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsKey;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
@@ -17,7 +18,9 @@ public class DefinitionsMapper
   public KeyValue<String, DefinitionsDTO> apply(String key, String value) {
     try {
       DefinitionsDTO parsed = new BpmnParser().parse(value);
-      return KeyValue.pair(parsed.getDefinitionsKey().getProcessDefinitionId(), parsed);
+      DefinitionsKey definitionsKey = parsed.getDefinitionsKey();
+      String processDefinitionId = definitionsKey.getProcessDefinitionId();
+      return KeyValue.pair(processDefinitionId, parsed);
     } catch (JAXBException
         | NoSuchAlgorithmException
         | IOException

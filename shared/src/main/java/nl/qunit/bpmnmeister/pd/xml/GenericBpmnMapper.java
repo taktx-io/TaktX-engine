@@ -31,8 +31,8 @@ public class GenericBpmnMapper implements BpmnMapper {
     builder.escalations(escalations);
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
-      builder.definitionsKey(new DefinitionsKey(tRootElement.getId(), hash));
       if (tRootElement instanceof TProcess tProcess) {
+        builder.definitionsKey(new DefinitionsKey(tRootElement.getId(), hash));
         Process rootElement = bpmnMapperFactory.createRootElementMapper().map(tProcess);
         builder.rootProcess(rootElement);
       } else if (tRootElement instanceof TMessage tMessage) {

@@ -81,7 +81,7 @@ class ProcessInstanceProcessorTest {
         .deployedProcessDefinition();
     assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
     assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
-    assertThat(processDefinition.getVersion()).isEqualTo(1);
+    assertThat(processDefinition.getVersion()).isEqualTo(3);
 
   }
 
