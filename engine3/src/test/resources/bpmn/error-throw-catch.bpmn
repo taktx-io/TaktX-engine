@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0dgdaf5" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.19.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+  <bpmn:process id="Process_0nmva4d" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1quprt8</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_Normal">
+      <bpmn:incoming>Flow_05f726e</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1quprt8" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+    <bpmn:serviceTask id="ServiceTask_1">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="servicetask" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=&#34;value_normal&#34;" target="MappedOutputVariable2" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1quprt8</bpmn:incoming>
+      <bpmn:outgoing>Flow_05f726e</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_05f726e" sourceRef="ServiceTask_1" targetRef="EndEvent_Normal" />
+    <bpmn:boundaryEvent id="BoundaryEvent_NoErrorReference" attachedToRef="ServiceTask_1">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=var1" target="MappedOutputVariable" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_0zgb8po</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_07g90sl" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="EndEvent_NoReference">
+      <bpmn:incoming>Flow_0zgb8po</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0zgb8po" sourceRef="BoundaryEvent_NoErrorReference" targetRef="EndEvent_NoReference" />
+    <bpmn:boundaryEvent id="BoundaryEvent_WithErrorReference" attachedToRef="ServiceTask_1">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=var1" target="MappedOutputVariable" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_1f5cr9d</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0ayonw9" errorRef="Error_0zoie3n" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="EndEvent_Error_WithErrorReference">
+      <bpmn:incoming>Flow_1f5cr9d</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1f5cr9d" sourceRef="BoundaryEvent_WithErrorReference" targetRef="EndEvent_Error_WithErrorReference" />
+  </bpmn:process>
+  <bpmn:escalation id="Escalation_1rfott1" name="Escalation_1rfott1" escalationCode="123" />
+  <bpmn:escalation id="Escalation_16vkrj5" name="Escalation_16vkrj5" escalationCode="noninterrupting" />
+  <bpmn:escalation id="Escalation_2q78tkp" name="Escalation_2q78tkp" escalationCode="ab" />
+  <bpmn:escalation id="Escalation_02db004" name="Escalation_02db004" escalationCode="interrupting" />
+  <bpmn:error id="Error_0zoie3n" name="Error_1tlo99v" errorCode="456" />
+  <bpmn:message id="Message_1d5p5bt" name="Message_1d5p5bt">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=123" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_0nmva4d">
+      <bpmndi:BPMNShape id="Event_0lx03ez_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="209" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ilt267_di" bpmnElement="EndEvent_Normal">
+        <dc:Bounds x="518" y="209" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_071ml77_di" bpmnElement="ServiceTask_1">
+        <dc:Bounds x="310" y="187" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1g7upab_di" bpmnElement="EndEvent_NoReference">
+        <dc:Bounds x="432" y="332" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_06fvt5l_di" bpmnElement="EndEvent_Error_WithErrorReference">
+        <dc:Bounds x="432" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_00cx8c1_di" bpmnElement="BoundaryEvent_NoErrorReference">
+        <dc:Bounds x="342" y="249" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1p3xibu_di" bpmnElement="BoundaryEvent_WithErrorReference">
+        <dc:Bounds x="342" y="169" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1quprt8_di" bpmnElement="Flow_1quprt8">
+        <di:waypoint x="188" y="227" />
+        <di:waypoint x="310" y="227" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05f726e_di" bpmnElement="Flow_05f726e">
+        <di:waypoint x="410" y="227" />
+        <di:waypoint x="518" y="227" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zgb8po_di" bpmnElement="Flow_0zgb8po">
+        <di:waypoint x="360" y="285" />
+        <di:waypoint x="360" y="350" />
+        <di:waypoint x="432" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1f5cr9d_di" bpmnElement="Flow_1f5cr9d">
+        <di:waypoint x="360" y="169" />
+        <di:waypoint x="360" y="100" />
+        <di:waypoint x="432" y="100" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

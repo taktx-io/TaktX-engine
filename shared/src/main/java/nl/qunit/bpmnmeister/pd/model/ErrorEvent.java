@@ -1,3 +1,3 @@
 package nl.qunit.bpmnmeister.pd.model;
 
-public record ErrorEvent(String name, String errorCode) {}
+public record ErrorEvent(String name, String code) {}

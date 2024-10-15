@@ -6,6 +6,8 @@ import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
+import nl.qunit.bpmnmeister.pd.model.ErrorEvent;
 import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
 import nl.qunit.bpmnmeister.pd.model.EscalationEvent;
 import nl.qunit.bpmnmeister.pd.model.FlowElement;
@@ -18,6 +20,7 @@ import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
+import nl.qunit.bpmnmeister.pd.model.WithErrorEventDefinitions;
 import nl.qunit.bpmnmeister.pd.model.WithEscalationEventDefinitions;
 import nl.qunit.bpmnmeister.pd.model.WithMessageReference;
 
@@ -37,6 +40,7 @@ public class DefinitionMapper {
     setParentReferences(flowElements1.getElements(), null);
     setMessageReferences(flowElements1.getElements(), definitionsDTO.getMessages());
     setEscalationReferences(flowElements1.getElements(), definitionsDTO.getEscalations());
+    setErrorReferences(flowElements1.getElements(), definitionsDTO.getErrors());
     setSequenceFlowReferences(flowElements1);
     return flowElements1;
   }
@@ -90,6 +94,24 @@ public class DefinitionMapper {
             });
   }
 
+  private void setErrorReferences(
+      Map<String, FlowElement> elements, Map<String, ErrorDTO> errors) {
+    for (FlowElement flowElement : elements.values()) {
+      if (flowElement instanceof WithErrorEventDefinitions withErrorEventDefinitions) {
+        withErrorEventDefinitions.getErrorEventDefinitions().stream()
+            .forEach(
+                errorEventDefinition -> {
+                  ErrorDTO errorDTO =
+                      errors.get(errorEventDefinition.getErrorRef());
+                  if (errorDTO != null) {
+                    errorEventDefinition.setReferencedError(
+                        new ErrorEvent(
+                            errorDTO.getName(), errorDTO.getCode()));
+                  }
+                });
+      }
+    }
+  }
   private void setEscalationReferences(
       Map<String, FlowElement> elements, Map<String, EscalationDTO> escalations) {
     for (FlowElement flowElement : elements.values()) {
@@ -99,9 +121,11 @@ public class DefinitionMapper {
                 escalationEventDefinition -> {
                   EscalationDTO escalationDTO =
                       escalations.get(escalationEventDefinition.getEscalationRef());
-                  escalationEventDefinition.setReferencedEscalation(
-                      new EscalationEvent(
-                          escalationDTO.getName(), escalationDTO.getEscalationCode()));
+                  if (escalationDTO != null) {
+                    escalationEventDefinition.setReferencedEscalation(
+                        new EscalationEvent(
+                            escalationDTO.getName(), escalationDTO.getCode()));
+                  }
                 });
       }
     }

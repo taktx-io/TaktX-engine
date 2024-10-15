@@ -370,9 +370,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String name, String message, VariablesDTO variables) {
+  public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String name, String code, String message, VariablesDTO variables) {
     triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
-        activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, allowRetry, name, message, Constants.NONE), variables);
+        activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, allowRetry, name, message, code), variables);
     return this;
   }
 
@@ -619,6 +619,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
     return waitUntilActivityHasState(elementId, ActtivityStateEnum.FAILED, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilElementHasTerminated(String elementId) {
+    return waitUntilActivityHasState(elementId, ActtivityStateEnum.TERMINATED, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilElementIsWaiting(String elementId) {

@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.pd.xml;
 import jakarta.xml.bind.JAXBElement;
 import java.util.HashMap;
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
+import nl.qunit.bpmnmeister.bpmn.TError;
 import nl.qunit.bpmnmeister.bpmn.TEscalation;
 import nl.qunit.bpmnmeister.bpmn.TMessage;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
@@ -10,6 +11,7 @@ import nl.qunit.bpmnmeister.bpmn.TRootElement;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO.DefinitionsDTOBuilder;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsKey;
+import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
 import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.Process;
@@ -27,8 +29,10 @@ public class GenericBpmnMapper implements BpmnMapper {
     DefinitionsDTOBuilder builder = DefinitionsDTO.builder();
     HashMap<String, MessageDTO> messages = new HashMap<>();
     HashMap<String, EscalationDTO> escalations = new HashMap<>();
+    HashMap<String, ErrorDTO> errors = new HashMap<>();
     builder.messages(messages);
     builder.escalations(escalations);
+    builder.errors(errors);
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
       if (tRootElement instanceof TProcess tProcess) {
@@ -41,6 +45,9 @@ public class GenericBpmnMapper implements BpmnMapper {
       } else if (tRootElement instanceof TEscalation tEscalation) {
         EscalationMapper escalationMapper = bpmnMapperFactory.createEscalationMapper();
         escalations.put(tEscalation.getId(), escalationMapper.map(tEscalation));
+      } else if (tRootElement instanceof TError tError) {
+        ErrorMapper errorMapper = bpmnMapperFactory.createErrorMapper();
+        errors.put(tError.getId(), errorMapper.map(tError));
       }
     }
 

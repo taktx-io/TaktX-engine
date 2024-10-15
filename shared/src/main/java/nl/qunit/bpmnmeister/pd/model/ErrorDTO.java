@@ -8,13 +8,13 @@ import lombok.Getter;
 
 @Getter
 @EqualsAndHashCode
-public class EscalationDTO {
+public class ErrorDTO {
   private final String id;
   private final String name;
   private final String code;
 
   @JsonCreator
-  public EscalationDTO(
+  public ErrorDTO(
       @Nonnull @JsonProperty("id") String id,
       @Nonnull @JsonProperty("name") String name,
       @Nonnull @JsonProperty("code") String code) {

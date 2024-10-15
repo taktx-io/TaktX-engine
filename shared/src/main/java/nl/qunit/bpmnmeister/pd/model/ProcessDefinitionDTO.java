@@ -11,10 +11,6 @@ import lombok.ToString;
 @Getter
 @ToString
 public class ProcessDefinitionDTO {
-
-  public static final ProcessDefinitionDTO NONE =
-      new ProcessDefinitionDTO(DefinitionsDTO.NONE, -1, ProcessDefinitionStateEnum.INACTIVE);
-
   private final DefinitionsDTO definitions;
   private final Integer version;
   private final ProcessDefinitionStateEnum state;

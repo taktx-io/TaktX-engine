@@ -11,8 +11,6 @@ import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ErrorSignal;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -23,6 +21,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.instances.ErrorEventSignal;
 import nl.qunit.bpmnmeister.pi.instances.EscalationEventSignal;
 import nl.qunit.bpmnmeister.pi.instances.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
@@ -87,7 +86,7 @@ public abstract class ExternalTaskInstanceProcessor<
               responseResult.getMessage()));
     } else if (ExternalTaskResponseTypeEnum.ERROR == responseResult.getResponseType()) {
       E externalTask = externalTaskInstance.getFlowNode();
-      if (!externalTask.getRetries().equals(Constants.NONE)) {
+      if (externalTask.getRetries() != null) {
         // We have some kind of retry definition
         JsonNode jsonNode =
             feelExpressionHandler.processFeelExpression(
@@ -140,18 +139,15 @@ public abstract class ExternalTaskInstanceProcessor<
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker
-          // fail the task
           instanceResult.addEvent(
-              new ErrorSignal(
-                  externalTaskInstance, responseResult.getName(), responseResult.getMessage()));
-          externalTaskInstance.setState(ActtivityStateEnum.FAILED);
+              new ErrorEventSignal(
+                  externalTaskInstance, responseResult.getName(), responseResult.getCode(), responseResult.getMessage()));
         }
       } else {
-        // No retries allowed, fail the task
+        // No retries allowed
         instanceResult.addEvent(
-            new ErrorSignal(
-                externalTaskInstance, responseResult.getName(), responseResult.getMessage()));
-        externalTaskInstance.setState(ActtivityStateEnum.FAILED);
+            new ErrorEventSignal(
+                externalTaskInstance, responseResult.getName(), responseResult.getCode(), responseResult.getMessage()));
       }
     }
     return instanceResult;

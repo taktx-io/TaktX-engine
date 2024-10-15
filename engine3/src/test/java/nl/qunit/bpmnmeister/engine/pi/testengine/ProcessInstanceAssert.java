@@ -65,13 +65,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = processInstance.getFlowNodeInstances()
-        .get(elementId).stream()
-        .filter(s -> s.getPassedCnt() > 0)
-        .toList();
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState).as("element " + elementId + " has not passed").isNotEmpty();
-    return this;
+    return hasInstantiatedElementWithId(elementId, 1);
   }
 
   public ProcessInstanceAssert hasTerminatedElements(String elementId) {

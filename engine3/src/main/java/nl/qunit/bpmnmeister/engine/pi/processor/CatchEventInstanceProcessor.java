@@ -51,6 +51,15 @@ public abstract class CatchEventInstanceProcessor<
 
     catchEventInstance
         .getFlowNode()
+        .getErrorEventDefinitions()
+        .forEach(
+            errorEventDefinition -> {
+              catchEventInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.addErrorSubscription(errorEventDefinition);
+            });
+
+    catchEventInstance
+        .getFlowNode()
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
@@ -106,11 +115,12 @@ public abstract class CatchEventInstanceProcessor<
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
-    terminateEscalationSubscriptions(flowNodeInstance);
+    terminateEscalationAndErrorSubscriptions(flowNodeInstance);
   }
 
-  private void terminateEscalationSubscriptions(I flowNodeInstance) {
+  private void terminateEscalationAndErrorSubscriptions(I flowNodeInstance) {
     flowNodeInstance.clearEscalationSubscriptions();
+    flowNodeInstance.clearErrorSubscriptions();
   }
 
   private static <I extends CatchEventInstance<? extends CatchEvent>>
@@ -152,6 +162,21 @@ public abstract class CatchEventInstanceProcessor<
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
     if (catchEventInstance.matchesEvent(event)) {
+      newInstanceResult.merge(getInstanceResultForContinue(catchEventInstance));
+      selectNextNodeIfAllowedContinue(
+          catchEventInstance, newInstanceResult, variables, false, flowNodeInstances);
+      return true;
+    }
+    return false;
+  }
+
+  public boolean processEventCatchAll(
+      I catchEventInstance,
+      EventSignal event,
+      InstanceResult newInstanceResult,
+      Variables variables,
+      FlowNodeInstances flowNodeInstances) {
+    if (catchEventInstance.matchesEventCatchAll(event)) {
       newInstanceResult.merge(getInstanceResultForContinue(catchEventInstance));
       selectNextNodeIfAllowedContinue(
           catchEventInstance, newInstanceResult, variables, false, flowNodeInstances);

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public abstract class ThrowEvent extends Event implements WithEscalationEventDefinitions {
+public abstract class ThrowEvent extends Event implements WithEscalationEventDefinitions, WithErrorEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Set<LinkEventDefinition> getLinkventDefinitions() {
@@ -23,6 +23,13 @@ public abstract class ThrowEvent extends Event implements WithEscalationEventDef
     return eventDefinitions.stream()
         .filter(EscalationEventDefinition.class::isInstance)
         .map(EscalationEventDefinition.class::cast)
+        .collect(Collectors.toSet());
+  }
+
+  public Set<ErrorEventDefinition> getErrorEventDefinitions() {
+    return eventDefinitions.stream()
+        .filter(ErrorEventDefinition.class::isInstance)
+        .map(ErrorEventDefinition.class::cast)
         .collect(Collectors.toSet());
   }
 }

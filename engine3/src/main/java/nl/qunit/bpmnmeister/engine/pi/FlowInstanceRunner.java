@@ -100,6 +100,7 @@ public class FlowInstanceRunner {
 
     boolean eventHandled = false;
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
+      // First check for specific codes
       for (BoundaryEventInstance boundaryEventInstance :
           activityInstance.getAttachedBoundaryEventInstances()) {
         if (!eventHandled) {
@@ -111,7 +112,24 @@ public class FlowInstanceRunner {
           }
         }
       }
+
+      // Check for catch all events
+      if (!eventHandled) {
+        for (BoundaryEventInstance boundaryEventInstance :
+            activityInstance.getAttachedBoundaryEventInstances()) {
+          if (!eventHandled) {
+            eventHandled =
+                boundaryEventProcessor.processEventCatchAll(
+                    boundaryEventInstance, event, newInstanceResult, variables, flowNodeInstances);
+            if (eventHandled) {
+              break;
+            }
+          }
+        }
+      }
     }
+
+    // Still not handled, bubble up if so defined
     if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() != null) {
       event.selectParent();
       InstanceResult parentInstanceResult = new InstanceResult();
@@ -124,6 +142,9 @@ public class FlowInstanceRunner {
                 flowElements.getParentElements(),
                 variables);
       }
+    } else if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() == null) {
+      // Still not handled and No more bubbling up possible
+      newInstanceResult.addTerminateInstance(event.getSourceInstance().getElementInstanceId());
     }
   }
 }

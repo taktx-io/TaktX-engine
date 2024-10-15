@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.ErrorEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinition;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
@@ -24,6 +25,9 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   private Set<ScheduledKey> scheduledKeys;
   private Map<MessageEventKey, Set<String>> messageEventKeys;
   private Set<EscalationSubscription> escalationSubscriptions;
+  private Set<ErrorSubscription> errorSubscriptions;
+  private boolean catchAllEscalations;
+  private boolean catchAllErrors;
 
   protected CatchEventInstance(FLowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
@@ -31,6 +35,9 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     scheduledKeys = new HashSet<>();
     messageEventKeys = new HashMap<>();
     escalationSubscriptions = new HashSet<>();
+    errorSubscriptions = new HashSet<>();
+    catchAllEscalations = false;
+    catchAllErrors = false;
   }
 
   @Override
@@ -78,14 +85,35 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   }
 
   public void addEscalationSubscription(EscalationEventDefinition escalationEventDefinition) {
-    escalationSubscriptions.add(
-        new EscalationSubscription(
-            escalationEventDefinition.getReferencedEscalation().name(),
-            escalationEventDefinition.getReferencedEscalation().escalationCode()));
+    if (escalationEventDefinition .getReferencedEscalation() != null) {
+      this.catchAllEscalations = false;
+      escalationSubscriptions.add(
+          new EscalationSubscription(
+              escalationEventDefinition.getReferencedEscalation().name(),
+              escalationEventDefinition.getReferencedEscalation().escalationCode()));
+    } else {
+      this.catchAllEscalations = true;
+    }
+  }
+
+  public void addErrorSubscription(ErrorEventDefinition errorEventDefinition) {
+    if (errorEventDefinition.getReferencedError() != null) {
+      errorSubscriptions.add(
+          new ErrorSubscription(
+              errorEventDefinition.getReferencedError().name(),
+              errorEventDefinition.getReferencedError().code()));
+    } else {
+      this.catchAllErrors = true;
+    }
   }
 
   public void clearEscalationSubscriptions() {
     escalationSubscriptions.clear();
+  }
+
+
+  public void clearErrorSubscriptions() {
+    errorSubscriptions.clear();
   }
 
   public boolean matchesEvent(EventSignal event) {
@@ -93,6 +121,19 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
       return escalationSubscriptions.stream()
           .anyMatch(
               escalationSubscription -> escalationSubscription.matchesEvent(escalationEventSignal));
+    } else if (event instanceof  ErrorEventSignal errorEventSignal) {
+      return errorSubscriptions.stream()
+          .anyMatch(
+              errorSubscription -> errorSubscription.matchesEvent(errorEventSignal));
+    }
+    return false;
+  }
+
+  public boolean matchesEventCatchAll(EventSignal event) {
+    if (event instanceof EscalationEventSignal) {
+      return isCatchAllEscalations();
+    } else if (event instanceof  ErrorEventSignal) {
+      return isCatchAllErrors();
     }
     return false;
   }

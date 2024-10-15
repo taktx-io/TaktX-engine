@@ -82,4 +82,8 @@ public class BpmnMapperFactory {
   public EscalationMapper createEscalationMapper() {
     return new GenericEscalationMapper();
   }
+
+  public ErrorMapper createErrorMapper() {
+    return new GenericErrorMapper();
+  }
 }

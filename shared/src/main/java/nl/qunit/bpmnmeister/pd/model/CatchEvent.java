@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class CatchEvent extends Event
-    implements WithIoMapping, WithEscalationEventDefinitions {
+    implements WithIoMapping, WithEscalationEventDefinitions, WithErrorEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Set<TimerEventDefinition> getTimerEventDefinitions() {

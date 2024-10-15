@@ -53,11 +53,60 @@ class EscalationsTest {
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasInstantiatedElementWithId("BoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_NonInterrupting")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasTerminatedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
+  }
+
+  @Test
+  void testInterruptingEscalation_CatchAllTriggered()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .andRespondWithEscalation("Escalation_02db004", "non-matching", "escalation message",
+            VariablesDTO.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasInstantiatedElementWithId("BoundaryEvent_NoReference")
+        .hasInstantiatedElementWithId("EndEvent_NoReference")
+        .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
+        .hasNotPassedElementWithId("EndEvent_Interrupting")
+        .hasNotPassedElementWithId("EndEvent_NonInterrupting")
+        .hasTerminatedElementWithId("ServiceTask_1")
+        .hasVariableWithValue("MappedOutputVariable", "CatchAll");
+  }
+
+  @Test
+  void testInterruptingEscalation_NoCode_CatchAllTriggered()
+      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .andRespondWithEscalation(null, null, null, VariablesDTO.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasInstantiatedElementWithId("BoundaryEvent_NoReference")
+        .hasInstantiatedElementWithId("EndEvent_NoReference")
+        .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
+        .hasNotPassedElementWithId("EndEvent_Interrupting")
+        .hasNotPassedElementWithId("EndEvent_NonInterrupting")
+        .hasTerminatedElementWithId("ServiceTask_1")
+        .hasVariableWithValue("MappedOutputVariable", "CatchAll");
   }
 
   @Test
@@ -77,6 +126,8 @@ class EscalationsTest {
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("EndEvent_Normal")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_NonInterrupting", 2)
@@ -100,6 +151,8 @@ class EscalationsTest {
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
         .hasNotPassedElementWithId("EndEvent_Noninterrupting")
@@ -124,12 +177,12 @@ class EscalationsTest {
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
         .hasInstantiatedElementWithId("EndEvent_Noninterrupting", 2)
         .hasPassedElementWithId("EscalationBoundaryEvent_Noninterrupting", 2);
-//        .hasTerminatedElementWithId("ServiceTask_1")
-//        .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
   }
 
   @Test
@@ -146,6 +199,8 @@ class EscalationsTest {
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("Subprocess_1")
         .hasInstantiatedElementWithId("EndEvent_1")
+        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
+        .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasNotPassedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting_1")
         .hasNotPassedElementWithId("EndEvent_Noninterrupting")
