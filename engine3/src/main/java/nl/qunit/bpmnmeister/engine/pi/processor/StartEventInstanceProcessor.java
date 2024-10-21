@@ -23,6 +23,11 @@ public class StartEventInstanceProcessor
   }
 
   @Override
+  protected boolean shoudHandleTimerxEvents() {
+    return false;
+  }
+
+  @Override
   protected InstanceResult processContinueSpecificCatchEventInstance(
       StartEventInstance flowNodeInstance) {
     return InstanceResult.empty();

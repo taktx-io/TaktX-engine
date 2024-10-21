@@ -4,11 +4,10 @@ import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import nl.qunit.bpmnmeister.client.BpmnDeployment;
 import nl.qunit.bpmnmeister.client.ExternalTask;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
 
-@BpmnDeployment(resource = "bpmn/servicetask-single.gen1.bpmn")
+// @BpmnDeployment(resource = "bpmn/servicetask-single.gen1.bpmn")
 @ApplicationScoped
 @Startup
 public class ServiceTaskSingleWorker {

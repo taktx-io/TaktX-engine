@@ -15,12 +15,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
 @ToString
+@EqualsAndHashCode
 public class RecurringMessageScheduler implements MessageScheduler {
 
   private final ProcessDefinitionKey processDefinitionKey;

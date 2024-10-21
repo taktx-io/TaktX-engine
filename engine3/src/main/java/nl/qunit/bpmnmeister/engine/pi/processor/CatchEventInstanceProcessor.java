@@ -58,17 +58,18 @@ public abstract class CatchEventInstanceProcessor<
               catchEventInstance.addErrorSubscription(errorEventDefinition);
             });
 
-    catchEventInstance
-        .getFlowNode()
-        .getTimerEventDefinitions()
-        .forEach(
-            timerEventDefinition -> {
-              catchEventInstance.setState(CatchEventStateEnum.WAITING);
-              result.addNewScheduledContinuation(
-                  new ScheduledContinuationInfo(
-                      catchEventInstance, timerEventDefinition, variables));
-            });
-
+    if (shoudHandleTimerxEvents()) {
+      catchEventInstance
+          .getFlowNode()
+          .getTimerEventDefinitions()
+          .forEach(
+              timerEventDefinition -> {
+                catchEventInstance.setState(CatchEventStateEnum.WAITING);
+                result.addNewScheduledContinuation(
+                    new ScheduledContinuationInfo(
+                        catchEventInstance, timerEventDefinition, variables));
+              });
+    }
     catchEventInstance
         .getFlowNode()
         .getMessageventDefinitions()
@@ -89,6 +90,8 @@ public abstract class CatchEventInstanceProcessor<
 
     return result;
   }
+
+  protected abstract boolean shoudHandleTimerxEvents();
 
   @Override
   protected InstanceResult processContinueSpecificFlowNodeInstance(

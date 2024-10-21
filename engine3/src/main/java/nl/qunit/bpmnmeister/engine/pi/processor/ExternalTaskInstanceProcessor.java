@@ -141,13 +141,19 @@ public abstract class ExternalTaskInstanceProcessor<
           // No more retries, either by limit or by disallowing retry by the worker
           instanceResult.addEvent(
               new ErrorEventSignal(
-                  externalTaskInstance, responseResult.getName(), responseResult.getCode(), responseResult.getMessage()));
+                  externalTaskInstance,
+                  responseResult.getName(),
+                  responseResult.getCode(),
+                  responseResult.getMessage()));
         }
       } else {
         // No retries allowed
         instanceResult.addEvent(
             new ErrorEventSignal(
-                externalTaskInstance, responseResult.getName(), responseResult.getCode(), responseResult.getMessage()));
+                externalTaskInstance,
+                responseResult.getName(),
+                responseResult.getCode(),
+                responseResult.getMessage()));
       }
     }
     return instanceResult;

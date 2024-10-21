@@ -8,8 +8,8 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.MediaType;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
@@ -18,25 +18,12 @@ import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.reactive.RestPath;
 
 @Path("/process")
 public class ProcessResource {
   @Inject ObjectMapper objectMapper;
   @Inject KafkaPropertiesHelper kafkaPropertiesHelper;
-
-  @ConfigProperty(name = "deployer.kafka.bootstrap.servers")
-  String bootstrapServers;
-
-  @ConfigProperty(name = "deployer.kafka.sasl.mechanism")
-  Optional<String> kafkaSaslMechanism;
-
-  @ConfigProperty(name = "deployer.kafka.sasl.jaas.config")
-  Optional<String> kafkaSaslJaasConfig;
-
-  @ConfigProperty(name = "deployer.kafka.security.protocol")
-  Optional<String> kafkaSecurityProtocol;
 
   @POST
   @Path("/{processId}")
@@ -53,10 +40,9 @@ public class ProcessResource {
         new StartCommand(
             UUID.randomUUID(),
             Constants.NONE_UUID,
-            Constants.NONE_UUID,
             Constants.NONE,
-            Constants.NONE,
-            Constants.NONE_UUID,
+            List.of(Constants.NONE),
+            List.of(Constants.NONE_UUID),
             processId,
             new VariablesDTO(variablesMap));
     KafkaProducer<String, StartCommand> startCommandEmitter =

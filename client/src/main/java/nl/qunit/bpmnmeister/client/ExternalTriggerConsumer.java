@@ -59,8 +59,7 @@ import org.xml.sax.SAXException;
 @Slf4j
 public class ExternalTriggerConsumer {
   private static final Logger LOG = Logger.getLogger(ExternalTriggerConsumer.class);
-  private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap =
-      new HashMap<>();
+  private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap = new HashMap<>();
 
   ObjectMapper objectMapper;
   @Inject BeanManager beanManager;
@@ -137,7 +136,11 @@ public class ExternalTriggerConsumer {
 
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
           log.info("deploying {}", bpmnPath);
-          xmlEmitter.send(new ProducerRecord<>(Topics.XML_TOPIC.getTopicName(), definitions.getDefinitionsKey().getProcessDefinitionId(), xml));
+          xmlEmitter.send(
+              new ProducerRecord<>(
+                  Topics.XML_TOPIC.getTopicName(),
+                  definitions.getDefinitionsKey().getProcessDefinitionId(),
+                  xml));
         }
       }
 
@@ -165,8 +168,7 @@ public class ExternalTriggerConsumer {
       // We have a worker instance for this process definition. If not consumer exists yet
       // for that process definitionm create a new one for the external-task-trigger-incoming
       // channel
-      KafkaConsumer<UUID, ExternalTaskTrigger> consumer =
-          consumerMap.get(processDefinitionId);
+      KafkaConsumer<UUID, ExternalTaskTrigger> consumer = consumerMap.get(processDefinitionId);
       if (consumer == null) {
         KafkaConsumer<UUID, ExternalTaskTrigger> newConsumer =
             createConsumer(
@@ -230,7 +232,12 @@ public class ExternalTriggerConsumer {
                       ? Map.of()
                       : objectMapper.convertValue(result, LinkedHashMap.class);
               ExternalTaskResponseResult externalTaskResponseResult =
-                  new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.SUCCESS, true, Constants.NONE, Constants.NONE, Constants.NONE);
+                  new ExternalTaskResponseResult(
+                      ExternalTaskResponseTypeEnum.SUCCESS,
+                      true,
+                      Constants.NONE,
+                      Constants.NONE,
+                      Constants.NONE);
               processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
@@ -239,13 +246,18 @@ public class ExternalTriggerConsumer {
                       externalTaskResponseResult,
                       new VariablesDTO(variablesMap));
               LOG.info("Returning process instance trigger: " + processInstanceTrigger);
-            } catch(EscalationEventException escalationEvent) {
+            } catch (EscalationEventException escalationEvent) {
               processInstanceTrigger =
                   new ExternalTaskResponseTrigger(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ESCALATION, true, escalationEvent.getName(), escalationEvent.getMessage(), escalationEvent.getCode()),
+                      new ExternalTaskResponseResult(
+                          ExternalTaskResponseTypeEnum.ESCALATION,
+                          true,
+                          escalationEvent.getName(),
+                          escalationEvent.getMessage(),
+                          escalationEvent.getCode()),
                       VariablesDTO.empty());
             } catch (Throwable e) {
               LOG.error("Error invoking method", e);
@@ -254,7 +266,12 @@ public class ExternalTriggerConsumer {
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, true, Constants.NONE, e.getMessage(), Constants.NONE),
+                      new ExternalTaskResponseResult(
+                          ExternalTaskResponseTypeEnum.ERROR,
+                          true,
+                          Constants.NONE,
+                          e.getMessage(),
+                          Constants.NONE),
                       VariablesDTO.empty());
             }
             responseEmitter.send(

@@ -6,10 +6,9 @@ import java.util.List;
 import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import nl.qunit.bpmnmeister.client.BpmnDeployment;
 import nl.qunit.bpmnmeister.client.ExternalTask;
 
-@BpmnDeployment(resource = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
+// @BpmnDeployment(resource = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
 @ApplicationScoped
 @Startup
 public class ServiceTaskMultiInstanceParallelWorker {

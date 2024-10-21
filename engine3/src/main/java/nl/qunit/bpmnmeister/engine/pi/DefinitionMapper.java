@@ -94,24 +94,22 @@ public class DefinitionMapper {
             });
   }
 
-  private void setErrorReferences(
-      Map<String, FlowElement> elements, Map<String, ErrorDTO> errors) {
+  private void setErrorReferences(Map<String, FlowElement> elements, Map<String, ErrorDTO> errors) {
     for (FlowElement flowElement : elements.values()) {
       if (flowElement instanceof WithErrorEventDefinitions withErrorEventDefinitions) {
         withErrorEventDefinitions.getErrorEventDefinitions().stream()
             .forEach(
                 errorEventDefinition -> {
-                  ErrorDTO errorDTO =
-                      errors.get(errorEventDefinition.getErrorRef());
+                  ErrorDTO errorDTO = errors.get(errorEventDefinition.getErrorRef());
                   if (errorDTO != null) {
                     errorEventDefinition.setReferencedError(
-                        new ErrorEvent(
-                            errorDTO.getName(), errorDTO.getCode()));
+                        new ErrorEvent(errorDTO.getName(), errorDTO.getCode()));
                   }
                 });
       }
     }
   }
+
   private void setEscalationReferences(
       Map<String, FlowElement> elements, Map<String, EscalationDTO> escalations) {
     for (FlowElement flowElement : elements.values()) {
@@ -123,8 +121,7 @@ public class DefinitionMapper {
                       escalations.get(escalationEventDefinition.getEscalationRef());
                   if (escalationDTO != null) {
                     escalationEventDefinition.setReferencedEscalation(
-                        new EscalationEvent(
-                            escalationDTO.getName(), escalationDTO.getCode()));
+                        new EscalationEvent(escalationDTO.getName(), escalationDTO.getCode()));
                   }
                 });
       }

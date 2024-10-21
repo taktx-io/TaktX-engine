@@ -48,9 +48,10 @@ public class ScheduleProcessor
                                                 message.getRecordKey(processInstanceKey),
                                                 message,
                                                 Instant.now(clock).toEpochMilli()))));
-                    if (updatedScheduleCommand != null) {
+                    if (updatedScheduleCommand != null
+                        && !updatedScheduleCommand.equals(scheduleCommand)) {
                       scheduleStore.put(scheduledKey, updatedScheduleCommand);
-                    } else {
+                    } else if (updatedScheduleCommand == null) {
                       scheduleStore.delete(scheduledKey);
                     }
                   }
@@ -61,12 +62,12 @@ public class ScheduleProcessor
 
   @Override
   public void process(Record<ScheduledKey, MessageScheduler> scheduleRecord) {
-    KeyValueStore<ScheduledKey, MessageScheduler> stateStore =
+    KeyValueStore<ScheduledKey, MessageScheduler> scheduleStore =
         context.getStateStore(Stores.SCHEDULES_STORE_NAME);
     if (scheduleRecord.value() != null) {
-      stateStore.put(scheduleRecord.key(), scheduleRecord.value());
+      scheduleStore.put(scheduleRecord.key(), scheduleRecord.value());
     } else {
-      stateStore.delete(scheduleRecord.key());
+      scheduleStore.delete(scheduleRecord.key());
     }
   }
 }

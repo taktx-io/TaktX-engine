@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.client;
 import lombok.Getter;
 
 @Getter
-public class EscalationEventException extends RuntimeException{
+public class EscalationEventException extends RuntimeException {
 
   private final String name;
   private final String code;

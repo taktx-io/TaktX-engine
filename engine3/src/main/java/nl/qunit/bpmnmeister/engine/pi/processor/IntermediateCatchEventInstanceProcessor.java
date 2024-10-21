@@ -23,6 +23,11 @@ public class IntermediateCatchEventInstanceProcessor
   }
 
   @Override
+  protected boolean shoudHandleTimerxEvents() {
+    return true;
+  }
+
+  @Override
   protected InstanceResult processContinueSpecificCatchEventInstance(
       IntermediateCatchEventInstance flowNodeInstance) {
     return InstanceResult.empty();

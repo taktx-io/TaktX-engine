@@ -23,6 +23,11 @@ public class BoundaryEventInstanceProcessor
   }
 
   @Override
+  protected boolean shoudHandleTimerxEvents() {
+    return true;
+  }
+
+  @Override
   protected InstanceResult processContinueSpecificCatchEventInstance(
       BoundaryEventInstance boundaryEventInstance) {
     InstanceResult result = InstanceResult.empty();

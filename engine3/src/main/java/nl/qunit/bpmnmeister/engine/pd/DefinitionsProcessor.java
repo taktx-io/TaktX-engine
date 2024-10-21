@@ -44,8 +44,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
   }
 
   private void processStartCommandRecord(
-      Record<String, DefinitionsTrigger> definitionsRecord,
-      StartCommand startCommand) {
+      Record<String, DefinitionsTrigger> definitionsRecord, StartCommand startCommand) {
     String definitionId = definitionsRecord.key();
     Integer latestVersion = this.definitionCountByIdStore.get(definitionId);
     if (latestVersion == null) {
@@ -83,8 +82,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
   }
 
   private void processDefinitionsRecord(
-      Record<String, DefinitionsTrigger> definitionsRecord,
-      DefinitionsDTO definitions) {
+      Record<String, DefinitionsTrigger> definitionsRecord, DefinitionsDTO definitions) {
     String hash = definitions.getDefinitionsKey().getHash();
     String definitionId = definitionsRecord.key();
 
@@ -110,7 +108,8 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
 
     } else {
       // Versions already exist
-      ProcessDefinitionKey existingKey = new ProcessDefinitionKey(definitionId, latestExistingVersion);
+      ProcessDefinitionKey existingKey =
+          new ProcessDefinitionKey(definitionId, latestExistingVersion);
 
       // known hash, check if it corresponds to the latest version
       ProcessDefinitionDTO processDefinition = processDefinitionStore.get(existingKey);
@@ -151,9 +150,7 @@ public class DefinitionsProcessor implements Processor<String, DefinitionsTrigge
                   processDefinition,
                   definitionsRecord.timestamp()));
         }
-    }
-
-
+      }
     }
   }
 }
