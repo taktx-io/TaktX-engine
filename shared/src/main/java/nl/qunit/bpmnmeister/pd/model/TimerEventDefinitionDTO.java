@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 public class TimerEventDefinitionDTO extends EventDefinitionDTO {
   private final String timeDate;
   private final String timeDuration;

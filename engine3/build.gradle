@@ -18,7 +18,10 @@ dependencies {
     implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
     implementation 'io.quarkus:quarkus-jaxb'
     implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-smallrye-openapi'
     implementation 'io.quarkus:quarkus-resteasy-jackson'
+    implementation 'io.quarkus:quarkus-jackson'
+
     implementation 'io.quarkiverse.logging.logback:quarkus-logging-logback:1.1.2'
     implementation 'org.jboss.slf4j:slf4j-jboss-logmanager'
 

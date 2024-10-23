@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
@@ -23,6 +24,7 @@ import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
+import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -65,6 +67,21 @@ public class ProcessInstanceProcessor
     this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
     this.processInstanceDefinitionStore =
         context.getStateStore(Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME);
+
+    context.schedule(
+        Duration.ofMinutes(5),
+        PunctuationType.WALL_CLOCK_TIME,
+        timestamp -> {
+          this.processInstanceStore
+              .all()
+              .forEachRemaining(
+                  record -> {
+                    if (record.value.getFlowNodeInstances().getState().isFinished()) {
+                      this.processInstanceStore.delete(record.key);
+                      this.variablesStore.delete(record.key);
+                    }
+                  });
+        });
   }
 
   @Override

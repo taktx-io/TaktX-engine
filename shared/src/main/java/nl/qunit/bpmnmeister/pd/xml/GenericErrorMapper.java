@@ -7,7 +7,6 @@ public class GenericErrorMapper implements ErrorMapper {
 
   @Override
   public ErrorDTO map(TError tError) {
-    return new ErrorDTO(
-        tError.getId(), tError.getName(), tError.getErrorCode());
+    return new ErrorDTO(tError.getId(), tError.getName(), tError.getErrorCode());
   }
 }

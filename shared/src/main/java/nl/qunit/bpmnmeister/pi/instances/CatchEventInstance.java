@@ -85,7 +85,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   }
 
   public void addEscalationSubscription(EscalationEventDefinition escalationEventDefinition) {
-    if (escalationEventDefinition .getReferencedEscalation() != null) {
+    if (escalationEventDefinition.getReferencedEscalation() != null) {
       this.catchAllEscalations = false;
       escalationSubscriptions.add(
           new EscalationSubscription(
@@ -111,7 +111,6 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     escalationSubscriptions.clear();
   }
 
-
   public void clearErrorSubscriptions() {
     errorSubscriptions.clear();
   }
@@ -121,10 +120,9 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
       return escalationSubscriptions.stream()
           .anyMatch(
               escalationSubscription -> escalationSubscription.matchesEvent(escalationEventSignal));
-    } else if (event instanceof  ErrorEventSignal errorEventSignal) {
+    } else if (event instanceof ErrorEventSignal errorEventSignal) {
       return errorSubscriptions.stream()
-          .anyMatch(
-              errorSubscription -> errorSubscription.matchesEvent(errorEventSignal));
+          .anyMatch(errorSubscription -> errorSubscription.matchesEvent(errorEventSignal));
     }
     return false;
   }
@@ -132,7 +130,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   public boolean matchesEventCatchAll(EventSignal event) {
     if (event instanceof EscalationEventSignal) {
       return isCatchAllEscalations();
-    } else if (event instanceof  ErrorEventSignal) {
+    } else if (event instanceof ErrorEventSignal) {
       return isCatchAllErrors();
     }
     return false;

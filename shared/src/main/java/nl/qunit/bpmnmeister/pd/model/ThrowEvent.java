@@ -9,7 +9,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public abstract class ThrowEvent extends Event implements WithEscalationEventDefinitions, WithErrorEventDefinitions {
+public abstract class ThrowEvent extends Event
+    implements WithEscalationEventDefinitions, WithErrorEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Set<LinkEventDefinition> getLinkventDefinitions() {

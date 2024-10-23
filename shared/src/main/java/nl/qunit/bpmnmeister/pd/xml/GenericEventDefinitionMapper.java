@@ -49,14 +49,18 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
   private EventDefinitionDTO mapErrorEventDefinition(TErrorEventDefinition errorEventDefinition) {
     return new ErrorEventDefinitionDTO(
         errorEventDefinition.getId(),
-        errorEventDefinition.getErrorRef() != null ? errorEventDefinition.getErrorRef().getLocalPart() : null);
+        errorEventDefinition.getErrorRef() != null
+            ? errorEventDefinition.getErrorRef().getLocalPart()
+            : null);
   }
 
   private EventDefinitionDTO mapEscalationEventDefinition(
       TEscalationEventDefinition escalationEventDefinition) {
     return new EscalationEventDefinitionDTO(
         escalationEventDefinition.getId(),
-        escalationEventDefinition.getEscalationRef() != null ? escalationEventDefinition.getEscalationRef().getLocalPart() : null);
+        escalationEventDefinition.getEscalationRef() != null
+            ? escalationEventDefinition.getEscalationRef().getLocalPart()
+            : null);
   }
 
   private EventDefinitionDTO mapTerminateEventDefinition(
