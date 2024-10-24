@@ -15,8 +15,7 @@ public class WrappedInMap implements Map<String, Object> {
   private final Variables vars;
   private final ObjectMapper objectMapper;
 
-  private WrappedInMap(Variables vars,
-      ObjectMapper objectMapper) {
+  private WrappedInMap(Variables vars, ObjectMapper objectMapper) {
     this.vars = vars;
     this.objectMapper = objectMapper;
   }

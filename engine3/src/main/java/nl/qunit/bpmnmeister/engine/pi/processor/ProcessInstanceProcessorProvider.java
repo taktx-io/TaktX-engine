@@ -46,6 +46,7 @@ public class ProcessInstanceProcessorProvider {
   @Inject FeelExpressionHandler feelExpressionHandler;
   @Inject VariablesMapper variablesMapper;
   @Inject ObjectMapper objectMapper;
+
   public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
     if (element instanceof ThrowEvent throwEvent) {
       return getProcessorForThrowEvent(throwEvent);
@@ -112,7 +113,8 @@ public class ProcessInstanceProcessorProvider {
     }
     if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
-      return new MultiInstanceProcessor(feelExpressionHandler, processor, variablesMapper, objectMapper);
+      return new MultiInstanceProcessor(
+          feelExpressionHandler, processor, variablesMapper, objectMapper);
     }
     return processor;
   }

@@ -19,20 +19,20 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 public class CustomObjectMapperProvider {
 
-    // Replaces the CDI producer for ObjectMapper built into Quarkus
-    @Singleton
-    @Produces
-    public ObjectMapper objectMapper(@All List<ObjectMapperCustomizer> customizers) {
+  // Replaces the CDI producer for ObjectMapper built into Quarkus
+  @Singleton
+  @Produces
+  public ObjectMapper objectMapper(@All List<ObjectMapperCustomizer> customizers) {
 
-        var mapper = new MyObjectMapper();
+    var mapper = new MyObjectMapper();
 
-        // Apply all ObjectMapperCustomizer beans (incl. Quarkus)
-        for (ObjectMapperCustomizer customizer : customizers) {
-            customizer.customize(mapper);
-        }
+    // Apply all ObjectMapperCustomizer beans (incl. Quarkus)
+    for (ObjectMapperCustomizer customizer : customizers) {
+      customizer.customize(mapper);
+    }
 
-
-        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+    PolymorphicTypeValidator ptv =
+        BasicPolymorphicTypeValidator.builder()
             .allowIfBaseType(DefinitionsTrigger.class)
             .allowIfBaseType(BaseElementDTO.class)
             .allowIfBaseType(SchedulableMessage.class)
@@ -42,14 +42,12 @@ public class CustomObjectMapperProvider {
             .allowIfBaseType(MessageEvent.class)
             .build();
 
-        mapper.setPolymorphicTypeValidator(ptv);
-        // Configure the ObjectMapper to ignore unknown properties
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper.setPolymorphicTypeValidator(ptv);
+    // Configure the ObjectMapper to ignore unknown properties
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        return mapper;
-    }
+    return mapper;
+  }
 
-    private class MyObjectMapper extends ObjectMapper {
-
-    }
+  private class MyObjectMapper extends ObjectMapper {}
 }

@@ -18,8 +18,8 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
   private final FeelEngineProvider feelEngineProvider;
   private final ObjectMapper objectMapper;
 
-  public FeelExpressionHandlerImpl(FeelEngineProvider feelEngineProvider,
-      ObjectMapper objectMapper) {
+  public FeelExpressionHandlerImpl(
+      FeelEngineProvider feelEngineProvider, ObjectMapper objectMapper) {
     this.feelEngineProvider = feelEngineProvider;
     this.objectMapper = objectMapper;
   }
@@ -32,7 +32,8 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
       FeelEngineApi feelEngineApi = new FeelEngineApi(engine);
 
       EvaluationResult evaluationResult =
-          feelEngineApi.evaluateExpression(expression.substring(1), WrappedInMap.of(variables, objectMapper));
+          feelEngineApi.evaluateExpression(
+              expression.substring(1), WrappedInMap.of(variables, objectMapper));
       if (evaluationResult.isSuccess()) {
         Object expressionResult =
             ((SuccessfulEvaluationResult) evaluationResult).productIterator().next();
