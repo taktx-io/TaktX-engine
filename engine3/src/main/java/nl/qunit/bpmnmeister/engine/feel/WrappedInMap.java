@@ -13,13 +13,16 @@ import nl.qunit.bpmnmeister.pi.Variables;
 public class WrappedInMap implements Map<String, Object> {
 
   private final Variables vars;
+  private final ObjectMapper objectMapper;
 
-  private WrappedInMap(Variables vars) {
+  private WrappedInMap(Variables vars,
+      ObjectMapper objectMapper) {
     this.vars = vars;
+    this.objectMapper = objectMapper;
   }
 
-  public static Map<String, Object> of(Variables variables) {
-    return new WrappedInMap(variables);
+  public static Map<String, Object> of(Variables variables, ObjectMapper objectMapper) {
+    return new WrappedInMap(variables, objectMapper);
   }
 
   @Override
@@ -49,7 +52,7 @@ public class WrappedInMap implements Map<String, Object> {
 
   @Override
   public Object put(String key, Object value) {
-    JsonNode node = new ObjectMapper().valueToTree(value);
+    JsonNode node = objectMapper.valueToTree(value);
     return vars.put(key, node);
   }
 
@@ -60,7 +63,7 @@ public class WrappedInMap implements Map<String, Object> {
 
   @Override
   public void putAll(Map<? extends String, ?> m) {
-    m.forEach((key, value) -> put(key, new ObjectMapper().valueToTree(value)));
+    m.forEach((key, value) -> put(key, objectMapper.valueToTree(value)));
   }
 
   @Override
@@ -75,12 +78,12 @@ public class WrappedInMap implements Map<String, Object> {
 
   @Override
   public Collection<Object> values() {
-    return vars.values().stream().map(WrappedInMap::toObject).toList();
+    return vars.values().stream().map(this::toObject).toList();
   }
 
-  private static Object toObject(JsonNode v) {
+  private Object toObject(JsonNode v) {
     try {
-      return new ObjectMapper().treeToValue(v, Object.class);
+      return objectMapper.treeToValue(v, Object.class);
     } catch (JsonProcessingException e) {
       throw new IllegalStateException(e);
     }

@@ -22,9 +22,6 @@ dependencies {
     implementation 'io.quarkus:quarkus-resteasy-jackson'
     implementation 'io.quarkus:quarkus-jackson'
 
-    implementation 'io.quarkiverse.logging.logback:quarkus-logging-logback:1.1.2'
-    implementation 'org.jboss.slf4j:slf4j-jboss-logmanager'
-
     implementation 'nl.qunit.bpmnmeister:shared'
     implementation 'org.camunda.feel:feel-engine:1.17.5'
     implementation 'com.cronutils:cron-utils:9.2.1'

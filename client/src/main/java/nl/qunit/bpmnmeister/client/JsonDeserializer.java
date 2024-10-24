@@ -7,11 +7,10 @@ import org.apache.kafka.common.serialization.Deserializer;
 public abstract class JsonDeserializer<T> implements Deserializer<T> {
 
   private final Class<T> clazz;
-  private final ObjectMapper objectMapper;
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
-  JsonDeserializer(Class<T> clazz, ObjectMapper objectMapper) {
+  JsonDeserializer(Class<T> clazz) {
     this.clazz = clazz;
-    this.objectMapper = objectMapper;
   }
 
   @Override

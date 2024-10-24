@@ -24,15 +24,18 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 public class MultiInstanceProcessor
     extends FLowNodeInstanceProcessor<Activity, MultiInstanceInstance, ContinueFlowElementTrigger> {
   private final FeelExpressionHandler feelExpressionHandler;
+  private final ObjectMapper objectMapper;
   private final ActivityInstanceProcessor<?, ?, ?> processor;
 
   public MultiInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       ActivityInstanceProcessor<?, ?, ?> processor,
-      VariablesMapper variablesMapper) {
+      VariablesMapper variablesMapper,
+      ObjectMapper objectMapper) {
     super(processor.getIoMappingProcessor(), variablesMapper);
     this.processor = processor;
     this.feelExpressionHandler = feelExpressionHandler;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -50,7 +53,6 @@ public class MultiInstanceProcessor
       String inputFlowId,
       Variables variables) {
 
-    ObjectMapper objectMapper = new ObjectMapper();
     Activity activity = multiInstanceInstance.getFlowNode();
     String outputCollectionName = activity.getLoopCharacteristics().getOutputCollection();
     if (outputCollectionName != null) {

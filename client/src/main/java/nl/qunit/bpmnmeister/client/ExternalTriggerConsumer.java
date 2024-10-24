@@ -61,17 +61,13 @@ public class ExternalTriggerConsumer {
   private static final Logger LOG = Logger.getLogger(ExternalTriggerConsumer.class);
   private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap = new HashMap<>();
 
-  ObjectMapper objectMapper;
+  @Inject ObjectMapper objectMapper;
   @Inject BeanManager beanManager;
   @Inject KafkaPropertiesHelper kafkaPropertiesHelper;
 
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> parsedDefinitionConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTrigger> responseEmitter;
-
-  public ExternalTriggerConsumer(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-  }
 
   @PostConstruct
   void init() {
