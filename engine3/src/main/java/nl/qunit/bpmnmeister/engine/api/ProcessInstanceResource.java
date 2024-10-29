@@ -5,15 +5,17 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
@@ -27,9 +29,12 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 @Path("/process-instances")
+@Slf4j
 public class ProcessInstanceResource {
 
   @Inject KafkaStreams kafkaStreams;
+
+  @Inject Client client;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -81,37 +86,55 @@ public class ProcessInstanceResource {
   @GET
   @Path("/{processId}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getProcessInstance(@PathParam("processId") UUID processId)
-      throws UnknownHostException {
+  public Response getProcessInstance(@PathParam("processId") UUID processId) {
 
     String envHost = System.getenv("injectedhost");
+    int envPort = Integer.parseInt(System.getenv("injectedport"));
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
             Stores.PROCESS_INSTANCE_STORE_NAME, processId, Serdes.UUID().serializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
+      log.info("no metadata available for key {}", processId);
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(envHost)) {
+    } else if (metadata.activeHost().host().equals(envHost)
+        && metadata.activeHost().port() == envPort) {
+      log.info(
+          "host and port match {}:{} ", metadata.activeHost().host(), metadata.activeHost().port());
       ProcessInstanceDTO processInstanceDTO = getProcessInstanceStore().get(processId);
       if (processInstanceDTO == null) {
+        log.info("processInstanceDTO is null for key {}", processId);
         return Response.status(Response.Status.NOT_FOUND).build();
       } else {
+        log.info("processInstanceDTO found for key {}", processId);
         return Response.ok(processInstanceDTO).build();
       }
     } else {
-      URI uri = getOtherUri(metadata.activeHost().host(), metadata.activeHost().port(), processId);
-      return Response.temporaryRedirect(uri).build();
+
+      log.info(
+          "Host and port differ from injected {}:{}, redirecting to host: {} port: {}",
+          envHost,
+          envPort,
+          metadata.activeHost().host(),
+          metadata.activeHost().port());
+
+      URI uri =
+          getOtherUriForProcessInstance(
+              metadata.activeHost().host(), metadata.activeHost().port(), processId);
+      WebTarget target = client.target(uri);
+      Response response = target.request().get();
+      return Response.status(response.getStatus()).entity(response.getEntity()).build();
     }
   }
 
   @GET
   @Path("/{processId}/variables")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getProcessInstanceVariables(@PathParam("processId") UUID processId)
-      throws UnknownHostException {
+  public Response getProcessInstanceVariables(@PathParam("processId") UUID processId) {
 
     String envHost = System.getenv("injectedhost");
+    int envPort = Integer.parseInt(System.getenv("injectedport"));
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
@@ -119,7 +142,8 @@ public class ProcessInstanceResource {
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(envHost)) {
+    } else if (metadata.activeHost().host().equals(envHost)
+        && metadata.activeHost().port() == envPort) {
       VariablesDTO variables = getVariablesStore().get(processId);
       if (variables == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
@@ -127,14 +151,26 @@ public class ProcessInstanceResource {
         return Response.ok(variables).build();
       }
     } else {
-      URI uri = getOtherUri(metadata.activeHost().host(), metadata.activeHost().port(), processId);
-      return Response.temporaryRedirect(uri).build();
+      URI uri =
+          getOtherUriForProcessInstanceVariables(
+              metadata.activeHost().host(), metadata.activeHost().port(), processId);
+      WebTarget target = client.target(uri);
+      Response response = target.request().get();
+      return Response.status(response.getStatus()).entity(response.getEntity()).build();
     }
   }
 
-  private URI getOtherUri(String host, int port, UUID id) {
+  private URI getOtherUriForProcessInstance(String host, int port, UUID id) {
     try {
       return new URI("http://" + host + ":" + port + "/process-instances/" + id);
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private URI getOtherUriForProcessInstanceVariables(String host, int port, UUID id) {
+    try {
+      return new URI("http://" + host + ":" + port + "/process-instances/" + id + "/variables");
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
     }

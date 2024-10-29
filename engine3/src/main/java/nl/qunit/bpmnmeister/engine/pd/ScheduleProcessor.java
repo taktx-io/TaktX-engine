@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pd;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
@@ -13,8 +14,11 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+@Slf4j
 public class ScheduleProcessor
     implements Processor<ScheduledKey, MessageScheduler, Object, SchedulableMessage> {
+
+  public static final int SCHEDULE_INTERVAL = 100;
   private ProcessorContext<Object, SchedulableMessage> context;
   private final Clock clock;
 
@@ -26,9 +30,10 @@ public class ScheduleProcessor
   public void init(ProcessorContext<Object, SchedulableMessage> context) {
     this.context = context;
     context.schedule(
-        Duration.ofMillis(100),
+        Duration.ofMillis(SCHEDULE_INTERVAL),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
+          long startTime = System.currentTimeMillis();
           KeyValueStore<ScheduledKey, MessageScheduler> scheduleStore =
               context.getStateStore(Stores.SCHEDULES_STORE_NAME);
           try (KeyValueIterator<ScheduledKey, MessageScheduler> all = scheduleStore.all()) {
@@ -56,6 +61,13 @@ public class ScheduleProcessor
                     }
                   }
                 });
+          }
+          long endTime = System.currentTimeMillis();
+          long processingTime = endTime - startTime;
+          if (processingTime > SCHEDULE_INTERVAL) {
+            log.warn(
+                "Backlog detected: processing time {} ms exceeds scheduled interval",
+                processingTime);
           }
         });
   }
