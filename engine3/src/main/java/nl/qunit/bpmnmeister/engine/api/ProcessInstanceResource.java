@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
@@ -35,6 +36,7 @@ public class ProcessInstanceResource {
   @Inject KafkaStreams kafkaStreams;
 
   @Inject Client client;
+  @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -44,7 +46,8 @@ public class ProcessInstanceResource {
         getProcessInstanceStore();
 
     Collection<StreamsMetadata> streamsMetadata =
-        kafkaStreams.streamsMetadataForStore(Stores.PROCESS_INSTANCE_STORE_NAME);
+        kafkaStreams.streamsMetadataForStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
 
     streamsMetadata.forEach(
         metadata -> {
@@ -61,7 +64,8 @@ public class ProcessInstanceResource {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<UUID, ProcessInstanceDTO>>
             processInstanceStoreQueryParameters =
                 StoreQueryParameters.fromNameAndType(
-                    Stores.PROCESS_INSTANCE_STORE_NAME, QueryableStoreTypes.keyValueStore());
+                    tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+                    QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(processInstanceStoreQueryParameters);
       } catch (InvalidStateStoreException e) {
         // ignore, store not ready yet
@@ -75,7 +79,8 @@ public class ProcessInstanceResource {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<UUID, VariablesDTO>>
             storeQueryParameters =
                 StoreQueryParameters.fromNameAndType(
-                    Stores.VARIABLES_STORE_NAME, QueryableStoreTypes.keyValueStore());
+                    tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
+                    QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(storeQueryParameters);
       } catch (InvalidStateStoreException e) {
         // ignore, store not ready yet
@@ -93,7 +98,9 @@ public class ProcessInstanceResource {
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            Stores.PROCESS_INSTANCE_STORE_NAME, processId, Serdes.UUID().serializer());
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+            processId,
+            Serdes.UUID().serializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       log.info("no metadata available for key {}", processId);
@@ -138,7 +145,9 @@ public class ProcessInstanceResource {
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            Stores.VARIABLES_STORE_NAME, processId, Serdes.UUID().serializer());
+            tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
+            processId,
+            Serdes.UUID().serializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();

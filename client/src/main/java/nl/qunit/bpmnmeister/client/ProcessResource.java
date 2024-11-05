@@ -50,7 +50,7 @@ public class ProcessResource {
             kafkaPropertiesHelper.getKafkaProducerProperties(
                 StringSerializer.class, StartCommandSerializer.class));
     startCommandEmitter.send(
-        new ProducerRecord<>(Topics.DEFINITIONS_TOPIC.getTopicName(), processId, startCommand));
+        new ProducerRecord<>(Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName(), processId, startCommand));
     startCommandEmitter.flush();
     startCommandEmitter.close();
   }

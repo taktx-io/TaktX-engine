@@ -1,14 +1,11 @@
 # Use the official Eclipse Temurin image as a parent image
-FROM eclipse-temurin:21-jre-alpine
-
-# Install the required libstdc++ package
-RUN apk add --no-cache libstdc++
+FROM ibm-semeru-runtimes:open-21-jre
 
 # Set the working directory in the container
 WORKDIR /app
 
 # Copy all project’s build artifacts from build/quarkus-app recursively to the container
-COPY build/quarkus-app/ /app/
+COPY build/quarkus-app /app/
 
 # Expose the port the application runs on
 EXPOSE 8080

@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.Topics;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -17,7 +16,7 @@ public class KafkaConsumerUtil<K, V> {
     private final Consumer<V> consumer;
     private boolean running = true;
 
-    public KafkaConsumerUtil(String groupId, Topics topic, String keyDeserializerClass, String valueDeserializerClass, Consumer<V> consumer) {
+    public KafkaConsumerUtil(String groupId, String topic, String keyDeserializerClass, String valueDeserializerClass, Consumer<V> consumer) {
         this.consumer = consumer;
         Properties props = new Properties();
         String kafkaBootstrapServers = ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
@@ -29,7 +28,7 @@ public class KafkaConsumerUtil<K, V> {
         props.put(ProducerConfig.CLIENT_ID_CONFIG, topic + "-test-consumer");
 
         kafkaConsumer = new KafkaConsumer<>(props);
-        kafkaConsumer.subscribe(Collections.singletonList(topic.getTopicName()));
+        kafkaConsumer.subscribe(Collections.singletonList(topic));
         start();
     }
 

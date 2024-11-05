@@ -4,5 +4,5 @@ import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 
 public interface KeyValueStoreSupplier {
 
-  KeyValueBytesStoreSupplier get(String processInstanceStoreName);
+  KeyValueBytesStoreSupplier get(Stores store);
 }

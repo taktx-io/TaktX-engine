@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
@@ -24,19 +25,29 @@ import org.apache.kafka.streams.state.KeyValueStore;
 public class MessageEventProcessor
     implements Processor<MessageEventKey, MessageEvent, Object, Object> {
 
+  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<MessageEventKey, DefinitionMessageSubscriptions>
       definitionMessageSubscriptionStore;
   private KeyValueStore<MessageEventKey, CorrelationMessageSubscriptions>
       correlationMessageSubscriptionStore;
 
+  public MessageEventProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
+    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+  }
+
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
     this.definitionMessageSubscriptionStore =
-        context.getStateStore(Stores.DEFINITION_MESSAGE_SUBSCRIPTION_STORE_NAME);
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()));
     this.correlationMessageSubscriptionStore =
-        context.getStateStore(Stores.CORRELATION_MESSAGE_SUBSCRIPTION_STORE_NAME);
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()));
   }
 
   @Override

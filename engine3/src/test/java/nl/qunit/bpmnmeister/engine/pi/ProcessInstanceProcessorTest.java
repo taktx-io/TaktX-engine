@@ -15,7 +15,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -23,8 +22,6 @@ import org.xml.sax.SAXException;
 
 @QuarkusTest
 class ProcessInstanceProcessorTest {
-
-  private static final Logger LOG = Logger.getLogger(ProcessInstanceProcessorTest.class);
 
   @Inject
   Clock clock;
@@ -89,7 +86,7 @@ class ProcessInstanceProcessorTest {
   void testProcessTaskSingle()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
     bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn", Duration.ofMinutes(1))
         .startProcessInstance(VariablesDTO.of("key1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()

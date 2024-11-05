@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
@@ -39,6 +40,7 @@ public class ProcessInstanceProcessor
   private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
+  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
 
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<UUID, VariablesDTO> variablesStore;
@@ -51,22 +53,30 @@ public class ProcessInstanceProcessor
       VariablesMapper variablesMapper,
       ProcessInstanceProcessorProvider processInstanceProcessorProvider,
       Forwarder forwarder,
-      FlowInstanceRunner flowInstanceRunner) {
+      FlowInstanceRunner flowInstanceRunner,
+      TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
     this.definitionMapper = definitionMapper;
     this.instanceMapper = instanceMapper;
     this.variablesMapper = variablesMapper;
     this.processInstanceProcessorProvider = processInstanceProcessorProvider;
     this.forwarder = forwarder;
     this.flowInstanceRunner = flowInstanceRunner;
+    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
   }
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
-    this.variablesStore = context.getStateStore(Stores.VARIABLES_STORE_NAME);
-    this.processInstanceStore = context.getStateStore(Stores.PROCESS_INSTANCE_STORE_NAME);
+    this.variablesStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()));
+    this.processInstanceStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
     this.processInstanceDefinitionStore =
-        context.getStateStore(Stores.PROCESS_INSTANCE_DEFINITION_STORE_NAME);
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.PROCESS_INSTANCE_DEFINITION.getStorename()));
 
     context.schedule(
         Duration.ofMinutes(5),

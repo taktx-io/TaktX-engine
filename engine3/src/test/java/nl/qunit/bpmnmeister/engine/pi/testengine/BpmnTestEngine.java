@@ -63,6 +63,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION;
+  private static final String TOPIC_TEST_PREFIX = "test_tenant.test_namespace.";
+
   static {
     if (DebuggerUtil.isDebuggerAttached()) {
       DEFAULT_DURATION = Duration.ofSeconds(10);
@@ -103,46 +105,47 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     String kafkaBootstrapServers = ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
     try (AdminClient adminClient = AdminClient.create(
         Map.of("bootstrap.servers", kafkaBootstrapServers))) {
+      List<NewTopic> topics = Arrays.stream(Topics.values())
+          .map(topic -> new NewTopic(TOPIC_TEST_PREFIX + topic.getTopicName(), 5, (short) 1))
+          .toList();
       adminClient.createTopics(
-          Arrays.stream(Topics.values())
-              .map(topic -> new NewTopic(topic.getTopicName(), 5, (short) 1))
-              .toList());
+          topics);
     }
 
-    triggerEmitter = new KafkaProducerUtil(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+    triggerEmitter = new KafkaProducerUtil(TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
         ObjectMapperSerializer.class.getName());
-    xmlEmitter = new KafkaProducerUtil<>(Topics.XML_TOPIC.getTopicName(),
+    xmlEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.XML_TOPIC.getTopicName(),
         StringSerializer.class.getName(),
         StringSerializer.class.getName());
-    startCommandEmitter = new KafkaProducerUtil<>(Topics.DEFINITIONS_TOPIC.getTopicName(),
+    startCommandEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName(),
         StringSerializer.class.getName(),
         ObjectMapperSerializer.class.getName());
-    messageEventEmitter = new KafkaProducerUtil<>(Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
+    messageEventEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
         ObjectMapperSerializer.class.getName(),
         ObjectMapperSerializer.class.getName());
     processInstanceTriggerConsumer = new KafkaConsumerUtil<>("test-group",
-        Topics.PROCESS_INSTANCE_TRIGGER_TOPIC,
+        TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
         ProcessInstanceTriggerDeserializer.class.getName(),
         this::consume);
     messageEventConsumer = new KafkaConsumerUtil<>("test-group",
-        Topics.MESSAGE_EVENT_TOPIC,
+        TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
         MessageEventKeyDeserializer.class.getName(),
         MessageEventDeserializer.class.getName(),
         this::consume);
     externalTaskTriggerConsumer = new KafkaConsumerUtil<>("test-group",
-        Topics.EXTERNAL_TASK_TRIGGER_TOPIC,
+        TOPIC_TEST_PREFIX + Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
         ExternalTaskTriggerDeserializer.class.getName(),
         this::consume);
     processInstanceUpdateConsumer = new KafkaConsumerUtil<>("test-group",
-        Topics.PROCESS_INSTANCE_UPDATE_TOPIC,
+        TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_UPDATE_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
         ProcessInstanceUpdateDeserializer.class.getName(),
         this::consume);
     processDefinitionParsedConsumer = new KafkaConsumerUtil<>("test-group",
-        Topics.PROCESS_DEFINITION_PARSED_TOPIC,
+        TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
         ProcessDefinitionKeyDeserializer.class.getName(),
         ProcessDefinitionDeserializer.class.getName(),
         this::consume);
@@ -166,13 +169,13 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public void consume(ProcessInstanceTrigger trigger) {
     LOG.info("Received flow element trigger: " + trigger);
     if (trigger instanceof StartNewProcessInstanceTrigger startNewProcessInstanceTrigger) {
-      ProcessDefinitionKey ProcessDefinitionKey = nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
+      ProcessDefinitionKey processDefinitionKey = nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
           startNewProcessInstanceTrigger.getProcessDefinition());
       Set<UUID> uuids1 = processInstanceParentChildMap.computeIfAbsent(
           startNewProcessInstanceTrigger.getParentProcessInstanceKey(), k -> new HashSet<>());
       uuids1.add(startNewProcessInstanceTrigger.getProcessInstanceKey());
       ConcurrentLinkedQueue<ProcessInstanceTrigger> processInstanceKeyList = definitionToInstancesMap.computeIfAbsent(
-          ProcessDefinitionKey, k -> new ConcurrentLinkedQueue<>());
+          processDefinitionKey, k -> new ConcurrentLinkedQueue<>());
       processInstanceKeyList.add(trigger);
     }
   }

@@ -1,6 +1,7 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
@@ -19,17 +20,28 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 public class DefinitionsProcessor implements Processor<String, DefinitionsTrigger, Object, Object> {
 
+  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, Integer> definitionCountByIdStore;
   private KeyValueStore<String, DefinitionsDTO> definitionsByHashStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
 
+  public DefinitionsProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
+    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+  }
+
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
-    this.definitionCountByIdStore = context.getStateStore(Stores.DEFINITION_COUNT_BY_ID_STORE_NAME);
-    this.processDefinitionStore = context.getStateStore(Stores.PROCESS_DEFINITION_STORE_NAME);
-    this.definitionsByHashStore = context.getStateStore(Stores.XML_BY_HASH_STORE_NAME);
+    this.definitionCountByIdStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.DEFINITION_COUNT_BY_ID.getStorename()));
+    this.processDefinitionStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
+    this.definitionsByHashStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()));
   }
 
   @Override

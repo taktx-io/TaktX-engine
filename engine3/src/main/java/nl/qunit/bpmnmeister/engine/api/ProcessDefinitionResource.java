@@ -14,6 +14,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.engine.generic.TopologyProducer;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
@@ -29,6 +30,7 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 public class ProcessDefinitionResource {
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> store;
   @Inject KafkaStreams kafkaStreams;
+  @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
 
   @PostConstruct
   void init() {
@@ -36,7 +38,8 @@ public class ProcessDefinitionResource {
             ? extends ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO>>
         STORE_QUERY_PARAMETERS =
             StoreQueryParameters.fromNameAndType(
-                Stores.PROCESS_DEFINITION_STORE_NAME, QueryableStoreTypes.keyValueStore());
+                tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()),
+                QueryableStoreTypes.keyValueStore());
     store = kafkaStreams.store(STORE_QUERY_PARAMETERS);
   }
 
@@ -46,7 +49,8 @@ public class ProcessDefinitionResource {
     List<ProcessDefinitionKey> processDefinitionKeys = new ArrayList<>();
 
     Collection<StreamsMetadata> streamsMetadata =
-        kafkaStreams.streamsMetadataForStore(Stores.PROCESS_DEFINITION_STORE_NAME);
+        kafkaStreams.streamsMetadataForStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
     streamsMetadata.forEach(
         metadata -> {
           System.out.println("Host: " + metadata.host());
@@ -72,7 +76,7 @@ public class ProcessDefinitionResource {
         new ProcessDefinitionKey(processDefinitionName, processDefinitionVersion);
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            Stores.PROCESS_INSTANCE_STORE_NAME,
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             processDefinitionKey,
             TopologyProducer.PROCESS_DEFINITION_KEY_SERDE.serializer());
 

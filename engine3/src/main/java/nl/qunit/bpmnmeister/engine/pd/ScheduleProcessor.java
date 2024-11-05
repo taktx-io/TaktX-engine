@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
+import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
@@ -21,9 +22,11 @@ public class ScheduleProcessor
   public static final int SCHEDULE_INTERVAL = 100;
   private ProcessorContext<Object, SchedulableMessage> context;
   private final Clock clock;
+  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
 
-  public ScheduleProcessor(Clock clock) {
+  public ScheduleProcessor(Clock clock, TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
     this.clock = clock;
+    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
   }
 
   @Override
@@ -35,7 +38,8 @@ public class ScheduleProcessor
         timestamp -> {
           long startTime = System.currentTimeMillis();
           KeyValueStore<ScheduledKey, MessageScheduler> scheduleStore =
-              context.getStateStore(Stores.SCHEDULES_STORE_NAME);
+              context.getStateStore(
+                  tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
           try (KeyValueIterator<ScheduledKey, MessageScheduler> all = scheduleStore.all()) {
             all.forEachRemaining(
                 scheduledKeyValue -> {
@@ -75,7 +79,8 @@ public class ScheduleProcessor
   @Override
   public void process(Record<ScheduledKey, MessageScheduler> scheduleRecord) {
     KeyValueStore<ScheduledKey, MessageScheduler> scheduleStore =
-        context.getStateStore(Stores.SCHEDULES_STORE_NAME);
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
     if (scheduleRecord.value() != null) {
       scheduleStore.put(scheduleRecord.key(), scheduleRecord.value());
     } else {
