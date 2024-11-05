@@ -10,4 +10,4 @@ pluginManagement {
 }
 includeBuild('../shared')
 
-rootProject.name='engine3'
+rootProject.name='takt'
