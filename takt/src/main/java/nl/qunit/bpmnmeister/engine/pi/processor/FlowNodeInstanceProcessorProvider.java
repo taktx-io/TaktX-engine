@@ -27,7 +27,7 @@ import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 
 @ApplicationScoped
-public class ProcessInstanceProcessorProvider {
+public class FlowNodeInstanceProcessorProvider {
 
   @Inject StartEventInstanceProcessor startEventProcessor;
   @Inject IntermediateCatchEventInstanceProcessor intermediateCatchEventProcessor;

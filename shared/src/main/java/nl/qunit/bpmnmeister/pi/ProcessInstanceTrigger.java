@@ -11,6 +11,9 @@ import lombok.ToString;
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = StartNewProcessInstanceTrigger.class),
+  @JsonSubTypes.Type(value = ContinueFlowElementTrigger.class),
+  @JsonSubTypes.Type(value = ExternalTaskResponseTrigger.class),
+  @JsonSubTypes.Type(value = TerminateTrigger.class)
 })
 @ToString
 @Getter

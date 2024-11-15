@@ -21,5 +21,4 @@ public enum Topics {
   public String getTopicName() {
     return topicName;
   }
-
 }

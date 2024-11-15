@@ -6,7 +6,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.processor.BoundaryEventInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
-import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
+import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
@@ -22,7 +22,7 @@ import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 @RequiredArgsConstructor
 public class FlowInstanceRunner {
 
-  private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
+  private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
 
   public InstanceResult continueNewInstances(
@@ -103,13 +103,11 @@ public class FlowInstanceRunner {
       // First check for specific codes
       for (BoundaryEventInstance boundaryEventInstance :
           activityInstance.getAttachedBoundaryEventInstances()) {
-        if (!eventHandled) {
-          eventHandled =
-              boundaryEventProcessor.processEvent(
-                  boundaryEventInstance, event, newInstanceResult, variables, flowNodeInstances);
-          if (eventHandled) {
-            break;
-          }
+        eventHandled =
+            boundaryEventProcessor.processEvent(
+                boundaryEventInstance, event, newInstanceResult, variables, flowNodeInstances);
+        if (eventHandled) {
+          break;
         }
       }
 

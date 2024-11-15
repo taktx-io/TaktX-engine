@@ -23,13 +23,13 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 public class SubProcessInstanceProcessor
     extends ActivityInstanceProcessor<SubProcess, SubProcessInstance, ContinueFlowElementTrigger> {
 
-  private ProcessInstanceProcessorProvider processInstanceProcessorProvider;
+  private FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private FlowInstanceRunner flowInstanceRunner;
 
   @Inject
   public SubProcessInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
-      ProcessInstanceProcessorProvider processInstanceProcessorProvider,
+      FlowNodeInstanceProcessorProvider processInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
       VariablesMapper variablesMapper) {
     super(ioMappingProcessor, variablesMapper);

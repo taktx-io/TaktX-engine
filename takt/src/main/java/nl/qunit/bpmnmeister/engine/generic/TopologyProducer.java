@@ -21,11 +21,12 @@ import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
 import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
+import nl.qunit.bpmnmeister.engine.pi.FlowNodeInstancesProcessor;
 import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.engine.pi.processor.ProcessInstanceProcessorProvider;
+import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
@@ -99,10 +100,11 @@ public class TopologyProducer {
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
   private final VariablesMapper variablesMapper;
-  private final ProcessInstanceProcessorProvider processInstanceProcessorProvider;
+  private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
   private final FlowInstanceRunner flowInstanceRunner;
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
 
   @Produces
   public Topology buildTopology() {
@@ -149,10 +151,9 @@ public class TopologyProducer {
                         definitionMapper,
                         instanceMapper,
                         variablesMapper,
-                        processInstanceProcessorProvider,
                         forwarder,
-                        flowInstanceRunner,
-                        tenantNamespaceNameWrapper),
+                        tenantNamespaceNameWrapper,
+                        flowNodeInstancesProcessor),
                 tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
                 tenantNamespaceNameWrapper.getPrefixed(
                     Stores.PROCESS_INSTANCE_DEFINITION.getStorename()),
