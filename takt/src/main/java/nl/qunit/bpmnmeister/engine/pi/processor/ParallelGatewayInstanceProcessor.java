@@ -4,7 +4,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
@@ -25,8 +27,9 @@ public class ParallelGatewayInstanceProcessor
   public ParallelGatewayInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
+    super(ioMappingProcessor, feelExpressionHandler, processInstanceMapper, variablesMapper);
   }
 
   @Override
@@ -36,7 +39,9 @@ public class ParallelGatewayInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processStartSpecificGatewayInstance(
+  protected void processStartSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       ParallelGatewayInstance flownodeInstance,
       String inputFlowId,
@@ -45,14 +50,13 @@ public class ParallelGatewayInstanceProcessor
     if (flownodeInstance.getFlowNode().getIncoming().equals(flownodeInstance.getTriggeredFlows())) {
       flownodeInstance.clearTriggeredFlows();
     }
-    return InstanceResult.empty();
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificGatewayInstance(
-      ParallelGatewayInstance instance) {
-    return InstanceResult.empty();
-  }
+  protected void processTerminateSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      ParallelGatewayInstance instance) {}
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(

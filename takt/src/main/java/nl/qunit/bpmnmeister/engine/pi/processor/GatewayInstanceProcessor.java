@@ -4,8 +4,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.Gateway;
@@ -14,6 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.GatewayInstance;
 
@@ -27,28 +30,42 @@ public abstract class GatewayInstanceProcessor<
   protected GatewayInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
   @Override
-  protected final InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements flowElements, I gatewayInstance, String inputFlowId, Variables variables) {
-    return processStartSpecificGatewayInstance(
-        flowElements, gatewayInstance, inputFlowId, variables);
+  protected final void processStartSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I gatewayInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables) {
+    processStartSpecificGatewayInstance(
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        gatewayInstance,
+        inputFlowId,
+        variables);
   }
 
   @Override
-  protected final InstanceResult processContinueSpecificFlowNodeInstance(
+  protected final void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
       Variables processInstanceVariables,
       FlowNodeInstances flowNodeInstances) {
     // Should never happen
-    return InstanceResult.empty();
   }
 
   @Override
@@ -91,13 +108,23 @@ public abstract class GatewayInstanceProcessor<
       I gatewayInstance, FlowNodeInstances flowNodeInstances);
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      I instance, Variables variables) {
-    return processTerminateSpecificGatewayInstance(instance);
+  protected void processTerminateSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I instance,
+      ProcessInstance processInstance,
+      Variables variables) {
+    processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }
 
-  protected abstract InstanceResult processStartSpecificGatewayInstance(
-      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables);
+  protected abstract void processStartSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flownodeInstance,
+      String inputFlowId,
+      Variables variables);
 
-  protected abstract InstanceResult processTerminateSpecificGatewayInstance(I instance);
+  protected abstract void processTerminateSpecificGatewayInstance(
+      InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I instance);
 }

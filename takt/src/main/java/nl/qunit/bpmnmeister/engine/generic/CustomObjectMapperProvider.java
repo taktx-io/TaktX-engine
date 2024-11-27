@@ -11,6 +11,7 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pi.InstanceUpdate;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
@@ -40,6 +41,7 @@ public class CustomObjectMapperProvider {
             .allowIfBaseType(ProcessInstanceTrigger.class)
             .allowIfBaseType(FlowNodeInstanceDTO.class)
             .allowIfBaseType(MessageEvent.class)
+            .allowIfBaseType(InstanceUpdate.class)
             .build();
 
     mapper.setPolymorphicTypeValidator(ptv);

@@ -2,8 +2,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -14,6 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.TerminateCorrelationSubscriptionMessageEven
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.CatchEventInstance;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
@@ -28,15 +31,20 @@ public abstract class CatchEventInstanceProcessor<
   protected CatchEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       VariablesMapper variablesMapper,
+      ProcessInstanceMapper processInstanceMapper,
       FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, variablesMapper);
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
   @Override
-  protected InstanceResult processStartSpecificEventInstance(
-      FlowElements flowElements, I catchEventInstance, String inputFlowId, Variables variables) {
-    InstanceResult result = new InstanceResult();
+  protected void processStartSpecificEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I catchEventInstance,
+      String inputFlowId,
+      Variables variables) {
 
     catchEventInstance.setState(CatchEventStateEnum.FINISHED);
 
@@ -65,7 +73,7 @@ public abstract class CatchEventInstanceProcessor<
           .forEach(
               timerEventDefinition -> {
                 catchEventInstance.setState(CatchEventStateEnum.WAITING);
-                result.addNewScheduledContinuation(
+                instanceResult.addNewScheduledContinuation(
                     new ScheduledContinuationInfo(
                         catchEventInstance, timerEventDefinition, variables));
               });
@@ -85,34 +93,37 @@ public abstract class CatchEventInstanceProcessor<
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
                   new NewCorrelationSubscriptionMessageEventInfo(
                       messageName, correlationKey, catchEventInstance);
-              result.addNewCorrelationSubcriptionMessageEvent(messageInfo);
+              instanceResult.addNewCorrelationSubcriptionMessageEvent(messageInfo);
             });
-
-    return result;
   }
 
   protected abstract boolean shoudHandleTimerxEvents();
 
   @Override
-  protected InstanceResult processContinueSpecificFlowNodeInstance(
+  protected void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTrigger trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
-    return getInstanceResultForContinue(flowNodeInstance);
+    getInstanceResultForContinue(instanceResult, directInstanceResult, flowNodeInstance);
   }
 
-  private InstanceResult getInstanceResultForContinue(I flowNodeInstance) {
-    InstanceResult result = InstanceResult.empty();
+  private void getInstanceResultForContinue(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I flowNodeInstance) {
 
     if (shouldCancel(flowNodeInstance)) {
       flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
-      terminateSubscriptions(flowNodeInstance, result);
+      terminateSubscriptions(flowNodeInstance, instanceResult);
     }
-    result.merge(processContinueSpecificCatchEventInstance(flowNodeInstance));
-    return result;
+    processContinueSpecificCatchEventInstance(
+        instanceResult, directInstanceResult, flowNodeInstance);
   }
 
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
@@ -146,28 +157,44 @@ public abstract class CatchEventInstanceProcessor<
     flowNodeInstance.getScheduledKeys().forEach(result::cancelSchedule);
   }
 
-  protected abstract InstanceResult processContinueSpecificCatchEventInstance(I flowNodeInstance);
+  protected abstract void processContinueSpecificCatchEventInstance(
+      InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I flowNodeInstance);
 
   protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      I instance, Variables variables) {
-    InstanceResult result = InstanceResult.empty();
-    terminateSubscriptions(instance, result);
-    return result;
+  protected void processTerminateSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I instance,
+      ProcessInstance processInstance,
+      Variables variables) {
+    terminateSubscriptions(instance, instanceResult);
   }
 
   public boolean processEvent(
       I catchEventInstance,
       EventSignal event,
       InstanceResult newInstanceResult,
+      DirectInstanceResult directInstanceResult,
       Variables variables,
+      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances) {
     if (catchEventInstance.matchesEvent(event)) {
-      newInstanceResult.merge(getInstanceResultForContinue(catchEventInstance));
+      getInstanceResultForContinue(newInstanceResult, directInstanceResult, catchEventInstance);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, newInstanceResult, variables, false, flowNodeInstances);
+          catchEventInstance,
+          newInstanceResult,
+          directInstanceResult,
+          variables,
+          false,
+          flowNodeInstances);
+      newInstanceResult.addProcessInstanceUpdate(
+          createFlowNodeInstanceUpdate(
+              processInstance,
+              flowNodeInstances.getFlowNodeInstancesId(),
+              catchEventInstance,
+              variables));
       return true;
     }
     return false;
@@ -176,13 +203,26 @@ public abstract class CatchEventInstanceProcessor<
   public boolean processEventCatchAll(
       I catchEventInstance,
       EventSignal event,
-      InstanceResult newInstanceResult,
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       Variables variables,
+      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances) {
     if (catchEventInstance.matchesEventCatchAll(event)) {
-      newInstanceResult.merge(getInstanceResultForContinue(catchEventInstance));
+      getInstanceResultForContinue(instanceResult, directInstanceResult, catchEventInstance);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, newInstanceResult, variables, false, flowNodeInstances);
+          catchEventInstance,
+          instanceResult,
+          directInstanceResult,
+          variables,
+          false,
+          flowNodeInstances);
+      instanceResult.addProcessInstanceUpdate(
+          createFlowNodeInstanceUpdate(
+              processInstance,
+              flowNodeInstances.getFlowNodeInstancesId(),
+              catchEventInstance,
+              variables));
       return true;
     }
     return false;

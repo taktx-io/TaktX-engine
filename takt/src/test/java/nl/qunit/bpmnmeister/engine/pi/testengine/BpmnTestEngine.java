@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Stream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.generic.TopologyProducer;
@@ -35,6 +36,8 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdate;
+import nl.qunit.bpmnmeister.pi.InstanceUpdate;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
@@ -48,6 +51,7 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.state.WithFlowNodeInstancesDTO;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -55,6 +59,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 import org.xml.sax.SAXException;
@@ -73,23 +78,24 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     }
   }
 
-  private final Map<UUID, ConcurrentLinkedQueue<ProcessInstanceUpdate>> processInstanceQueueMap = new HashMap<>();
   private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new HashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTrigger>> externalTaskTriggerQueueMap = new HashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTrigger>> definitionToInstancesMap = new HashMap<>();
-  private final Map<UUID, ProcessInstanceUpdate> processInstanceMap = new HashMap<>();
+  private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new HashMap<>();
+  private final Map<UUID, Map<UUID, Map<UUID, FlowNodeInstanceDTO>>> flowNodeInstanceMap = new HashMap<>();
+  private final Map<UUID, VariablesDTO> variablesMap = new HashMap<>();
   private final Map<String, ProcessDefinitionDTO> hashToDefinitionMap = new HashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEvent>> messageSubscriptionMap = new HashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
-  private ProcessInstanceUpdate activeProcessInstance;
+  private UUID activeProcessInstanceKey;
   private ExternalTaskTrigger activeExternalTaskTrigger;
   private DefinitionsDTO definitionsBeingDeployed;
   private final MutableClock mutableClock;
-  private ProcessInstanceUpdate latestInstantiatedProcessInstance;
+  private UUID latestInstantiatedProcessInstanceKey;
   private KafkaConsumerUtil<UUID, ProcessInstanceTrigger> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKey, MessageEvent> messageEventConsumer;
   private KafkaConsumerUtil<UUID, ExternalTaskTrigger> externalTaskTriggerConsumer;
-  private KafkaConsumerUtil<UUID, ProcessInstanceUpdate> processInstanceUpdateConsumer;
+  private KafkaConsumerUtil<UUID, InstanceUpdate> instanceUpdateConsumer;
   private KafkaConsumerUtil<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionParsedConsumer;
   private KafkaProducerUtil<UUID, ProcessInstanceTrigger> triggerEmitter;
   private KafkaProducerUtil<String, String> xmlEmitter;
@@ -139,10 +145,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
         ExternalTaskTriggerDeserializer.class.getName(),
         this::consume);
-    processInstanceUpdateConsumer = new KafkaConsumerUtil<>("test-group",
-        TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_UPDATE_TOPIC.getTopicName(),
+    instanceUpdateConsumer = new KafkaConsumerUtil<>("test-group",
+        TOPIC_TEST_PREFIX + Topics.INSTANCE_UPDATE_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
-        ProcessInstanceUpdateDeserializer.class.getName(),
+        InstanceUpdateDeserializer.class.getName(),
         this::consume);
     processDefinitionParsedConsumer = new KafkaConsumerUtil<>("test-group",
         TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
@@ -157,7 +163,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
     externalTaskTriggerConsumer.stop();
-    processInstanceUpdateConsumer.stop();
+    instanceUpdateConsumer.stop();
     processDefinitionParsedConsumer.stop();
     messageEventEmitter.close();
     xmlEmitter.close();
@@ -194,17 +200,37 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     externalTaskTriggers.add(externalTaskTrigger);
   }
 
-  public void consume(ProcessInstanceUpdate processInstance) {
-    LOG.info("Received process instance: " + processInstance);
-    ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances1 = processInstanceQueueMap.computeIfAbsent(
-        processInstance.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
-    processInstances1.add(processInstance);
-    ProcessInstanceDTO previousProcessInstance = processInstanceMap.put(processInstance.getProcessInstanceKey(),
-        processInstance);
-    if (previousProcessInstance == null) {
-      latestInstantiatedProcessInstance = processInstance;
-    }
+  public void consume(InstanceUpdate instanceUpdate) {
+    if (instanceUpdate instanceof ProcessInstanceUpdate processInstanceUpdate) {
+      LOG.info("Received process instance update: " + instanceUpdate);
 
+      ProcessInstanceDTO processInstanceDTO = getProcessInstanceDTO(processInstanceUpdate);
+      ProcessInstanceDTO previousProcessInstance = processInstanceMap.put(instanceUpdate.getProcessInstanceKey(),
+          processInstanceDTO);
+      if (previousProcessInstance == null) {
+        latestInstantiatedProcessInstanceKey = processInstanceDTO.getProcessInstanceKey();
+      }
+    } else if (instanceUpdate instanceof FlowNodeInstanceUpdate flowNodeInstanceUpdate) {
+      LOG.info("Received FlowNode instance update: " + instanceUpdate);
+
+      Map<UUID, Map<UUID, FlowNodeInstanceDTO>> flowNodeInstancesDTOMap =
+          flowNodeInstanceMap.computeIfAbsent(flowNodeInstanceUpdate.getProcessInstanceKey(), id -> new HashMap<>());
+      Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap =
+          flowNodeInstancesDTOMap.computeIfAbsent(flowNodeInstanceUpdate.getFlowNodeInstancesId(), id -> new HashMap<>());
+
+      flowNodeInstanceMap.put(flowNodeInstanceUpdate.getFlowNodeInstance().getElementInstanceId(), flowNodeInstanceUpdate.getFlowNodeInstance());
+      variablesMap.put(flowNodeInstanceUpdate.getProcessInstanceKey(), flowNodeInstanceUpdate.getVariables());
+    }
+  }
+
+  private static @NotNull ProcessInstanceDTO getProcessInstanceDTO(ProcessInstanceUpdate processInstanceUpdate) {
+    return new ProcessInstanceDTO(
+        processInstanceUpdate.getProcessInstanceKey(),
+        processInstanceUpdate.getParentProcessInstanceKey(),
+        processInstanceUpdate.getParentElementIdPath(),
+        processInstanceUpdate.getParentElementInstancePath(),
+        processInstanceUpdate.getProcessDefinitionKey(),
+        processInstanceUpdate.getFlowNodeInstances());
   }
 
   public void consume(ProcessDefinitionDTO processDefinition) {
@@ -213,7 +239,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public ExternalTaskTrigger pollExternalTask() {
-    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.get(activeProcessInstance.getProcessInstanceKey());
+    ConcurrentLinkedQueue<ExternalTaskTrigger> externalTaskTriggers = externalTaskTriggerQueueMap.get(activeProcessInstanceKey);
     if (externalTaskTriggers == null) {
       return null;
     }
@@ -277,7 +303,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         variables);
     startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
 
-    UUID activeProcessInstanceKey;
     try {
        activeProcessInstanceKey = Awaitility.await()
           .until(() -> {
@@ -299,20 +324,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       throw new IllegalStateException(e);
     }
     try {
-      activeProcessInstance = Awaitility.await()
-          .until(() -> {
-            ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-                activeProcessInstanceKey);
-            if (processInstances == null || processInstances.isEmpty()) {
-              return null;
-            }
-            ProcessInstanceUpdate poll = processInstances.poll();
-            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstanceKey)) {
-              return poll;
-            }
-            return null;
-          }, Objects::nonNull);
+      Awaitility.await()
+          .until(() -> processInstanceMap.get(activeProcessInstanceKey),
+              Objects::nonNull);
     } catch (ConditionTimeoutException e) {
       LOG.error("Error waiting for process instance to start: " + e);
       throw new IllegalStateException(e);
@@ -331,10 +345,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
 
   public BpmnTestEngine waitForNewProcessInstance() {
-    ProcessInstanceUpdate referenceProcessInstance = latestInstantiatedProcessInstance;
-    activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
-        .until(() -> latestInstantiatedProcessInstance,
-            instance -> !Objects.equals(referenceProcessInstance, instance));
+    UUID referenceProcessInstanceKey = latestInstantiatedProcessInstanceKey;
+    activeProcessInstanceKey = Awaitility.await().atMost(DEFAULT_DURATION)
+        .until(() -> latestInstantiatedProcessInstanceKey,
+            instance -> !Objects.equals(referenceProcessInstanceKey, instance));
     return this;
   }
 
@@ -349,18 +363,18 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine waitUntilChildProcessesHaveState(int expectedCount, ProcessInstanceState processInstanceState) {
-    activeProcessInstance = Awaitility.await().atMost(DEFAULT_DURATION)
+    activeProcessInstanceKey = Awaitility.await().atMost(DEFAULT_DURATION)
         .until(() -> {
-          Set<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstance.getProcessInstanceKey());
+          Set<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstanceKey);
           if (childKeys == null) {
             return null;
           }
           if (childKeys.size() >= expectedCount) {
-            UUID processInstanceKey = childKeys.iterator().next();
-            ProcessInstanceUpdate processInstance = processInstanceMap.get(processInstanceKey);
+            UUID childProcessInstanceKey = childKeys.iterator().next();
+            ProcessInstanceDTO childProcessInstance = processInstanceMap.get(childProcessInstanceKey);
             return
-                processInstance != null && processInstance.getFlowNodeInstances().getState() == processInstanceState
-                    ? processInstance : null;
+                childProcessInstance != null && childProcessInstance.getFlowNodeInstances().getState() == processInstanceState
+                    ? childProcessInstanceKey : null;
           }
           return null;
         }, Objects::nonNull);
@@ -368,19 +382,19 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine andRespondWithSuccess(VariablesDTO of) {
-    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(), activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.SUCCESS, true,
+    triggerExternalTaskResponse(activeProcessInstanceKey, activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.SUCCESS, true,
         Constants.NONE, Constants.NONE, Constants.NONE), of);
     return this;
   }
 
   public BpmnTestEngine andRespondWithFailure(boolean allowRetry, String name, String code, String message, VariablesDTO variables) {
-    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
+    triggerExternalTaskResponse(activeProcessInstanceKey,
         activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ERROR, allowRetry, name, message, code), variables);
     return this;
   }
 
   public BpmnTestEngine andRespondWithEscalation(String name, String code, String message, VariablesDTO variables) {
-    triggerExternalTaskResponse(activeProcessInstance.getProcessInstanceKey(),
+    triggerExternalTaskResponse(activeProcessInstanceKey,
         activeExternalTaskTrigger, new ExternalTaskResponseResult(ExternalTaskResponseTypeEnum.ESCALATION, true, name, message, code), variables);
     return this;
   }
@@ -391,32 +405,17 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine waitUntilCompleted(Duration duration) {
     try {
-      activeProcessInstance = Awaitility.await()
+      Awaitility.await()
           .atMost(duration)
           .until(() -> {
-            if (activeProcessInstance != null && activeProcessInstance.getFlowNodeInstances().getState()
+            if (activeProcessInstanceKey != null && processInstanceMap.get(activeProcessInstanceKey).getFlowNodeInstances().getState()
                 .isFinished()) {
-              return activeProcessInstance;
+              return activeProcessInstanceKey;
             }
-            ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-                activeProcessInstance.getProcessInstanceKey());
-            if (processInstances == null || processInstances.isEmpty()) {
-              return null;
-            }
-            ProcessInstanceUpdate poll;
-            do {
-              poll = processInstances.poll();
-              if (poll != null && poll.getProcessInstanceKey() != null
-                  && poll.getProcessInstanceKey()
-                      .equals(activeProcessInstance.getProcessInstanceKey())
-                  && poll.getFlowNodeInstances().getState().isFinished()) {
-                return poll;
-              }
-            } while (poll != null);
             return null;
           }, Objects::nonNull);
     } catch (ConditionTimeoutException e) {
-      LOG.error("Process instance: " + activeProcessInstance + " did not complete in time");
+      LOG.error("Process instance: " + activeProcessInstanceKey + " did not complete in time");
       LOG.error(processInstanceMap);
       throw e;
     }
@@ -424,31 +423,35 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public ProcessInstanceAssert assertThatProcess() {
-    return new ProcessInstanceAssert(activeProcessInstance, this);
+    return new ProcessInstanceAssert(activeProcessInstanceKey, this);
   }
 
   public void clear() {
-    processInstanceQueueMap.clear();
     processInstanceParentChildMap.clear();
     externalTaskTriggerQueueMap.clear();
     definitionToInstancesMap.clear();
     processInstanceMap.clear();
+    flowNodeInstanceMap.clear();
+    variablesMap.clear();
     hashToDefinitionMap.clear();
     messageSubscriptionMap.clear();
     activeProcessDefintion = null;
-    activeProcessInstance = null;
+    activeProcessInstanceKey = null;
     activeExternalTaskTrigger = null;
   }
 
   public BpmnTestEngine parentProcess() {
-    activeProcessInstance = processInstanceMap.get(activeProcessInstance.getParentProcessInstanceKey());
+    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
+
+    activeProcessInstanceKey = processInstanceDTO.getParentProcessInstanceKey();
     return this;
   }
 
   public ProcessInstanceAssert assertThatParentProcess() {
-    ProcessInstanceUpdate parentProcessInstance = processInstanceMap.get(activeProcessInstance.getParentProcessInstanceKey());
-    activeProcessInstance = parentProcessInstance;
-    return new ProcessInstanceAssert(parentProcessInstance, this);
+    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
+    ProcessInstanceDTO parentProcessInstance = processInstanceMap.get(processInstanceDTO.getParentProcessInstanceKey());
+    activeProcessInstanceKey = parentProcessInstance.getProcessInstanceKey();
+    return new ProcessInstanceAssert(parentProcessInstance.getProcessInstanceKey(), this);
   }
 
   public ProcessDefinitionDTO deployedProcessDefinition() {
@@ -479,7 +482,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateProcessInstance() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of()));
+    triggerEmitter.send(activeProcessInstanceKey, new TerminateTrigger(activeProcessInstanceKey, List.of()));
     return this;
   }
 
@@ -492,35 +495,38 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine waitUntilElementHasPassed(String elementId, int count, Duration duration) {
-
-    activeProcessInstance = Awaitility.await()
+    Awaitility.await()
         .atMost(duration)
-        .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-              activeProcessInstance.getProcessInstanceKey());
-          LOG.info("Pi for " + activeProcessInstance.getProcessInstanceKey() + " in : " + processInstanceQueueMap);
-          if (processInstances == null || processInstances.isEmpty()) {
-            return null;
-          }
-          ProcessInstanceUpdate poll;
-          do {
-            poll = processInstances.poll();
-            LOG.info("Poll: " + poll);
-            if (poll != null && poll.getProcessInstanceKey() != null && poll.getProcessInstanceKey()
-                .equals(activeProcessInstance.getProcessInstanceKey()) &&
-                getPassedCnt(elementId, poll) >= count) {
-              return poll;
-            }
-          } while (poll != null);
-          return null;
-        }, Objects::nonNull);
+        .until(() -> getFlowNodeInstancesWithElementId(
+            activeProcessInstanceKey,
+                elementId,
+                count),
+            instances -> !instances.isEmpty());
     return this;
   }
 
-  private static int getPassedCnt(String elementId, ProcessInstanceUpdate poll) {
-    List<FlowNodeInstanceDTO> flowNodeInstance = poll.getFlowNodeInstances().get(elementId).stream().filter(e -> e.getPassedCnt() > 0).toList();
+  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, String elementId, int count) {
+    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(processInstanceKey);
 
-    return flowNodeInstance.size();
+      return getFlowNodeInstancesWithElementId(processInstanceKey, processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId(), elementId, count, 0);
+  }
+
+  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, UUID flowNodeInstancesId, String elementId, int count, int index) {
+    Map<UUID, Map<UUID, FlowNodeInstanceDTO>>flowNodeInstancesMap =
+        flowNodeInstanceMap.get(processInstanceKey);
+    Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap = flowNodeInstancesMap.get(flowNodeInstancesId);
+    String[] split = elementId.split("/");
+    String elementIdSubPath = split[index];
+
+    return flowNodeInstanceMap.values().stream()
+        .filter(i -> i.getElementId().equals(elementIdSubPath) && i.getPassedCnt() >= count).flatMap(flowNodeInstanceDTO -> {
+          if (split.length > index + 1 && flowNodeInstanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
+            return getFlowNodeInstancesWithElementId(processInstanceKey, withFlowNodeInstances.getFlowNodeInstances().getFlowNodeInstancesId(),
+                elementId, count, index + 1).stream();
+          } else {
+            return Stream.of(flowNodeInstanceDTO);
+          }
+    }).toList();
   }
 
   public BpmnTestEngine sendMessage(String messageName, VariablesDTO variables) {
@@ -581,36 +587,31 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return new ExternalTaskAssert(activeExternalTaskTrigger, this);
   }
 
-  public ProcessInstanceUpdate getProcessInstance(UUID parentInstanceKey) {
+  public ProcessInstanceDTO getProcessInstance(UUID parentInstanceKey) {
     return processInstanceMap.get(parentInstanceKey);
   }
 
-  public BpmnTestEngine waitUntilActivityHasState(String elementId, ActtivityStateEnum state, Duration duration) {
+  public VariablesDTO getVariables(UUID processInstanceKey) {
+    return variablesMap.get(processInstanceKey);
+  }
 
-    activeProcessInstance = Awaitility.await()
+  public BpmnTestEngine waitUntilActivityHasState(String elementId, ActtivityStateEnum state, Duration duration) {
+    Awaitility.await()
         .atMost(duration)
         .until(() -> {
-          ConcurrentLinkedQueue<ProcessInstanceUpdate> processInstances = processInstanceQueueMap.get(
-              activeProcessInstance.getProcessInstanceKey());
-          if (processInstances == null || processInstances.isEmpty()) {
-            return null;
-          }
-          ProcessInstanceUpdate poll;
-          do {
-            poll = processInstances.poll();
-            if (poll != null &&
-                poll.getProcessInstanceKey() != null &&
-                poll.getProcessInstanceKey().equals(activeProcessInstance.getProcessInstanceKey()) &&
-                !poll.getFlowNodeInstances().get(elementId).isEmpty()) {
-              selectedFlowNodeInstance = poll.getFlowNodeInstances().get(elementId).getFirst();
-              if (selectedFlowNodeInstance instanceof ActivityInstanceDTO activityState && state == activityState.getState()) {
-                return poll;
-              }
-            }
-          } while (poll != null);
-          return null;
+          Map<UUID, Map<UUID, FlowNodeInstanceDTO>>flowNodeInstancesMap =
+              flowNodeInstanceMap.get(activeProcessInstanceKey);
+          ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
+          Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap = flowNodeInstancesMap.get(
+              processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId());
+          return flowNodeInstanceMap.values().stream()
+              .filter(i -> i instanceof ActivityInstanceDTO)
+              .map(i -> (ActivityInstanceDTO)i)
+              .anyMatch(a -> a.getElementId().equals(elementId) && a.getState() == state);
         }, Objects::nonNull);
-    return this;  }
+
+    return this;
+  }
 
   public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
     return waitUntilActivityHasState(elementId, ActtivityStateEnum.WAITING, duration);
@@ -633,7 +634,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateElemeent() {
-    triggerEmitter.send(activeProcessInstance.getProcessInstanceKey(), new TerminateTrigger(activeProcessInstance.getProcessInstanceKey(), List.of(
+    triggerEmitter.send(activeProcessInstanceKey, new TerminateTrigger(activeProcessInstanceKey, List.of(
         selectedFlowNodeInstance.getElementInstanceId())));
     return this;
   }

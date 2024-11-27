@@ -3,11 +3,14 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Task;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.TaskInstance;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
@@ -19,34 +22,44 @@ public class TaskInstanceProcessor
 
   @Inject
   public TaskInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(
-      TaskInstance instance, Variables processInstanceVariables) {
+  protected void processTerminateSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      TaskInstance instance,
+      ProcessInstance processInstance,
+      Variables processInstanceVariables) {
     // Nothing to do here
-    return InstanceResult.empty();
   }
 
   @Override
-  protected InstanceResult processStartSpecificActivityInstance(
+  protected void processStartSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       TaskInstance flowNodeInstance,
+      ProcessInstance processInstance,
       String inputFlowId,
       Variables variables) {
     flowNodeInstance.setState(ActtivityStateEnum.FINISHED);
-    return InstanceResult.empty();
   }
 
   @Override
-  protected InstanceResult processContinueSpecificActivityInstance(
+  protected void processContinueSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTrigger trigger,
       Variables processInstanceVariables) {
-    return InstanceResult.empty();
+    // Nothing to do here
   }
 }

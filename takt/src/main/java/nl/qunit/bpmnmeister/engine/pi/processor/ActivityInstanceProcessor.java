@@ -2,15 +2,18 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
@@ -22,18 +25,30 @@ public abstract class ActivityInstanceProcessor<
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   protected ActivityInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected final InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables) {
-    InstanceResult result = InstanceResult.empty();
+  protected final void processStartSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flownodeInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables) {
 
-    result.merge(
-        processStartSpecificActivityInstance(
-            flowElements, flownodeInstance, inputFlowId, variables));
+    processStartSpecificActivityInstance(
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        flownodeInstance,
+        processInstance,
+        inputFlowId,
+        variables);
 
     if (flownodeInstance.getState() == ActtivityStateEnum.WAITING) {
       E flowNode = flownodeInstance.getFlowNode();
@@ -46,61 +61,80 @@ public abstract class ActivityInstanceProcessor<
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEvent(boundaryEventInstance);
-                result.addNewFlowNodeInstance(
+                directInstanceResult.addNewFlowNodeInstance(
                     new FLowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
               });
     }
-
-    return result;
   }
 
   @Override
-  protected final InstanceResult processContinueSpecificFlowNodeInstance(
+  protected final void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
       Variables processInstanceVariables,
       FlowNodeInstances flowNodeInstances) {
 
-    InstanceResult result = InstanceResult.empty();
-    result.merge(
-        processContinueSpecificActivityInstance(
-            subProcessLevel, flowElements, flowNodeInstance, trigger, processInstanceVariables));
+    processContinueSpecificActivityInstance(
+        instanceResult,
+        directInstanceResult,
+        subProcessLevel,
+        flowElements,
+        processInstance,
+        flowNodeInstance,
+        trigger,
+        processInstanceVariables);
 
     if (flowNodeInstance.getState() == ActtivityStateEnum.FINISHED) {
       flowNodeInstance
           .getAttachedBoundaryEventInstances()
-          .forEach(bi -> result.addTerminateInstance(bi.getElementInstanceId()));
+          .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
     }
-
-    return result;
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      I instance, Variables variables) {
-    InstanceResult result = InstanceResult.empty();
+  protected void processTerminateSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I instance,
+      ProcessInstance processInstance,
+      Variables variables) {
     instance
         .getAttachedBoundaryEventInstances()
-        .forEach(bi -> result.addTerminateInstance(bi.getElementInstanceId()));
-    result.merge(processTerminateSpecificActivityInstance(instance, variables));
-    return result;
+        .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
+    processTerminateSpecificActivityInstance(
+        instanceResult, directInstanceResult, instance, processInstance, variables);
   }
 
-  protected abstract InstanceResult processStartSpecificActivityInstance(
-      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables);
+  protected abstract void processStartSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flownodeInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables);
 
-  protected abstract InstanceResult processContinueSpecificActivityInstance(
+  protected abstract void processContinueSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      //      E externalTask,
+      ProcessInstance processInstance,
       I externalTaskInstance,
       C trigger,
       Variables processInstanceVariables);
 
-  protected abstract InstanceResult processTerminateSpecificActivityInstance(
-      I instance, Variables variables);
+  protected abstract void processTerminateSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I instance,
+      ProcessInstance processInstance,
+      Variables variables);
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(

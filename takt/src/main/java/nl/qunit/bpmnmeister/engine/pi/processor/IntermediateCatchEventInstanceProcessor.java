@@ -3,7 +3,9 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -18,8 +20,9 @@ public class IntermediateCatchEventInstanceProcessor
   IntermediateCatchEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper, feelExpressionHandler);
+    super(ioMappingProcessor, variablesMapper, processInstanceMapper, feelExpressionHandler);
   }
 
   @Override
@@ -28,10 +31,10 @@ public class IntermediateCatchEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processContinueSpecificCatchEventInstance(
-      IntermediateCatchEventInstance flowNodeInstance) {
-    return InstanceResult.empty();
-  }
+  protected void processContinueSpecificCatchEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      IntermediateCatchEventInstance flowNodeInstance) {}
 
   @Override
   protected boolean shouldCancel(IntermediateCatchEventInstance flowNodeInstance) {

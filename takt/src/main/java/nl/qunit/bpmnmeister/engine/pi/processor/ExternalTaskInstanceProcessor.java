@@ -10,7 +10,9 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -19,6 +21,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.instances.ErrorEventSignal;
@@ -35,23 +38,27 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private FeelExpressionHandler feelExpressionHandler;
   private Clock clock;
-  private VariablesMapper variablesMapper;
 
   protected ExternalTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
     this.clock = clock;
-    this.variablesMapper = variablesMapper;
   }
 
   @Override
-  protected InstanceResult processStartSpecificActivityInstance(
-      FlowElements flowElements, I flownodeInstance, String inputFlowId, Variables variables) {
-    InstanceResult instanceResult = InstanceResult.empty();
+  protected void processStartSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flownodeInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(
@@ -59,13 +66,15 @@ public abstract class ExternalTaskInstanceProcessor<
     instanceResult.addExternalTaskRequest(externalTaskInfo);
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
-    return instanceResult;
   }
 
   @Override
-  protected InstanceResult processContinueSpecificActivityInstance(
+  protected void processContinueSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       I externalTaskInstance,
       ExternalTaskResponseTrigger trigger,
       Variables processInstanceVariables) {
@@ -73,12 +82,11 @@ public abstract class ExternalTaskInstanceProcessor<
     Variables variables = variablesMapper.fromDTO(variablesDTO);
     processInstanceVariables.merge(variables);
 
-    InstanceResult instanceResult = InstanceResult.empty();
     ExternalTaskResponseResult responseResult = trigger.getExternalTaskResponseResult();
     if (ExternalTaskResponseTypeEnum.SUCCESS == responseResult.getResponseType()) {
       externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
     } else if (ExternalTaskResponseTypeEnum.ESCALATION == responseResult.getResponseType()) {
-      instanceResult.addEvent(
+      directInstanceResult.addEvent(
           new EscalationEventSignal(
               externalTaskInstance,
               responseResult.getName(),
@@ -139,7 +147,7 @@ public abstract class ExternalTaskInstanceProcessor<
           }
         } else {
           // No more retries, either by limit or by disallowing retry by the worker
-          instanceResult.addEvent(
+          directInstanceResult.addEvent(
               new ErrorEventSignal(
                   externalTaskInstance,
                   responseResult.getName(),
@@ -148,7 +156,7 @@ public abstract class ExternalTaskInstanceProcessor<
         }
       } else {
         // No retries allowed
-        instanceResult.addEvent(
+        directInstanceResult.addEvent(
             new ErrorEventSignal(
                 externalTaskInstance,
                 responseResult.getName(),
@@ -156,14 +164,16 @@ public abstract class ExternalTaskInstanceProcessor<
                 responseResult.getMessage()));
       }
     }
-    return instanceResult;
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificActivityInstance(
-      I instance, Variables variables) {
+  protected void processTerminateSpecificActivityInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I instance,
+      ProcessInstance processInstance,
+      Variables variables) {
     // Nothing to do here
-    return InstanceResult.empty();
   }
 
   private String getExternalTaskId(String workerDefinition, Variables variables) {

@@ -3,7 +3,9 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.StartEvent;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -18,8 +20,9 @@ public class StartEventInstanceProcessor
   public StartEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       VariablesMapper variablesMapper,
+      ProcessInstanceMapper processInstanceMapper,
       FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, variablesMapper, feelExpressionHandler);
+    super(ioMappingProcessor, variablesMapper, processInstanceMapper, feelExpressionHandler);
   }
 
   @Override
@@ -28,10 +31,10 @@ public class StartEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processContinueSpecificCatchEventInstance(
-      StartEventInstance flowNodeInstance) {
-    return InstanceResult.empty();
-  }
+  protected void processContinueSpecificCatchEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      StartEventInstance flowNodeInstance) {}
 
   @Override
   protected boolean shouldCancel(StartEventInstance flowNodeInstance) {

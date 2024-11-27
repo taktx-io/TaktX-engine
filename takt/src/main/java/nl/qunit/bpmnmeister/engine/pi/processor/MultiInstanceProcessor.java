@@ -6,15 +6,18 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import java.util.Set;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
@@ -31,8 +34,9 @@ public class MultiInstanceProcessor
       FeelExpressionHandler feelExpressionHandler,
       ActivityInstanceProcessor<?, ?, ?> processor,
       VariablesMapper variablesMapper,
+      ProcessInstanceMapper processInstanceMapper,
       ObjectMapper objectMapper) {
-    super(processor.getIoMappingProcessor(), variablesMapper);
+    super(processor.getIoMappingProcessor(), processInstanceMapper, variablesMapper);
     this.processor = processor;
     this.feelExpressionHandler = feelExpressionHandler;
     this.objectMapper = objectMapper;
@@ -47,9 +51,12 @@ public class MultiInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processStartSpecificFlowNodeInstance(
+  protected void processStartSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
+      ProcessInstance processInstance,
       String inputFlowId,
       Variables variables) {
 
@@ -63,9 +70,7 @@ public class MultiInstanceProcessor
             activity.getLoopCharacteristics().getInputCollection(), variables);
     if (inputCollection == null || inputCollection.isEmpty()) {
       multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
-      return InstanceResult.empty();
     } else {
-      InstanceResult instanceResult = InstanceResult.empty();
       multiInstanceInstance.setState(ActtivityStateEnum.WAITING);
 
       if (activity.getLoopCharacteristics().isSequential()) {
@@ -79,10 +84,12 @@ public class MultiInstanceProcessor
               startIteration(
                   flowElements,
                   activity,
+                  processInstance,
                   multiInstanceInstance,
                   inputFlowId,
                   variables,
                   instanceResult,
+                  directInstanceResult,
                   inputCollection);
         }
       } else {
@@ -90,10 +97,12 @@ public class MultiInstanceProcessor
           startIteration(
               flowElements,
               activity,
+              processInstance,
               multiInstanceInstance,
               inputFlowId,
               variables,
               instanceResult,
+              directInstanceResult,
               inputCollection);
         }
       }
@@ -102,17 +111,18 @@ public class MultiInstanceProcessor
           && multiInstanceInstance.getFlowNodeInstances().allCompleted()) {
         multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
       }
-      return instanceResult;
     }
   }
 
   private ActivityInstance<?> startIteration(
       FlowElements flowElements,
       Activity activity,
+      ProcessInstance processInstance,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
       Variables variables,
       InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       JsonNode inputCollection) {
 
     ActivityInstance<?> instance = activity.newActivityInstance(multiInstanceInstance);
@@ -128,15 +138,16 @@ public class MultiInstanceProcessor
             inputElement);
     variables.merge(iterationVars);
 
-    InstanceResult toMerge =
-        processor.processStart(
-            flowElements,
-            instance,
-            inputFlowId,
-            iterationVars,
-            true,
-            multiInstanceInstance.getFlowNodeInstances());
-    instanceResult.merge(toMerge);
+    processor.processStart(
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        instance,
+        processInstance,
+        inputFlowId,
+        iterationVars,
+        true,
+        multiInstanceInstance.getFlowNodeInstances());
 
     storeOutputCollectionIfCompleted(activity, variables, instance, iterationVars);
     multiInstanceInstance.increaseLoopCnt();
@@ -163,9 +174,12 @@ public class MultiInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processContinueSpecificFlowNodeInstance(
+  protected void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       MultiInstanceInstance multiInstanceInstance,
       ContinueFlowElementTrigger trigger,
       Variables variables,
@@ -182,15 +196,17 @@ public class MultiInstanceProcessor
     subFlowElements.addFlowElement(activity);
 
     if (iterationInstance != null) {
-      InstanceResult instanceResult =
-          processor.processContinue(
-              subProcessLevel,
-              subFlowElements,
-              iterationInstance,
-              trigger,
-              variables,
-              true,
-              flowNodeInstances);
+      processor.processContinue(
+          instanceResult,
+          directInstanceResult,
+          subProcessLevel,
+          subFlowElements,
+          processInstance,
+          iterationInstance,
+          trigger,
+          variables,
+          true,
+          flowNodeInstances);
 
       storeOutputCollectionIfCompleted(activity, variables, iterationInstance, variables);
 
@@ -203,10 +219,12 @@ public class MultiInstanceProcessor
             startIteration(
                 flowElements,
                 activity,
+                processInstance,
                 multiInstanceInstance,
                 Constants.NONE,
                 variables,
                 instanceResult,
+                directInstanceResult,
                 inputCollection);
       }
 
@@ -215,21 +233,28 @@ public class MultiInstanceProcessor
       if (multiInstanceInstance.getFlowNodeInstances().getState().isFinished()) {
         multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
       }
-      return instanceResult;
     }
-    return InstanceResult.empty();
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      MultiInstanceInstance instance, Variables variables) {
-    InstanceResult instanceResult = InstanceResult.empty();
-    instance
-        .getFlowNodeInstances()
+  protected void processTerminateSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      MultiInstanceInstance instance,
+      ProcessInstance processInstance,
+      Variables variables) {
+    FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
+    flowNodeInstances
         .getInstances()
         .values()
         .forEach(
-            iteration -> instanceResult.merge(processor.processTerminate(iteration, variables)));
-    return instanceResult;
+            iteration ->
+                processor.processTerminate(
+                    instanceResult,
+                    directInstanceResult,
+                    iteration,
+                    processInstance,
+                    variables,
+                    flowNodeInstances));
   }
 }

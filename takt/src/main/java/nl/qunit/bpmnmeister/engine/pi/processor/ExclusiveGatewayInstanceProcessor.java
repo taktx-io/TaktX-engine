@@ -3,7 +3,9 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGateway;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -23,8 +25,9 @@ public class ExclusiveGatewayInstanceProcessor
   public ExclusiveGatewayInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
+    super(ioMappingProcessor, feelExpressionHandler, processInstanceMapper, variablesMapper);
   }
 
   @Override
@@ -34,17 +37,17 @@ public class ExclusiveGatewayInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processStartSpecificGatewayInstance(
+  protected void processStartSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       ExclusiveGatewayInstance flownodeInstance,
       String inputFlowId,
-      Variables variables) {
-    return InstanceResult.empty();
-  }
+      Variables variables) {}
 
   @Override
-  protected InstanceResult processTerminateSpecificGatewayInstance(
-      ExclusiveGatewayInstance instance) {
-    return InstanceResult.empty();
-  }
+  protected void processTerminateSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      ExclusiveGatewayInstance instance) {}
 }

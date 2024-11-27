@@ -1,18 +1,20 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.List;
+import java.util.Queue;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.processor.BoundaryEventInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
@@ -24,79 +26,104 @@ public class FlowInstanceRunner {
 
   private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
+  private final ProcessInstanceMapper processInstanceMapper;
+  private final VariablesMapper variablesMapper;
 
-  public InstanceResult continueNewInstances(
+  public void continueNewInstances(
       InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
+      ProcessInstance processInstance,
       FlowElements flowElements,
       Variables processInstanceVariables) {
-    while (instanceResult.hasDirectTriggers()) {
-      instanceResult =
-          processDirectTriggers(
-              flowNodeInstances, instanceResult, flowElements, processInstanceVariables);
+    while (directInstanceResult.hasDirectTriggers()) {
+      processDirectTriggers(
+          flowNodeInstances,
+          processInstance,
+          instanceResult,
+          directInstanceResult,
+          flowElements,
+          processInstanceVariables);
     }
 
     flowNodeInstances.determineImplicitCompletedState();
-    return instanceResult;
   }
 
-  private InstanceResult processDirectTriggers(
+  private void processDirectTriggers(
       FlowNodeInstances flowNodeInstances,
+      ProcessInstance processInstance,
       InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       Variables variables) {
-    InstanceResult newInstanceResult = new InstanceResult();
 
-    List<EventSignal> events = instanceResult.getEvents();
-    for (EventSignal event : events) {
+    DirectInstanceResult subDirectInstanceResult = DirectInstanceResult.empty();
+
+    Queue<EventSignal> events = directInstanceResult.getEvents();
+    while (!events.isEmpty()) {
+      EventSignal event = events.poll(); // Removes the head of the queue
       processEventByFlowNodeInstance(
           flowNodeInstances,
           flowElements,
+          processInstance,
           event,
           event.getSourceInstance(),
-          newInstanceResult,
+          instanceResult,
+          subDirectInstanceResult,
           variables);
     }
 
-    List<UUID> terminateInstances = instanceResult.getTerminateInstances();
-    for (UUID terminateInstance : terminateInstances) {
+    Queue<UUID> terminateInstances = directInstanceResult.getTerminateInstances();
+    while (!terminateInstances.isEmpty()) {
+      UUID terminateInstance = terminateInstances.poll(); // Removes the head of the queue
       FLowNodeInstance<?> activityInstance =
           flowNodeInstances.getInstanceWithInstanceId(terminateInstance);
       FlowNode node = activityInstance.getFlowNode();
       FLowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
-      newInstanceResult.merge(processor.processTerminate(activityInstance, variables));
+      processor.processTerminate(
+          instanceResult,
+          subDirectInstanceResult,
+          activityInstance,
+          processInstance,
+          variables,
+          flowNodeInstances);
     }
 
-    List<FLowNodeInstanceInfo> newFlowNodeInstances = instanceResult.getNewFlowNodeInstanceInfos();
-    for (FLowNodeInstanceInfo instanceInfo : newFlowNodeInstances) {
+    Queue<FLowNodeInstanceInfo> newFlowNodeInstances =
+        directInstanceResult.getNewFlowNodeInstanceInfos();
+    while (!newFlowNodeInstances.isEmpty()) {
+      FLowNodeInstanceInfo instanceInfo =
+          newFlowNodeInstances.poll(); // Removes the head of the queue
       FLowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
       flowNodeInstances.putInstance(fLowNodeInstance);
       FLowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
-      InstanceResult subInstanceResult =
-          processor.processStart(
-              flowElements,
-              instanceInfo.flowNodeInstance(),
-              instanceInfo.inputSequenceFlowId(),
-              variables,
-              false,
-              flowNodeInstances);
-      newInstanceResult.merge(subInstanceResult);
+      processor.processStart(
+          instanceResult,
+          subDirectInstanceResult,
+          flowElements,
+          instanceInfo.flowNodeInstance(),
+          processInstance,
+          instanceInfo.inputSequenceFlowId(),
+          variables,
+          false,
+          flowNodeInstances);
     }
-
-    instanceResult.clearDirectTriggers();
-    newInstanceResult.merge(instanceResult);
-    return newInstanceResult;
+    directInstanceResult.merge(subDirectInstanceResult);
   }
 
   private void processEventByFlowNodeInstance(
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       EventSignal event,
       FLowNodeInstance fLowNodeInstance,
-      InstanceResult newInstanceResult,
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       Variables variables) {
+
+    DirectInstanceResult subDirectInstanceResult = DirectInstanceResult.empty();
 
     boolean eventHandled = false;
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
@@ -105,7 +132,13 @@ public class FlowInstanceRunner {
           activityInstance.getAttachedBoundaryEventInstances()) {
         eventHandled =
             boundaryEventProcessor.processEvent(
-                boundaryEventInstance, event, newInstanceResult, variables, flowNodeInstances);
+                boundaryEventInstance,
+                event,
+                instanceResult,
+                subDirectInstanceResult,
+                variables,
+                processInstance,
+                flowNodeInstances);
         if (eventHandled) {
           break;
         }
@@ -118,7 +151,13 @@ public class FlowInstanceRunner {
           if (!eventHandled) {
             eventHandled =
                 boundaryEventProcessor.processEventCatchAll(
-                    boundaryEventInstance, event, newInstanceResult, variables, flowNodeInstances);
+                    boundaryEventInstance,
+                    event,
+                    instanceResult,
+                    subDirectInstanceResult,
+                    variables,
+                    processInstance,
+                    flowNodeInstances);
             if (eventHandled) {
               break;
             }
@@ -130,19 +169,21 @@ public class FlowInstanceRunner {
     // Still not handled, bubble up if so defined
     if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() != null) {
       event.selectParent();
-      InstanceResult parentInstanceResult = new InstanceResult();
-      parentInstanceResult.addEvent(event);
-      while (parentInstanceResult.hasDirectTriggers()) {
-        parentInstanceResult =
-            processDirectTriggers(
-                flowNodeInstances.getParentFlowNodeInstances(),
-                parentInstanceResult,
-                flowElements.getParentElements(),
-                variables);
+      subDirectInstanceResult.addEvent(event);
+      while (subDirectInstanceResult.hasDirectTriggers()) {
+        processDirectTriggers(
+            flowNodeInstances.getParentFlowNodeInstances(),
+            processInstance,
+            instanceResult,
+            subDirectInstanceResult,
+            flowElements.getParentElements(),
+            variables);
       }
     } else if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() == null) {
       // Still not handled and No more bubbling up possible
-      newInstanceResult.addTerminateInstance(event.getSourceInstance().getElementInstanceId());
+      subDirectInstanceResult.addTerminateInstance(
+          event.getSourceInstance().getElementInstanceId());
     }
+    directInstanceResult.merge(subDirectInstanceResult);
   }
 }

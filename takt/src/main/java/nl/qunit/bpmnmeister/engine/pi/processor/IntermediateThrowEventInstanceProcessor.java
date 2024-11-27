@@ -3,10 +3,13 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
 
@@ -17,22 +20,25 @@ public class IntermediateThrowEventInstanceProcessor
 
   @Inject
   public IntermediateThrowEventInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificFlowNodeInstance(
-      IntermediateThrowEventInstance instance, Variables processInstanceVariables) {
-    return InstanceResult.empty();
-  }
+  protected void processTerminateSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      IntermediateThrowEventInstance instance,
+      ProcessInstance processInstance,
+      Variables processInstanceVariables) {}
 
   @Override
-  protected InstanceResult processStartSpecificThrowEventInstance(
+  protected void processStartSpecificThrowEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      Variables variables) {
-
-    return InstanceResult.empty();
-  }
+      Variables variables) {}
 }

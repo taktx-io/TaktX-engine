@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.SendTask;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -18,7 +19,8 @@ public class SendTaskInstanceProcessor
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(feelExpressionHandler, clock, ioMappingProcessor, variablesMapper);
+    super(feelExpressionHandler, clock, ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 }

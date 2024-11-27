@@ -3,8 +3,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
@@ -18,8 +20,9 @@ public class BoundaryEventInstanceProcessor
   BoundaryEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper, feelExpressionHandler);
+    super(ioMappingProcessor, variablesMapper, processInstanceMapper, feelExpressionHandler);
   }
 
   @Override
@@ -28,13 +31,13 @@ public class BoundaryEventInstanceProcessor
   }
 
   @Override
-  protected InstanceResult processContinueSpecificCatchEventInstance(
+  protected void processContinueSpecificCatchEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       BoundaryEventInstance boundaryEventInstance) {
-    InstanceResult result = InstanceResult.empty();
     if (shouldCancel(boundaryEventInstance)) {
-      result.addTerminateInstance(boundaryEventInstance.getAttachedInstanceId());
+      directInstanceResult.addTerminateInstance(boundaryEventInstance.getAttachedInstanceId());
     }
-    return result;
   }
 
   @Override

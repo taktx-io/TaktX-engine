@@ -2,8 +2,10 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Optional;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -20,14 +22,20 @@ public abstract class ThrowEventInstanceProcessor<
     extends EventInstanceProcessor<E, I> {
 
   protected ThrowEventInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected InstanceResult processStartSpecificEventInstance(
-      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables) {
-    InstanceResult result = InstanceResult.empty();
+  protected void processStartSpecificEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      String inputFlowId,
+      Variables variables) {
     flowNodeInstance
         .getFlowNode()
         .getLinkventDefinitions()
@@ -42,13 +50,17 @@ public abstract class ThrowEventInstanceProcessor<
                             flowNodeInstance.getParentInstance(), event);
                     FLowNodeInstanceInfo flowNodeInstanceInfo =
                         new FLowNodeInstanceInfo(catchEventInstance, Constants.NONE);
-                    result.addNewFlowNodeInstance(flowNodeInstanceInfo);
+                    directInstanceResult.addNewFlowNodeInstance(flowNodeInstanceInfo);
                   });
             });
-    result.merge(processStartSpecificThrowEventInstance(flowElements, flowNodeInstance, variables));
-    return result;
+    processStartSpecificThrowEventInstance(
+        instanceResult, directInstanceResult, flowElements, flowNodeInstance, variables);
   }
 
-  protected abstract InstanceResult processStartSpecificThrowEventInstance(
-      FlowElements flowElements, I flowNodeInstance, Variables variables);
+  protected abstract void processStartSpecificThrowEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      Variables variables);
 }

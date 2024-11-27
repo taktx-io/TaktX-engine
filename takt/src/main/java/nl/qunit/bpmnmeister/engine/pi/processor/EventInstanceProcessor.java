@@ -2,13 +2,16 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.EventInstance;
 
@@ -17,27 +20,42 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
     extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTrigger> {
 
   protected EventInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor, VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, variablesMapper);
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected InstanceResult processStartSpecificFlowNodeInstance(
-      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables) {
-    return processStartSpecificEventInstance(
-        flowElements, flowNodeInstance, inputFlowId, variables);
+  protected void processStartSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables) {
+    processStartSpecificEventInstance(
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        flowNodeInstance,
+        inputFlowId,
+        variables);
   }
 
   @Override
-  protected InstanceResult processContinueSpecificFlowNodeInstance(
+  protected void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
+      ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTrigger trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
     // Should not occur
-    return InstanceResult.empty();
   }
 
   @Override
@@ -46,6 +64,11 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-  protected abstract InstanceResult processStartSpecificEventInstance(
-      FlowElements flowElements, I flowNodeInstance, String inputFlowId, Variables variables);
+  protected abstract void processStartSpecificEventInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      String inputFlowId,
+      Variables variables);
 }

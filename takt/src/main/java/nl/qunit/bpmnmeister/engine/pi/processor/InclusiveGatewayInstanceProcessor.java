@@ -9,7 +9,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
@@ -32,25 +34,27 @@ public class InclusiveGatewayInstanceProcessor
   public InclusiveGatewayInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper processInstanceMapper,
       VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, feelExpressionHandler, variablesMapper);
+    super(ioMappingProcessor, feelExpressionHandler, processInstanceMapper, variablesMapper);
   }
 
   @Override
-  protected InstanceResult processStartSpecificGatewayInstance(
+  protected void processStartSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       InclusiveGatewayInstance gatewayInstance,
       String inputFlowId,
       Variables variables) {
     gatewayInstance.addTriggeredInputFlow(inputFlowId);
-    return InstanceResult.empty();
   }
 
   @Override
-  protected InstanceResult processTerminateSpecificGatewayInstance(
-      InclusiveGatewayInstance instance) {
-    return InstanceResult.empty();
-  }
+  protected void processTerminateSpecificGatewayInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      InclusiveGatewayInstance instance) {}
 
   @Override
   protected boolean canTriggerOutputFlows(

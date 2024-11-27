@@ -1,6 +1,8 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
+import java.util.UUID;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
@@ -204,8 +206,9 @@ public interface ProcessInstanceMapper {
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
   default ProcessInstance mapAndSetReferences(
-      ProcessInstanceDTO source, FlowElements flowElements) {
+      ProcessInstanceDTO source, FlowNodeInstances flowNodeInstances, FlowElements flowElements) {
     ProcessInstance processInstance = map(source, flowElements);
+    processInstance.getFlowNodeInstances().getInstances().putAll(flowNodeInstances.getInstances());
     setParentInstances(processInstance.getFlowNodeInstances(), null, null);
     setAttachedBoundaryEventInstances(processInstance.getFlowNodeInstances());
     return processInstance;
@@ -299,4 +302,6 @@ public interface ProcessInstanceMapper {
       throw new IllegalStateException(e);
     }
   }
+
+  Map<UUID, FlowNodeInstanceDTO> map(Map<UUID, FLowNodeInstance<?>> instances);
 }

@@ -20,24 +20,23 @@ import nl.qunit.bpmnmeister.engine.pd.ProcessDefinitionActivationProcessor;
 import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
-import nl.qunit.bpmnmeister.engine.pi.FlowInstanceRunner;
 import nl.qunit.bpmnmeister.engine.pi.FlowNodeInstancesProcessor;
 import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.InstanceUpdate;
 import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
 import nl.qunit.bpmnmeister.pi.StartCommand;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
@@ -71,6 +70,7 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKey.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
+  public static final Serde<String> FLOW_NODE_INSTANCE_KEY_SERDE = Serdes.String();
   public static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
   public static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
@@ -87,8 +87,10 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(DefinitionsTrigger.class);
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
-  public static final ObjectMapperSerde<ProcessInstanceUpdate> PROCESS_INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceUpdate.class);
+  public static final ObjectMapperSerde<InstanceUpdate> INSTANCE_UPDATE_SERDE =
+      new ObjectMapperSerde<>(InstanceUpdate.class);
+  public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
+      new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
   public static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTrigger.class);
   public static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
@@ -100,9 +102,7 @@ public class TopologyProducer {
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
   private final VariablesMapper variablesMapper;
-  private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final Forwarder forwarder;
-  private final FlowInstanceRunner flowInstanceRunner;
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
 
@@ -131,6 +131,11 @@ public class TopologyProducer {
             PROCESS_INSTANCE_SERDE));
     builder.addStateStore(
         keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.FLOW_NODE_INSTANCE),
+            FLOW_NODE_INSTANCE_KEY_SERDE,
+            FLOW_NODE_INSTANCE_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.PROCESS_INSTANCE_DEFINITION),
             PROCESS_DEFINITION_KEY_SERDE,
             PROCESS_DEFINITION_SERDE));
@@ -154,13 +159,14 @@ public class TopologyProducer {
                         forwarder,
                         tenantNamespaceNameWrapper,
                         flowNodeInstancesProcessor),
+                tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
                 tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
                 tenantNamespaceNameWrapper.getPrefixed(
                     Stores.PROCESS_INSTANCE_DEFINITION.getStorename()),
                 tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
             .branch(
                 (key, value) -> value instanceof ProcessInstanceTrigger,
-                (key, value) -> value instanceof ProcessInstanceUpdate,
+                (key, value) -> value instanceof InstanceUpdate,
                 (key, value) -> value instanceof ExternalTaskTrigger,
                 (key, value) -> value instanceof StartCommand,
                 (key, value) -> value instanceof MessageScheduler,
@@ -174,11 +180,10 @@ public class TopologyProducer {
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE));
     branches[1]
-        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceUpdate) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (InstanceUpdate) value))
         .to(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.PROCESS_INSTANCE_UPDATE_TOPIC.getTopicName()),
-            Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_UPDATE_SERDE));
+            tenantNamespaceNameWrapper.getPrefixed(Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
+            Produced.with(PROCESS_INSTANCE_KEY_SERDE, INSTANCE_UPDATE_SERDE));
     branches[2]
         .map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTrigger) value))
         .to(

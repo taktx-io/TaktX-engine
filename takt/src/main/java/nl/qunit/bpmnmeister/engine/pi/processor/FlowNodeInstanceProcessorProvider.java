@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BaseElement;
@@ -45,6 +46,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject ReceiveTaskInstanceProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
   @Inject VariablesMapper variablesMapper;
+  @Inject ProcessInstanceMapper processInstanceMapper;
   @Inject ObjectMapper objectMapper;
 
   public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
@@ -114,7 +116,7 @@ public class FlowNodeInstanceProcessorProvider {
     if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
       return new MultiInstanceProcessor(
-          feelExpressionHandler, processor, variablesMapper, objectMapper);
+          feelExpressionHandler, processor, variablesMapper, processInstanceMapper, objectMapper);
     }
     return processor;
   }

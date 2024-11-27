@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.InstanceResult;
@@ -11,7 +12,6 @@ import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.TerminateTrigger;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
@@ -22,126 +22,171 @@ public class FlowNodeInstancesProcessor {
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
   private final VariablesMapper variablesMapper;
+  private final ProcessInstanceMapper processInstanceMapper;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
-      VariablesMapper variablesMapper) {
+      VariablesMapper variablesMapper,
+      ProcessInstanceMapper processInstanceMapper) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
     this.variablesMapper = variablesMapper;
+    this.processInstanceMapper = processInstanceMapper;
   }
 
-  public InstanceResult processStart(
-      StartNewProcessInstanceTrigger startNewProcessInstanceTrigger,
+  public void processStart(
+      InstanceResult instanceResult,
+      String elementId,
+      FLowNodeInstance<?> parentElementInstance,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      Variables processInstanceVariablee,
+      Variables processInstanceVariables,
       FlowNodeInstances flowNodeInstances) {
-    FlowNode flowNode = flowElements.getStartNode(startNewProcessInstanceTrigger.getElementId());
+
+    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
+
+    FlowNode flowNode = flowElements.getStartNode(elementId);
     FLowNodeInstance<?> flowNodeInstance =
-        flowNode.createAndStoreNewInstance(null, flowNodeInstances);
+        flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
 
     FLowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
 
-    InstanceResult instanceResult =
-        processor.processStart(
-            flowElements,
-            flowNodeInstance,
-            Constants.NONE,
-            processInstanceVariablee,
-            false,
-            flowNodeInstances);
+    processor.processStart(
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        flowNodeInstance,
+        processInstance,
+        Constants.NONE,
+        processInstanceVariables,
+        false,
+        flowNodeInstances);
 
-    return continueNewInstances(
-        instanceResult, flowNodeInstances, flowElements, processInstance, processInstanceVariablee);
+    continueNewInstances(
+        instanceResult,
+        directInstanceResult,
+        flowNodeInstances,
+        flowElements,
+        processInstance,
+        processInstanceVariables);
   }
 
-  public InstanceResult processContinue(
+  public void processContinue(
+      InstanceResult instanceResult,
+      int subProcessLevel,
       ContinueFlowElementTrigger trigger,
       FlowElements flowElements,
       ProcessInstance processInstance,
       Variables processInstanceVariables,
       FlowNodeInstances flowNodeInstances) {
     FLowNodeInstance<?> flowNodeInstance =
-        flowNodeInstances.getInstanceWithInstanceId(trigger.getElementInstanceIdPath().getFirst());
+        flowNodeInstances.getInstanceWithInstanceId(
+            trigger.getElementInstanceIdPath().get(subProcessLevel));
+    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
     FLowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 
-    InstanceResult instanceResult =
-        processor.processContinue(
-            0,
-            flowElements,
-            flowNodeInstance,
-            trigger,
-            processInstanceVariables,
-            false,
-            flowNodeInstances);
+    processor.processContinue(
+        instanceResult,
+        directInstanceResult,
+        subProcessLevel,
+        flowElements,
+        processInstance,
+        flowNodeInstance,
+        trigger,
+        processInstanceVariables,
+        false,
+        flowNodeInstances);
 
-    return continueNewInstances(
-        instanceResult, flowNodeInstances, flowElements, processInstance, processInstanceVariables);
+    continueNewInstances(
+        instanceResult,
+        directInstanceResult,
+        flowNodeInstances,
+        flowElements,
+        processInstance,
+        processInstanceVariables);
   }
 
-  public InstanceResult processTerminate(
+  public void processTerminate(
+      InstanceResult instanceResult,
       TerminateTrigger trigger,
       ProcessInstance processInstance,
       Variables processInstanceVariables,
       FlowElements flowElements) {
-    InstanceResult instanceResult = InstanceResult.empty();
+
+    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
+
     if (trigger.getElementIdPath().isEmpty() && trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
-      processInstance
-          .getFlowNodeInstances()
+      FlowNodeInstances flowNodeInstances = processInstance.getFlowNodeInstances();
+      flowNodeInstances
           .getInstances()
           .values()
           .forEach(
               instance -> {
                 FLowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-                instanceResult.merge(
-                    processor.processTerminate(instance, processInstanceVariables));
+                processor.processTerminate(
+                    instanceResult,
+                    directInstanceResult,
+                    instance,
+                    processInstance,
+                    processInstanceVariables,
+                    flowNodeInstances);
               });
-      processInstance.getFlowNodeInstances().setState(ProcessInstanceState.TERMINATED);
+      flowNodeInstances.setStateDirty(ProcessInstanceState.TERMINATED);
     } else {
       // Terminate the specific element instance in the process instance
+      FlowNodeInstances flowNodeInstances = processInstance.getFlowNodeInstances();
       FLowNodeInstance<?> instance =
-          processInstance
-              .getFlowNodeInstances()
-              .getInstanceWithInstanceId(trigger.getElementInstanceIdPath().getFirst());
+          flowNodeInstances.getInstanceWithInstanceId(
+              trigger.getElementInstanceIdPath().getFirst());
       if (instance != null) {
         FLowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-        instanceResult.merge(processor.processTerminate(instance, processInstanceVariables));
+        processor.processTerminate(
+            instanceResult,
+            directInstanceResult,
+            instance,
+            processInstance,
+            processInstanceVariables,
+            flowNodeInstances);
       }
     }
-    return continueNewInstances(
+    continueNewInstances(
         instanceResult,
+        directInstanceResult,
         processInstance.getFlowNodeInstances(),
         flowElements,
         processInstance,
         processInstanceVariables);
   }
 
-  protected InstanceResult continueNewInstances(
+  protected void continueNewInstances(
       InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
       ProcessInstance processInstance,
       Variables processInstanceVariables) {
 
-    instanceResult =
-        flowInstanceRunner.continueNewInstances(
-            instanceResult, flowNodeInstances, flowElements, processInstanceVariables);
+    flowInstanceRunner.continueNewInstances(
+        instanceResult,
+        directInstanceResult,
+        flowNodeInstances,
+        processInstance,
+        flowElements,
+        processInstanceVariables);
 
     if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
-      processInstanceFinished(instanceResult, processInstance, processInstanceVariables);
+      continueParentInstance(instanceResult, processInstance, processInstanceVariables);
     }
-    return instanceResult;
   }
 
-  private void processInstanceFinished(
+  private void continueParentInstance(
       InstanceResult instanceResult,
       ProcessInstance processInstance,
       Variables processInstanceVariables) {

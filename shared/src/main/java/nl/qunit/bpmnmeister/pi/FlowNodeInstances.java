@@ -8,20 +8,23 @@ import lombok.Getter;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
+import nl.qunit.bpmnmeister.pi.instances.WithFlowNodeInstances;
 
 @Getter
 @Setter
 public class FlowNodeInstances {
 
   private final Map<UUID, FLowNodeInstance<?>> instances;
-
   private ProcessInstanceState state;
-
+  private UUID flowNodeInstancesId;
   private FlowNodeInstances parentFlowNodeInstances;
+  private boolean dirty;
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
+    this.flowNodeInstancesId = UUID.randomUUID();
     this.state = ProcessInstanceState.ACTIVE;
+    this.dirty = false;
   }
 
   public void putInstance(FLowNodeInstance<?> fLowNodeInstance) {
@@ -39,7 +42,7 @@ public class FlowNodeInstances {
   public void determineImplicitCompletedState() {
     if (state == ProcessInstanceState.ACTIVE
         && instances.values().stream().allMatch(FLowNodeInstance::isNotAwaiting)) {
-      this.state = ProcessInstanceState.COMPLETED;
+      this.setStateDirty(ProcessInstanceState.COMPLETED);
     }
   }
 
@@ -47,5 +50,22 @@ public class FlowNodeInstances {
     return instances.values().stream()
         .filter(flowNodeInstance -> flowNodeInstance.getFlowNode().equals(flowNode))
         .findFirst();
+  }
+
+  public void setState(ProcessInstanceState state) {
+    this.state = state;
+  }
+
+  public void setStateDirty(ProcessInstanceState state) {
+    this.dirty = true;
+    this.state = state;
+  }
+
+  public boolean isDirty() {
+    return dirty
+        || instances.values().stream()
+            .filter(instance -> instance instanceof WithFlowNodeInstances)
+            .map(instance -> (WithFlowNodeInstances) instance)
+            .anyMatch(instance -> instance.getFlowNodeInstances().isDirty());
   }
 }

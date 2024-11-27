@@ -8,14 +8,17 @@ import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 
 @Getter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@SuperBuilder(toBuilder = true)
-public class ProcessInstanceUpdate extends ProcessInstanceDTO {
+public class ProcessInstanceUpdate extends InstanceUpdate {
+  private final UUID parentProcessInstanceKey;
+  private final List<String> parentElementIdPath;
+  private final List<UUID> parentElementInstancePath;
+  private final ProcessDefinitionKey processDefinitionKey;
+  private final FlowNodeInstancesDTO flowNodeInstances;
   private final VariablesDTO variables;
 
   @JsonCreator
@@ -27,13 +30,12 @@ public class ProcessInstanceUpdate extends ProcessInstanceDTO {
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("flowNodeInstances") FlowNodeInstancesDTO flowNodeInstances,
       @Nonnull @JsonProperty("variables") VariablesDTO variables) {
-    super(
-        processInstanceKey,
-        parentProcessInstanceKey,
-        parentElementIdPath,
-        parentElementInstancePath,
-        processDefinitionKey,
-        flowNodeInstances);
+    super(processInstanceKey);
+    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.parentElementIdPath = parentElementIdPath;
+    this.parentElementInstancePath = parentElementInstancePath;
+    this.processDefinitionKey = processDefinitionKey;
+    this.flowNodeInstances = flowNodeInstances;
     this.variables = variables;
   }
 
