@@ -5,13 +5,13 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
@@ -70,8 +70,8 @@ public abstract class FLowNodeInstanceProcessor<
         inputVariables);
 
     selectNextNodeIfAllowedStart(
+        processInstance,
         (I) flownodeInstance,
-        instanceResult,
         directInstanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
@@ -115,7 +115,7 @@ public abstract class FLowNodeInstanceProcessor<
 
     selectNextNodeIfAllowedContinue(
         (I) flowNodeInstance,
-        instanceResult,
+        processInstance,
         directInstanceResult,
         processInstanceVariables,
         isIterationInMultiInstance,
@@ -157,8 +157,8 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected void selectNextNodeIfAllowedStart(
+      ProcessInstance processInstance,
       I flownodeInstance,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
@@ -166,6 +166,7 @@ public abstract class FLowNodeInstanceProcessor<
     if (flownodeInstance.canSelectNextNodeStart()) {
 
       processNode(
+          processInstance,
           flownodeInstance,
           directInstanceResult,
           processInstanceVariables,
@@ -176,7 +177,7 @@ public abstract class FLowNodeInstanceProcessor<
 
   protected void selectNextNodeIfAllowedContinue(
       I flownodeInstance,
-      InstanceResult instanceResult,
+      ProcessInstance processInstance,
       DirectInstanceResult directInstanceResult,
       Variables processInstanceVariables,
       boolean isIterationInMultiInstance,
@@ -184,6 +185,7 @@ public abstract class FLowNodeInstanceProcessor<
     if (flownodeInstance.canSelectNextNodeContinue()) {
 
       processNode(
+          processInstance,
           flownodeInstance,
           directInstanceResult,
           processInstanceVariables,
@@ -193,6 +195,7 @@ public abstract class FLowNodeInstanceProcessor<
   }
 
   protected void processNode(
+      ProcessInstance processInstance,
       I flownodeInstance,
       DirectInstanceResult directInstanceResult,
       Variables processInstanceVariables,
@@ -206,7 +209,8 @@ public abstract class FLowNodeInstanceProcessor<
 
     flownodeInstance.increasePassedCnt();
     if (!isIterationInMultiInstance) {
-      getSelectedSequenceFlows(flownodeInstance, flowNodeInstances, processInstanceVariables)
+      getSelectedSequenceFlows(
+              processInstance, flownodeInstance, flowNodeInstances, processInstanceVariables)
           .forEach(
               sequenceFlow -> {
                 FLowNodeInstance<?> fLowNodeInstance =
@@ -215,13 +219,17 @@ public abstract class FLowNodeInstanceProcessor<
                         .createAndStoreNewInstance(
                             flownodeInstance.getParentInstance(), flowNodeInstances);
                 directInstanceResult.addNewFlowNodeInstance(
+                    processInstance,
                     new FLowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
               });
     }
   }
 
   protected abstract Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables);
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables);
 
   protected Variables getOutputVariables(
       Variables processInstanceVariables, WithIoMapping withIoMapping) {

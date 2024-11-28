@@ -2,12 +2,12 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Event;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
@@ -36,6 +36,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       String inputFlowId,
       Variables variables) {
     processStartSpecificEventInstance(
+        processInstance,
         instanceResult,
         directInstanceResult,
         flowElements,
@@ -60,11 +61,15 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
   protected abstract void processStartSpecificEventInstance(
+      ProcessInstance processInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,

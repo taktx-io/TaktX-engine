@@ -2,15 +2,16 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Optional;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
 import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
+import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
@@ -30,6 +31,7 @@ public abstract class ThrowEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
+      ProcessInstance processInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
@@ -50,7 +52,8 @@ public abstract class ThrowEventInstanceProcessor<
                             flowNodeInstance.getParentInstance(), event);
                     FLowNodeInstanceInfo flowNodeInstanceInfo =
                         new FLowNodeInstanceInfo(catchEventInstance, Constants.NONE);
-                    directInstanceResult.addNewFlowNodeInstance(flowNodeInstanceInfo);
+                    directInstanceResult.addNewFlowNodeInstance(
+                        processInstance, flowNodeInstanceInfo);
                   });
             });
     processStartSpecificThrowEventInstance(

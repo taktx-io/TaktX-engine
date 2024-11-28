@@ -1,18 +1,15 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Queue;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.engine.pi.processor.BoundaryEventInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
@@ -57,11 +54,8 @@ public class FlowInstanceRunner {
       FlowElements flowElements,
       Variables variables) {
 
-    DirectInstanceResult subDirectInstanceResult = DirectInstanceResult.empty();
-
-    Queue<EventSignal> events = directInstanceResult.getEvents();
-    while (!events.isEmpty()) {
-      EventSignal event = events.poll(); // Removes the head of the queue
+    while (!directInstanceResult.eventsEmpty()) {
+      EventSignal event = directInstanceResult.pollEvent();
       processEventByFlowNodeInstance(
           flowNodeInstances,
           flowElements,
@@ -69,13 +63,12 @@ public class FlowInstanceRunner {
           event,
           event.getSourceInstance(),
           instanceResult,
-          subDirectInstanceResult,
+          directInstanceResult,
           variables);
     }
 
-    Queue<UUID> terminateInstances = directInstanceResult.getTerminateInstances();
-    while (!terminateInstances.isEmpty()) {
-      UUID terminateInstance = terminateInstances.poll(); // Removes the head of the queue
+    while (!directInstanceResult.terminateInstancesIsEmpty()) {
+      UUID terminateInstance = directInstanceResult.pollTerminateInstance();
       FLowNodeInstance<?> activityInstance =
           flowNodeInstances.getInstanceWithInstanceId(terminateInstance);
       FlowNode node = activityInstance.getFlowNode();
@@ -83,25 +76,22 @@ public class FlowInstanceRunner {
           processInstanceProcessorProvider.getProcessor(node);
       processor.processTerminate(
           instanceResult,
-          subDirectInstanceResult,
+          directInstanceResult,
           activityInstance,
           processInstance,
           variables,
           flowNodeInstances);
     }
 
-    Queue<FLowNodeInstanceInfo> newFlowNodeInstances =
-        directInstanceResult.getNewFlowNodeInstanceInfos();
-    while (!newFlowNodeInstances.isEmpty()) {
-      FLowNodeInstanceInfo instanceInfo =
-          newFlowNodeInstances.poll(); // Removes the head of the queue
+    while (!directInstanceResult.newFlowNodeInstancesIsEmpty()) {
+      FLowNodeInstanceInfo instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
       FLowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
       flowNodeInstances.putInstance(fLowNodeInstance);
       FLowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
       processor.processStart(
           instanceResult,
-          subDirectInstanceResult,
+          directInstanceResult,
           flowElements,
           instanceInfo.flowNodeInstance(),
           processInstance,
@@ -110,7 +100,6 @@ public class FlowInstanceRunner {
           false,
           flowNodeInstances);
     }
-    directInstanceResult.merge(subDirectInstanceResult);
   }
 
   private void processEventByFlowNodeInstance(
@@ -123,8 +112,6 @@ public class FlowInstanceRunner {
       DirectInstanceResult directInstanceResult,
       Variables variables) {
 
-    DirectInstanceResult subDirectInstanceResult = DirectInstanceResult.empty();
-
     boolean eventHandled = false;
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
       // First check for specific codes
@@ -135,7 +122,7 @@ public class FlowInstanceRunner {
                 boundaryEventInstance,
                 event,
                 instanceResult,
-                subDirectInstanceResult,
+                directInstanceResult,
                 variables,
                 processInstance,
                 flowNodeInstances);
@@ -154,7 +141,7 @@ public class FlowInstanceRunner {
                     boundaryEventInstance,
                     event,
                     instanceResult,
-                    subDirectInstanceResult,
+                    directInstanceResult,
                     variables,
                     processInstance,
                     flowNodeInstances);
@@ -169,21 +156,19 @@ public class FlowInstanceRunner {
     // Still not handled, bubble up if so defined
     if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() != null) {
       event.selectParent();
-      subDirectInstanceResult.addEvent(event);
-      while (subDirectInstanceResult.hasDirectTriggers()) {
+      directInstanceResult.addEvent(event);
+      while (directInstanceResult.hasDirectTriggers()) {
         processDirectTriggers(
             flowNodeInstances.getParentFlowNodeInstances(),
             processInstance,
             instanceResult,
-            subDirectInstanceResult,
+            directInstanceResult,
             flowElements.getParentElements(),
             variables);
       }
     } else if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() == null) {
       // Still not handled and No more bubbling up possible
-      subDirectInstanceResult.addTerminateInstance(
-          event.getSourceInstance().getElementInstanceId());
+      directInstanceResult.addTerminateInstance(event.getSourceInstance().getElementInstanceId());
     }
-    directInstanceResult.merge(subDirectInstanceResult);
   }
 }

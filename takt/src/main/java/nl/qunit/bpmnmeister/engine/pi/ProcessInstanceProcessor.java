@@ -1,12 +1,12 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
@@ -98,15 +98,34 @@ public class ProcessInstanceProcessor
   public void process(Record<UUID, ProcessInstanceTrigger> triggerRecord) {
     ProcessInstanceTrigger trigger = triggerRecord.value();
 
-    switch (trigger) {
-      case StartNewProcessInstanceTrigger
-      startNewProcessInstanceTrigger -> handleStartNewProcessInstance(
-          startNewProcessInstanceTrigger);
-      case ContinueFlowElementTrigger continueFlowElementTrigger2 -> handleContinue(
-          continueFlowElementTrigger2);
-      case TerminateTrigger terminateTrigger -> handleTerminate(terminateTrigger);
-      default -> throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
+    try {
+      switch (trigger) {
+        case StartNewProcessInstanceTrigger
+        startNewProcessInstanceTrigger -> handleStartNewProcessInstance(
+            startNewProcessInstanceTrigger);
+        case ContinueFlowElementTrigger continueFlowElementTrigger2 -> handleContinue(
+            continueFlowElementTrigger2);
+        case TerminateTrigger terminateTrigger -> handleTerminate(terminateTrigger);
+        default -> throw new IllegalArgumentException(
+            "Unknown trigger type: " + trigger.getClass());
+      }
+    } catch (ProcessInstanceException e) {
+      handleExceptional(e, trigger);
+    } catch (Throwable t) {
+      log.error("Internal error occurred for", t);
     }
+  }
+
+  private void handleExceptional(ProcessInstanceException e, ProcessInstanceTrigger trigger) {
+    FLowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
+    flowNodeInstance.terminate();
+    ProcessInstance processInstance = e.getProcessInstance();
+    log.warn(
+        "Takt exception occurred for processinstance {}, {}, {}",
+        processInstance.getProcessInstanceKey(),
+        flowNodeInstance.getFlowNode().getId(),
+        flowNodeInstance.getElementInstanceId());
+    handleTerminate(new TerminateTrigger(processInstance.getProcessInstanceKey(), List.of()));
   }
 
   public void handleStartNewProcessInstance(

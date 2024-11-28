@@ -15,6 +15,11 @@ public class InclusiveGatewayInstance extends GatewayInstance<InclusiveGateway> 
     super(parentInstance, flowNode);
   }
 
+  @Override
+  public void resetFlows() {
+    this.triggeredInputFlows.clear();
+  }
+
   public void addTriggeredInputFlow(String inputFlowId) {
     this.triggeredInputFlows.add(inputFlowId);
   }

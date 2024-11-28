@@ -2,14 +2,14 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
@@ -62,6 +62,7 @@ public abstract class ActivityInstanceProcessor<
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEvent(boundaryEventInstance);
                 directInstanceResult.addNewFlowNodeInstance(
+                    processInstance,
                     new FLowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
               });
     }
@@ -138,7 +139,10 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I flowNodeInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 }

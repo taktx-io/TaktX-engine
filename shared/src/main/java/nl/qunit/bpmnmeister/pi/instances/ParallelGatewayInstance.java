@@ -7,21 +7,26 @@ import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
 
 @Getter
 public class ParallelGatewayInstance extends GatewayInstance<ParallelGateway> {
-  private Set<String> triggeredFlows = new HashSet<>();
+  private Set<String> triggeredInputFlows = new HashSet<>();
 
   public ParallelGatewayInstance(FLowNodeInstance<?> parentInstance, ParallelGateway flowNode) {
     super(parentInstance, flowNode);
   }
 
-  public void setTriggeredFlows(Set<String> triggeredFlows) {
-    this.triggeredFlows = new HashSet<>(triggeredFlows);
+  @Override
+  public void resetFlows() {
+    this.triggeredInputFlows.clear();
   }
 
-  public void addTriggeredFlow(String inputFlowId) {
-    this.triggeredFlows.add(inputFlowId);
+  public void setTriggeredInputFlows(Set<String> triggeredInputFlows) {
+    this.triggeredInputFlows = new HashSet<>(triggeredInputFlows);
   }
 
-  public void clearTriggeredFlows() {
-    this.triggeredFlows.clear();
+  public void addTriggeredInputFlow(String inputFlowId) {
+    this.triggeredInputFlows.add(inputFlowId);
+  }
+
+  public void clearTriggeredInputFlows() {
+    this.triggeredInputFlows.clear();
   }
 }

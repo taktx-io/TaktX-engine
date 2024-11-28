@@ -2,13 +2,13 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.NewCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.pd.model.ScheduledContinuationInfo;
@@ -39,6 +39,7 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
+      ProcessInstance processInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
@@ -184,7 +185,7 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(newInstanceResult, directInstanceResult, catchEventInstance);
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
-          newInstanceResult,
+          processInstance,
           directInstanceResult,
           variables,
           false,
@@ -212,7 +213,7 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(instanceResult, directInstanceResult, catchEventInstance);
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
-          instanceResult,
+          processInstance,
           directInstanceResult,
           variables,
           false,

@@ -56,4 +56,6 @@ public abstract class GatewayInstance<N extends Gateway> extends FLowNodeInstanc
   public boolean canSelectNextNodeContinue() {
     return isCompleted();
   }
+
+  public abstract void resetFlows();
 }

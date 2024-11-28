@@ -52,7 +52,7 @@ class GatewayTest {
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("Task_1")
         .hasInstantiatedElementWithId("Task_2")
-        .hasInstantiatedElementWithId("EndEvent_1", 2);
+        .hasInstantiatedElementWithId("EndEvent_1", 1);
   }
 
   @Test

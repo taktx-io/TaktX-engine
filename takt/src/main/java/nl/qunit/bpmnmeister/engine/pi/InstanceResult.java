@@ -1,9 +1,12 @@
-package nl.qunit.bpmnmeister.pd.model;
+package nl.qunit.bpmnmeister.engine.pi;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.UUID;
 import lombok.Getter;
+import nl.qunit.bpmnmeister.pd.model.NewCorrelationSubscriptionMessageEventInfo;
+import nl.qunit.bpmnmeister.pd.model.ScheduledContinuationInfo;
+import nl.qunit.bpmnmeister.pd.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.InstanceUpdate;

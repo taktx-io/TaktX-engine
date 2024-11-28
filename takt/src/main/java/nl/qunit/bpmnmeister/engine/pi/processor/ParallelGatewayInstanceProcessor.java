@@ -2,15 +2,13 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.ParallelGateway;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
@@ -35,7 +33,10 @@ public class ParallelGatewayInstanceProcessor
   @Override
   protected boolean canTriggerOutputFlows(
       ParallelGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
-    return true;
+    return gatewayInstance
+        .getFlowNode()
+        .getIncoming()
+        .equals(gatewayInstance.getTriggeredInputFlows());
   }
 
   @Override
@@ -46,10 +47,7 @@ public class ParallelGatewayInstanceProcessor
       ParallelGatewayInstance flownodeInstance,
       String inputFlowId,
       Variables variables) {
-    flownodeInstance.addTriggeredFlow(inputFlowId);
-    if (flownodeInstance.getFlowNode().getIncoming().equals(flownodeInstance.getTriggeredFlows())) {
-      flownodeInstance.clearTriggeredFlows();
-    }
+    flownodeInstance.addTriggeredInputFlow(inputFlowId);
   }
 
   @Override
@@ -57,12 +55,4 @@ public class ParallelGatewayInstanceProcessor
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       ParallelGatewayInstance instance) {}
-
-  @Override
-  protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ParallelGatewayInstance flowNodeInstance,
-      FlowNodeInstances flowNodeInstances,
-      Variables variables) {
-    return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
-  }
 }

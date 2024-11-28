@@ -4,14 +4,15 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
+import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceException;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DirectInstanceResult;
 import nl.qunit.bpmnmeister.pd.model.FlowCondition;
 import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.Gateway;
-import nl.qunit.bpmnmeister.pd.model.InstanceResult;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
@@ -70,9 +71,13 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      I gatewayInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
+      ProcessInstance processInstance,
+      I gatewayInstance,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
     if (canTriggerOutputFlows(gatewayInstance, flowNodeInstances)) {
+      gatewayInstance.resetFlows();
       E gatewayNode = gatewayInstance.getFlowNode();
       Set<SequenceFlow> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
       Set<SequenceFlow> flowsWithCondition =
@@ -94,7 +99,9 @@ public abstract class GatewayInstanceProcessor<
         outgoingFlows.addAll(sequenceFlows);
       }
       if (outgoingFlows.isEmpty()) {
-        throw new IllegalStateException(
+        throw new ProcessInstanceException(
+            processInstance,
+            gatewayInstance,
             "No outgoing flow could be selected found for exclusive gateway: "
                 + gatewayNode.getId());
       }
