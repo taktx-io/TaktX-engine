@@ -38,7 +38,6 @@ public class Forwarder {
   private final PathExtractor pathExtractor;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final DtoMapper dtoMapper;
-  private final ProcessInstanceMapper instanceMapper;
 
   public void forward(
       ProcessorContext<Object, Object> context,

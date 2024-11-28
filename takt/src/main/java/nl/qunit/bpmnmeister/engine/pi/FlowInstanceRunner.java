@@ -23,8 +23,6 @@ public class FlowInstanceRunner {
 
   private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
-  private final ProcessInstanceMapper processInstanceMapper;
-  private final VariablesMapper variablesMapper;
 
   public void continueNewInstances(
       InstanceResult instanceResult,
@@ -135,19 +133,17 @@ public class FlowInstanceRunner {
       if (!eventHandled) {
         for (BoundaryEventInstance boundaryEventInstance :
             activityInstance.getAttachedBoundaryEventInstances()) {
-          if (!eventHandled) {
-            eventHandled =
-                boundaryEventProcessor.processEventCatchAll(
-                    boundaryEventInstance,
-                    event,
-                    instanceResult,
-                    directInstanceResult,
-                    variables,
-                    processInstance,
-                    flowNodeInstances);
-            if (eventHandled) {
-              break;
-            }
+          eventHandled =
+              boundaryEventProcessor.processEventCatchAll(
+                  boundaryEventInstance,
+                  event,
+                  instanceResult,
+                  directInstanceResult,
+                  variables,
+                  processInstance,
+                  flowNodeInstances);
+          if (eventHandled) {
+            break;
           }
         }
       }

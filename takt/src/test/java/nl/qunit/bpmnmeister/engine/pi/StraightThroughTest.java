@@ -10,16 +10,12 @@ import java.time.Clock;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 @QuarkusTest
 class StraightThroughTest {
-
-  private static final Logger LOG = Logger.getLogger(StraightThroughTest.class);
-
   @Inject
   Clock clock;
 

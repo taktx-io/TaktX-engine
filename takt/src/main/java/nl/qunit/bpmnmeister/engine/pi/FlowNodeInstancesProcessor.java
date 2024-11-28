@@ -20,7 +20,6 @@ public class FlowNodeInstancesProcessor {
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
   private final VariablesMapper variablesMapper;
-  private final ProcessInstanceMapper processInstanceMapper;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
@@ -30,7 +29,6 @@ public class FlowNodeInstancesProcessor {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
     this.variablesMapper = variablesMapper;
-    this.processInstanceMapper = processInstanceMapper;
   }
 
   public void processStart(
