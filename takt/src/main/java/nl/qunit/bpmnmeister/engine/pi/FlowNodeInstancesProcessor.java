@@ -24,8 +24,7 @@ public class FlowNodeInstancesProcessor {
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
-      VariablesMapper variablesMapper,
-      ProcessInstanceMapper processInstanceMapper) {
+      VariablesMapper variablesMapper) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
     this.variablesMapper = variablesMapper;
