@@ -10,5 +10,4 @@ public enum ProcessInstanceState {
   public boolean isFinished() {
     return this == COMPLETED || this == TERMINATED || this == FAILED;
   }
-
 }

@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.generic;
 
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -35,7 +36,6 @@ import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
 import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
 import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
@@ -77,8 +77,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
-  public static final ObjectMapperSerde<VariablesDTO> VARIABLES_SERDE =
-      new ObjectMapperSerde<>(VariablesDTO.class);
+  public static final ObjectMapperSerde<JsonNode> VARIABLES_SERDE =
+      new ObjectMapperSerde<>(JsonNode.class);
   public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
   public static final ObjectMapperSerde<DefinitionsDTO> DEFINITIONS_SERDE =
@@ -141,9 +141,7 @@ public class TopologyProducer {
             PROCESS_DEFINITION_SERDE));
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.VARIABLES),
-            PROCESS_INSTANCE_KEY_SERDE,
-            VARIABLES_SERDE));
+            keyValueStoreSupplier.get(Stores.VARIABLES), Serdes.String(), VARIABLES_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(
