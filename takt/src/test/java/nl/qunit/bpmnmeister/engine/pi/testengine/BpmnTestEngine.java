@@ -215,10 +215,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
       Map<UUID, Map<UUID, FlowNodeInstanceDTO>> flowNodeInstancesDTOMap =
           flowNodeInstanceMap.computeIfAbsent(flowNodeInstanceUpdate.getProcessInstanceKey(), id -> new HashMap<>());
-      Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap =
+      Map<UUID, FlowNodeInstanceDTO> instanceMap =
           flowNodeInstancesDTOMap.computeIfAbsent(flowNodeInstanceUpdate.getFlowNodeInstancesId(), id -> new HashMap<>());
 
-      flowNodeInstanceMap.put(flowNodeInstanceUpdate.getFlowNodeInstance().getElementInstanceId(), flowNodeInstanceUpdate.getFlowNodeInstance());
+      instanceMap.put(flowNodeInstanceUpdate.getFlowNodeInstance().getElementInstanceId(), flowNodeInstanceUpdate.getFlowNodeInstance());
       variablesMap.put(flowNodeInstanceUpdate.getProcessInstanceKey(), flowNodeInstanceUpdate.getVariables());
     }
   }
@@ -505,24 +505,26 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, String elementId, int count) {
+  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, String elementId, int... count) {
     ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(processInstanceKey);
 
-      return getFlowNodeInstancesWithElementId(processInstanceKey, processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId(), elementId, count, 0);
+      return getFlowNodeInstancesWithElementId(processInstanceKey, processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId(), elementId,
+          0, count);
   }
 
-  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, UUID flowNodeInstancesId, String elementId, int count, int index) {
+  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(UUID processInstanceKey, UUID flowNodeInstancesId, String elementId,
+      int index, int... count) {
     Map<UUID, Map<UUID, FlowNodeInstanceDTO>>flowNodeInstancesMap =
         flowNodeInstanceMap.get(processInstanceKey);
-    Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap = flowNodeInstancesMap.get(flowNodeInstancesId);
+    Map<UUID, FlowNodeInstanceDTO> instanceMap = flowNodeInstancesMap.get(flowNodeInstancesId);
     String[] split = elementId.split("/");
     String elementIdSubPath = split[index];
-
-    return flowNodeInstanceMap.values().stream()
-        .filter(i -> i.getElementId().equals(elementIdSubPath) && i.getPassedCnt() >= count).flatMap(flowNodeInstanceDTO -> {
-          if (split.length > index + 1 && flowNodeInstanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
+    int checkCnt = index >= count.length ? count[count.length - 1] : count[index];
+    return instanceMap.values().stream()
+        .filter(i -> i.getElementId().equals(elementIdSubPath) && i.getPassedCnt() >= checkCnt).flatMap(flowNodeInstanceDTO -> {
+          if (index < split.length - 1 && flowNodeInstanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
             return getFlowNodeInstancesWithElementId(processInstanceKey, withFlowNodeInstances.getFlowNodeInstances().getFlowNodeInstancesId(),
-                elementId, count, index + 1).stream();
+                elementId, index + 1, count).stream();
           } else {
             return Stream.of(flowNodeInstanceDTO);
           }
@@ -602,9 +604,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           Map<UUID, Map<UUID, FlowNodeInstanceDTO>>flowNodeInstancesMap =
               flowNodeInstanceMap.get(activeProcessInstanceKey);
           ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
-          Map<UUID, FlowNodeInstanceDTO> flowNodeInstanceMap = flowNodeInstancesMap.get(
+          Map<UUID, FlowNodeInstanceDTO> instanceMap = flowNodeInstancesMap.get(
               processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId());
-          return flowNodeInstanceMap.values().stream()
+          return instanceMap.values().stream()
               .filter(i -> i instanceof ActivityInstanceDTO)
               .map(i -> (ActivityInstanceDTO)i)
               .anyMatch(a -> a.getElementId().equals(elementId) && a.getState() == state);

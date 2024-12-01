@@ -3,7 +3,6 @@ package nl.qunit.bpmnmeister.pi;
 public enum ProcessInstanceState {
   START,
   ACTIVE,
-  SUSPENDED,
   COMPLETED,
   TERMINATED,
   FAILED;
@@ -12,7 +11,4 @@ public enum ProcessInstanceState {
     return this == COMPLETED || this == TERMINATED || this == FAILED;
   }
 
-  public boolean isStarted() {
-    return this == ACTIVE;
-  }
 }

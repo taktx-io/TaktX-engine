@@ -16,7 +16,10 @@ import java.util.stream.IntStream;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.CallActivityInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.SubProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.TaskInstanceDTO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
@@ -56,7 +59,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("StartEvent_1")
-//        .hasPassedElementWithId("task-id", TaskState.class, 3)
+        .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 3)
         .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
         .hasInstantiatedElementWithId("EndEvent_1");
   }
@@ -74,10 +77,11 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
         .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 1000)
         .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-//        .hasPassedElementWithId("task-id", TaskState.class, 1000)
         .hasInstantiatedElementWithId("EndEvent_1");
   }
+
   @Test
   void testProcessTaskMultiInstanceSequentialMany()
       throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
@@ -91,8 +95,8 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
         .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 1000)
         .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-//        .hasPassedElementWithId("task-id", TaskState.class, 1000)
         .hasInstantiatedElementWithId("EndEvent_1");
   }
 
@@ -107,7 +111,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("StartEvent_1")
-//        .hasPassedElementWithId("task-id", SubProcessState.class, 3)
+        .hasInstantiatedElementWithId("task-id/task-id", SubProcessInstanceDTO.class, 3)
         .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
         .hasInstantiatedElementWithId("EndEvent_1");
   }
@@ -124,7 +128,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasInstantiatedElementWithId("StartEvent_1")
-//        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
+        .hasInstantiatedElementWithId("callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
         .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
         .hasInstantiatedElementWithId("EndEvent_1");
 
@@ -142,7 +146,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasVariableMatching("outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
         .hasInstantiatedElementWithId("StartEvent_1")
-//        .hasPassedElementWithId("callactivity-id", CallActivityState.class, 3)
+        .hasInstantiatedElementWithId("callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
         .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
         .hasInstantiatedElementWithId("EndEvent_1");
 

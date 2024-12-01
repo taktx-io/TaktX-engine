@@ -30,15 +30,17 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasPassedElementWithId(String elementId, int count) {
+  public ProcessInstanceAssert hasPassedElementWithId(String elementId, int... count) {
     assertThat(bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, count)).isNotEmpty();
     return this;
   }
 
   public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, Class<?> clazz, int count) {
     List<FlowNodeInstanceDTO> instances = bpmnTestEngine.getFlowNodeInstancesWithElementId(
-        processInstanceKey, elementId, count);
-    assertThat(instances.stream().anyMatch(i -> i.getClass().equals(clazz))).isTrue();
+        processInstanceKey, elementId, 1);
+    assertThat(instances).as("element with " + elementId + " not found in process instance").isNotEmpty();
+    assertThat(instances).as("element " + elementId + " has not passed").hasSize(count);
+    assertThat(instances.stream()).as("element " + elementId + " not of class " + clazz).allMatch(i -> i.getClass().equals(clazz));
     return this;
   }
 
@@ -67,7 +69,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
         elementId, 0);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.get(0).isTerminated()).as("element " + elementId + " was not terminated").isTrue();
+    assertThat(bpmnElementState.getFirst().isTerminated()).as("element " + elementId + " was not terminated").isTrue();
     return this;
   }
 
@@ -76,7 +78,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
         elementId, 1);
     assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.get(0).isFailed()).as("element " + elementId + " was not terminated").isTrue();
+    assertThat(bpmnElementState.getFirst().isFailed()).as("element " + elementId + " was not terminated").isTrue();
     return this;
   }
 

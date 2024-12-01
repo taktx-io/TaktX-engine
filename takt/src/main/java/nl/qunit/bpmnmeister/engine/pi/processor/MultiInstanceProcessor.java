@@ -207,7 +207,7 @@ public class MultiInstanceProcessor
           trigger,
           variables,
           true,
-          flowNodeInstances);
+          multiInstanceInstance.getFlowNodeInstances());
 
       storeOutputCollectionIfCompleted(activity, variables, iterationInstance, variables);
 
