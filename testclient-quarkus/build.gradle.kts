@@ -13,6 +13,10 @@ dependencies {
     implementation(enforcedPlatform("$quarkusPlatformGroupId:$quarkusPlatformArtifactId:$quarkusPlatformVersion"))
     implementation("io.quarkus:quarkus-arc")
     implementation("io.quarkus:quarkus-jaxb")
+    implementation("io.quarkus:quarkus-smallrye-openapi")
+    implementation("io.quarkus:quarkus-resteasy-client")
+    implementation("io.quarkus:quarkus-resteasy-jackson")
+    implementation("io.quarkus:quarkus-jackson")
     implementation(project(":takt-client"))
 
     testImplementation("io.quarkus:quarkus-junit5")

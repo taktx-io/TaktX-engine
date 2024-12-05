@@ -1,16 +1,32 @@
 package nl.qunit.bpmnmeister.client;
 
+import java.util.Set;
+import nl.qunit.bpmnmeister.pi.VariablesDTO;
+
 public class TaktClient {
   private final ExternalTriggerConsumer externalTriggerConsumer;
+  private final ProcessInstanceProducer processInstanceProducer;
 
   public TaktClient(String bootstrapServers, String tenant, String namespace) {
     KafkaPropertiesHelper kafkaPropertiesHelper = new KafkaPropertiesHelper(bootstrapServers, tenant, namespace);
     this.externalTriggerConsumer = new ExternalTriggerConsumer(kafkaPropertiesHelper);
-    this.externalTriggerConsumer.init();
+    this.processInstanceProducer = new ProcessInstanceProducer(kafkaPropertiesHelper);
   }
 
   public static TaktClientBuilder newClientBuilder() {
     return new TaktClientBuilder();
+  }
+
+  public void start() {
+    this.externalTriggerConsumer.init();
+  }
+
+  public void startProcess(String process) {
+      processInstanceProducer.startProcess(process, VariablesDTO.empty());
+  }
+
+  public Set<String> getProcessDefinitionConsumers() {
+    return externalTriggerConsumer.getProcessDefinitionConsumers();
   }
 
   public static class TaktClientBuilder {

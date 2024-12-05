@@ -19,6 +19,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
@@ -36,10 +37,13 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 
 public class ExternalTriggerConsumer {
+  private static final Logger LOGGER = Logger.getLogger(ExternalTriggerConsumer.class.getName());
   private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap = new HashMap<>();
 
   private final ObjectMapper objectMapper;
@@ -59,6 +63,10 @@ public class ExternalTriggerConsumer {
     scanAndDeployBpmnDefinitions();
   }
 
+  public Set<String> getProcessDefinitionConsumers() {
+    return consumerMap.keySet();
+  }
+
   private void subscribeToDefinitionRecords() {
     parsedDefinitionConsumer =
         createConsumer(
@@ -73,7 +81,7 @@ public class ExternalTriggerConsumer {
     responseEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(
-                ProcessInstanceKeyJsonSeserializer.class,
+                (Class<? extends Serializer<?>>) Serdes.UUID().serializer().getClass(),
                 ExternalTaskTriggerResponseSerializer.class));
 
     CompletableFuture.runAsync(
@@ -131,7 +139,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeDefinition(ProcessDefinitionKey processDefinitionKey) {
-    String processDefinitionId = processDefinitionKey.getProcessDefinitionId().split("/")[0];
+    final String processDefinitionId = processDefinitionKey.getProcessDefinitionId().split("/")[0];
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance != null) {
       // We have a worker instance for this process definition. If not consumer exists yet
@@ -139,10 +147,10 @@ public class ExternalTriggerConsumer {
       // channel
       KafkaConsumer<UUID, ExternalTaskTrigger> consumer = consumerMap.get(processDefinitionId);
       if (consumer == null) {
-        KafkaConsumer<UUID, ExternalTaskTrigger> newConsumer =
+        final KafkaConsumer<UUID, ExternalTaskTrigger> newConsumer =
             createConsumer(
                 "consumer-" + processDefinitionId,
-                ProcessInstanceKeyJsonDeserializer.class,
+                (Class<? extends Deserializer<?>>) Serdes.UUID().deserializer().getClass(),
                 ExternalTaskTriggerJsonDeserializer.class);
         consumerMap.put(processDefinitionId, newConsumer);
         newConsumer.subscribe(
@@ -157,6 +165,9 @@ public class ExternalTriggerConsumer {
                   consumeExternalTaskTrigger(record.value(), processDefinitionId);
                 }
               }
+            }).exceptionallyAsync(t -> {
+              LOGGER.severe("Error while consuming external task triggers for process definition " + processDefinitionId + " " + t.getMessage());
+              return null;
             });
       }
     }

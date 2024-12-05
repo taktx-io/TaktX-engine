@@ -41,7 +41,7 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.0")
 }
 
-group = "nl.qunit.flomaestro"
+group = "nl.flomaestro"
 version = "1.0.0-SNAPSHOT"
 
 tasks.test {

@@ -1,39 +1,31 @@
 plugins {
     id("java")
-    id("com.github.bjornvester.xjc") version "1.8.1"
-    `maven-publish`
+    id("maven-publish")
 }
 
 group = "nl.flomaestro"
 version = "1.0.0-SNAPSHOT"
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+val quarkusPlatformGroupId: String by project
+val quarkusPlatformArtifactId: String by project
+val quarkusPlatformVersion: String by project
+
 dependencies {
-    implementation("com.cronutils:cron-utils:9.2.1")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
+    implementation(project(":takt-shared"))
+    implementation("org.apache.kafka:kafka-clients:3.9.0")
+    implementation("io.github.classgraph:classgraph:4.8.179")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
+    compileOnly("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
     testImplementation("org.assertj:assertj-core:3.24.2")
-    testImplementation("org.mockito:mockito-core:3.12.4")
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations:2.15.3")
-    testImplementation("org.reflections:reflections:0.10.2")
-    testImplementation("org.glassfish.jaxb:jaxb-runtime:3.0.2")
-
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
 }
-
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-xjc {
-    markGenerated.set(true)
-    defaultPackage.set("nl.qunit.bpmnmeister.bpmn")
-}
-
 
 publishing {
     publications {

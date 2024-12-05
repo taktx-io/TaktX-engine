@@ -20,6 +20,7 @@ public class TaktClientProvider {
         .withTenant("tenant")
         .withNamespace("namespace")
         .build();
+    taktClient.start();
   }
 
   @Produces
