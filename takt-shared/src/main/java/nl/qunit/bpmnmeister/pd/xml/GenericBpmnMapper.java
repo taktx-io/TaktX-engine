@@ -14,7 +14,7 @@ import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder;
-import nl.qunit.bpmnmeister.pd.model.Process;
+import nl.qunit.bpmnmeister.pd.model.ProcessDTO;
 
 public class GenericBpmnMapper implements BpmnMapper {
 
@@ -37,7 +37,7 @@ public class GenericBpmnMapper implements BpmnMapper {
       TRootElement tRootElement = jaxbElement.getValue();
       if (tRootElement instanceof TProcess tProcess) {
         builder.definitionsKey(new DefinitionsKey(tRootElement.getId(), hash));
-        Process rootElement = bpmnMapperFactory.createRootElementMapper().map(tProcess);
+        ProcessDTO rootElement = bpmnMapperFactory.createRootElementMapper().map(tProcess);
         builder.rootProcess(rootElement);
       } else if (tRootElement instanceof TMessage tMessage) {
         MessageMapper messageMapper = bpmnMapperFactory.createMessageMapper();

@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
-import nl.qunit.bpmnmeister.pi.instances.IFlowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.IFlowNodeInstance;
 
 @ApplicationScoped
 public class PathExtractor {

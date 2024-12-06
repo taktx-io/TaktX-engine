@@ -3,41 +3,41 @@ package nl.qunit.bpmnmeister.engine.pi;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.UUID;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.SubProcess;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstancesDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
-import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.CallActivityInstance;
-import nl.qunit.bpmnmeister.pi.instances.EndEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.ExclusiveGatewayInstance;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
-import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
-import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.IntermediateThrowEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.MultiInstanceInstance;
-import nl.qunit.bpmnmeister.pi.instances.ParallelGatewayInstance;
-import nl.qunit.bpmnmeister.pi.instances.ReceiveTaskInstance;
-import nl.qunit.bpmnmeister.pi.instances.SendTaskInstance;
-import nl.qunit.bpmnmeister.pi.instances.ServiceTaskInstance;
-import nl.qunit.bpmnmeister.pi.instances.StartEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.SubProcessInstance;
-import nl.qunit.bpmnmeister.pi.instances.TaskInstance;
-import nl.qunit.bpmnmeister.pi.instances.WithFlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.engine.pi.model.ActivityInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.BoundaryEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.CallActivityInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.EndEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ExclusiveGatewayInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.InclusiveGatewayInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.IntermediateCatchEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.IntermediateThrowEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.MultiInstanceInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ParallelGatewayInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ReceiveTaskInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.SendTaskInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ServiceTaskInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.StartEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.SubProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.TaskInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.WithFlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.state.BoundaryEventInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.CallActivityInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.EndEventInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.ExclusiveGatewayInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeInstancesDTO;
 import nl.qunit.bpmnmeister.pi.state.InclusiveGatewayInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.IntermediateCatchEventInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.IntermediateThrowEventInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.MultiInstanceInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.ParallelGatewayInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.ReceiveTaskInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.SendTaskInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.ServiceTaskInstanceDTO;
@@ -56,7 +56,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.ParallelGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.ParallelGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   ParallelGatewayInstance map(
       ParallelGatewayInstanceDTO source, @Context FlowElements flowElements);
@@ -64,7 +64,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.InclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.InclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   InclusiveGatewayInstance map(
       InclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
@@ -72,7 +72,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.ExclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.ExclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   ExclusiveGatewayInstance map(
       ExclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
@@ -80,21 +80,21 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.BoundaryEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   BoundaryEventInstance map(BoundaryEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.StartEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.StartEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   StartEventInstance map(StartEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   IntermediateCatchEventInstance map(
       IntermediateCatchEventInstanceDTO source, @Context FlowElements flowElements);
@@ -102,14 +102,14 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.EndEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.EndEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   EndEventInstance map(EndEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   IntermediateThrowEventInstance map(
       IntermediateThrowEventInstanceDTO source, @Context FlowElements flowElements);
@@ -117,7 +117,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.ServiceTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.ServiceTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   ServiceTaskInstance map(ServiceTaskInstanceDTO source, @Context FlowElements flowElements);
@@ -125,7 +125,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.SendTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.SendTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   SendTaskInstance map(SendTaskInstanceDTO source, @Context FlowElements flowElements);
@@ -133,7 +133,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.ReceiveTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.ReceiveTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   ReceiveTaskInstance map(ReceiveTaskInstanceDTO source, @Context FlowElements flowElements);
@@ -141,7 +141,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.SubProcess)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.SubProcess)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   @Mapping(
@@ -153,7 +153,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.CallActivity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.CallActivity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   CallActivityInstance map(CallActivityInstanceDTO source, @Context FlowElements flowElements);
@@ -161,7 +161,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.Activity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.Activity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   MultiInstanceInstance map(MultiInstanceInstanceDTO source, @Context FlowElements flowElements);
@@ -169,7 +169,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((nl.qunit.bpmnmeister.pd.model.Task)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
+          "java((nl.qunit.bpmnmeister.engine.pd.model.Task)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   TaskInstance map(TaskInstanceDTO source, @Context FlowElements flowElements);
 

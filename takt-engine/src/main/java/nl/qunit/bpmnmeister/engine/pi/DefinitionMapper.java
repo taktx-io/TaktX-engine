@@ -2,27 +2,27 @@ package nl.qunit.bpmnmeister.engine.pi;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
-import nl.qunit.bpmnmeister.pd.model.Activity;
-import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
-import nl.qunit.bpmnmeister.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.Activity;
+import nl.qunit.bpmnmeister.engine.pd.model.BoundaryEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.CatchEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.ErrorEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.EscalationEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElement;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pd.model.Gateway;
+import nl.qunit.bpmnmeister.engine.pd.model.Message;
+import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.pd.model.SubProcess;
+import nl.qunit.bpmnmeister.engine.pd.model.WIthChildElements;
+import nl.qunit.bpmnmeister.engine.pd.model.WithErrorEventDefinitions;
+import nl.qunit.bpmnmeister.engine.pd.model.WithEscalationEventDefinitions;
+import nl.qunit.bpmnmeister.engine.pd.model.WithMessageReference;
 import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
-import nl.qunit.bpmnmeister.pd.model.ErrorEvent;
 import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
-import nl.qunit.bpmnmeister.pd.model.EscalationEvent;
-import nl.qunit.bpmnmeister.pd.model.FlowElement;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.Gateway;
-import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
 import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pd.model.SubProcess;
-import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
-import nl.qunit.bpmnmeister.pd.model.WithErrorEventDefinitions;
-import nl.qunit.bpmnmeister.pd.model.WithEscalationEventDefinitions;
-import nl.qunit.bpmnmeister.pd.model.WithMessageReference;
 
 @ApplicationScoped
 public class DefinitionMapper {

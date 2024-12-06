@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @ToString
 @Getter

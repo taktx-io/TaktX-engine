@@ -3,19 +3,19 @@ package nl.qunit.bpmnmeister.engine.pi;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pi.model.ActivityInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.BoundaryEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.processor.BoundaryEventInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
-import nl.qunit.bpmnmeister.pd.model.EventSignal;
-import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.instances.ActivityInstance;
-import nl.qunit.bpmnmeister.pi.instances.BoundaryEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -82,7 +82,7 @@ public class FlowInstanceRunner {
     }
 
     while (!directInstanceResult.newFlowNodeInstancesIsEmpty()) {
-      FLowNodeInstanceInfo instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
+      FlowNodeInstanceInfo instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
       FLowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
       flowNodeInstances.putInstance(fLowNodeInstance);
       FLowNodeInstanceProcessor<?, ?, ?> processor =

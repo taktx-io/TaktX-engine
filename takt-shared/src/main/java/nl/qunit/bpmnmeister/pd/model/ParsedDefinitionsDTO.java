@@ -13,7 +13,7 @@ import lombok.Getter;
 @Builder
 public class ParsedDefinitionsDTO extends DefinitionsTrigger {
   private final DefinitionsKey definitionsKey;
-  private final Process rootProcess;
+  private final ProcessDTO rootProcess;
   private final Map<String, MessageDTO> messages;
   private final Map<String, EscalationDTO> escalations;
   private final Map<String, ErrorDTO> errors;
@@ -21,7 +21,7 @@ public class ParsedDefinitionsDTO extends DefinitionsTrigger {
   @JsonCreator
   public ParsedDefinitionsDTO(
       @JsonProperty("definitionsKey") @Nonnull DefinitionsKey definitionsKey,
-      @JsonProperty("elements") @Nonnull Process rootProcess,
+      @JsonProperty("elements") @Nonnull ProcessDTO rootProcess,
       @JsonProperty("messages") @Nonnull Map<String, MessageDTO> messages,
       @JsonProperty("escalations") @Nonnull Map<String, EscalationDTO> escalations,
       @JsonProperty("errors") @Nonnull Map<String, ErrorDTO> errors) {

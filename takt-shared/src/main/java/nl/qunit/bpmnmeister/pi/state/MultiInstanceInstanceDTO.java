@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstancesDTO;
 
 @Getter
 @SuperBuilder(toBuilder = true)

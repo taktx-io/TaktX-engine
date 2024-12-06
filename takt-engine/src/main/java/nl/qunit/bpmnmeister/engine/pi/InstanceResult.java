@@ -4,13 +4,13 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.UUID;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.NewCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pd.model.ScheduledContinuationInfo;
-import nl.qunit.bpmnmeister.pd.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import nl.qunit.bpmnmeister.engine.pd.model.NewStartCommand;
+import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.pi.InstanceUpdate;
-import nl.qunit.bpmnmeister.pi.NewStartCommand;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 
 @Getter

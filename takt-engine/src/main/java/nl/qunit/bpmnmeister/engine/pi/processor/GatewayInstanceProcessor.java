@@ -4,22 +4,22 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.Gateway;
+import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceException;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.GatewayInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowCondition;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.Gateway;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.pd.model.FlowConditionDTO;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.instances.GatewayInstance;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
@@ -82,7 +82,7 @@ public abstract class GatewayInstanceProcessor<
       Set<SequenceFlow> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
       Set<SequenceFlow> flowsWithCondition =
           sequenceFlows.stream()
-              .filter(sequenceFlow -> !FlowCondition.NONE.equals(sequenceFlow.getCondition()))
+              .filter(sequenceFlow -> !FlowConditionDTO.NONE.equals(sequenceFlow.getCondition()))
               .filter(
                   sequenceFlow ->
                       feelExpressionHandler

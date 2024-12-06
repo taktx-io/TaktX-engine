@@ -5,13 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.EventSignal;
-import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 
 public class DirectInstanceResult {
-  private final Queue<FLowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
+
+  private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
   private final Queue<UUID> terminateInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
@@ -23,7 +24,7 @@ public class DirectInstanceResult {
   }
 
   public void addNewFlowNodeInstance(
-      ProcessInstance processInstance, FLowNodeInstanceInfo flowNodeInstanceInfo) {
+      ProcessInstance processInstance, FlowNodeInstanceInfo flowNodeInstanceInfo) {
     if (!flowNodeInstanceInfo.inputSequenceFlowId().equals(Constants.NONE)) {
       if (sequenceFlows.contains(flowNodeInstanceInfo.inputSequenceFlowId())) {
         throw new ProcessInstanceException(
@@ -39,7 +40,7 @@ public class DirectInstanceResult {
     newFlowNodeInstanceInfos.add(flowNodeInstanceInfo);
   }
 
-  public FLowNodeInstanceInfo pollNewFlowNodeInstance() {
+  public FlowNodeInstanceInfo pollNewFlowNodeInstance() {
     return newFlowNodeInstanceInfos.poll();
   }
 

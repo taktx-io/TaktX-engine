@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 import java.util.stream.Collectors;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

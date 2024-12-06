@@ -12,7 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;

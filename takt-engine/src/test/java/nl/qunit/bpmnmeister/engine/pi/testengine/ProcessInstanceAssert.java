@@ -8,10 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 public class ProcessInstanceAssert {
 

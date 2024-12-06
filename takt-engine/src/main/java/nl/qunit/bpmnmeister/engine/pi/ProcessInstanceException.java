@@ -1,8 +1,8 @@
 package nl.qunit.bpmnmeister.engine.pi;
 
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 
 @Getter
 public class ProcessInstanceException extends RuntimeException {

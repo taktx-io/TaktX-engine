@@ -9,6 +9,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.state.FlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @ToString(callSuper = true)

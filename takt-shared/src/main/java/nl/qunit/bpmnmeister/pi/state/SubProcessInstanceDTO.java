@@ -8,7 +8,6 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstancesDTO;
 
 @Getter
 @ToString(callSuper = true)

@@ -7,6 +7,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @ToString(callSuper = true)

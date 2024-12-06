@@ -2,20 +2,20 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Optional;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.IntermediateCatchEvent;
+import nl.qunit.bpmnmeister.engine.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.IntermediateCatchEventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.ThrowEventInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.IntermediateCatchEvent;
-import nl.qunit.bpmnmeister.pd.model.ThrowEvent;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
-import nl.qunit.bpmnmeister.pi.instances.IntermediateCatchEventInstance;
-import nl.qunit.bpmnmeister.pi.instances.ThrowEventInstance;
 
 @NoArgsConstructor
 public abstract class ThrowEventInstanceProcessor<
@@ -50,8 +50,8 @@ public abstract class ThrowEventInstanceProcessor<
                     FLowNodeInstance<?> catchEventInstance =
                         new IntermediateCatchEventInstance(
                             flowNodeInstance.getParentInstance(), event);
-                    FLowNodeInstanceInfo flowNodeInstanceInfo =
-                        new FLowNodeInstanceInfo(catchEventInstance, Constants.NONE);
+                    FlowNodeInstanceInfo flowNodeInstanceInfo =
+                        new FlowNodeInstanceInfo(catchEventInstance, Constants.NONE);
                     directInstanceResult.addNewFlowNodeInstance(
                         processInstance, flowNodeInstanceInfo);
                   });

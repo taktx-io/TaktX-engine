@@ -9,20 +9,20 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pd.model.InclusiveGateway;
+import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.InclusiveGateway;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.InclusiveGatewayInstance;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
-import nl.qunit.bpmnmeister.pi.instances.InclusiveGatewayInstance;
 
 @ApplicationScoped
 @NoArgsConstructor

@@ -12,7 +12,7 @@ public class SequenceFlowDTO extends FlowElementDTO {
 
   String source;
   String target;
-  FlowCondition condition;
+  FlowConditionDTO condition;
 
   @JsonCreator
   public SequenceFlowDTO(
@@ -20,7 +20,7 @@ public class SequenceFlowDTO extends FlowElementDTO {
       @Nonnull @JsonProperty("parentId") String parentId,
       @Nonnull @JsonProperty("source") String source,
       @Nonnull @JsonProperty("target") String target,
-      @Nonnull @JsonProperty("condition") FlowCondition condition) {
+      @Nonnull @JsonProperty("condition") FlowConditionDTO condition) {
     super(id, parentId);
     this.source = source;
     this.target = target;

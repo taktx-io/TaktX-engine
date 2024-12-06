@@ -10,7 +10,7 @@ import nl.qunit.bpmnmeister.bpmn.TRootElement;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
-import nl.qunit.bpmnmeister.pd.model.Process;
+import nl.qunit.bpmnmeister.pd.model.ProcessDTO;
 
 public class GenericRootElementMapper implements RootElementMapper {
 
@@ -20,12 +20,12 @@ public class GenericRootElementMapper implements RootElementMapper {
     this.bpmnMapperFactory = bpmnMapperFactory;
   }
 
-  public Process map(TRootElement tRootElement) {
+  public ProcessDTO map(TRootElement tRootElement) {
     if (tRootElement instanceof TProcess tProcess) {
       String id = tProcess.getId();
-      return new Process(id, Constants.NONE, mapFlowElements(tProcess.getFlowElement()));
+      return new ProcessDTO(id, Constants.NONE, mapFlowElements(tProcess.getFlowElement()));
     }
-    return Process.NONE;
+    return ProcessDTO.NONE;
   }
 
   private FlowElementsDTO mapFlowElements(

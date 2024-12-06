@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @Setter

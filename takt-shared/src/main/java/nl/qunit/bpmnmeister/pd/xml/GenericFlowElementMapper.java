@@ -31,7 +31,7 @@ import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.EndEventDTO;
 import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ExclusiveGatewayDTO;
-import nl.qunit.bpmnmeister.pd.model.FlowCondition;
+import nl.qunit.bpmnmeister.pd.model.FlowConditionDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
 import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
 import nl.qunit.bpmnmeister.pd.model.GatewayDTO;
@@ -180,11 +180,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         ((TBaseElement) tSequenceFlow.getSourceRef()).getId(),
         ((TBaseElement) tSequenceFlow.getTargetRef()).getId(),
         tSequenceFlow.getConditionExpression() != null
-            ? new FlowCondition(
+            ? new FlowConditionDTO(
                 tSequenceFlow.getConditionExpression().getContent().stream()
                     .map(Object::toString)
                     .collect(Collectors.joining("")))
-            : FlowCondition.NONE);
+            : FlowConditionDTO.NONE);
   }
 
   private FlowElementDTO mapActivity(TActivity activity, String parentId) {

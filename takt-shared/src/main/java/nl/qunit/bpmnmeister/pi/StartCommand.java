@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter

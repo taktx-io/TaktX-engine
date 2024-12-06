@@ -15,7 +15,7 @@ import lombok.Getter;
   @JsonSubTypes.Type(value = EventDefinitionDTO.class),
   @JsonSubTypes.Type(value = ExclusiveGatewayDTO.class),
   @JsonSubTypes.Type(value = ParallelGatewayDTO.class),
-  @JsonSubTypes.Type(value = Process.class),
+    @JsonSubTypes.Type(value = ProcessDTO.class),
   @JsonSubTypes.Type(value = SubProcessDTO.class),
   @JsonSubTypes.Type(value = SequenceFlowDTO.class),
   @JsonSubTypes.Type(value = StartEventDTO.class),

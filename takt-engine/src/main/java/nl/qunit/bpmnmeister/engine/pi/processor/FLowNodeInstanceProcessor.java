@@ -5,24 +5,24 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
+import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.pd.model.WithIoMapping;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.FLowNodeInstanceInfo;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
-import nl.qunit.bpmnmeister.pd.model.WithIoMapping;
+import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
 import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
 import nl.qunit.bpmnmeister.pi.InstanceUpdate;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
-import nl.qunit.bpmnmeister.pi.instances.FLowNodeInstance;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @Setter
@@ -220,7 +220,7 @@ public abstract class FLowNodeInstanceProcessor<
                             flownodeInstance.getParentInstance(), flowNodeInstances);
                 directInstanceResult.addNewFlowNodeInstance(
                     processInstance,
-                    new FLowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
+                    new FlowNodeInstanceInfo(fLowNodeInstance, sequenceFlow.getId()));
               });
     }
   }

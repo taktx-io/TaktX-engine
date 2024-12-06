@@ -31,7 +31,7 @@ import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;

@@ -2,18 +2,18 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import java.util.Set;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.pd.model.Event;
+import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
+import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.InstanceResult;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.Event;
-import nl.qunit.bpmnmeister.pd.model.FlowElements;
-import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
+import nl.qunit.bpmnmeister.engine.pi.model.EventInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
+import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstances;
-import nl.qunit.bpmnmeister.pi.ProcessInstance;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.instances.EventInstance;
 
 @NoArgsConstructor
 public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
