@@ -8,12 +8,12 @@ import nl.qunit.bpmnmeister.bpmn.TEscalation;
 import nl.qunit.bpmnmeister.bpmn.TMessage;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO.DefinitionsDTOBuilder;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsKey;
 import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
 import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder;
 import nl.qunit.bpmnmeister.pd.model.Process;
 
 public class GenericBpmnMapper implements BpmnMapper {
@@ -24,9 +24,9 @@ public class GenericBpmnMapper implements BpmnMapper {
     this.bpmnMapperFactory = bpmnMapperFactory;
   }
 
-  public DefinitionsDTO map(TDefinitions definitions, String hash) {
+  public ParsedDefinitionsDTO map(TDefinitions definitions, String hash) {
 
-    DefinitionsDTOBuilder builder = DefinitionsDTO.builder();
+    ParsedDefinitionsDTOBuilder builder = ParsedDefinitionsDTO.builder();
     HashMap<String, MessageDTO> messages = new HashMap<>();
     HashMap<String, EscalationDTO> escalations = new HashMap<>();
     HashMap<String, ErrorDTO> errors = new HashMap<>();

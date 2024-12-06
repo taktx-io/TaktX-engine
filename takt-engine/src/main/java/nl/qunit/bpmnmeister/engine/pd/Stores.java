@@ -13,7 +13,8 @@ public enum Stores {
   PROCESS_DEFINITION("pd"),
   DEFINITION_MESSAGE_SUBSCRIPTION("pd-message-subscription"),
   CORRELATION_MESSAGE_SUBSCRIPTION("correlation-subscription"),
-  VARIABLES("vars-store");
+  VARIABLES("vars-store"),
+  VERSION_BY_HASH("vre-by-hash");
 
   private final String storename;
 

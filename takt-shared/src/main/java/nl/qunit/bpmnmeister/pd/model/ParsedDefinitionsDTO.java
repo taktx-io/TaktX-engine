@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @Builder
-public class DefinitionsDTO extends DefinitionsTrigger {
+public class ParsedDefinitionsDTO extends DefinitionsTrigger {
   private final DefinitionsKey definitionsKey;
   private final Process rootProcess;
   private final Map<String, MessageDTO> messages;
@@ -19,7 +19,7 @@ public class DefinitionsDTO extends DefinitionsTrigger {
   private final Map<String, ErrorDTO> errors;
 
   @JsonCreator
-  public DefinitionsDTO(
+  public ParsedDefinitionsDTO(
       @JsonProperty("definitionsKey") @Nonnull DefinitionsKey definitionsKey,
       @JsonProperty("elements") @Nonnull Process rootProcess,
       @JsonProperty("messages") @Nonnull Map<String, MessageDTO> messages,

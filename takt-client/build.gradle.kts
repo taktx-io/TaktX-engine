@@ -17,12 +17,17 @@ val quarkusPlatformVersion: String by project
 
 dependencies {
     implementation(project(":takt-shared"))
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-simple:2.0.16")
     implementation("org.apache.kafka:kafka-clients:3.9.0")
     implementation("io.github.classgraph:classgraph:4.8.179")
     implementation("com.fasterxml.jackson.core:jackson-core:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
     compileOnly("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
+
+    compileOnly("org.projectlombok:lombok:1.18.30")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
 
     testImplementation("org.assertj:assertj-core:3.24.2")
 }

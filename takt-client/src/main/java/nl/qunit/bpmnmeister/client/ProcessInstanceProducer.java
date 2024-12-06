@@ -30,7 +30,7 @@ public class ProcessInstanceProducer {
     StartCommand startCommand = new StartCommand(processInstanceKey, Constants.NONE_UUID, Constants.NONE, List.of(), List.of(), processDefinitionId, variables);
     startCommandEmitter.send( new ProducerRecord<>(
         kafkaPropertiesHelper.getPrefixedTopicName(
-            Topics.PROCESS_DEFINITIONS_TOPIC),
+            Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC),
         processDefinitionId,
         startCommand));
 

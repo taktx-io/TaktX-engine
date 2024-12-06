@@ -5,7 +5,6 @@ import java.util.Map;
 import nl.qunit.bpmnmeister.pd.model.Activity;
 import nl.qunit.bpmnmeister.pd.model.BoundaryEvent;
 import nl.qunit.bpmnmeister.pd.model.CatchEvent;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
 import nl.qunit.bpmnmeister.pd.model.ErrorEvent;
 import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
@@ -17,6 +16,7 @@ import nl.qunit.bpmnmeister.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.pd.model.Gateway;
 import nl.qunit.bpmnmeister.pd.model.Message;
 import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.SequenceFlow;
 import nl.qunit.bpmnmeister.pd.model.SubProcess;
 import nl.qunit.bpmnmeister.pd.model.WIthChildElements;
@@ -32,7 +32,7 @@ public class DefinitionMapper {
     this.dtoMapper = dtoMapper;
   }
 
-  public FlowElements getFlowElements(DefinitionsDTO definitionsDTO) {
+  public FlowElements getFlowElements(ParsedDefinitionsDTO definitionsDTO) {
     FlowElementsDTO flowElements = definitionsDTO.getRootProcess().getFlowElements();
 
     FlowElements flowElements1 = dtoMapper.getFlowElements(flowElements);

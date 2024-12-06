@@ -7,16 +7,16 @@ import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
+import java.util.HashMap;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscriptions;
 import nl.qunit.bpmnmeister.engine.pd.DefinitionMessageSubscriptions;
-import nl.qunit.bpmnmeister.engine.pd.DefinitionsMapper;
-import nl.qunit.bpmnmeister.engine.pd.DefinitionsProcessor;
 import nl.qunit.bpmnmeister.engine.pd.KeyValueStoreSupplier;
 import nl.qunit.bpmnmeister.engine.pd.MessageEventProcessor;
 import nl.qunit.bpmnmeister.engine.pd.MessageSchedulerFactory;
+import nl.qunit.bpmnmeister.engine.pd.NewDefinitionsProcessor;
 import nl.qunit.bpmnmeister.engine.pd.ProcessDefinitionActivationProcessor;
 import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
@@ -26,8 +26,8 @@ import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
@@ -81,8 +81,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(JsonNode.class);
   public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
-  public static final ObjectMapperSerde<DefinitionsDTO> DEFINITIONS_SERDE =
-      new ObjectMapperSerde<>(DefinitionsDTO.class);
+  public static final ObjectMapperSerde<ParsedDefinitionsDTO> DEFINITIONS_SERDE =
+      new ObjectMapperSerde<>(ParsedDefinitionsDTO.class);
   public static final ObjectMapperSerde<DefinitionsTrigger> DEFINITIONS_TRIGGER_SERDE =
       new ObjectMapperSerde<>(DefinitionsTrigger.class);
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
@@ -121,6 +121,70 @@ public class TopologyProducer {
     setupProcessInstanceStream(builder);
 
     return builder.build();
+  }
+
+  private void setupNewDefinitionStream(StreamsBuilder builder) {
+    builder.addStateStore(keyValueStoreBuilder(
+        keyValueStoreSupplier.get(Stores.XML_BY_HASH),
+        Serdes.String(),
+        Serdes.String()));
+    builder.addStateStore(keyValueStoreBuilder(
+        keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
+        Serdes.String(),
+        new ObjectMapperSerde<HashMap<String, Integer>>(
+            (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+    builder.addStateStore(keyValueStoreBuilder(
+        keyValueStoreSupplier.get(Stores.PROCESS_DEFINITION),
+        PROCESS_DEFINITION_KEY_SERDE,
+        PROCESS_DEFINITION_SERDE));
+
+    builder.stream(
+            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+            Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
+        .process(() -> new NewDefinitionsProcessor(tenantNamespaceNameWrapper),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
+        .split()
+        .branch(
+            (key, value) -> value instanceof ProcessDefinitionDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessDefinitionKey) key, (ProcessDefinitionDTO) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName()),
+                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
+        .branch(
+            (key, value) -> value instanceof ProcessDefinitionActivation,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    (ProcessDefinitionKey) key,
+                                    (ProcessDefinitionActivation) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
+                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
+        .branch(
+            (key, value) -> value instanceof ProcessInstanceTrigger,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+
+
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -194,7 +258,7 @@ public class TopologyProducer {
                 KeyValue.pair(
                     ((StartCommand) value).getProcessDefinitionId(), (StartCommand) value))
         .to(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName()),
+            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Produced.with(Serdes.String(), START_COMMAND_SERDE));
     branches[4]
         .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
@@ -236,85 +300,14 @@ public class TopologyProducer {
                 Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof StartCommand,
+            (key, value) -> value instanceof DefinitionsTrigger,
             Branched.withConsumer(
                 ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommand) value))
+                    ks.map((key, value) -> KeyValue.pair((String) key, (DefinitionsTrigger) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName()),
-                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
-        .branch(
-            (key, value) -> value instanceof ProcessInstanceTrigger,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
-                            Produced.with(
-                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
-  }
-
-  private void setupNewDefinitionStream(StreamsBuilder builder) {
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.XML_BY_HASH), Serdes.String(), DEFINITIONS_SERDE));
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.DEFINITION_COUNT_BY_ID),
-            Serdes.String(),
-            Serdes.Integer()));
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.PROCESS_DEFINITION),
-            PROCESS_DEFINITION_KEY_SERDE,
-            PROCESS_DEFINITION_SERDE));
-
-    builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.XML_TOPIC.getTopicName()),
-            Consumed.with(Serdes.String(), Serdes.String()))
-        .map(new DefinitionsMapper())
-        .to(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName()),
-            Produced.with(Serdes.String(), DEFINITIONS_SERDE));
-
-    builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName()),
-            Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
-        .process(
-            () -> new DefinitionsProcessor(tenantNamespaceNameWrapper),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.DEFINITION_COUNT_BY_ID.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
-        .split()
-        .branch(
-            (key, value) -> value instanceof ProcessDefinitionDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessDefinitionKey) key, (ProcessDefinitionDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName()),
-                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
-        .branch(
-            (key, value) -> value instanceof ProcessDefinitionActivation,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessDefinitionKey) key,
-                                    (ProcessDefinitionActivation) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
-                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
+                                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+                            Produced.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))))
         .branch(
             (key, value) -> value instanceof ProcessInstanceTrigger,
             Branched.withConsumer(
@@ -354,7 +347,7 @@ public class TopologyProducer {
                     ks.map((key, value) -> KeyValue.pair((String) key, (StartCommand) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName()),
+                                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
             (k, v) -> v instanceof ExternalTaskTrigger,

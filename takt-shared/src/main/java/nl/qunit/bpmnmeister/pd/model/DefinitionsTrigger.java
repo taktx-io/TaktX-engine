@@ -9,7 +9,8 @@ import nl.qunit.bpmnmeister.pi.StartCommand;
 
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = DefinitionsDTO.class),
+    @JsonSubTypes.Type(value = XmlDefinitionsDTO.class),
+    @JsonSubTypes.Type(value = ParsedDefinitionsDTO.class),
   @JsonSubTypes.Type(value = StartCommand.class)
 })
 @Getter

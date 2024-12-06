@@ -15,7 +15,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.util.SHA256;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -23,7 +23,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 public class BpmnParser {
 
-  public DefinitionsDTO parse(String xml) {
+  public static ParsedDefinitionsDTO parse(String xml) {
     try {
       JAXBContext context = JAXBContext.newInstance(TDefinitions.class);
       MyHandler handler = new MyHandler();

@@ -19,12 +19,13 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
 import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
@@ -41,14 +42,14 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-
+@Slf4j
 public class ExternalTriggerConsumer {
-  private static final Logger LOGGER = Logger.getLogger(ExternalTriggerConsumer.class.getName());
   private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap = new HashMap<>();
 
   private final ObjectMapper objectMapper;
   private final KafkaPropertiesHelper kafkaPropertiesHelper;
 
+  private final Map<String, String> storedHashes = new HashMap<>();
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> parsedDefinitionConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTrigger> responseEmitter;
@@ -90,6 +91,11 @@ public class ExternalTriggerConsumer {
             ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records =
                 parsedDefinitionConsumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record : records) {
+              final String storedHash = storedHashes.get(record.key());
+              if (storedHash != null && !storedHash.equals(
+                  record.value().getDefinitions().getDefinitionsKey().getHash())) {
+                log.warn("Hash mismatch for process definition {}", record.key());
+              }
               consumeDefinition(record.key());
             }
           }
@@ -107,7 +113,7 @@ public class ExternalTriggerConsumer {
     try {
       Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(BpmnDeployment.class);
 
-      KafkaProducer<String, String> xmlEmitter =
+      KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter =
           new KafkaProducer<>(
               kafkaPropertiesHelper.getKafkaProducerProperties(
                   StringSerializer.class, StringSerializer.class));
@@ -120,14 +126,16 @@ public class ExternalTriggerConsumer {
           URL url = Thread.currentThread().getContextClassLoader().getResource(resource);
           Path bpmnPath = Paths.get(url.getPath());
           String xml = Files.readString(bpmnPath);
-          DefinitionsDTO definitions = new BpmnParser().parse(xml);
+          ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);
 
+          storedHashes.put(definitions.getDefinitionsKey().getProcessDefinitionId(),
+              definitions.getDefinitionsKey().getHash());
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
           xmlEmitter.send(
               new ProducerRecord<>(
-                  kafkaPropertiesHelper.getPrefixedTopicName(Topics.XML_TOPIC),
+                  kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC),
                   definitions.getDefinitionsKey().getProcessDefinitionId(),
-                  xml));
+                  new XmlDefinitionsDTO(xml)));
         }
       }
 
@@ -166,7 +174,8 @@ public class ExternalTriggerConsumer {
                 }
               }
             }).exceptionallyAsync(t -> {
-              LOGGER.severe("Error while consuming external task triggers for process definition " + processDefinitionId + " " + t.getMessage());
+          log.error("Error while consuming external task triggers for process definition {}:{}", processDefinitionId,
+              t.getMessage());
               return null;
             });
       }
@@ -193,6 +202,7 @@ public class ExternalTriggerConsumer {
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance == null) {
+      respondError(externalTaskTrigger, "No worker instance found for process definition " + processDefinitionId);
       return;
     }
     // Get method from workerInstance which has matching annotation
@@ -261,8 +271,31 @@ public class ExternalTriggerConsumer {
           });
 
     } else {
-      throw new IllegalStateException("No method found for external task " + externalTaskId);
+      respondError(externalTaskTrigger,
+          "No method matching method found for external task '" + externalTaskId + "' in jobworker '" + aClass.getName()
+              + "'");
     }
+  }
+
+  private void respondError(ExternalTaskTrigger externalTaskTrigger, String processDefinitionId) {
+    ExternalTaskResponseTrigger processInstanceTrigger =
+        new ExternalTaskResponseTrigger(
+            externalTaskTrigger.getProcessInstanceKey(),
+            externalTaskTrigger.getElementIdPath(),
+            externalTaskTrigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResult(
+                ExternalTaskResponseTypeEnum.ERROR,
+                true,
+                Constants.NONE,
+                processDefinitionId,
+                Constants.NONE),
+            VariablesDTO.empty());
+    responseEmitter.send(
+        new ProducerRecord<>(
+            kafkaPropertiesHelper.getPrefixedTopicName(
+                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+            externalTaskTrigger.getProcessInstanceKey(),
+            processInstanceTrigger));
   }
 
   private Object[] getParameters(Method method, ExternalTaskTrigger externalTaskTrigger) {

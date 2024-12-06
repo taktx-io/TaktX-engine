@@ -11,13 +11,14 @@ import lombok.ToString;
 @Getter
 @ToString
 public class ProcessDefinitionDTO {
-  private final DefinitionsDTO definitions;
+
+  private final ParsedDefinitionsDTO definitions;
   private final Integer version;
   private final ProcessDefinitionStateEnum state;
 
   @JsonCreator
   public ProcessDefinitionDTO(
-      @Nonnull @JsonProperty("definitions") DefinitionsDTO definitions,
+      @Nonnull @JsonProperty("definitions") ParsedDefinitionsDTO definitions,
       @Nonnull @JsonProperty("id") Integer version,
       @Nonnull @JsonProperty("state") ProcessDefinitionStateEnum state) {
     this.definitions = definitions;

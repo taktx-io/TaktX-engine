@@ -25,9 +25,11 @@ import nl.qunit.bpmnmeister.engine.generic.TopologyProducer;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.engine.pi.DebuggerUtil;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
 import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
@@ -89,7 +91,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceKey;
   private ExternalTaskTrigger activeExternalTaskTrigger;
-  private DefinitionsDTO definitionsBeingDeployed;
+  private ParsedDefinitionsDTO definitionsBeingDeployed;
   private final MutableClock mutableClock;
   private UUID latestInstantiatedProcessInstanceKey;
   private KafkaConsumerUtil<UUID, ProcessInstanceTrigger> processInstanceTriggerConsumer;
@@ -97,9 +99,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private KafkaConsumerUtil<UUID, ExternalTaskTrigger> externalTaskTriggerConsumer;
   private KafkaConsumerUtil<UUID, InstanceUpdate> instanceUpdateConsumer;
   private KafkaConsumerUtil<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionParsedConsumer;
-  private KafkaProducerUtil<UUID, ProcessInstanceTrigger> triggerEmitter;
-  private KafkaProducerUtil<String, String> xmlEmitter;
-  private KafkaProducerUtil<String, StartCommand>  startCommandEmitter;
+  private KafkaProducerUtil<UUID, ProcessInstanceTrigger> processInstanceTriggerEmitter;
+  private KafkaProducerUtil<String, DefinitionsTrigger> processDefinitionsTriggerEmitter;
   private KafkaProducerUtil<MessageEventKey, MessageEvent> messageEventEmitter;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
 
@@ -118,13 +119,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
           topics);
     }
 
-    triggerEmitter = new KafkaProducerUtil(TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+    processInstanceTriggerEmitter = new KafkaProducerUtil(
+        TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
         TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
         ObjectMapperSerializer.class.getName());
-    xmlEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.XML_TOPIC.getTopicName(),
-        StringSerializer.class.getName(),
-        StringSerializer.class.getName());
-    startCommandEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITIONS_TOPIC.getTopicName(),
+    processDefinitionsTriggerEmitter = new KafkaProducerUtil<>(
+        TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName(),
         StringSerializer.class.getName(),
         ObjectMapperSerializer.class.getName());
     messageEventEmitter = new KafkaProducerUtil<>(TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
@@ -166,9 +166,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     instanceUpdateConsumer.stop();
     processDefinitionParsedConsumer.stop();
     messageEventEmitter.close();
-    xmlEmitter.close();
-    startCommandEmitter.close();
-    triggerEmitter.close();
+    processDefinitionsTriggerEmitter.close();
+    processInstanceTriggerEmitter.close();
 
   }
 
@@ -249,7 +248,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public void triggerExternalTaskResponse(UUID processInstanceKey, ExternalTaskTrigger externalTaskTrigger,
       ExternalTaskResponseResult externalTaskResponseResult, VariablesDTO variables) {
-      triggerEmitter.send(processInstanceKey,
+    processInstanceTriggerEmitter.send(processInstanceKey,
           new ExternalTaskResponseTrigger(externalTaskTrigger.getProcessInstanceKey(),
           externalTaskTrigger.getElementIdPath(), externalTaskTrigger.getElementInstanceIdPath(), externalTaskResponseResult, variables)
       );
@@ -260,9 +259,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
-    definitionsBeingDeployed = new BpmnParser().parse(xml);
-    xmlEmitter.send(filename, xml);
+    definitionsBeingDeployed = BpmnParser.parse(xml);
     hashToDefinitionMap.clear();
+
+    processDefinitionsTriggerEmitter.send(definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
+        new XmlDefinitionsDTO(xml));
     return this;
   }
 
@@ -273,8 +274,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public BpmnTestEngine waitForProcessDeployment(Duration duration) {
     activeProcessDefintion = Awaitility.await().atMost(duration)
         .until(() ->
-            hashToDefinitionMap.get(definitionsBeingDeployed.getDefinitionsKey().getHash()),
-            Objects::nonNull);
+                hashToDefinitionMap.values().iterator().hasNext() ? hashToDefinitionMap.values().iterator().next() : null,
+            obj -> obj != null && obj.getDefinitions().getDefinitionsKey().getProcessDefinitionId()
+                .equals(definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId()));
 
     return this;
   }
@@ -301,7 +303,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         List.of(),
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
-    startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
+    processDefinitionsTriggerEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
     return this;
   }
 
@@ -315,7 +317,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         List.of(),
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         variables);
-    startCommandEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
+    processDefinitionsTriggerEmitter.send(processDefinitionKey.getProcessDefinitionId(), startCommand);
 
     try {
        activeProcessInstanceKey = Awaitility.await()
@@ -496,7 +498,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateProcessInstance() {
-    triggerEmitter.send(activeProcessInstanceKey, new TerminateTrigger(activeProcessInstanceKey, List.of()));
+    processInstanceTriggerEmitter.send(activeProcessInstanceKey,
+        new TerminateTrigger(activeProcessInstanceKey, List.of()));
     return this;
   }
 
@@ -650,7 +653,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine terminateElemeent() {
-    triggerEmitter.send(activeProcessInstanceKey, new TerminateTrigger(activeProcessInstanceKey, List.of(
+    processInstanceTriggerEmitter.send(activeProcessInstanceKey, new TerminateTrigger(activeProcessInstanceKey, List.of(
         selectedFlowNodeInstance.getElementInstanceId())));
     return this;
   }

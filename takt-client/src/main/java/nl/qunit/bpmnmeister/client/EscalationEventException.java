@@ -1,5 +1,8 @@
 package nl.qunit.bpmnmeister.client;
 
+import lombok.Getter;
+
+@Getter
 public class EscalationEventException extends RuntimeException {
 
   private final String name;
@@ -11,11 +14,4 @@ public class EscalationEventException extends RuntimeException {
     this.code = code;
   }
 
-  public String getName() {
-    return name;
-  }
-
-  public String getCode() {
-    return code;
-  }
 }
