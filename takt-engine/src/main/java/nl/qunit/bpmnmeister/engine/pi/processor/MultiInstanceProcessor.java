@@ -26,7 +26,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 
 public class MultiInstanceProcessor
     extends FLowNodeInstanceProcessor<
-    Activity, MultiInstanceInstance, ContinueFlowElementTriggerDTO> {
+        Activity, MultiInstanceInstance, ContinueFlowElementTriggerDTO> {
   private final FeelExpressionHandler feelExpressionHandler;
   private final ObjectMapper objectMapper;
   private final ActivityInstanceProcessor<?, ?, ?> processor;

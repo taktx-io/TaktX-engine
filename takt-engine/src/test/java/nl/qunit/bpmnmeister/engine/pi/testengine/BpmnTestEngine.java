@@ -295,10 +295,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine deployProcessDefinition(String filename)
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     definitionsBeingDeployed = BpmnParser.parse(xml);
@@ -326,31 +326,31 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                 obj ->
                     obj != null
                         && obj.getDefinitions()
-                        .getDefinitionsKey()
-                        .getProcessDefinitionId()
-                        .equals(
-                            definitionsBeingDeployed
-                                .getDefinitionsKey()
-                                .getProcessDefinitionId()));
+                            .getDefinitionsKey()
+                            .getProcessDefinitionId()
+                            .equals(
+                                definitionsBeingDeployed
+                                    .getDefinitionsKey()
+                                    .getProcessDefinitionId()));
 
     return this;
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     return deployProcessDefinitionAndWait(filename, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     deployProcessDefinition(filename);
     waitForProcessDeployment(duration);
     return this;
@@ -398,11 +398,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                     }
                     ProcessInstanceTriggerDTO poll = flowElementTriggers.poll();
                     if (poll
-                        instanceof
-                        StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger
+                            instanceof
+                            StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger
                         && ProcessDefinitionKey.of(
-                            startNewProcessInstanceTrigger.getProcessDefinition())
-                        .equals(processDefinitionKey)) {
+                                startNewProcessInstanceTrigger.getProcessDefinition())
+                            .equals(processDefinitionKey)) {
                       return poll.getProcessInstanceKey();
                     }
                     return null;
@@ -474,8 +474,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                     ProcessInstanceDTO childProcessInstance =
                         processInstanceMap.get(childProcessInstanceKey);
                     return childProcessInstance != null
-                        && childProcessInstance.getFlowNodeInstances().getState()
-                        == processInstanceState
+                            && childProcessInstance.getFlowNodeInstances().getState()
+                                == processInstanceState
                         ? childProcessInstanceKey
                         : null;
                   }
@@ -529,10 +529,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
               () -> {
                 if (activeProcessInstanceKey != null
                     && processInstanceMap
-                    .get(activeProcessInstanceKey)
-                    .getFlowNodeInstances()
-                    .getState()
-                    .isFinished()) {
+                        .get(activeProcessInstanceKey)
+                        .getFlowNodeInstances()
+                        .getState()
+                        .isFinished()) {
                   return activeProcessInstanceKey;
                 }
                 return null;
@@ -660,7 +660,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             flowNodeInstanceDTO -> {
               if (index < split.length - 1
                   && flowNodeInstanceDTO
-                  instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
+                      instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
                 return getFlowNodeInstancesWithElementId(
                     processInstanceKey,
                     withFlowNodeInstances.getFlowNodeInstances().getFlowNodeInstancesId(),

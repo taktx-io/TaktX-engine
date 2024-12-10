@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 
 @NoArgsConstructor
 public abstract class ActivityInstanceProcessor<
-    E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTriggerDTO>
+        E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   protected ActivityInstanceProcessor(

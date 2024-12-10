@@ -27,8 +27,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class MultiInstanceTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -51,10 +50,10 @@ class MultiInstanceTest {
   @Test
   void testProcessTaskMultiInstanceParallel()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
@@ -76,10 +75,10 @@ class MultiInstanceTest {
   @Test
   void testProcessTaskMultiInstanceParallelMany()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
@@ -99,10 +98,10 @@ class MultiInstanceTest {
   @Test
   void testProcessTaskMultiInstanceSequentialMany()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.bpmn")
@@ -122,10 +121,10 @@ class MultiInstanceTest {
   @Test
   void testProcessSubTaskMultiInstanceSequential()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.bpmn")
@@ -144,10 +143,10 @@ class MultiInstanceTest {
   @Test
   void testProcessCallActivityMultiInstanceSequential()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
@@ -167,10 +166,10 @@ class MultiInstanceTest {
   @Test
   void testProcessCallActivityMultiInstanceParallel()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
@@ -190,10 +189,10 @@ class MultiInstanceTest {
   @Test
   void testReceiveTask_multiInstance()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()

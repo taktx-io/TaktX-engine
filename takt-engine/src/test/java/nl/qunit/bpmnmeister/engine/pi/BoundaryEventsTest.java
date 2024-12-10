@@ -19,8 +19,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class BoundaryEventsTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -43,10 +42,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimerTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
@@ -65,10 +64,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimerNotTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
@@ -88,10 +87,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimerNonInterrupting()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
@@ -115,10 +114,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryMessageInterrupting()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
@@ -138,10 +137,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryMessageNonInterrupting()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
@@ -168,10 +167,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -192,10 +191,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimer_SubProcessTriggered_NormalEnd()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -217,10 +216,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -245,10 +244,10 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryTimer_SubProcessTriggered_NonInterrupting_BoundaryEventEnd_NoEnd()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess-noendevent.bpmn")

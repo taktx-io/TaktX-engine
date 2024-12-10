@@ -89,10 +89,10 @@ public class FlowNodeInstanceResource {
       try {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO>>
             storeQueryParameters =
-            StoreQueryParameters.fromNameAndType(
-                tenantNamespaceNameWrapper.getPrefixed(
-                    Stores.FLOW_NODE_INSTANCE.getStorename()),
-                QueryableStoreTypes.keyValueStore());
+                StoreQueryParameters.fromNameAndType(
+                    tenantNamespaceNameWrapper.getPrefixed(
+                        Stores.FLOW_NODE_INSTANCE.getStorename()),
+                    QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(storeQueryParameters);
       } catch (InvalidStateStoreException e) {
         // ignore, store not ready yet

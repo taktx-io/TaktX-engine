@@ -23,8 +23,7 @@ class IntermediateEventsTest {
 
   private static final Logger LOG = Logger.getLogger(IntermediateEventsTest.class);
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -47,10 +46,10 @@ class IntermediateEventsTest {
   @Test
   void testIntermediateTimerCatch()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -71,10 +70,10 @@ class IntermediateEventsTest {
   @Test
   void testMessageIntermediateCatch()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
         .waitForProcessDeployment()
@@ -94,10 +93,10 @@ class IntermediateEventsTest {
   @Test
   void testLinkIntermediateThrowCatch()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/link-intermediate-catch-throw.bpmn")
         .startProcessInstance(VariablesDTO.of("input", "value"))

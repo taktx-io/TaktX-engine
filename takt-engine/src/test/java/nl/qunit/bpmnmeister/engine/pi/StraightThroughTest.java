@@ -17,8 +17,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class StraightThroughTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -41,10 +40,10 @@ class StraightThroughTest {
   @Test
   void testStraighThrough()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/straight-through.bpmn")
         .startProcessInstance(VariablesDTO.empty())

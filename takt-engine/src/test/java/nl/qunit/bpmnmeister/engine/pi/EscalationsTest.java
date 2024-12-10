@@ -17,8 +17,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class EscalationsTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -41,10 +40,10 @@ class EscalationsTest {
   @Test
   void testInterruptingEscalationTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
@@ -73,10 +72,10 @@ class EscalationsTest {
   @Test
   void testInterruptingEscalation_CatchAllTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
@@ -103,10 +102,10 @@ class EscalationsTest {
   @Test
   void testInterruptingEscalation_NoCode_CatchAllTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
@@ -129,10 +128,10 @@ class EscalationsTest {
   @Test
   void testNonInterruptingEscalationTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
@@ -166,10 +165,10 @@ class EscalationsTest {
   @Test
   void testInterruptingEscalationTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
@@ -195,10 +194,10 @@ class EscalationsTest {
   @Test
   void testNonInterruptingEscalationTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
@@ -234,10 +233,10 @@ class EscalationsTest {
   @Test
   void testNoEscalationTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")

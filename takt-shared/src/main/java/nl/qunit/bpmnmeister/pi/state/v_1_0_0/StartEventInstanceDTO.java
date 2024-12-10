@@ -23,7 +23,7 @@ public class StartEventInstanceDTO extends CatchEventInstanceDTO {
       @Nonnull @JsonProperty("state") CatchEventStateEnum state,
       @Nonnull @JsonProperty("scheduledKeys") Set<ScheduledKeyDTO> scheduledKeys,
       @Nonnull @JsonProperty("messageEventKeys")
-      Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
+          Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
   }
 }

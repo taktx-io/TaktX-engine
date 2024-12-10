@@ -19,7 +19,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 @NoArgsConstructor
 public class ParallelGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-    ParallelGateway, ParallelGatewayInstance, ContinueFlowElementTriggerDTO> {
+        ParallelGateway, ParallelGatewayInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public ParallelGatewayInstanceProcessor(

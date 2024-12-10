@@ -107,9 +107,11 @@ public class ProcessInstanceProcessor
       switch (trigger) {
         case StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger ->
             handleStartNewProcessInstance(startNewProcessInstanceTrigger);
-        case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 -> handleContinue(continueFlowElementTrigger2);
+        case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 ->
+            handleContinue(continueFlowElementTrigger2);
         case TerminateTriggerDTO terminateTrigger -> handleTerminate(terminateTrigger);
-        default -> throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
+        default ->
+            throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (ProcessInstanceException e) {
       handleExceptional(e, trigger);

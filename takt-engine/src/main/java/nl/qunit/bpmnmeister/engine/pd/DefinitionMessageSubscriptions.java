@@ -22,7 +22,7 @@ public class DefinitionMessageSubscriptions {
   @JsonCreator
   public DefinitionMessageSubscriptions(
       @JsonProperty("definitions")
-      Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> definitions) {
+          Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> definitions) {
     this.definitions = definitions;
   }
 

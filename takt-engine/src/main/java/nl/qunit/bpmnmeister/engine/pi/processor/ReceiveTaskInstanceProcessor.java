@@ -21,7 +21,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor
     extends ActivityInstanceProcessor<
-    ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTriggerDTO> {
+        ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTriggerDTO> {
   private final FeelExpressionHandler feelExpressionHandler;
 
   @Inject

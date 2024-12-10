@@ -28,7 +28,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 @NoArgsConstructor
 public class InclusiveGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-    InclusiveGateway, InclusiveGatewayInstance, ContinueFlowElementTriggerDTO> {
+        InclusiveGateway, InclusiveGatewayInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public InclusiveGatewayInstanceProcessor(

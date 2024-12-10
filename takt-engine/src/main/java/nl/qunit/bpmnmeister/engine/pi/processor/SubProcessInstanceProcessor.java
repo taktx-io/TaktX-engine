@@ -25,7 +25,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
 @NoArgsConstructor
 public class SubProcessInstanceProcessor
     extends ActivityInstanceProcessor<
-    SubProcess, SubProcessInstance, ContinueFlowElementTriggerDTO> {
+        SubProcess, SubProcessInstance, ContinueFlowElementTriggerDTO> {
 
   private FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private FlowNodeInstancesProcessor flowNodeInstancesProcessor;

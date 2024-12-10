@@ -97,7 +97,7 @@ public class ExternalTriggerConsumer {
               final String storedHash = storedHashes.get(record.key());
               if (storedHash != null
                   && !storedHash.equals(
-                  record.value().getDefinitions().getDefinitionsKey().getHash())) {
+                      record.value().getDefinitions().getDefinitionsKey().getHash())) {
                 log.warn("Hash mismatch for process definition {}", record.key());
               }
               consumeDefinition(record.key());

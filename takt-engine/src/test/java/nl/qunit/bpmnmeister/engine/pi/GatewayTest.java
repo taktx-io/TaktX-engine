@@ -17,8 +17,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class GatewayTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -41,10 +40,10 @@ class GatewayTest {
   @Test
   void testParallelGateway()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/gateway-parallel.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -59,10 +58,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_DefaultFlow()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", new DummyObject(1)))
@@ -76,10 +75,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_SingleFlow()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", new DummyObject(2)))
@@ -93,10 +92,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_MultipleFlows()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", new DummyObject(3)))
@@ -110,10 +109,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_MultipleFlows_Deep()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", 3, "inputVariable2", "a"))
@@ -127,10 +126,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_MultipleFlows_Deep2()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", 2, "inputVariable3", "a"))
@@ -144,10 +143,10 @@ class GatewayTest {
   @Test
   void testInclusiveGateway_MultipleFlows_Deep3()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/inclusive-gateway-deep.bpmn")
         .startProcessInstance(
@@ -162,10 +161,10 @@ class GatewayTest {
   @Test
   void testExclusiveGatewy()
       throws JAXBException,
-      NoSuchAlgorithmException,
-      IOException,
-      ParserConfigurationException,
-      SAXException {
+          NoSuchAlgorithmException,
+          IOException,
+          ParserConfigurationException,
+          SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/sequence-flow-condition.bpmn")
         .startProcessInstance(VariablesDTO.of("inputVariable", 1))

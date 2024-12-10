@@ -13,8 +13,7 @@ import nl.qunit.bpmnmeister.client.TaktClient;
 @Slf4j
 public class TestResource {
 
-  @Inject
-  TaktClient taktClient;
+  @Inject TaktClient taktClient;
 
   @GET
   public Set<String> getProcessDefinitions() {

@@ -22,7 +22,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 @NoArgsConstructor
 public class CallActivityInstanceProcessor
     extends ActivityInstanceProcessor<
-    CallActivity, CallActivityInstance, ContinueFlowElementTriggerDTO> {
+        CallActivity, CallActivityInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public CallActivityInstanceProcessor(

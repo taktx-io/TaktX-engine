@@ -34,7 +34,7 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasPassedElementWithId(String elementId, int... count) {
     assertThat(
-        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, count))
+            bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, count))
         .isNotEmpty();
     return this;
   }
@@ -130,8 +130,8 @@ public class ProcessInstanceAssert {
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 0);
 
     assertThat(
-        bpmnElementState.isEmpty()
-            || bpmnElementState.stream().allMatch(state -> state.getPassedCnt() == 0))
+            bpmnElementState.isEmpty()
+                || bpmnElementState.stream().allMatch(state -> state.getPassedCnt() == 0))
         .as("element with " + elementId + " not found in process instance")
         .isTrue();
     return this;

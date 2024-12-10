@@ -24,7 +24,7 @@ public class IntermediateCatchEventInstanceDTO extends CatchEventInstanceDTO {
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("scheduledKeys") Set<ScheduledKeyDTO> scheduledKeys,
       @Nonnull @JsonProperty("messageEventKeys")
-      Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
+          Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
   }
 }

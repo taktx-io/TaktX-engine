@@ -17,8 +17,7 @@ import org.xml.sax.SAXException;
 @QuarkusTest
 class ErrorsTest {
 
-  @Inject
-  Clock clock;
+  @Inject Clock clock;
 
   static BpmnTestEngine bpmnTestEngine;
 
@@ -41,10 +40,10 @@ class ErrorsTest {
   @Test
   void testInterruptingErrorTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
@@ -69,10 +68,10 @@ class ErrorsTest {
   @Test
   void testInterruptingError_CatchAllTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
@@ -95,10 +94,10 @@ class ErrorsTest {
   @Test
   void testInterruptingError_NoCode_CatchAllTriggered()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
@@ -120,10 +119,10 @@ class ErrorsTest {
   @Test
   void testInterruptingErrorTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
@@ -144,10 +143,10 @@ class ErrorsTest {
   @Test
   void testCatchAllErrorTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
@@ -168,10 +167,10 @@ class ErrorsTest {
   @Test
   void testNoErrorTriggeredInSubprocess()
       throws IOException,
-      JAXBException,
-      NoSuchAlgorithmException,
-      ParserConfigurationException,
-      SAXException {
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")

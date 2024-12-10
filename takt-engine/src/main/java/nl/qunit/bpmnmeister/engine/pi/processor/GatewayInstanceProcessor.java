@@ -23,7 +23,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
-    E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTriggerDTO>
+        E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   private FeelExpressionHandler feelExpressionHandler;

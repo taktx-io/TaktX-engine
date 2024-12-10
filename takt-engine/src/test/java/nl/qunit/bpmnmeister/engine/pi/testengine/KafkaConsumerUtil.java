@@ -39,25 +39,25 @@ public class KafkaConsumerUtil<K, V> {
 
   void start() {
     new Thread(
-        () -> {
-          while (running) {
-            kafkaConsumer
-                .poll(100)
-                .forEach(
-                    record -> {
-                      V value = record.value();
-                      consumer.accept(value);
-                    });
-          }
-          try {
+            () -> {
+              while (running) {
+                kafkaConsumer
+                    .poll(100)
+                    .forEach(
+                        record -> {
+                          V value = record.value();
+                          consumer.accept(value);
+                        });
+              }
+              try {
                 if (kafkaConsumer != null) {
                   kafkaConsumer.close(Duration.ofMillis(100));
                 }
                 kafkaConsumer = null;
-          } catch (Throwable t) {
+              } catch (Throwable t) {
                 t.printStackTrace();
-          }
-        })
+              }
+            })
         .start();
   }
 

@@ -19,7 +19,7 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 @NoArgsConstructor
 public class ExclusiveGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-    ExclusiveGateway, ExclusiveGatewayInstance, ContinueFlowElementTriggerDTO> {
+        ExclusiveGateway, ExclusiveGatewayInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public ExclusiveGatewayInstanceProcessor(
