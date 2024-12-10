@@ -10,13 +10,12 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @Builder
-public class XmlDefinitionsDTO extends DefinitionsTrigger {
+public class XmlDefinitionsDTO extends DefinitionsTriggerDTO {
 
   private final String xml;
 
   @JsonCreator
-  public XmlDefinitionsDTO(
-      @JsonProperty("xml") @Nonnull String xml) {
+  public XmlDefinitionsDTO(@JsonProperty("xml") @Nonnull String xml) {
     this.xml = xml;
   }
 }

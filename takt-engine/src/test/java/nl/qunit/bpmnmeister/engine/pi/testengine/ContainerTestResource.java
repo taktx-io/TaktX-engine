@@ -15,6 +15,5 @@ public class ContainerTestResource implements QuarkusTestResourceLifecycleManage
 
   @Override
   public void stop() {
-
   }
 }

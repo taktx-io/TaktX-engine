@@ -1,11 +1,14 @@
 package nl.qunit.bpmnmeister.engine.pi.testengine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
 
-public class ProcessInstanceTriggerDeserializer extends ObjectMapperDeserializer<ProcessInstanceTrigger> {
+public class ProcessInstanceTriggerDeserializer
+    extends ObjectMapperDeserializer<ProcessInstanceTriggerDTO> {
 
   public ProcessInstanceTriggerDeserializer() {
-    super(ProcessInstanceTrigger.class);
+    super(ProcessInstanceTriggerDTO.class, new ObjectMapper(new CBORFactory()));
   }
 }

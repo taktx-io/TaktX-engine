@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
@@ -20,6 +21,8 @@ import lombok.ToString;
 @EqualsAndHashCode
 public class VariablesDTO {
 
+  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+
   private Map<String, JsonNode> variables;
 
   @JsonCreator
@@ -32,7 +35,7 @@ public class VariablesDTO {
   }
 
   public static VariablesDTO of(String key, Object value) {
-    return new VariablesDTO(Map.of(key, new ObjectMapper().valueToTree(value)));
+    return new VariablesDTO(Map.of(key, OBJECT_MAPPER.valueToTree(value)));
   }
 
   public static VariablesDTO of(Map<String, JsonNode> variables) {
@@ -41,18 +44,14 @@ public class VariablesDTO {
 
   public static VariablesDTO of(String key, Object value, String key2, Object value2) {
     return new VariablesDTO(
-        Map.of(
-            key,
-            new ObjectMapper().valueToTree(value),
-            key2,
-            new ObjectMapper().valueToTree(value2)));
+        Map.of(key, OBJECT_MAPPER.valueToTree(value), key2, OBJECT_MAPPER.valueToTree(value2)));
   }
 
   public static VariablesDTO of(
       String key, Object value, String key2, Object value2, String key3, Object value3) {
-    JsonNode v1 = new ObjectMapper().valueToTree(value);
-    JsonNode v2 = new ObjectMapper().valueToTree(value2);
-    JsonNode v3 = new ObjectMapper().valueToTree(value3);
+    JsonNode v1 = OBJECT_MAPPER.valueToTree(value);
+    JsonNode v2 = OBJECT_MAPPER.valueToTree(value2);
+    JsonNode v3 = OBJECT_MAPPER.valueToTree(value3);
     return new VariablesDTO(Map.of(key, v1, key2, v2, key3, v3));
   }
 

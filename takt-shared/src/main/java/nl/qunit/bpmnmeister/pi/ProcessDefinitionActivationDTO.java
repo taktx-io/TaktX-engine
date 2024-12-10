@@ -7,12 +7,12 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 
 @Getter
-public class ProcessDefinitionActivation {
+public class ProcessDefinitionActivationDTO {
   ProcessDefinitionDTO processDefinition;
   ProcessDefinitionStateEnum state;
 
   @JsonCreator
-  public ProcessDefinitionActivation(
+  public ProcessDefinitionActivationDTO(
       @JsonProperty("processDefinition") ProcessDefinitionDTO processDefinition,
       @JsonProperty("newState") ProcessDefinitionStateEnum state) {
     this.state = state;

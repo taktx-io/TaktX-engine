@@ -38,16 +38,22 @@ class EscalationsTest {
     }
   }
 
-  
   @Test
   void testInterruptingEscalationTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation("Escalation_02db004", "interrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_02db004",
+            "interrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
@@ -66,13 +72,20 @@ class EscalationsTest {
 
   @Test
   void testInterruptingEscalation_CatchAllTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation("Escalation_02db004", "non-matching", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_02db004",
+            "non-matching",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
@@ -89,7 +102,11 @@ class EscalationsTest {
 
   @Test
   void testInterruptingEscalation_NoCode_CatchAllTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
@@ -111,15 +128,25 @@ class EscalationsTest {
 
   @Test
   void testNonInterruptingEscalationTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_16vkrj5",
+            "noninterrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_16vkrj5",
+            "noninterrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
@@ -136,16 +163,22 @@ class EscalationsTest {
         .hasVariableWithValue("MappedOutputVariable2", "value_normal");
   }
 
-
   @Test
   void testInterruptingEscalationTriggeredInSubprocess()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithEscalation("Escalation_02db004", "interrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_02db004",
+            "interrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
@@ -161,17 +194,30 @@ class EscalationsTest {
 
   @Test
   void testNonInterruptingEscalationTriggeredInSubprocess()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_16vkrj5",
+            "noninterrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation("Escalation_16vkrj5", "noninterrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_16vkrj5",
+            "noninterrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation("Escalation_02db004", "interrupting", "escalation message",
+        .andRespondWithEscalation(
+            "Escalation_02db004",
+            "interrupting",
+            "escalation message",
             VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
@@ -187,7 +233,11 @@ class EscalationsTest {
 
   @Test
   void testNoEscalationTriggeredInSubprocess()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
@@ -207,6 +257,4 @@ class EscalationsTest {
         .hasNotPassedElementWithId("EscalationBoundaryEvent_Noninterrupting")
         .hasVariableWithValue("var1", "value1");
   }
-
-
 }

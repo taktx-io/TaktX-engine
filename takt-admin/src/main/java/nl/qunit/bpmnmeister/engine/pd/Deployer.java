@@ -32,7 +32,12 @@ public class Deployer {
       CreateTopicsResult topics =
           adminClient.createTopics(
               Arrays.stream(Topics.values())
-                  .map(topic -> new NewTopic(tenant + "." + namespace + "." + topic.getTopicName(), 5, (short) replicationFactor))
+                  .map(
+                      topic ->
+                          new NewTopic(
+                              tenant + "." + namespace + "." + topic.getTopicName(),
+                              5,
+                              (short) replicationFactor))
                   .toList());
       topics.all().get();
     } catch (InterruptedException e) {

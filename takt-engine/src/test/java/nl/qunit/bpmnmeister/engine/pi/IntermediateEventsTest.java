@@ -44,10 +44,13 @@ class IntermediateEventsTest {
     }
   }
 
-
   @Test
   void testIntermediateTimerCatch()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -67,13 +70,19 @@ class IntermediateEventsTest {
 
   @Test
   void testMessageIntermediateCatch()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription("IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
-        .andSendMessageWithCorrelationKey("IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
+        .waitForMessageSubscription(
+            "IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
+        .andSendMessageWithCorrelationKey(
+            "IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -84,7 +93,11 @@ class IntermediateEventsTest {
 
   @Test
   void testLinkIntermediateThrowCatch()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/link-intermediate-catch-throw.bpmn")
         .startProcessInstance(VariablesDTO.of("input", "value"))
@@ -99,5 +112,4 @@ class IntermediateEventsTest {
         .hasVariableWithValue("linkOutput_1", 123.0)
         .hasVariableWithValue("linkOutput_2", 456.0);
   }
-
 }

@@ -4,64 +4,68 @@ import jakarta.enterprise.inject.spi.CDI;
 
 public class InstanceProvider {
 
-    // Enum to identify the environment
-    public enum Environment {
-        QUARKUS,
-        SPRING,
-        PLAIN_JAVA
-    }
+  private static Environment environment;
 
-    private static Environment environment;
-
-    static {
-        // Detect environment at runtime
-        try {
-            Class.forName("io.quarkus.runtime.Quarkus");
-            environment = Environment.QUARKUS;
-        } catch (ClassNotFoundException e1) {
-            try {
-                Class.forName("org.springframework.context.ApplicationContext");
-                environment = Environment.SPRING;
-            } catch (ClassNotFoundException e2) {
-                environment = Environment.PLAIN_JAVA;
-            }
-        }
+  static {
+    // Detect environment at runtime
+    try {
+      Class.forName("io.quarkus.runtime.Quarkus");
+      environment = Environment.QUARKUS;
+    } catch (ClassNotFoundException e1) {
+      try {
+        Class.forName("org.springframework.context.ApplicationContext");
+        environment = Environment.SPRING;
+      } catch (ClassNotFoundException e2) {
+        environment = Environment.PLAIN_JAVA;
+      }
     }
+  }
 
-    public static <T> T getInstance(Class<T> clazz) {
-        switch (environment) {
-            case QUARKUS:
-                return getQuarkusBean(clazz);
-            case SPRING:
-                return getSpringBean(clazz);
-            case PLAIN_JAVA:
-            default:
-                return createNewInstance(clazz);
-        }
+  public static <T> T getInstance(Class<T> clazz) {
+    switch (environment) {
+      case QUARKUS:
+        return getQuarkusBean(clazz);
+      case SPRING:
+        return getSpringBean(clazz);
+      case PLAIN_JAVA:
+      default:
+        return createNewInstance(clazz);
     }
+  }
 
-    private static <T> T getQuarkusBean(Class<T> clazz) {
-        return CDI.current().select(clazz).get();
-    }
+  private static <T> T getQuarkusBean(Class<T> clazz) {
+    return CDI.current().select(clazz).get();
+  }
 
-    private static <T> T getSpringBean(Class<T> clazz) {
-        try {
-            // Spring context should be statically available in the app
-            Class<?> contextHolderClass = Class.forName("org.springframework.context.ApplicationContextHolder");
-            Object applicationContext = contextHolderClass.getMethod("getApplicationContext").invoke(null);
-            return clazz.cast(
-                applicationContext.getClass().getMethod("getBean", Class.class).invoke(applicationContext, clazz)
-            );
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to get Spring bean for " + clazz, e);
-        }
+  private static <T> T getSpringBean(Class<T> clazz) {
+    try {
+      // Spring context should be statically available in the app
+      Class<?> contextHolderClass =
+          Class.forName("org.springframework.context.ApplicationContextHolder");
+      Object applicationContext =
+          contextHolderClass.getMethod("getApplicationContext").invoke(null);
+      return clazz.cast(
+          applicationContext
+              .getClass()
+              .getMethod("getBean", Class.class)
+              .invoke(applicationContext, clazz));
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to get Spring bean for " + clazz, e);
     }
+  }
 
-    private static <T> T createNewInstance(Class<T> clazz) {
-        try {
-            return clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to create a new instance of " + clazz, e);
-        }
+  private static <T> T createNewInstance(Class<T> clazz) {
+    try {
+      return clazz.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to create a new instance of " + clazz, e);
     }
+  }
+
+  // Enum to identify the environment
+  public enum Environment {
+    QUARKUS,
+    SPRING,
+    PLAIN_JAVA
+  }
 }

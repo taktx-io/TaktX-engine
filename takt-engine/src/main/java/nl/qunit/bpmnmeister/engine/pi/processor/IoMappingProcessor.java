@@ -5,9 +5,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.IoVariableMapping;
 import nl.qunit.bpmnmeister.engine.pd.model.WithIoMapping;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @ApplicationScoped

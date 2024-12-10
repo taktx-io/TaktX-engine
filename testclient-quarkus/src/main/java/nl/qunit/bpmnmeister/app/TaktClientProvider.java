@@ -15,11 +15,12 @@ public class TaktClientProvider {
   @PostConstruct
   void init() {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
-    taktClient = taktClientBuilder
-        .withBootstrapServers("localhost:9092")
-        .withTenant("tenant")
-        .withNamespace("namespace")
-        .build();
+    taktClient =
+        taktClientBuilder
+            .withBootstrapServers("localhost:9092")
+            .withTenant("tenant")
+            .withNamespace("namespace")
+            .build();
     taktClient.start();
   }
 

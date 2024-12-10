@@ -9,17 +9,18 @@ import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.InstanceUpdate;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 
 @Getter
 public class InstanceResult {
-  private final Queue<InstanceUpdate> processInstanceUpdates = new ArrayDeque<>();
+
+  private final Queue<InstanceUpdateDTO> processInstanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
   private final Queue<UUID> newTerminateCommands = new ArrayDeque<>();
-  private final Queue<ContinueFlowElementTrigger> continuations = new ArrayDeque<>();
+  private final Queue<ContinueFlowElementTriggerDTO> continuations = new ArrayDeque<>();
   private final Queue<NewCorrelationSubscriptionMessageEventInfo>
       newCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
@@ -31,7 +32,7 @@ public class InstanceResult {
     return new InstanceResult();
   }
 
-  public void addProcessInstanceUpdate(InstanceUpdate processInstanceUpdate) {
+  public void addProcessInstanceUpdate(InstanceUpdateDTO processInstanceUpdate) {
     processInstanceUpdates.add(processInstanceUpdate);
   }
 
@@ -43,7 +44,7 @@ public class InstanceResult {
     newStartCommands.add(newStartCommand);
   }
 
-  public void addContinuation(ContinueFlowElementTrigger continueFlowElementTrigger) {
+  public void addContinuation(ContinueFlowElementTriggerDTO continueFlowElementTrigger) {
     continuations.add(continueFlowElementTrigger);
   }
 

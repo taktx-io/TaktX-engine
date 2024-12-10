@@ -16,7 +16,7 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 @Getter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class ProcessInstanceUpdate extends InstanceUpdate {
+public class ProcessInstanceUpdate extends InstanceUpdateDTO {
   private final UUID parentProcessInstanceKey;
   private final List<String> parentElementIdPath;
   private final List<UUID> parentElementInstancePath;

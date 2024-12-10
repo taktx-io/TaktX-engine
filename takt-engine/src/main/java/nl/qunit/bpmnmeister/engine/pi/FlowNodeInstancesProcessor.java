@@ -9,9 +9,9 @@ import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.TerminateTrigger;
+import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @ApplicationScoped
@@ -71,7 +71,7 @@ public class FlowNodeInstancesProcessor {
   public void processContinue(
       InstanceResult instanceResult,
       int subProcessLevel,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       FlowElements flowElements,
       ProcessInstance processInstance,
       Variables processInstanceVariables,
@@ -107,7 +107,7 @@ public class FlowNodeInstancesProcessor {
 
   public void processTerminate(
       InstanceResult instanceResult,
-      TerminateTrigger trigger,
+      TerminateTriggerDTO trigger,
       ProcessInstance processInstance,
       Variables processInstanceVariables,
       FlowElements flowElements) {
@@ -187,7 +187,7 @@ public class FlowNodeInstancesProcessor {
       Variables processInstanceVariables) {
     if (!processInstance.getParentProcessInstanceKey().equals(Constants.NONE_UUID)) {
       instanceResult.addContinuation(
-          new ContinueFlowElementTrigger(
+          new ContinueFlowElementTriggerDTO(
               processInstance.getParentProcessInstanceKey(),
               processInstance.getParentElementIdPath(),
               processInstance.getParentElementInstancePath(),

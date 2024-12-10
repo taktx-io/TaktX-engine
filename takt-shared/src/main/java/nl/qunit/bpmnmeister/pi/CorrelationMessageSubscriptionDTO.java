@@ -9,13 +9,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class CorrelationMessageSubscription extends MessageEvent {
+public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
   private UUID processInstanceKey;
   private String correlationKey;
@@ -23,7 +23,7 @@ public class CorrelationMessageSubscription extends MessageEvent {
   private List<UUID> elementInstanceIdPath;
 
   @JsonCreator
-  public CorrelationMessageSubscription(
+  public CorrelationMessageSubscriptionDTO(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("correlationKey") String correlationKey,
       @Nonnull @JsonProperty("elementIdPath") List<String> elementIdPath,

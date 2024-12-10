@@ -17,11 +17,11 @@ import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.WithFlowNodeInstances;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.TerminateTrigger;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstancesDTO;
@@ -36,7 +36,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
 public class ProcessInstanceProcessor
-    implements Processor<UUID, ProcessInstanceTrigger, Object, Object> {
+    implements Processor<UUID, ProcessInstanceTriggerDTO, Object, Object> {
 
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
@@ -100,19 +100,16 @@ public class ProcessInstanceProcessor
   }
 
   @Override
-  public void process(Record<UUID, ProcessInstanceTrigger> triggerRecord) {
-    ProcessInstanceTrigger trigger = triggerRecord.value();
+  public void process(Record<UUID, ProcessInstanceTriggerDTO> triggerRecord) {
+    ProcessInstanceTriggerDTO trigger = triggerRecord.value();
 
     try {
       switch (trigger) {
-        case StartNewProcessInstanceTrigger
-        startNewProcessInstanceTrigger -> handleStartNewProcessInstance(
-            startNewProcessInstanceTrigger);
-        case ContinueFlowElementTrigger continueFlowElementTrigger2 -> handleContinue(
-            continueFlowElementTrigger2);
-        case TerminateTrigger terminateTrigger -> handleTerminate(terminateTrigger);
-        default -> throw new IllegalArgumentException(
-            "Unknown trigger type: " + trigger.getClass());
+        case StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger ->
+            handleStartNewProcessInstance(startNewProcessInstanceTrigger);
+        case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 -> handleContinue(continueFlowElementTrigger2);
+        case TerminateTriggerDTO terminateTrigger -> handleTerminate(terminateTrigger);
+        default -> throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (ProcessInstanceException e) {
       handleExceptional(e, trigger);
@@ -121,7 +118,7 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void handleExceptional(ProcessInstanceException e, ProcessInstanceTrigger trigger) {
+  private void handleExceptional(ProcessInstanceException e, ProcessInstanceTriggerDTO trigger) {
     FLowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
     flowNodeInstance.terminate();
     ProcessInstance processInstance = e.getProcessInstance();
@@ -130,11 +127,11 @@ public class ProcessInstanceProcessor
         processInstance.getProcessInstanceKey(),
         flowNodeInstance.getFlowNode().getId(),
         flowNodeInstance.getElementInstanceId());
-    handleTerminate(new TerminateTrigger(processInstance.getProcessInstanceKey(), List.of()));
+    handleTerminate(new TerminateTriggerDTO(processInstance.getProcessInstanceKey(), List.of()));
   }
 
   public void handleStartNewProcessInstance(
-      StartNewProcessInstanceTrigger startNewProcessInstanceTrigger) {
+      StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger) {
     ProcessDefinitionDTO definitionDTO = startNewProcessInstanceTrigger.getProcessDefinition();
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(definitionDTO);
     processInstanceDefinitionStore.putIfAbsent(processDefinitionKey, definitionDTO);
@@ -189,7 +186,7 @@ public class ProcessInstanceProcessor
     return new ProcessInstanceUpdate(processInstanceDTO, variablesDTO);
   }
 
-  public void handleContinue(ContinueFlowElementTrigger trigger) {
+  public void handleContinue(ContinueFlowElementTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceKey());
@@ -242,7 +239,7 @@ public class ProcessInstanceProcessor
     return variablesDTO;
   }
 
-  private void handleTerminate(TerminateTrigger trigger) {
+  private void handleTerminate(TerminateTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceKey());

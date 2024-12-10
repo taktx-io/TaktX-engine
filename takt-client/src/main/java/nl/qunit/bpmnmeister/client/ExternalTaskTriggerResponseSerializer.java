@@ -1,11 +1,11 @@
 package nl.qunit.bpmnmeister.client;
 
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTriggerDTO;
 
 public class ExternalTaskTriggerResponseSerializer
-    extends JsonSerializer<ExternalTaskResponseTrigger> {
+    extends JsonSerializer<ExternalTaskResponseTriggerDTO> {
 
   public ExternalTaskTriggerResponseSerializer() {
-    super(ExternalTaskResponseTrigger.class);
+    super(ExternalTaskResponseTriggerDTO.class);
   }
 }

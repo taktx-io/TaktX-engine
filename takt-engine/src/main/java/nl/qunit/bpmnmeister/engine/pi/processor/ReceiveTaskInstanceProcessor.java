@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pd.model.ReceiveTask;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
@@ -13,15 +14,14 @@ import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEve
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ReceiveTaskInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor
     extends ActivityInstanceProcessor<
-        ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTrigger> {
+    ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTriggerDTO> {
   private final FeelExpressionHandler feelExpressionHandler;
 
   @Inject
@@ -65,7 +65,7 @@ public class ReceiveTaskInstanceProcessor
       FlowElements flowElements,
       ProcessInstance processInstance,
       ReceiveTaskInstance receiveTaskInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables processInstanceVariables) {
     receiveTaskInstance.setState(ActtivityStateEnum.FINISHED);
     terminatingSubscriptionInstanceResult(instanceResult, receiveTaskInstance);

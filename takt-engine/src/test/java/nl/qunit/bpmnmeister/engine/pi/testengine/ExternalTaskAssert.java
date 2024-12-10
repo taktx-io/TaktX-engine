@@ -2,15 +2,15 @@ package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
 
 public class ExternalTaskAssert {
 
-  private final ExternalTaskTrigger activeExternalTaskTrigger;
+  private final ExternalTaskTriggerDTO activeExternalTaskTrigger;
   private final BpmnTestEngine bpmnTestEngine;
 
-  public ExternalTaskAssert(ExternalTaskTrigger activeExternalTaskTrigger,
-      BpmnTestEngine bpmnTestEngine) {
+  public ExternalTaskAssert(
+      ExternalTaskTriggerDTO activeExternalTaskTrigger, BpmnTestEngine bpmnTestEngine) {
 
     this.activeExternalTaskTrigger = activeExternalTaskTrigger;
     this.bpmnTestEngine = bpmnTestEngine;
@@ -21,7 +21,8 @@ public class ExternalTaskAssert {
   }
 
   public ExternalTaskAssert hasVariableWithValue(String inputVariable, String expected) {
-    assertThat(activeExternalTaskTrigger.getVariables().get(inputVariable).asText()).isEqualTo(expected);
+    assertThat(activeExternalTaskTrigger.getVariables().get(inputVariable).asText())
+        .isEqualTo(expected);
     return this;
   }
 

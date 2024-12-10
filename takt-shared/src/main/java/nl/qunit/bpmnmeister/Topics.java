@@ -18,5 +18,4 @@ public enum Topics {
   Topics(String topicName) {
     this.topicName = topicName;
   }
-
 }

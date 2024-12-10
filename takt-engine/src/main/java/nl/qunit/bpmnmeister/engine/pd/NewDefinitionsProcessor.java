@@ -6,24 +6,25 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
 import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
-import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivationDTO;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.StartCommandDTO;
+import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTriggerDTO;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
-public class NewDefinitionsProcessor implements Processor<String, DefinitionsTrigger, Object, Object> {
+public class NewDefinitionsProcessor
+    implements Processor<String, DefinitionsTriggerDTO, Object, Object> {
 
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private ProcessorContext<Object, Object> context;
@@ -38,33 +39,36 @@ public class NewDefinitionsProcessor implements Processor<String, DefinitionsTri
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
-    this.hashToXmlStore = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()));
-    this.hashVersionPairStore = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
+    this.hashToXmlStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()));
+    this.hashVersionPairStore =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
     this.processDefinitionStore =
         context.getStateStore(
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
   }
 
-
   @Override
-  public void process(Record<String, DefinitionsTrigger> definitionsRecord) {
+  public void process(Record<String, DefinitionsTriggerDTO> definitionsRecord) {
     if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
-      processDefinitionsRecord(definitionsRecord.key(), xmlDefinitions, definitionsRecord.timestamp());
-    } else if (definitionsRecord.value() instanceof StartCommand startCommand) {
+      processDefinitionsRecord(
+          definitionsRecord.key(), xmlDefinitions, definitionsRecord.timestamp());
+    } else if (definitionsRecord.value() instanceof StartCommandDTO startCommand) {
       processStartCommandRecord(definitionsRecord, startCommand);
     } else {
       throw new IllegalStateException("Unsupported trigger: " + definitionsRecord.value());
     }
   }
 
-  public void processDefinitionsRecord(String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
+  public void processDefinitionsRecord(
+      String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
 
     ParsedDefinitionsDTO parsedDefinition = BpmnParser.parse(xmlDefinitions.getXml());
 
-    Map<String, Integer> hashVersionPairs = hashVersionPairStore.get(
-        parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
+    Map<String, Integer> hashVersionPairs =
+        hashVersionPairStore.get(parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
     if (hashVersionPairs == null) {
       hashVersionPairs = new HashMap<>();
     }
@@ -82,45 +86,46 @@ public class NewDefinitionsProcessor implements Processor<String, DefinitionsTri
       hashVersionPairStore.put(processDefinitionId, hashVersionPairs);
       hashToXmlStore.put(hash, xmlDefinitions.getXml());
 
-      processDefinitionDTO = new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
+      processDefinitionDTO =
+          new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
       processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
       processDefinitionStore.put(processDefinitionKey, processDefinitionDTO);
 
     } else {
       // Existing version, do not create a new ProcessDefinitionDTO but get the latest version
       version = hashVersionPairs.size();
-      processDefinitionDTO = processDefinitionStore.get(new ProcessDefinitionKey(processDefinitionId, version));
+      processDefinitionDTO =
+          processDefinitionStore.get(new ProcessDefinitionKey(processDefinitionId, version));
       processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
     }
 
     if (version > 1) {
       // Not the first version, deactivate the previous active version
-      ProcessDefinitionDTO previousActiveVersion = processDefinitionStore.get(
-          new ProcessDefinitionKey(processDefinitionId, version - 1));
-      ProcessDefinitionDTO deactivatedPreviousActiveVersion = new ProcessDefinitionDTO(
-          previousActiveVersion.getDefinitions(), previousActiveVersion.getVersion(),
-          ProcessDefinitionStateEnum.INACTIVE);
-      ProcessDefinitionKey previousProcessDefinitionKey = ProcessDefinitionKey.of(deactivatedPreviousActiveVersion);
+      ProcessDefinitionDTO previousActiveVersion =
+          processDefinitionStore.get(new ProcessDefinitionKey(processDefinitionId, version - 1));
+      ProcessDefinitionDTO deactivatedPreviousActiveVersion =
+          new ProcessDefinitionDTO(
+              previousActiveVersion.getDefinitions(),
+              previousActiveVersion.getVersion(),
+              ProcessDefinitionStateEnum.INACTIVE);
+      ProcessDefinitionKey previousProcessDefinitionKey =
+          ProcessDefinitionKey.of(deactivatedPreviousActiveVersion);
       processDefinitionStore.put(previousProcessDefinitionKey, deactivatedPreviousActiveVersion);
-      ProcessDefinitionActivation deactivationMessage =
-          new ProcessDefinitionActivation(previousActiveVersion, ProcessDefinitionStateEnum.INACTIVE);
+      ProcessDefinitionActivationDTO deactivationMessage =
+          new ProcessDefinitionActivationDTO(
+              previousActiveVersion, ProcessDefinitionStateEnum.INACTIVE);
       context.forward(new Record<>(previousProcessDefinitionKey, deactivationMessage, timestamp));
     }
 
-    ProcessDefinitionActivation activationMessage =
-        new ProcessDefinitionActivation(processDefinitionDTO, ProcessDefinitionStateEnum.ACTIVE);
+    ProcessDefinitionActivationDTO activationMessage =
+        new ProcessDefinitionActivationDTO(processDefinitionDTO, ProcessDefinitionStateEnum.ACTIVE);
     context.forward(new Record<>(processDefinitionKey, activationMessage, timestamp));
 
-    context.forward(
-        new Record<>(
-            processDefinitionKey,
-            processDefinitionDTO,
-            timestamp));
+    context.forward(new Record<>(processDefinitionKey, processDefinitionDTO, timestamp));
   }
 
-
   private void processStartCommandRecord(
-      Record<String, DefinitionsTrigger> definitionsRecord, StartCommand startCommand) {
+      Record<String, DefinitionsTriggerDTO> definitionsRecord, StartCommandDTO startCommand) {
     Map<String, Integer> stringIntegerMap = hashVersionPairStore.get(definitionsRecord.key());
     // Get highest value from stringIntegerMap
     Integer latestVersion = stringIntegerMap.size();
@@ -130,7 +135,8 @@ public class NewDefinitionsProcessor implements Processor<String, DefinitionsTri
     }
 
     ProcessDefinitionDTO processDefinition =
-        processDefinitionStore.get(new ProcessDefinitionKey(definitionsRecord.key(), latestVersion));
+        processDefinitionStore.get(
+            new ProcessDefinitionKey(definitionsRecord.key(), latestVersion));
     String startEventId =
         processDefinition
             .getDefinitions()
@@ -142,8 +148,8 @@ public class NewDefinitionsProcessor implements Processor<String, DefinitionsTri
         startCommand.getProcessInstanceKey().equals(Constants.NONE_UUID)
             ? UUID.randomUUID()
             : startCommand.getProcessInstanceKey();
-    ProcessInstanceTrigger processInstanceTrigger =
-        new StartNewProcessInstanceTrigger(
+    ProcessInstanceTriggerDTO processInstanceTrigger =
+        new StartNewProcessInstanceTriggerDTO(
             processInstanceKey,
             startCommand.getParentProcessInstanceKey(),
             startCommand.getParentElementIdPath(),
@@ -154,5 +160,4 @@ public class NewDefinitionsProcessor implements Processor<String, DefinitionsTri
     context.forward(
         new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
   }
-
 }

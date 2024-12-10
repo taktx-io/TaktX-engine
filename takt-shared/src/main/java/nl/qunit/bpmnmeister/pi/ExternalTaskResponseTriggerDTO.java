@@ -12,17 +12,17 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @ToString(callSuper = true)
-public class ExternalTaskResponseTrigger extends ContinueFlowElementTrigger {
+public class ExternalTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
 
-  private final ExternalTaskResponseResult externalTaskResponseResult;
+  private final ExternalTaskResponseResultDTO externalTaskResponseResult;
 
   @JsonCreator
-  public ExternalTaskResponseTrigger(
+  public ExternalTaskResponseTriggerDTO(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("elementIdPath") @Nonnull List<String> elementIdPath,
       @JsonProperty("elementInstanceIdPath") @Nonnull List<UUID> elementInstanceIdPath,
       @JsonProperty("externalTaskResponseResult") @Nonnull
-          ExternalTaskResponseResult externalTaskResponseResult,
+      ExternalTaskResponseResultDTO externalTaskResponseResult,
       @JsonProperty("variables") @Nonnull VariablesDTO variables) {
     super(processInstanceKey, elementIdPath, elementInstanceIdPath, Constants.NONE, variables);
     this.externalTaskResponseResult = externalTaskResponseResult;

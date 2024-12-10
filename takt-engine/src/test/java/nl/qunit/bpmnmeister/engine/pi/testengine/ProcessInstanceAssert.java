@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -26,28 +27,38 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert isCompleted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceKey);
     assertThat(processInstance).isNotNull();
-    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ProcessInstanceState.COMPLETED);
+    assertThat(processInstance.getFlowNodeInstances().getState())
+        .isEqualTo(ProcessInstanceState.COMPLETED);
     return this;
   }
 
   public ProcessInstanceAssert hasPassedElementWithId(String elementId, int... count) {
-    assertThat(bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, count)).isNotEmpty();
+    assertThat(
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, count))
+        .isNotEmpty();
     return this;
   }
 
-  public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, Class<?> clazz, int count) {
-    List<FlowNodeInstanceDTO> instances = bpmnTestEngine.getFlowNodeInstancesWithElementId(
-        processInstanceKey, elementId, 1);
-    assertThat(instances).as("element with " + elementId + " not found in process instance").isNotEmpty();
+  public ProcessInstanceAssert hasInstantiatedElementWithId(
+      String elementId, Class<?> clazz, int count) {
+    List<FlowNodeInstanceDTO> instances =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 1);
+    assertThat(instances)
+        .as("element with " + elementId + " not found in process instance")
+        .isNotEmpty();
     assertThat(instances).as("element " + elementId + " has not passed").hasSize(count);
-    assertThat(instances.stream()).as("element " + elementId + " not of class " + clazz).allMatch(i -> i.getClass().equals(clazz));
+    assertThat(instances.stream())
+        .as("element " + elementId + " not of class " + clazz)
+        .allMatch(i -> i.getClass().equals(clazz));
     return this;
   }
 
   public ProcessInstanceAssert hasInstantiatedElementWithId(String elementId, int count) {
-    List<FlowNodeInstanceDTO> instances = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
-        elementId, 1);
-    assertThat(instances).as("element with " + elementId + " not found in process instance").isNotEmpty();
+    List<FlowNodeInstanceDTO> instances =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 1);
+    assertThat(instances)
+        .as("element with " + elementId + " not found in process instance")
+        .isNotEmpty();
     assertThat(instances).as("element " + elementId + " has not passed").hasSize(count);
     return this;
   }
@@ -57,28 +68,40 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasTerminatedElements(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
-        elementId, 0);
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    bpmnElementState.forEach(state ->
-        assertThat(state.isTerminated()).as("element " + elementId + " was not terminated").isTrue());
+    List<FlowNodeInstanceDTO> bpmnElementState =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 0);
+    assertThat(bpmnElementState)
+        .as("element with " + elementId + " not found in process instance")
+        .isNotEmpty();
+    bpmnElementState.forEach(
+        state ->
+            assertThat(state.isTerminated())
+                .as("element " + elementId + " was not terminated")
+                .isTrue());
     return this;
   }
 
   public ProcessInstanceAssert hasTerminatedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
-        elementId, 0);
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.getFirst().isTerminated()).as("element " + elementId + " was not terminated").isTrue();
+    List<FlowNodeInstanceDTO> bpmnElementState =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 0);
+    assertThat(bpmnElementState)
+        .as("element with " + elementId + " not found in process instance")
+        .isNotEmpty();
+    assertThat(bpmnElementState.getFirst().isTerminated())
+        .as("element " + elementId + " was not terminated")
+        .isTrue();
     return this;
   }
 
-
   public ProcessInstanceAssert hasFailedElement(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
-        elementId, 1);
-    assertThat(bpmnElementState).as("element with " + elementId + " not found in process instance").isNotEmpty();
-    assertThat(bpmnElementState.getFirst().isFailed()).as("element " + elementId + " was not terminated").isTrue();
+    List<FlowNodeInstanceDTO> bpmnElementState =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 1);
+    assertThat(bpmnElementState)
+        .as("element with " + elementId + " not found in process instance")
+        .isNotEmpty();
+    assertThat(bpmnElementState.getFirst().isFailed())
+        .as("element " + elementId + " was not terminated")
+        .isTrue();
     return this;
   }
 
@@ -93,7 +116,7 @@ public class ProcessInstanceAssert {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceKey);
     JsonNode jsonNode = variables.get(var1);
     assertThat(jsonNode).isNotNull();
-    JsonNode expectedNode = new ObjectMapper().valueToTree(value1);
+    JsonNode expectedNode = new ObjectMapper(new CBORFactory()).valueToTree(value1);
     assertThat(jsonNode).isEqualTo(expectedNode);
     return this;
   }
@@ -103,10 +126,14 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasNotPassedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey,
-        elementId, 0);
+    List<FlowNodeInstanceDTO> bpmnElementState =
+        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId, 0);
 
-    assertThat(bpmnElementState.isEmpty() || bpmnElementState.stream().allMatch(state -> state.getPassedCnt() == 0)).as("element with " + elementId + " not found in process instance").isTrue();
+    assertThat(
+        bpmnElementState.isEmpty()
+            || bpmnElementState.stream().allMatch(state -> state.getPassedCnt() == 0))
+        .as("element with " + elementId + " not found in process instance")
+        .isTrue();
     return this;
   }
 
@@ -114,7 +141,7 @@ public class ProcessInstanceAssert {
       throws JsonProcessingException {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceKey);
     JsonNode jsonNode = variables.get(var1);
-    consumer.accept(new ObjectMapper().treeToValue(jsonNode, Object.class));
+    consumer.accept(new ObjectMapper(new CBORFactory()).treeToValue(jsonNode, Object.class));
     return this;
   }
 
@@ -126,19 +153,22 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasFailed() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceKey);
-    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ProcessInstanceState.FAILED);
+    assertThat(processInstance.getFlowNodeInstances().getState())
+        .isEqualTo(ProcessInstanceState.FAILED);
     return this;
   }
 
   public ProcessInstanceAssert isTerminated() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceKey);
-    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ProcessInstanceState.TERMINATED);
+    assertThat(processInstance.getFlowNodeInstances().getState())
+        .isEqualTo(ProcessInstanceState.TERMINATED);
     return this;
   }
 
   public ProcessInstanceAssert isStillActive() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceKey);
-    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ProcessInstanceState.ACTIVE);
+    assertThat(processInstance.getFlowNodeInstances().getState())
+        .isEqualTo(ProcessInstanceState.ACTIVE);
     return this;
   }
 }

@@ -13,10 +13,11 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
+public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
     implements SchedulableMessage<UUID> {
-  public static final ContinueFlowElementTrigger NONE =
-      new ContinueFlowElementTrigger(
+
+  public static final ContinueFlowElementTriggerDTO NONE =
+      new ContinueFlowElementTriggerDTO(
           Constants.NONE_UUID, List.of(), List.of(), Constants.NONE, VariablesDTO.empty());
 
   private final List<String> elementIdPath;
@@ -24,7 +25,7 @@ public class ContinueFlowElementTrigger extends ProcessInstanceTrigger
   private final List<UUID> elementInstanceIdPath;
 
   @JsonCreator
-  public ContinueFlowElementTrigger(
+  public ContinueFlowElementTriggerDTO(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("parentElementIds") @Nonnull List<String> elementIdPath,
       @JsonProperty("elementInstanceId") @Nonnull List<UUID> elementInstanceIdPath,

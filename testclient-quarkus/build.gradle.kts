@@ -1,7 +1,7 @@
 plugins {
     id("java")
     id("io.quarkus") version "3.15.1"
-    id("com.google.cloud.tools.jib") version "3.4.4"
+    id("com.diffplug.spotless")
 }
 
 val quarkusPlatformGroupId: String by project
@@ -25,4 +25,10 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
 }

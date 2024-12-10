@@ -7,15 +7,15 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class CancelDefinitionMessageSubscription extends MessageEvent {
+public class CancelDefinitionMessageSubscriptionDTO extends MessageEventDTO {
   @JsonCreator
-  public CancelDefinitionMessageSubscription(
+  public CancelDefinitionMessageSubscriptionDTO(
       @Nonnull @JsonProperty("messageName") String messageName) {
     super(messageName);
   }

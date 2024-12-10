@@ -44,47 +44,65 @@ class ProcessInstanceProcessorTest {
     }
   }
 
-
   @Test
   void testDeploy()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
-    ProcessDefinitionDTO processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single.bpmn")
-        .waitForProcessDeployment()
-        .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
-    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
+    ProcessDefinitionDTO processDefinition =
+        bpmnTestEngine
+            .deployProcessDefinition("/bpmn/task-single.bpmn")
+            .waitForProcessDeployment()
+            .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId())
+        .isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values())
+        .hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(1);
 
-    processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2.bpmn")
-        .waitForProcessDeployment()
-        .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
-    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    processDefinition =
+        bpmnTestEngine
+            .deployProcessDefinition("/bpmn/task-single-2.bpmn")
+            .waitForProcessDeployment()
+            .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId())
+        .isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values())
+        .hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
-    processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single-2.bpmn")
-        .waitForProcessDeployment()
-        .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
-    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    processDefinition =
+        bpmnTestEngine
+            .deployProcessDefinition("/bpmn/task-single-2.bpmn")
+            .waitForProcessDeployment()
+            .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId())
+        .isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values())
+        .hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(2);
 
-    processDefinition = bpmnTestEngine
-        .deployProcessDefinition("/bpmn/task-single.bpmn")
-        .waitForProcessDeployment()
-        .deployedProcessDefinition();
-    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId()).isEqualTo("task-single");
-    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values()).hasSize(5);
+    processDefinition =
+        bpmnTestEngine
+            .deployProcessDefinition("/bpmn/task-single.bpmn")
+            .waitForProcessDeployment()
+            .deployedProcessDefinition();
+    assertThat(processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId())
+        .isEqualTo("task-single");
+    assertThat(processDefinition.getDefinitions().getRootProcess().getFlowElements().values())
+        .hasSize(5);
     assertThat(processDefinition.getVersion()).isEqualTo(2);
-
   }
 
   @Test
   void testProcessTaskSingle()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn", Duration.ofMinutes(1))
         .startProcessInstance(VariablesDTO.of("key1", "value1"))
@@ -98,7 +116,11 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testSubProcessTaskSingle()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subprocess-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -111,7 +133,11 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testSubProcessServiceTaskSingle()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -126,7 +152,11 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testSubProcessTaskNested()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -141,7 +171,11 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testProcessCallActivitySingle()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
@@ -160,13 +194,16 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasInstantiatedElementWithId("callactivity-id")
         .hasInstantiatedElementWithId("EndEvent_1");
-
   }
 
-
-  @Test @Disabled
+  @Test
+  @Disabled
   void testScheduledStart_R5()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/schedule_start_r5.bpmn")
@@ -180,14 +217,18 @@ class ProcessInstanceProcessorTest {
         .hasInstantiatedElementWithId("Task", 1);
   }
 
-  @Test @Disabled
+  @Test
+  @Disabled
   void testTerminateSingleElementInstances()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
-        .startProcessInstance(
-            VariablesDTO.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsActive("SubTask_1")
         .terminateProcessInstance()
         .waitUntilCompleted()
@@ -198,13 +239,16 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testTerminateChildSingleCallActivityInstances()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity_servicetask.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-callactivity.bpmn")
-        .startProcessInstance(
-            VariablesDTO.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilChildProcessIsStarted()
         .parentProcess()
         .terminateProcessInstance()
@@ -219,14 +263,18 @@ class ProcessInstanceProcessorTest {
         .isTerminated();
   }
 
-  @Test @Disabled
+  @Test
+  @Disabled
   void testTerminateSpecificSingleElementInstances()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
-        .startProcessInstance(
-            VariablesDTO.empty())
+        .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsWaiting("SubTask_1")
         .terminateElemeent()
         .waitUntilCompleted()
@@ -235,9 +283,13 @@ class ProcessInstanceProcessorTest {
         .isTerminated();
   }
 
-  @Test 
+  @Test
   void testMessageStartEvent()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/message_start.bpmn")
         .waitForProcessDeployment()
@@ -272,14 +324,18 @@ class ProcessInstanceProcessorTest {
 
   @Test
   void testReceiveTask()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/receive-task.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("key1"))
-        .andSendMessageWithCorrelationKey("ReceiveTaskMessage", "key1", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey(
+            "ReceiveTaskMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted();
   }
-
 }

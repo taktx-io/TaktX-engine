@@ -13,15 +13,12 @@ import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import nl.qunit.bpmnmeister.engine.pi.testengine.BpmnTestEngine;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 @QuarkusTest
 class ExternalTaskTest {
-
-  private static final Logger LOG = Logger.getLogger(ExternalTaskTest.class);
 
   @Inject
   Clock clock;
@@ -46,7 +43,11 @@ class ExternalTaskTest {
 
   @Test
   void testProcessServiceTaskSingle()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
@@ -61,10 +62,13 @@ class ExternalTaskTest {
         .hasInstantiatedElementWithId("EndEvent_1");
   }
 
-
   @Test
   void testProcessServiceTaskSingleFx()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn")
@@ -81,7 +85,11 @@ class ExternalTaskTest {
 
   @Test
   void testProcessServiceTaskFailed5Retries()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
@@ -89,15 +97,15 @@ class ExternalTaskTest {
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed2", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed2", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed3", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed3", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed4", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed4", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed5", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed5", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed5", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed5", "true"))
         .waitUntilElementHasTerminated("ServiceTask_1")
         .waitUntilCompleted()
         .assertThatProcess()
@@ -112,40 +120,49 @@ class ExternalTaskTest {
 
   @Test
   void testProcessServiceTaskFailed3RetriesButThenSucceeds()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed1", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed2", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed2", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed3", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed3", "true"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
-        .assertThatProcess().isCompleted();
+        .assertThatProcess()
+        .isCompleted();
   }
 
   @Test
   void testProcessServiceTaskRetryBackoff()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed1", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed2", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed2", "true"))
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondWithFailure(true, "fail","123","failure", VariablesDTO.of("failed3", "true"))
+        .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed3", "true"))
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -161,7 +178,11 @@ class ExternalTaskTest {
 
   @Test
   void testSendTask_Single()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/sendtask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -174,5 +195,4 @@ class ExternalTaskTest {
         .hasInstantiatedElementWithId("send-task-id")
         .hasInstantiatedElementWithId("EndEvent_2");
   }
-
 }

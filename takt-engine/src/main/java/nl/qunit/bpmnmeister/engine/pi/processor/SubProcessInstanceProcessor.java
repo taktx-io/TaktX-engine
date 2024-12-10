@@ -16,7 +16,7 @@ import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.SubProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
@@ -24,7 +24,8 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 @ApplicationScoped
 @NoArgsConstructor
 public class SubProcessInstanceProcessor
-    extends ActivityInstanceProcessor<SubProcess, SubProcessInstance, ContinueFlowElementTrigger> {
+    extends ActivityInstanceProcessor<
+    SubProcess, SubProcessInstance, ContinueFlowElementTriggerDTO> {
 
   private FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private FlowNodeInstancesProcessor flowNodeInstancesProcessor;
@@ -82,7 +83,7 @@ public class SubProcessInstanceProcessor
       FlowElements flowElements,
       ProcessInstance processInstance,
       SubProcessInstance subProcessInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables processInstanceVariables) {
     subProcessLevel++;
 

@@ -16,14 +16,14 @@ import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.InstanceUpdate;
-import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.TerminateTrigger;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.StartCommandDTO;
+import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
@@ -57,9 +57,9 @@ public class Forwarder {
   private void forwardInstanceUpdates(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
 
-    Queue<InstanceUpdate> processInstanceUpdates = instanceResult.getProcessInstanceUpdates();
+    Queue<InstanceUpdateDTO> processInstanceUpdates = instanceResult.getProcessInstanceUpdates();
     while (!processInstanceUpdates.isEmpty()) {
-      InstanceUpdate processInstanceUpdate = processInstanceUpdates.poll();
+      InstanceUpdateDTO processInstanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
               processInstanceUpdate.getProcessInstanceKey(),
@@ -87,8 +87,8 @@ public class Forwarder {
     while (!scheduledContinuationInfos.isEmpty()) {
       ScheduledContinuationInfo info = scheduledContinuationInfos.poll();
       CatchEventInstance<?> catchEventInstance = info.catchEventInstance();
-      ContinueFlowElementTrigger continueFlowElementTrigger =
-          new ContinueFlowElementTrigger(
+      ContinueFlowElementTriggerDTO continueFlowElementTrigger =
+          new ContinueFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getElementIdPath(catchEventInstance.getFlowNode()),
               pathExtractor.getInstancePath(catchEventInstance),
@@ -119,14 +119,15 @@ public class Forwarder {
       NewCorrelationSubscriptionMessageEventInfo messageEvent =
           newCorrelationSubscriptionMessageEventInfos.poll();
       ReceivingMessageInstance instance = messageEvent.instance();
-      CorrelationMessageSubscription correlationMessageSubscriptionTrigger =
-          new CorrelationMessageSubscription(
+      CorrelationMessageSubscriptionDTO correlationMessageSubscriptionTrigger =
+          new CorrelationMessageSubscriptionDTO(
               processInstance.getProcessInstanceKey(),
               messageEvent.correlationKey(),
               pathExtractor.getElementIdPath(instance.getFlowNode()),
               pathExtractor.getInstancePath(instance),
               messageEvent.messageName());
-      MessageEventKey messageEventKey = correlationMessageSubscriptionTrigger.toMessageEventKey();
+      MessageEventKeyDTO messageEventKey =
+          correlationMessageSubscriptionTrigger.toMessageEventKey();
       instance.addMessageSubscriptionWithCorrelationKey(
           messageEventKey, messageEvent.correlationKey());
       context.forward(
@@ -142,8 +143,8 @@ public class Forwarder {
     while (!terminateCorrelationSubscriptionMessageEventInfos.isEmpty()) {
       TerminateCorrelationSubscriptionMessageEventInfo messageEvent =
           terminateCorrelationSubscriptionMessageEventInfos.poll();
-      CancelCorrelationMessageSubscription terminateSubscriptionTrigger =
-          new CancelCorrelationMessageSubscription(
+      CancelCorrelationMessageSubscriptionDTO terminateSubscriptionTrigger =
+          new CancelCorrelationMessageSubscriptionDTO(
               messageEvent.messageName(), messageEvent.correlationKey());
       context.forward(
           new Record<>(
@@ -158,7 +159,7 @@ public class Forwarder {
     Queue<UUID> newTerminateCommands = instanceResult.getNewTerminateCommands();
     while (!newTerminateCommands.isEmpty()) {
       UUID processInstanceKey = newTerminateCommands.poll();
-      TerminateTrigger terminateTrigger = new TerminateTrigger(processInstanceKey, List.of());
+      TerminateTriggerDTO terminateTrigger = new TerminateTriggerDTO(processInstanceKey, List.of());
       context.forward(
           new Record<>(processInstanceKey, terminateTrigger, Instant.now().toEpochMilli()));
     }
@@ -166,9 +167,9 @@ public class Forwarder {
 
   private void forwardContinuations(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
-    Queue<ContinueFlowElementTrigger> continuations = instanceResult.getContinuations();
+    Queue<ContinueFlowElementTriggerDTO> continuations = instanceResult.getContinuations();
     while (!continuations.isEmpty()) {
-      ContinueFlowElementTrigger continuation = continuations.poll();
+      ContinueFlowElementTriggerDTO continuation = continuations.poll();
       context.forward(
           new Record<>(
               continuation.getProcessInstanceKey(), continuation, Instant.now().toEpochMilli()));
@@ -182,8 +183,8 @@ public class Forwarder {
     Queue<NewStartCommand> newStartCommands = instanceResult.getNewStartCommands();
     while (!newStartCommands.isEmpty()) {
       NewStartCommand newStartCommand = newStartCommands.poll();
-      StartCommand startCommand =
-          new StartCommand(
+      StartCommandDTO startCommand =
+          new StartCommandDTO(
               newStartCommand.processInstanceKey(),
               processInstance.getProcessInstanceKey(),
               Constants.NONE,
@@ -206,7 +207,7 @@ public class Forwarder {
     Queue<ExternalTaskInfo> externalTaskRequests = instanceResult.getExternalTaskRequests();
     while (!externalTaskRequests.isEmpty()) {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
-      ExternalTaskTrigger newExternalTaskTrigger =
+      ExternalTaskTriggerDTO newExternalTaskTrigger =
           toTrigger(externalTask, processInstance.getProcessInstanceKey(), definitionKey);
       if (externalTask.startTime() == null) {
         // No schedule time, forward directly
@@ -237,11 +238,11 @@ public class Forwarder {
     }
   }
 
-  private ExternalTaskTrigger toTrigger(
+  private ExternalTaskTriggerDTO toTrigger(
       ExternalTaskInfo externalTaskInfo,
       UUID processInstanceKey,
       ProcessDefinitionKey processDefinitionKey) {
-    return new ExternalTaskTrigger(
+    return new ExternalTaskTriggerDTO(
         processInstanceKey,
         processDefinitionKey,
         pathExtractor.getElementIdPath(externalTaskInfo.element()),

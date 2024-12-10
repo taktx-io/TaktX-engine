@@ -6,16 +6,17 @@ import jakarta.annotation.Nonnull;
 import lombok.Getter;
 
 @Getter
-public class ExternalTaskResponseResult {
-  private final ExternalTaskResponseTypeEnum responseType;
+public class ExternalTaskResponseResultDTO {
+
+  private final ExternalTaskResponseType responseType;
   private final String name;
   private final String code;
   private final String message;
   private final Boolean allowRetry;
 
   @JsonCreator
-  public ExternalTaskResponseResult(
-      @Nonnull @JsonProperty("success") ExternalTaskResponseTypeEnum responseType,
+  public ExternalTaskResponseResultDTO(
+      @Nonnull @JsonProperty("success") ExternalTaskResponseType responseType,
       @JsonProperty("allowRetry") Boolean allowRetry,
       @JsonProperty("name") String name,
       @JsonProperty("message") String message,

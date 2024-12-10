@@ -8,12 +8,12 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
-import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivationDTO;
+import nl.qunit.bpmnmeister.pi.StartCommandDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
@@ -24,7 +24,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 public class ProcessDefinitionActivationProcessor
-    implements Processor<ProcessDefinitionKey, ProcessDefinitionActivation, Object, Object> {
+    implements Processor<ProcessDefinitionKey, ProcessDefinitionActivationDTO, Object, Object> {
 
   private ProcessorContext<Object, Object> context;
   private final MessageSchedulerFactory messageSchedulerFactory;
@@ -42,7 +42,7 @@ public class ProcessDefinitionActivationProcessor
       String processDefinitionId, StartEventDTO startEvent) {
     List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
-        new StartCommand(
+        new StartCommandDTO(
             Constants.NONE_UUID,
             Constants.NONE_UUID,
             startEvent.getParentId(),
@@ -56,9 +56,9 @@ public class ProcessDefinitionActivationProcessor
 
   @Override
   public void process(
-      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord) {
+      Record<ProcessDefinitionKey, ProcessDefinitionActivationDTO> processActivationRecord) {
     if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
-      ProcessDefinitionActivation processActivation = processActivationRecord.value();
+      ProcessDefinitionActivationDTO processActivation = processActivationRecord.value();
       ProcessDefinitionDTO processDefinition = processActivation.getProcessDefinition();
 
       processDefinition
@@ -79,7 +79,7 @@ public class ProcessDefinitionActivationProcessor
                     processActivationRecord, startEvent, processDefinition);
               });
     } else if (processActivationRecord.value().getState() == ProcessDefinitionStateEnum.INACTIVE) {
-      ProcessDefinitionActivation processActivation = processActivationRecord.value();
+      ProcessDefinitionActivationDTO processActivation = processActivationRecord.value();
       ProcessDefinitionDTO processDefinition = processActivation.getProcessDefinition();
       processDefinition
           .getDefinitions()
@@ -96,7 +96,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private void subscribetoStartMessageEvents(
-      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
+      Record<ProcessDefinitionKey, ProcessDefinitionActivationDTO> processActivationRecord,
       StartEventDTO startEvent,
       ProcessDefinitionDTO processDefinition) {
     startEvent
@@ -106,8 +106,8 @@ public class ProcessDefinitionActivationProcessor
               String messageRef = messageStartEventDefinition.getMessageRef();
               MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
-              MessageEvent messageSubscription =
-                  new DefinitionMessageSubscription(
+              MessageEventDTO messageSubscription =
+                  new DefinitionMessageSubscriptionDTO(
                       processActivationRecord.key(), startEvent.getId(), messageName);
 
               context.forward(
@@ -119,7 +119,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private void unsubscribeFromStartMessageEvents(
-      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
+      Record<ProcessDefinitionKey, ProcessDefinitionActivationDTO> processActivationRecord,
       StartEventDTO startEvent,
       ProcessDefinitionDTO processDefinition) {
     startEvent
@@ -129,8 +129,8 @@ public class ProcessDefinitionActivationProcessor
               String messageRef = messageStartEventDefinition.getMessageRef();
               MessageDTO message = processDefinition.getDefinitions().getMessages().get(messageRef);
               String messageName = message.getName();
-              MessageEvent cancelSubscription =
-                  new CancelDefinitionMessageSubscription(messageName);
+              MessageEventDTO cancelSubscription =
+                  new CancelDefinitionMessageSubscriptionDTO(messageName);
               context.forward(
                   new Record<>(
                       cancelSubscription.toMessageEventKey(),
@@ -140,7 +140,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private void cancelScheduledStartCommands(
-      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
+      Record<ProcessDefinitionKey, ProcessDefinitionActivationDTO> processActivationRecord,
       StartEventDTO startEvent) {
     startEvent
         .getTimerEventDefinitions()
@@ -159,7 +159,7 @@ public class ProcessDefinitionActivationProcessor
   }
 
   private void scheduleStartCommands(
-      Record<ProcessDefinitionKey, ProcessDefinitionActivation> processActivationRecord,
+      Record<ProcessDefinitionKey, ProcessDefinitionActivationDTO> processActivationRecord,
       StartEventDTO startEvent,
       String processDefinitionId) {
     startEvent

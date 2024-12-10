@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("com.diffplug.spotless")
     id("io.quarkus") version "3.15.1"
     id("com.google.cloud.tools.jib") version "3.4.4"
 }
@@ -22,6 +23,7 @@ dependencies {
     implementation("io.quarkus:quarkus-resteasy-client")
     implementation("io.quarkus:quarkus-resteasy-jackson")
     implementation("io.quarkus:quarkus-jackson")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
 
     implementation("org.camunda.feel:feel-engine:1.17.5")
     implementation("com.cronutils:cron-utils:9.2.1")
@@ -46,4 +48,10 @@ version = "1.0.0-SNAPSHOT"
 
 tasks.test {
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
 }

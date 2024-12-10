@@ -4,17 +4,18 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.quarkus.arc.All;
 import io.quarkus.jackson.ObjectMapperCustomizer;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
 import java.util.List;
 import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
-import nl.qunit.bpmnmeister.pi.InstanceUpdate;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
+import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
@@ -26,7 +27,6 @@ public class CustomObjectMapperProvider {
   public ObjectMapper objectMapper(@All List<ObjectMapperCustomizer> customizers) {
 
     var mapper = new MyObjectMapper();
-
     // Apply all ObjectMapperCustomizer beans (incl. Quarkus)
     for (ObjectMapperCustomizer customizer : customizers) {
       customizer.customize(mapper);
@@ -34,14 +34,14 @@ public class CustomObjectMapperProvider {
 
     PolymorphicTypeValidator ptv =
         BasicPolymorphicTypeValidator.builder()
-            .allowIfBaseType(DefinitionsTrigger.class)
+            .allowIfBaseType(DefinitionsTriggerDTO.class)
             .allowIfBaseType(BaseElementDTO.class)
             .allowIfBaseType(SchedulableMessage.class)
             .allowIfBaseType(MessageScheduler.class)
-            .allowIfBaseType(ProcessInstanceTrigger.class)
+            .allowIfBaseType(ProcessInstanceTriggerDTO.class)
             .allowIfBaseType(FlowNodeInstanceDTO.class)
-            .allowIfBaseType(MessageEvent.class)
-            .allowIfBaseType(InstanceUpdate.class)
+            .allowIfBaseType(MessageEventDTO.class)
+            .allowIfBaseType(InstanceUpdateDTO.class)
             .build();
 
     mapper.setPolymorphicTypeValidator(ptv);
@@ -51,5 +51,10 @@ public class CustomObjectMapperProvider {
     return mapper;
   }
 
-  private class MyObjectMapper extends ObjectMapper {}
+  private class MyObjectMapper extends ObjectMapper {
+
+    public MyObjectMapper() {
+      super(new CBORFactory());
+    }
+  }
 }

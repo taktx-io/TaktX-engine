@@ -8,18 +8,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class DefinitionMessageSubscription extends MessageEvent {
+public class DefinitionMessageSubscriptionDTO extends MessageEventDTO {
   private ProcessDefinitionKey processDefinitionKey;
   private String elementId;
 
   @JsonCreator
-  public DefinitionMessageSubscription(
+  public DefinitionMessageSubscriptionDTO(
       @Nonnull @JsonProperty("processDefinitionKey") ProcessDefinitionKey processDefinitionKey,
       @Nonnull @JsonProperty("elementId") String elementId,
       @Nonnull @JsonProperty("messageName") String messageName) {

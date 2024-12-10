@@ -17,9 +17,9 @@ import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.InstanceUpdate;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
@@ -28,7 +28,7 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 @Setter
 @NoArgsConstructor
 public abstract class FLowNodeInstanceProcessor<
-    E extends FlowNode, I extends FLowNodeInstance<?>, C extends ContinueFlowElementTrigger> {
+    E extends FlowNode, I extends FLowNodeInstance<?>, C extends ContinueFlowElementTriggerDTO> {
   protected IoMappingProcessor ioMappingProcessor;
   protected VariablesMapper variablesMapper;
   protected ProcessInstanceMapper processInstanceMapper;
@@ -92,7 +92,7 @@ public abstract class FLowNodeInstanceProcessor<
       FlowElements flowElements,
       ProcessInstance processInstance,
       FLowNodeInstance<?> flowNodeInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables processInstanceVariables,
       Boolean isIterationInMultiInstance,
       FlowNodeInstances flowNodeInstances) {
@@ -263,14 +263,14 @@ public abstract class FLowNodeInstanceProcessor<
       ProcessInstance processInstance,
       Variables variables);
 
-  protected InstanceUpdate createFlowNodeInstanceUpdate(
+  protected InstanceUpdateDTO createFlowNodeInstanceUpdate(
       ProcessInstance processInstance,
       UUID flowNodeInstancesId,
       FLowNodeInstance<?> flowNodeInstance,
       Variables processInstanceVariables) {
     VariablesDTO processInstanceVariablesDTO = variablesMapper.toDTO(processInstanceVariables);
     FlowNodeInstanceDTO flowNodeInstanceDTO = processInstanceMapper.map(flowNodeInstance);
-    return new FlowNodeInstanceUpdate(
+    return new FlowNodeInstanceUpdateDTO(
         processInstance.getProcessInstanceKey(),
         flowNodeInstancesId,
         flowNodeInstanceDTO,

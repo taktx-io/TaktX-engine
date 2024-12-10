@@ -3,6 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.Activity;
 import nl.qunit.bpmnmeister.engine.pd.model.BaseElement;
 import nl.qunit.bpmnmeister.engine.pd.model.BoundaryEvent;
@@ -25,7 +26,6 @@ import nl.qunit.bpmnmeister.engine.pd.model.Task;
 import nl.qunit.bpmnmeister.engine.pd.model.ThrowEvent;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
 
 @ApplicationScoped
 public class FlowNodeInstanceProcessorProvider {

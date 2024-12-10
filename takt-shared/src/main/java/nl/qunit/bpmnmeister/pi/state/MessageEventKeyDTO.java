@@ -11,12 +11,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode
-public class MessageEventKey {
+public class MessageEventKeyDTO {
 
   private String messageName;
 
   @JsonCreator
-  public MessageEventKey(@JsonProperty("messageName") String messageName) {
+  public MessageEventKeyDTO(@JsonProperty("messageName") String messageName) {
     this.messageName = messageName;
   }
 

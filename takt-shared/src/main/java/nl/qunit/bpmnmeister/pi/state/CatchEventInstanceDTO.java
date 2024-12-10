@@ -16,7 +16,7 @@ import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   private CatchEventStateEnum state;
   private Set<ScheduledKey> scheduledKeys;
-  private Map<MessageEventKey, Set<String>> messageEventKeys;
+  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
   private Set<EscalationSubscriptionDTO> escalationSubscriptions;
   private Set<ErrorSubscriptionDTO> errorSubscriptions;
   private boolean catchAllEscalations;
@@ -28,7 +28,7 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
       int passedCnt,
       CatchEventStateEnum state,
       Set<ScheduledKey> scheduledKeys,
-      Map<MessageEventKey, Set<String>> messageEventKeys) {
+      Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt);
     this.state = state;
     this.scheduledKeys = scheduledKeys;

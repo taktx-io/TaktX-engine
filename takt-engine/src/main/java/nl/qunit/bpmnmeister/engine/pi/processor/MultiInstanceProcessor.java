@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import java.util.Set;
 import java.util.UUID;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.Activity;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
@@ -19,13 +20,13 @@ import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.MultiInstanceInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 public class MultiInstanceProcessor
-    extends FLowNodeInstanceProcessor<Activity, MultiInstanceInstance, ContinueFlowElementTrigger> {
+    extends FLowNodeInstanceProcessor<
+    Activity, MultiInstanceInstance, ContinueFlowElementTriggerDTO> {
   private final FeelExpressionHandler feelExpressionHandler;
   private final ObjectMapper objectMapper;
   private final ActivityInstanceProcessor<?, ?, ?> processor;
@@ -182,7 +183,7 @@ public class MultiInstanceProcessor
       FlowElements flowElements,
       ProcessInstance processInstance,
       MultiInstanceInstance multiInstanceInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
     subProcessLevel++;

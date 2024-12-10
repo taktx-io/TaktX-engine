@@ -24,7 +24,8 @@ public class BoundaryEventInstanceDTO extends CatchEventInstanceDTO {
       @Nonnull @JsonProperty("elementId") String elementId,
       @JsonProperty("passedCnt") int passedCnt,
       @Nonnull @JsonProperty("attachedInstanceId") UUID attachedInstanceId,
-      @Nonnull @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys,
+      @Nonnull @JsonProperty("messageEventKeys")
+      Map<MessageEventKeyDTO, Set<String>> messageEventKeys,
       @Nonnull @JsonProperty("state") CatchEventStateEnum state,
       @Nonnull @JsonProperty("scheduledKeys") Set<ScheduledKey> scheduledKeys) {
     super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);

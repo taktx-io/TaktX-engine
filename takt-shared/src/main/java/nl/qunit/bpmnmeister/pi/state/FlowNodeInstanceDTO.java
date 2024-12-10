@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.pi.state;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import java.util.UUID;
@@ -11,24 +11,6 @@ import lombok.experimental.SuperBuilder;
 
 @Getter
 @JsonTypeInfo(use = Id.CLASS, property = "clazz")
-@JsonSubTypes({
-  @JsonSubTypes.Type(value = EndEventInstanceDTO.class),
-  @JsonSubTypes.Type(value = ExclusiveGatewayInstanceDTO.class),
-  @JsonSubTypes.Type(value = ParallelGatewayInstanceDTO.class),
-  @JsonSubTypes.Type(value = StartEventInstanceDTO.class),
-  @JsonSubTypes.Type(value = IntermediateCatchEventInstanceDTO.class),
-  @JsonSubTypes.Type(value = TaskInstanceDTO.class),
-  @JsonSubTypes.Type(value = CallActivityInstanceDTO.class),
-  @JsonSubTypes.Type(value = ServiceTaskInstanceDTO.class),
-  @JsonSubTypes.Type(value = SendTaskInstanceDTO.class),
-  @JsonSubTypes.Type(value = SubProcessInstanceDTO.class),
-  @JsonSubTypes.Type(value = InclusiveGatewayInstanceDTO.class),
-  @JsonSubTypes.Type(value = BoundaryEventInstanceDTO.class),
-  @JsonSubTypes.Type(value = ReceiveTaskInstanceDTO.class),
-  @JsonSubTypes.Type(value = MultiInstanceInstanceDTO.class),
-  @JsonSubTypes.Type(value = ThrowEventInstanceDTO.class),
-  @JsonSubTypes.Type(value = IntermediateThrowEventInstanceDTO.class),
-})
 @ToString
 @SuperBuilder(toBuilder = true)
 public abstract class FlowNodeInstanceDTO {
@@ -44,10 +26,12 @@ public abstract class FlowNodeInstanceDTO {
     this.passedCnt = passedCnt;
   }
 
+  @JsonIgnore
   public boolean isTerminated() {
     return false;
   }
 
+  @JsonIgnore
   public boolean isFailed() {
     return false;
   }

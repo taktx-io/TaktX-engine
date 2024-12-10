@@ -7,30 +7,30 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTrigger;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscription;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTrigger;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.StartCommand;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTriggerDTO;
+import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTriggerDTO;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.StartCommandDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class MessageEventProcessor
-    implements Processor<MessageEventKey, MessageEvent, Object, Object> {
+    implements Processor<MessageEventKeyDTO, MessageEventDTO, Object, Object> {
 
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
 
   private ProcessorContext<Object, Object> context;
-  private KeyValueStore<MessageEventKey, DefinitionMessageSubscriptions>
+  private KeyValueStore<MessageEventKeyDTO, DefinitionMessageSubscriptions>
       definitionMessageSubscriptionStore;
-  private KeyValueStore<MessageEventKey, CorrelationMessageSubscriptions>
+  private KeyValueStore<MessageEventKeyDTO, CorrelationMessageSubscriptions>
       correlationMessageSubscriptionStore;
 
   public MessageEventProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
@@ -51,24 +51,26 @@ public class MessageEventProcessor
   }
 
   @Override
-  public void process(Record<MessageEventKey, MessageEvent> messageEventRecord) {
+  public void process(Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
     if (messageEventRecord.value()
-        instanceof DefinitionMessageSubscription startEventMessageSubscription) {
+        instanceof DefinitionMessageSubscriptionDTO startEventMessageSubscription) {
       storeDefinitionMessageSubscription(messageEventRecord.key(), startEventMessageSubscription);
     } else if (messageEventRecord.value()
-        instanceof CorrelationMessageSubscription correlatingMessageSubscription) {
+        instanceof CorrelationMessageSubscriptionDTO correlatingMessageSubscription) {
       storeCorrelationMessageSubscription(messageEventRecord.key(), correlatingMessageSubscription);
     } else if (messageEventRecord.value()
-        instanceof CancelDefinitionMessageSubscription cancelDefinitionMessageSubscription) {
+        instanceof CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription) {
       cancelDefinitionMessageSubscription(
           messageEventRecord.key(), cancelDefinitionMessageSubscription);
     } else if (messageEventRecord.value()
-        instanceof CancelCorrelationMessageSubscription cancelCorrelatingMessageSubscription) {
+        instanceof CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription) {
       cancelCorrelationMessageSubscription(
           messageEventRecord.key(), cancelCorrelatingMessageSubscription);
-    } else if (messageEventRecord.value() instanceof DefinitionMessageEventTrigger messageEvent) {
+    } else if (messageEventRecord.value()
+        instanceof DefinitionMessageEventTriggerDTO messageEvent) {
       processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
-    } else if (messageEventRecord.value() instanceof CorrelationMessageEventTrigger messageEvent) {
+    } else if (messageEventRecord.value()
+        instanceof CorrelationMessageEventTriggerDTO messageEvent) {
       processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
     } else {
       throw new IllegalArgumentException(
@@ -77,8 +79,8 @@ public class MessageEventProcessor
   }
 
   private void cancelDefinitionMessageSubscription(
-      MessageEventKey key,
-      CancelDefinitionMessageSubscription cancelDefinitionMessageSubscription) {
+      MessageEventKeyDTO key,
+      CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription) {
     DefinitionMessageSubscriptions messageSubscriptions =
         this.definitionMessageSubscriptionStore.get(key);
     if (messageSubscriptions != null) {
@@ -89,8 +91,8 @@ public class MessageEventProcessor
   }
 
   private void cancelCorrelationMessageSubscription(
-      MessageEventKey messageEventKey,
-      CancelCorrelationMessageSubscription cancelCorrelatingMessageSubscription) {
+      MessageEventKeyDTO messageEventKey,
+      CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription) {
     CorrelationMessageSubscriptions messageSubscriptions =
         this.correlationMessageSubscriptionStore.get(messageEventKey);
     if (messageSubscriptions != null) {
@@ -101,7 +103,7 @@ public class MessageEventProcessor
   }
 
   private void processCorrelationMessageEventTrigger(
-      MessageEventKey messageEventKey, CorrelationMessageEventTrigger messageEvent) {
+      MessageEventKeyDTO messageEventKey, CorrelationMessageEventTriggerDTO messageEvent) {
 
     CorrelationMessageSubscriptions messageSubscriptions =
         this.correlationMessageSubscriptionStore.get(messageEventKey);
@@ -113,8 +115,8 @@ public class MessageEventProcessor
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
                   UUID processInstanceKey = subscription.getProcessInstanceKey();
-                  ContinueFlowElementTrigger flowElementTrigger =
-                      new ContinueFlowElementTrigger(
+                  ContinueFlowElementTriggerDTO flowElementTrigger =
+                      new ContinueFlowElementTriggerDTO(
                           processInstanceKey,
                           subscription.getElementIdPath(),
                           subscription.getElementInstanceIdPath(),
@@ -130,7 +132,7 @@ public class MessageEventProcessor
   }
 
   private void processDefinitionMessageEventTrigger(
-      MessageEventKey messageEventKey, DefinitionMessageEventTrigger messageEvent) {
+      MessageEventKeyDTO messageEventKey, DefinitionMessageEventTriggerDTO messageEvent) {
     DefinitionMessageSubscriptions messageSubscription =
         this.definitionMessageSubscriptionStore.get(messageEventKey);
     if (messageSubscription != null) {
@@ -141,8 +143,8 @@ public class MessageEventProcessor
               value -> {
                 if (value.getMessageName().equals(messageEvent.getMessageName())) {
                   ProcessDefinitionKey processDefinitionKey = value.getProcessDefinitionKey();
-                  StartCommand startCommand =
-                      new StartCommand(
+                  StartCommandDTO startCommand =
+                      new StartCommandDTO(
                           Constants.NONE_UUID,
                           Constants.NONE_UUID,
                           value.getElementId(),
@@ -162,8 +164,8 @@ public class MessageEventProcessor
   }
 
   private void storeCorrelationMessageSubscription(
-      MessageEventKey messageEventKey,
-      CorrelationMessageSubscription correlatingMessageSubscription) {
+      MessageEventKeyDTO messageEventKey,
+      CorrelationMessageSubscriptionDTO correlatingMessageSubscription) {
     CorrelationMessageSubscriptions messageSubscriptions =
         this.correlationMessageSubscriptionStore.get(messageEventKey);
     if (messageSubscriptions == null) {
@@ -174,8 +176,8 @@ public class MessageEventProcessor
   }
 
   private void storeDefinitionMessageSubscription(
-      MessageEventKey messageEventKey,
-      DefinitionMessageSubscription startEventMessageSubscription) {
+      MessageEventKeyDTO messageEventKey,
+      DefinitionMessageSubscriptionDTO startEventMessageSubscription) {
     DefinitionMessageSubscriptions messageSubscriptions =
         this.definitionMessageSubscriptionStore.get(messageEventKey);
     if (messageSubscriptions == null) {

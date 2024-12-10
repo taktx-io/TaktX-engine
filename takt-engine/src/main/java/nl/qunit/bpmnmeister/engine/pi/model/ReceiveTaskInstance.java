@@ -8,14 +8,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pd.model.ReceiveTask;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 
 @NoArgsConstructor
 @Getter
 @Setter
 public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask>
     implements ReceivingMessageInstance {
-  private Map<MessageEventKey, Set<String>> messageEventKeys;
+
+  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 
   private String correlationKey;
 
@@ -26,12 +27,12 @@ public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask>
 
   @Override
   public void addMessageSubscriptionWithCorrelationKey(
-      MessageEventKey messageEventKey, String correlationKey) {
+      MessageEventKeyDTO messageEventKey, String correlationKey) {
     messageEventKeys.computeIfAbsent(messageEventKey, k -> new HashSet<>()).add(correlationKey);
   }
 
   @Override
-  public Map<MessageEventKey, Set<String>> getMessageEventKeys() {
+  public Map<MessageEventKeyDTO, Set<String>> getMessageEventKeys() {
     return messageEventKeys;
   }
 }

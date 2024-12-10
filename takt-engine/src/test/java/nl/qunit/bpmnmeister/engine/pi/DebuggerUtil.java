@@ -6,15 +6,15 @@ import java.util.List;
 
 public class DebuggerUtil {
 
-    public static boolean isDebuggerAttached() {
-        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        List<String> arguments = runtimeMXBean.getInputArguments();
+  public static boolean isDebuggerAttached() {
+    RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+    List<String> arguments = runtimeMXBean.getInputArguments();
 
-        for (String argument : arguments) {
-            if (argument.contains("-agentlib:jdwp")) {
-                return true;
-            }
-        }
-        return false;
+    for (String argument : arguments) {
+      if (argument.contains("-agentlib:jdwp")) {
+        return true;
+      }
     }
+    return false;
+  }
 }

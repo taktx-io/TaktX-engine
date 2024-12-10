@@ -35,10 +35,7 @@ public class KafkaPropertiesHelper {
     this.kafkaSecurityProtocol = kafkaSecurityProtocol;
   }
 
-  public KafkaPropertiesHelper(
-      String bootstrapServers,
-      String tenant,
-      String namespace) {
+  public KafkaPropertiesHelper(String bootstrapServers, String tenant, String namespace) {
     this(bootstrapServers, tenant, namespace, Optional.empty(), Optional.empty(), Optional.empty());
   }
 

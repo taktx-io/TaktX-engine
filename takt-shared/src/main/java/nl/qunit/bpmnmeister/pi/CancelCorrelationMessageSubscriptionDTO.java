@@ -7,22 +7,22 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class DefinitionMessageEventTrigger extends MessageEvent {
+public class CancelCorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
-  private VariablesDTO variables;
+  private String correlationKey;
 
   @JsonCreator
-  public DefinitionMessageEventTrigger(
+  public CancelCorrelationMessageSubscriptionDTO(
       @Nonnull @JsonProperty("messageName") String messageName,
-      @Nonnull @JsonProperty("variables") VariablesDTO variables) {
+      @Nonnull @JsonProperty("correlationKey") String correlationKey) {
     super(messageName);
-    this.variables = variables;
+
+    this.correlationKey = correlationKey;
   }
 }

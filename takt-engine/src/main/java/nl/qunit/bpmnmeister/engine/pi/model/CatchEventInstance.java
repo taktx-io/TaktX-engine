@@ -12,7 +12,7 @@ import nl.qunit.bpmnmeister.engine.pd.model.ErrorEventDefinition;
 import nl.qunit.bpmnmeister.engine.pd.model.EscalationEventDefinition;
 import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
 
 @Getter
@@ -23,7 +23,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   private CatchEventStateEnum state;
 
   private Set<ScheduledKey> scheduledKeys;
-  private Map<MessageEventKey, Set<String>> messageEventKeys;
+  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
   private Set<EscalationSubscription> escalationSubscriptions;
   private Set<ErrorSubscription> errorSubscriptions;
   private boolean catchAllEscalations;
@@ -78,7 +78,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   }
 
   public void addMessageSubscriptionWithCorrelationKey(
-      MessageEventKey messageEventKey, String correlationKey) {
+      MessageEventKeyDTO messageEventKey, String correlationKey) {
     this.messageEventKeys
         .computeIfAbsent(messageEventKey, k -> new HashSet<>())
         .add(correlationKey);

@@ -10,6 +10,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
@@ -21,10 +22,9 @@ import nl.qunit.bpmnmeister.engine.pi.model.EscalationEventSignal;
 import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResultDTO;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTriggerDTO;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseType;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
@@ -34,7 +34,7 @@ import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
 @Setter
 public abstract class ExternalTaskInstanceProcessor<
         E extends ExternalTask, I extends ExternalTaskInstance<E>>
-    extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTrigger> {
+    extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTriggerDTO> {
 
   private FeelExpressionHandler feelExpressionHandler;
   private Clock clock;
@@ -76,23 +76,23 @@ public abstract class ExternalTaskInstanceProcessor<
       FlowElements flowElements,
       ProcessInstance processInstance,
       I externalTaskInstance,
-      ExternalTaskResponseTrigger trigger,
+      ExternalTaskResponseTriggerDTO trigger,
       Variables processInstanceVariables) {
     VariablesDTO variablesDTO = trigger.getVariables();
     Variables variables = variablesMapper.fromDTO(variablesDTO);
     processInstanceVariables.merge(variables);
 
-    ExternalTaskResponseResult responseResult = trigger.getExternalTaskResponseResult();
-    if (ExternalTaskResponseTypeEnum.SUCCESS == responseResult.getResponseType()) {
+    ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
+    if (ExternalTaskResponseType.SUCCESS == responseResult.getResponseType()) {
       externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
-    } else if (ExternalTaskResponseTypeEnum.ESCALATION == responseResult.getResponseType()) {
+    } else if (ExternalTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       directInstanceResult.addEvent(
           new EscalationEventSignal(
               externalTaskInstance,
               responseResult.getName(),
               responseResult.getCode(),
               responseResult.getMessage()));
-    } else if (ExternalTaskResponseTypeEnum.ERROR == responseResult.getResponseType()) {
+    } else if (ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       E externalTask = externalTaskInstance.getFlowNode();
       if (externalTask.getRetries() != null) {
         // We have some kind of retry definition

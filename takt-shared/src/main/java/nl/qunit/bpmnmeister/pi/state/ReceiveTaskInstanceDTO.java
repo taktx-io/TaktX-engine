@@ -16,7 +16,7 @@ import lombok.experimental.SuperBuilder;
 public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
   private String correlationKey;
-  private Map<MessageEventKey, Set<String>> messageEventKeys;
+  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 
   @JsonCreator
   public ReceiveTaskInstanceDTO(
@@ -27,7 +27,7 @@ public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
       @JsonProperty("loopCnt") int loopCnt,
       @JsonProperty("correlationKey") String correlationKey,
       @JsonProperty("boundaryEventIds") Set<UUID> boundaryEventIds,
-      @JsonProperty("messageEventKeys") Map<MessageEventKey, Set<String>> messageEventKeys) {
+      @JsonProperty("messageEventKeys") Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
     this.correlationKey = correlationKey;
     this.messageEventKeys = messageEventKeys;

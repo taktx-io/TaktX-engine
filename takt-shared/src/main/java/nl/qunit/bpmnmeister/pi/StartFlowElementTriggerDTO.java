@@ -12,13 +12,13 @@ import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @ToString(callSuper = true)
-public abstract class StartFlowElementTrigger extends ProcessInstanceTrigger
+public abstract class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
     implements SchedulableMessage<UUID> {
 
   private final String inputFlowId;
 
   @JsonCreator
-  public StartFlowElementTrigger(
+  public StartFlowElementTriggerDTO(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("elementId") @Nonnull List<String> elementIdPath,
       @JsonProperty("inputFlowId") @Nonnull String inputFlowId,

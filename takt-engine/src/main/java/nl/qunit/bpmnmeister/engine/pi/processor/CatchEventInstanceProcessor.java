@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
@@ -16,8 +17,7 @@ import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEve
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
 
@@ -108,7 +108,7 @@ public abstract class CatchEventInstanceProcessor<
       FlowElements flowElements,
       ProcessInstance processInstance,
       I flowNodeInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
     getInstanceResultForContinue(instanceResult, directInstanceResult, flowNodeInstance);

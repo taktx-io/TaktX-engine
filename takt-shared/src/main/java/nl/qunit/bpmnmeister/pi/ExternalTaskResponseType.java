@@ -1,6 +1,6 @@
 package nl.qunit.bpmnmeister.pi;
 
-public enum ExternalTaskResponseTypeEnum {
+public enum ExternalTaskResponseType {
   SUCCESS,
   ESCALATION,
   ERROR

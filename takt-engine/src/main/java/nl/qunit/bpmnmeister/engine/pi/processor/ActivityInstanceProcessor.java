@@ -15,13 +15,13 @@ import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @NoArgsConstructor
 public abstract class ActivityInstanceProcessor<
-        E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTrigger>
+    E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   protected ActivityInstanceProcessor(

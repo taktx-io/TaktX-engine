@@ -157,9 +157,12 @@ public class ProcessInstanceResource {
         && metadata.activeHost().port() == envPort) {
 
       Map<String, JsonNode> variables = new HashMap<>();
-      getVariablesStore().range(processId + ":", processId  + "\u00ff").forEachRemaining(entry -> {
-        variables.put(entry.key.substring(entry.key.indexOf(":") + 1), entry.value);
-      });
+      getVariablesStore()
+          .range(processId + ":", processId + "\u00ff")
+          .forEachRemaining(
+              entry -> {
+                variables.put(entry.key.substring(entry.key.indexOf(":") + 1), entry.value);
+              });
       return Response.ok(variables).build();
     } else {
       URI uri =

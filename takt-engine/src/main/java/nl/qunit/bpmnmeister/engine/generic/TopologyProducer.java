@@ -26,18 +26,18 @@ import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
 import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
-import nl.qunit.bpmnmeister.pi.InstanceUpdate;
-import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivation;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTrigger;
-import nl.qunit.bpmnmeister.pi.StartCommand;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivationDTO;
+import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.StartCommandDTO;
 import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEvent;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
 import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
@@ -55,8 +55,9 @@ import org.apache.kafka.streams.kstream.Produced;
 @ApplicationScoped
 @RequiredArgsConstructor
 public class TopologyProducer {
-  public static final ObjectMapperSerde<MessageEvent> MESSAGE_EVENT_SERDE =
-      new ObjectMapperSerde<>(MessageEvent.class);
+
+  public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
+      new ObjectMapperSerde<>(MessageEventDTO.class);
   public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
       DEFINITION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
@@ -67,34 +68,34 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   public static final ObjectMapperSerde<ScheduledKey> SCHEDULE_KEY_SERDE =
       new ObjectMapperSerde<>(ScheduledKey.class);
-  public static final ObjectMapperSerde<MessageEventKey> MESSAGE_EVENT_KEY_SERDE =
-      new ObjectMapperSerde<>(MessageEventKey.class);
+  public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
+      new ObjectMapperSerde<>(MessageEventKeyDTO.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
   public static final Serde<String> FLOW_NODE_INSTANCE_KEY_SERDE = Serdes.String();
   public static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageScheduler.class);
-  public static final ObjectMapperSerde<ProcessInstanceTrigger> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTrigger.class);
+  public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final ObjectMapperSerde<JsonNode> VARIABLES_SERDE =
       new ObjectMapperSerde<>(JsonNode.class);
-  public static final ObjectMapperSerde<ProcessDefinitionActivation> PROCESS_ACTIVATION_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinitionActivation.class);
+  public static final ObjectMapperSerde<ProcessDefinitionActivationDTO> PROCESS_ACTIVATION_SERDE =
+      new ObjectMapperSerde<>(ProcessDefinitionActivationDTO.class);
   public static final ObjectMapperSerde<ParsedDefinitionsDTO> DEFINITIONS_SERDE =
       new ObjectMapperSerde<>(ParsedDefinitionsDTO.class);
-  public static final ObjectMapperSerde<DefinitionsTrigger> DEFINITIONS_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(DefinitionsTrigger.class);
+  public static final ObjectMapperSerde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(DefinitionsTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
-  public static final ObjectMapperSerde<InstanceUpdate> INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<>(InstanceUpdate.class);
+  public static final ObjectMapperSerde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
+      new ObjectMapperSerde<>(InstanceUpdateDTO.class);
   public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
-  public static final ObjectMapperSerde<ExternalTaskTrigger> EXTERNAL_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ExternalTaskTrigger.class);
-  public static final ObjectMapperSerde<StartCommand> START_COMMAND_SERDE =
-      new ObjectMapperSerde<>(StartCommand.class);
+  public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class);
+  public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
+      new ObjectMapperSerde<>(StartCommandDTO.class);
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
@@ -124,24 +125,27 @@ public class TopologyProducer {
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
-    builder.addStateStore(keyValueStoreBuilder(
-        keyValueStoreSupplier.get(Stores.XML_BY_HASH),
-        Serdes.String(),
-        Serdes.String()));
-    builder.addStateStore(keyValueStoreBuilder(
-        keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
-        Serdes.String(),
-        new ObjectMapperSerde<HashMap<String, Integer>>(
-            (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
-    builder.addStateStore(keyValueStoreBuilder(
-        keyValueStoreSupplier.get(Stores.PROCESS_DEFINITION),
-        PROCESS_DEFINITION_KEY_SERDE,
-        PROCESS_DEFINITION_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.XML_BY_HASH), Serdes.String(), Serdes.String()));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
+            Serdes.String(),
+            new ObjectMapperSerde<HashMap<String, Integer>>(
+                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.PROCESS_DEFINITION),
+            PROCESS_DEFINITION_KEY_SERDE,
+            PROCESS_DEFINITION_SERDE));
 
     builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+            tenantNamespaceNameWrapper.getPrefixed(
+                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
-        .process(() -> new NewDefinitionsProcessor(tenantNamespaceNameWrapper),
+        .process(
+            () -> new NewDefinitionsProcessor(tenantNamespaceNameWrapper),
             tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
@@ -159,32 +163,30 @@ public class TopologyProducer {
                                 Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessDefinitionActivation,
+            (key, value) -> value instanceof ProcessDefinitionActivationDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair(
                                     (ProcessDefinitionKey) key,
-                                    (ProcessDefinitionActivation) value))
+                                    (ProcessDefinitionActivationDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTrigger,
+            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
-
-
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -227,27 +229,27 @@ public class TopologyProducer {
                     Stores.PROCESS_INSTANCE_DEFINITION.getStorename()),
                 tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
             .branch(
-                (key, value) -> value instanceof ProcessInstanceTrigger,
-                (key, value) -> value instanceof InstanceUpdate,
-                (key, value) -> value instanceof ExternalTaskTrigger,
-                (key, value) -> value instanceof StartCommand,
+                (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+                (key, value) -> value instanceof InstanceUpdateDTO,
+                (key, value) -> value instanceof ExternalTaskTriggerDTO,
+                (key, value) -> value instanceof StartCommandDTO,
                 (key, value) -> value instanceof MessageScheduler,
                 (key, value) -> key instanceof ScheduledKey,
-                (key, value) -> value instanceof MessageEvent);
+                (key, value) -> value instanceof MessageEventDTO);
 
     branches[0]
-        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE));
     branches[1]
-        .map((key, value) -> KeyValue.pair((UUID) key, (InstanceUpdate) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (InstanceUpdateDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
             Produced.with(PROCESS_INSTANCE_KEY_SERDE, INSTANCE_UPDATE_SERDE));
     branches[2]
-        .map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTrigger) value))
+        .map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(
                 Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()),
@@ -256,9 +258,10 @@ public class TopologyProducer {
         .map(
             (key, value) ->
                 KeyValue.pair(
-                    ((StartCommand) value).getProcessDefinitionId(), (StartCommand) value))
+                    ((StartCommandDTO) value).getProcessDefinitionId(), (StartCommandDTO) value))
         .to(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+            tenantNamespaceNameWrapper.getPrefixed(
+                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Produced.with(Serdes.String(), START_COMMAND_SERDE));
     branches[4]
         .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
@@ -271,7 +274,7 @@ public class TopologyProducer {
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     branches[6]
-        .map((key, value) -> KeyValue.pair(((MessageEventKey) key), (MessageEvent) value))
+        .map((key, value) -> KeyValue.pair(((MessageEventKeyDTO) key), (MessageEventDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE));
@@ -300,21 +303,23 @@ public class TopologyProducer {
                 Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof DefinitionsTrigger,
+            (key, value) -> value instanceof DefinitionsTriggerDTO,
             Branched.withConsumer(
                 ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (DefinitionsTrigger) value))
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((String) key, (DefinitionsTriggerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTrigger,
+            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
@@ -341,31 +346,33 @@ public class TopologyProducer {
     processStream
         .split()
         .branch(
-            (k, v) -> v instanceof StartCommand,
+            (k, v) -> v instanceof StartCommandDTO,
             Branched.withConsumer(
                 ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommand) value))
+                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
-            (k, v) -> v instanceof ExternalTaskTrigger,
+            (k, v) -> v instanceof ExternalTaskTriggerDTO,
             Branched.withConsumer(
                 ks ->
-                    ks.map((key, value) -> KeyValue.pair((UUID) key, (ExternalTaskTrigger) value))
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (k, v) -> v instanceof ProcessInstanceTrigger,
+            (k, v) -> v instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((UUID) key, (ProcessInstanceTrigger) value))
+                                KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
@@ -374,7 +381,7 @@ public class TopologyProducer {
   }
 
   private void setupActivationStream(StreamsBuilder builder) {
-    KStream<ProcessDefinitionKey, ProcessDefinitionActivation> activationStreamIn =
+    KStream<ProcessDefinitionKey, ProcessDefinitionActivationDTO> activationStreamIn =
         builder.stream(
             tenantNamespaceNameWrapper.getPrefixed(
                 Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
@@ -397,12 +404,12 @@ public class TopologyProducer {
                                 Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
         .branch(
-            (key, value) -> value == null || value instanceof MessageEvent,
+            (key, value) -> value == null || value instanceof MessageEventDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((MessageEventKey) key, (MessageEvent) value))
+                                KeyValue.pair((MessageEventKeyDTO) key, (MessageEventDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),

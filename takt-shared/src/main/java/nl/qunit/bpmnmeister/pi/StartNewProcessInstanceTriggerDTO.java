@@ -13,7 +13,7 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @Getter
 @ToString(callSuper = true)
-public class StartNewProcessInstanceTrigger extends StartFlowElementTrigger {
+public class StartNewProcessInstanceTriggerDTO extends StartFlowElementTriggerDTO {
 
   private final UUID parentProcessInstanceKey;
   private final List<String> parentElementIdPath;
@@ -21,7 +21,7 @@ public class StartNewProcessInstanceTrigger extends StartFlowElementTrigger {
   private final ProcessDefinitionDTO processDefinition;
 
   @JsonCreator
-  public StartNewProcessInstanceTrigger(
+  public StartNewProcessInstanceTriggerDTO(
       @JsonProperty("processInstanceKey") @Nonnull UUID processInstanceKey,
       @JsonProperty("parentProcessInstanceKey") @Nonnull UUID parentProcessInstanceKey,
       @JsonProperty("parentElementIdPath") @Nonnull List<String> parentElementIdPath,

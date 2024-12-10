@@ -12,12 +12,12 @@ import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.EventInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @NoArgsConstructor
 public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
-    extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTrigger> {
+    extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTriggerDTO> {
 
   protected EventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
@@ -53,7 +53,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       FlowElements flowElements,
       ProcessInstance processInstance,
       I flowNodeInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables variables,
       FlowNodeInstances flowNodeInstances) {
     // Should not occur

@@ -11,12 +11,12 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 
 @ToString
 @Getter
-public class TerminateTrigger extends ProcessInstanceTrigger {
+public class TerminateTriggerDTO extends ProcessInstanceTriggerDTO {
 
   private final List<UUID> elementInstanceIdPath;
 
   @JsonCreator
-  public TerminateTrigger(
+  public TerminateTriggerDTO(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("elementInstanceIdPath") List<UUID> elementInstanceIdPath) {
     super(processInstanceKey, List.of(), VariablesDTO.empty());

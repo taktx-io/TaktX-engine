@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("maven-publish")
+    id("com.diffplug.spotless")
 }
 
 group = "nl.flomaestro"
@@ -24,6 +25,8 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.18.2")
+
     compileOnly("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
 
     compileOnly("org.projectlombok:lombok:1.18.30")
@@ -71,5 +74,11 @@ publishing {
             name = "local"
             url = uri("file://~/.m2")
         }
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat()
     }
 }

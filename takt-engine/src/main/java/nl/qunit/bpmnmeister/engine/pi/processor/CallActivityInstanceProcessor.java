@@ -14,7 +14,7 @@ import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.CallActivityInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
@@ -22,7 +22,7 @@ import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 @NoArgsConstructor
 public class CallActivityInstanceProcessor
     extends ActivityInstanceProcessor<
-        CallActivity, CallActivityInstance, ContinueFlowElementTrigger> {
+    CallActivity, CallActivityInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public CallActivityInstanceProcessor(
@@ -64,7 +64,7 @@ public class CallActivityInstanceProcessor
       FlowElements flowElements,
       ProcessInstance processInstance,
       CallActivityInstance instance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables processInstanceVariables) {
     instance.setState(ActtivityStateEnum.FINISHED);
     if (instance.getFlowNode().isPropagateAllChildVariables()) {

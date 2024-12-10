@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.engine.pd.model.InclusiveGateway;
@@ -20,15 +21,14 @@ import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.InclusiveGatewayInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class InclusiveGatewayInstanceProcessor
     extends GatewayInstanceProcessor<
-        InclusiveGateway, InclusiveGatewayInstance, ContinueFlowElementTrigger> {
+    InclusiveGateway, InclusiveGatewayInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public InclusiveGatewayInstanceProcessor(

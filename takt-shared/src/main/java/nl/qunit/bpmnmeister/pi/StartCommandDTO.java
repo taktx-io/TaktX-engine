@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTrigger;
+import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class StartCommand extends DefinitionsTrigger implements SchedulableMessage<String> {
+public class StartCommandDTO extends DefinitionsTriggerDTO implements SchedulableMessage<String> {
 
   private final UUID processInstanceKey;
   private final UUID parentProcessInstanceKey;
@@ -24,7 +24,7 @@ public class StartCommand extends DefinitionsTrigger implements SchedulableMessa
   private final VariablesDTO variables;
 
   @JsonCreator
-  public StartCommand(
+  public StartCommandDTO(
       @Nonnull @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @Nonnull @JsonProperty("parentProcessInstanceKey") UUID parentProcessInstanceKey,
       @Nonnull @JsonProperty("elementId") String elementId,

@@ -8,7 +8,8 @@ public class TaktClient {
   private final ProcessInstanceProducer processInstanceProducer;
 
   public TaktClient(String bootstrapServers, String tenant, String namespace) {
-    KafkaPropertiesHelper kafkaPropertiesHelper = new KafkaPropertiesHelper(bootstrapServers, tenant, namespace);
+    KafkaPropertiesHelper kafkaPropertiesHelper =
+        new KafkaPropertiesHelper(bootstrapServers, tenant, namespace);
     this.externalTriggerConsumer = new ExternalTriggerConsumer(kafkaPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(kafkaPropertiesHelper);
   }
@@ -22,7 +23,7 @@ public class TaktClient {
   }
 
   public void startProcess(String process) {
-      processInstanceProducer.startProcess(process, VariablesDTO.empty());
+    processInstanceProducer.startProcess(process, VariablesDTO.empty());
   }
 
   public Set<String> getProcessDefinitionConsumers() {

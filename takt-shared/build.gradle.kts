@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("com.github.bjornvester.xjc") version "1.8.1"
+    id("com.diffplug.spotless")
     `maven-publish`
 }
 
@@ -11,6 +12,7 @@ dependencies {
     implementation("com.cronutils:cron-utils:9.2.1")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.18.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
@@ -74,5 +76,11 @@ publishing {
             name = "local"
             url = uri("file://~/.m2")
         }
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat()
     }
 }

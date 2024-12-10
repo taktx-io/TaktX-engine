@@ -2,6 +2,7 @@ package nl.qunit.bpmnmeister.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -27,10 +28,10 @@ import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
 import nl.qunit.bpmnmeister.pd.model.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResult;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTrigger;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTypeEnum;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResultDTO;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTriggerDTO;
+import nl.qunit.bpmnmeister.pi.ExternalTaskResponseType;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
 import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -44,7 +45,9 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 @Slf4j
 public class ExternalTriggerConsumer {
-  private final Map<String, KafkaConsumer<UUID, ExternalTaskTrigger>> consumerMap = new HashMap<>();
+
+  private final Map<String, KafkaConsumer<UUID, ExternalTaskTriggerDTO>> consumerMap =
+      new HashMap<>();
 
   private final ObjectMapper objectMapper;
   private final KafkaPropertiesHelper kafkaPropertiesHelper;
@@ -52,10 +55,10 @@ public class ExternalTriggerConsumer {
   private final Map<String, String> storedHashes = new HashMap<>();
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> parsedDefinitionConsumer;
-  private KafkaProducer<UUID, ExternalTaskResponseTrigger> responseEmitter;
+  private KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
 
   ExternalTriggerConsumer(KafkaPropertiesHelper kafkaPropertiesHelper) {
-    this.objectMapper = new ObjectMapper();
+    this.objectMapper = new ObjectMapper(new CBORFactory());
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
   }
 
@@ -92,7 +95,8 @@ public class ExternalTriggerConsumer {
                 parsedDefinitionConsumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record : records) {
               final String storedHash = storedHashes.get(record.key());
-              if (storedHash != null && !storedHash.equals(
+              if (storedHash != null
+                  && !storedHash.equals(
                   record.value().getDefinitions().getDefinitionsKey().getHash())) {
                 log.warn("Hash mismatch for process definition {}", record.key());
               }
@@ -116,7 +120,7 @@ public class ExternalTriggerConsumer {
       KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter =
           new KafkaProducer<>(
               kafkaPropertiesHelper.getKafkaProducerProperties(
-                  StringSerializer.class, StringSerializer.class));
+                  StringSerializer.class, XmlDefinitionSerializer.class));
 
       for (Class<?> clazz : annotatedClasses) {
         BpmnDeployment annotation = clazz.getAnnotation(BpmnDeployment.class);
@@ -128,12 +132,14 @@ public class ExternalTriggerConsumer {
           String xml = Files.readString(bpmnPath);
           ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);
 
-          storedHashes.put(definitions.getDefinitionsKey().getProcessDefinitionId(),
+          storedHashes.put(
+              definitions.getDefinitionsKey().getProcessDefinitionId(),
               definitions.getDefinitionsKey().getHash());
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
           xmlEmitter.send(
               new ProducerRecord<>(
-                  kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC),
+                  kafkaPropertiesHelper.getPrefixedTopicName(
+                      Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC),
                   definitions.getDefinitionsKey().getProcessDefinitionId(),
                   new XmlDefinitionsDTO(xml)));
         }
@@ -153,9 +159,9 @@ public class ExternalTriggerConsumer {
       // We have a worker instance for this process definition. If not consumer exists yet
       // for that process definitionm create a new one for the external-task-trigger-incoming
       // channel
-      KafkaConsumer<UUID, ExternalTaskTrigger> consumer = consumerMap.get(processDefinitionId);
+      KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = consumerMap.get(processDefinitionId);
       if (consumer == null) {
-        final KafkaConsumer<UUID, ExternalTaskTrigger> newConsumer =
+        final KafkaConsumer<UUID, ExternalTaskTriggerDTO> newConsumer =
             createConsumer(
                 "consumer-" + processDefinitionId,
                 (Class<? extends Deserializer<?>>) Serdes.UUID().deserializer().getClass(),
@@ -165,19 +171,23 @@ public class ExternalTriggerConsumer {
             Collections.singletonList(
                 kafkaPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
         CompletableFuture.runAsync(
-            () -> {
-              while (true) {
-                ConsumerRecords<UUID, ExternalTaskTrigger> records =
-                    newConsumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<UUID, ExternalTaskTrigger> record : records) {
-                  consumeExternalTaskTrigger(record.value(), processDefinitionId);
-                }
-              }
-            }).exceptionallyAsync(t -> {
-          log.error("Error while consuming external task triggers for process definition {}:{}", processDefinitionId,
-              t.getMessage());
-              return null;
-            });
+                () -> {
+                  while (true) {
+                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
+                        newConsumer.poll(Duration.ofMillis(100));
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                      consumeExternalTaskTrigger(record.value(), processDefinitionId);
+                    }
+                  }
+                })
+            .exceptionallyAsync(
+                t -> {
+                  log.error(
+                      "Error while consuming external task triggers for process definition {}:{}",
+                      processDefinitionId,
+                      t.getMessage());
+                  return null;
+                });
       }
     }
   }
@@ -193,7 +203,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeExternalTaskTrigger(
-      ExternalTaskTrigger externalTaskTrigger, String definitionId) {
+      ExternalTaskTriggerDTO externalTaskTrigger, String definitionId) {
     String processDefinitionId =
         externalTaskTrigger.getProcessDefinitionKey().getProcessDefinitionId().split("/")[0];
     if (!definitionId.equals(processDefinitionId)) {
@@ -202,7 +212,9 @@ public class ExternalTriggerConsumer {
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance == null) {
-      respondError(externalTaskTrigger, "No worker instance found for process definition " + processDefinitionId);
+      respondError(
+          externalTaskTrigger,
+          "No worker instance found for process definition " + processDefinitionId);
       return;
     }
     // Get method from workerInstance which has matching annotation
@@ -213,7 +225,7 @@ public class ExternalTriggerConsumer {
 
       CompletableFuture.runAsync(
           () -> {
-            ExternalTaskResponseTrigger processInstanceTrigger;
+            ExternalTaskResponseTriggerDTO processInstanceTrigger;
             try {
               Object result =
                   method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
@@ -221,15 +233,15 @@ public class ExternalTriggerConsumer {
                   result == null
                       ? Map.of()
                       : objectMapper.convertValue(result, LinkedHashMap.class);
-              ExternalTaskResponseResult externalTaskResponseResult =
-                  new ExternalTaskResponseResult(
-                      ExternalTaskResponseTypeEnum.SUCCESS,
+              ExternalTaskResponseResultDTO externalTaskResponseResult =
+                  new ExternalTaskResponseResultDTO(
+                      ExternalTaskResponseType.SUCCESS,
                       true,
                       Constants.NONE,
                       Constants.NONE,
                       Constants.NONE);
               processInstanceTrigger =
-                  new ExternalTaskResponseTrigger(
+                  new ExternalTaskResponseTriggerDTO(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
@@ -237,12 +249,12 @@ public class ExternalTriggerConsumer {
                       new VariablesDTO(variablesMap));
             } catch (EscalationEventException escalationEvent) {
               processInstanceTrigger =
-                  new ExternalTaskResponseTrigger(
+                  new ExternalTaskResponseTriggerDTO(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResult(
-                          ExternalTaskResponseTypeEnum.ESCALATION,
+                      new ExternalTaskResponseResultDTO(
+                          ExternalTaskResponseType.ESCALATION,
                           true,
                           escalationEvent.getName(),
                           escalationEvent.getMessage(),
@@ -250,12 +262,12 @@ public class ExternalTriggerConsumer {
                       VariablesDTO.empty());
             } catch (Throwable e) {
               processInstanceTrigger =
-                  new ExternalTaskResponseTrigger(
+                  new ExternalTaskResponseTriggerDTO(
                       externalTaskTrigger.getProcessInstanceKey(),
                       externalTaskTrigger.getElementIdPath(),
                       externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResult(
-                          ExternalTaskResponseTypeEnum.ERROR,
+                      new ExternalTaskResponseResultDTO(
+                          ExternalTaskResponseType.ERROR,
                           true,
                           Constants.NONE,
                           e.getMessage(),
@@ -271,20 +283,25 @@ public class ExternalTriggerConsumer {
           });
 
     } else {
-      respondError(externalTaskTrigger,
-          "No method matching method found for external task '" + externalTaskId + "' in jobworker '" + aClass.getName()
+      respondError(
+          externalTaskTrigger,
+          "No method matching method found for external task '"
+              + externalTaskId
+              + "' in jobworker '"
+              + aClass.getName()
               + "'");
     }
   }
 
-  private void respondError(ExternalTaskTrigger externalTaskTrigger, String processDefinitionId) {
-    ExternalTaskResponseTrigger processInstanceTrigger =
-        new ExternalTaskResponseTrigger(
+  private void respondError(
+      ExternalTaskTriggerDTO externalTaskTrigger, String processDefinitionId) {
+    ExternalTaskResponseTriggerDTO processInstanceTrigger =
+        new ExternalTaskResponseTriggerDTO(
             externalTaskTrigger.getProcessInstanceKey(),
             externalTaskTrigger.getElementIdPath(),
             externalTaskTrigger.getElementInstanceIdPath(),
-            new ExternalTaskResponseResult(
-                ExternalTaskResponseTypeEnum.ERROR,
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.ERROR,
                 true,
                 Constants.NONE,
                 processDefinitionId,
@@ -292,19 +309,18 @@ public class ExternalTriggerConsumer {
             VariablesDTO.empty());
     responseEmitter.send(
         new ProducerRecord<>(
-            kafkaPropertiesHelper.getPrefixedTopicName(
-                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+            kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
             externalTaskTrigger.getProcessInstanceKey(),
             processInstanceTrigger));
   }
 
-  private Object[] getParameters(Method method, ExternalTaskTrigger externalTaskTrigger) {
+  private Object[] getParameters(Method method, ExternalTaskTriggerDTO externalTaskTrigger) {
     // This method has the matching annotation
     Parameter[] parameters = method.getParameters();
     Object[] args = new Object[parameters.length];
     VariablesDTO variables = externalTaskTrigger.getVariables();
     for (int i = 0; i < parameters.length; i++) {
-      if (parameters[i].getType().equals(ExternalTaskTrigger.class)) {
+      if (parameters[i].getType().equals(ExternalTaskTriggerDTO.class)) {
         args[i] = externalTaskTrigger;
       } else {
         JsonNode jsonNode = variables.get(parameters[i].getName());

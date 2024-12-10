@@ -40,10 +40,13 @@ class BoundaryEventsTest {
     }
   }
 
-  
   @Test
   void testBoundaryTimerTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
@@ -51,7 +54,8 @@ class BoundaryEventsTest {
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
         .waitUntilCompleted()
-        .assertThatProcess().isCompleted()
+        .assertThatProcess()
+        .isCompleted()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasInstantiatedElementWithId("EndEvent_2")
@@ -60,7 +64,11 @@ class BoundaryEventsTest {
 
   @Test
   void testBoundaryTimerNotTriggered()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
@@ -69,7 +77,8 @@ class BoundaryEventsTest {
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
-        .assertThatProcess().isCompleted()
+        .assertThatProcess()
+        .isCompleted()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("Boundary_Timer_1")
@@ -78,7 +87,11 @@ class BoundaryEventsTest {
 
   @Test
   void testBoundaryTimerNonInterrupting()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
@@ -99,18 +112,19 @@ class BoundaryEventsTest {
         .hasInstantiatedElementWithId("Boundary_Timer_1", 1);
   }
 
-
-
   @Test
   void testBoundaryMessageInterrupting()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1",
-            Set.of("key1"))
-        .andSendMessageWithCorrelationKey("BoundaryMessage", "key1",
-            VariablesDTO.of("var1", "value1"))
+        .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1", Set.of("key1"))
+        .andSendMessageWithCorrelationKey(
+            "BoundaryMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -123,19 +137,22 @@ class BoundaryEventsTest {
 
   @Test
   void testBoundaryMessageNonInterrupting()
-      throws JAXBException, NoSuchAlgorithmException, IOException, ParserConfigurationException, SAXException {
+      throws JAXBException,
+      NoSuchAlgorithmException,
+      IOException,
+      ParserConfigurationException,
+      SAXException {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1",
-            Set.of("key1"))
-        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
-            VariablesDTO.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
-            VariablesDTO.of("var1", "value1"))
-        .andSendMessageWithCorrelationKey("BoundaryEventMessage", "key1",
-            VariablesDTO.of("var1", "value1"))
+        .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1", Set.of("key1"))
+        .andSendMessageWithCorrelationKey(
+            "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey(
+            "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
+        .andSendMessageWithCorrelationKey(
+            "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilElementHasPassed("BoundaryEvent_1", 1)
         .andRespondWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
@@ -146,12 +163,15 @@ class BoundaryEventsTest {
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasVariableWithValue("var1", "value1")
         .hasVariableWithValue("var2", "value2");
-
   }
 
   @Test
   void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -169,10 +189,13 @@ class BoundaryEventsTest {
         .hasNotPassedElementWithId("OkTask");
   }
 
-
   @Test
   void testBoundaryTimer_SubProcessTriggered_NormalEnd()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -193,7 +216,11 @@ class BoundaryEventsTest {
 
   @Test
   void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
@@ -202,10 +229,10 @@ class BoundaryEventsTest {
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
         .assertThatProcess()
-//        .hasTerminatedElement("SubProcess_Boundary_Timer_1")
-//        .hasPassedElementWithId("SubStartEvent_1")
-//        .hasPassedElementWithId("Service_Task_1")
-//        .hasPassedElementWithId("SubEndEvent_1")
+        //        .hasTerminatedElement("SubProcess_Boundary_Timer_1")
+        //        .hasPassedElementWithId("SubStartEvent_1")
+        //        .hasPassedElementWithId("Service_Task_1")
+        //        .hasPassedElementWithId("SubEndEvent_1")
         .hasNotPassedElementWithId("Service_Task_2")
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("Subprocess_1")
@@ -215,10 +242,13 @@ class BoundaryEventsTest {
         .hasNotPassedElementWithId("EndEvent_1");
   }
 
-
   @Test
   void testBoundaryTimer_SubProcessTriggered_NonInterrupting_BoundaryEventEnd_NoEnd()
-      throws IOException, JAXBException, NoSuchAlgorithmException, ParserConfigurationException, SAXException {
+      throws IOException,
+      JAXBException,
+      NoSuchAlgorithmException,
+      ParserConfigurationException,
+      SAXException {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess-noendevent.bpmn")

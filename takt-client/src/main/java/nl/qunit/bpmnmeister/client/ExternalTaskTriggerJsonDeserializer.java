@@ -1,9 +1,9 @@
 package nl.qunit.bpmnmeister.client;
 
-import nl.qunit.bpmnmeister.pi.ExternalTaskTrigger;
+import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
 
-public class ExternalTaskTriggerJsonDeserializer extends JsonDeserializer<ExternalTaskTrigger> {
+public class ExternalTaskTriggerJsonDeserializer extends JsonDeserializer<ExternalTaskTriggerDTO> {
   public ExternalTaskTriggerJsonDeserializer() {
-    super(ExternalTaskTrigger.class);
+    super(ExternalTaskTriggerDTO.class);
   }
 }

@@ -12,14 +12,14 @@ import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
 @Getter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class FlowNodeInstanceUpdate extends InstanceUpdate {
+public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
 
   private final UUID flowNodeInstancesId;
   private final FlowNodeInstanceDTO flowNodeInstance;
   private final VariablesDTO variables;
 
   @JsonCreator
-  public FlowNodeInstanceUpdate(
+  public FlowNodeInstanceUpdateDTO(
       @JsonProperty("processInstanceKey") UUID processInstanceKey,
       @JsonProperty("flowNodeInstancesId") UUID flowNodeInstancesId,
       @JsonProperty("flowNodeInstance") FlowNodeInstanceDTO flowNodeInstance,

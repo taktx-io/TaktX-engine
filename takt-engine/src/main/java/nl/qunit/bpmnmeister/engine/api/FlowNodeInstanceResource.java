@@ -57,12 +57,16 @@ public class FlowNodeInstanceResource {
       log.info(
           "host and port match {}:{} ", metadata.activeHost().host(), metadata.activeHost().port());
 
-      ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO> flowNodeInstanceStore = getFlowNodeInstanceStore();
+      ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO> flowNodeInstanceStore =
+          getFlowNodeInstanceStore();
       Map<String, FlowNodeInstanceDTO> flowNodeInstances = new HashMap<>();
-      flowNodeInstanceStore.range(flowNodeInstancesId + ":", flowNodeInstancesId + "\u00ff").forEachRemaining(e -> {
-        flowNodeInstances.put(e.key, e.value);
-      });
-        return Response.ok(flowNodeInstances).build();
+      flowNodeInstanceStore
+          .range(flowNodeInstancesId + ":", flowNodeInstancesId + "\u00ff")
+          .forEachRemaining(
+              e -> {
+                flowNodeInstances.put(e.key, e.value);
+              });
+      return Response.ok(flowNodeInstances).build();
     } else {
       log.info(
           "Host and port differ from injected {}:{}, redirecting to host: {} port: {}",
@@ -80,14 +84,14 @@ public class FlowNodeInstanceResource {
     }
   }
 
-
   private ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO> getFlowNodeInstanceStore() {
     while (true) {
       try {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO>>
             storeQueryParameters =
             StoreQueryParameters.fromNameAndType(
-                tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
+                tenantNamespaceNameWrapper.getPrefixed(
+                    Stores.FLOW_NODE_INSTANCE.getStorename()),
                 QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(storeQueryParameters);
       } catch (InvalidStateStoreException e) {
@@ -103,5 +107,4 @@ public class FlowNodeInstanceResource {
       throw new RuntimeException(e);
     }
   }
-
 }

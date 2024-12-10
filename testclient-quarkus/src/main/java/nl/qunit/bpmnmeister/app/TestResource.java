@@ -8,9 +8,11 @@ import jakarta.ws.rs.PathParam;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.client.TaktClient;
+
 @Path("/processes")
 @Slf4j
 public class TestResource {
+
   @Inject
   TaktClient taktClient;
 
@@ -24,5 +26,4 @@ public class TestResource {
   public void startProcessInstance(@PathParam("process") String process) {
     taktClient.startProcess(process);
   }
-
 }

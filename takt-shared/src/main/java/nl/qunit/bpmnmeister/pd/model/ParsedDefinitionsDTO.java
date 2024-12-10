@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @Builder
-public class ParsedDefinitionsDTO extends DefinitionsTrigger {
+public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
   private final DefinitionsKey definitionsKey;
   private final ProcessDTO rootProcess;
   private final Map<String, MessageDTO> messages;

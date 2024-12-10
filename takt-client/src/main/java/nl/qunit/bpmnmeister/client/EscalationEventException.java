@@ -13,5 +13,4 @@ public class EscalationEventException extends RuntimeException {
     this.name = name;
     this.code = code;
   }
-
 }

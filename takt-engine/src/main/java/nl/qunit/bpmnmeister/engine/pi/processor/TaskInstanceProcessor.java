@@ -11,14 +11,14 @@ import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.TaskInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
 
 @ApplicationScoped
 @NoArgsConstructor
 public class TaskInstanceProcessor
-    extends ActivityInstanceProcessor<Task, TaskInstance, ContinueFlowElementTrigger> {
+    extends ActivityInstanceProcessor<Task, TaskInstance, ContinueFlowElementTriggerDTO> {
 
   @Inject
   public TaskInstanceProcessor(
@@ -58,7 +58,7 @@ public class TaskInstanceProcessor
       FlowElements flowElements,
       ProcessInstance processInstance,
       TaskInstance externalTaskInstance,
-      ContinueFlowElementTrigger trigger,
+      ContinueFlowElementTriggerDTO trigger,
       Variables processInstanceVariables) {
     // Nothing to do here
   }

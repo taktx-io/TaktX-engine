@@ -8,34 +8,38 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscription;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKey;
+import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
 
 @NoArgsConstructor
 @Getter
 @Setter
 public class DefinitionMessageSubscriptions {
-  private Map<MessageEventKey, DefinitionMessageSubscription> definitions;
+
+  private Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> definitions;
 
   @JsonCreator
   public DefinitionMessageSubscriptions(
       @JsonProperty("definitions")
-          Map<MessageEventKey, DefinitionMessageSubscription> definitions) {
+      Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> definitions) {
     this.definitions = definitions;
   }
 
   @JsonIgnore
-  public DefinitionMessageSubscriptions update(DefinitionMessageSubscription messageSubscription) {
-    Map<MessageEventKey, DefinitionMessageSubscription> newDefinitions = new HashMap<>(definitions);
+  public DefinitionMessageSubscriptions update(
+      DefinitionMessageSubscriptionDTO messageSubscription) {
+    Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> newDefinitions =
+        new HashMap<>(definitions);
     newDefinitions.put(messageSubscription.toMessageEventKey(), messageSubscription);
     return new DefinitionMessageSubscriptions(newDefinitions);
   }
 
   @JsonIgnore
   public DefinitionMessageSubscriptions remove(
-      CancelDefinitionMessageSubscription messageSubscription) {
-    Map<MessageEventKey, DefinitionMessageSubscription> newDefinitions = new HashMap<>(definitions);
+      CancelDefinitionMessageSubscriptionDTO messageSubscription) {
+    Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> newDefinitions =
+        new HashMap<>(definitions);
     newDefinitions.remove(messageSubscription.toMessageEventKey());
     return new DefinitionMessageSubscriptions(newDefinitions);
   }

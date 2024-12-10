@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pd.model.Gateway;
 import nl.qunit.bpmnmeister.engine.pd.model.SequenceFlow;
@@ -17,13 +18,12 @@ import nl.qunit.bpmnmeister.engine.pi.model.GatewayInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.pd.model.Constants;
 import nl.qunit.bpmnmeister.pd.model.FlowConditionDTO;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTrigger;
-import nl.qunit.bpmnmeister.pi.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
 import nl.qunit.bpmnmeister.pi.Variables;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
-        E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTrigger>
+    E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FLowNodeInstanceProcessor<E, I, C> {
 
   private FeelExpressionHandler feelExpressionHandler;
