@@ -15,7 +15,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import nl.qunit.bpmnmeister.bpmn.TDefinitions;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.util.SHA256;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;

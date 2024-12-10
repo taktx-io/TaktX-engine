@@ -11,6 +11,7 @@ import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
+import nl.qunit.bpmnmeister.engine.pd.RepeatDuration;
 import nl.qunit.bpmnmeister.engine.pd.model.ExternalTask;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElements;
 import nl.qunit.bpmnmeister.engine.pi.DirectInstanceResult;
@@ -22,13 +23,12 @@ import nl.qunit.bpmnmeister.engine.pi.model.EscalationEventSignal;
 import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResultDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseType;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
-import nl.qunit.bpmnmeister.scheduler.RepeatDuration;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseResultDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseType;
 
 @NoArgsConstructor
 @Setter

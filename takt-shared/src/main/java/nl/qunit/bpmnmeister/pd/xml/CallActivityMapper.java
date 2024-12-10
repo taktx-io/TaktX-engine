@@ -1,9 +1,9 @@
 package nl.qunit.bpmnmeister.pd.xml;
 
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
-import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.CallActivityDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.LoopCharacteristicsDTO;
 
 public interface CallActivityMapper extends Mapper {
 

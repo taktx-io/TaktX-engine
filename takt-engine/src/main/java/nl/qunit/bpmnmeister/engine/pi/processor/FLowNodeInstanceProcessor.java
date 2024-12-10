@@ -17,12 +17,12 @@ import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.FlowNodeInstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
 
 @Getter
 @Setter

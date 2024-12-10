@@ -6,13 +6,13 @@ import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
 import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.TerminateTriggerDTO;
 
 @ApplicationScoped
 public class FlowNodeInstancesProcessor {

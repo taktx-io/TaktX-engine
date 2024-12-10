@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.engine.pi.testengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskTriggerDTO;
 
 public class ExternalTaskAssert {
 

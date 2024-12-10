@@ -3,9 +3,9 @@ package nl.qunit.bpmnmeister.pd.xml;
 import java.util.Optional;
 import nl.qunit.bpmnmeister.bpmn.CalledElement;
 import nl.qunit.bpmnmeister.bpmn.TCallActivity;
-import nl.qunit.bpmnmeister.pd.model.CallActivityDTO;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.LoopCharacteristicsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.CallActivityDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.LoopCharacteristicsDTO;
 
 public class ZeebeCallActivityMapper implements CallActivityMapper {
 

@@ -10,14 +10,14 @@ import io.quarkus.jackson.ObjectMapperCustomizer;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
 import java.util.List;
-import nl.qunit.bpmnmeister.pd.model.BaseElementDTO;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
-import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
-import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.BaseElementDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.DefinitionsTriggerDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.MessageSchedulerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.SchedulableMessageDTO;
 
 public class CustomObjectMapperProvider {
 
@@ -36,8 +36,8 @@ public class CustomObjectMapperProvider {
         BasicPolymorphicTypeValidator.builder()
             .allowIfBaseType(DefinitionsTriggerDTO.class)
             .allowIfBaseType(BaseElementDTO.class)
-            .allowIfBaseType(SchedulableMessage.class)
-            .allowIfBaseType(MessageScheduler.class)
+            .allowIfBaseType(SchedulableMessageDTO.class)
+            .allowIfBaseType(MessageSchedulerDTO.class)
             .allowIfBaseType(ProcessInstanceTriggerDTO.class)
             .allowIfBaseType(FlowNodeInstanceDTO.class)
             .allowIfBaseType(MessageEventDTO.class)

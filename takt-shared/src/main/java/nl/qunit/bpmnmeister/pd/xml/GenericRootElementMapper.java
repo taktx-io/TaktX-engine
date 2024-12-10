@@ -7,10 +7,10 @@ import java.util.Map;
 import nl.qunit.bpmnmeister.bpmn.TFlowElement;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.FlowElementDTO;
-import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.FlowElementDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.FlowElementsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDTO;
 
 public class GenericRootElementMapper implements RootElementMapper {
 

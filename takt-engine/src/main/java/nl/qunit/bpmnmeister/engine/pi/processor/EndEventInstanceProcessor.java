@@ -11,7 +11,7 @@ import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.EndEventInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 
 @ApplicationScoped
 @NoArgsConstructor

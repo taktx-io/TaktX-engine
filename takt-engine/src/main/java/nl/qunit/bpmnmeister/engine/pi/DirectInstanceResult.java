@@ -8,7 +8,7 @@ import java.util.UUID;
 import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
-import nl.qunit.bpmnmeister.pd.model.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
 
 public class DirectInstanceResult {
 

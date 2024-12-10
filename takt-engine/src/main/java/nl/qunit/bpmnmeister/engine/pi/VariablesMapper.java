@@ -3,8 +3,8 @@ package nl.qunit.bpmnmeister.engine.pi;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

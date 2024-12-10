@@ -4,8 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pd.model.Activity;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
 
 @NoArgsConstructor
 @Getter

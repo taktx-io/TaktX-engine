@@ -2,23 +2,23 @@ package nl.qunit.bpmnmeister.engine.pd;
 
 import java.util.ArrayList;
 import java.util.List;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.MessageDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionStateEnum;
-import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
-import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivationDTO;
-import nl.qunit.bpmnmeister.pi.StartCommandDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
-import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
-import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduleType;
-import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionStateEnum;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.StartEventDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.DefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessDefinitionActivationDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartCommandDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.MessageSchedulerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.SchedulableMessageDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduleType;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduledKeyDTO;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -38,9 +38,9 @@ public class ProcessDefinitionActivationProcessor
     this.context = context;
   }
 
-  private static List<SchedulableMessage<?>> getStartCommands(
+  private static List<SchedulableMessageDTO<?>> getStartCommands(
       String processDefinitionId, StartEventDTO startEvent) {
-    List<SchedulableMessage<?>> processInstanceStartCommand = new ArrayList<>();
+    List<SchedulableMessageDTO<?>> processInstanceStartCommand = new ArrayList<>();
     processInstanceStartCommand.add(
         new StartCommandDTO(
             Constants.NONE_UUID,
@@ -146,8 +146,8 @@ public class ProcessDefinitionActivationProcessor
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              ScheduledKey scheduledKey =
-                  new ScheduledKey(
+              ScheduledKeyDTO scheduledKey =
+                  new ScheduledKeyDTO(
                       processActivationRecord.key(),
                       Constants.NONE_UUID,
                       ScheduleType.from(timerEventDefinition),
@@ -166,7 +166,7 @@ public class ProcessDefinitionActivationProcessor
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              MessageScheduler schedule =
+              MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
                       processActivationRecord.key(),
                       Constants.NONE_UUID,

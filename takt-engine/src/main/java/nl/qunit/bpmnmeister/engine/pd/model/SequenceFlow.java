@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.engine.pd.model;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import nl.qunit.bpmnmeister.pd.model.FlowConditionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.FlowConditionDTO;
 
 @Getter
 @SuperBuilder

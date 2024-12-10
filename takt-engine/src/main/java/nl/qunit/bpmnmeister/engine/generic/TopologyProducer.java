@@ -26,22 +26,22 @@ import nl.qunit.bpmnmeister.engine.pi.Forwarder;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.ProcessDefinitionActivationDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.StartCommandDTO;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
-import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
-import nl.qunit.bpmnmeister.scheduler.SchedulableMessage;
-import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.DefinitionsTriggerDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessDefinitionActivationDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartCommandDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.MessageSchedulerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.SchedulableMessageDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduledKeyDTO;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
@@ -66,14 +66,14 @@ public class TopologyProducer {
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  public static final ObjectMapperSerde<ScheduledKey> SCHEDULE_KEY_SERDE =
-      new ObjectMapperSerde<>(ScheduledKey.class);
+  public static final ObjectMapperSerde<ScheduledKeyDTO> SCHEDULE_KEY_SERDE =
+      new ObjectMapperSerde<>(ScheduledKeyDTO.class);
   public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKeyDTO.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
   public static final Serde<String> FLOW_NODE_INSTANCE_KEY_SERDE = Serdes.String();
-  public static final ObjectMapperSerde<MessageScheduler> MESSAGE_SCHEDULER_SERDE =
-      new ObjectMapperSerde<>(MessageScheduler.class);
+  public static final ObjectMapperSerde<MessageSchedulerDTO> MESSAGE_SCHEDULER_SERDE =
+      new ObjectMapperSerde<>(MessageSchedulerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
@@ -233,8 +233,8 @@ public class TopologyProducer {
                 (key, value) -> value instanceof InstanceUpdateDTO,
                 (key, value) -> value instanceof ExternalTaskTriggerDTO,
                 (key, value) -> value instanceof StartCommandDTO,
-                (key, value) -> value instanceof MessageScheduler,
-                (key, value) -> key instanceof ScheduledKey,
+                (key, value) -> value instanceof MessageSchedulerDTO,
+                (key, value) -> key instanceof ScheduledKeyDTO,
                 (key, value) -> value instanceof MessageEventDTO);
 
     branches[0]
@@ -264,12 +264,12 @@ public class TopologyProducer {
                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Produced.with(Serdes.String(), START_COMMAND_SERDE));
     branches[4]
-        .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
+        .map((key, value) -> KeyValue.pair(((ScheduledKeyDTO) key), (MessageSchedulerDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     branches[5]
-        .map((key, value) -> KeyValue.pair(((ScheduledKey) key), (MessageScheduler) value))
+        .map((key, value) -> KeyValue.pair(((ScheduledKeyDTO) key), (MessageSchedulerDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
@@ -335,11 +335,11 @@ public class TopologyProducer {
                 SCHEDULE_KEY_SERDE,
                 MESSAGE_SCHEDULER_SERDE));
 
-    KStream<ScheduledKey, MessageScheduler> scheduleCommandStream =
+    KStream<ScheduledKeyDTO, MessageSchedulerDTO> scheduleCommandStream =
         stateStore.stream(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
-    KStream<Object, SchedulableMessage> processStream =
+    KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
             () -> new ScheduleProcessor(clock, tenantNamespaceNameWrapper),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
@@ -393,12 +393,12 @@ public class TopologyProducer {
     scheduleStream
         .split()
         .branch(
-            (key, value) -> value instanceof MessageScheduler,
+            (key, value) -> value instanceof MessageSchedulerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((ScheduledKey) key, (MessageScheduler) value))
+                                KeyValue.pair((ScheduledKeyDTO) key, (MessageSchedulerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.SCHEDULE_COMMANDS.getTopicName()),

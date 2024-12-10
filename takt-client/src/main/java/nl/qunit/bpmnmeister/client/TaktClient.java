@@ -1,7 +1,7 @@
 package nl.qunit.bpmnmeister.client;
 
 import java.util.Set;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
 
 public class TaktClient {
   private final ExternalTriggerConsumer externalTriggerConsumer;

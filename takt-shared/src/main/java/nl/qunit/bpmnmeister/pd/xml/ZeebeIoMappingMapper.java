@@ -5,8 +5,8 @@ import java.util.Optional;
 import java.util.Set;
 import nl.qunit.bpmnmeister.bpmn.IoMapping;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.IoVariableMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.IoVariableMappingDTO;
 
 public class ZeebeIoMappingMapper implements IoMappingMapper {
 

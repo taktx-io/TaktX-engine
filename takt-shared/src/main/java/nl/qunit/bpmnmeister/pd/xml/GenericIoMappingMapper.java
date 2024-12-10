@@ -2,7 +2,7 @@ package nl.qunit.bpmnmeister.pd.xml;
 
 import java.util.Set;
 import nl.qunit.bpmnmeister.bpmn.TBaseElement;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.InputOutputMappingDTO;
 
 public class GenericIoMappingMapper implements IoMappingMapper {
 

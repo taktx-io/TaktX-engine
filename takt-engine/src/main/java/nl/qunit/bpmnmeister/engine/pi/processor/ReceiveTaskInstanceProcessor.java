@@ -14,9 +14,9 @@ import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEve
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ReceiveTaskInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor

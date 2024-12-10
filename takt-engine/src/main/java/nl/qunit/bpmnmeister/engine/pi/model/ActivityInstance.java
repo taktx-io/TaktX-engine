@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActtivityStateEnum;
 
 @NoArgsConstructor
 @Setter

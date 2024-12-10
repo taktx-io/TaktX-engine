@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowElement;
 import nl.qunit.bpmnmeister.engine.pd.model.StartEvent;
-import nl.qunit.bpmnmeister.pd.model.InputOutputMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.IoVariableMappingDTO;
-import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.StartEventDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.InputOutputMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.IoVariableMappingDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.LinkEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.StartEventDTO;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 

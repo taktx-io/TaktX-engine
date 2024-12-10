@@ -12,8 +12,8 @@ import nl.qunit.bpmnmeister.engine.pi.ProcessInstanceMapper;
 import nl.qunit.bpmnmeister.engine.pi.VariablesMapper;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ParallelGatewayInstance;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
 
 @ApplicationScoped
 @NoArgsConstructor

@@ -14,20 +14,20 @@ import nl.qunit.bpmnmeister.engine.pd.model.WIthChildElements;
 import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 import nl.qunit.bpmnmeister.engine.pi.model.WithFlowNodeInstances;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
-import nl.qunit.bpmnmeister.pi.Variables;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstancesDTO;
-import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
-import nl.qunit.bpmnmeister.pi.state.WithFlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.WithFlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartNewProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.TerminateTriggerDTO;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -173,7 +173,7 @@ public class ProcessInstanceProcessor
         processInstanceVariablee);
   }
 
-  private ProcessInstanceUpdate processInstanceToUpdate(
+  private ProcessInstanceUpdateDTO processInstanceToUpdate(
       ProcessInstance processInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
     VariablesDTO variablesDTO = variablesMapper.toDTO(variables);
     FlowNodeInstancesDTO flowNodeInstancesDTO =
@@ -183,7 +183,7 @@ public class ProcessInstanceProcessor
         instanceMapper.map(processInstance).toBuilder()
             .flowNodeInstances(flowNodeInstancesDTO)
             .build();
-    return new ProcessInstanceUpdate(processInstanceDTO, variablesDTO);
+    return new ProcessInstanceUpdateDTO(processInstanceDTO, variablesDTO);
   }
 
   public void handleContinue(ContinueFlowElementTriggerDTO trigger) {
@@ -320,7 +320,7 @@ public class ProcessInstanceProcessor
     VariablesDTO variablesDTO = variablesMapper.toDTO(processInstanceVariables);
     if (flowNodeInstances.isDirty()) {
       instanceResult.addProcessInstanceUpdate(
-          new ProcessInstanceUpdate(processInstanceDTO, variablesDTO));
+          new ProcessInstanceUpdateDTO(processInstanceDTO, variablesDTO));
     }
 
     processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);

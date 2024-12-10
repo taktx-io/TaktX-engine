@@ -2,8 +2,8 @@ package nl.qunit.bpmnmeister.pd.xml;
 
 import nl.qunit.bpmnmeister.bpmn.Subscription;
 import nl.qunit.bpmnmeister.bpmn.TMessage;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.MessageDTO;
 
 public class ZeebeMessagekMapper implements MessageMapper {
 

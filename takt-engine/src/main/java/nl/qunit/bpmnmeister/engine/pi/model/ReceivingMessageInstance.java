@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.model;
 import java.util.Map;
 import java.util.Set;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
 
 public interface ReceivingMessageInstance extends IFlowNodeInstance {
 

@@ -7,7 +7,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pd.model.FlowNode;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
 
 @Getter
 @Setter

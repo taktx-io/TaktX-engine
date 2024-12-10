@@ -9,10 +9,10 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
 
 public class ProcessInstanceAssert {
 

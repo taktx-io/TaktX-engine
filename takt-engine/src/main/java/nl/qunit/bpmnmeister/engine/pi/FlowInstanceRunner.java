@@ -12,10 +12,10 @@ import nl.qunit.bpmnmeister.engine.pi.model.FLowNodeInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstanceInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.FlowNodeInstances;
 import nl.qunit.bpmnmeister.engine.pi.model.ProcessInstance;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 import nl.qunit.bpmnmeister.engine.pi.processor.BoundaryEventInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FLowNodeInstanceProcessor;
 import nl.qunit.bpmnmeister.engine.pi.processor.FlowNodeInstanceProcessorProvider;
-import nl.qunit.bpmnmeister.pi.Variables;
 
 @ApplicationScoped
 @RequiredArgsConstructor

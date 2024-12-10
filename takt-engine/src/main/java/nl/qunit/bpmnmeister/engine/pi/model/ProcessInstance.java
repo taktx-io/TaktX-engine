@@ -3,7 +3,7 @@ package nl.qunit.bpmnmeister.engine.pi.model;
 import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
 
 @Getter
 public class ProcessInstance {

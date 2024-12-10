@@ -18,11 +18,11 @@ import nl.qunit.bpmnmeister.engine.pd.model.WIthChildElements;
 import nl.qunit.bpmnmeister.engine.pd.model.WithErrorEventDefinitions;
 import nl.qunit.bpmnmeister.engine.pd.model.WithEscalationEventDefinitions;
 import nl.qunit.bpmnmeister.engine.pd.model.WithMessageReference;
-import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
-import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
-import nl.qunit.bpmnmeister.pd.model.FlowElementsDTO;
-import nl.qunit.bpmnmeister.pd.model.MessageDTO;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ErrorDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.EscalationDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.FlowElementsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
 
 @ApplicationScoped
 public class DefinitionMapper {

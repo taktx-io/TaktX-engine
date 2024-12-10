@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 
 public class WrappedInMap implements Map<String, Object> {
 

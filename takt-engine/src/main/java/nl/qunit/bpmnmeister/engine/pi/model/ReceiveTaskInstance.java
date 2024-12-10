@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.pd.model.ReceiveTask;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
 
 @NoArgsConstructor
 @Getter

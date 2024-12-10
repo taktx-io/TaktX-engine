@@ -17,7 +17,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.engine.generic.TenantNamespaceNameWrapper;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;

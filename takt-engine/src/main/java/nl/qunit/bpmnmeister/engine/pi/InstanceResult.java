@@ -9,9 +9,9 @@ import nl.qunit.bpmnmeister.engine.pi.model.ExternalTaskInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduledKeyDTO;
 
 @Getter
 public class InstanceResult {
@@ -26,7 +26,7 @@ public class InstanceResult {
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayDeque<>();
-  private final Queue<ScheduledKey> cancelSchedules = new ArrayDeque<>();
+  private final Queue<ScheduledKeyDTO> cancelSchedules = new ArrayDeque<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -66,7 +66,7 @@ public class InstanceResult {
     scheduledContinuationInfos.add(scheduledContinuationInfo);
   }
 
-  public void cancelSchedule(ScheduledKey scheduledKey) {
+  public void cancelSchedule(ScheduledKeyDTO scheduledKey) {
     cancelSchedules.add(scheduledKey);
   }
 }

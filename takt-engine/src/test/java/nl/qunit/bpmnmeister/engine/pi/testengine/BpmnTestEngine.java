@@ -22,36 +22,36 @@ import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.generic.TopologyProducer;
 import nl.qunit.bpmnmeister.engine.pd.MutableClock;
 import nl.qunit.bpmnmeister.engine.pi.DebuggerUtil;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsTriggerDTO;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pd.model.XmlDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.DefinitionsTriggerDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageEventTriggerDTO;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageEventTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseResultDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskResponseType;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
-import nl.qunit.bpmnmeister.pi.FlowNodeInstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceState;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.ProcessInstanceUpdate;
-import nl.qunit.bpmnmeister.pi.StartCommandDTO;
-import nl.qunit.bpmnmeister.pi.StartNewProcessInstanceTriggerDTO;
-import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
-import nl.qunit.bpmnmeister.pi.state.ActivityInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.ActtivityStateEnum;
-import nl.qunit.bpmnmeister.pi.state.FlowNodeInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
-import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.pi.state.VariablesDTO;
-import nl.qunit.bpmnmeister.pi.state.WithFlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActivityInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActtivityStateEnum;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.FlowNodeInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.WithFlowNodeInstancesDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CorrelationMessageEventTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.DefinitionMessageEventTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseResultDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseType;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.FlowNodeInstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceState;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ProcessInstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartCommandDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartNewProcessInstanceTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.TerminateTriggerDTO;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -112,7 +112,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   private static @NotNull ProcessInstanceDTO getProcessInstanceDTO(
-      ProcessInstanceUpdate processInstanceUpdate) {
+      ProcessInstanceUpdateDTO processInstanceUpdate) {
     return new ProcessInstanceDTO(
         processInstanceUpdate.getProcessInstanceKey(),
         processInstanceUpdate.getParentProcessInstanceKey(),
@@ -203,8 +203,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     LOG.info("Received flow element trigger: " + trigger);
     if (trigger instanceof StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger) {
       ProcessDefinitionKey processDefinitionKey =
-          nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey.of(
-              startNewProcessInstanceTrigger.getProcessDefinition());
+          ProcessDefinitionKey.of(startNewProcessInstanceTrigger.getProcessDefinition());
       Set<UUID> uuids1 =
           processInstanceParentChildMap.computeIfAbsent(
               startNewProcessInstanceTrigger.getParentProcessInstanceKey(), k -> new HashSet<>());
@@ -233,7 +232,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public void consume(InstanceUpdateDTO instanceUpdate) {
-    if (instanceUpdate instanceof ProcessInstanceUpdate processInstanceUpdate) {
+    if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + instanceUpdate);
 
       ProcessInstanceDTO processInstanceDTO = getProcessInstanceDTO(processInstanceUpdate);

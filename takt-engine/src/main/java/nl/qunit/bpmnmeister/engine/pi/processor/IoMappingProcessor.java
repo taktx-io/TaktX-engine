@@ -8,7 +8,7 @@ import lombok.Setter;
 import nl.qunit.bpmnmeister.engine.feel.FeelExpressionHandler;
 import nl.qunit.bpmnmeister.engine.pd.model.IoVariableMapping;
 import nl.qunit.bpmnmeister.engine.pd.model.WithIoMapping;
-import nl.qunit.bpmnmeister.pi.Variables;
+import nl.qunit.bpmnmeister.engine.pi.model.Variables;
 
 @ApplicationScoped
 @NoArgsConstructor

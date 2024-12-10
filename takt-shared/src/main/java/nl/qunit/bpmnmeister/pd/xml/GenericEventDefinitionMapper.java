@@ -11,13 +11,13 @@ import nl.qunit.bpmnmeister.bpmn.TLinkEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TMessageEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTerminateEventDefinition;
 import nl.qunit.bpmnmeister.bpmn.TTimerEventDefinition;
-import nl.qunit.bpmnmeister.pd.model.ErrorEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.EscalationEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.EventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.LinkEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.MessageEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.TerminateEventDefinitionDTO;
-import nl.qunit.bpmnmeister.pd.model.TimerEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ErrorEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.EscalationEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.EventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.LinkEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.MessageEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.TerminateEventDefinitionDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.TimerEventDefinitionDTO;
 
 public class GenericEventDefinitionMapper implements EventDefinitionMapper {
 

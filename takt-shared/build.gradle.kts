@@ -81,6 +81,8 @@ publishing {
 
 spotless {
     java {
+        target("src/**/*.java")
+        targetExclude("${layout.buildDirectory}/**/*.java")
         googleJavaFormat()
     }
 }

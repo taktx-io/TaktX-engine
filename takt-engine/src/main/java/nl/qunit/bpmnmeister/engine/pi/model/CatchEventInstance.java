@@ -11,9 +11,9 @@ import nl.qunit.bpmnmeister.engine.pd.model.CatchEvent;
 import nl.qunit.bpmnmeister.engine.pd.model.ErrorEventDefinition;
 import nl.qunit.bpmnmeister.engine.pd.model.EscalationEventDefinition;
 import nl.qunit.bpmnmeister.engine.pd.model.EventSignal;
-import nl.qunit.bpmnmeister.pi.state.CatchEventStateEnum;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
-import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.CatchEventStateEnum;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduledKeyDTO;
 
 @Getter
 @Setter
@@ -22,7 +22,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     implements ReceivingMessageInstance {
   private CatchEventStateEnum state;
 
-  private Set<ScheduledKey> scheduledKeys;
+  private Set<ScheduledKeyDTO> scheduledKeys;
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
   private Set<EscalationSubscription> escalationSubscriptions;
   private Set<ErrorSubscription> errorSubscriptions;
@@ -73,7 +73,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     }
   }
 
-  public void addScheduledKey(ScheduledKey scheduledKey) {
+  public void addScheduledKey(ScheduledKeyDTO scheduledKey) {
     this.scheduledKeys.add(scheduledKey);
   }
 

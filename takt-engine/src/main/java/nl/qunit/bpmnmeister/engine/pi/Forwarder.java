@@ -14,20 +14,20 @@ import nl.qunit.bpmnmeister.engine.pi.model.NewCorrelationSubscriptionMessageEve
 import nl.qunit.bpmnmeister.engine.pi.model.ReceivingMessageInstance;
 import nl.qunit.bpmnmeister.engine.pi.model.ScheduledContinuationInfo;
 import nl.qunit.bpmnmeister.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import nl.qunit.bpmnmeister.pd.model.Constants;
-import nl.qunit.bpmnmeister.pd.model.ProcessDefinitionKey;
-import nl.qunit.bpmnmeister.pi.CancelCorrelationMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.ContinueFlowElementTriggerDTO;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.ExternalTaskTriggerDTO;
-import nl.qunit.bpmnmeister.pi.InstanceUpdateDTO;
-import nl.qunit.bpmnmeister.pi.StartCommandDTO;
-import nl.qunit.bpmnmeister.pi.TerminateTriggerDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
-import nl.qunit.bpmnmeister.pi.state.ProcessInstanceDTO;
-import nl.qunit.bpmnmeister.scheduler.MessageScheduler;
-import nl.qunit.bpmnmeister.scheduler.OneTimeScheduler;
-import nl.qunit.bpmnmeister.scheduler.ScheduledKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ProcessInstanceDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ContinueFlowElementTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskTriggerDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.InstanceUpdateDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.StartCommandDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.TerminateTriggerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.MessageSchedulerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.OneTimeSchedulerDTO;
+import nl.qunit.bpmnmeister.scheduler.v_1_0_0.ScheduledKeyDTO;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
@@ -71,9 +71,9 @@ public class Forwarder {
   private void forwardCancelSchedules(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
 
-    Queue<ScheduledKey> cancelSchedules = instanceResult.getCancelSchedules();
+    Queue<ScheduledKeyDTO> cancelSchedules = instanceResult.getCancelSchedules();
     while (!cancelSchedules.isEmpty()) {
-      ScheduledKey scheduledKey = cancelSchedules.poll();
+      ScheduledKeyDTO scheduledKey = cancelSchedules.poll();
       context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli()));
     }
   }
@@ -95,7 +95,7 @@ public class Forwarder {
               Constants.NONE,
               variablesMapper.toDTO(info.variables()));
 
-      MessageScheduler schedule =
+      MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
               processInstance.getProcessDefinitionKey(),
               processInstance.getProcessInstanceKey(),
@@ -218,16 +218,16 @@ public class Forwarder {
                 Instant.now().toEpochMilli()));
       } else {
         // Schedule the external task
-        OneTimeScheduler oneTimeScheduler =
-            new OneTimeScheduler(
+        OneTimeSchedulerDTO oneTimeScheduler =
+            new OneTimeSchedulerDTO(
                 processInstance.getProcessDefinitionKey(),
                 processInstance.getProcessInstanceKey(),
                 externalTask.element().getId(),
                 externalTask.element().getId(),
                 List.of(newExternalTaskTrigger),
                 externalTask.startTime());
-        ScheduledKey scheduledKey =
-            new ScheduledKey(
+        ScheduledKeyDTO scheduledKey =
+            new ScheduledKeyDTO(
                 definitionKey,
                 processInstance.getProcessInstanceKey(),
                 oneTimeScheduler.getScheduleType(),

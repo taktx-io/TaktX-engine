@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.CorrelationMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CorrelationMessageSubscriptionDTO;
 
 @Getter
 @Setter

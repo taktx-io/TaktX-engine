@@ -8,9 +8,9 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import nl.qunit.bpmnmeister.pi.CancelDefinitionMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.DefinitionMessageSubscriptionDTO;
-import nl.qunit.bpmnmeister.pi.state.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.state.v_1_0_0.MessageEventKeyDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
+import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.DefinitionMessageSubscriptionDTO;
 
 @NoArgsConstructor
 @Getter

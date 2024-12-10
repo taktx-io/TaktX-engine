@@ -8,13 +8,13 @@ import nl.qunit.bpmnmeister.bpmn.TEscalation;
 import nl.qunit.bpmnmeister.bpmn.TMessage;
 import nl.qunit.bpmnmeister.bpmn.TProcess;
 import nl.qunit.bpmnmeister.bpmn.TRootElement;
-import nl.qunit.bpmnmeister.pd.model.DefinitionsKey;
-import nl.qunit.bpmnmeister.pd.model.ErrorDTO;
-import nl.qunit.bpmnmeister.pd.model.EscalationDTO;
-import nl.qunit.bpmnmeister.pd.model.MessageDTO;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO;
-import nl.qunit.bpmnmeister.pd.model.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder;
-import nl.qunit.bpmnmeister.pd.model.ProcessDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.DefinitionsKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ErrorDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.EscalationDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.MessageDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDTO;
 
 public class GenericBpmnMapper implements BpmnMapper {
 
