@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -20,6 +21,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
@@ -34,11 +38,13 @@ import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseResultDTO;
 import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskResponseType;
 import nl.qunit.bpmnmeister.pi.trigger.v_1_0_0.ExternalTaskTriggerDTO;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
@@ -57,6 +63,7 @@ public class ExternalTriggerConsumer {
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> definitionActivationConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
+  private final boolean subscriberInitialized = false;
 
   ExternalTriggerConsumer(KafkaPropertiesHelper kafkaPropertiesHelper) {
     this.objectMapper = new ObjectMapper(new CBORFactory());
@@ -75,13 +82,16 @@ public class ExternalTriggerConsumer {
   private void subscribeToDefinitionRecords() {
     definitionActivationConsumer =
         createConsumer(
-            "client-definition-activation-consumer" + UUID.randomUUID(),
+            "client-definition-activation-consumer-" + UUID.randomUUID(),
             ProcessDefinitionKeyJsonDeserializer.class,
             ProcessDefinitionJsonDeserializer.class);
 
     String prefixedTopicName =
         kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC);
-    definitionActivationConsumer.subscribe(Collections.singletonList(prefixedTopicName));
+    log.info("Subscribing to topic {}", prefixedTopicName);
+    AtomicBoolean assigned = new AtomicBoolean(false);
+
+    subscribeAndWaitUntilPartitionsAssigned(prefixedTopicName, assigned);
 
     responseEmitter =
         new KafkaProducer<>(
@@ -95,6 +105,10 @@ public class ExternalTriggerConsumer {
             ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records =
                 definitionActivationConsumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record : records) {
+              log.info(
+                  "Received definition activation record {} to state {}",
+                  record.key(),
+                  record.value().getState());
               final String storedHash = storedHashes.get(record.key().getProcessDefinitionId());
               if (storedHash != null
                   && !storedHash.equals(
@@ -105,6 +119,30 @@ public class ExternalTriggerConsumer {
             }
           }
         });
+  }
+
+  private void subscribeAndWaitUntilPartitionsAssigned(
+      String prefixedTopicName, AtomicBoolean assigned) {
+    definitionActivationConsumer.subscribe(
+        Collections.singletonList(prefixedTopicName),
+        new ConsumerRebalanceListener() {
+          @Override
+          public void onPartitionsRevoked(Collection<TopicPartition> collection) {}
+
+          @Override
+          public void onPartitionsAssigned(Collection<TopicPartition> collection) {
+            log.info("Partitions assigned: {}", collection);
+            assigned.set(true);
+          }
+        });
+
+    while (!assigned.get()) {
+      ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> poll =
+          definitionActivationConsumer.poll(Duration.ofMillis(100));
+      if (poll.count() > 0) {
+        log.error("Received {} records before expecting to received", poll.count());
+      }
+    }
   }
 
   public void cleanup() {
@@ -137,6 +175,7 @@ public class ExternalTriggerConsumer {
               definitions.getDefinitionsKey().getProcessDefinitionId(),
               definitions.getDefinitionsKey().getHash());
           definitionMap.put(definitions.getDefinitionsKey().getProcessDefinitionId(), beanInstance);
+          log.info("Deploying process definition {}", definitions.getDefinitionsKey());
           xmlEmitter.send(
               new ProducerRecord<>(
                   kafkaPropertiesHelper.getPrefixedTopicName(
@@ -178,8 +217,20 @@ public class ExternalTriggerConsumer {
                     while (true) {
                       ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
                           newConsumer.poll(Duration.ofMillis(100));
-                      for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
-                        consumeExternalTaskTrigger(record.value(), processDefinitionId);
+                      if (records.count() > 0) {
+                        log.info(
+                            "Received {} records for process definition {}",
+                            records.count(),
+                            processDefinitionId);
+                        try (ExecutorService executor =
+                            Executors.newVirtualThreadPerTaskExecutor()) {
+                          records.forEach(
+                              record ->
+                                  executor.submit(
+                                      () ->
+                                          consumeExternalTaskTrigger(
+                                              record.value(), processDefinitionId)));
+                        }
                       }
                     }
                   })
@@ -191,6 +242,7 @@ public class ExternalTriggerConsumer {
                         t.getMessage());
                     return null;
                   });
+          int i = 0;
         }
       }
     } else if (value.getState() == ProcessDefinitionStateEnum.INACTIVE) {
@@ -209,6 +261,7 @@ public class ExternalTriggerConsumer {
       String groupId,
       Class<? extends Deserializer<?>> keyDeserializer,
       Class<? extends Deserializer<?>> valueDeserializer) {
+    log.info("Creating consumer for group id {}", groupId);
     Properties props =
         kafkaPropertiesHelper.getKafkaConsumerProperties(
             groupId, keyDeserializer, valueDeserializer);
@@ -222,6 +275,7 @@ public class ExternalTriggerConsumer {
     if (!definitionId.equals(processDefinitionId)) {
       return;
     }
+    log.info("Processing external task trigger for process definition {}", processDefinitionId);
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
     if (workerInstance == null) {
@@ -235,65 +289,57 @@ public class ExternalTriggerConsumer {
     Optional<Method> optMethod = findMatchingMethod(aClass, externalTaskId);
     if (optMethod.isPresent()) {
       Method method = optMethod.get();
-
-      CompletableFuture.runAsync(
-          () -> {
-            ExternalTaskResponseTriggerDTO processInstanceTrigger;
-            try {
-              Object result =
-                  method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
-              Map<String, JsonNode> variablesMap =
-                  result == null
-                      ? Map.of()
-                      : objectMapper.convertValue(result, LinkedHashMap.class);
-              ExternalTaskResponseResultDTO externalTaskResponseResult =
-                  new ExternalTaskResponseResultDTO(
-                      ExternalTaskResponseType.SUCCESS,
-                      true,
-                      Constants.NONE,
-                      Constants.NONE,
-                      Constants.NONE);
-              processInstanceTrigger =
-                  new ExternalTaskResponseTriggerDTO(
-                      externalTaskTrigger.getProcessInstanceKey(),
-                      externalTaskTrigger.getElementIdPath(),
-                      externalTaskTrigger.getElementInstanceIdPath(),
-                      externalTaskResponseResult,
-                      new VariablesDTO(variablesMap));
-            } catch (EscalationEventException escalationEvent) {
-              processInstanceTrigger =
-                  new ExternalTaskResponseTriggerDTO(
-                      externalTaskTrigger.getProcessInstanceKey(),
-                      externalTaskTrigger.getElementIdPath(),
-                      externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResultDTO(
-                          ExternalTaskResponseType.ESCALATION,
-                          true,
-                          escalationEvent.getName(),
-                          escalationEvent.getMessage(),
-                          escalationEvent.getCode()),
-                      VariablesDTO.empty());
-            } catch (Throwable e) {
-              processInstanceTrigger =
-                  new ExternalTaskResponseTriggerDTO(
-                      externalTaskTrigger.getProcessInstanceKey(),
-                      externalTaskTrigger.getElementIdPath(),
-                      externalTaskTrigger.getElementInstanceIdPath(),
-                      new ExternalTaskResponseResultDTO(
-                          ExternalTaskResponseType.ERROR,
-                          true,
-                          Constants.NONE,
-                          e.getMessage(),
-                          Constants.NONE),
-                      VariablesDTO.empty());
-            }
-            responseEmitter.send(
-                new ProducerRecord<>(
-                    kafkaPropertiesHelper.getPrefixedTopicName(
-                        Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
-                    externalTaskTrigger.getProcessInstanceKey(),
-                    processInstanceTrigger));
-          });
+      ExternalTaskResponseTriggerDTO processInstanceTrigger;
+      try {
+        Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
+        Map<String, JsonNode> variablesMap =
+            result == null ? Map.of() : objectMapper.convertValue(result, LinkedHashMap.class);
+        ExternalTaskResponseResultDTO externalTaskResponseResult =
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS,
+                true,
+                Constants.NONE,
+                Constants.NONE,
+                Constants.NONE);
+        processInstanceTrigger =
+            new ExternalTaskResponseTriggerDTO(
+                externalTaskTrigger.getProcessInstanceKey(),
+                externalTaskTrigger.getElementIdPath(),
+                externalTaskTrigger.getElementInstanceIdPath(),
+                externalTaskResponseResult,
+                new VariablesDTO(variablesMap));
+      } catch (EscalationEventException escalationEvent) {
+        processInstanceTrigger =
+            new ExternalTaskResponseTriggerDTO(
+                externalTaskTrigger.getProcessInstanceKey(),
+                externalTaskTrigger.getElementIdPath(),
+                externalTaskTrigger.getElementInstanceIdPath(),
+                new ExternalTaskResponseResultDTO(
+                    ExternalTaskResponseType.ESCALATION,
+                    true,
+                    escalationEvent.getName(),
+                    escalationEvent.getMessage(),
+                    escalationEvent.getCode()),
+                VariablesDTO.empty());
+      } catch (Throwable e) {
+        processInstanceTrigger =
+            new ExternalTaskResponseTriggerDTO(
+                externalTaskTrigger.getProcessInstanceKey(),
+                externalTaskTrigger.getElementIdPath(),
+                externalTaskTrigger.getElementInstanceIdPath(),
+                new ExternalTaskResponseResultDTO(
+                    ExternalTaskResponseType.ERROR,
+                    true,
+                    Constants.NONE,
+                    e.getMessage(),
+                    Constants.NONE),
+                VariablesDTO.empty());
+      }
+      responseEmitter.send(
+          new ProducerRecord<>(
+              kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+              externalTaskTrigger.getProcessInstanceKey(),
+              processInstanceTrigger));
 
     } else {
       respondError(

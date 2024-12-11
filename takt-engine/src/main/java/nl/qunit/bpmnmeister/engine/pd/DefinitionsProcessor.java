@@ -76,7 +76,7 @@ public class DefinitionsProcessor
 
   public void processDefinitionsRecord(
       String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
-
+    log.info("Processing definitions record for process definition {}", processDefinitionId);
     ParsedDefinitionsDTO parsedDefinition = BpmnParser.parse(xmlDefinitions.getXml());
 
     Map<String, Integer> hashVersionPairs =
@@ -113,6 +113,8 @@ public class DefinitionsProcessor
           .forEachRemaining(
               entry -> {
                 if (entry.value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
+                  log.info(
+                      "Forwarding active process definition for process definition {}", entry.key);
                   context.forward(new Record(entry.key, entry.value, Instant.now().toEpochMilli()));
                 }
               });
@@ -128,7 +130,6 @@ public class DefinitionsProcessor
       log.warn("No process definition found for key {}", definitionsRecord.key());
       return;
     }
-
     ProcessDefinitionDTO processDefinition =
         processDefinitionStore.get(
             new ProcessDefinitionKey(definitionsRecord.key(), latestVersion));
@@ -152,6 +153,7 @@ public class DefinitionsProcessor
             processDefinition,
             startEventId,
             startCommand.getVariables());
+    log.info("Starting process instance for process definition {}", definitionsRecord.key());
     context.forward(
         new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
   }

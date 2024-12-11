@@ -46,7 +46,9 @@ public class KafkaPropertiesHelper {
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
-
+    props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "10000");
+    props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "3000");
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest"); // or "latest"
     kafkaSaslMechanism.ifPresent(s -> props.put("sasl.mechanism", s));
     kafkaSaslJaasConfig.ifPresent(s -> props.put("sasl.jaas.config", s));
     kafkaSecurityProtocol.ifPresent(s -> props.put("security.protocol", s));

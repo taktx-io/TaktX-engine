@@ -26,6 +26,10 @@ public class TaktClient {
     processInstanceProducer.startProcess(process, VariablesDTO.empty());
   }
 
+  public void startProcess(String process, VariablesDTO variables) {
+    processInstanceProducer.startProcess(process, variables);
+  }
+
   public Set<String> getProcessDefinitionConsumers() {
     return externalTriggerConsumer.getProcessDefinitionConsumers();
   }
