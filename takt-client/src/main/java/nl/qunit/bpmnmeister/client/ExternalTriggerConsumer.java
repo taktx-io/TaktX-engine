@@ -26,6 +26,7 @@ import nl.qunit.bpmnmeister.pd.model.v_1_0_0.Constants;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.state.v_1_0_0.VariablesDTO;
@@ -54,7 +55,7 @@ public class ExternalTriggerConsumer {
 
   private final Map<String, String> storedHashes = new HashMap<>();
   private final Map<String, Object> definitionMap = new HashMap<>();
-  private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> parsedDefinitionConsumer;
+  private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> definitionActivationConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
 
   ExternalTriggerConsumer(KafkaPropertiesHelper kafkaPropertiesHelper) {
@@ -72,15 +73,15 @@ public class ExternalTriggerConsumer {
   }
 
   private void subscribeToDefinitionRecords() {
-    parsedDefinitionConsumer =
+    definitionActivationConsumer =
         createConsumer(
-            "client-parsed-definition-consumer",
+            "client-definition-activation-consumer" + UUID.randomUUID(),
             ProcessDefinitionKeyJsonDeserializer.class,
             ProcessDefinitionJsonDeserializer.class);
 
     String prefixedTopicName =
-        kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITION_PARSED_TOPIC);
-    parsedDefinitionConsumer.subscribe(Collections.singletonList(prefixedTopicName));
+        kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC);
+    definitionActivationConsumer.subscribe(Collections.singletonList(prefixedTopicName));
 
     responseEmitter =
         new KafkaProducer<>(
@@ -92,23 +93,23 @@ public class ExternalTriggerConsumer {
         () -> {
           while (true) {
             ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records =
-                parsedDefinitionConsumer.poll(Duration.ofMillis(100));
+                definitionActivationConsumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record : records) {
-              final String storedHash = storedHashes.get(record.key());
+              final String storedHash = storedHashes.get(record.key().getProcessDefinitionId());
               if (storedHash != null
                   && !storedHash.equals(
                       record.value().getDefinitions().getDefinitionsKey().getHash())) {
                 log.warn("Hash mismatch for process definition {}", record.key());
               }
-              consumeDefinition(record.key());
+              consumeDefinitionActivation(record.key(), record.value());
             }
           }
         });
   }
 
   public void cleanup() {
-    if (parsedDefinitionConsumer != null) {
-      parsedDefinitionConsumer.close();
+    if (definitionActivationConsumer != null) {
+      definitionActivationConsumer.close();
     }
     consumerMap.values().forEach(KafkaConsumer::close);
   }
@@ -152,42 +153,54 @@ public class ExternalTriggerConsumer {
     }
   }
 
-  public void consumeDefinition(ProcessDefinitionKey processDefinitionKey) {
-    final String processDefinitionId = processDefinitionKey.getProcessDefinitionId().split("/")[0];
-    Object workerInstance = definitionMap.get(processDefinitionId);
-    if (workerInstance != null) {
-      // We have a worker instance for this process definition. If not consumer exists yet
-      // for that process definitionm create a new one for the external-task-trigger-incoming
-      // channel
-      KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = consumerMap.get(processDefinitionId);
-      if (consumer == null) {
-        final KafkaConsumer<UUID, ExternalTaskTriggerDTO> newConsumer =
-            createConsumer(
-                "consumer-" + processDefinitionId,
-                (Class<? extends Deserializer<?>>) Serdes.UUID().deserializer().getClass(),
-                ExternalTaskTriggerJsonDeserializer.class);
-        consumerMap.put(processDefinitionId, newConsumer);
-        newConsumer.subscribe(
-            Collections.singletonList(
-                kafkaPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
-        CompletableFuture.runAsync(
-                () -> {
-                  while (true) {
-                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
-                        newConsumer.poll(Duration.ofMillis(100));
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
-                      consumeExternalTaskTrigger(record.value(), processDefinitionId);
+  public void consumeDefinitionActivation(
+      ProcessDefinitionKey processDefinitionKey, ProcessDefinitionDTO value) {
+    final String processDefinitionId = processDefinitionKey.getProcessDefinitionId();
+    if (value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
+      Object workerInstance = definitionMap.get(processDefinitionId);
+      if (workerInstance != null) {
+        // We have a worker instance for this process definition. If no consumer exists yet
+        // for that process definitionm create a new one for the external-task-trigger-incoming
+        // channel
+        KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = consumerMap.get(processDefinitionId);
+        if (consumer == null) {
+          final KafkaConsumer<UUID, ExternalTaskTriggerDTO> newConsumer =
+              createConsumer(
+                  "client-consumer-" + processDefinitionId,
+                  (Class<? extends Deserializer<?>>) Serdes.UUID().deserializer().getClass(),
+                  ExternalTaskTriggerJsonDeserializer.class);
+          consumerMap.put(processDefinitionId, newConsumer);
+          newConsumer.subscribe(
+              Collections.singletonList(
+                  kafkaPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
+          CompletableFuture.runAsync(
+                  () -> {
+                    while (true) {
+                      ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
+                          newConsumer.poll(Duration.ofMillis(100));
+                      for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                        consumeExternalTaskTrigger(record.value(), processDefinitionId);
+                      }
                     }
-                  }
-                })
-            .exceptionallyAsync(
-                t -> {
-                  log.error(
-                      "Error while consuming external task triggers for process definition {}:{}",
-                      processDefinitionId,
-                      t.getMessage());
-                  return null;
-                });
+                  })
+              .exceptionallyAsync(
+                  t -> {
+                    log.error(
+                        "Error while consuming external task triggers for process definition {}:{}",
+                        processDefinitionId,
+                        t.getMessage());
+                    return null;
+                  });
+        }
+      }
+    } else if (value.getState() == ProcessDefinitionStateEnum.INACTIVE) {
+      Object workerInstance = definitionMap.get(processDefinitionId);
+      if (workerInstance != null) {
+        // We have a worker instance. Stop consuming for this process definition
+        KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = consumerMap.get(processDefinitionId);
+        if (consumer != null) {
+          consumer.unsubscribe();
+        }
       }
     }
   }

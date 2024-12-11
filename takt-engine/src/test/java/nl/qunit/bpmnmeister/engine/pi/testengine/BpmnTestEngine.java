@@ -27,6 +27,7 @@ import nl.qunit.bpmnmeister.pd.model.v_1_0_0.DefinitionsTriggerDTO;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ParsedDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionDTO;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionKey;
+import nl.qunit.bpmnmeister.pd.model.v_1_0_0.ProcessDefinitionStateEnum;
 import nl.qunit.bpmnmeister.pd.model.v_1_0_0.XmlDefinitionsDTO;
 import nl.qunit.bpmnmeister.pd.xml.BpmnParser;
 import nl.qunit.bpmnmeister.pi.state.v_1_0_0.ActivityInstanceDTO;
@@ -192,7 +193,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     processDefinitionParsedConsumer =
         new KafkaConsumerUtil<>(
             "test-group",
-            TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName(),
+            TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName(),
             ProcessDefinitionKeyDeserializer.class.getName(),
             ProcessDefinitionDeserializer.class.getName(),
             this::consume);
@@ -265,8 +266,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             + processDefinition
             + " "
             + processDefinition.getDefinitions().getDefinitionsKey().getHash());
-    hashToDefinitionMap.put(
-        processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
+    if (processDefinition.getState() == ProcessDefinitionStateEnum.ACTIVE) {
+      hashToDefinitionMap.put(
+          processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
+    }
   }
 
   public ExternalTaskTriggerDTO pollExternalTask() {

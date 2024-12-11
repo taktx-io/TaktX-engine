@@ -13,11 +13,10 @@ import lombok.RequiredArgsConstructor;
 import nl.qunit.bpmnmeister.Topics;
 import nl.qunit.bpmnmeister.engine.pd.CorrelationMessageSubscriptions;
 import nl.qunit.bpmnmeister.engine.pd.DefinitionMessageSubscriptions;
+import nl.qunit.bpmnmeister.engine.pd.DefinitionsProcessor;
 import nl.qunit.bpmnmeister.engine.pd.KeyValueStoreSupplier;
 import nl.qunit.bpmnmeister.engine.pd.MessageEventProcessor;
 import nl.qunit.bpmnmeister.engine.pd.MessageSchedulerFactory;
-import nl.qunit.bpmnmeister.engine.pd.NewDefinitionsProcessor;
-import nl.qunit.bpmnmeister.engine.pd.ProcessDefinitionActivationProcessor;
 import nl.qunit.bpmnmeister.engine.pd.ScheduleProcessor;
 import nl.qunit.bpmnmeister.engine.pd.Stores;
 import nl.qunit.bpmnmeister.engine.pi.DefinitionMapper;
@@ -113,8 +112,6 @@ public class TopologyProducer {
 
     setupNewDefinitionStream(builder);
 
-    setupActivationStream(builder);
-
     setupMessageStream(builder);
 
     setupScheduleCommandStream(builder);
@@ -145,7 +142,7 @@ public class TopologyProducer {
                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () -> new NewDefinitionsProcessor(tenantNamespaceNameWrapper),
+            () -> new DefinitionsProcessor(tenantNamespaceNameWrapper, messageSchedulerFactory),
             tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
@@ -160,21 +157,8 @@ public class TopologyProducer {
                                     (ProcessDefinitionKey) key, (ProcessDefinitionDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINITION_PARSED_TOPIC.getTopicName()),
+                                Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
-        .branch(
-            (key, value) -> value instanceof ProcessDefinitionActivationDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair(
-                                    (ProcessDefinitionKey) key,
-                                    (ProcessDefinitionActivationDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
-                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE))))
         .branch(
             (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
@@ -186,7 +170,29 @@ public class TopologyProducer {
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
-                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
+        .branch(
+            (key, value) -> key instanceof ScheduledKeyDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((ScheduledKeyDTO) key, (MessageSchedulerDTO) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.SCHEDULE_COMMANDS.getTopicName()),
+                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
+        .branch(
+            (key, value) -> key instanceof MessageEventKeyDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((MessageEventKeyDTO) key, (MessageEventDTO) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
+                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -378,41 +384,5 @@ public class TopologyProducer {
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
-  }
-
-  private void setupActivationStream(StreamsBuilder builder) {
-    KStream<ProcessDefinitionKey, ProcessDefinitionActivationDTO> activationStreamIn =
-        builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.PROCESS_DEFINTIION_ACTIVATION_TOPIC.getTopicName()),
-            Consumed.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_ACTIVATION_SERDE));
-
-    KStream<Object, Object> scheduleStream =
-        activationStreamIn.process(
-            () -> new ProcessDefinitionActivationProcessor(messageSchedulerFactory));
-    scheduleStream
-        .split()
-        .branch(
-            (key, value) -> value instanceof MessageSchedulerDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair((ScheduledKeyDTO) key, (MessageSchedulerDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.SCHEDULE_COMMANDS.getTopicName()),
-                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
-        .branch(
-            (key, value) -> value == null || value instanceof MessageEventDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair((MessageEventKeyDTO) key, (MessageEventDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
-                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
   }
 }

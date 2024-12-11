@@ -4,8 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum Topics {
-  PROCESS_DEFINITION_PARSED_TOPIC("process-definition-parsed-topic"),
-  PROCESS_DEFINTIION_ACTIVATION_TOPIC("process-definition-activation-topic"),
+  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation-topic"),
   MESSAGE_EVENT_TOPIC("message-event-topic"),
   SCHEDULE_COMMANDS("schedule-commands"),
   INSTANCE_UPDATE_TOPIC("instance-update-topic"),

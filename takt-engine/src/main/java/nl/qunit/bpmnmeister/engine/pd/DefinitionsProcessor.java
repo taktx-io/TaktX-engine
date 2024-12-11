@@ -1,5 +1,6 @@
 package nl.qunit.bpmnmeister.engine.pd;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,17 +24,22 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
-public class NewDefinitionsProcessor
+public class DefinitionsProcessor
     implements Processor<String, DefinitionsTriggerDTO, Object, Object> {
 
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final MessageSchedulerFactory messageSchedulerFactory;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
+  private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
 
-  public NewDefinitionsProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
+  public DefinitionsProcessor(
+      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
+      MessageSchedulerFactory messageSchedulerFactory) {
     this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+    this.messageSchedulerFactory = messageSchedulerFactory;
   }
 
   @Override
@@ -48,6 +54,9 @@ public class NewDefinitionsProcessor
     this.processDefinitionStore =
         context.getStateStore(
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
+    processDefinitionActivationProcessor =
+        new ProcessDefinitionActivationProcessor(
+            tenantNamespaceNameWrapper, messageSchedulerFactory, context);
   }
 
   @Override
@@ -57,6 +66,9 @@ public class NewDefinitionsProcessor
           definitionsRecord.key(), xmlDefinitions, definitionsRecord.timestamp());
     } else if (definitionsRecord.value() instanceof StartCommandDTO startCommand) {
       processStartCommandRecord(definitionsRecord, startCommand);
+    } else if (definitionsRecord.value()
+        instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
+      processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
     } else {
       throw new IllegalStateException("Unsupported trigger: " + definitionsRecord.value());
     }
@@ -90,38 +102,21 @@ public class NewDefinitionsProcessor
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
       processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
       processDefinitionStore.put(processDefinitionKey, processDefinitionDTO);
-
+      processDefinitionActivationProcessor.activate(processDefinitionKey);
     } else {
-      // Existing version, do not create a new ProcessDefinitionDTO but get the latest version
-      version = hashVersionPairs.size();
-      processDefinitionDTO =
-          processDefinitionStore.get(new ProcessDefinitionKey(processDefinitionId, version));
-      processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
+      // Existing version, do not create a new ProcessDefinitionDTO but return the active version
+      ProcessDefinitionKey startKey = new ProcessDefinitionKey(processDefinitionId, 1);
+      ProcessDefinitionKey endKey =
+          new ProcessDefinitionKey(processDefinitionId, Integer.MAX_VALUE);
+      processDefinitionStore
+          .range(startKey, endKey)
+          .forEachRemaining(
+              entry -> {
+                if (entry.value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
+                  context.forward(new Record(entry.key, entry.value, Instant.now().toEpochMilli()));
+                }
+              });
     }
-
-    if (version > 1) {
-      // Not the first version, deactivate the previous active version
-      ProcessDefinitionDTO previousActiveVersion =
-          processDefinitionStore.get(new ProcessDefinitionKey(processDefinitionId, version - 1));
-      ProcessDefinitionDTO deactivatedPreviousActiveVersion =
-          new ProcessDefinitionDTO(
-              previousActiveVersion.getDefinitions(),
-              previousActiveVersion.getVersion(),
-              ProcessDefinitionStateEnum.INACTIVE);
-      ProcessDefinitionKey previousProcessDefinitionKey =
-          ProcessDefinitionKey.of(deactivatedPreviousActiveVersion);
-      processDefinitionStore.put(previousProcessDefinitionKey, deactivatedPreviousActiveVersion);
-      ProcessDefinitionActivationDTO deactivationMessage =
-          new ProcessDefinitionActivationDTO(
-              previousActiveVersion, ProcessDefinitionStateEnum.INACTIVE);
-      context.forward(new Record<>(previousProcessDefinitionKey, deactivationMessage, timestamp));
-    }
-
-    ProcessDefinitionActivationDTO activationMessage =
-        new ProcessDefinitionActivationDTO(processDefinitionDTO, ProcessDefinitionStateEnum.ACTIVE);
-    context.forward(new Record<>(processDefinitionKey, activationMessage, timestamp));
-
-    context.forward(new Record<>(processDefinitionKey, processDefinitionDTO, timestamp));
   }
 
   private void processStartCommandRecord(
