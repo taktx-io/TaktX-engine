@@ -1,0 +1,42 @@
+package com.flomaestro.takt.dto.v_1_0_0;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@EqualsAndHashCode(callSuper = true)
+@Builder
+@NoArgsConstructor
+public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
+  @JsonProperty("dk")
+  private DefinitionsKey definitionsKey;
+
+  @JsonProperty("rp")
+  private ProcessDTO rootProcess;
+
+  @JsonProperty("msg")
+  private Map<String, MessageDTO> messages;
+
+  @JsonProperty("esc")
+  private Map<String, EscalationDTO> escalations;
+
+  @JsonProperty("err")
+  private Map<String, ErrorDTO> errors;
+
+  public ParsedDefinitionsDTO(
+      DefinitionsKey definitionsKey,
+      ProcessDTO rootProcess,
+      Map<String, MessageDTO> messages,
+      Map<String, EscalationDTO> escalations,
+      Map<String, ErrorDTO> errors) {
+    this.definitionsKey = definitionsKey;
+    this.rootProcess = rootProcess;
+    this.messages = messages;
+    this.escalations = escalations;
+    this.errors = errors;
+  }
+}

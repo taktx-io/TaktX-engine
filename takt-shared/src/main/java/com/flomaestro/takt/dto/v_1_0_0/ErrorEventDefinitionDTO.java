@@ -1,0 +1,20 @@
+package com.flomaestro.takt.dto.v_1_0_0;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
+public class ErrorEventDefinitionDTO extends EventDefinitionDTO {
+
+  @JsonProperty("err")
+  private String errorRef;
+
+  public ErrorEventDefinitionDTO(String id, String errorRef) {
+    super(id, Constants.NONE);
+    this.errorRef = errorRef;
+  }
+}

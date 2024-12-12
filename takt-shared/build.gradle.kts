@@ -33,7 +33,7 @@ tasks.test {
 
 xjc {
     markGenerated.set(true)
-    defaultPackage.set("nl.qunit.bpmnmeister.bpmn")
+    defaultPackage.set("com.flomaestro.bpmn")
 }
 
 

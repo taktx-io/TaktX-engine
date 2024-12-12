@@ -1,0 +1,79 @@
+package com.flomaestro.engine.pi.processor;
+
+import com.flomaestro.engine.pd.model.Event;
+import com.flomaestro.engine.pd.model.FlowElements;
+import com.flomaestro.engine.pd.model.SequenceFlow;
+import com.flomaestro.engine.pi.DirectInstanceResult;
+import com.flomaestro.engine.pi.InstanceResult;
+import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.EventInstance;
+import com.flomaestro.engine.pi.model.FlowNodeInstances;
+import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import java.util.Set;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
+    extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTriggerDTO> {
+
+  protected EventInstanceProcessor(
+      IoMappingProcessor ioMappingProcessor,
+      ProcessInstanceMapper processInstanceMapper,
+      VariablesMapper variablesMapper) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+  }
+
+  @Override
+  protected void processStartSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      ProcessInstance processInstance,
+      String inputFlowId,
+      Variables variables) {
+    processStartSpecificEventInstance(
+        processInstance,
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        flowNodeInstance,
+        inputFlowId,
+        variables);
+  }
+
+  @Override
+  protected void processContinueSpecificFlowNodeInstance(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      int subProcessLevel,
+      FlowElements flowElements,
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      ContinueFlowElementTriggerDTO trigger,
+      Variables variables,
+      FlowNodeInstances flowNodeInstances) {
+    // Should not occur
+  }
+
+  @Override
+  protected Set<SequenceFlow> getSelectedSequenceFlows(
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      FlowNodeInstances flowNodeInstances,
+      Variables variables) {
+    return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
+  }
+
+  protected abstract void processStartSpecificEventInstance(
+      ProcessInstance processInstance,
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      FlowElements flowElements,
+      I flowNodeInstance,
+      String inputFlowId,
+      Variables variables);
+}

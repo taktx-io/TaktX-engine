@@ -1,0 +1,26 @@
+package com.flomaestro.takt.dto.v_1_0_0;
+
+import java.util.Set;
+import java.util.UUID;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Data
+@ToString(callSuper = true)
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+public class ServiceTaskInstanceDTO extends ExternalTaskInstanceDTO {
+
+  public ServiceTaskInstanceDTO(
+      ActtivityStateEnum state,
+      UUID elementInstanceId,
+      String elementId,
+      int passedCnt,
+      int loopCnt,
+      int attempt,
+      Set<UUID> boundaryEventIds) {
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds, attempt);
+  }
+}

@@ -1,0 +1,31 @@
+package com.flomaestro.takt.dto.v_1_0_0;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Set;
+import java.util.UUID;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+@NoArgsConstructor
+public abstract class ExternalTaskInstanceDTO extends TaskInstanceDTO {
+
+  @JsonProperty("at")
+  private int attempt;
+
+  public ExternalTaskInstanceDTO(
+      ActtivityStateEnum state,
+      UUID elementInstanceId,
+      String elementId,
+      int passedCnt,
+      int loopCnt,
+      Set<UUID> boundaryEventIds,
+      int attempt) {
+    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
+    this.attempt = attempt;
+  }
+}
