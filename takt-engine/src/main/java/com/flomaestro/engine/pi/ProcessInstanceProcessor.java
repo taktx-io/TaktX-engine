@@ -22,7 +22,6 @@ import com.flomaestro.takt.dto.v_1_0_0.StartNewProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.WithFlowNodeInstancesDTO;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,6 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -83,34 +81,28 @@ public class ProcessInstanceProcessor
         context.getStateStore(
             tenantNamespaceNameWrapper.getPrefixed(
                 Stores.PROCESS_INSTANCE_DEFINITION.getStorename()));
+  }
 
-    context.schedule(
-        Duration.ofSeconds(300),
-        PunctuationType.WALL_CLOCK_TIME,
-        timestamp ->
-            this.processInstanceStore
-                .all()
-                .forEachRemaining(
-                    record -> {
-                      log.info("Purging finished process instance: {}", record.key);
-                      if (record.value.getFlowNodeInstances().getState().isFinished()) {
-                        this.processInstanceStore.delete(record.key);
-                        this.flowNodeInstanceStore
-                            .range(record.key + ":", record.key + "\u00ff")
-                            .forEachRemaining(
-                                r -> {
-                                  log.info("Purging flow node instance: {}", record.key);
-                                  this.flowNodeInstanceStore.delete(r.key);
-                                });
-                        this.variablesStore
-                            .range(record.key + ":", record.key + "\u00ff")
-                            .forEachRemaining(
-                                r -> {
-                                  log.info("Purging variable: {}", record.key);
-                                  this.variablesStore.delete(r.key);
-                                });
-                      }
-                    }));
+  private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
+    UUID processInstanceKey = processInstance.getProcessInstanceKey();
+    log.info("Purging finished process instance: {}", processInstanceKey);
+    this.processInstanceStore.delete(processInstanceKey);
+    this.flowNodeInstanceStore
+        .range(
+            processInstance.getFlowNodeInstances().getFlowNodeInstancesId() + ":",
+            processInstance.getFlowNodeInstances().getFlowNodeInstancesId() + ":\u00ff")
+        .forEachRemaining(
+            r -> {
+              log.info("Purging flow node instance: {}", r.key);
+              this.flowNodeInstanceStore.delete(r.key);
+            });
+    this.variablesStore
+        .range(processInstanceKey + ":", processInstanceKey + ":\u00ff")
+        .forEachRemaining(
+            r -> {
+              log.info("Purging variable: {}", r.key);
+              this.variablesStore.delete(r.key);
+            });
   }
 
   @Override
@@ -155,7 +147,8 @@ public class ProcessInstanceProcessor
     FlowElements flowElements = definitionMapper.getFlowElements(definitionDTO.getDefinitions());
 
     FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
-    Variables triggerVariables = variablesMapper.fromDTO(startNewProcessInstanceTrigger.getVariables());
+    Variables triggerVariables =
+        variablesMapper.fromDTO(startNewProcessInstanceTrigger.getVariables());
     Variables processInstanceVariablee = Variables.empty();
     processInstanceVariablee.merge(triggerVariables);
 
@@ -248,7 +241,7 @@ public class ProcessInstanceProcessor
   private VariablesDTO getVariablesForProcessInstanceKey(UUID processInstanceKey) {
     Map<String, JsonNode> variables = new HashMap<>();
     variablesStore
-        .range(processInstanceKey + ":", processInstanceKey + "\u00ff")
+        .range(processInstanceKey + ":", processInstanceKey + ":\u00ff")
         .forEachRemaining(
             r -> {
               String varName = r.key.substring(r.key.indexOf(":") + 1);
@@ -297,7 +290,7 @@ public class ProcessInstanceProcessor
     flowNodeInstances.setState(flowNodeInstancesDTO.getState());
     log.info("Retrieving flow node instances with id: {}", flowNodeInstancesId);
     flowNodeInstanceStore
-        .range(flowNodeInstancesId.toString() + ":", flowNodeInstancesId + "\u00ff")
+        .range(flowNodeInstancesId.toString() + ":", flowNodeInstancesId + ":\u00ff")
         .forEachRemaining(
             record -> {
               log.info("Retrieved flow node instance: {}", record.value);
@@ -329,6 +322,7 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       Variables processInstanceVariables) {
+
     FlowNodeInstancesDTO flowNodeInstancesDTO =
         new FlowNodeInstancesDTO(
             flowNodeInstances.getState(), flowNodeInstances.getFlowNodeInstancesId());
@@ -338,27 +332,33 @@ public class ProcessInstanceProcessor
             .flowNodeInstances(flowNodeInstancesDTO)
             .build();
 
-    Map<String, JsonNode> dirtyVariables = processInstanceVariables.entrySet().stream()
-        .filter(e -> processInstanceVariables.isDirty(e.getKey())).collect(
-            Collectors.toMap(Entry::getKey, Entry::getValue));
+    Map<String, JsonNode> dirtyVariables =
+        processInstanceVariables.entrySet().stream()
+            .filter(e -> processInstanceVariables.isDirty(e.getKey()))
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     VariablesDTO dirtyVariablesDTO = VariablesDTO.of(dirtyVariables);
 
     if (flowNodeInstances.isDirty()) {
       instanceResult.addProcessInstanceUpdate(
           new ProcessInstanceUpdateDTO(processInstanceDTO, dirtyVariablesDTO));
     }
-    processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);
 
-    storeFlowNodeInstances(processInstance.getFlowNodeInstances());
-
-    dirtyVariablesDTO
-        .getVariables()
-        .forEach(
-            (k, v) -> {
-              log.info("Storing variable: {} {}", processInstance.getProcessInstanceKey() + ":" + k, v);
-              variablesStore.put(processInstance.getProcessInstanceKey() + ":" + k, v);
-            });
-
+    if (processInstance.getFlowNodeInstances().getState().isFinished()) {
+      purgeProcessInstance(processInstanceDTO);
+    } else {
+      processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);
+      storeFlowNodeInstances(processInstance.getFlowNodeInstances());
+      dirtyVariablesDTO
+          .getVariables()
+          .forEach(
+              (k, v) -> {
+                log.info(
+                    "Storing variable: {} {}",
+                    processInstance.getProcessInstanceKey() + ":" + k,
+                    v);
+                variablesStore.put(processInstance.getProcessInstanceKey() + ":" + k, v);
+              });
+    }
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
   }
 

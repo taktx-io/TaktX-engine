@@ -64,7 +64,7 @@ public class FlowNodeInstanceResource {
           getFlowNodeInstanceStore();
       Map<String, FlowNodeInstanceDTO> flowNodeInstances = new HashMap<>();
       flowNodeInstanceStore
-          .range(flowNodeInstancesId + ":", flowNodeInstancesId + "\u00ff")
+          .range(flowNodeInstancesId + ":", flowNodeInstancesId + ":\u00ff")
           .forEachRemaining(
               e -> {
                 flowNodeInstances.put(e.key, e.value);

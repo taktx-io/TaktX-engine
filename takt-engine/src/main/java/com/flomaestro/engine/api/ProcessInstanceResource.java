@@ -158,7 +158,7 @@ public class ProcessInstanceResource {
 
       Map<String, JsonNode> variables = new HashMap<>();
       getVariablesStore()
-          .range(processId + ":", processId + "\u00ff")
+          .range(processId + ":", processId + ":\u00ff")
           .forEachRemaining(
               entry -> {
                 variables.put(entry.key.substring(entry.key.indexOf(":") + 1), entry.value);
