@@ -21,7 +21,12 @@ public class VariableKeySerializer implements Serializer<VariableKeyDTO> {
     // Return a concatenated byte array of the serialized UUID and the serialized variable name
     byte[] serializedVariableKey = new byte[serializedUUID.length + serializedVariableName.length];
     System.arraycopy(serializedUUID, 0, serializedVariableKey, 0, serializedUUID.length);
-    System.arraycopy(serializedVariableName, 0, serializedVariableKey, serializedUUID.length, serializedVariableName.length);
+    System.arraycopy(
+        serializedVariableName,
+        0,
+        serializedVariableKey,
+        serializedUUID.length,
+        serializedVariableName.length);
     return serializedVariableKey;
   }
 }

@@ -89,8 +89,14 @@ public class ProcessInstanceProcessor
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
     log.debug("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
-    UUID[] start = new UUID[] {processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MIN_UUID};
-    UUID[] end = new UUID[] {processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID};
+    UUID[] start =
+        new UUID[] {
+          processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MIN_UUID
+        };
+    UUID[] end =
+        new UUID[] {
+          processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID
+        };
 
     this.flowNodeInstanceStore
         .range(start, end)
@@ -366,7 +372,8 @@ public class ProcessInstanceProcessor
                     processInstance.getProcessInstanceKey() + ":" + k,
                     v);
 
-                variablesStore.put(new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v);
+                variablesStore.put(
+                    new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v);
               });
     }
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
@@ -378,7 +385,10 @@ public class ProcessInstanceProcessor
         continue;
       }
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
-      UUID[] key = new UUID[] {flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()};
+      UUID[] key =
+          new UUID[] {
+            flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()
+          };
       log.debug("Storing flow node instance: {} {}", key, flowNodeInstanceDTO);
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
       if (fLowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {

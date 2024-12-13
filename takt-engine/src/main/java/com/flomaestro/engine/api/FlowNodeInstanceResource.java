@@ -61,7 +61,8 @@ public class FlowNodeInstanceResource {
       log.info(
           "host and port match {}:{} ", metadata.activeHost().host(), metadata.activeHost().port());
 
-      ReadOnlyKeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore = getFlowNodeInstanceStore();
+      ReadOnlyKeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore =
+          getFlowNodeInstanceStore();
       Map<UUID, FlowNodeInstanceDTO> flowNodeInstances = new HashMap<>();
       UUID[] start = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MIN_UUID};
       UUID[] end = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MAX_UUID};
