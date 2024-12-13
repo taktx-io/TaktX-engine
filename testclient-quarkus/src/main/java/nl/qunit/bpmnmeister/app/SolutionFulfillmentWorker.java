@@ -1,8 +1,8 @@
 package nl.qunit.bpmnmeister.app;
 
+import com.flomaestro.client.ExternalTask;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import nl.qunit.bpmnmeister.client.ExternalTask;
 
 // @BpmnDeployment(resource = "bpmn/SolutionFulfillment.bpmn")
 public class SolutionFulfillmentWorker {

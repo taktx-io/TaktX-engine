@@ -182,6 +182,7 @@ public abstract class CatchEventInstanceProcessor<
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances) {
     if (catchEventInstance.matchesEvent(event)) {
+      catchEventInstance.setDirty();
       getInstanceResultForContinue(newInstanceResult, directInstanceResult, catchEventInstance);
       selectNextNodeIfAllowedContinue(
           catchEventInstance,

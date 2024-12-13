@@ -1,5 +1,7 @@
 package com.flomaestro.engine.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flomaestro.engine.generic.RestObjectMapper;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
@@ -34,6 +36,7 @@ public class FlowNodeInstanceResource {
 
   @Inject Client client;
   @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  @Inject @RestObjectMapper ObjectMapper restObjectMapper;
 
   @GET
   @Path("/{flowNodeInstancesId}")

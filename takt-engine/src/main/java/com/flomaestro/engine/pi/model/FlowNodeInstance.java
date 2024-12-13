@@ -21,6 +21,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   private FlowNodeInstance<?> parentInstance;
 
+  private boolean dirty = false;
+
   protected FlowNodeInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
     this.parentInstance = parentInstance;
     this.elementInstanceId = UUID.randomUUID();
@@ -46,4 +48,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   public abstract boolean canSelectNextNodeStart();
 
   public abstract boolean canSelectNextNodeContinue();
+
+  public void setDirty() {
+    dirty = true;
+  }
 }

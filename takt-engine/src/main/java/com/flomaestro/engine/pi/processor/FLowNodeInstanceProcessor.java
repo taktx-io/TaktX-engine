@@ -57,6 +57,8 @@ public abstract class FLowNodeInstanceProcessor<
       return;
     }
 
+    flownodeInstance.setDirty();
+
     E flowNode = (E) flownodeInstance.getFlowNode();
     Variables inputVariables = getInputVariables(flowNode, processInstanceVariables);
 
@@ -100,6 +102,8 @@ public abstract class FLowNodeInstanceProcessor<
       return;
     }
 
+    flowNodeInstance.setDirty();
+
     processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
 
     this.processContinueSpecificFlowNodeInstance(
@@ -138,6 +142,7 @@ public abstract class FLowNodeInstanceProcessor<
       FlowNodeInstances flowNodeInstances) {
     // Only terminate if the instance is ready or waiting
     if (instance.stateAllowsTerminate()) {
+      instance.setDirty();
       processTerminateSpecificFlowNodeInstance(
           instanceResult, directInstanceResult, (I) instance, processInstance, variables);
       instance.terminate();

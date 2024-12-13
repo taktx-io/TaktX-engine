@@ -90,11 +90,23 @@ public class ProcessInstanceProcessor
                 .all()
                 .forEachRemaining(
                     record -> {
+                      log.info("Purging finished process instance: {}", record.key);
                       if (record.value.getFlowNodeInstances().getState().isFinished()) {
                         this.processInstanceStore.delete(record.key);
+                        this.flowNodeInstanceStore
+                            .range(record.key + ":", record.key + "\u00ff")
+                            .forEachRemaining(
+                                r -> {
+                                  log.info("Purging flow node instance: {}", record.key);
+                                  this.flowNodeInstanceStore.delete(r.key);
+                                });
                         this.variablesStore
                             .range(record.key + ":", record.key + "\u00ff")
-                            .forEachRemaining(r -> this.variablesStore.delete(r.key));
+                            .forEachRemaining(
+                                r -> {
+                                  log.info("Purging variable: {}", record.key);
+                                  this.variablesStore.delete(r.key);
+                                });
                       }
                     }));
   }
@@ -216,13 +228,13 @@ public class ProcessInstanceProcessor
             flowElements,
             processInstance,
             processInstanceVariables,
-            flowNodeInstances);
+            processInstance.getFlowNodeInstances());
 
         processResultAndForward(
             instanceResult,
             processInstance.getProcessDefinitionKey(),
             processInstance,
-            flowNodeInstances,
+            processInstance.getFlowNodeInstances(),
             processInstanceVariables);
       }
     }
@@ -324,8 +336,8 @@ public class ProcessInstanceProcessor
       instanceResult.addProcessInstanceUpdate(
           new ProcessInstanceUpdateDTO(processInstanceDTO, variablesDTO));
     }
-
     processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);
+
     storeFlowNodeInstances(processInstance.getFlowNodeInstances());
 
     variablesDTO
@@ -339,11 +351,10 @@ public class ProcessInstanceProcessor
   }
 
   private void storeFlowNodeInstances(FlowNodeInstances flowNodeInstances) {
-    log.info(
-        "Storing {} flow node instances with id: {}",
-        flowNodeInstances.getInstances().size(),
-        flowNodeInstances.getFlowNodeInstancesId());
     for (FlowNodeInstance<?> fLowNodeInstance : flowNodeInstances.getInstances().values()) {
+      if (!fLowNodeInstance.isDirty()) {
+        continue;
+      }
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
       String key =
           flowNodeInstances.getFlowNodeInstancesId()
