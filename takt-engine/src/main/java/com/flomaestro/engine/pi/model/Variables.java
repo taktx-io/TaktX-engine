@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -13,9 +14,11 @@ public class Variables {
 
   public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final Map<String, JsonNode> variables;
+  private final Set<String> dirty;
 
   public Variables(Map<String, JsonNode> variables) {
     this.variables = new HashMap<>(variables);
+    this.dirty = new HashSet<>();
   }
 
   public static Variables empty() {
@@ -48,14 +51,17 @@ public class Variables {
   }
 
   public JsonNode put(String key, JsonNode value) {
+    dirty.add(key);
     return variables.put(key, value);
   }
 
   public JsonNode remove(String key) {
+    dirty.add(key);
     return variables.remove(key);
   }
 
   public void merge(Variables variablesToMerge) {
+    dirty.addAll(variablesToMerge.keySet());
     variables.putAll(variablesToMerge.variables);
   }
 
@@ -64,7 +70,12 @@ public class Variables {
   }
 
   public void clear() {
+    dirty.addAll(variables.keySet());
     variables.clear();
+  }
+
+  public boolean isDirty(String key) {
+    return dirty.contains(key);
   }
 
   public Set<String> keySet() {

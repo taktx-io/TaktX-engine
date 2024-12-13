@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -25,7 +26,7 @@ public class VariablesDTO {
   private Map<String, JsonNode> variables;
 
   public VariablesDTO(Map<String, JsonNode> variables) {
-    this.variables = variables;
+    this.variables = new HashMap<>(variables);
   }
 
   public static VariablesDTO empty() {

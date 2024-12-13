@@ -255,8 +255,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       instanceMap.put(
           flowNodeInstanceUpdate.getFlowNodeInstance().getElementInstanceId(),
           flowNodeInstanceUpdate.getFlowNodeInstance());
-      variablesMap.put(
-          flowNodeInstanceUpdate.getProcessInstanceKey(), flowNodeInstanceUpdate.getVariables());
+
+
+      VariablesDTO existingVariables = variablesMap.computeIfAbsent(flowNodeInstanceUpdate.getProcessInstanceKey(),k -> VariablesDTO.empty());
+      existingVariables.getVariables().putAll(flowNodeInstanceUpdate.getVariables().getVariables());
     }
   }
 

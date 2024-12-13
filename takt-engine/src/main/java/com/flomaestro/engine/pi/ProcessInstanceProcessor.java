@@ -26,7 +26,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -153,8 +155,9 @@ public class ProcessInstanceProcessor
     FlowElements flowElements = definitionMapper.getFlowElements(definitionDTO.getDefinitions());
 
     FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
-    Variables processInstanceVariablee =
-        variablesMapper.fromDTO(startNewProcessInstanceTrigger.getVariables());
+    Variables triggerVariables = variablesMapper.fromDTO(startNewProcessInstanceTrigger.getVariables());
+    Variables processInstanceVariablee = Variables.empty();
+    processInstanceVariablee.merge(triggerVariables);
 
     ProcessInstance processInstance =
         new ProcessInstance(
@@ -189,7 +192,9 @@ public class ProcessInstanceProcessor
 
   private ProcessInstanceUpdateDTO processInstanceToUpdate(
       ProcessInstance processInstance, FlowNodeInstances flowNodeInstances, Variables variables) {
+
     VariablesDTO variablesDTO = variablesMapper.toDTO(variables);
+
     FlowNodeInstancesDTO flowNodeInstancesDTO =
         new FlowNodeInstancesDTO(
             flowNodeInstances.getState(), flowNodeInstances.getFlowNodeInstancesId());
@@ -327,23 +332,30 @@ public class ProcessInstanceProcessor
     FlowNodeInstancesDTO flowNodeInstancesDTO =
         new FlowNodeInstancesDTO(
             flowNodeInstances.getState(), flowNodeInstances.getFlowNodeInstancesId());
+
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder()
             .flowNodeInstances(flowNodeInstancesDTO)
             .build();
-    VariablesDTO variablesDTO = variablesMapper.toDTO(processInstanceVariables);
+
+    Map<String, JsonNode> dirtyVariables = processInstanceVariables.entrySet().stream()
+        .filter(e -> processInstanceVariables.isDirty(e.getKey())).collect(
+            Collectors.toMap(Entry::getKey, Entry::getValue));
+    VariablesDTO dirtyVariablesDTO = VariablesDTO.of(dirtyVariables);
+
     if (flowNodeInstances.isDirty()) {
       instanceResult.addProcessInstanceUpdate(
-          new ProcessInstanceUpdateDTO(processInstanceDTO, variablesDTO));
+          new ProcessInstanceUpdateDTO(processInstanceDTO, dirtyVariablesDTO));
     }
     processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);
 
     storeFlowNodeInstances(processInstance.getFlowNodeInstances());
 
-    variablesDTO
+    dirtyVariablesDTO
         .getVariables()
         .forEach(
             (k, v) -> {
+              log.info("Storing variable: {} {}", processInstance.getProcessInstanceKey() + ":" + k, v);
               variablesStore.put(processInstance.getProcessInstanceKey() + ":" + k, v);
             });
 

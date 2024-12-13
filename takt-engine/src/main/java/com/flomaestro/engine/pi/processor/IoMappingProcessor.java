@@ -24,8 +24,8 @@ public class IoMappingProcessor {
 
   public Variables getOutputVariables(WithIoMapping element, Variables inputVariables) {
     if (element.getIoMapping().getOutputMappings().isEmpty()) {
-      // No mappings, return all input variables unmodified
-      return inputVariables;
+      // No mappings
+      return Variables.empty();
     }
 
     Variables outputVariables = Variables.empty();

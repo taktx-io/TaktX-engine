@@ -21,7 +21,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
-import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -78,9 +77,6 @@ public abstract class ExternalTaskInstanceProcessor<
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
       Variables processInstanceVariables) {
-    VariablesDTO variablesDTO = trigger.getVariables();
-    Variables variables = variablesMapper.fromDTO(variablesDTO);
-    processInstanceVariables.merge(variables);
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     if (ExternalTaskResponseType.SUCCESS == responseResult.getResponseType()) {

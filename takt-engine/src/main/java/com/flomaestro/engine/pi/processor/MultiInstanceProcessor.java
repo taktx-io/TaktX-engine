@@ -171,6 +171,7 @@ public class MultiInstanceProcessor
               activity.getLoopCharacteristics().getOutputElement(), iterationVars);
       if (outputElementNode != null) {
         outputCollection.add(outputElementNode);
+        variables.put(activity.getLoopCharacteristics().getOutputCollection(), outputCollection);
       }
     }
   }
