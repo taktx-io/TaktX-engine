@@ -34,6 +34,9 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
+import com.flomaestro.takt.util.TaktCompositeUUIDSerde;
+import com.flomaestro.takt.util.TaktUUIDSerde;
+import com.flomaestro.takt.util.VariableKeySerde;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -69,8 +72,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ScheduledKeyDTO.class);
   public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKeyDTO.class);
-  public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = Serdes.UUID();
-  public static final Serde<String> FLOW_NODE_INSTANCE_KEY_SERDE = Serdes.String();
+  public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
+  public static final Serde<UUID[]> FLOW_NODE_INSTANCE_KEY_SERDE = new TaktCompositeUUIDSerde();
   public static final ObjectMapperSerde<MessageSchedulerDTO> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageSchedulerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
@@ -95,6 +98,7 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class);
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
+  private static final Serde<? extends Object> VARIABLES_KEY_SERDE = new VariableKeySerde();
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
@@ -213,7 +217,7 @@ public class TopologyProducer {
             PROCESS_DEFINITION_SERDE));
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.VARIABLES), Serdes.String(), VARIABLES_SERDE));
+            keyValueStoreSupplier.get(Stores.VARIABLES), VARIABLES_KEY_SERDE, VARIABLES_SERDE));
 
     KStream<Object, Object>[] branches =
         builder.stream(

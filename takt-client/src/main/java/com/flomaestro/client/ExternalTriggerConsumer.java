@@ -15,6 +15,8 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
+import com.flomaestro.takt.util.TaktUUIDDeserializer;
+import com.flomaestro.takt.util.TaktUUIDSerializer;
 import com.flomaestro.takt.xml.BpmnParser;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -46,8 +48,6 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 @Slf4j
@@ -96,8 +96,7 @@ public class ExternalTriggerConsumer {
     responseEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(
-                (Class<? extends Serializer<?>>) Serdes.UUID().serializer().getClass(),
-                ExternalTaskTriggerResponseSerializer.class));
+                TaktUUIDSerializer.class, ExternalTaskTriggerResponseSerializer.class));
 
     CompletableFuture.runAsync(
         () -> {
@@ -206,7 +205,7 @@ public class ExternalTriggerConsumer {
           final KafkaConsumer<UUID, ExternalTaskTriggerDTO> newConsumer =
               createConsumer(
                   "client-consumer-" + processDefinitionId,
-                  (Class<? extends Deserializer<?>>) Serdes.UUID().deserializer().getClass(),
+                  TaktUUIDDeserializer.class,
                   ExternalTaskTriggerJsonDeserializer.class);
           consumerMap.put(processDefinitionId, newConsumer);
           newConsumer.subscribe(

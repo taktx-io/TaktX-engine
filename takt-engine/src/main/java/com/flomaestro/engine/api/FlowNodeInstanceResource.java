@@ -5,6 +5,8 @@ import com.flomaestro.engine.generic.RestObjectMapper;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.util.TaktUUIDSerde;
+import com.flomaestro.takt.util.TaktUUIDSerializer;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -20,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
@@ -50,7 +51,7 @@ public class FlowNodeInstanceResource {
         kafkaStreams.queryMetadataForKey(
             tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             flowNodeInstancesId,
-            Serdes.UUID().serializer());
+            new TaktUUIDSerializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       log.info("no metadata available for key {}", flowNodeInstancesId);
@@ -60,14 +61,15 @@ public class FlowNodeInstanceResource {
       log.info(
           "host and port match {}:{} ", metadata.activeHost().host(), metadata.activeHost().port());
 
-      ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO> flowNodeInstanceStore =
-          getFlowNodeInstanceStore();
-      Map<String, FlowNodeInstanceDTO> flowNodeInstances = new HashMap<>();
+      ReadOnlyKeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore = getFlowNodeInstanceStore();
+      Map<UUID, FlowNodeInstanceDTO> flowNodeInstances = new HashMap<>();
+      UUID[] start = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MIN_UUID};
+      UUID[] end = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MAX_UUID};
       flowNodeInstanceStore
-          .range(flowNodeInstancesId + ":", flowNodeInstancesId + ":\u00ff")
+          .range(start, end)
           .forEachRemaining(
               e -> {
-                flowNodeInstances.put(e.key, e.value);
+                flowNodeInstances.put(e.key[1], e.value);
               });
       return Response.ok(flowNodeInstances).build();
     } else {
@@ -87,10 +89,10 @@ public class FlowNodeInstanceResource {
     }
   }
 
-  private ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO> getFlowNodeInstanceStore() {
+  private ReadOnlyKeyValueStore<UUID[], FlowNodeInstanceDTO> getFlowNodeInstanceStore() {
     while (true) {
       try {
-        StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, FlowNodeInstanceDTO>>
+        StoreQueryParameters<? extends ReadOnlyKeyValueStore<UUID[], FlowNodeInstanceDTO>>
             storeQueryParameters =
                 StoreQueryParameters.fromNameAndType(
                     tenantNamespaceNameWrapper.getPrefixed(

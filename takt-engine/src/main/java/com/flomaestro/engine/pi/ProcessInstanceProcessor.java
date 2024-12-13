@@ -20,8 +20,10 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartNewProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.WithFlowNodeInstancesDTO;
+import com.flomaestro.takt.util.TaktUUIDSerde;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +47,8 @@ public class ProcessInstanceProcessor
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
-  private KeyValueStore<String, FlowNodeInstanceDTO> flowNodeInstanceStore;
-  private KeyValueStore<String, JsonNode> variablesStore;
+  private KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore;
+  private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processInstanceDefinitionStore;
   private ProcessorContext<Object, Object> context;
 
@@ -85,22 +87,25 @@ public class ProcessInstanceProcessor
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
-    log.info("Purging finished process instance: {}", processInstanceKey);
+    log.debug("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
+    UUID[] start = new UUID[] {processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MIN_UUID};
+    UUID[] end = new UUID[] {processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID};
+
     this.flowNodeInstanceStore
-        .range(
-            processInstance.getFlowNodeInstances().getFlowNodeInstancesId() + ":",
-            processInstance.getFlowNodeInstances().getFlowNodeInstancesId() + ":\u00ff")
+        .range(start, end)
         .forEachRemaining(
             r -> {
-              log.info("Purging flow node instance: {}", r.key);
+              log.debug("Purging flow node instance: {}", r.key);
               this.flowNodeInstanceStore.delete(r.key);
             });
+    VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
+    VariableKeyDTO variableEndKey = new VariableKeyDTO(processInstanceKey, "\u00ff");
     this.variablesStore
-        .range(processInstanceKey + ":", processInstanceKey + ":\u00ff")
+        .range(variableStartKey, variableEndKey)
         .forEachRemaining(
             r -> {
-              log.info("Purging variable: {}", r.key);
+              log.debug("Purging variable: {}", r.key);
               this.variablesStore.delete(r.key);
             });
   }
@@ -240,11 +245,13 @@ public class ProcessInstanceProcessor
 
   private VariablesDTO getVariablesForProcessInstanceKey(UUID processInstanceKey) {
     Map<String, JsonNode> variables = new HashMap<>();
+    VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
+    VariableKeyDTO variableEndKey = new VariableKeyDTO(processInstanceKey, "\u00ff");
     variablesStore
-        .range(processInstanceKey + ":", processInstanceKey + ":\u00ff")
+        .range(variableStartKey, variableEndKey)
         .forEachRemaining(
             r -> {
-              String varName = r.key.substring(r.key.indexOf(":") + 1);
+              String varName = r.key.getVariableName();
               variables.put(varName, r.value);
             });
     VariablesDTO variablesDTO = VariablesDTO.of(variables);
@@ -288,12 +295,14 @@ public class ProcessInstanceProcessor
     UUID flowNodeInstancesId = flowNodeInstancesDTO.getFlowNodeInstancesId();
     flowNodeInstances.setFlowNodeInstancesId(flowNodeInstancesId);
     flowNodeInstances.setState(flowNodeInstancesDTO.getState());
-    log.info("Retrieving flow node instances with id: {}", flowNodeInstancesId);
+    log.debug("Retrieving flow node instances with id: {}", flowNodeInstancesId);
+    UUID[] start = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MIN_UUID};
+    UUID[] end = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MAX_UUID};
     flowNodeInstanceStore
-        .range(flowNodeInstancesId.toString() + ":", flowNodeInstancesId + ":\u00ff")
+        .range(start, end)
         .forEachRemaining(
             record -> {
-              log.info("Retrieved flow node instance: {}", record.value);
+              log.debug("Retrieved flow node instance: {}", record.value);
               FlowNodeInstanceDTO instanceDTO = record.value;
               FlowNodeInstance instance = instanceMapper.map(instanceDTO, flowElements);
               flowNodeInstances.putInstance(instance);
@@ -352,11 +361,12 @@ public class ProcessInstanceProcessor
           .getVariables()
           .forEach(
               (k, v) -> {
-                log.info(
+                log.debug(
                     "Storing variable: {} {}",
                     processInstance.getProcessInstanceKey() + ":" + k,
                     v);
-                variablesStore.put(processInstance.getProcessInstanceKey() + ":" + k, v);
+
+                variablesStore.put(new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v);
               });
     }
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
@@ -368,11 +378,8 @@ public class ProcessInstanceProcessor
         continue;
       }
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
-      String key =
-          flowNodeInstances.getFlowNodeInstancesId()
-              + ":"
-              + flowNodeInstanceDTO.getElementInstanceId();
-      log.info("Storing flow node instance: {} {}", key, flowNodeInstanceDTO);
+      UUID[] key = new UUID[] {flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()};
+      log.debug("Storing flow node instance: {} {}", key, flowNodeInstanceDTO);
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
       if (fLowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
         storeFlowNodeInstances(withFlowNodeInstances.getFlowNodeInstances());

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
+import com.flomaestro.takt.util.TaktUUIDSerializer;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -22,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
@@ -75,10 +76,10 @@ public class ProcessInstanceResource {
     }
   }
 
-  private ReadOnlyKeyValueStore<String, JsonNode> getVariablesStore() {
+  private ReadOnlyKeyValueStore<VariableKeyDTO, JsonNode> getVariablesStore() {
     while (true) {
       try {
-        StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, JsonNode>>
+        StoreQueryParameters<? extends ReadOnlyKeyValueStore<VariableKeyDTO, JsonNode>>
             storeQueryParameters =
                 StoreQueryParameters.fromNameAndType(
                     tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
@@ -102,7 +103,7 @@ public class ProcessInstanceResource {
         kafkaStreams.queryMetadataForKey(
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             processId,
-            Serdes.UUID().serializer());
+            new TaktUUIDSerializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       log.info("no metadata available for key {}", processId);
@@ -149,7 +150,7 @@ public class ProcessInstanceResource {
         kafkaStreams.queryMetadataForKey(
             tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
             processId,
-            Serdes.UUID().serializer());
+            new TaktUUIDSerializer());
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();
@@ -157,11 +158,13 @@ public class ProcessInstanceResource {
         && metadata.activeHost().port() == envPort) {
 
       Map<String, JsonNode> variables = new HashMap<>();
+      VariableKeyDTO startVariableKey = new VariableKeyDTO(processId, "");
+      VariableKeyDTO endVariableKey = new VariableKeyDTO(processId, "\u00ff");
       getVariablesStore()
-          .range(processId + ":", processId + ":\u00ff")
+          .range(startVariableKey, endVariableKey)
           .forEachRemaining(
               entry -> {
-                variables.put(entry.key.substring(entry.key.indexOf(":") + 1), entry.value);
+                variables.put(entry.key.getVariableName(), entry.value);
               });
       return Response.ok(variables).build();
     } else {

@@ -13,6 +13,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.18.2")
+    implementation("org.apache.kafka:kafka-clients:3.7.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
