@@ -90,7 +90,6 @@ public class Forwarder {
       ContinueFlowElementTriggerDTO continueFlowElementTrigger =
           new ContinueFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
-              pathExtractor.getElementIdPath(catchEventInstance.getFlowNode()),
               pathExtractor.getInstancePath(catchEventInstance),
               Constants.NONE,
               variablesMapper.toDTO(info.variables()));
@@ -245,7 +244,6 @@ public class Forwarder {
     return new ExternalTaskTriggerDTO(
         processInstanceKey,
         processDefinitionKey,
-        pathExtractor.getElementIdPath(externalTaskInfo.element()),
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
         variablesMapper.toDTO(externalTaskInfo.variables()));

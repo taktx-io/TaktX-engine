@@ -19,11 +19,10 @@ public class ExternalTaskResponseTriggerDTO extends ContinueFlowElementTriggerDT
 
   public ExternalTaskResponseTriggerDTO(
       UUID processInstanceKey,
-      List<String> elementIdPath,
       List<UUID> elementInstanceIdPath,
       ExternalTaskResponseResultDTO externalTaskResponseResult,
       VariablesDTO variables) {
-    super(processInstanceKey, elementIdPath, elementInstanceIdPath, Constants.NONE, variables);
+    super(processInstanceKey, elementInstanceIdPath, Constants.NONE, variables);
     this.externalTaskResponseResult = externalTaskResponseResult;
   }
 }

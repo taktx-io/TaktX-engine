@@ -118,7 +118,6 @@ public class MessageEventProcessor
                   ContinueFlowElementTriggerDTO flowElementTrigger =
                       new ContinueFlowElementTriggerDTO(
                           processInstanceKey,
-                          subscription.getElementIdPath(),
                           subscription.getElementInstanceIdPath(),
                           Constants.NONE,
                           messageEvent.getVariables());

@@ -114,7 +114,7 @@ public class FlowNodeInstancesProcessor {
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
-    if (trigger.getElementIdPath().isEmpty() && trigger.getElementInstanceIdPath().isEmpty()) {
+    if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
       FlowNodeInstances flowNodeInstances = processInstance.getFlowNodeInstances();
       flowNodeInstances
@@ -189,7 +189,6 @@ public class FlowNodeInstancesProcessor {
       instanceResult.addContinuation(
           new ContinueFlowElementTriggerDTO(
               processInstance.getParentProcessInstanceKey(),
-              processInstance.getParentElementIdPath(),
               processInstance.getParentElementInstancePath(),
               Constants.NONE,
               variablesMapper.toDTO(processInstanceVariables)));

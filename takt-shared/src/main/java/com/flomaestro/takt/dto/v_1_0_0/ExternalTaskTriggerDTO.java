@@ -21,9 +21,6 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO<UUID> {
   @JsonProperty("pdk")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("eid")
-  private List<String> elementIdPath;
-
   @JsonProperty("etid")
   private String externalTaskId;
 
@@ -36,13 +33,11 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO<UUID> {
   public ExternalTaskTriggerDTO(
       UUID processInstanceKey,
       ProcessDefinitionKey processDefinitionKey,
-      List<String> elementIdPath,
       String externalTaskId,
       List<UUID> elementInstanceIdPath,
       VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
     this.processDefinitionKey = processDefinitionKey;
-    this.elementIdPath = elementIdPath;
     this.externalTaskId = externalTaskId;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.variables = variables;

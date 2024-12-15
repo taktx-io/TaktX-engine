@@ -17,7 +17,7 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
 
   public static final ContinueFlowElementTriggerDTO NONE =
       new ContinueFlowElementTriggerDTO(
-          Constants.NONE_UUID, List.of(), List.of(), Constants.NONE, VariablesDTO.empty());
+          Constants.NONE_UUID, List.of(), Constants.NONE, VariablesDTO.empty());
 
   @JsonProperty("ifi")
   private String inputFlowId;
@@ -27,11 +27,10 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
 
   public ContinueFlowElementTriggerDTO(
       UUID processInstanceKey,
-      List<String> elementIdPath,
       List<UUID> elementInstanceIdPath,
       String inputFlowId,
       VariablesDTO variables) {
-    super(processInstanceKey, elementIdPath, variables);
+    super(processInstanceKey, List.of(), variables);
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.inputFlowId = inputFlowId;
   }

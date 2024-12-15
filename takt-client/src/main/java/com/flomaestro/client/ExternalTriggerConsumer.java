@@ -303,7 +303,6 @@ public class ExternalTriggerConsumer {
         processInstanceTrigger =
             new ExternalTaskResponseTriggerDTO(
                 externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementIdPath(),
                 externalTaskTrigger.getElementInstanceIdPath(),
                 externalTaskResponseResult,
                 new VariablesDTO(variablesMap));
@@ -311,7 +310,6 @@ public class ExternalTriggerConsumer {
         processInstanceTrigger =
             new ExternalTaskResponseTriggerDTO(
                 externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementIdPath(),
                 externalTaskTrigger.getElementInstanceIdPath(),
                 new ExternalTaskResponseResultDTO(
                     ExternalTaskResponseType.ESCALATION,
@@ -324,7 +322,6 @@ public class ExternalTriggerConsumer {
         processInstanceTrigger =
             new ExternalTaskResponseTriggerDTO(
                 externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementIdPath(),
                 externalTaskTrigger.getElementInstanceIdPath(),
                 new ExternalTaskResponseResultDTO(
                     ExternalTaskResponseType.ERROR,
@@ -356,7 +353,6 @@ public class ExternalTriggerConsumer {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementIdPath(),
             externalTaskTrigger.getElementInstanceIdPath(),
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ERROR,

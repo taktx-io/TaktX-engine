@@ -87,7 +87,7 @@ public class ProcessInstanceProcessor
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
-    log.debug("Purging finished process instance: {}", processInstanceKey);
+    log.info("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
     UUID[] start =
         new UUID[] {

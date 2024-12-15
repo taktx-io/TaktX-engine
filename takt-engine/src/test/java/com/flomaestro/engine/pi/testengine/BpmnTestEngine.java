@@ -293,7 +293,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         processInstanceKey,
         new ExternalTaskResponseTriggerDTO(
             externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementIdPath(),
             externalTaskTrigger.getElementInstanceIdPath(),
             externalTaskResponseResult,
             variables));
@@ -437,7 +436,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                 this::pollExternalTask,
                 externalTaskTrigger ->
                     externalTaskTrigger != null
-                        && externalTaskTrigger.getElementIdPath().contains(elementId));
+                        && externalTaskTrigger
+                            .getProcessInstanceKey()
+                            .equals(activeProcessInstanceKey));
     return this;
   }
 
