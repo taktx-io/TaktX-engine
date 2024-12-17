@@ -40,8 +40,8 @@ public abstract class ThrowEventInstanceProcessor<
       Variables variables) {
     flowNodeInstance
         .getFlowNode()
-        .getLinkventDefinitions()
-        .forEach(
+        .getLinkventDefinition()
+        .ifPresent(
             linkEventDefinition -> {
               Optional<IntermediateCatchEvent> intermediateCatchEvent =
                   flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());

@@ -51,8 +51,8 @@ public abstract class CatchEventInstanceProcessor<
 
     catchEventInstance
         .getFlowNode()
-        .getEscalationEventDefinitions()
-        .forEach(
+        .getEscalationEventDefinition()
+        .ifPresent(
             escalationEventDefinition -> {
               catchEventInstance.setState(CatchEventStateEnum.WAITING);
               catchEventInstance.addEscalationSubscription(escalationEventDefinition);
@@ -60,8 +60,8 @@ public abstract class CatchEventInstanceProcessor<
 
     catchEventInstance
         .getFlowNode()
-        .getErrorEventDefinitions()
-        .forEach(
+        .getErrorEventDefinition()
+        .ifPresent(
             errorEventDefinition -> {
               catchEventInstance.setState(CatchEventStateEnum.WAITING);
               catchEventInstance.addErrorSubscription(errorEventDefinition);
@@ -70,8 +70,8 @@ public abstract class CatchEventInstanceProcessor<
     if (shoudHandleTimerxEvents()) {
       catchEventInstance
           .getFlowNode()
-          .getTimerEventDefinitions()
-          .forEach(
+          .getTimerEventDefinition()
+          .ifPresent(
               timerEventDefinition -> {
                 catchEventInstance.setState(CatchEventStateEnum.WAITING);
                 instanceResult.addNewScheduledContinuation(
@@ -81,8 +81,8 @@ public abstract class CatchEventInstanceProcessor<
     }
     catchEventInstance
         .getFlowNode()
-        .getMessageventDefinitions()
-        .forEach(
+        .getMessageventDefinition()
+        .ifPresent(
             messageEventDefinition -> {
               catchEventInstance.setState(CatchEventStateEnum.WAITING);
               Message message = messageEventDefinition.getReferencedMessage();

@@ -18,7 +18,7 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   private CatchEventStateEnum state;
 
   @JsonProperty("sk")
-  private Set<ScheduledKeyDTO> scheduledKeys;
+  private Set<ScheduleKeyDTO> scheduledKeys;
 
   @JsonProperty("mek")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
@@ -40,7 +40,7 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
       String elementId,
       int passedCnt,
       CatchEventStateEnum state,
-      Set<ScheduledKeyDTO> scheduledKeys,
+      Set<ScheduleKeyDTO> scheduledKeys,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt);
     this.state = state;

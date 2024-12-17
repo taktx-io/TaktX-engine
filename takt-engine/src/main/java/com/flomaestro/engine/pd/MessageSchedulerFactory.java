@@ -10,17 +10,15 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.FixedRateMessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.OneTimeSchedulerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.RecurringMessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @ApplicationScoped
 public class MessageSchedulerFactory {
@@ -29,49 +27,27 @@ public class MessageSchedulerFactory {
   @Inject FeelExpressionHandlerImpl feelExpressionHandler;
 
   public MessageSchedulerDTO schedule(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
-      return scheduleCycle(
-          processDefinitionKey,
-          processInstanceKey,
-          targetElementId,
-          timerEventDefinition,
-          messages,
-          variables);
+      return scheduleCycle(scheduleKey, timerEventDefinition, messages, variables);
     } else if (timerEventDefinition.getTimeDate() != null
         && !timerEventDefinition.getTimeDate().isEmpty()) {
-      return scheduleOneTime(
-          processDefinitionKey,
-          processInstanceKey,
-          targetElementId,
-          timerEventDefinition,
-          messages,
-          variables);
+      return scheduleOneTime(scheduleKey, timerEventDefinition, messages, variables);
     } else if (timerEventDefinition.getTimeDuration() != null
         && !timerEventDefinition.getTimeDuration().isEmpty()) {
-      return scheduleDuration(
-          processDefinitionKey,
-          processInstanceKey,
-          targetElementId,
-          timerEventDefinition,
-          messages,
-          variables);
+      return scheduleDuration(scheduleKey, timerEventDefinition, messages, variables);
     }
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
 
   private MessageSchedulerDTO scheduleDuration(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
 
     String timeDuration =
@@ -82,66 +58,37 @@ public class MessageSchedulerFactory {
     Duration duration = Duration.parse(repeatDuration.getDuration());
 
     return new OneTimeSchedulerDTO(
-        processDefinitionKey,
-        processInstanceKey,
-        targetElementId,
-        timerEventDefinition.getId(),
-        messages,
-        Instant.now(clock).plus(duration).toString());
+        scheduleKey, messages, Instant.now(clock).plus(duration).toString());
   }
 
   private MessageSchedulerDTO scheduleOneTime(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
     String timeDate =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
             .asText();
-    return new OneTimeSchedulerDTO(
-        processDefinitionKey,
-        processInstanceKey,
-        targetElementId,
-        timerEventDefinition.getId(),
-        messages,
-        timeDate);
+    return new OneTimeSchedulerDTO(scheduleKey, messages, timeDate);
   }
 
   private MessageSchedulerDTO scheduleCycle(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
-      return scheduleCron(
-          processDefinitionKey,
-          processInstanceKey,
-          targetElementId,
-          timerEventDefinition,
-          messages,
-          variables);
+      return scheduleCron(scheduleKey, timerEventDefinition, messages, variables);
     } else {
-      return scheduleFixedRate(
-          processDefinitionKey,
-          processInstanceKey,
-          targetElementId,
-          timerEventDefinition,
-          messages,
-          variables);
+      return scheduleFixedRate(scheduleKey, timerEventDefinition, messages, variables);
     }
   }
 
   private MessageSchedulerDTO scheduleFixedRate(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
 
     String timeCycle =
@@ -152,10 +99,7 @@ public class MessageSchedulerFactory {
     RepeatDuration repeatDuration = RepeatDuration.parse(timeCycle);
     Duration duration = Duration.parse(repeatDuration.getDuration());
     return new FixedRateMessageSchedulerDTO(
-        processDefinitionKey,
-        processInstanceKey,
-        targetElementId,
-        timerEventDefinition.getId(),
+        scheduleKey,
         messages,
         repeatDuration.getDuration(),
         repeatDuration.getRepetitions(),
@@ -164,24 +108,16 @@ public class MessageSchedulerFactory {
   }
 
   private MessageSchedulerDTO scheduleCron(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
+      ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      List<SchedulableMessageDTO<?>> messages,
+      SchedulableMessageDTO messages,
       Variables variables) {
     String timeCycle =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
             .asText();
     return new RecurringMessageSchedulerDTO(
-        processDefinitionKey,
-        processInstanceKey,
-        targetElementId,
-        timerEventDefinition.getId(),
-        messages,
-        timeCycle,
-        Instant.now(clock).toString());
+        scheduleKey, messages, timeCycle, Instant.now(clock).toString());
   }
 
   private boolean isValidCron(String timeCycle) {

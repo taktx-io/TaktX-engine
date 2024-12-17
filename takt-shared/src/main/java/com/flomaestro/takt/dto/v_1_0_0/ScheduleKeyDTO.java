@@ -7,4 +7,6 @@ import com.flomaestro.takt.CustomTypeIdResolver;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "cls")
 @JsonTypeIdResolver(CustomTypeIdResolver.class)
-public interface SchedulableMessageDTO {}
+public interface ScheduleKeyDTO {
+  Object getRecordKey();
+}

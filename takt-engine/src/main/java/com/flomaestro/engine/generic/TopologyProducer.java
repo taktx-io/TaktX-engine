@@ -32,7 +32,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.util.TaktCompositeUUIDSerde;
 import com.flomaestro.takt.util.TaktUUIDSerde;
@@ -68,8 +68,8 @@ public class TopologyProducer {
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  public static final ObjectMapperSerde<ScheduledKeyDTO> SCHEDULE_KEY_SERDE =
-      new ObjectMapperSerde<>(ScheduledKeyDTO.class);
+  public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
+      new ObjectMapperSerde<>(ScheduleKeyDTO.class);
   public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKeyDTO.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
@@ -176,12 +176,12 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> key instanceof ScheduledKeyDTO,
+            (key, value) -> key instanceof ScheduleKeyDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((ScheduledKeyDTO) key, (MessageSchedulerDTO) value))
+                                KeyValue.pair((ScheduleKeyDTO) key, (MessageSchedulerDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.SCHEDULE_COMMANDS.getTopicName()),
@@ -244,7 +244,6 @@ public class TopologyProducer {
                 (key, value) -> value instanceof ExternalTaskTriggerDTO,
                 (key, value) -> value instanceof StartCommandDTO,
                 (key, value) -> value instanceof MessageSchedulerDTO,
-                (key, value) -> key instanceof ScheduledKeyDTO,
                 (key, value) -> value instanceof MessageEventDTO);
 
     branches[0]
@@ -274,16 +273,11 @@ public class TopologyProducer {
                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Produced.with(Serdes.String(), START_COMMAND_SERDE));
     branches[4]
-        .map((key, value) -> KeyValue.pair(((ScheduledKeyDTO) key), (MessageSchedulerDTO) value))
+        .map((key, value) -> KeyValue.pair(((ScheduleKeyDTO) key), (MessageSchedulerDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
     branches[5]
-        .map((key, value) -> KeyValue.pair(((ScheduledKeyDTO) key), (MessageSchedulerDTO) value))
-        .to(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
-    branches[6]
         .map((key, value) -> KeyValue.pair(((MessageEventKeyDTO) key), (MessageEventDTO) value))
         .to(
             tenantNamespaceNameWrapper.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
@@ -345,7 +339,7 @@ public class TopologyProducer {
                 SCHEDULE_KEY_SERDE,
                 MESSAGE_SCHEDULER_SERDE));
 
-    KStream<ScheduledKeyDTO, MessageSchedulerDTO> scheduleCommandStream =
+    KStream<ScheduleKeyDTO, MessageSchedulerDTO> scheduleCommandStream =
         stateStore.stream(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));

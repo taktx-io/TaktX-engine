@@ -1,6 +1,5 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +12,7 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @EqualsAndHashCode
-public class ExternalTaskTriggerDTO implements SchedulableMessageDTO<UUID> {
+public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
   @JsonProperty("pik")
   private UUID processInstanceKey;
@@ -41,11 +40,5 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO<UUID> {
     this.externalTaskId = externalTaskId;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.variables = variables;
-  }
-
-  @JsonIgnore
-  @Override
-  public UUID getRecordKey(UUID processInstanceKey) {
-    return this.processInstanceKey;
   }
 }

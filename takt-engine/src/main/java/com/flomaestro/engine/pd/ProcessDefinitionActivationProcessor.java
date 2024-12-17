@@ -5,6 +5,7 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
+import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
@@ -13,13 +14,10 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduleType;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -167,13 +165,8 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              ScheduledKeyDTO scheduledKey =
-                  new ScheduledKeyDTO(
-                      processDefinitionKey,
-                      Constants.NONE_UUID,
-                      ScheduleType.from(timerEventDefinition),
-                      startEvent.getId(),
-                      timerEventDefinition.getId());
+              DefinitionScheduleKeyDTO scheduledKey =
+                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
               context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli()));
             });
   }
@@ -184,32 +177,27 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
+              DefinitionScheduleKeyDTO scheduleKey =
+                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
-                      processDefinitionKey,
-                      Constants.NONE_UUID,
-                      startEvent.getId(),
+                      scheduleKey,
                       timerEventDefinition,
-                      getStartCommands(processDefinitionKey.getProcessDefinitionId(), startEvent),
+                      getStartCommand(processDefinitionKey.getProcessDefinitionId(), startEvent),
                       Variables.empty());
-              context.forward(
-                  new Record<>(schedule.getScheduledKey(), schedule, Instant.now().toEpochMilli()));
+              context.forward(new Record<>(scheduleKey, schedule, Instant.now().toEpochMilli()));
             });
   }
 
-  private static List<SchedulableMessageDTO<?>> getStartCommands(
+  private static SchedulableMessageDTO getStartCommand(
       String processDefinitionId, StartEventDTO startEvent) {
-    List<SchedulableMessageDTO<?>> processInstanceStartCommand = new ArrayList<>();
-    processInstanceStartCommand.add(
-        new StartCommandDTO(
-            Constants.NONE_UUID,
-            Constants.NONE_UUID,
-            startEvent.getParentId(),
-            List.of(),
-            List.of(),
-            processDefinitionId,
-            VariablesDTO.empty()));
-
-    return processInstanceStartCommand;
+    return new StartCommandDTO(
+        Constants.NONE_UUID,
+        Constants.NONE_UUID,
+        startEvent.getParentId(),
+        List.of(),
+        List.of(),
+        processDefinitionId,
+        VariablesDTO.empty());
   }
 }

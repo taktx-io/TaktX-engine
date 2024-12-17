@@ -1,7 +1,7 @@
 package com.flomaestro.engine.pd.model;
 
+import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -13,34 +13,31 @@ public abstract class CatchEvent extends Event
     implements WithIoMapping, WithEscalationEventDefinitions, WithErrorEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
-  public Set<TimerEventDefinition> getTimerEventDefinitions() {
-    return getDefinitions(TimerEventDefinition.class);
+  public Optional<TimerEventDefinition> getTimerEventDefinition() {
+    return getDefinition(TimerEventDefinition.class);
   }
 
-  public Set<MessageEventDefinition> getMessageventDefinitions() {
-    return getDefinitions(MessageEventDefinition.class);
+  public Optional<MessageEventDefinition> getMessageventDefinition() {
+    return getDefinition(MessageEventDefinition.class);
   }
 
-  public Set<LinkEventDefinition> getLinkventDefinitions() {
-    return getDefinitions(LinkEventDefinition.class);
+  public Optional<LinkEventDefinition> getLinkventDefinition() {
+    return getDefinition(LinkEventDefinition.class);
   }
 
-  public Set<TerminateEventDefinition> getTerminateEventDefinitions() {
-    return getDefinitions(TerminateEventDefinition.class);
+  public Optional<TerminateEventDefinition> getTerminateEventDefinition() {
+    return getDefinition(TerminateEventDefinition.class);
   }
 
-  public Set<EscalationEventDefinition> getEscalationEventDefinitions() {
-    return getDefinitions(EscalationEventDefinition.class);
+  public Optional<EscalationEventDefinition> getEscalationEventDefinition() {
+    return getDefinition(EscalationEventDefinition.class);
   }
 
-  public Set<ErrorEventDefinition> getErrorEventDefinitions() {
-    return getDefinitions(ErrorEventDefinition.class);
+  public Optional<ErrorEventDefinition> getErrorEventDefinition() {
+    return getDefinition(ErrorEventDefinition.class);
   }
 
-  private <T> Set<T> getDefinitions(Class<T> clazz) {
-    return eventDefinitions.stream()
-        .filter(clazz::isInstance)
-        .map(clazz::cast)
-        .collect(Collectors.toSet());
+  private <T> Optional<T> getDefinition(Class<T> clazz) {
+    return eventDefinitions.stream().filter(clazz::isInstance).map(clazz::cast).findFirst();
   }
 }

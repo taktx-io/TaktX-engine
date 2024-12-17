@@ -10,9 +10,7 @@ import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.BiConsumer;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -25,20 +23,11 @@ import lombok.ToString;
 @NoArgsConstructor
 public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
-  @JsonProperty("pdk")
-  private ProcessDefinitionKey processDefinitionKey;
-
-  @JsonProperty("pik")
-  private UUID processInstanceKey;
-
-  @JsonProperty("tei")
-  private String targetElementId;
-
-  @JsonProperty("tedi")
-  private String timerEventDefinitionId;
+  @JsonProperty("sk")
+  private ScheduleKeyDTO scheduleKey;
 
   @JsonProperty("msgs")
-  private List<SchedulableMessageDTO<?>> messages;
+  private SchedulableMessageDTO messages;
 
   @JsonProperty("cron")
   private String cron;
@@ -47,17 +36,11 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
   private String instantiation;
 
   public RecurringMessageSchedulerDTO(
-      ProcessDefinitionKey processDefinitionKey,
-      UUID processInstanceKey,
-      String targetElementId,
-      String timerEventDefinitionId,
-      List<SchedulableMessageDTO<?>> messages,
+      ScheduleKeyDTO scheduleKey,
+      SchedulableMessageDTO messages,
       String cron,
       String instantiation) {
-    this.processDefinitionKey = processDefinitionKey;
-    this.processInstanceKey = processInstanceKey;
-    this.targetElementId = targetElementId;
-    this.timerEventDefinitionId = timerEventDefinitionId;
+    this.scheduleKey = scheduleKey;
     this.messages = messages;
     this.cron = cron;
     this.instantiation = instantiation;
@@ -65,7 +48,7 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
   @Override
   public RecurringMessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<UUID, List<SchedulableMessageDTO<?>>> triggerConsumer) {
+      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -75,17 +58,11 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(processInstanceKey, messages);
+        triggerConsumer.accept(scheduleKey, messages);
 
         // Return a new command with the next execution time
         return new RecurringMessageSchedulerDTO(
-            processDefinitionKey,
-            processInstanceKey,
-            targetElementId,
-            timerEventDefinitionId,
-            messages,
-            parsedCron.asString(),
-            zonedDateTime.get().toString());
+            scheduleKey, messages, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;
@@ -93,20 +70,5 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
     }
     // Something went wrong, return null to indicate that this command is done
     return null;
-  }
-
-  @Override
-  public ScheduleType getScheduleType() {
-    return ScheduleType.RECURRING;
-  }
-
-  @Override
-  public ScheduledKeyDTO getScheduledKey() {
-    return new ScheduledKeyDTO(
-        processDefinitionKey,
-        processInstanceKey,
-        ScheduleType.RECURRING,
-        targetElementId,
-        timerEventDefinitionId);
   }
 }

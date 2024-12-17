@@ -7,7 +7,7 @@ import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.UUID;
@@ -26,7 +26,7 @@ public class InstanceResult {
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayDeque<>();
-  private final Queue<ScheduledKeyDTO> cancelSchedules = new ArrayDeque<>();
+  private final Queue<ScheduleKeyDTO> cancelSchedules = new ArrayDeque<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -66,7 +66,7 @@ public class InstanceResult {
     scheduledContinuationInfos.add(scheduledContinuationInfo);
   }
 
-  public void cancelSchedule(ScheduledKeyDTO scheduledKey) {
+  public void cancelSchedule(ScheduleKeyDTO scheduledKey) {
     cancelSchedules.add(scheduledKey);
   }
 }

@@ -19,7 +19,7 @@ public class IntermediateCatchEventInstanceDTO extends CatchEventInstanceDTO {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      Set<ScheduledKeyDTO> scheduledKeys,
+      Set<ScheduleKeyDTO> scheduledKeys,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
   }

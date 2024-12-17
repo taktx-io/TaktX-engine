@@ -207,6 +207,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = TaskInstance.class, source = TaskInstanceDTO.class)
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "flowNode", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   FlowNodeInstance map(FlowNodeInstanceDTO source, @Context FlowElements flowElements);
 
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
@@ -222,7 +223,7 @@ public interface ProcessInstanceMapper {
 
   default void setAttachedBoundaryEventInstances(FlowNodeInstances flowNodeInstances) {
     for (FlowNodeInstance<?> value : flowNodeInstances.getInstances().values()) {
-      if (value instanceof ActivityInstance activityInstance) {
+      if (value instanceof ActivityInstance<?> activityInstance) {
         activityInstance
             .getBoundaryEventIds()
             .forEach(

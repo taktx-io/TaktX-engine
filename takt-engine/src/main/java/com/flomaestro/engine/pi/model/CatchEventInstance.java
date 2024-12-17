@@ -6,7 +6,7 @@ import com.flomaestro.engine.pd.model.EscalationEventDefinition;
 import com.flomaestro.engine.pd.model.EventSignal;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -22,7 +22,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     implements ReceivingMessageInstance {
   private CatchEventStateEnum state;
 
-  private Set<ScheduledKeyDTO> scheduledKeys;
+  private Set<ScheduleKeyDTO> scheduledKeys;
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
   private Set<EscalationSubscription> escalationSubscriptions;
   private Set<ErrorSubscription> errorSubscriptions;
@@ -73,7 +73,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     }
   }
 
-  public void addScheduledKey(ScheduledKeyDTO scheduledKey) {
+  public void addScheduledKey(ScheduleKeyDTO scheduledKey) {
     this.scheduledKeys.add(scheduledKey);
   }
 

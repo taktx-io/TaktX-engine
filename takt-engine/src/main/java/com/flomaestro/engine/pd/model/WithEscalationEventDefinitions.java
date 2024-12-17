@@ -1,7 +1,7 @@
 package com.flomaestro.engine.pd.model;
 
-import java.util.Set;
+import java.util.Optional;
 
 public interface WithEscalationEventDefinitions {
-  Set<EscalationEventDefinition> getEscalationEventDefinitions();
+  Optional<EscalationEventDefinition> getEscalationEventDefinition();
 }

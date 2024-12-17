@@ -3,7 +3,7 @@ package com.flomaestro.engine.pd;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,7 +17,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
 public class ScheduleProcessor
-    implements Processor<ScheduledKeyDTO, MessageSchedulerDTO, Object, SchedulableMessageDTO> {
+    implements Processor<ScheduleKeyDTO, MessageSchedulerDTO, Object, SchedulableMessageDTO> {
 
   public static final int SCHEDULE_INTERVAL = 100;
   private ProcessorContext<Object, SchedulableMessageDTO> context;
@@ -37,26 +37,24 @@ public class ScheduleProcessor
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
           long startTime = System.currentTimeMillis();
-          KeyValueStore<ScheduledKeyDTO, MessageSchedulerDTO> scheduleStore =
+          KeyValueStore<ScheduleKeyDTO, MessageSchedulerDTO> scheduleStore =
               context.getStateStore(
                   tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
-          try (KeyValueIterator<ScheduledKeyDTO, MessageSchedulerDTO> all = scheduleStore.all()) {
+          try (KeyValueIterator<ScheduleKeyDTO, MessageSchedulerDTO> all = scheduleStore.all()) {
             all.forEachRemaining(
                 scheduledKeyValue -> {
-                  ScheduledKeyDTO scheduledKey = scheduledKeyValue.key;
+                  ScheduleKeyDTO scheduledKey = scheduledKeyValue.key;
                   MessageSchedulerDTO scheduleCommand = scheduledKeyValue.value;
                   if (scheduleCommand != null) {
                     MessageSchedulerDTO updatedScheduleCommand =
                         scheduleCommand.evaluate(
                             Instant.now(clock),
-                            (processInstanceKey, schedulableMessages) ->
-                                schedulableMessages.forEach(
-                                    message ->
-                                        context.forward(
-                                            new Record<>(
-                                                message.getRecordKey(processInstanceKey),
-                                                message,
-                                                Instant.now(clock).toEpochMilli()))));
+                            (scheduleKey, message) ->
+                                context.forward(
+                                    new Record<>(
+                                        scheduledKey.getRecordKey(),
+                                        message,
+                                        Instant.now(clock).toEpochMilli())));
                     if (updatedScheduleCommand != null
                         && !updatedScheduleCommand.equals(scheduleCommand)) {
                       scheduleStore.put(scheduledKey, updatedScheduleCommand);
@@ -77,8 +75,8 @@ public class ScheduleProcessor
   }
 
   @Override
-  public void process(Record<ScheduledKeyDTO, MessageSchedulerDTO> scheduleRecord) {
-    KeyValueStore<ScheduledKeyDTO, MessageSchedulerDTO> scheduleStore =
+  public void process(Record<ScheduleKeyDTO, MessageSchedulerDTO> scheduleRecord) {
+    KeyValueStore<ScheduleKeyDTO, MessageSchedulerDTO> scheduleStore =
         context.getStateStore(
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
     if (scheduleRecord.value() != null) {

@@ -97,7 +97,7 @@ public class DefinitionMapper {
   private void setErrorReferences(Map<String, FlowElement> elements, Map<String, ErrorDTO> errors) {
     for (FlowElement flowElement : elements.values()) {
       if (flowElement instanceof WithErrorEventDefinitions withErrorEventDefinitions) {
-        withErrorEventDefinitions.getErrorEventDefinitions().stream()
+        withErrorEventDefinitions.getErrorEventDefinition().stream()
             .forEach(
                 errorEventDefinition -> {
                   ErrorDTO errorDTO = errors.get(errorEventDefinition.getErrorRef());
@@ -114,7 +114,7 @@ public class DefinitionMapper {
       Map<String, FlowElement> elements, Map<String, EscalationDTO> escalations) {
     for (FlowElement flowElement : elements.values()) {
       if (flowElement instanceof WithEscalationEventDefinitions withEscalationEventDefinitions) {
-        withEscalationEventDefinitions.getEscalationEventDefinitions().stream()
+        withEscalationEventDefinitions.getEscalationEventDefinition().stream()
             .forEach(
                 escalationEventDefinition -> {
                   EscalationDTO escalationDTO =
@@ -136,7 +136,7 @@ public class DefinitionMapper {
         withMessageReference.setReferencedMessage(
             new Message(messageDTO.getId(), messageDTO.getName(), messageDTO.getCorrelationKey()));
       } else if (flowElement instanceof CatchEvent catchEvent) {
-        catchEvent.getMessageventDefinitions().stream()
+        catchEvent.getMessageventDefinition().stream()
             .forEach(
                 messageEventDefinition -> {
                   MessageDTO messageDTO = messages.get(messageEventDefinition.getMessageRef());

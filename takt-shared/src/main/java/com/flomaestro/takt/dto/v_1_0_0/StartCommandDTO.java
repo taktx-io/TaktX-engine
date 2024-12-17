@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class StartCommandDTO extends DefinitionsTriggerDTO
-    implements SchedulableMessageDTO<String> {
+public class StartCommandDTO extends DefinitionsTriggerDTO implements SchedulableMessageDTO {
 
   @JsonProperty("pi")
   private UUID processInstanceKey;
@@ -49,10 +48,5 @@ public class StartCommandDTO extends DefinitionsTriggerDTO
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionId = processDefinitionId;
     this.variables = variables;
-  }
-
-  @Override
-  public String getRecordKey(UUID processInstanceKey) {
-    return processDefinitionId;
   }
 }

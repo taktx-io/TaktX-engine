@@ -13,7 +13,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
-    implements SchedulableMessageDTO<UUID> {
+    implements SchedulableMessageDTO {
 
   public static final ContinueFlowElementTriggerDTO NONE =
       new ContinueFlowElementTriggerDTO(
@@ -33,10 +33,5 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
     super(processInstanceKey, List.of(), variables);
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.inputFlowId = inputFlowId;
-  }
-
-  @Override
-  public UUID getRecordKey(UUID processInstanceKey) {
-    return processInstanceKey;
   }
 }

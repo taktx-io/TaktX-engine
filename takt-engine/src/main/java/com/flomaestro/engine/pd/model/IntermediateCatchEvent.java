@@ -19,6 +19,6 @@ public class IntermediateCatchEvent extends CatchEvent {
   }
 
   public boolean hasLinkEventDefinition(String name) {
-    return getLinkventDefinitions().stream().anyMatch(e -> e.getName().equals(name));
+    return getLinkventDefinition().stream().anyMatch(e -> e.getName().equals(name));
   }
 }

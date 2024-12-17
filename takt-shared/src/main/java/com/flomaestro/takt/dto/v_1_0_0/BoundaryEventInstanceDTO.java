@@ -23,7 +23,7 @@ public class BoundaryEventInstanceDTO extends CatchEventInstanceDTO {
       UUID attachedInstanceId,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys,
       CatchEventStateEnum state,
-      Set<ScheduledKeyDTO> scheduledKeys) {
+      Set<ScheduleKeyDTO> scheduledKeys) {
     super(elementInstanceId, elementId, passedCnt, state, scheduledKeys, messageEventKeys);
     this.attachedInstanceId = attachedInstanceId;
   }

@@ -15,22 +15,17 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public abstract class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
-    implements SchedulableMessageDTO<UUID> {
+    implements SchedulableMessageDTO {
 
   @JsonProperty("ifi")
   private String inputFlowId;
 
-  public StartFlowElementTriggerDTO(
+  protected StartFlowElementTriggerDTO(
       UUID processInstanceKey,
       List<String> elementIdPath,
       String inputFlowId,
       VariablesDTO variables) {
     super(processInstanceKey, elementIdPath, variables);
     this.inputFlowId = inputFlowId;
-  }
-
-  @Override
-  public UUID getRecordKey(UUID processInstanceKey) {
-    return processInstanceKey;
   }
 }

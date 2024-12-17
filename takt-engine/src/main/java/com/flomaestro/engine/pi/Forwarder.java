@@ -13,13 +13,14 @@ import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.OneTimeSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ScheduledKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -71,9 +72,9 @@ public class Forwarder {
   private void forwardCancelSchedules(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
 
-    Queue<ScheduledKeyDTO> cancelSchedules = instanceResult.getCancelSchedules();
+    Queue<ScheduleKeyDTO> cancelSchedules = instanceResult.getCancelSchedules();
     while (!cancelSchedules.isEmpty()) {
-      ScheduledKeyDTO scheduledKey = cancelSchedules.poll();
+      ScheduleKeyDTO scheduledKey = cancelSchedules.poll();
       context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli()));
     }
   }
@@ -94,17 +95,17 @@ public class Forwarder {
               Constants.NONE,
               variablesMapper.toDTO(info.variables()));
 
+      InstanceScheduleKeyDTO scheduledKey =
+          new InstanceScheduleKeyDTO(
+              processInstance.getProcessInstanceKey(), catchEventInstance.getElementInstanceId());
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
-              processInstance.getProcessDefinitionKey(),
-              processInstance.getProcessInstanceKey(),
-              catchEventInstance.getFlowNode().getId(),
+              scheduledKey,
               dtoMapper.map(info.timerEventDefinition()),
-              List.of(continueFlowElementTrigger),
+              continueFlowElementTrigger,
               info.variables());
-      catchEventInstance.addScheduledKey(schedule.getScheduledKey());
-      context.forward(
-          new Record<>(schedule.getScheduledKey(), schedule, Instant.now().toEpochMilli()));
+      catchEventInstance.addScheduledKey(scheduledKey);
+      context.forward(new Record<>(scheduledKey, schedule, Instant.now().toEpochMilli()));
     }
   }
 
@@ -217,21 +218,12 @@ public class Forwarder {
                 Instant.now().toEpochMilli()));
       } else {
         // Schedule the external task
+        ScheduleKeyDTO scheduledKey =
+            new InstanceScheduleKeyDTO(
+                processInstance.getProcessInstanceKey(),
+                externalTask.instance().getElementInstanceId());
         OneTimeSchedulerDTO oneTimeScheduler =
-            new OneTimeSchedulerDTO(
-                processInstance.getProcessDefinitionKey(),
-                processInstance.getProcessInstanceKey(),
-                externalTask.element().getId(),
-                externalTask.element().getId(),
-                List.of(newExternalTaskTrigger),
-                externalTask.startTime());
-        ScheduledKeyDTO scheduledKey =
-            new ScheduledKeyDTO(
-                definitionKey,
-                processInstance.getProcessInstanceKey(),
-                oneTimeScheduler.getScheduleType(),
-                externalTask.element().getId(),
-                "");
+            new OneTimeSchedulerDTO(scheduledKey, newExternalTaskTrigger, externalTask.startTime());
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, Instant.now().toEpochMilli()));
       }
     }
