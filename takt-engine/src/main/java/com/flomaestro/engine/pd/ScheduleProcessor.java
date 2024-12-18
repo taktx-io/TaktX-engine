@@ -46,15 +46,20 @@ public class ScheduleProcessor
                   ScheduleKeyDTO scheduledKey = scheduledKeyValue.key;
                   MessageSchedulerDTO scheduleCommand = scheduledKeyValue.value;
                   if (scheduleCommand != null) {
+                    Instant now = Instant.now(clock);
                     MessageSchedulerDTO updatedScheduleCommand =
                         scheduleCommand.evaluate(
-                            Instant.now(clock),
-                            (scheduleKey, message) ->
-                                context.forward(
-                                    new Record<>(
-                                        scheduledKey.getRecordKey(),
-                                        message,
-                                        Instant.now(clock).toEpochMilli())));
+                            now,
+                            (scheduleKey, message) -> {
+                              log.info(
+                                  "Sending scheduled message at {} {}, {}",
+                                  now,
+                                  scheduleKey,
+                                  message);
+                              context.forward(
+                                  new Record<>(
+                                      scheduledKey.getRecordKey(), message, now.toEpochMilli()));
+                            });
                     if (updatedScheduleCommand != null
                         && !updatedScheduleCommand.equals(scheduleCommand)) {
                       scheduleStore.put(scheduledKey, updatedScheduleCommand);

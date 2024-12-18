@@ -1,4 +1,4 @@
-package com.flomaestro.engine.pi.testengine;
+package com.flomaestro.engine.generic;
 
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,7 +18,7 @@ public class KafkaClients {
   Map<String, Object> config;
 
   @Produces
-  AdminClient getAdmin() {
+  public AdminClient getAdmin() {
     Map<String, Object> copy = new HashMap<>();
     for (Map.Entry<String, Object> entry : config.entrySet()) {
       if (AdminClientConfig.configNames().contains(entry.getKey())) {

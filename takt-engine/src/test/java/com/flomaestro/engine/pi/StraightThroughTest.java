@@ -27,7 +27,7 @@ class StraightThroughTest {
       bpmnTestEngine = new BpmnTestEngine(clock);
       bpmnTestEngine.init();
     }
-    bpmnTestEngine.clear();
+    bpmnTestEngine.reset();
   }
 
   @AfterAll

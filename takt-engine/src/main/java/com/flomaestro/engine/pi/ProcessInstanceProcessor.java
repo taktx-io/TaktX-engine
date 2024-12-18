@@ -357,6 +357,7 @@ public class ProcessInstanceProcessor
       instanceResult.addProcessInstanceUpdate(
           new ProcessInstanceUpdateDTO(processInstanceDTO, dirtyVariablesDTO));
     }
+    forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
 
     if (processInstance.getFlowNodeInstances().getState().isFinished()) {
       purgeProcessInstance(processInstanceDTO);
@@ -376,7 +377,6 @@ public class ProcessInstanceProcessor
                     new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v);
               });
     }
-    forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
   }
 
   private void storeFlowNodeInstances(FlowNodeInstances flowNodeInstances) {
@@ -385,6 +385,7 @@ public class ProcessInstanceProcessor
         continue;
       }
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
+
       UUID[] key =
           new UUID[] {
             flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()

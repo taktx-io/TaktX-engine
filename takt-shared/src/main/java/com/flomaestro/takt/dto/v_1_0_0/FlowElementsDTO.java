@@ -73,82 +73,11 @@ public class FlowElementsDTO {
   }
 
   @JsonIgnore
-  public List<FlowNodeDTO> getFlowNodes() {
-    return elements.values().stream()
-        .filter(FlowNodeDTO.class::isInstance)
-        .map(FlowNodeDTO.class::cast)
-        .toList();
-  }
-
-  @JsonIgnore
-  public List<ActivityDTO> getActivities() {
-    return elements.values().stream()
-        .filter(ActivityDTO.class::isInstance)
-        .map(ActivityDTO.class::cast)
-        .toList();
-  }
-
-  @JsonIgnore
-  public Optional<FlowElementDTO> getFlowElement(String id) {
-    return elements.values().stream()
-        .filter(flowElement -> id.equals(flowElement.getId()))
-        .findFirst();
-  }
-
-  @JsonIgnore
   public Optional<FlowNodeDTO> getFlowNode(String elementId) {
     return elements.values().stream()
         .filter(FlowNodeDTO.class::isInstance)
         .map(FlowNodeDTO.class::cast)
         .filter(flowElement -> elementId.equals(flowElement.getId()))
-        .findFirst();
-  }
-
-  @JsonIgnore
-  public List<BoundaryEventDTO> getBoundaryEventsAttachedToElement(String id) {
-    return elements.values().stream()
-        .filter(BoundaryEventDTO.class::isInstance)
-        .map(BoundaryEventDTO.class::cast)
-        .filter(boundaryEvent -> boundaryEvent.getAttachedToRef().equals(id))
-        .toList();
-  }
-
-  @JsonIgnore
-  public List<SequenceFlowDTO> getOutgoingSequenceFlowsForElement(FlowNodeDTO element) {
-    return element.getOutgoing().stream()
-        .map(this::getFlowElement)
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .filter(SequenceFlowDTO.class::isInstance)
-        .map(SequenceFlowDTO.class::cast)
-        .toList();
-  }
-
-  @JsonIgnore
-  public Optional<FlowNodeDTO> getFlowNodeWithIncomingFlow(String sequenceFlowId) {
-    FlowElementDTO flowElement = elements.get(sequenceFlowId);
-    if (flowElement instanceof SequenceFlowDTO sequenceFlow) {
-      return Optional.ofNullable((FlowNodeDTO) elements.get(sequenceFlow.getTarget()));
-    }
-    return Optional.empty();
-  }
-
-  @JsonIgnore
-  public Optional<FlowNodeDTO> getFlowNodeWithOutgoingFlow(String sequenceFlowId) {
-    FlowElementDTO flowElement = elements.get(sequenceFlowId);
-    if (flowElement instanceof SequenceFlowDTO sequenceFlow) {
-      return Optional.ofNullable((FlowNodeDTO) elements.get(sequenceFlow.getSource()));
-    }
-    return Optional.empty();
-  }
-
-  public Optional<IntermediateCatchEventDTO> getLinkedCatchElement(String name) {
-    return elements.values().stream()
-        .filter(IntermediateCatchEventDTO.class::isInstance)
-        .map(IntermediateCatchEventDTO.class::cast)
-        .filter(
-            imce ->
-                imce.getLinkventDefinitions().stream().anyMatch(def -> def.getName().equals(name)))
         .findFirst();
   }
 }

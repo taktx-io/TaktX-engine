@@ -12,6 +12,9 @@ public class ExternalTaskResponseResultDTO {
   @JsonProperty("rt")
   private ExternalTaskResponseType responseType;
 
+  @JsonProperty("to")
+  private String timeout;
+
   @JsonProperty("n")
   private String name;
 
@@ -29,11 +32,13 @@ public class ExternalTaskResponseResultDTO {
       Boolean allowRetry,
       String name,
       String message,
-      String code) {
+      String code,
+      String timeout) {
     this.responseType = responseType;
     this.name = name;
     this.code = code;
     this.message = message;
     this.allowRetry = allowRetry;
+    this.timeout = timeout;
   }
 }

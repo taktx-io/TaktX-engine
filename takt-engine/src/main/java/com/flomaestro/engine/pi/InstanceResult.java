@@ -4,6 +4,7 @@ import com.flomaestro.engine.pd.model.NewStartCommand;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
+import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
@@ -27,6 +28,8 @@ public class InstanceResult {
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayDeque<>();
   private final Queue<ScheduleKeyDTO> cancelSchedules = new ArrayDeque<>();
+  private final Queue<ScheduledExternalTaskTriggerTimeoutInfo>
+      scheduledExternalTaskTriggerTimeouts = new ArrayDeque<>();
 
   public static InstanceResult empty() {
     return new InstanceResult();
@@ -60,6 +63,11 @@ public class InstanceResult {
   public void addTerminateCorrelationSubscriptionMessageEvent(
       TerminateCorrelationSubscriptionMessageEventInfo messageEvent) {
     terminateCorrelationSubscriptionMessageEventInfos.add(messageEvent);
+  }
+
+  public void addScheduledExternalTaskTriggerTimeout(
+      ScheduledExternalTaskTriggerTimeoutInfo scheduledExternalTaskTriggerTimeoutInfo) {
+    scheduledExternalTaskTriggerTimeouts.add(scheduledExternalTaskTriggerTimeoutInfo);
   }
 
   public void addNewScheduledContinuation(ScheduledContinuationInfo scheduledContinuationInfo) {

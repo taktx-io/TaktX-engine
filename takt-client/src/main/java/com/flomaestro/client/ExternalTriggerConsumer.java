@@ -241,7 +241,6 @@ public class ExternalTriggerConsumer {
                         t.getMessage());
                     return null;
                   });
-          int i = 0;
         }
       }
     } else if (value.getState() == ProcessDefinitionStateEnum.INACTIVE) {
@@ -274,6 +273,7 @@ public class ExternalTriggerConsumer {
     if (!definitionId.equals(processDefinitionId)) {
       return;
     }
+
     log.info("Processing external task trigger for process definition {}", processDefinitionId);
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
@@ -283,7 +283,7 @@ public class ExternalTriggerConsumer {
           "No worker instance found for process definition " + processDefinitionId);
       return;
     }
-    // Get method from workerInstance which has matching annotation
+
     Class<?> aClass = workerInstance.getClass();
     Optional<Method> optMethod = findMatchingMethod(aClass, externalTaskId);
     if (optMethod.isPresent()) {
@@ -293,10 +293,12 @@ public class ExternalTriggerConsumer {
         Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
         Map<String, JsonNode> variablesMap =
             result == null ? Map.of() : objectMapper.convertValue(result, LinkedHashMap.class);
+
         ExternalTaskResponseResultDTO externalTaskResponseResult =
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.SUCCESS,
                 true,
+                Constants.NONE,
                 Constants.NONE,
                 Constants.NONE,
                 Constants.NONE);
@@ -316,7 +318,8 @@ public class ExternalTriggerConsumer {
                     true,
                     escalationEvent.getName(),
                     escalationEvent.getMessage(),
-                    escalationEvent.getCode()),
+                    escalationEvent.getCode(),
+                    Constants.NONE),
                 VariablesDTO.empty());
       } catch (Throwable e) {
         processInstanceTrigger =
@@ -328,6 +331,7 @@ public class ExternalTriggerConsumer {
                     true,
                     Constants.NONE,
                     e.getMessage(),
+                    Constants.NONE,
                     Constants.NONE),
                 VariablesDTO.empty());
       }
@@ -359,6 +363,7 @@ public class ExternalTriggerConsumer {
                 true,
                 Constants.NONE,
                 processDefinitionId,
+                Constants.NONE,
                 Constants.NONE),
             VariablesDTO.empty());
     responseEmitter.send(

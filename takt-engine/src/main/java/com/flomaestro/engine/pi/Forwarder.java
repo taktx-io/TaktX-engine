@@ -2,16 +2,22 @@ package com.flomaestro.engine.pi;
 
 import com.flomaestro.engine.pd.MessageSchedulerFactory;
 import com.flomaestro.engine.pd.model.NewStartCommand;
-import com.flomaestro.engine.pi.model.CatchEventInstance;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
+import com.flomaestro.engine.pi.model.ExternalTaskInstance;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.engine.pi.model.ReceivingMessageInstance;
 import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
+import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
@@ -23,6 +29,8 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
+import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.List;
@@ -50,6 +58,7 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
     forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
+    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
     forwardCancelSchedules(context, instanceResult);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
@@ -87,7 +96,7 @@ public class Forwarder {
         instanceResult.getScheduledContinuationInfos();
     while (!scheduledContinuationInfos.isEmpty()) {
       ScheduledContinuationInfo info = scheduledContinuationInfos.poll();
-      CatchEventInstance<?> catchEventInstance = info.catchEventInstance();
+      FlowNodeInstanceWithScheduleKeys catchEventInstance = info.catchEventInstance();
       ContinueFlowElementTriggerDTO continueFlowElementTrigger =
           new ContinueFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
@@ -106,6 +115,47 @@ public class Forwarder {
               info.variables());
       catchEventInstance.addScheduledKey(scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, Instant.now().toEpochMilli()));
+    }
+  }
+
+  private void forwardScheduledExternalTaskTriggerTimeouts(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstanceDTO processInstance) {
+    Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
+        instanceResult.getScheduledExternalTaskTriggerTimeouts();
+    while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {
+      ScheduledExternalTaskTriggerTimeoutInfo info = scheduledExternalTaskTriggerTimeouts.poll();
+
+      ExternalTaskInstance<?> externalTaskInstance = info.externalTaskInstance();
+
+      ExternalTaskResponseResultDTO externalTaskResponseResult =
+          new ExternalTaskResponseResultDTO(
+              ExternalTaskResponseType.TIMEOUT,
+              false,
+              Constants.NONE,
+              Constants.NONE,
+              Constants.NONE,
+              Constants.NONE);
+      ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
+          new ExternalTaskResponseTriggerDTO(
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(info.externalTaskInstance()),
+              externalTaskResponseResult,
+              VariablesDTO.empty());
+
+      TimerEventDefinitionDTO timerEventDefinition = new TimerEventDefinitionDTO();
+      timerEventDefinition.setTimeDuration(info.duration());
+
+      InstanceScheduleKeyDTO scheduleKey =
+          new InstanceScheduleKeyDTO(
+              processInstance.getProcessInstanceKey(), externalTaskInstance.getElementInstanceId());
+      MessageSchedulerDTO schedule =
+          messageSchedulerFactory.schedule(
+              scheduleKey, timerEventDefinition, externalTaskResponseResultDTO, Variables.empty());
+
+      externalTaskInstance.addScheduledKey(scheduleKey);
+      context.forward(new Record<>(scheduleKey, schedule, Instant.now().toEpochMilli()));
     }
   }
 

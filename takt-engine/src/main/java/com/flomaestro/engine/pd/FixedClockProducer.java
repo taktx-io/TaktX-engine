@@ -9,8 +9,9 @@ import java.time.ZoneId;
 @Alternative
 public class FixedClockProducer {
 
+  public static final String INITIAL_TIME = "2024-02-28T10:00:00Z";
   public static final MutableClock FIXED_CLOCK =
-      new MutableClock(Instant.parse("2024-02-28T10:00:00Z"), ZoneId.of("UTC"));
+      new MutableClock(Instant.parse(INITIAL_TIME), ZoneId.of("UTC"));
 
   @Produces
   Clock produceFixedClock() {

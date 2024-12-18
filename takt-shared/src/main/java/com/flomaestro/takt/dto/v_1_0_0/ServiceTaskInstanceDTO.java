@@ -1,5 +1,6 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Data;
@@ -20,7 +21,16 @@ public class ServiceTaskInstanceDTO extends ExternalTaskInstanceDTO {
       int passedCnt,
       int loopCnt,
       int attempt,
-      Set<UUID> boundaryEventIds) {
-    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds, attempt);
+      Set<UUID> boundaryEventIds,
+      List<ScheduleKeyDTO> scheduledKeys) {
+    super(
+        state,
+        elementInstanceId,
+        elementId,
+        passedCnt,
+        loopCnt,
+        boundaryEventIds,
+        attempt,
+        scheduledKeys);
   }
 }

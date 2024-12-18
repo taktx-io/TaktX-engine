@@ -29,17 +29,17 @@ public class MessageSchedulerFactory {
   public MessageSchedulerDTO schedule(
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
-      SchedulableMessageDTO messages,
+      SchedulableMessageDTO message,
       Variables variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
-      return scheduleCycle(scheduleKey, timerEventDefinition, messages, variables);
+      return scheduleCycle(scheduleKey, timerEventDefinition, message, variables);
     } else if (timerEventDefinition.getTimeDate() != null
         && !timerEventDefinition.getTimeDate().isEmpty()) {
-      return scheduleOneTime(scheduleKey, timerEventDefinition, messages, variables);
+      return scheduleOneTime(scheduleKey, timerEventDefinition, message, variables);
     } else if (timerEventDefinition.getTimeDuration() != null
         && !timerEventDefinition.getTimeDuration().isEmpty()) {
-      return scheduleDuration(scheduleKey, timerEventDefinition, messages, variables);
+      return scheduleDuration(scheduleKey, timerEventDefinition, message, variables);
     }
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }

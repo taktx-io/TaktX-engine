@@ -1,6 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Data;
@@ -17,6 +18,9 @@ public abstract class ExternalTaskInstanceDTO extends TaskInstanceDTO {
   @JsonProperty("at")
   private int attempt;
 
+  @JsonProperty("sch")
+  private List<ScheduleKeyDTO> scheduledKeys;
+
   public ExternalTaskInstanceDTO(
       ActtivityStateEnum state,
       UUID elementInstanceId,
@@ -24,8 +28,10 @@ public abstract class ExternalTaskInstanceDTO extends TaskInstanceDTO {
       int passedCnt,
       int loopCnt,
       Set<UUID> boundaryEventIds,
-      int attempt) {
+      int attempt,
+      List<ScheduleKeyDTO> scheduledKeys) {
     super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
     this.attempt = attempt;
+    this.scheduledKeys = scheduledKeys;
   }
 }

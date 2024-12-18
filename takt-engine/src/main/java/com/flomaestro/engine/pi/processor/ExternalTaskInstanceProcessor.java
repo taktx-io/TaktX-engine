@@ -4,6 +4,8 @@ import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
+import com.flomaestro.engine.generic.KafkaClients;
+import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.RepeatDuration;
 import com.flomaestro.engine.pd.model.ExternalTask;
 import com.flomaestro.engine.pd.model.FlowElements;
@@ -16,7 +18,9 @@ import com.flomaestro.engine.pi.model.EscalationEventSignal;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.ExternalTaskInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
@@ -26,8 +30,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.apache.kafka.clients.admin.Config;
+import org.apache.kafka.clients.admin.DescribeConfigsResult;
+import org.apache.kafka.common.config.ConfigResource;
 
 @NoArgsConstructor
 @Setter
@@ -37,16 +45,44 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private FeelExpressionHandler feelExpressionHandler;
   private Clock clock;
+  private long retentionMs;
 
   protected ExternalTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
+      VariablesMapper variablesMapper,
+      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
+      KafkaClients kafkaClients) {
     super(ioMappingProcessor, processInstanceMapper, variablesMapper);
     this.feelExpressionHandler = feelExpressionHandler;
     this.clock = clock;
+    this.retentionMs =
+        getRetentionForTopicConfiguration(
+            kafkaClients,
+            tenantNamespaceNameWrapper.getPrefixed(
+                Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()));
+  }
+
+  public long getRetentionForTopicConfiguration(KafkaClients kafkaClients, String topicName) {
+    try {
+      // Specify the type of resource we want to describe (TOPIC in this case)
+      ConfigResource resource = new ConfigResource(ConfigResource.Type.TOPIC, topicName);
+
+      // Call Kafka's Admin API to describe the topic configuration
+
+      DescribeConfigsResult result =
+          kafkaClients.getAdmin().describeConfigs(java.util.Collections.singleton(resource));
+
+      // Extract the configuration details for the topic
+      Config config = result.all().get().get(resource);
+      config.get("retention.ms");
+      // Extract each configuration entry and return it as a map
+      return Long.valueOf(config.get("retention.ms").value());
+    } catch (ExecutionException | InterruptedException e) {
+      throw new RuntimeException("Failed to retrieve configuration for topic: " + topicName, e);
+    }
   }
 
   @Override
@@ -65,6 +101,10 @@ public abstract class ExternalTaskInstanceProcessor<
     instanceResult.addExternalTaskRequest(externalTaskInfo);
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
+
+    String timeDuration = "PT" + (retentionMs / 1000.0) + "S";
+    instanceResult.addScheduledExternalTaskTriggerTimeout(
+        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, timeDuration));
   }
 
   @Override
@@ -79,79 +119,84 @@ public abstract class ExternalTaskInstanceProcessor<
       Variables processInstanceVariables) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
+
     if (ExternalTaskResponseType.SUCCESS == responseResult.getResponseType()) {
-      externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
+      handleSuccess(instanceResult, externalTaskInstance);
+    } else if (ExternalTaskResponseType.PROMISE == responseResult.getResponseType()) {
+      handlePromise(instanceResult, externalTaskInstance, trigger);
     } else if (ExternalTaskResponseType.ESCALATION == responseResult.getResponseType()) {
-      directInstanceResult.addEvent(
-          new EscalationEventSignal(
-              externalTaskInstance,
-              responseResult.getName(),
-              responseResult.getCode(),
-              responseResult.getMessage()));
-    } else if (ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
-      E externalTask = externalTaskInstance.getFlowNode();
-      if (externalTask.getRetries() != null) {
-        // We have some kind of retry definition
-        JsonNode jsonNode =
-            feelExpressionHandler.processFeelExpression(
-                externalTask.getRetries(), processInstanceVariables);
-        String retryString = jsonNode.asText();
+      handleEscalation(instanceResult, directInstanceResult, externalTaskInstance, responseResult);
+    } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
+        || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
+      handleErrorOrTimeout(
+          instanceResult,
+          directInstanceResult,
+          externalTaskInstance,
+          processInstanceVariables,
+          responseResult);
+    }
+  }
 
-        // Analyze the retry definition
-        int retries = -1;
-        Optional<String> backoff = Optional.empty();
-        if (isNumeric(retryString)) {
-          // Definition is just a number
-          retries = Integer.parseInt(retryString);
-        } else {
-          // Definition might be a repeat limit with a backoff time
-          try {
-            RepeatDuration repeatDuration = RepeatDuration.parse(retryString);
-            retries = repeatDuration.getRepetitions();
-            backoff = Optional.ofNullable(repeatDuration.getDuration());
-          } catch (DateTimeParseException e) {
-            // Definition is not a valid repeat duration, since retries is still set
-            // to -1 it will fail the task and the process instance
-          }
+  private void handleErrorOrTimeout(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I externalTaskInstance,
+      Variables processInstanceVariables,
+      ExternalTaskResponseResultDTO responseResult) {
+    E externalTask = externalTaskInstance.getFlowNode();
+    if (externalTask.getRetries() != null) {
+      // We have some kind of retry definition
+      JsonNode jsonNode =
+          feelExpressionHandler.processFeelExpression(
+              externalTask.getRetries(), processInstanceVariables);
+      String retryString = jsonNode.asText();
+
+      // Analyze the retry definition
+      int retries = -1;
+      Optional<String> backoff = Optional.empty();
+      if (isNumeric(retryString)) {
+        // Definition is just a number
+        retries = Integer.parseInt(retryString);
+      } else {
+        // Definition might be a repeat limit with a backoff time
+        try {
+          RepeatDuration repeatDuration = RepeatDuration.parse(retryString);
+          retries = repeatDuration.getRepetitions();
+          backoff = Optional.ofNullable(repeatDuration.getDuration());
+        } catch (DateTimeParseException e) {
+          // Definition is not a valid repeat duration, since retries is still set
+          // to -1 it will fail the task and the process instance
         }
+      }
 
-        if (externalTaskInstance.increaseAttempt() <= retries
-            && Boolean.TRUE.equals(responseResult.getAllowRetry())) {
-          // Retry allowed, possibly with backoff
-          String externalTaskId =
-              getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
+      if (externalTaskInstance.increaseAttempt() <= retries
+          && Boolean.TRUE.equals(responseResult.getAllowRetry())) {
+        // Retry allowed, possibly with backoff
+        String externalTaskId =
+            getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
 
-          if (backoff.isPresent()) {
-            // This means for now we do nothing, the retry will be scheduled by the scheduler
-            scheduleNextExternalTask(
-                externalTaskId,
-                backoff.get(),
-                externalTask,
-                externalTaskInstance,
-                ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
-                instanceResult);
-          } else {
-            // No backoff time defined, retry directly
-            ExternalTaskInfo externalTaskInfo =
-                getExternalTaskInfo(
-                    externalTaskId,
-                    externalTask,
-                    externalTaskInstance,
-                    ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
-                    null);
-            instanceResult.addExternalTaskRequest(externalTaskInfo);
-          }
+        if (backoff.isPresent()) {
+          // This means for now we do nothing, the retry will be scheduled by the scheduler
+          scheduleNextExternalTask(
+              externalTaskId,
+              backoff.get(),
+              externalTask,
+              externalTaskInstance,
+              ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
+              instanceResult);
         } else {
-          // No more retries, either by limit or by disallowing retry by the worker
-          directInstanceResult.addEvent(
-              new ErrorEventSignal(
+          // No backoff time defined, retry directly
+          ExternalTaskInfo externalTaskInfo =
+              getExternalTaskInfo(
+                  externalTaskId,
+                  externalTask,
                   externalTaskInstance,
-                  responseResult.getName(),
-                  responseResult.getCode(),
-                  responseResult.getMessage()));
+                  ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
+                  null);
+          instanceResult.addExternalTaskRequest(externalTaskInfo);
         }
       } else {
-        // No retries allowed
+        // No more retries, either by limit or by disallowing retry by the worker
         directInstanceResult.addEvent(
             new ErrorEventSignal(
                 externalTaskInstance,
@@ -159,7 +204,52 @@ public abstract class ExternalTaskInstanceProcessor<
                 responseResult.getCode(),
                 responseResult.getMessage()));
       }
+    } else {
+      // No retries allowed
+      directInstanceResult.addEvent(
+          new ErrorEventSignal(
+              externalTaskInstance,
+              responseResult.getName(),
+              responseResult.getCode(),
+              responseResult.getMessage()));
     }
+  }
+
+  private void handleEscalation(
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I externalTaskInstance,
+      ExternalTaskResponseResultDTO responseResult) {
+    cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
+    directInstanceResult.addEvent(
+        new EscalationEventSignal(
+            externalTaskInstance,
+            responseResult.getName(),
+            responseResult.getCode(),
+            responseResult.getMessage()));
+  }
+
+  private void handlePromise(
+      InstanceResult instanceResult,
+      I externalTaskInstance,
+      ExternalTaskResponseTriggerDTO trigger) {
+    cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
+    instanceResult.addScheduledExternalTaskTriggerTimeout(
+        new ScheduledExternalTaskTriggerTimeoutInfo(
+            externalTaskInstance, trigger.getExternalTaskResponseResult().getTimeout()));
+  }
+
+  private void handleSuccess(InstanceResult instanceResult, I externalTaskInstance) {
+    cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
+    externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
+  }
+
+  private void cancelTimeoutScheduledTrigger(
+      InstanceResult instanceResult, I externalTaskInstance) {
+    externalTaskInstance
+        .getScheduledKeys()
+        .forEach(scheduledKeyDTO -> instanceResult.cancelSchedule(scheduledKeyDTO));
+    externalTaskInstance.clearScheduledKeys();
   }
 
   @Override

@@ -19,7 +19,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public abstract class CatchEventInstance<N extends CatchEvent> extends EventInstance<N>
-    implements ReceivingMessageInstance {
+    implements ReceivingMessageInstance, FlowNodeInstanceWithScheduleKeys {
   private CatchEventStateEnum state;
 
   private Set<ScheduleKeyDTO> scheduledKeys;

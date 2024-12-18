@@ -1,6 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
@@ -23,6 +24,9 @@ public abstract class ExternalTaskDTO extends TaskDTO {
 
   @JsonProperty("hdr")
   private Map<String, String> headers;
+
+  @JsonProperty("sch")
+  private List<ScheduleKeyDTO> scheduledKeys;
 
   protected ExternalTaskDTO(
       String id,

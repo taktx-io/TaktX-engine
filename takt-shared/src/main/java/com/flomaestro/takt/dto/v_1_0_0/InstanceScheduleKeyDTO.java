@@ -14,10 +14,10 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 public class InstanceScheduleKeyDTO implements ScheduleKeyDTO {
-  @JsonProperty("pi]")
+  @JsonProperty("pik")
   private UUID processInstanceKey;
 
-  @JsonProperty("ei")
+  @JsonProperty("eiid")
   private UUID elementInstanceId;
 
   public InstanceScheduleKeyDTO(UUID processInstanceKey, UUID elementInstanceId) {

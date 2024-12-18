@@ -1,6 +1,7 @@
 package com.flomaestro.engine.pi.testengine;
 
 import com.flomaestro.engine.generic.TopologyProducer;
+import com.flomaestro.engine.pd.FixedClockProducer;
 import com.flomaestro.engine.pd.MutableClock;
 import com.flomaestro.engine.pi.DebuggerUtil;
 import com.flomaestro.takt.Topics;
@@ -62,6 +63,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 import org.xml.sax.SAXException;
 
@@ -70,6 +72,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION;
   private static final String TOPIC_TEST_PREFIX = "test_tenant.test_namespace.";
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   static {
     if (DebuggerUtil.isDebuggerAttached()) {
@@ -197,7 +200,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             ProcessDefinitionKeyDeserializer.class.getName(),
             ProcessDefinitionDeserializer.class.getName(),
             this::consume);
-    clear();
+    reset();
   }
 
   public void consume(ProcessInstanceTriggerDTO trigger) {
@@ -328,15 +331,21 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                     hashToDefinitionMap.values().iterator().hasNext()
                         ? hashToDefinitionMap.values().iterator().next()
                         : null,
-                obj ->
-                    obj != null
-                        && obj.getDefinitions()
-                            .getDefinitionsKey()
-                            .getProcessDefinitionId()
-                            .equals(
-                                definitionsBeingDeployed
-                                    .getDefinitionsKey()
-                                    .getProcessDefinitionId()));
+                obj -> {
+                  if (obj == null) {
+                    return false;
+                  }
+                  String actualDeployed =
+                      obj.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
+                  String expectedDeployed =
+                      definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId();
+                  LOG.info(
+                      "Comparing actual deployed process "
+                          + actualDeployed
+                          + " with "
+                          + expectedDeployed);
+                  return actualDeployed.equals(expectedDeployed);
+                });
 
     return this;
   }
@@ -497,8 +506,28 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.SUCCESS, true, Constants.NONE, Constants.NONE, Constants.NONE),
+            ExternalTaskResponseType.SUCCESS,
+            true,
+            Constants.NONE,
+            Constants.NONE,
+            Constants.NONE,
+            Constants.NONE),
         of);
+    return this;
+  }
+
+  public BpmnTestEngine andRespondWithPromise(String newTimeout) {
+    triggerExternalTaskResponse(
+        activeProcessInstanceKey,
+        activeExternalTaskTrigger,
+        new ExternalTaskResponseResultDTO(
+            ExternalTaskResponseType.PROMISE,
+            true,
+            Constants.NONE,
+            Constants.NONE,
+            Constants.NONE,
+            newTimeout),
+        VariablesDTO.empty());
     return this;
   }
 
@@ -508,7 +537,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ERROR, allowRetry, name, message, code),
+            ExternalTaskResponseType.ERROR, allowRetry, name, message, code, Constants.NONE),
         variables);
     return this;
   }
@@ -519,7 +548,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ESCALATION, true, name, message, code),
+            ExternalTaskResponseType.ESCALATION, true, name, message, code, Constants.NONE),
         variables);
     return this;
   }
@@ -557,7 +586,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return new ProcessInstanceAssert(activeProcessInstanceKey, this);
   }
 
-  public void clear() {
+  public void reset() {
     processInstanceParentChildMap.clear();
     externalTaskTriggerQueueMap.clear();
     definitionToInstancesMap.clear();
@@ -566,9 +595,11 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     variablesMap.clear();
     hashToDefinitionMap.clear();
     messageSubscriptionMap.clear();
+
     activeProcessDefintion = null;
     activeProcessInstanceKey = null;
     activeExternalTaskTrigger = null;
+    mutableClock.set(Instant.parse(FixedClockProducer.INITIAL_TIME));
   }
 
   public BpmnTestEngine parentProcess() {
@@ -601,10 +632,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine moveTimeForward(Duration duration) {
     mutableClock.advanceBy(duration);
+    log.info("Advanced the time by {} to {}", duration, Instant.now(mutableClock));
     return this;
   }
 
   public BpmnTestEngine setTime(Instant newInstant) {
+    log.info("Setting the time to: " + newInstant);
     mutableClock.set(newInstant);
     return this;
   }

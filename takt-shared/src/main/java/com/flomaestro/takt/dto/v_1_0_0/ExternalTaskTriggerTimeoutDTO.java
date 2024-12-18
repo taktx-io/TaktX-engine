@@ -12,22 +12,14 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
+public class ExternalTaskTriggerTimeoutDTO extends ProcessInstanceTriggerDTO
     implements SchedulableMessageDTO {
-
-  @JsonProperty("ifi")
-  private String inputFlowId;
 
   @JsonProperty("eiip")
   private List<UUID> elementInstanceIdPath;
 
-  public ContinueFlowElementTriggerDTO(
-      UUID processInstanceKey,
-      List<UUID> elementInstanceIdPath,
-      String inputFlowId,
-      VariablesDTO variables) {
-    super(processInstanceKey, List.of(), variables);
+  public ExternalTaskTriggerTimeoutDTO(UUID processInstanceKey, List<UUID> elementInstanceIdPath) {
+    super(processInstanceKey, List.of(), VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
-    this.inputFlowId = inputFlowId;
   }
 }

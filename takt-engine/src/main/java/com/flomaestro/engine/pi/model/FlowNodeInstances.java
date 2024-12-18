@@ -15,6 +15,7 @@ public class FlowNodeInstances {
 
   private final Map<UUID, FlowNodeInstance<?>> instances;
   private ProcessInstanceState state;
+
   private UUID flowNodeInstancesId;
   private FlowNodeInstances parentFlowNodeInstances;
   private boolean dirty;
