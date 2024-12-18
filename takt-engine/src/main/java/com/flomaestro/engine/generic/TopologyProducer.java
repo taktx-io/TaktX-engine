@@ -243,7 +243,7 @@ public class TopologyProducer {
                 (key, value) -> value instanceof InstanceUpdateDTO,
                 (key, value) -> value instanceof ExternalTaskTriggerDTO,
                 (key, value) -> value instanceof StartCommandDTO,
-                (key, value) -> value instanceof MessageSchedulerDTO,
+                (key, value) -> key instanceof ScheduleKeyDTO,
                 (key, value) -> value instanceof MessageEventDTO);
 
     branches[0]

@@ -246,6 +246,8 @@ public class ProcessInstanceProcessor
             processInstance.getFlowNodeInstances(),
             processInstanceVariables);
       }
+    } else {
+      log.warn("Process instance not found for key: {}", trigger.getProcessInstanceKey());
     }
   }
 

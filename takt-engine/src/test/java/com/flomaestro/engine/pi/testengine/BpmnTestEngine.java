@@ -511,7 +511,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             Constants.NONE,
             Constants.NONE,
             Constants.NONE,
-            Constants.NONE),
+            0L),
         of);
     return this;
   }
@@ -526,7 +526,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             Constants.NONE,
             Constants.NONE,
             Constants.NONE,
-            newTimeout),
+            Duration.parse(newTimeout).toMillis()),
         VariablesDTO.empty());
     return this;
   }
@@ -537,7 +537,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ERROR, allowRetry, name, message, code, Constants.NONE),
+            ExternalTaskResponseType.ERROR, allowRetry, name, message, code, 0L),
         variables);
     return this;
   }
@@ -548,7 +548,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ESCALATION, true, name, message, code, Constants.NONE),
+            ExternalTaskResponseType.ESCALATION, true, name, message, code, 0L),
         variables);
     return this;
   }

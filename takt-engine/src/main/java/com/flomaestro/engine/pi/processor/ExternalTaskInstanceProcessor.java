@@ -102,9 +102,8 @@ public abstract class ExternalTaskInstanceProcessor<
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
 
-    String timeDuration = "PT" + (retentionMs / 1000.0) + "S";
     instanceResult.addScheduledExternalTaskTriggerTimeout(
-        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, timeDuration));
+        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, retentionMs));
   }
 
   @Override
@@ -246,9 +245,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private void cancelTimeoutScheduledTrigger(
       InstanceResult instanceResult, I externalTaskInstance) {
-    externalTaskInstance
-        .getScheduledKeys()
-        .forEach(scheduledKeyDTO -> instanceResult.cancelSchedule(scheduledKeyDTO));
+    externalTaskInstance.getScheduledKeys().forEach(instanceResult::cancelSchedule);
     externalTaskInstance.clearScheduledKeys();
   }
 

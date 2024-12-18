@@ -1,4 +1,4 @@
 package com.flomaestro.engine.pi.model;
 
 public record ScheduledExternalTaskTriggerTimeoutInfo(
-    ExternalTaskInstance externalTaskInstance, String duration) {}
+    ExternalTaskInstance externalTaskInstance, long timeoutMs) {}

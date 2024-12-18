@@ -2,6 +2,7 @@ package com.flomaestro.client;
 
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
+import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.util.List;
@@ -15,6 +16,7 @@ public class ProcessInstanceProducer {
 
   private final KafkaPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<String, StartCommandDTO> startCommandEmitter;
+  private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
 
   public ProcessInstanceProducer(KafkaPropertiesHelper kafkaPropertiesHelper) {
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
@@ -24,6 +26,12 @@ public class ProcessInstanceProducer {
             kafkaPropertiesHelper.getKafkaProducerProperties(
                 (Class<? extends Serializer<?>>) Serdes.String().serializer().getClass(),
                 StartCommandSerializer.class));
+
+    processInstanceTriggerEmitter =
+        new KafkaProducer<>(
+            kafkaPropertiesHelper.getKafkaProducerProperties(
+                (Class<? extends Serializer<?>>) Serdes.UUID().serializer().getClass(),
+                ProcessInstanceTriggerSerializer.class));
   }
 
   public void startProcess(String processDefinitionId, VariablesDTO variables) {

@@ -4,16 +4,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Getter
 @NoArgsConstructor
 @EqualsAndHashCode
+@ToString
 public class ExternalTaskResponseResultDTO {
   @JsonProperty("rt")
   private ExternalTaskResponseType responseType;
 
   @JsonProperty("to")
-  private String timeout;
+  private long timeout;
 
   @JsonProperty("n")
   private String name;
@@ -33,7 +35,7 @@ public class ExternalTaskResponseResultDTO {
       String name,
       String message,
       String code,
-      String timeout) {
+      long timeout) {
     this.responseType = responseType;
     this.name = name;
     this.code = code;

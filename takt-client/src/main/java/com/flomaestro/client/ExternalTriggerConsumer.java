@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.flomaestro.takt.Topics;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ParsedDefinitionsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
@@ -26,15 +23,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -96,7 +95,7 @@ public class ExternalTriggerConsumer {
     responseEmitter =
         new KafkaProducer<>(
             kafkaPropertiesHelper.getKafkaProducerProperties(
-                TaktUUIDSerializer.class, ExternalTaskTriggerResponseSerializer.class));
+                TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
 
     CompletableFuture.runAsync(
         () -> {
@@ -213,24 +212,28 @@ public class ExternalTriggerConsumer {
                   kafkaPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
           CompletableFuture.runAsync(
                   () -> {
-                    while (true) {
-                      ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
-                          newConsumer.poll(Duration.ofMillis(100));
-                      if (records.count() > 0) {
-                        log.info(
-                            "Received {} records for process definition {}",
-                            records.count(),
-                            processDefinitionId);
-                        try (ExecutorService executor =
-                            Executors.newVirtualThreadPerTaskExecutor()) {
-                          records.forEach(
-                              record ->
-                                  executor.submit(
-                                      () ->
-                                          consumeExternalTaskTrigger(
-                                              record.value(), processDefinitionId)));
+                    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+                    try {
+                      while (true) {
+                        ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
+                            newConsumer.poll(Duration.ofMillis(100));
+                        if (records.count() > 0) {
+                          List<Callable<Void>> tasks = new ArrayList<>();
+                          for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                            tasks.add(
+                                () -> {
+                                  consumeExternalTaskTrigger(record.value(), processDefinitionId);
+                                  return null;
+                                });
+                          }
+                          executor.invokeAll(tasks);
                         }
                       }
+                    } catch (InterruptedException e) {
+                      Thread.currentThread().interrupt();
+                      log.error("Thread was interrupted", e);
+                    } finally {
+                      executor.shutdown();
                     }
                   })
               .exceptionallyAsync(
@@ -277,10 +280,15 @@ public class ExternalTriggerConsumer {
     log.info("Processing external task trigger for process definition {}", processDefinitionId);
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
+    ResponseConsumer responseConsumer =
+        new ResponseConsumer(
+            responseEmitter,
+            externalTaskTrigger,
+            kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+            objectMapper);
     if (workerInstance == null) {
-      respondError(
-          externalTaskTrigger,
-          "No worker instance found for process definition " + processDefinitionId);
+      responseConsumer.respondError(
+          true, "No worker instance found for process definition " + processDefinitionId, "", "");
       return;
     }
 
@@ -288,101 +296,47 @@ public class ExternalTriggerConsumer {
     Optional<Method> optMethod = findMatchingMethod(aClass, externalTaskId);
     if (optMethod.isPresent()) {
       Method method = optMethod.get();
-      ExternalTaskResponseTriggerDTO processInstanceTrigger;
       try {
-        Object result = method.invoke(workerInstance, getParameters(method, externalTaskTrigger));
-        Map<String, JsonNode> variablesMap =
-            result == null ? Map.of() : objectMapper.convertValue(result, LinkedHashMap.class);
-
-        ExternalTaskResponseResultDTO externalTaskResponseResult =
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.SUCCESS,
-                true,
-                Constants.NONE,
-                Constants.NONE,
-                Constants.NONE,
-                Constants.NONE);
-        processInstanceTrigger =
-            new ExternalTaskResponseTriggerDTO(
-                externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementInstanceIdPath(),
-                externalTaskResponseResult,
-                new VariablesDTO(variablesMap));
+        Object invoke =
+            method.invoke(
+                workerInstance, getParameters(method, externalTaskTrigger, responseConsumer));
+        if (!responseConsumer.isAsParameter()) {
+          responseConsumer.respondSucess(invoke);
+        }
       } catch (EscalationEventException escalationEvent) {
-        processInstanceTrigger =
-            new ExternalTaskResponseTriggerDTO(
-                externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementInstanceIdPath(),
-                new ExternalTaskResponseResultDTO(
-                    ExternalTaskResponseType.ESCALATION,
-                    true,
-                    escalationEvent.getName(),
-                    escalationEvent.getMessage(),
-                    escalationEvent.getCode(),
-                    Constants.NONE),
-                VariablesDTO.empty());
-      } catch (Throwable e) {
-        processInstanceTrigger =
-            new ExternalTaskResponseTriggerDTO(
-                externalTaskTrigger.getProcessInstanceKey(),
-                externalTaskTrigger.getElementInstanceIdPath(),
-                new ExternalTaskResponseResultDTO(
-                    ExternalTaskResponseType.ERROR,
-                    true,
-                    Constants.NONE,
-                    e.getMessage(),
-                    Constants.NONE,
-                    Constants.NONE),
-                VariablesDTO.empty());
+        responseConsumer.respondEscalation(escalationEvent);
+      } catch (ErrorEventException e) {
+        responseConsumer.respondError(e.isAllowRetry(), e.getCode(), e.getName(), e.getMessage());
+      } catch (Throwable t) {
+        responseConsumer.respondError(false, "", "", t.getMessage());
       }
-      responseEmitter.send(
-          new ProducerRecord<>(
-              kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
-              externalTaskTrigger.getProcessInstanceKey(),
-              processInstanceTrigger));
-
     } else {
-      respondError(
-          externalTaskTrigger,
+      responseConsumer.respondError(
+          true,
           "No method matching method found for external task '"
               + externalTaskId
               + "' in jobworker '"
               + aClass.getName()
-              + "'");
+              + "'",
+          "",
+          "");
     }
   }
 
-  private void respondError(
-      ExternalTaskTriggerDTO externalTaskTrigger, String processDefinitionId) {
-    ExternalTaskResponseTriggerDTO processInstanceTrigger =
-        new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.ERROR,
-                true,
-                Constants.NONE,
-                processDefinitionId,
-                Constants.NONE,
-                Constants.NONE),
-            VariablesDTO.empty());
-    responseEmitter.send(
-        new ProducerRecord<>(
-            kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
-            externalTaskTrigger.getProcessInstanceKey(),
-            processInstanceTrigger));
-  }
-
-  private Object[] getParameters(Method method, ExternalTaskTriggerDTO externalTaskTrigger) {
+  private Object[] getParameters(
+      Method method,
+      ExternalTaskTriggerDTO externalTaskTrigger,
+      ResponseConsumer responseConsumer) {
     // This method has the matching annotation
     Parameter[] parameters = method.getParameters();
     Object[] args = new Object[parameters.length];
     VariablesDTO variables = externalTaskTrigger.getVariables();
     for (int i = 0; i < parameters.length; i++) {
-      if (parameters[i].getType().equals(ExternalTaskTriggerDTO.class)) {
-        args[i] = externalTaskTrigger;
-      } else {
-        JsonNode jsonNode = variables.get(parameters[i].getName());
+      Variable annotation = parameters[i].getAnnotation(Variable.class);
+      if (annotation != null) {
+        String variableName =
+            annotation.value().isEmpty() ? parameters[i].getName() : annotation.value();
+        JsonNode jsonNode = variables.get(variableName);
         // Convert jsonNode to the required type
         try {
           args[i] = objectMapper.convertValue(jsonNode, parameters[i].getType());
@@ -390,6 +344,11 @@ public class ExternalTriggerConsumer {
           // If the conversion fails, set the argument to null
           args[i] = null;
         }
+      } else if (parameters[i].getType().equals(ExternalTaskTriggerDTO.class)) {
+        args[i] = externalTaskTrigger;
+      } else if (parameters[i].getType().equals(ResponseConsumer.class)) {
+        responseConsumer.setAsParameter();
+        args[i] = responseConsumer;
       }
     }
     return args;

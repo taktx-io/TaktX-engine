@@ -32,6 +32,7 @@ import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Queue;
@@ -57,9 +58,9 @@ public class Forwarder {
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstanceDTO);
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
+    forwardCancelSchedules(context, instanceResult);
     forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
     forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
-    forwardCancelSchedules(context, instanceResult);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
   }
@@ -136,7 +137,7 @@ public class Forwarder {
               Constants.NONE,
               Constants.NONE,
               Constants.NONE,
-              Constants.NONE);
+              0L);
       ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
           new ExternalTaskResponseTriggerDTO(
               processInstance.getProcessInstanceKey(),
@@ -145,7 +146,8 @@ public class Forwarder {
               VariablesDTO.empty());
 
       TimerEventDefinitionDTO timerEventDefinition = new TimerEventDefinitionDTO();
-      timerEventDefinition.setTimeDuration(info.duration());
+      String duration = Duration.ofMillis(info.timeoutMs()).toString();
+      timerEventDefinition.setTimeDuration(duration);
 
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
