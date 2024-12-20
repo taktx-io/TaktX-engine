@@ -95,9 +95,10 @@ public abstract class ExternalTaskInstanceProcessor<
       String inputFlowId,
       Variables variables) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
+    String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
+
     ExternalTaskInfo externalTaskInfo =
-        getExternalTaskInfo(
-            flowNode.getWorkerDefinition(), flowNode, flownodeInstance, variables, null);
+        getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null);
     instanceResult.addExternalTaskRequest(externalTaskInfo);
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);

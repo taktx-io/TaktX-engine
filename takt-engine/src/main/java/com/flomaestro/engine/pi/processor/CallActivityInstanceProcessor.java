@@ -55,15 +55,18 @@ public class CallActivityInstanceProcessor
 
     JsonNode jsonNode =
         feelExpressionHandler.processFeelExpression(flowNode.getCalledElement(), variables);
-
-    instanceResult.addNewStartCommand(
-        new NewStartCommand(
-            newProcessInstanceKey,
-            Constants.NONE_UUID,
-            flowNode,
-            callActivityInstance,
-            jsonNode.asText(),
-            variables));
+    if (jsonNode != null) {
+      instanceResult.addNewStartCommand(
+          new NewStartCommand(
+              newProcessInstanceKey,
+              Constants.NONE_UUID,
+              flowNode,
+              callActivityInstance,
+              jsonNode.asText(),
+              variables));
+    } else {
+      callActivityInstance.setState(ActtivityStateEnum.FAILED);
+    }
   }
 
   @Override
