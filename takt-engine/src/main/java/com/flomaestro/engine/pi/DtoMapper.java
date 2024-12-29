@@ -10,6 +10,7 @@ import com.flomaestro.engine.pd.model.EventDefinition;
 import com.flomaestro.engine.pd.model.ExclusiveGateway;
 import com.flomaestro.engine.pd.model.FlowElement;
 import com.flomaestro.engine.pd.model.FlowElements;
+import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.engine.pd.model.InclusiveGateway;
 import com.flomaestro.engine.pd.model.IntermediateCatchEvent;
 import com.flomaestro.engine.pd.model.IntermediateThrowEvent;
@@ -34,6 +35,7 @@ import com.flomaestro.takt.dto.v_1_0_0.EventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExclusiveGatewayDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementsDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InclusiveGatewayDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateCatchEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateThrowEventDTO;
@@ -56,7 +58,7 @@ import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
 
-@Mapper(componentModel = "jakarta", builder = @Builder(disableBuilder = false))
+@Mapper(componentModel = "jakarta", builder = @Builder())
 public interface DtoMapper {
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)
@@ -82,6 +84,66 @@ public interface DtoMapper {
   @Mapping(target = "parentElement", ignore = true)
   FlowElement getFlowElement(FlowElementDTO flowElement);
 
+  @Mapping(target = "attachedActivity", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  BoundaryEvent map(BoundaryEventDTO boundaryEventDTO);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  ServiceTask map(ServiceTaskDTO serviceTask);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  SendTask map(SendTaskDTO sendTask);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  @Mapping(target = "referencedMessage", ignore = true)
+  ReceiveTask map(ReceiveTaskDTO receiveTask);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  Task map(TaskDTO task);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  SubProcess map(SubProcessDTO subProcess);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  CallActivity map(CallActivityDTO callActivity);
+
+  @Mapping(target = "referencedError", ignore = true)
+  ErrorEventDefinition map(ErrorEventDefinitionDTO errorEventDefinitionDTO);
+
+  @Mapping(target = "referencedEscalation", ignore = true)
+  EscalationEventDefinition map(EscalationEventDefinitionDTO escalationEventDefinitionDTO);
+
+  @Mapping(target = "referencedMessage", ignore = true)
+  MessageEventDefinition map(MessageEventDefinitionDTO messageEventDefinition);
+
+  @Mapping(target = "sourceNode", ignore = true)
+  @Mapping(target = "targetNode", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  SequenceFlow map(SequenceFlowDTO sequenceFlow);
+
+  @Mapping(target = "incomingSequenceFlows", ignore = true)
+  @Mapping(target = "outGoingSequenceFlows", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  FlowNode map(FlowNodeDTO flowNode);
+
+  @Mapping(target = "defaultSequenceFlow", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  ExclusiveGateway map(ExclusiveGatewayDTO gateway);
+
+  @Mapping(target = "defaultSequenceFlow", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  ParallelGateway map(ParallelGatewayDTO gateway);
+
+  @Mapping(target = "defaultSequenceFlow", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  InclusiveGateway map(InclusiveGatewayDTO gateway);
+
   @SubclassMapping(source = MessageEventDefinitionDTO.class, target = MessageEventDefinition.class)
   @SubclassMapping(source = TimerEventDefinitionDTO.class, target = TimerEventDefinition.class)
   @SubclassMapping(source = LinkEventDefinitionDTO.class, target = LinkEventDefinition.class)
@@ -91,11 +153,12 @@ public interface DtoMapper {
   @SubclassMapping(source = ErrorEventDefinitionDTO.class, target = ErrorEventDefinition.class)
   EventDefinition map(EventDefinitionDTO eventDefinition);
 
+  @Mapping(target = "parentId", ignore = true)
   TimerEventDefinitionDTO map(TimerEventDefinition eventDefinition);
 
   @ObjectFactory
   default <T extends BaseElement> T resolveEquipment(
-      BaseElementDTO sourceDto, @TargetType Class<T> type) {
+      BaseElementDTO ignoredSourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 

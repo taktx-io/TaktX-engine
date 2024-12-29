@@ -34,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
@@ -98,22 +99,25 @@ public class ProcessInstanceProcessor
           processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID
         };
 
-    this.flowNodeInstanceStore
-        .range(start, end)
-        .forEachRemaining(
-            r -> {
-              log.debug("Purging flow node instance: {}", r.key);
-              this.flowNodeInstanceStore.delete(r.key);
-            });
+    try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =
+        this.flowNodeInstanceStore.range(start, end)) {
+      range.forEachRemaining(
+          r -> {
+            log.debug("Purging flow node instance: {}", (Object) r.key);
+            this.flowNodeInstanceStore.delete(r.key);
+          });
+    }
     VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
     VariableKeyDTO variableEndKey = new VariableKeyDTO(processInstanceKey, "\u00ff");
-    this.variablesStore
-        .range(variableStartKey, variableEndKey)
-        .forEachRemaining(
-            r -> {
-              log.debug("Purging variable: {}", r.key);
-              this.variablesStore.delete(r.key);
-            });
+
+    try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
+        this.variablesStore.range(variableStartKey, variableEndKey)) {
+      range.forEachRemaining(
+          r -> {
+            log.debug("Purging variable: {}", r.key);
+            this.variablesStore.delete(r.key);
+          });
+    }
   }
 
   @Override
@@ -131,13 +135,13 @@ public class ProcessInstanceProcessor
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (ProcessInstanceException e) {
-      handleExceptional(e, trigger);
+      handleExceptional(e);
     } catch (Throwable t) {
       log.error("Internal error occurred for", t);
     }
   }
 
-  private void handleExceptional(ProcessInstanceException e, ProcessInstanceTriggerDTO trigger) {
+  private void handleExceptional(ProcessInstanceException e) {
     FlowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
     flowNodeInstance.terminate();
     ProcessInstance processInstance = e.getProcessInstance();
@@ -255,15 +259,15 @@ public class ProcessInstanceProcessor
     Map<String, JsonNode> variables = new HashMap<>();
     VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
     VariableKeyDTO variableEndKey = new VariableKeyDTO(processInstanceKey, "\u00ff");
-    variablesStore
-        .range(variableStartKey, variableEndKey)
-        .forEachRemaining(
-            r -> {
-              String varName = r.key.getVariableName();
-              variables.put(varName, r.value);
-            });
-    VariablesDTO variablesDTO = VariablesDTO.of(variables);
-    return variablesDTO;
+    try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
+        variablesStore.range(variableStartKey, variableEndKey)) {
+      range.forEachRemaining(
+          r -> {
+            String varName = r.key.getVariableName();
+            variables.put(varName, r.value);
+          });
+    }
+    return VariablesDTO.of(variables);
   }
 
   private void handleTerminate(TerminateTriggerDTO trigger) {
@@ -306,29 +310,30 @@ public class ProcessInstanceProcessor
     log.debug("Retrieving flow node instances with id: {}", flowNodeInstancesId);
     UUID[] start = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MIN_UUID};
     UUID[] end = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MAX_UUID};
-    flowNodeInstanceStore
-        .range(start, end)
-        .forEachRemaining(
-            record -> {
-              log.debug("Retrieved flow node instance: {}", record.value);
-              FlowNodeInstanceDTO instanceDTO = record.value;
-              FlowNodeInstance instance = instanceMapper.map(instanceDTO, flowElements);
-              flowNodeInstances.putInstance(instance);
-              if (instanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstancesDTO) {
-                WithFlowNodeInstances withFlowNodeInstances = (WithFlowNodeInstances) instance;
-                FlowElements subFlowElements = flowElements;
-                if (instance.getFlowNode() instanceof WIthChildElements withChildElements) {
-                  subFlowElements = withChildElements.getElements();
-                }
-                FlowNodeInstances subFlowNodeInstances =
-                    retrieveFlowNodeInstances(
-                        withFlowNodeInstancesDTO.getFlowNodeInstances(), subFlowElements);
-                withFlowNodeInstances
-                    .getFlowNodeInstances()
-                    .getInstances()
-                    .putAll(subFlowNodeInstances.getInstances());
+    try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =
+        flowNodeInstanceStore.range(start, end)) {
+      range.forEachRemaining(
+          record -> {
+            log.debug("Retrieved flow node instance: {}", record.value);
+            FlowNodeInstanceDTO instanceDTO = record.value;
+            FlowNodeInstance<?> instance = instanceMapper.map(instanceDTO, flowElements);
+            flowNodeInstances.putInstance(instance);
+            if (instanceDTO instanceof WithFlowNodeInstancesDTO withFlowNodeInstancesDTO) {
+              WithFlowNodeInstances withFlowNodeInstances = (WithFlowNodeInstances) instance;
+              FlowElements subFlowElements = flowElements;
+              if (instance.getFlowNode() instanceof WIthChildElements withChildElements) {
+                subFlowElements = withChildElements.getElements();
               }
-            });
+              FlowNodeInstances subFlowNodeInstances =
+                  retrieveFlowNodeInstances(
+                      withFlowNodeInstancesDTO.getFlowNodeInstances(), subFlowElements);
+              withFlowNodeInstances
+                  .getFlowNodeInstances()
+                  .getInstances()
+                  .putAll(subFlowNodeInstances.getInstances());
+            }
+          });
+    }
 
     return flowNodeInstances;
   }

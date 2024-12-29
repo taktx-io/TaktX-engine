@@ -7,7 +7,7 @@ import lombok.Getter;
 
 @Getter
 public class ParallelGatewayInstance extends GatewayInstance<ParallelGateway> {
-  private final Set<String> triggeredInputFlows = new HashSet<>();
+  private final Set<String> triggeredFlows = new HashSet<>();
 
   public ParallelGatewayInstance(FlowNodeInstance<?> parentInstance, ParallelGateway flowNode) {
     super(parentInstance, flowNode);
@@ -15,10 +15,10 @@ public class ParallelGatewayInstance extends GatewayInstance<ParallelGateway> {
 
   @Override
   public void resetFlows() {
-    this.triggeredInputFlows.clear();
+    this.triggeredFlows.clear();
   }
 
-  public void addTriggeredInputFlow(String inputFlowId) {
-    this.triggeredInputFlows.add(inputFlowId);
+  public void addTriggeredFlow(String inputFlowId) {
+    this.triggeredFlows.add(inputFlowId);
   }
 }

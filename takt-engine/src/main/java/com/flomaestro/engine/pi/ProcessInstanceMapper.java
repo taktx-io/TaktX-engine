@@ -28,7 +28,6 @@ import com.flomaestro.takt.dto.v_1_0_0.CallActivityInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.EndEventInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExclusiveGatewayInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
-import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstancesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InclusiveGatewayInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateCatchEventInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateThrowEventInstanceDTO;
@@ -58,6 +57,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.ParallelGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   ParallelGatewayInstance map(
       ParallelGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -66,6 +66,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.InclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   InclusiveGatewayInstance map(
       InclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -74,6 +75,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.ExclusiveGateway)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   ExclusiveGatewayInstance map(
       ExclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -82,6 +84,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   BoundaryEventInstance map(BoundaryEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -89,6 +92,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.StartEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   StartEventInstance map(StartEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -96,6 +100,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   IntermediateCatchEventInstance map(
       IntermediateCatchEventInstanceDTO source, @Context FlowElements flowElements);
 
@@ -104,6 +109,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.EndEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   EndEventInstance map(EndEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -111,6 +117,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   IntermediateThrowEventInstance map(
       IntermediateThrowEventInstanceDTO source, @Context FlowElements flowElements);
 
@@ -119,6 +126,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.ServiceTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   ServiceTaskInstance map(ServiceTaskInstanceDTO source, @Context FlowElements flowElements);
 
@@ -127,6 +135,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.SendTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   SendTaskInstance map(SendTaskInstanceDTO source, @Context FlowElements flowElements);
 
@@ -135,6 +144,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.ReceiveTask)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   ReceiveTaskInstance map(ReceiveTaskInstanceDTO source, @Context FlowElements flowElements);
 
@@ -143,6 +153,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.SubProcess)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   @Mapping(
       target = "flowNodeInstances",
@@ -155,6 +166,7 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.CallActivity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   CallActivityInstance map(CallActivityInstanceDTO source, @Context FlowElements flowElements);
 
@@ -163,6 +175,11 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.Activity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "flowNodeInstances.stateDirty", ignore = true)
+  @Mapping(target = "flowNodeInstances.dirty", ignore = true)
+  @Mapping(target = "flowNodeInstances.instances", ignore = true)
+  @Mapping(target = "flowNodeInstances.parentFlowNodeInstances", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   MultiInstanceInstance map(MultiInstanceInstanceDTO source, @Context FlowElements flowElements);
 
@@ -171,6 +188,8 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.Task)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
   TaskInstance map(TaskInstanceDTO source, @Context FlowElements flowElements);
 
   default FlowElements getChildElements(SubProcessInstanceDTO source, FlowElements flowElements) {
@@ -208,8 +227,12 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "flowNode", ignore = true)
   @Mapping(target = "dirty", ignore = true)
-  FlowNodeInstance map(FlowNodeInstanceDTO source, @Context FlowElements flowElements);
+  FlowNodeInstance<?> map(FlowNodeInstanceDTO source, @Context FlowElements flowElements);
 
+  @Mapping(target = "flowNodeInstances.stateDirty", ignore = true)
+  @Mapping(target = "flowNodeInstances.dirty", ignore = true)
+  @Mapping(target = "flowNodeInstances.instances", ignore = true)
+  @Mapping(target = "flowNodeInstances.parentFlowNodeInstances", ignore = true)
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
   default ProcessInstance mapAndSetReferences(
@@ -282,19 +305,17 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentElementInstanceId", source = "parentInstance.elementInstanceId")
   FlowNodeInstanceDTO map(FlowNodeInstance source);
 
-  FlowNodeInstancesDTO map(FlowNodeInstances source);
-
   ProcessInstanceDTO map(ProcessInstance source);
 
   @ObjectFactory
   default <T extends FlowNodeInstance<?>> T resolveEquipment(
-      FlowNodeInstanceDTO sourceDto, @TargetType Class<T> type) {
+      FlowNodeInstanceDTO ignoredSourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 
   @ObjectFactory
   default <T extends FlowNodeInstanceDTO> T resolveEquipment(
-      FlowNodeInstance<?> sourceDto, @TargetType Class<T> type) {
+      FlowNodeInstance<?> ignoredSourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 

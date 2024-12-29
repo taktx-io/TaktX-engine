@@ -33,10 +33,7 @@ public class ParallelGatewayInstanceProcessor
   @Override
   protected boolean canTriggerOutputFlows(
       ParallelGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
-    return gatewayInstance
-        .getFlowNode()
-        .getIncoming()
-        .equals(gatewayInstance.getTriggeredInputFlows());
+    return gatewayInstance.getFlowNode().getIncoming().equals(gatewayInstance.getTriggeredFlows());
   }
 
   @Override
@@ -47,7 +44,7 @@ public class ParallelGatewayInstanceProcessor
       ParallelGatewayInstance flownodeInstance,
       String inputFlowId,
       Variables variables) {
-    flownodeInstance.addTriggeredInputFlow(inputFlowId);
+    flownodeInstance.addTriggeredFlow(inputFlowId);
   }
 
   @Override
