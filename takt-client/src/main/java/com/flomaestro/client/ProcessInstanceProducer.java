@@ -5,6 +5,8 @@ import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
+import com.flomaestro.takt.util.TaktPropertiesHelper;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -14,11 +16,11 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class ProcessInstanceProducer {
 
-  private final KafkaPropertiesHelper kafkaPropertiesHelper;
+  private final TaktPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<String, StartCommandDTO> startCommandEmitter;
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
 
-  public ProcessInstanceProducer(KafkaPropertiesHelper kafkaPropertiesHelper) {
+  public ProcessInstanceProducer(TaktPropertiesHelper kafkaPropertiesHelper) throws IOException {
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
 
     startCommandEmitter =

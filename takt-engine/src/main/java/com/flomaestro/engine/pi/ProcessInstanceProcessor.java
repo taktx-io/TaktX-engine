@@ -52,6 +52,7 @@ public class ProcessInstanceProcessor
   private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processInstanceDefinitionStore;
   private ProcessorContext<Object, Object> context;
+  private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   public ProcessInstanceProcessor(
       DefinitionMapper definitionMapper,
@@ -103,7 +104,6 @@ public class ProcessInstanceProcessor
         this.flowNodeInstanceStore.range(start, end)) {
       range.forEachRemaining(
           r -> {
-            log.debug("Purging flow node instance: {}", (Object) r.key);
             this.flowNodeInstanceStore.delete(r.key);
           });
     }
@@ -114,7 +114,6 @@ public class ProcessInstanceProcessor
         this.variablesStore.range(variableStartKey, variableEndKey)) {
       range.forEachRemaining(
           r -> {
-            log.debug("Purging variable: {}", r.key);
             this.variablesStore.delete(r.key);
           });
     }
@@ -160,6 +159,7 @@ public class ProcessInstanceProcessor
     processInstanceDefinitionStore.putIfAbsent(processDefinitionKey, definitionDTO);
 
     FlowElements flowElements = definitionMapper.getFlowElements(definitionDTO.getDefinitions());
+    flowElementsCache.put(processDefinitionKey, flowElements);
 
     FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
     Variables triggerVariables =
@@ -218,19 +218,14 @@ public class ProcessInstanceProcessor
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceKey());
     if (processInstanceDTO != null) {
-      ProcessDefinitionDTO processDefinitionDTO =
-          processInstanceDefinitionStore.get(processInstanceDTO.getProcessDefinitionKey());
-      if (processDefinitionDTO != null) {
-        FlowElements flowElements =
-            definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
-
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      if (flowElements != null) {
         VariablesDTO variablesDTO =
             getVariablesForProcessInstanceKey(trigger.getProcessInstanceKey());
 
         FlowNodeInstances flowNodeInstances =
             retrieveFlowNodeInstances(processInstanceDTO.getFlowNodeInstances(), flowElements);
         Variables processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
-
         ProcessInstance processInstance =
             instanceMapper.mapAndSetReferences(processInstanceDTO, flowNodeInstances, flowElements);
 
@@ -255,6 +250,18 @@ public class ProcessInstanceProcessor
     }
   }
 
+  private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
+    return flowElementsCache.computeIfAbsent(
+        processDefinitionKey,
+        key -> {
+          ProcessDefinitionDTO processDefinitionDTO = processInstanceDefinitionStore.get(key);
+          if (processDefinitionDTO != null) {
+            return definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
+          }
+          return null;
+        });
+  }
+
   private VariablesDTO getVariablesForProcessInstanceKey(UUID processInstanceKey) {
     Map<String, JsonNode> variables = new HashMap<>();
     VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
@@ -275,11 +282,8 @@ public class ProcessInstanceProcessor
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceKey());
     if (processInstanceDTO != null) {
-      ProcessDefinitionDTO processDefinitionDTO =
-          processInstanceDefinitionStore.get(processInstanceDTO.getProcessDefinitionKey());
-      if (processDefinitionDTO != null) {
-        FlowElements flowElements =
-            definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      if (flowElements != null) {
         VariablesDTO variablesDTO =
             getVariablesForProcessInstanceKey(trigger.getProcessInstanceKey());
         Variables processInstanceVariables = variablesMapper.fromDTO(variablesDTO);
@@ -307,14 +311,12 @@ public class ProcessInstanceProcessor
     UUID flowNodeInstancesId = flowNodeInstancesDTO.getFlowNodeInstancesId();
     flowNodeInstances.setFlowNodeInstancesId(flowNodeInstancesId);
     flowNodeInstances.setState(flowNodeInstancesDTO.getState());
-    log.debug("Retrieving flow node instances with id: {}", flowNodeInstancesId);
     UUID[] start = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MIN_UUID};
     UUID[] end = new UUID[] {flowNodeInstancesId, TaktUUIDSerde.MAX_UUID};
     try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =
         flowNodeInstanceStore.range(start, end)) {
       range.forEachRemaining(
           record -> {
-            log.debug("Retrieved flow node instance: {}", record.value);
             FlowNodeInstanceDTO instanceDTO = record.value;
             FlowNodeInstance<?> instance = instanceMapper.map(instanceDTO, flowElements);
             flowNodeInstances.putInstance(instance);
@@ -375,11 +377,6 @@ public class ProcessInstanceProcessor
           .getVariables()
           .forEach(
               (k, v) -> {
-                log.debug(
-                    "Storing variable: {} {}",
-                    processInstance.getProcessInstanceKey() + ":" + k,
-                    v);
-
                 variablesStore.put(
                     new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v);
               });
@@ -397,7 +394,6 @@ public class ProcessInstanceProcessor
           new UUID[] {
             flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()
           };
-      log.debug("Storing flow node instance: {} {}", key, flowNodeInstanceDTO);
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
       if (fLowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
         storeFlowNodeInstances(withFlowNodeInstances.getFlowNodeInstances());

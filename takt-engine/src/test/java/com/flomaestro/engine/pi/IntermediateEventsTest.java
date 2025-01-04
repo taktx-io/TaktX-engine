@@ -13,15 +13,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 @QuarkusTest
 class IntermediateEventsTest {
-
-  private static final Logger LOG = Logger.getLogger(IntermediateEventsTest.class);
 
   @Inject Clock clock;
 
@@ -108,7 +105,7 @@ class IntermediateEventsTest {
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("Catch_2")
         .hasVariableWithValue("input", "value")
-        .hasVariableWithValue("linkOutput_1", 123.0)
-        .hasVariableWithValue("linkOutput_2", 456.0);
+        .hasVariableWithValue("linkOutput_1", 123)
+        .hasVariableWithValue("linkOutput_2", 456);
   }
 }

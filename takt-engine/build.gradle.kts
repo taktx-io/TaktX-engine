@@ -25,7 +25,7 @@ dependencies {
     implementation("io.quarkus:quarkus-jackson")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
 
-    implementation("org.camunda.feel:feel-engine:1.17.5")
+    implementation("org.camunda.feel:feel-engine:1.19.0")
     implementation("com.cronutils:cron-utils:9.2.1")
 
     testImplementation("io.quarkus:quarkus-junit5")

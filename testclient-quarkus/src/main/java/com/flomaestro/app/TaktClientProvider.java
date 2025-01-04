@@ -6,6 +6,7 @@ import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import java.io.IOException;
 
 @ApplicationScoped
 @Startup
@@ -13,14 +14,9 @@ public class TaktClientProvider {
   private TaktClient taktClient;
 
   @PostConstruct
-  void init() {
+  void init() throws IOException {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
-    taktClient =
-        taktClientBuilder
-            .withBootstrapServers("localhost:9092")
-            .withTenant("tenant")
-            .withNamespace("namespace")
-            .build();
+    taktClient = taktClientBuilder.withTenant("tenant").withNamespace("namespace").build();
     taktClient.start();
   }
 

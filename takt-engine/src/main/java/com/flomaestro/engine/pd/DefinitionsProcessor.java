@@ -34,6 +34,10 @@ public class DefinitionsProcessor
   private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
   private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
+  private final Map<String, String> hashToXmlCache = new HashMap<>();
+  private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
+  private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionCache =
+      new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
 
   public DefinitionsProcessor(
@@ -77,11 +81,11 @@ public class DefinitionsProcessor
 
   public void processDefinitionsRecord(
       String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
-    log.info("Processing definitions record for process definition {}", processDefinitionId);
+    //    log.info("Processing definitions record for process definition {}", processDefinitionId);
     ParsedDefinitionsDTO parsedDefinition = BpmnParser.parse(xmlDefinitions.getXml());
 
     Map<String, Integer> hashVersionPairs =
-        hashVersionPairStore.get(parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
+        getHashVersionPairs(parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
     if (hashVersionPairs == null) {
       hashVersionPairs = new HashMap<>();
     }
@@ -97,12 +101,17 @@ public class DefinitionsProcessor
       hashVersionPairs.put(hash, version);
 
       hashVersionPairStore.put(processDefinitionId, hashVersionPairs);
+      hashVersionPairCache.put(processDefinitionId, hashVersionPairs);
+
       hashToXmlStore.put(hash, xmlDefinitions.getXml());
+      hashToXmlCache.put(hash, xmlDefinitions.getXml());
 
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
       processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
       processDefinitionStore.put(processDefinitionKey, processDefinitionDTO);
+      processDefinitionCache.put(processDefinitionKey, processDefinitionDTO);
+
       processDefinitionActivationProcessor.activate(processDefinitionKey);
     } else {
       // Existing version, do not create a new ProcessDefinitionDTO but return the active version
@@ -114,26 +123,39 @@ public class DefinitionsProcessor
           .forEachRemaining(
               entry -> {
                 if (entry.value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
-                  log.info(
-                      "Forwarding active process definition for process definition {}", entry.key);
+                  //                  log.info(
+                  //                      "Forwarding active process definition for process
+                  // definition {}", entry.key);
                   context.forward(new Record(entry.key, entry.value, Instant.now().toEpochMilli()));
                 }
               });
     }
   }
 
+  private Map<String, Integer> getHashVersionPairs(String processDefinitionId) {
+    Map<String, Integer> stringIntegerMap = hashVersionPairCache.get(processDefinitionId);
+    if (stringIntegerMap != null) {
+      return stringIntegerMap;
+    } else {
+      Map<String, Integer> stringIntegerMap1 = hashVersionPairStore.get(processDefinitionId);
+      if (stringIntegerMap1 != null) {
+        hashVersionPairCache.put(processDefinitionId, stringIntegerMap1);
+      }
+      return stringIntegerMap1;
+    }
+  }
+
   private void processStartCommandRecord(
       Record<String, DefinitionsTriggerDTO> definitionsRecord, StartCommandDTO startCommand) {
-    Map<String, Integer> stringIntegerMap = hashVersionPairStore.get(definitionsRecord.key());
+    Map<String, Integer> stringIntegerMap = getHashVersionPairs(definitionsRecord.key());
     // Get highest value from stringIntegerMap
-    Integer latestVersion = stringIntegerMap.size();
+    Integer latestVersion = stringIntegerMap != null ? stringIntegerMap.size() : null;
     if (latestVersion == null) {
       log.warn("No process definition found for key {}", definitionsRecord.key());
       return;
     }
     ProcessDefinitionDTO processDefinition =
-        processDefinitionStore.get(
-            new ProcessDefinitionKey(definitionsRecord.key(), latestVersion));
+        getProcessDefinitionDTO(definitionsRecord, latestVersion);
     String startEventId =
         processDefinition
             .getDefinitions()
@@ -154,8 +176,15 @@ public class DefinitionsProcessor
             processDefinition,
             List.of(startEventId),
             startCommand.getVariables());
-    log.info("Starting process instance for process definition {}", definitionsRecord.key());
+    //    log.info("Starting process instance for process definition {}", definitionsRecord.key());
     context.forward(
         new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
+  }
+
+  private ProcessDefinitionDTO getProcessDefinitionDTO(
+      Record<String, DefinitionsTriggerDTO> definitionsRecord, Integer latestVersion) {
+    return processDefinitionCache.computeIfAbsent(
+        new ProcessDefinitionKey(definitionsRecord.key(), latestVersion),
+        key -> processDefinitionStore.get(key));
   }
 }

@@ -1,15 +1,16 @@
 package com.flomaestro.client;
 
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
+import com.flomaestro.takt.util.TaktPropertiesHelper;
+import java.io.IOException;
 import java.util.Set;
 
 public class TaktClient {
   private final ExternalTriggerConsumer externalTriggerConsumer;
   private final ProcessInstanceProducer processInstanceProducer;
 
-  public TaktClient(String bootstrapServers, String tenant, String namespace) {
-    KafkaPropertiesHelper kafkaPropertiesHelper =
-        new KafkaPropertiesHelper(bootstrapServers, tenant, namespace);
+  public TaktClient(String tenant, String namespace) throws IOException {
+    TaktPropertiesHelper kafkaPropertiesHelper = new TaktPropertiesHelper(tenant, namespace);
     this.externalTriggerConsumer = new ExternalTriggerConsumer(kafkaPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(kafkaPropertiesHelper);
   }
@@ -18,7 +19,7 @@ public class TaktClient {
     return new TaktClientBuilder();
   }
 
-  public void start() {
+  public void start() throws IOException {
     this.externalTriggerConsumer.init();
   }
 
@@ -35,32 +36,22 @@ public class TaktClient {
   }
 
   public static class TaktClientBuilder {
-    private String bootstrapServers;
     private String tenant;
     private String namespace;
 
     private TaktClientBuilder() {
-      this.bootstrapServers = System.getenv("BOOTSTRAP_SERVERS");
       this.tenant = System.getenv("TENANT");
       this.namespace = System.getenv("NAMESPACE");
     }
 
-    public TaktClient build() {
-      if (bootstrapServers == null) {
-        throw new IllegalArgumentException("BOOTSTRAP_SERVERS environment variable is not set");
-      }
+    public TaktClient build() throws IOException {
       if (tenant == null) {
         throw new IllegalArgumentException("TENANT environment variable is not set");
       }
       if (namespace == null) {
         throw new IllegalArgumentException("NAMESPACE environment variable is not set");
       }
-      return new TaktClient(bootstrapServers, tenant, namespace);
-    }
-
-    public TaktClientBuilder withBootstrapServers(String bootstrapServers) {
-      this.bootstrapServers = bootstrapServers;
-      return this;
+      return new TaktClient(tenant, namespace);
     }
 
     public TaktClientBuilder withTenant(String tenant) {

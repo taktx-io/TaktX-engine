@@ -12,16 +12,16 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
+import com.flomaestro.takt.util.TaktPropertiesHelper;
 import com.flomaestro.takt.util.TaktUUIDDeserializer;
 import com.flomaestro.takt.util.TaktUUIDSerializer;
 import com.flomaestro.takt.xml.BpmnParser;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,20 +56,19 @@ public class ExternalTriggerConsumer {
       new HashMap<>();
 
   private final ObjectMapper objectMapper;
-  private final KafkaPropertiesHelper kafkaPropertiesHelper;
+  private final TaktPropertiesHelper taktPropertiesHelper;
 
   private final Map<String, String> storedHashes = new HashMap<>();
   private final Map<String, Object> definitionMap = new HashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> definitionActivationConsumer;
   private KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
-  private final boolean subscriberInitialized = false;
 
-  ExternalTriggerConsumer(KafkaPropertiesHelper kafkaPropertiesHelper) {
+  ExternalTriggerConsumer(TaktPropertiesHelper taktPropertiesHelper) {
     this.objectMapper = new ObjectMapper(new CBORFactory());
-    this.kafkaPropertiesHelper = kafkaPropertiesHelper;
+    this.taktPropertiesHelper = taktPropertiesHelper;
   }
 
-  void init() {
+  void init() throws IOException {
     subscribeToDefinitionRecords();
     scanAndDeployBpmnDefinitions();
   }
@@ -78,7 +77,7 @@ public class ExternalTriggerConsumer {
     return consumerMap.keySet();
   }
 
-  private void subscribeToDefinitionRecords() {
+  private void subscribeToDefinitionRecords() throws IOException {
     definitionActivationConsumer =
         createConsumer(
             "client-definition-activation-consumer-" + UUID.randomUUID(),
@@ -86,7 +85,7 @@ public class ExternalTriggerConsumer {
             ProcessDefinitionJsonDeserializer.class);
 
     String prefixedTopicName =
-        kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC);
+        taktPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC);
     log.info("Subscribing to topic {}", prefixedTopicName);
     AtomicBoolean assigned = new AtomicBoolean(false);
 
@@ -94,7 +93,7 @@ public class ExternalTriggerConsumer {
 
     responseEmitter =
         new KafkaProducer<>(
-            kafkaPropertiesHelper.getKafkaProducerProperties(
+            taktPropertiesHelper.getKafkaProducerProperties(
                 TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
 
     CompletableFuture.runAsync(
@@ -113,7 +112,11 @@ public class ExternalTriggerConsumer {
                       record.value().getDefinitions().getDefinitionsKey().getHash())) {
                 log.warn("Hash mismatch for process definition {}", record.key());
               }
-              consumeDefinitionActivation(record.key(), record.value());
+              try {
+                consumeDefinitionActivation(record.key(), record.value());
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
             }
           }
         });
@@ -156,7 +159,7 @@ public class ExternalTriggerConsumer {
 
       KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter =
           new KafkaProducer<>(
-              kafkaPropertiesHelper.getKafkaProducerProperties(
+              taktPropertiesHelper.getKafkaProducerProperties(
                   StringSerializer.class, XmlDefinitionSerializer.class));
 
       for (Class<?> clazz : annotatedClasses) {
@@ -164,9 +167,13 @@ public class ExternalTriggerConsumer {
         if (annotation != null) {
           Object beanInstance = InstanceProvider.getInstance(clazz);
           String resource = annotation.resource();
-          URL url = Thread.currentThread().getContextClassLoader().getResource(resource);
-          Path bpmnPath = Paths.get(url.getPath());
-          String xml = Files.readString(bpmnPath);
+          log.info("Deploying process definition from resource {}", resource);
+          InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resource);
+          if (inputStream == null) {
+            throw new FileNotFoundException("Resource not found: " + resource);
+          }
+          byte[] bytes = inputStream.readAllBytes();
+          String xml = new String(bytes, StandardCharsets.UTF_8);
           ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);
 
           storedHashes.put(
@@ -176,7 +183,7 @@ public class ExternalTriggerConsumer {
           log.info("Deploying process definition {}", definitions.getDefinitionsKey());
           xmlEmitter.send(
               new ProducerRecord<>(
-                  kafkaPropertiesHelper.getPrefixedTopicName(
+                  taktPropertiesHelper.getPrefixedTopicName(
                       Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC),
                   definitions.getDefinitionsKey().getProcessDefinitionId(),
                   new XmlDefinitionsDTO(xml)));
@@ -191,7 +198,7 @@ public class ExternalTriggerConsumer {
   }
 
   public void consumeDefinitionActivation(
-      ProcessDefinitionKey processDefinitionKey, ProcessDefinitionDTO value) {
+      ProcessDefinitionKey processDefinitionKey, ProcessDefinitionDTO value) throws IOException {
     final String processDefinitionId = processDefinitionKey.getProcessDefinitionId();
     if (value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
       Object workerInstance = definitionMap.get(processDefinitionId);
@@ -209,7 +216,7 @@ public class ExternalTriggerConsumer {
           consumerMap.put(processDefinitionId, newConsumer);
           newConsumer.subscribe(
               Collections.singletonList(
-                  kafkaPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
+                  taktPropertiesHelper.getPrefixedTopicName(Topics.EXTERNAL_TASK_TRIGGER_TOPIC)));
           CompletableFuture.runAsync(
                   () -> {
                     ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -261,10 +268,11 @@ public class ExternalTriggerConsumer {
   private <K, V> KafkaConsumer<K, V> createConsumer(
       String groupId,
       Class<? extends Deserializer<?>> keyDeserializer,
-      Class<? extends Deserializer<?>> valueDeserializer) {
+      Class<? extends Deserializer<?>> valueDeserializer)
+      throws IOException {
     log.info("Creating consumer for group id {}", groupId);
     Properties props =
-        kafkaPropertiesHelper.getKafkaConsumerProperties(
+        taktPropertiesHelper.getKafkaConsumerProperties(
             groupId, keyDeserializer, valueDeserializer);
     return new KafkaConsumer<>(props);
   }
@@ -284,7 +292,7 @@ public class ExternalTriggerConsumer {
         new ResponseConsumer(
             responseEmitter,
             externalTaskTrigger,
-            kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+            taktPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
             objectMapper);
     if (workerInstance == null) {
       responseConsumer.respondError(

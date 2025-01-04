@@ -7,6 +7,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -36,6 +37,7 @@ public class ScheduleProcessor
         Duration.ofMillis(SCHEDULE_INTERVAL),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
+          AtomicInteger nrSchedulesProcessed = new AtomicInteger(0);
           long startTime = System.currentTimeMillis();
           KeyValueStore<ScheduleKeyDTO, MessageSchedulerDTO> scheduleStore =
               context.getStateStore(
@@ -43,6 +45,7 @@ public class ScheduleProcessor
           try (KeyValueIterator<ScheduleKeyDTO, MessageSchedulerDTO> all = scheduleStore.all()) {
             all.forEachRemaining(
                 scheduledKeyValue -> {
+                  nrSchedulesProcessed.incrementAndGet();
                   ScheduleKeyDTO scheduledKey = scheduledKeyValue.key;
                   MessageSchedulerDTO scheduleCommand = scheduledKeyValue.value;
                   if (scheduleCommand != null) {
@@ -72,9 +75,10 @@ public class ScheduleProcessor
           long endTime = System.currentTimeMillis();
           long processingTime = endTime - startTime;
           if (processingTime > SCHEDULE_INTERVAL) {
-            log.warn(
-                "Backlog detected: processing time {} ms exceeds scheduled interval",
-                processingTime);
+            log.error(
+                "Backlog detected: processing time {} ms exceeds scheduled interval for {} schedules",
+                processingTime,
+                nrSchedulesProcessed.get());
           }
         });
   }

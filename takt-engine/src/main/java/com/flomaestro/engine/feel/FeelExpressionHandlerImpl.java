@@ -1,21 +1,37 @@
 package com.flomaestro.engine.feel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.flomaestro.engine.pi.model.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.camunda.feel.FeelEngine;
+import java.util.HashMap;
+import java.util.Map;
+import org.camunda.feel.FeelEngineClock.SystemClock$;
 import org.camunda.feel.api.EvaluationResult;
 import org.camunda.feel.api.FeelEngineApi;
+import org.camunda.feel.api.ParseResult;
 import org.camunda.feel.api.SuccessfulEvaluationResult;
+import org.camunda.feel.context.Context;
+import org.camunda.feel.context.FunctionProvider;
+import org.camunda.feel.context.VariableProvider;
+import org.camunda.feel.impl.interpreter.BuiltinFunctions;
+import org.camunda.feel.syntaxtree.ParsedExpression;
+import org.camunda.feel.valuemapper.ValueMapper;
+import scala.Option;
 import scala.collection.Iterable;
+import scala.collection.JavaConverters;
 import scala.jdk.CollectionConverters;
 
 @ApplicationScoped
 public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
+
+  private static final BuiltinFunctions BUILTIN_FUNCTIONS =
+      new BuiltinFunctions(new SystemClock$(), ValueMapper.defaultValueMapper());
   private final FeelEngineProvider feelEngineProvider;
   private final ObjectMapper objectMapper;
+  private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();
 
   public FeelExpressionHandlerImpl(
       FeelEngineProvider feelEngineProvider, ObjectMapper objectMapper) {
@@ -27,12 +43,10 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     JsonNode resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
-      FeelEngine engine = feelEngineProvider.getFeelEngine();
-      FeelEngineApi feelEngineApi = new FeelEngineApi(engine);
-
+      FeelEngineApi feelEngineApi = feelEngineProvider.getFeelEngineApi();
+      ParsedExpression parsedExpression = getParsedExpression(feelEngineApi, expression);
       EvaluationResult evaluationResult =
-          feelEngineApi.evaluateExpression(
-              expression.substring(1), WrappedInMap.of(variables, objectMapper));
+          feelEngineApi.evaluate(parsedExpression, createContext(variables));
       if (evaluationResult.isSuccess()) {
         Object expressionResult =
             ((SuccessfulEvaluationResult) evaluationResult).productIterator().next();
@@ -54,5 +68,47 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     }
 
     return resultNode;
+  }
+
+  private Context createContext(Variables variables) {
+    Context context =
+        new Context() {
+          @Override
+          public VariableProvider variableProvider() {
+            return new VariableProvider() {
+              @Override
+              public Option<Object> getVariable(String name) {
+                try {
+                  return Option.apply(objectMapper.treeToValue(variables.get(name), Object.class));
+                } catch (JsonProcessingException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+
+              @Override
+              public Iterable<String> keys() {
+                return JavaConverters.asScalaSet(variables.keySet()).toIterable();
+              }
+            };
+          }
+
+          @Override
+          public FunctionProvider functionProvider() {
+            return BUILTIN_FUNCTIONS;
+          }
+        };
+    return context;
+  }
+
+  private ParsedExpression getParsedExpression(FeelEngineApi feelEngineApi, String expression) {
+    ParsedExpression parsedExpression = parsedExpressionCache.get(expression);
+    if (parsedExpression == null) {
+      ParseResult parseResult = feelEngineApi.parseExpression(expression.substring(1));
+      if (parseResult.isSuccess()) {
+        parsedExpression = parseResult.parsedExpression();
+        parsedExpressionCache.put(expression, parsedExpression);
+      }
+    }
+    return parsedExpression;
   }
 }

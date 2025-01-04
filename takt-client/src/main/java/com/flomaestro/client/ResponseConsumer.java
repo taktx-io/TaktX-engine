@@ -9,6 +9,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -36,9 +37,18 @@ public class ResponseConsumer {
     this.asParameter = false;
   }
 
+  public void respondSucess() {
+    Map<String, JsonNode> variablesMap = new HashMap<>();
+    respondSucess(variablesMap);
+  }
+
   public void respondSucess(Object variable) {
     Map<String, JsonNode> variablesMap =
         variable == null ? Map.of() : objectMapper.convertValue(variable, LinkedHashMap.class);
+    respondSucess(variablesMap);
+  }
+
+  private void respondSucess(Map<String, JsonNode> variablesMap) {
 
     ExternalTaskResponseResultDTO externalTaskResponseResult =
         new ExternalTaskResponseResultDTO(
