@@ -10,16 +10,10 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class StartCommandDTO extends DefinitionsTriggerDTO implements SchedulableMessageDTO {
-
-  @JsonProperty("pi")
-  private UUID processInstanceKey;
+public class StartCommandDTO extends ProcessInstanceTriggerDTO implements SchedulableMessageDTO {
 
   @JsonProperty("ppi")
   private UUID parentProcessInstanceKey;
-
-  @JsonProperty("ei")
-  private String elementId;
 
   @JsonProperty("pei")
   private List<String> parentElementIdPath;
@@ -28,10 +22,7 @@ public class StartCommandDTO extends DefinitionsTriggerDTO implements Schedulabl
   private List<UUID> parentElementInstancePath;
 
   @JsonProperty("pd")
-  private String processDefinitionId;
-
-  @JsonProperty("vrs")
-  private VariablesDTO variables;
+  private ProcessDefinitionKey processDefinitionKey;
 
   public StartCommandDTO(
       UUID processInstanceKey,
@@ -39,14 +30,12 @@ public class StartCommandDTO extends DefinitionsTriggerDTO implements Schedulabl
       String elementId,
       List<String> parentElementIdPath,
       List<UUID> parentElementInstancePath,
-      String processDefinitionId,
+      ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
-    this.processInstanceKey = processInstanceKey;
+    super(processInstanceKey, List.of(elementId), variables);
     this.parentProcessInstanceKey = parentProcessInstanceKey;
-    this.elementId = elementId;
     this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
-    this.processDefinitionId = processDefinitionId;
-    this.variables = variables;
+    this.processDefinitionKey = processDefinitionKey;
   }
 }

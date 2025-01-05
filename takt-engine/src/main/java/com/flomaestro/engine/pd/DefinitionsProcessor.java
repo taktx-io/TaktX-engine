@@ -1,23 +1,17 @@
 package com.flomaestro.engine.pd;
 
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ParsedDefinitionsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionActivationDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
-import com.flomaestro.takt.dto.v_1_0_0.StartNewProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
 import com.flomaestro.takt.xml.BpmnParser;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -69,8 +63,6 @@ public class DefinitionsProcessor
     if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
       processDefinitionsRecord(
           definitionsRecord.key(), xmlDefinitions, definitionsRecord.timestamp());
-    } else if (definitionsRecord.value() instanceof StartCommandDTO startCommand) {
-      processStartCommandRecord(definitionsRecord, startCommand);
     } else if (definitionsRecord.value()
         instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
       processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
@@ -143,48 +135,5 @@ public class DefinitionsProcessor
       }
       return stringIntegerMap1;
     }
-  }
-
-  private void processStartCommandRecord(
-      Record<String, DefinitionsTriggerDTO> definitionsRecord, StartCommandDTO startCommand) {
-    Map<String, Integer> stringIntegerMap = getHashVersionPairs(definitionsRecord.key());
-    // Get highest value from stringIntegerMap
-    Integer latestVersion = stringIntegerMap != null ? stringIntegerMap.size() : null;
-    if (latestVersion == null) {
-      log.warn("No process definition found for key {}", definitionsRecord.key());
-      return;
-    }
-    ProcessDefinitionDTO processDefinition =
-        getProcessDefinitionDTO(definitionsRecord, latestVersion);
-    String startEventId =
-        processDefinition
-            .getDefinitions()
-            .getRootProcess()
-            .getFlowElements()
-            .getStartNode(startCommand.getElementId())
-            .getId();
-    UUID processInstanceKey =
-        startCommand.getProcessInstanceKey().equals(Constants.NONE_UUID)
-            ? UUID.randomUUID()
-            : startCommand.getProcessInstanceKey();
-    ProcessInstanceTriggerDTO processInstanceTrigger =
-        new StartNewProcessInstanceTriggerDTO(
-            processInstanceKey,
-            startCommand.getParentProcessInstanceKey(),
-            startCommand.getParentElementIdPath(),
-            startCommand.getParentElementInstancePath(),
-            processDefinition,
-            List.of(startEventId),
-            startCommand.getVariables());
-    //    log.info("Starting process instance for process definition {}", definitionsRecord.key());
-    context.forward(
-        new Record<>(processInstanceKey, processInstanceTrigger, definitionsRecord.timestamp()));
-  }
-
-  private ProcessDefinitionDTO getProcessDefinitionDTO(
-      Record<String, DefinitionsTriggerDTO> definitionsRecord, Integer latestVersion) {
-    return processDefinitionCache.computeIfAbsent(
-        new ProcessDefinitionKey(definitionsRecord.key(), latestVersion),
-        key -> processDefinitionStore.get(key));
   }
 }

@@ -17,6 +17,10 @@ public class ProcessDefinitionKey {
   @JsonProperty("v")
   private Integer version;
 
+  public ProcessDefinitionKey(String processDefinitionId) {
+    this(processDefinitionId, -1);
+  }
+
   public ProcessDefinitionKey(String processDefinitionId, Integer version) {
     this.processDefinitionId = processDefinitionId;
     this.version = version;

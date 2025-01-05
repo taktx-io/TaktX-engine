@@ -49,7 +49,9 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 
 @ApplicationScoped
@@ -135,6 +137,16 @@ public class TopologyProducer {
             PROCESS_DEFINITION_KEY_SERDE,
             PROCESS_DEFINITION_SERDE));
 
+    // Define the global table
+    GlobalKTable<ProcessDefinitionKey, ProcessDefinitionDTO> globalProcessDefinitionStore =
+        builder.globalTable(
+            tenantNamespaceNameWrapper.getPrefixed(
+                Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
+            Materialized.<ProcessDefinitionKey, ProcessDefinitionDTO>as(
+                    keyValueStoreSupplier.get(Stores.GLOBAL_PROCESS_DEFINITION))
+                .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
+                .withValueSerde(PROCESS_DEFINITION_SERDE));
+
     builder.stream(
             tenantNamespaceNameWrapper.getPrefixed(
                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
@@ -206,11 +218,6 @@ public class TopologyProducer {
             FLOW_NODE_INSTANCE_SERDE));
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.PROCESS_INSTANCE_DEFINITION),
-            PROCESS_DEFINITION_KEY_SERDE,
-            PROCESS_DEFINITION_SERDE));
-    builder.addStateStore(
-        keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.VARIABLES), VARIABLES_KEY_SERDE, VARIABLES_SERDE));
 
     builder.stream(
@@ -228,8 +235,6 @@ public class TopologyProducer {
                     flowNodeInstancesProcessor),
             tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.PROCESS_INSTANCE_DEFINITION.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
         .branch(
@@ -363,15 +368,6 @@ public class TopologyProducer {
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
     processStream
         .split()
-        .branch(
-            (k, v) -> v instanceof StartCommandDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
-                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
             (k, v) -> v instanceof ExternalTaskTriggerDTO,
             Branched.withConsumer(

@@ -242,12 +242,12 @@ public class Forwarder {
               Constants.NONE,
               pathExtractor.getElementIdPath(newStartCommand.flowNode()),
               pathExtractor.getInstancePath(newStartCommand.instance()),
-              newStartCommand.calledElement(),
+              new ProcessDefinitionKey(newStartCommand.calledElement()),
               variablesMapper.toDTO(newStartCommand.variables()));
 
       context.forward(
           new Record<>(
-              startCommand.getProcessDefinitionId(), startCommand, Instant.now().toEpochMilli()));
+              newStartCommand.processInstanceKey(), startCommand, Instant.now().toEpochMilli()));
     }
   }
 

@@ -36,7 +36,7 @@ public class Deployer {
                       topic ->
                           new NewTopic(
                               tenant + "." + namespace + "." + topic.getTopicName(),
-                              5,
+                              21,
                               (short) replicationFactor))
                   .toList());
       topics.all().get();

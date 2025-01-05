@@ -5,7 +5,7 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
@@ -19,6 +19,7 @@ import com.flomaestro.takt.dto.v_1_0_0.StartEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -85,6 +86,9 @@ public class ProcessDefinitionActivationProcessor {
 
     context.forward(
         new Record<>(processDefinitionKey, activatedDefinition, Instant.now().toEpochMilli()));
+    ProcessDefinitionKey latestKey =
+        new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), -1);
+    context.forward(new Record<>(latestKey, activatedDefinition, Instant.now().toEpochMilli()));
   }
 
   public void deactivate(ProcessDefinitionKey processDefinitionKey) {
@@ -165,9 +169,9 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              DefinitionScheduleKeyDTO scheduledKey =
-                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
-              context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli()));
+              InstanceScheduleKeyDTO scheduleKey =
+                  new InstanceScheduleKeyDTO(UUID.randomUUID(), Constants.NONE_UUID);
+              context.forward(new Record<>(scheduleKey, null, Instant.now().toEpochMilli()));
             });
   }
 
@@ -177,8 +181,8 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              DefinitionScheduleKeyDTO scheduleKey =
-                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
+              InstanceScheduleKeyDTO scheduleKey =
+                  new InstanceScheduleKeyDTO(UUID.randomUUID(), Constants.NONE_UUID);
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
                       scheduleKey,
@@ -192,12 +196,12 @@ public class ProcessDefinitionActivationProcessor {
   private static SchedulableMessageDTO getStartCommand(
       String processDefinitionId, StartEventDTO startEvent) {
     return new StartCommandDTO(
-        Constants.NONE_UUID,
+        UUID.randomUUID(),
         Constants.NONE_UUID,
         startEvent.getParentId(),
         List.of(),
         List.of(),
-        processDefinitionId,
+        new ProcessDefinitionKey(processDefinitionId),
         VariablesDTO.empty());
   }
 }

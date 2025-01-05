@@ -142,21 +142,19 @@ public class MessageEventProcessor
               value -> {
                 if (value.getMessageName().equals(messageEvent.getMessageName())) {
                   ProcessDefinitionKey processDefinitionKey = value.getProcessDefinitionKey();
+                  UUID processInstanceKey = UUID.randomUUID();
                   StartCommandDTO startCommand =
                       new StartCommandDTO(
-                          Constants.NONE_UUID,
+                          processInstanceKey,
                           Constants.NONE_UUID,
                           value.getElementId(),
                           List.of(),
                           List.of(),
-                          processDefinitionKey.getProcessDefinitionId(),
+                          new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),
                           messageEvent.getVariables());
 
                   context.forward(
-                      new Record<>(
-                          processDefinitionKey.getProcessDefinitionId(),
-                          startCommand,
-                          Instant.now().toEpochMilli()));
+                      new Record<>(processInstanceKey, startCommand, Instant.now().toEpochMilli()));
                 }
               });
     }

@@ -30,7 +30,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
-import com.flomaestro.takt.dto.v_1_0_0.StartNewProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.WithFlowNodeInstancesDTO;
@@ -205,16 +204,14 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public void consume(ProcessInstanceTriggerDTO trigger) {
     LOG.info("Received flow element trigger: " + trigger);
-    if (trigger instanceof StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger) {
-      ProcessDefinitionKey processDefinitionKey =
-          ProcessDefinitionKey.of(startNewProcessInstanceTrigger.getProcessDefinition());
+    if (trigger instanceof StartCommandDTO startCommand) {
       Set<UUID> uuids1 =
           processInstanceParentChildMap.computeIfAbsent(
-              startNewProcessInstanceTrigger.getParentProcessInstanceKey(), k -> new HashSet<>());
-      uuids1.add(startNewProcessInstanceTrigger.getProcessInstanceKey());
+              startCommand.getParentProcessInstanceKey(), k -> new HashSet<>());
+      uuids1.add(startCommand.getProcessInstanceKey());
       ConcurrentLinkedQueue<ProcessInstanceTriggerDTO> processInstanceKeyList =
           definitionToInstancesMap.computeIfAbsent(
-              processDefinitionKey, k -> new ConcurrentLinkedQueue<>());
+              startCommand.getProcessDefinitionKey(), k -> new ConcurrentLinkedQueue<>());
       processInstanceKeyList.add(trigger);
     }
   }
@@ -370,35 +367,19 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine startProcessInstanceNoWait(VariablesDTO variables) {
-    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
-    StartCommandDTO startCommand =
-        new StartCommandDTO(
-            Constants.NONE_UUID,
-            Constants.NONE_UUID,
-            Constants.NONE,
-            List.of(),
-            List.of(),
-            activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
-            variables);
-    processDefinitionsTriggerEmitter.send(
-        processDefinitionKey.getProcessDefinitionId(), startCommand);
-    return this;
-  }
-
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
+    UUID processInstanceKey = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
-            Constants.NONE_UUID,
+            processInstanceKey,
             Constants.NONE_UUID,
             Constants.NONE,
             List.of(),
             List.of(),
-            activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
+            ProcessDefinitionKey.of(activeProcessDefintion),
             variables);
-    processDefinitionsTriggerEmitter.send(
-        processDefinitionKey.getProcessDefinitionId(), startCommand);
+    processInstanceTriggerEmitter.send(processInstanceKey, startCommand);
 
     try {
       activeProcessInstanceKey =
@@ -411,11 +392,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                       return null;
                     }
                     ProcessInstanceTriggerDTO poll = flowElementTriggers.poll();
-                    if (poll
-                            instanceof
-                            StartNewProcessInstanceTriggerDTO startNewProcessInstanceTrigger
-                        && ProcessDefinitionKey.of(
-                                startNewProcessInstanceTrigger.getProcessDefinition())
+                    if (poll instanceof StartCommandDTO startNewProcessInstanceTrigger
+                        && startNewProcessInstanceTrigger
+                            .getProcessDefinitionKey()
                             .equals(processDefinitionKey)) {
                       return poll.getProcessInstanceKey();
                     }
