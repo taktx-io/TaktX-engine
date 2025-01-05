@@ -181,22 +181,26 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
+              UUID processInstanceKey = UUID.randomUUID();
               InstanceScheduleKeyDTO scheduleKey =
-                  new InstanceScheduleKeyDTO(UUID.randomUUID(), Constants.NONE_UUID);
+                  new InstanceScheduleKeyDTO(processInstanceKey, Constants.NONE_UUID);
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
                       scheduleKey,
                       timerEventDefinition,
-                      getStartCommand(processDefinitionKey.getProcessDefinitionId(), startEvent),
+                      getStartCommand(
+                          processDefinitionKey.getProcessDefinitionId(),
+                          processInstanceKey,
+                          startEvent),
                       Variables.empty());
               context.forward(new Record<>(scheduleKey, schedule, Instant.now().toEpochMilli()));
             });
   }
 
   private static SchedulableMessageDTO getStartCommand(
-      String processDefinitionId, StartEventDTO startEvent) {
+      String processDefinitionId, UUID processInstanceKey, StartEventDTO startEvent) {
     return new StartCommandDTO(
-        UUID.randomUUID(),
+        processInstanceKey,
         Constants.NONE_UUID,
         startEvent.getParentId(),
         List.of(),
