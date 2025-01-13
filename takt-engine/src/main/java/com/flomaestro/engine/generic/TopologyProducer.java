@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.pd.CorrelationMessageSubscriptions;
 import com.flomaestro.engine.pd.DefinitionMessageSubscriptions;
 import com.flomaestro.engine.pd.DefinitionsProcessor;
-import com.flomaestro.engine.pd.KeyValueStoreSupplier;
 import com.flomaestro.engine.pd.MessageEventProcessor;
 import com.flomaestro.engine.pd.MessageSchedulerFactory;
 import com.flomaestro.engine.pd.ScheduleProcessor;
@@ -29,6 +28,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.ProcessingStatisticsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
@@ -49,7 +49,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
@@ -66,6 +65,8 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
       CORRELATION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
+  public static final ObjectMapperSerde<ProcessingStatisticsDTO> PROCESSING_STATISTICS_SERDE =
+      new ObjectMapperSerde<>(ProcessingStatisticsDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
@@ -138,21 +139,22 @@ public class TopologyProducer {
             PROCESS_DEFINITION_SERDE));
 
     // Define the global table
-    GlobalKTable<ProcessDefinitionKey, ProcessDefinitionDTO> globalProcessDefinitionStore =
-        builder.globalTable(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
-            Materialized.<ProcessDefinitionKey, ProcessDefinitionDTO>as(
-                    keyValueStoreSupplier.get(Stores.GLOBAL_PROCESS_DEFINITION))
-                .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
-                .withValueSerde(PROCESS_DEFINITION_SERDE));
+    builder.globalTable(
+        tenantNamespaceNameWrapper.getPrefixed(
+            Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
+        Materialized.<ProcessDefinitionKey, ProcessDefinitionDTO>as(
+                keyValueStoreSupplier.get(Stores.GLOBAL_PROCESS_DEFINITION))
+            .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
+            .withValueSerde(PROCESS_DEFINITION_SERDE));
 
     builder.stream(
             tenantNamespaceNameWrapper.getPrefixed(
                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () -> new DefinitionsProcessor(tenantNamespaceNameWrapper, messageSchedulerFactory),
+            () ->
+                new DefinitionsProcessor(
+                    tenantNamespaceNameWrapper, messageSchedulerFactory, clock),
             tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
@@ -232,11 +234,23 @@ public class TopologyProducer {
                     variablesMapper,
                     forwarder,
                     tenantNamespaceNameWrapper,
-                    flowNodeInstancesProcessor),
+                    flowNodeInstancesProcessor,
+                    clock),
             tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
+        .branch(
+            (key, value) -> value instanceof ProcessingStatisticsDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((String) key, (ProcessingStatisticsDTO) value))
+                        .to(
+                            tenantNamespaceNameWrapper.getPrefixed(
+                                Topics.PROCESSING_STATISTICS_TOPIC.getTopicName()),
+                            Produced.with(Serdes.String(), PROCESSING_STATISTICS_SERDE))))
         .branch(
             (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
@@ -319,7 +333,7 @@ public class TopologyProducer {
             tenantNamespaceNameWrapper.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
         .process(
-            () -> new MessageEventProcessor(tenantNamespaceNameWrapper),
+            () -> new MessageEventProcessor(tenantNamespaceNameWrapper, clock),
             tenantNamespaceNameWrapper.getPrefixed(
                 Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(

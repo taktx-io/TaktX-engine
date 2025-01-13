@@ -31,6 +31,9 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   @JsonProperty("v")
   private VariablesDTO variables;
 
+  @JsonProperty("pt")
+  private long processTime;
+
   public ProcessInstanceUpdateDTO(
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
@@ -38,7 +41,9 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
       List<UUID> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       FlowNodeInstancesDTO flowNodeInstances,
-      VariablesDTO variables) {
+      VariablesDTO variables,
+      long processTime) {
+
     super(processInstanceKey);
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.parentElementIdPath = parentElementIdPath;
@@ -46,9 +51,11 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
     this.processDefinitionKey = processDefinitionKey;
     this.flowNodeInstances = flowNodeInstances;
     this.variables = variables;
+    this.processTime = processTime;
   }
 
-  public ProcessInstanceUpdateDTO(ProcessInstanceDTO processInstance, VariablesDTO variables) {
+  public ProcessInstanceUpdateDTO(
+      ProcessInstanceDTO processInstance, VariablesDTO variables, long processTime) {
     this(
         processInstance.getProcessInstanceKey(),
         processInstance.getParentProcessInstanceKey(),
@@ -56,6 +63,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
         processInstance.getParentElementInstancePath(),
         processInstance.getProcessDefinitionKey(),
         processInstance.getFlowNodeInstances(),
-        variables);
+        variables,
+        processTime);
   }
 }

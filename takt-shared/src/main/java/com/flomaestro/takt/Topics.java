@@ -4,14 +4,16 @@ import lombok.Getter;
 
 @Getter
 public enum Topics {
-  PROCESS_DEFINITION_STORE_TOPIC("process-definition-store-topic"),
-  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation-topic"),
-  MESSAGE_EVENT_TOPIC("message-event-topic"),
+  PROCESS_DEFINITION_STORE_TOPIC("process-definition-store"),
+  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation"),
+  MESSAGE_EVENT_TOPIC("message-event"),
   SCHEDULE_COMMANDS("schedule-commands"),
-  INSTANCE_UPDATE_TOPIC("instance-update-topic"),
-  PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger-topic"),
-  EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger-topic"),
-  PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions-trigger-topic");
+  INSTANCE_UPDATE_TOPIC("instance-update"),
+  PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger"),
+  EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger"),
+  PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions-trigger"),
+  PROCESSING_STATISTICS_TOPIC("processing-statistics"),
+  ;
 
   private final String topicName;
 

@@ -12,6 +12,7 @@ import com.flomaestro.engine.pd.model.FlowElements;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ErrorEventSignal;
 import com.flomaestro.engine.pi.model.EscalationEventSignal;
@@ -44,7 +45,6 @@ public abstract class ExternalTaskInstanceProcessor<
     extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTriggerDTO> {
 
   private FeelExpressionHandler feelExpressionHandler;
-  private Clock clock;
   private long retentionMs;
 
   protected ExternalTaskInstanceProcessor(
@@ -55,9 +55,8 @@ public abstract class ExternalTaskInstanceProcessor<
       VariablesMapper variablesMapper,
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
       KafkaClients kafkaClients) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
-    this.clock = clock;
     this.retentionMs =
         getRetentionForTopicConfiguration(
             kafkaClients,
@@ -79,9 +78,10 @@ public abstract class ExternalTaskInstanceProcessor<
       Config config = result.all().get().get(resource);
       config.get("retention.ms");
       // Extract each configuration entry and return it as a map
-      return Long.valueOf(config.get("retention.ms").value());
+      return Long.parseLong(config.get("retention.ms").value());
     } catch (ExecutionException | InterruptedException e) {
-      throw new RuntimeException("Failed to retrieve configuration for topic: " + topicName, e);
+      throw new IllegalStateException(
+          "Failed to retrieve configuration for topic: " + topicName, e);
     }
   }
 
@@ -93,7 +93,8 @@ public abstract class ExternalTaskInstanceProcessor<
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
@@ -116,7 +117,8 @@ public abstract class ExternalTaskInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
 
@@ -256,7 +258,8 @@ public abstract class ExternalTaskInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     // Nothing to do here
   }
 

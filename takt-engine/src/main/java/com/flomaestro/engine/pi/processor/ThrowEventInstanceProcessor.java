@@ -6,6 +6,7 @@ import com.flomaestro.engine.pd.model.ThrowEvent;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
@@ -14,6 +15,7 @@ import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ThrowEventInstance;
 import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
+import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 
@@ -25,8 +27,9 @@ public abstract class ThrowEventInstanceProcessor<
   protected ThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
   }
 
   @Override
@@ -37,7 +40,8 @@ public abstract class ThrowEventInstanceProcessor<
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     flowNodeInstance
         .getFlowNode()
         .getLinkventDefinition()
@@ -57,7 +61,12 @@ public abstract class ThrowEventInstanceProcessor<
                   });
             });
     processStartSpecificThrowEventInstance(
-        instanceResult, directInstanceResult, flowElements, flowNodeInstance, variables);
+        instanceResult,
+        directInstanceResult,
+        flowElements,
+        flowNodeInstance,
+        variables,
+        processingStatistics);
   }
 
   protected abstract void processStartSpecificThrowEventInstance(
@@ -65,5 +74,6 @@ public abstract class ThrowEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
-      Variables variables);
+      Variables variables,
+      ProcessingStatistics processingStatistics);
 }

@@ -13,7 +13,7 @@ import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -32,9 +32,11 @@ public class MessageEventProcessor
       definitionMessageSubscriptionStore;
   private KeyValueStore<MessageEventKeyDTO, CorrelationMessageSubscriptions>
       correlationMessageSubscriptionStore;
+  private final Clock clock;
 
-  public MessageEventProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper) {
+  public MessageEventProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper, Clock clock) {
     this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+    this.clock = clock;
   }
 
   @Override
@@ -123,8 +125,7 @@ public class MessageEventProcessor
                           messageEvent.getVariables());
 
                   context.forward(
-                      new Record<>(
-                          processInstanceKey, flowElementTrigger, Instant.now().toEpochMilli()));
+                      new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
                 }
               });
     }
@@ -153,8 +154,7 @@ public class MessageEventProcessor
                           new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),
                           messageEvent.getVariables());
 
-                  context.forward(
-                      new Record<>(processInstanceKey, startCommand, Instant.now().toEpochMilli()));
+                  context.forward(new Record<>(processInstanceKey, startCommand, clock.millis()));
                 }
               });
     }

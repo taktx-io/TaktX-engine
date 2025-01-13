@@ -6,6 +6,7 @@ import com.flomaestro.engine.pd.model.SequenceFlow;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.BoundaryEventInstance;
@@ -16,19 +17,21 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public abstract class ActivityInstanceProcessor<
         E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTriggerDTO>
-    extends FLowNodeInstanceProcessor<E, I, C> {
+    extends FlowNodeInstanceProcessor<E, I, C> {
 
   protected ActivityInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
   }
 
   @Override
@@ -39,7 +42,8 @@ public abstract class ActivityInstanceProcessor<
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
 
     processStartSpecificActivityInstance(
         instanceResult,
@@ -48,7 +52,8 @@ public abstract class ActivityInstanceProcessor<
         flownodeInstance,
         processInstance,
         inputFlowId,
-        variables);
+        variables,
+        processingStatistics);
 
     if (flownodeInstance.getState() == ActtivityStateEnum.WAITING) {
       E flowNode = flownodeInstance.getFlowNode();
@@ -78,7 +83,8 @@ public abstract class ActivityInstanceProcessor<
       I flowNodeInstance,
       C trigger,
       Variables processInstanceVariables,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
 
     processContinueSpecificActivityInstance(
         instanceResult,
@@ -88,7 +94,8 @@ public abstract class ActivityInstanceProcessor<
         processInstance,
         flowNodeInstance,
         trigger,
-        processInstanceVariables);
+        processInstanceVariables,
+        processingStatistics);
 
     if (flowNodeInstance.getState() == ActtivityStateEnum.FINISHED) {
       flowNodeInstance
@@ -103,12 +110,18 @@ public abstract class ActivityInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     instance
         .getAttachedBoundaryEventInstances()
         .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
     processTerminateSpecificActivityInstance(
-        instanceResult, directInstanceResult, instance, processInstance, variables);
+        instanceResult,
+        directInstanceResult,
+        instance,
+        processInstance,
+        variables,
+        processingStatistics);
   }
 
   protected abstract void processStartSpecificActivityInstance(
@@ -118,7 +131,8 @@ public abstract class ActivityInstanceProcessor<
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables);
+      Variables variables,
+      ProcessingStatistics processingStatistics);
 
   protected abstract void processContinueSpecificActivityInstance(
       InstanceResult instanceResult,
@@ -128,14 +142,16 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       C trigger,
-      Variables processInstanceVariables);
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificActivityInstance(
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables);
+      Variables variables,
+      ProcessingStatistics processingStatistics);
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(

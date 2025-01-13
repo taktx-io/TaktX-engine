@@ -6,24 +6,27 @@ import com.flomaestro.engine.pd.model.SequenceFlow;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.EventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
-    extends FLowNodeInstanceProcessor<E, I, ContinueFlowElementTriggerDTO> {
+    extends FlowNodeInstanceProcessor<E, I, ContinueFlowElementTriggerDTO> {
 
   protected EventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
   }
 
   @Override
@@ -34,7 +37,8 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       I flowNodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     processStartSpecificEventInstance(
         processInstance,
         instanceResult,
@@ -42,7 +46,8 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
         flowElements,
         flowNodeInstance,
         inputFlowId,
-        variables);
+        variables,
+        processingStatistics);
   }
 
   @Override
@@ -55,7 +60,8 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       Variables variables,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
     // Should not occur
   }
 
@@ -75,5 +81,6 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      Variables variables);
+      Variables variables,
+      ProcessingStatistics processingStatistics);
 }

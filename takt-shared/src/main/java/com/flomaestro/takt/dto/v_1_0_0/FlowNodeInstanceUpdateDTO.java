@@ -21,14 +21,19 @@ public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
   @JsonProperty("v")
   private VariablesDTO variables;
 
+  @JsonProperty("pt")
+  private long processTime;
+
   public FlowNodeInstanceUpdateDTO(
       UUID processInstanceKey,
       UUID flowNodeInstancesId,
       FlowNodeInstanceDTO flowNodeInstance,
-      VariablesDTO variables) {
+      VariablesDTO variables,
+      long processTime) {
     super(processInstanceKey);
     this.flowNodeInstancesId = flowNodeInstancesId;
     this.flowNodeInstance = flowNodeInstance;
     this.variables = variables;
+    this.processTime = processTime;
   }
 }

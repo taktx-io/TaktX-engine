@@ -8,6 +8,7 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceException;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.GatewayInstance;
@@ -16,6 +17,7 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowConditionDTO;
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,7 +26,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
         E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTriggerDTO>
-    extends FLowNodeInstanceProcessor<E, I, C> {
+    extends FlowNodeInstanceProcessor<E, I, C> {
 
   private FeelExpressionHandler feelExpressionHandler;
 
@@ -32,8 +34,9 @@ public abstract class GatewayInstanceProcessor<
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
@@ -45,14 +48,16 @@ public abstract class GatewayInstanceProcessor<
       I gatewayInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     processStartSpecificGatewayInstance(
         instanceResult,
         directInstanceResult,
         flowElements,
         gatewayInstance,
         inputFlowId,
-        variables);
+        variables,
+        processingStatistics);
   }
 
   @Override
@@ -65,7 +70,8 @@ public abstract class GatewayInstanceProcessor<
       I flowNodeInstance,
       C trigger,
       Variables processInstanceVariables,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
     // Should never happen
   }
 
@@ -120,7 +126,8 @@ public abstract class GatewayInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }
 
@@ -130,7 +137,8 @@ public abstract class GatewayInstanceProcessor<
       FlowElements flowElements,
       I flownodeInstance,
       String inputFlowId,
-      Variables variables);
+      Variables variables,
+      ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificGatewayInstance(
       InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I instance);

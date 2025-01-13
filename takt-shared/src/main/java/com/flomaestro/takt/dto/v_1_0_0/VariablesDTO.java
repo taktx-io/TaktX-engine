@@ -54,6 +54,10 @@ public class VariablesDTO {
     return new VariablesDTO(Map.of(key, v1, key2, v2, key3, v3));
   }
 
+  public void put(String key, JsonNode value) {
+    variables.put(key, value);
+  }
+
   @JsonIgnore
   public JsonNode get(String key) {
     return variables.get(key);

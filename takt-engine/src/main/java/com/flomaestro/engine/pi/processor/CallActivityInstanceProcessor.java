@@ -8,6 +8,7 @@ import com.flomaestro.engine.pd.model.NewStartCommand;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.CallActivityInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
@@ -17,6 +18,7 @@ import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 import java.util.UUID;
 import lombok.NoArgsConstructor;
 
@@ -33,8 +35,9 @@ public class CallActivityInstanceProcessor
       FeelExpressionHandler feelExpressionHandler,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
@@ -46,7 +49,8 @@ public class CallActivityInstanceProcessor
       CallActivityInstance callActivityInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     callActivityInstance.setState(ActtivityStateEnum.WAITING);
 
     UUID newProcessInstanceKey = UUID.randomUUID();
@@ -78,10 +82,11 @@ public class CallActivityInstanceProcessor
       ProcessInstance processInstance,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     instance.setState(ActtivityStateEnum.FINISHED);
     if (instance.getFlowNode().isPropagateAllChildVariables()) {
-      processInstanceVariables.merge(variablesMapper.fromDTO(trigger.getVariables()));
+      processInstanceVariables.merge(trigger.getVariables());
     }
   }
 
@@ -91,7 +96,8 @@ public class CallActivityInstanceProcessor
       DirectInstanceResult directInstanceResult,
       CallActivityInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
   }
 

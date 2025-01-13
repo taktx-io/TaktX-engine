@@ -61,7 +61,7 @@ public class ScheduleProcessor
                                   message);
                               context.forward(
                                   new Record<>(
-                                      scheduledKey.getRecordKey(), message, now.toEpochMilli()));
+                                      scheduledKey.getRecordKey(), message, clock.millis()));
                             });
                     if (updatedScheduleCommand != null
                         && !updatedScheduleCommand.equals(scheduleCommand)) {

@@ -9,9 +9,11 @@ import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @EqualsAndHashCode
+@ToString
 @NoArgsConstructor
 public class FlowElementsDTO {
   public static final FlowElementsDTO EMPTY = new FlowElementsDTO(Map.of());

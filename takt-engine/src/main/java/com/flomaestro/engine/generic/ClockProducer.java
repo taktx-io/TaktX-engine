@@ -1,4 +1,4 @@
-package com.flomaestro.engine.pd;
+package com.flomaestro.engine.generic;
 
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;

@@ -11,6 +11,7 @@ import com.flomaestro.engine.pd.model.SequenceFlow;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
@@ -21,11 +22,12 @@ import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import java.time.Clock;
 import java.util.Set;
 import java.util.UUID;
 
 public class MultiInstanceProcessor
-    extends FLowNodeInstanceProcessor<
+    extends FlowNodeInstanceProcessor<
         Activity, MultiInstanceInstance, ContinueFlowElementTriggerDTO> {
   private final FeelExpressionHandler feelExpressionHandler;
   private final ObjectMapper objectMapper;
@@ -36,8 +38,9 @@ public class MultiInstanceProcessor
       ActivityInstanceProcessor<?, ?, ?> processor,
       VariablesMapper variablesMapper,
       ProcessInstanceMapper processInstanceMapper,
-      ObjectMapper objectMapper) {
-    super(processor.getIoMappingProcessor(), processInstanceMapper, variablesMapper);
+      ObjectMapper objectMapper,
+      Clock clock) {
+    super(processor.getIoMappingProcessor(), processInstanceMapper, variablesMapper, clock);
     this.processor = processor;
     this.feelExpressionHandler = feelExpressionHandler;
     this.objectMapper = objectMapper;
@@ -60,7 +63,8 @@ public class MultiInstanceProcessor
       MultiInstanceInstance multiInstanceInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
 
     Activity activity = multiInstanceInstance.getFlowNode();
     String outputCollectionName = activity.getLoopCharacteristics().getOutputCollection();
@@ -92,7 +96,8 @@ public class MultiInstanceProcessor
                   variables,
                   instanceResult,
                   directInstanceResult,
-                  inputCollection);
+                  inputCollection,
+                  processingStatistics);
         }
       } else {
         for (int i = 0; i < inputCollection.size(); i++) {
@@ -105,7 +110,8 @@ public class MultiInstanceProcessor
               variables,
               instanceResult,
               directInstanceResult,
-              inputCollection);
+              inputCollection,
+              processingStatistics);
         }
       }
 
@@ -125,20 +131,17 @@ public class MultiInstanceProcessor
       Variables variables,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      JsonNode inputCollection) {
+      JsonNode inputCollection,
+      ProcessingStatistics processingStatistics) {
 
     ActivityInstance<?> instance = activity.newActivityInstance(multiInstanceInstance);
     instance.setLoopCnt(multiInstanceInstance.getLoopCnt());
     multiInstanceInstance.getFlowNodeInstances().putInstance(instance);
 
     JsonNode inputElement = inputCollection.get(multiInstanceInstance.getLoopCnt());
-    Variables iterationVars =
-        Variables.of(
-            "loopCnt",
-            new IntNode(multiInstanceInstance.getLoopCnt()),
-            activity.getLoopCharacteristics().getInputElement(),
-            inputElement);
-    variables.merge(iterationVars);
+
+    variables.put("loopCnt", new IntNode(multiInstanceInstance.getLoopCnt()));
+    variables.put(activity.getLoopCharacteristics().getInputElement(), inputElement);
 
     processor.processStart(
         instanceResult,
@@ -147,11 +150,12 @@ public class MultiInstanceProcessor
         instance,
         processInstance,
         inputFlowId,
-        iterationVars,
+        variables,
         true,
-        multiInstanceInstance.getFlowNodeInstances());
+        multiInstanceInstance.getFlowNodeInstances(),
+        processingStatistics);
 
-    storeOutputCollectionIfCompleted(activity, variables, instance, iterationVars);
+    storeOutputCollectionIfCompleted(activity, variables, instance, variables);
     multiInstanceInstance.increaseLoopCnt();
     return instance;
   }
@@ -186,7 +190,8 @@ public class MultiInstanceProcessor
       MultiInstanceInstance multiInstanceInstance,
       ContinueFlowElementTriggerDTO trigger,
       Variables variables,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
     subProcessLevel++;
 
     UUID subElementId = trigger.getElementInstanceIdPath().get(subProcessLevel);
@@ -209,7 +214,8 @@ public class MultiInstanceProcessor
           trigger,
           variables,
           true,
-          multiInstanceInstance.getFlowNodeInstances());
+          multiInstanceInstance.getFlowNodeInstances(),
+          processingStatistics);
 
       storeOutputCollectionIfCompleted(activity, variables, iterationInstance, variables);
 
@@ -228,7 +234,8 @@ public class MultiInstanceProcessor
                 variables,
                 instanceResult,
                 directInstanceResult,
-                inputCollection);
+                inputCollection,
+                processingStatistics);
       }
 
       multiInstanceInstance.getFlowNodeInstances().determineImplicitCompletedState();
@@ -245,7 +252,8 @@ public class MultiInstanceProcessor
       DirectInstanceResult directInstanceResult,
       MultiInstanceInstance instance,
       ProcessInstance processInstance,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
     flowNodeInstances
         .getInstances()
@@ -258,6 +266,7 @@ public class MultiInstanceProcessor
                     iteration,
                     processInstance,
                     variables,
-                    flowNodeInstances));
+                    flowNodeInstances,
+                    processingStatistics));
   }
 }

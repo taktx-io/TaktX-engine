@@ -1,10 +1,12 @@
-package com.flomaestro.engine.pd;
+package com.flomaestro.engine.generic;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(callSuper = true)
 public class MutableClock extends Clock {
 
   private final ZoneId zone;

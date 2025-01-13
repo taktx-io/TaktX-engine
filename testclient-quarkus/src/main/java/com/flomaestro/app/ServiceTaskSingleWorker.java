@@ -16,7 +16,7 @@ public class ServiceTaskSingleWorker {
 
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-  @ExternalTask(element = "service-task-id")
+  @ExternalTask(element = "service-task")
   public void doWork(ResponseConsumer responseConsumer) {
     responseConsumer.respondPromise(Duration.ofSeconds(10));
 

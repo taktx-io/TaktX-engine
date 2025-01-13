@@ -17,7 +17,7 @@ import lombok.Getter;
 @Getter
 public class InstanceResult {
 
-  private final Queue<InstanceUpdateDTO> processInstanceUpdates = new ArrayDeque<>();
+  private final Queue<InstanceUpdateDTO> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
   private final Queue<UUID> newTerminateCommands = new ArrayDeque<>();
@@ -35,8 +35,8 @@ public class InstanceResult {
     return new InstanceResult();
   }
 
-  public void addProcessInstanceUpdate(InstanceUpdateDTO processInstanceUpdate) {
-    processInstanceUpdates.add(processInstanceUpdate);
+  public void addInstanceUpdate(InstanceUpdateDTO processInstanceUpdate) {
+    instanceUpdates.add(processInstanceUpdate);
   }
 
   public void addExternalTaskRequest(ExternalTaskInfo externalTaskInfo) {

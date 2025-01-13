@@ -8,6 +8,7 @@ import com.flomaestro.engine.pi.model.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.camunda.feel.FeelEngineClock.SystemClock$;
 import org.camunda.feel.api.EvaluationResult;
 import org.camunda.feel.api.FeelEngineApi;
@@ -25,6 +26,7 @@ import scala.collection.JavaConverters;
 import scala.jdk.CollectionConverters;
 
 @ApplicationScoped
+@Slf4j
 public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
   private static final BuiltinFunctions BUILTIN_FUNCTIONS =
@@ -71,33 +73,32 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
   }
 
   private Context createContext(Variables variables) {
-    Context context =
-        new Context() {
+    return new Context() {
+      @Override
+      public VariableProvider variableProvider() {
+        return new VariableProvider() {
           @Override
-          public VariableProvider variableProvider() {
-            return new VariableProvider() {
-              @Override
-              public Option<Object> getVariable(String name) {
-                try {
-                  return Option.apply(objectMapper.treeToValue(variables.get(name), Object.class));
-                } catch (JsonProcessingException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-
-              @Override
-              public Iterable<String> keys() {
-                return JavaConverters.asScalaSet(variables.keySet()).toIterable();
-              }
-            };
+          public Option<Object> getVariable(String name) {
+            try {
+              return Option.apply(objectMapper.treeToValue(variables.get(name), Object.class));
+            } catch (JsonProcessingException e) {
+              throw new IllegalStateException(e);
+            }
           }
 
           @Override
-          public FunctionProvider functionProvider() {
-            return BUILTIN_FUNCTIONS;
+          public Iterable<String> keys() {
+            log.error("THe keys method is called although not all variables might be available");
+            return JavaConverters.asScalaSet(variables.keySet()).toIterable();
           }
         };
-    return context;
+      }
+
+      @Override
+      public FunctionProvider functionProvider() {
+        return BUILTIN_FUNCTIONS;
+      }
+    };
   }
 
   private ParsedExpression getParsedExpression(FeelEngineApi feelEngineApi, String expression) {

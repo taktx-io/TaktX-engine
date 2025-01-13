@@ -18,13 +18,13 @@ public class FlowNodeInstances {
 
   private UUID flowNodeInstancesId;
   private FlowNodeInstances parentFlowNodeInstances;
-  private boolean dirty;
+  private boolean stateChanged;
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
     this.flowNodeInstancesId = UUID.randomUUID();
     this.state = ProcessInstanceState.ACTIVE;
-    this.dirty = false;
+    this.stateChanged = false;
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
@@ -42,7 +42,7 @@ public class FlowNodeInstances {
   public void determineImplicitCompletedState() {
     if (state == ProcessInstanceState.ACTIVE
         && instances.values().stream().allMatch(FlowNodeInstance::isNotAwaiting)) {
-      this.setStateDirty(ProcessInstanceState.COMPLETED);
+      this.setState(ProcessInstanceState.COMPLETED);
     }
   }
 
@@ -53,19 +53,15 @@ public class FlowNodeInstances {
   }
 
   public void setState(ProcessInstanceState state) {
+    this.stateChanged = this.state != null && this.state != state;
     this.state = state;
   }
 
-  public void setStateDirty(ProcessInstanceState state) {
-    this.dirty = true;
-    this.state = state;
-  }
-
-  public boolean isDirty() {
-    return dirty
+  public boolean isStateChanged() {
+    return stateChanged
         || instances.values().stream()
-            .filter(instance -> instance instanceof WithFlowNodeInstances)
-            .map(instance -> (WithFlowNodeInstances) instance)
-            .anyMatch(instance -> instance.getFlowNodeInstances().isDirty());
+            .filter(WithFlowNodeInstances.class::isInstance)
+            .map(WithFlowNodeInstances.class::cast)
+            .anyMatch(instance -> instance.getFlowNodeInstances().isStateChanged());
   }
 }

@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
+@ToString
 @NoArgsConstructor
 public class ProcessDTO extends RootElementDTO {
 

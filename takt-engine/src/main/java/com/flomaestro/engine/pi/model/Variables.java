@@ -1,53 +1,47 @@
 package com.flomaestro.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import java.util.Collection;
+import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
 public class Variables {
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final Map<String, JsonNode> variables;
+  private final Function<String, JsonNode> variableProvider;
   private final Set<String> dirty;
 
-  public Variables(Map<String, JsonNode> variables) {
-    this.variables = new HashMap<>(variables);
+  public Variables(Set<String> variableNames, Function<String, JsonNode> variableProvider) {
+    this.variables = new HashMap<>();
+    variableNames.forEach(key -> this.variables.put(key, null));
+    this.variableProvider = variableProvider;
     this.dirty = new HashSet<>();
   }
 
   public static Variables empty() {
-    return new Variables(Map.of());
+    return new Variables(Set.of(), key -> null);
   }
 
-  public static Variables of(String key, Object value) {
-    return new Variables(Map.of(key, OBJECT_MAPPER.valueToTree(value)));
-  }
-
-  public static Variables of(Map<String, JsonNode> variables) {
-    return new Variables(variables);
-  }
-
-  public static Variables of(String key, Object value, String key2, Object value2) {
-    return new Variables(
-        Map.of(key, OBJECT_MAPPER.valueToTree(value), key2, OBJECT_MAPPER.valueToTree(value2)));
-  }
-
-  public static Variables of(
-      String key, Object value, String key2, Object value2, String key3, Object value3) {
-    JsonNode v1 = OBJECT_MAPPER.valueToTree(value);
-    JsonNode v2 = OBJECT_MAPPER.valueToTree(value2);
-    JsonNode v3 = OBJECT_MAPPER.valueToTree(value3);
-    return new Variables(Map.of(key, v1, key2, v2, key3, v3));
+  public static Variables empty(Function<String, JsonNode> variableProvider) {
+    return new Variables(Set.of(), variableProvider);
   }
 
   public JsonNode get(String key) {
-    return variables.get(key);
+    if (variables.containsKey(key)) {
+      return variables.get(key);
+    } else {
+      JsonNode value = variableProvider.apply(key);
+      if (value != null) {
+        variables.put(key, value);
+        return value;
+      } else {
+        return null;
+      }
+    }
   }
 
   public JsonNode put(String key, JsonNode value) {
@@ -55,9 +49,9 @@ public class Variables {
     return variables.put(key, value);
   }
 
-  public JsonNode remove(String key) {
-    dirty.add(key);
-    return variables.remove(key);
+  public void merge(VariablesDTO variablesToMerge) {
+    dirty.addAll(variablesToMerge.getVariables().keySet());
+    variables.putAll(variablesToMerge.getVariables());
   }
 
   public void merge(Variables variablesToMerge) {
@@ -69,21 +63,12 @@ public class Variables {
     return variables.size();
   }
 
-  public void clear() {
-    dirty.addAll(variables.keySet());
-    variables.clear();
-  }
-
   public boolean isDirty(String key) {
     return dirty.contains(key);
   }
 
   public Set<String> keySet() {
     return variables.keySet();
-  }
-
-  public Collection<JsonNode> values() {
-    return variables.values();
   }
 
   public Set<Entry<String, JsonNode>> entrySet() {

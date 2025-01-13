@@ -5,12 +5,14 @@ import com.flomaestro.engine.pd.model.IntermediateThrowEvent;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.IntermediateThrowEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 import lombok.NoArgsConstructor;
 
 @ApplicationScoped
@@ -22,8 +24,9 @@ public class IntermediateThrowEventInstanceProcessor
   public IntermediateThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
   }
 
   @Override
@@ -32,7 +35,10 @@ public class IntermediateThrowEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       IntermediateThrowEventInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables) {}
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
+    // nothing to do
+  }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
@@ -40,5 +46,8 @@ public class IntermediateThrowEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      Variables variables) {}
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
+    // nothing to do
+  }
 }

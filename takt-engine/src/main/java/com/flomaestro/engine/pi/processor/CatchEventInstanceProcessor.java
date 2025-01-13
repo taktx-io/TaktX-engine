@@ -9,6 +9,7 @@ import com.flomaestro.engine.pd.model.Message;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.CatchEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
@@ -19,6 +20,7 @@ import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEve
 import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import java.time.Clock;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
@@ -32,8 +34,9 @@ public abstract class CatchEventInstanceProcessor<
       IoMappingProcessor ioMappingProcessor,
       VariablesMapper variablesMapper,
       ProcessInstanceMapper processInstanceMapper,
-      FeelExpressionHandler feelExpressionHandler) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      FeelExpressionHandler feelExpressionHandler,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
@@ -45,7 +48,8 @@ public abstract class CatchEventInstanceProcessor<
       FlowElements flowElements,
       I catchEventInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
 
     catchEventInstance.setState(CatchEventStateEnum.FINISHED);
 
@@ -110,21 +114,24 @@ public abstract class CatchEventInstanceProcessor<
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       Variables variables,
-      FlowNodeInstances flowNodeInstances) {
-    getInstanceResultForContinue(instanceResult, directInstanceResult, flowNodeInstance);
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
+    getInstanceResultForContinue(
+        instanceResult, directInstanceResult, flowNodeInstance, processingStatistics);
   }
 
   private void getInstanceResultForContinue(
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      I flowNodeInstance) {
+      I flowNodeInstance,
+      ProcessingStatistics processingStatistics) {
 
     if (shouldCancel(flowNodeInstance)) {
       flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
       terminateSubscriptions(flowNodeInstance, instanceResult);
     }
     processContinueSpecificCatchEventInstance(
-        instanceResult, directInstanceResult, flowNodeInstance);
+        instanceResult, directInstanceResult, flowNodeInstance, processingStatistics);
   }
 
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
@@ -159,7 +166,10 @@ public abstract class CatchEventInstanceProcessor<
   }
 
   protected abstract void processContinueSpecificCatchEventInstance(
-      InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I flowNodeInstance);
+      InstanceResult instanceResult,
+      DirectInstanceResult directInstanceResult,
+      I flowNodeInstance,
+      ProcessingStatistics processingStatistics);
 
   protected abstract boolean shouldCancel(I flowNodeInstance);
 
@@ -169,7 +179,8 @@ public abstract class CatchEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     terminateSubscriptions(instance, instanceResult);
   }
 
@@ -180,10 +191,13 @@ public abstract class CatchEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       Variables variables,
       ProcessInstance processInstance,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
+    long now = clock.millis();
     if (catchEventInstance.matchesEvent(event)) {
       catchEventInstance.setDirty();
-      getInstanceResultForContinue(newInstanceResult, directInstanceResult, catchEventInstance);
+      getInstanceResultForContinue(
+          newInstanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,
@@ -191,12 +205,13 @@ public abstract class CatchEventInstanceProcessor<
           variables,
           false,
           flowNodeInstances);
-      newInstanceResult.addProcessInstanceUpdate(
+      newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
               flowNodeInstances.getFlowNodeInstancesId(),
               catchEventInstance,
-              variables));
+              variables,
+              now));
       return true;
     }
     return false;
@@ -209,9 +224,12 @@ public abstract class CatchEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       Variables variables,
       ProcessInstance processInstance,
-      FlowNodeInstances flowNodeInstances) {
+      FlowNodeInstances flowNodeInstances,
+      ProcessingStatistics processingStatistics) {
+    long now = clock.millis();
     if (catchEventInstance.matchesEventCatchAll(event)) {
-      getInstanceResultForContinue(instanceResult, directInstanceResult, catchEventInstance);
+      getInstanceResultForContinue(
+          instanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,
@@ -219,12 +237,13 @@ public abstract class CatchEventInstanceProcessor<
           variables,
           false,
           flowNodeInstances);
-      instanceResult.addProcessInstanceUpdate(
+      instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
               flowNodeInstances.getFlowNodeInstancesId(),
               catchEventInstance,
-              variables));
+              variables,
+              now));
       return true;
     }
     return false;

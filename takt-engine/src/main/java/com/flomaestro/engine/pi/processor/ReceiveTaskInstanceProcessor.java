@@ -7,6 +7,7 @@ import com.flomaestro.engine.pd.model.ReceiveTask;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.engine.pi.model.ProcessInstance;
@@ -17,6 +18,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 
 @ApplicationScoped
 public class ReceiveTaskInstanceProcessor
@@ -29,8 +31,9 @@ public class ReceiveTaskInstanceProcessor
       FeelExpressionHandler feelExpressionHandler,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
@@ -42,7 +45,8 @@ public class ReceiveTaskInstanceProcessor
       ReceiveTaskInstance receiveTaskInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     receiveTaskInstance.setState(ActtivityStateEnum.WAITING);
 
     ReceiveTask receiveTask = receiveTaskInstance.getFlowNode();
@@ -66,7 +70,8 @@ public class ReceiveTaskInstanceProcessor
       ProcessInstance processInstance,
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     receiveTaskInstance.setState(ActtivityStateEnum.FINISHED);
     terminatingSubscriptionInstanceResult(instanceResult, receiveTaskInstance);
   }
@@ -77,7 +82,8 @@ public class ReceiveTaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       ReceiveTaskInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     terminatingSubscriptionInstanceResult(instanceResult, instance);
   }
 

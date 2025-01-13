@@ -26,6 +26,7 @@ import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.VariablesMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 
 @ApplicationScoped
 public class FlowNodeInstanceProcessorProvider {
@@ -48,8 +49,9 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject VariablesMapper variablesMapper;
   @Inject ProcessInstanceMapper processInstanceMapper;
   @Inject ObjectMapper objectMapper;
+  @Inject Clock clock;
 
-  public FLowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
+  public FlowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
     if (element instanceof ThrowEvent throwEvent) {
       return getProcessorForThrowEvent(throwEvent);
     } else if (element instanceof CatchEvent catchEvent) {
@@ -63,7 +65,7 @@ public class FlowNodeInstanceProcessorProvider {
     throw new IllegalStateException("Unknown element type: " + element.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForGateway(Gateway gateway) {
+  private FlowNodeInstanceProcessor<?, ?, ?> getProcessorForGateway(Gateway gateway) {
 
     if (gateway instanceof ExclusiveGateway) {
       return exclusiveGatewayProcessor;
@@ -75,7 +77,7 @@ public class FlowNodeInstanceProcessorProvider {
     throw new IllegalStateException("Unknown gateway element type: " + gateway.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent throwEvent) {
+  private FlowNodeInstanceProcessor<?, ?, ?> getProcessorForThrowEvent(ThrowEvent throwEvent) {
     if (throwEvent instanceof EndEvent) {
       return endEventProcessor;
     } else if (throwEvent instanceof IntermediateThrowEvent) {
@@ -84,7 +86,7 @@ public class FlowNodeInstanceProcessorProvider {
     throw new IllegalStateException("Unknown throw element type: " + throwEvent.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getProcessorForCatchEvent(CatchEvent element) {
+  private FlowNodeInstanceProcessor<?, ?, ?> getProcessorForCatchEvent(CatchEvent element) {
     if (element instanceof StartEvent) {
       return startEventProcessor;
     } else if (element instanceof IntermediateCatchEvent) {
@@ -95,7 +97,7 @@ public class FlowNodeInstanceProcessorProvider {
     throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }
 
-  private FLowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(Activity element) {
+  private FlowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(Activity element) {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
@@ -116,7 +118,12 @@ public class FlowNodeInstanceProcessorProvider {
     if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
       return new MultiInstanceProcessor(
-          feelExpressionHandler, processor, variablesMapper, processInstanceMapper, objectMapper);
+          feelExpressionHandler,
+          processor,
+          variablesMapper,
+          processInstanceMapper,
+          objectMapper,
+          clock);
     }
     return processor;
   }

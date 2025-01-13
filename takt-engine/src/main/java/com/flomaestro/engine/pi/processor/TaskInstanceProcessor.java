@@ -5,6 +5,7 @@ import com.flomaestro.engine.pd.model.Task;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.TaskInstance;
@@ -13,6 +14,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Clock;
 import lombok.NoArgsConstructor;
 
 @ApplicationScoped
@@ -24,8 +26,9 @@ public class TaskInstanceProcessor
   public TaskInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper);
+      VariablesMapper variablesMapper,
+      Clock clock) {
+    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
   }
 
   @Override
@@ -34,7 +37,8 @@ public class TaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       TaskInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     // Nothing to do here
   }
 
@@ -46,7 +50,8 @@ public class TaskInstanceProcessor
       TaskInstance flowNodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables) {
+      Variables variables,
+      ProcessingStatistics processingStatistics) {
     flowNodeInstance.setState(ActtivityStateEnum.FINISHED);
   }
 
@@ -59,7 +64,8 @@ public class TaskInstanceProcessor
       ProcessInstance processInstance,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
-      Variables processInstanceVariables) {
+      Variables processInstanceVariables,
+      ProcessingStatistics processingStatistics) {
     // Nothing to do here
   }
 }

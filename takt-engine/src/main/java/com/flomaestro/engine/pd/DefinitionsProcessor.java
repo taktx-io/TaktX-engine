@@ -9,7 +9,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
 import com.flomaestro.takt.xml.BpmnParser;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +33,15 @@ public class DefinitionsProcessor
   private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionCache =
       new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
+  private final Clock clock;
 
   public DefinitionsProcessor(
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
-      MessageSchedulerFactory messageSchedulerFactory) {
+      MessageSchedulerFactory messageSchedulerFactory,
+      Clock clock) {
     this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
     this.messageSchedulerFactory = messageSchedulerFactory;
+    this.clock = clock;
   }
 
   @Override
@@ -55,7 +58,7 @@ public class DefinitionsProcessor
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
-            tenantNamespaceNameWrapper, messageSchedulerFactory, context);
+            tenantNamespaceNameWrapper, messageSchedulerFactory, context, clock);
   }
 
   @Override
@@ -115,10 +118,7 @@ public class DefinitionsProcessor
           .forEachRemaining(
               entry -> {
                 if (entry.value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
-                  //                  log.info(
-                  //                      "Forwarding active process definition for process
-                  // definition {}", entry.key);
-                  context.forward(new Record(entry.key, entry.value, Instant.now().toEpochMilli()));
+                  context.forward(new Record(entry.key, entry.value, clock.millis()));
                 }
               });
     }

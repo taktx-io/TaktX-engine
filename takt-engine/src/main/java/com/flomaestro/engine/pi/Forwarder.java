@@ -32,8 +32,8 @@ import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
@@ -48,6 +48,7 @@ public class Forwarder {
   private final PathExtractor pathExtractor;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final DtoMapper dtoMapper;
+  private final Clock clock;
 
   public void forward(
       ProcessorContext<Object, Object> context,
@@ -68,14 +69,14 @@ public class Forwarder {
   private void forwardInstanceUpdates(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
 
-    Queue<InstanceUpdateDTO> processInstanceUpdates = instanceResult.getProcessInstanceUpdates();
+    Queue<InstanceUpdateDTO> processInstanceUpdates = instanceResult.getInstanceUpdates();
     while (!processInstanceUpdates.isEmpty()) {
       InstanceUpdateDTO processInstanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
               processInstanceUpdate.getProcessInstanceKey(),
               processInstanceUpdate,
-              Instant.now().toEpochMilli()));
+              clock.millis()));
     }
   }
 
@@ -85,7 +86,7 @@ public class Forwarder {
     Queue<ScheduleKeyDTO> cancelSchedules = instanceResult.getCancelSchedules();
     while (!cancelSchedules.isEmpty()) {
       ScheduleKeyDTO scheduledKey = cancelSchedules.poll();
-      context.forward(new Record<>(scheduledKey, null, Instant.now().toEpochMilli()));
+      context.forward(new Record<>(scheduledKey, null, clock.millis()));
     }
   }
 
@@ -115,7 +116,7 @@ public class Forwarder {
               continueFlowElementTrigger,
               info.variables());
       catchEventInstance.addScheduledKey(scheduledKey);
-      context.forward(new Record<>(scheduledKey, schedule, Instant.now().toEpochMilli()));
+      context.forward(new Record<>(scheduledKey, schedule, clock.millis()));
     }
   }
 
@@ -157,7 +158,7 @@ public class Forwarder {
               scheduleKey, timerEventDefinition, externalTaskResponseResultDTO, Variables.empty());
 
       externalTaskInstance.addScheduledKey(scheduleKey);
-      context.forward(new Record<>(scheduleKey, schedule, Instant.now().toEpochMilli()));
+      context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
     }
   }
 
@@ -183,10 +184,7 @@ public class Forwarder {
       instance.addMessageSubscriptionWithCorrelationKey(
           messageEventKey, messageEvent.correlationKey());
       context.forward(
-          new Record<>(
-              messageEventKey,
-              correlationMessageSubscriptionTrigger,
-              Instant.now().toEpochMilli()));
+          new Record<>(messageEventKey, correlationMessageSubscriptionTrigger, clock.millis()));
     }
 
     Queue<TerminateCorrelationSubscriptionMessageEventInfo>
@@ -202,7 +200,7 @@ public class Forwarder {
           new Record<>(
               terminateSubscriptionTrigger.toMessageEventKey(),
               terminateSubscriptionTrigger,
-              Instant.now().toEpochMilli()));
+              clock.millis()));
     }
   }
 
@@ -212,8 +210,7 @@ public class Forwarder {
     while (!newTerminateCommands.isEmpty()) {
       UUID processInstanceKey = newTerminateCommands.poll();
       TerminateTriggerDTO terminateTrigger = new TerminateTriggerDTO(processInstanceKey, List.of());
-      context.forward(
-          new Record<>(processInstanceKey, terminateTrigger, Instant.now().toEpochMilli()));
+      context.forward(new Record<>(processInstanceKey, terminateTrigger, clock.millis()));
     }
   }
 
@@ -223,8 +220,7 @@ public class Forwarder {
     while (!continuations.isEmpty()) {
       ContinueFlowElementTriggerDTO continuation = continuations.poll();
       context.forward(
-          new Record<>(
-              continuation.getProcessInstanceKey(), continuation, Instant.now().toEpochMilli()));
+          new Record<>(continuation.getProcessInstanceKey(), continuation, clock.millis()));
     }
   }
 
@@ -246,8 +242,7 @@ public class Forwarder {
               variablesMapper.toDTO(newStartCommand.variables()));
 
       context.forward(
-          new Record<>(
-              newStartCommand.processInstanceKey(), startCommand, Instant.now().toEpochMilli()));
+          new Record<>(newStartCommand.processInstanceKey(), startCommand, clock.millis()));
     }
   }
 
@@ -267,7 +262,7 @@ public class Forwarder {
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceKey(),
                 newExternalTaskTrigger,
-                Instant.now().toEpochMilli()));
+                clock.millis()));
       } else {
         // Schedule the external task
         ScheduleKeyDTO scheduledKey =
@@ -276,7 +271,7 @@ public class Forwarder {
                 externalTask.instance().getElementInstanceId());
         OneTimeSchedulerDTO oneTimeScheduler =
             new OneTimeSchedulerDTO(scheduledKey, newExternalTaskTrigger, externalTask.startTime());
-        context.forward(new Record<>(scheduledKey, oneTimeScheduler, Instant.now().toEpochMilli()));
+        context.forward(new Record<>(scheduledKey, oneTimeScheduler, clock.millis()));
       }
     }
   }

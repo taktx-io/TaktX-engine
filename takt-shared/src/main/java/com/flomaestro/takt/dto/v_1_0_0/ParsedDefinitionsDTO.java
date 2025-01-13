@@ -6,10 +6,12 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @Builder
+@ToString
 @NoArgsConstructor
 public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
   @JsonProperty("dk")
