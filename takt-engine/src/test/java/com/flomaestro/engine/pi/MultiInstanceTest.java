@@ -175,7 +175,7 @@ class MultiInstanceTest {
 
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
-        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-parallel.bpmn")
         .startProcessInstance(
             VariablesDTO.of(
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))

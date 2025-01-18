@@ -62,6 +62,9 @@ public abstract class FlowNodeInstanceProcessor<
     if (!flownodeInstance.stateAllowsStart()) {
       return;
     }
+
+    flownodeInstance.setStartedState();
+
     processingStatistics.increaseFlowNodesStarted();
 
     long now = clock.instant().toEpochMilli();

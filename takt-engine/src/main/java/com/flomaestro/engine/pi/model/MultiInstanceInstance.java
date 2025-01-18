@@ -22,7 +22,8 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
   public void setState(ActtivityStateEnum state) {
     super.setState(state);
     switch (state) {
-      case READY -> flowNodeInstances.setState(ProcessInstanceState.START);
+      case INITIAL -> flowNodeInstances.setState(ProcessInstanceState.START);
+      case STARTED -> flowNodeInstances.setState(ProcessInstanceState.START);
       case WAITING -> flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
       case TERMINATED -> flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
       case FAILED -> flowNodeInstances.setState(ProcessInstanceState.FAILED);

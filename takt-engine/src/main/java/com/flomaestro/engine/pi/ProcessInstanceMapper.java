@@ -85,6 +85,7 @@ public interface ProcessInstanceMapper {
           "java((com.flomaestro.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   BoundaryEventInstance map(BoundaryEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -93,6 +94,7 @@ public interface ProcessInstanceMapper {
           "java((com.flomaestro.engine.pd.model.StartEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   StartEventInstance map(StartEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -101,6 +103,7 @@ public interface ProcessInstanceMapper {
           "java((com.flomaestro.engine.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   IntermediateCatchEventInstance map(
       IntermediateCatchEventInstanceDTO source, @Context FlowElements flowElements);
 
@@ -128,6 +131,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   ServiceTaskInstance map(ServiceTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -137,6 +141,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   SendTaskInstance map(SendTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -146,6 +151,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   ReceiveTaskInstance map(ReceiveTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -155,6 +161,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   @Mapping(
       target = "flowNodeInstances",
       expression =
@@ -167,6 +174,7 @@ public interface ProcessInstanceMapper {
           "java((com.flomaestro.engine.pd.model.CallActivity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "attachedBoundaryEventInstances", ignore = true)
   CallActivityInstance map(CallActivityInstanceDTO source, @Context FlowElements flowElements);
 
@@ -175,6 +183,8 @@ public interface ProcessInstanceMapper {
       expression =
           "java((com.flomaestro.engine.pd.model.Activity)flowElements.getFlowNode(source.getElementId()).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "flowNodeInstances.stateChanged", ignore = true)
   @Mapping(target = "flowNodeInstances.instances", ignore = true)
   @Mapping(target = "flowNodeInstances.parentFlowNodeInstances", ignore = true)

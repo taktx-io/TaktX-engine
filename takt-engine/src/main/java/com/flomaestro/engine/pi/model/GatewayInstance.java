@@ -38,6 +38,26 @@ public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstanc
   }
 
   @Override
+  public boolean wasAwaiting() {
+    return false;
+  }
+
+  @Override
+  public void setStartedState() {
+    // Do nothing
+  }
+
+  @Override
+  public boolean stateChanged() {
+    return false;
+  }
+
+  @Override
+  public boolean isAwaiting() {
+    return false;
+  }
+
+  @Override
   public boolean isCompleted() {
     return true;
   }

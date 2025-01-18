@@ -105,12 +105,13 @@ public class ProcessInstanceProcessor
     context.schedule(
         Duration.ofMillis(10000),
         PunctuationType.WALL_CLOCK_TIME,
-        timestamp -> stats.forEach(
-            (statsKey, statistics) -> {
-              ProcessingStatisticsDTO statisticsDto = statistics.toDTO();
-              statistics.reset();
-              context.forward(new Record<>(statsKey, statisticsDto, timestamp));
-            }));
+        timestamp ->
+            stats.forEach(
+                (statsKey, statistics) -> {
+                  ProcessingStatisticsDTO statisticsDto = statistics.toDTO();
+                  statistics.reset();
+                  context.forward(new Record<>(statsKey, statisticsDto, timestamp));
+                }));
   }
 
   @Override
@@ -337,6 +338,7 @@ public class ProcessInstanceProcessor
             instanceResult,
             trigger,
             processInstance,
+            processInstance.getFlowNodeInstances(),
             processInstanceVariables,
             flowElements,
             processingStatistics);
@@ -426,14 +428,15 @@ public class ProcessInstanceProcessor
       dirtyVariablesDTO
           .getVariables()
           .forEach(
-              (k, v) -> variablesStore.put(
-                  new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v));
+              (k, v) ->
+                  variablesStore.put(
+                      new VariableKeyDTO(processInstance.getProcessInstanceKey(), k), v));
     }
   }
 
   private static FlowNodeInstancesDTO flowNodeInstancesToDTO(FlowNodeInstances flowNodeInstances) {
     return new FlowNodeInstancesDTO(
-        flowNodeInstances.getState(), flowNodeInstances.getFlowNodeInstancesId());
+        flowNodeInstances.getState(), flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstances.getActiveCnt());
   }
 
   private void storeFlowNodeInstances(FlowNodeInstances flowNodeInstances) {
@@ -469,8 +472,7 @@ public class ProcessInstanceProcessor
 
     try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =
         this.flowNodeInstanceStore.range(start, end)) {
-      range.forEachRemaining(
-          r -> this.flowNodeInstanceStore.delete(r.key));
+      range.forEachRemaining(r -> this.flowNodeInstanceStore.delete(r.key));
     }
     VariableKeyDTO variableStartKey = new VariableKeyDTO(processInstanceKey, "");
     VariableKeyDTO variableEndKey = new VariableKeyDTO(processInstanceKey, "\u00ff");

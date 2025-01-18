@@ -14,15 +14,15 @@ import lombok.Setter;
 @Getter
 public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInstance<N> {
   private int loopCnt;
-  private ActtivityStateEnum state;
-  private Set<UUID> boundaryEventIds;
-  private Set<BoundaryEventInstance> attachedBoundaryEventInstances;
+  private ActtivityStateEnum state = ActtivityStateEnum.INITIAL;
+  private boolean stateChanged = false;
+  private boolean stateWasWaiting = false;
+  private Set<UUID> boundaryEventIds = new HashSet<>();
+
+  private Set<BoundaryEventInstance> attachedBoundaryEventInstances = new HashSet<>();
 
   protected ActivityInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
-    this.state = ActtivityStateEnum.READY;
-    this.boundaryEventIds = new HashSet<>();
-    this.attachedBoundaryEventInstances = new HashSet<>();
   }
 
   public void addBoundaryEvent(BoundaryEventInstance boundaryEventInstance) {
@@ -49,8 +49,33 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
   }
 
   @Override
+  public void setStartedState() {
+    setState(ActtivityStateEnum.STARTED);
+  }
+
+  public void setState(ActtivityStateEnum state) {
+    if (this.state != ActtivityStateEnum.INITIAL && this.state != state) {
+      stateChanged = true;
+    }
+    if (state == ActtivityStateEnum.WAITING) {
+      stateWasWaiting = true;
+    }
+    this.state = state;
+  }
+
+  @Override
+  public boolean wasAwaiting() {
+    return stateWasWaiting;
+  }
+
+  @Override
+  public boolean stateChanged() {
+    return stateChanged;
+  }
+
+  @Override
   public boolean stateAllowsStart() {
-    return state == ActtivityStateEnum.READY;
+    return state == ActtivityStateEnum.INITIAL;
   }
 
   @Override
@@ -60,12 +85,17 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   @Override
   public boolean stateAllowsTerminate() {
-    return state == ActtivityStateEnum.READY || state == ActtivityStateEnum.WAITING;
+    return state == ActtivityStateEnum.INITIAL || state == ActtivityStateEnum.WAITING;
   }
 
   @Override
   public boolean isNotAwaiting() {
     return state == ActtivityStateEnum.FINISHED || state == ActtivityStateEnum.TERMINATED;
+  }
+
+  @Override
+  public boolean isAwaiting() {
+    return state == ActtivityStateEnum.WAITING;
   }
 
   @Override
@@ -75,7 +105,7 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   @Override
   public void terminate() {
-    state = ActtivityStateEnum.TERMINATED;
+    setState(ActtivityStateEnum.TERMINATED);
   }
 
   @Override

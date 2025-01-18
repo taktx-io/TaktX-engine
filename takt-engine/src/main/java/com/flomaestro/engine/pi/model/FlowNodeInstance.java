@@ -52,4 +52,12 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   public void setDirty() {
     dirty = true;
   }
+
+  public abstract void setStartedState();
+
+  public abstract boolean stateChanged();
+
+  public abstract boolean isAwaiting();
+
+  public abstract boolean wasAwaiting();
 }

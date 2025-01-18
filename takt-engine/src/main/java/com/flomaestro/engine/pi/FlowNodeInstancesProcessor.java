@@ -73,6 +73,12 @@ public class FlowNodeInstancesProcessor {
         processInstance,
         processInstanceVariables,
         processingStatistics);
+
+    flowNodeInstances.determineImplicitCompletedState();
+
+    if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
+      continueParentInstance(instanceResult, processInstance, processInstanceVariables);
+    }
   }
 
   public void processContinue(
@@ -115,12 +121,19 @@ public class FlowNodeInstancesProcessor {
         processInstance,
         processInstanceVariables,
         processingStatistics);
+
+    flowNodeInstances.determineImplicitCompletedState();
+
+    if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
+      continueParentInstance(instanceResult, processInstance, processInstanceVariables);
+    }
   }
 
   public void processTerminate(
       InstanceResult instanceResult,
       TerminateTriggerDTO trigger,
       ProcessInstance processInstance,
+      FlowNodeInstances flowNodeInstances,
       Variables processInstanceVariables,
       FlowElements flowElements,
       ProcessingStatistics processingStatistics) {
@@ -129,7 +142,6 @@ public class FlowNodeInstancesProcessor {
 
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
-      FlowNodeInstances flowNodeInstances = processInstance.getFlowNodeInstances();
       flowNodeInstances
           .getInstances()
           .values()
@@ -149,7 +161,6 @@ public class FlowNodeInstancesProcessor {
       flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
     } else {
       // Terminate the specific element instance in the process instance
-      FlowNodeInstances flowNodeInstances = processInstance.getFlowNodeInstances();
       FlowNodeInstance<?> instance =
           flowNodeInstances.getInstanceWithInstanceId(
               trigger.getElementInstanceIdPath().getFirst());
@@ -167,14 +178,16 @@ public class FlowNodeInstancesProcessor {
             processingStatistics);
       }
     }
-    continueNewInstances(
-        instanceResult,
-        directInstanceResult,
-        processInstance.getFlowNodeInstances(),
-        flowElements,
-        processInstance,
-        processInstanceVariables,
-        processingStatistics);
+    //    continueNewInstances(
+    //        instanceResult,
+    //        directInstanceResult,
+    //        flowNodeInstances,
+    //        flowElements,
+    //        processInstance,
+    //        processInstanceVariables,
+    //        processingStatistics);
+    flowNodeInstances.determineImplicitCompletedState();
+
   }
 
   protected void continueNewInstances(
@@ -194,10 +207,6 @@ public class FlowNodeInstancesProcessor {
         flowElements,
         processInstanceVariables,
         processingStatistics);
-
-    if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
-      continueParentInstance(instanceResult, processInstance, processInstanceVariables);
-    }
   }
 
   private void continueParentInstance(

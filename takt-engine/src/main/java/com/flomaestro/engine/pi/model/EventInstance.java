@@ -16,6 +16,26 @@ public abstract class EventInstance<N extends Event> extends FlowNodeInstance<N>
   }
 
   @Override
+  public boolean isAwaiting() {
+    return false;
+  }
+
+  @Override
+  public void setStartedState() {
+    // Do nothing
+  }
+
+  @Override
+  public boolean wasAwaiting() {
+    return false;
+  }
+
+  @Override
+  public boolean stateChanged() {
+    return false;
+  }
+
+  @Override
   public boolean canSelectNextNodeContinue() {
     return isCompleted();
   }

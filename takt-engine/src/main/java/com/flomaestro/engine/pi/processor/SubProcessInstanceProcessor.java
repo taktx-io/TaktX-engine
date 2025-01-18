@@ -9,7 +9,6 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.VariablesMapper;
-import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.SubProcessInstance;
@@ -18,9 +17,11 @@ import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
+import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.List;
 import lombok.NoArgsConstructor;
 
 @ApplicationScoped
@@ -123,28 +124,15 @@ public class SubProcessInstanceProcessor
     FlowNodeInstances flowNodeInstances = subProcessInstance.getFlowNodeInstances();
     flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
 
-    DirectInstanceResult directInstanceResult1 = DirectInstanceResult.empty();
-    for (FlowNodeInstance<?> fLowNodeInstance : flowNodeInstances.getInstances().values()) {
-      FlowNodeInstanceProcessor<?, ?, ?> processor =
-          processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
-
-      processor.processTerminate(
-          instanceResult,
-          directInstanceResult1,
-          fLowNodeInstance,
-          processInstance,
-          processInstanceVariables,
-          flowNodeInstances,
-          processingStatistics);
-
-      flowInstanceRunner.continueNewInstances(
-          instanceResult,
-          directInstanceResult1,
-          flowNodeInstances,
-          processInstance,
-          subProcessInstance.getFlowNode().getElements(),
-          processInstanceVariables,
-          processingStatistics);
-    }
+    TerminateTriggerDTO trigger =
+        new TerminateTriggerDTO(processInstance.getProcessInstanceKey(), List.of());
+    flowNodeInstancesProcessor.processTerminate(
+        instanceResult,
+        trigger,
+        processInstance,
+        flowNodeInstances,
+        processInstanceVariables,
+        subProcessInstance.getFlowNode().getElements(),
+        processingStatistics);
   }
 }

@@ -26,11 +26,6 @@ public class StartEventInstance extends CatchEventInstance<StartEvent> {
   }
 
   @Override
-  public boolean isNotAwaiting() {
-    return true;
-  }
-
-  @Override
   public boolean isCompleted() {
     return true;
   }

@@ -43,8 +43,6 @@ public class FlowInstanceRunner {
           processInstanceVariables,
           processingStatistics);
     }
-
-    flowNodeInstances.determineImplicitCompletedState();
   }
 
   private void processDirectTriggers(

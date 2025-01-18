@@ -115,8 +115,8 @@ public class MultiInstanceProcessor
         }
       }
 
-      if (multiInstanceInstance.getLoopCnt() >= (inputCollection.size())
-          && multiInstanceInstance.getFlowNodeInstances().allCompleted()) {
+      multiInstanceInstance.getFlowNodeInstances().determineImplicitCompletedState();
+      if (multiInstanceInstance.getFlowNodeInstances().getState().isFinished()) {
         multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
       }
     }

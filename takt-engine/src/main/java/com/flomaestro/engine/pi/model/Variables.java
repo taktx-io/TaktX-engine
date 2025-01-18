@@ -15,19 +15,18 @@ public class Variables {
   private final Function<String, JsonNode> variableProvider;
   private final Set<String> dirty;
 
-  public Variables(Set<String> variableNames, Function<String, JsonNode> variableProvider) {
+  public Variables(Function<String, JsonNode> variableProvider) {
     this.variables = new HashMap<>();
-    variableNames.forEach(key -> this.variables.put(key, null));
     this.variableProvider = variableProvider;
     this.dirty = new HashSet<>();
   }
 
   public static Variables empty() {
-    return new Variables(Set.of(), key -> null);
+    return new Variables(key -> null);
   }
 
   public static Variables empty(Function<String, JsonNode> variableProvider) {
-    return new Variables(Set.of(), variableProvider);
+    return new Variables(variableProvider);
   }
 
   public JsonNode get(String key) {

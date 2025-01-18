@@ -3,7 +3,8 @@ package com.flomaestro.takt.dto.v_1_0_0;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ActtivityStateEnum {
-  READY("R"),
+  INITIAL("I"),
+  STARTED("S"),
   WAITING("W"),
   TERMINATED("T"),
   FAILED("X"),

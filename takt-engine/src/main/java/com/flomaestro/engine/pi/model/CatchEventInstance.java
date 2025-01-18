@@ -20,29 +20,48 @@ import lombok.Setter;
 @NoArgsConstructor
 public abstract class CatchEventInstance<N extends CatchEvent> extends EventInstance<N>
     implements ReceivingMessageInstance, FlowNodeInstanceWithScheduleKeys {
-  private CatchEventStateEnum state;
-
-  private Set<ScheduleKeyDTO> scheduledKeys;
-  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
-  private Set<EscalationSubscription> escalationSubscriptions;
-  private Set<ErrorSubscription> errorSubscriptions;
-  private boolean catchAllEscalations;
-  private boolean catchAllErrors;
+  private CatchEventStateEnum state = CatchEventStateEnum.INITIAL;
+  private boolean stateChanged = false;
+  private boolean wasWaiting = false;
+  private Set<ScheduleKeyDTO> scheduledKeys = new HashSet<>();
+  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys = new HashMap<>();
+  private Set<EscalationSubscription> escalationSubscriptions = new HashSet<>();
+  private Set<ErrorSubscription> errorSubscriptions = new HashSet<>();
+  private boolean catchAllEscalations = false;
+  private boolean catchAllErrors = false;
 
   protected CatchEventInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
-    state = CatchEventStateEnum.READY;
-    scheduledKeys = new HashSet<>();
-    messageEventKeys = new HashMap<>();
-    escalationSubscriptions = new HashSet<>();
-    errorSubscriptions = new HashSet<>();
-    catchAllEscalations = false;
-    catchAllErrors = false;
   }
 
   @Override
   public boolean stateAllowsStart() {
-    return state == CatchEventStateEnum.READY;
+    return state == CatchEventStateEnum.INITIAL;
+  }
+
+  @Override
+  public void setStartedState() {
+    setState(CatchEventStateEnum.STARTED);
+  }
+
+  @Override
+  public boolean wasAwaiting() {
+    return wasWaiting;
+  }
+
+  public void setState(CatchEventStateEnum state) {
+    if (this.state != CatchEventStateEnum.INITIAL && this.state != state) {
+      stateChanged = true;
+    }
+    if (state == CatchEventStateEnum.WAITING) {
+      wasWaiting = true;
+    }
+    this.state = state;
+  }
+
+  @Override
+  public boolean stateChanged() {
+    return stateChanged;
   }
 
   @Override
@@ -56,20 +75,25 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   }
 
   @Override
+  public boolean isAwaiting() {
+    return state == CatchEventStateEnum.WAITING;
+  }
+
+  @Override
   public boolean isCompleted() {
     return state == CatchEventStateEnum.FINISHED || state == CatchEventStateEnum.TERMINATED;
   }
 
   @Override
   public boolean stateAllowsTerminate() {
-    return state == CatchEventStateEnum.WAITING || state == CatchEventStateEnum.READY;
+    return state == CatchEventStateEnum.WAITING || state == CatchEventStateEnum.INITIAL;
   }
 
   @Override
   public void terminate() {
     // Do nothing
     if (stateAllowsTerminate()) {
-      state = CatchEventStateEnum.TERMINATED;
+      setState(CatchEventStateEnum.TERMINATED);
     }
   }
 
