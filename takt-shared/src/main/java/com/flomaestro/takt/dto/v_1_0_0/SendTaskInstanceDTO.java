@@ -19,7 +19,6 @@ public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       int attempt,
       Set<UUID> boundaryEventIds,
       List<ScheduleKeyDTO> scheduledKeys) {
@@ -28,7 +27,6 @@ public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {
         elementInstanceId,
         elementId,
         passedCnt,
-        loopCnt,
         boundaryEventIds,
         attempt,
         scheduledKeys);

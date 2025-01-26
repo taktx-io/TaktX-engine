@@ -33,7 +33,6 @@ public class ProcessInstanceProducer {
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceKey,
-            Constants.NONE_UUID,
             Constants.NONE,
             List.of(),
             List.of(),

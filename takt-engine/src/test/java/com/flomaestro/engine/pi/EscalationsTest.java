@@ -9,7 +9,6 @@ import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
-import java.time.Duration;
 import javax.xml.parsers.ParserConfigurationException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -219,7 +218,7 @@ class EscalationsTest {
             "interrupting",
             "escalation message",
             VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted(Duration.ofHours(1))
+        .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")

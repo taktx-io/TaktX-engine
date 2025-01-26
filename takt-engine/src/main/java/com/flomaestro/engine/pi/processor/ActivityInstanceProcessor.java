@@ -1,51 +1,62 @@
 package com.flomaestro.engine.pi.processor;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.Activity;
 import com.flomaestro.engine.pd.model.FlowElements;
+import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.engine.pd.model.SequenceFlow;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.BoundaryEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
+import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import java.time.Clock;
 import java.util.Set;
+import java.util.UUID;
 import lombok.NoArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class ActivityInstanceProcessor<
         E extends Activity, I extends ActivityInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FlowNodeInstanceProcessor<E, I, C> {
 
+  protected FeelExpressionHandler feelExpressionHandler;
+
   protected ActivityInstanceProcessor(
+      FeelExpressionHandler feelExpressionHandler,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, clock);
+    this.feelExpressionHandler = feelExpressionHandler;
   }
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
 
     processStartSpecificActivityInstance(
+        flowNodeInstanceStore,
         instanceResult,
         directInstanceResult,
         flowElements,
@@ -63,6 +74,8 @@ public abstract class ActivityInstanceProcessor<
               boundaryEvent -> {
                 BoundaryEventInstance boundaryEventInstance =
                     new BoundaryEventInstance(flownodeInstance.getParentInstance(), boundaryEvent);
+                boundaryEventInstance.setState(CatchEventStateEnum.INITIAL);
+
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEvent(boundaryEventInstance);
@@ -71,10 +84,14 @@ public abstract class ActivityInstanceProcessor<
                     new FlowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
               });
     }
+
+    handleFinishedIteration(flownodeInstance, variables);
+
   }
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -82,11 +99,12 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
 
     processContinueSpecificActivityInstance(
+        flowNodeInstanceStore,
         instanceResult,
         directInstanceResult,
         subProcessLevel,
@@ -94,28 +112,32 @@ public abstract class ActivityInstanceProcessor<
         processInstance,
         flowNodeInstance,
         trigger,
-        processInstanceVariables,
+        variables,
         processingStatistics);
 
-    if (flowNodeInstance.getState() == ActtivityStateEnum.FINISHED) {
+    if (flowNodeInstance.isCompleted()) {
       flowNodeInstance
           .getAttachedBoundaryEventInstances()
           .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
     }
+
+    handleFinishedIteration(flowNodeInstance, variables);
   }
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     instance
         .getAttachedBoundaryEventInstances()
         .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
     processTerminateSpecificActivityInstance(
+        flowNodeInstanceStore,
         instanceResult,
         directInstanceResult,
         instance,
@@ -125,16 +147,18 @@ public abstract class ActivityInstanceProcessor<
   }
 
   protected abstract void processStartSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processContinueSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -142,15 +166,16 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       C trigger,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics);
 
   @Override
@@ -158,7 +183,20 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      FlowNodeInstanceVariables variables) {
+    if (flowNodeInstance.isIteration()) {
+      return Set.of();
+    }
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
+  }
+
+
+  private void handleFinishedIteration(ActivityInstance<?> flownodeInstance, FlowNodeInstanceVariables variables) {
+    if(flownodeInstance.getState() == ActtivityStateEnum.FINISHED && flownodeInstance.isIteration()) {
+      FlowNode flowNode = flownodeInstance.getFlowNode();
+      String outputElement = ((Activity) flowNode).getLoopCharacteristics().getOutputElement();
+      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variables);
+      flownodeInstance.setOutputElement(jsonNode);
+    }
   }
 }

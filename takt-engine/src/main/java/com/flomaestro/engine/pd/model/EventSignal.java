@@ -13,13 +13,15 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public abstract class EventSignal {
   @Setter private FlowNodeInstance<?> sourceInstance;
+  @Setter private FlowNodeInstance<?> currentInstance;
+
   private final String name;
 
   public void selectParent() {
-    if (sourceInstance.getParentInstance() != null) {
-      sourceInstance = sourceInstance.getParentInstance();
+    if (currentInstance.getParentInstance() != null) {
+      currentInstance = currentInstance.getParentInstance();
     }
   }
 
-  public abstract boolean bubbleUp();
+  public abstract boolean bubblesUp();
 }

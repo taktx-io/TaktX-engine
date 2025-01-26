@@ -21,7 +21,9 @@ public class ExternalTaskInstance<N extends ExternalTask> extends ActivityInstan
   }
 
   public int increaseAttempt() {
+    setDirty();
     return ++attempt;
+
   }
 
   @Override

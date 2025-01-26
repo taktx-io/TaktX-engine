@@ -16,6 +16,7 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
 
   public MultiInstanceInstance(Activity activity, FlowNodeInstance<?> parentInstance) {
     super(parentInstance, activity);
+    setState(ActtivityStateEnum.INITIAL);
   }
 
   @Override
@@ -23,7 +24,7 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
     super.setState(state);
     switch (state) {
       case INITIAL -> flowNodeInstances.setState(ProcessInstanceState.START);
-      case STARTED -> flowNodeInstances.setState(ProcessInstanceState.START);
+      case STARTED -> flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
       case WAITING -> flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
       case TERMINATED -> flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
       case FAILED -> flowNodeInstances.setState(ProcessInstanceState.FAILED);

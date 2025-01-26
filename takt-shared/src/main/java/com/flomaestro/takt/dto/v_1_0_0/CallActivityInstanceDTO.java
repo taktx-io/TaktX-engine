@@ -23,9 +23,8 @@ public class CallActivityInstanceDTO extends ActivityInstanceDTO {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       Set<UUID> boundaryEventIds) {
-    super(state, elementId, elementInstanceId, passedCnt, loopCnt, boundaryEventIds);
+    super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
     this.childProcessInstanceId = childProcessInstanceId;
   }
 }

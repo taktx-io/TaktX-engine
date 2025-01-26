@@ -31,6 +31,15 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public void increasePassedCnt() {
     this.passedCnt++;
+    setDirty();
+  }
+
+  public boolean isDirty() {
+    boolean result = dirty;
+    if (!dirty && this instanceof WithFlowNodeInstances withFlowNodeInstances) {
+      result |= withFlowNodeInstances.getFlowNodeInstances().isDirty();
+    }
+    return result;
   }
 
   public abstract boolean stateAllowsStart();
@@ -55,9 +64,13 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public abstract void setStartedState();
 
+  public abstract boolean wasNew();
+
   public abstract boolean stateChanged();
 
   public abstract boolean isAwaiting();
 
   public abstract boolean wasAwaiting();
+
+  public abstract void setInitialState();
 }

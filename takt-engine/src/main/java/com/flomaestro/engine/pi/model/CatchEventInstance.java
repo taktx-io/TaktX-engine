@@ -20,9 +20,10 @@ import lombok.Setter;
 @NoArgsConstructor
 public abstract class CatchEventInstance<N extends CatchEvent> extends EventInstance<N>
     implements ReceivingMessageInstance, FlowNodeInstanceWithScheduleKeys {
-  private CatchEventStateEnum state = CatchEventStateEnum.INITIAL;
+  private CatchEventStateEnum state = null;
   private boolean stateChanged = false;
   private boolean wasWaiting = false;
+  private boolean wasNew = false;
   private Set<ScheduleKeyDTO> scheduledKeys = new HashSet<>();
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys = new HashMap<>();
   private Set<EscalationSubscription> escalationSubscriptions = new HashSet<>();
@@ -32,6 +33,11 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
 
   protected CatchEventInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
+  }
+
+  @Override
+  public void setInitialState() {
+    setState(CatchEventStateEnum.INITIAL);
   }
 
   @Override
@@ -49,9 +55,20 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     return wasWaiting;
   }
 
+  @Override
+  public boolean wasNew() {
+    return wasNew;
+  }
+
   public void setState(CatchEventStateEnum state) {
-    if (this.state != CatchEventStateEnum.INITIAL && this.state != state) {
+    if (this.state == null && state == CatchEventStateEnum.INITIAL) {
+      setDirty();
+    }
+    if (this.state != null &&  this.state != state) {
       stateChanged = true;
+    }
+    if (this.state == CatchEventStateEnum.INITIAL && this.state != state) {
+      wasNew = true;
     }
     if (state == CatchEventStateEnum.WAITING) {
       wasWaiting = true;

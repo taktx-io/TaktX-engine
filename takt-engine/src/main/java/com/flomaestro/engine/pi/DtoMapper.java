@@ -14,6 +14,7 @@ import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.engine.pd.model.InclusiveGateway;
 import com.flomaestro.engine.pd.model.IntermediateCatchEvent;
 import com.flomaestro.engine.pd.model.IntermediateThrowEvent;
+import com.flomaestro.engine.pd.model.IoVariableMapping;
 import com.flomaestro.engine.pd.model.LinkEventDefinition;
 import com.flomaestro.engine.pd.model.MessageEventDefinition;
 import com.flomaestro.engine.pd.model.ParallelGateway;
@@ -39,6 +40,7 @@ import com.flomaestro.takt.dto.v_1_0_0.FlowNodeDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InclusiveGatewayDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateCatchEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IntermediateThrowEventDTO;
+import com.flomaestro.takt.dto.v_1_0_0.IoVariableMappingDTO;
 import com.flomaestro.takt.dto.v_1_0_0.LinkEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ParallelGatewayDTO;
@@ -51,6 +53,7 @@ import com.flomaestro.takt.dto.v_1_0_0.SubProcessDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TaskDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Set;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -173,4 +176,10 @@ public interface DtoMapper {
       throw new IllegalStateException(e);
     }
   }
+
+  IoVariableMappingDTO toDto(IoVariableMapping ioVariableMappings);
+  IoVariableMapping map(IoVariableMappingDTO ioVariableMappings);
+
+  Set<IoVariableMappingDTO> toDto(Set<IoVariableMapping> ioVariableMappings);
+  Set<IoVariableMapping> map(Set<IoVariableMappingDTO> ioVariableMappings);
 }

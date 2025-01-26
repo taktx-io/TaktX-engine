@@ -19,10 +19,9 @@ public class MultiInstanceInstanceDTO extends ActivityInstanceDTO
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       ActtivityStateEnum state,
       FlowNodeInstancesDTO flowNodeInstances) {
-    super(state, elementId, elementInstanceId, passedCnt, loopCnt, new HashSet<>());
+    super(state, elementId, elementInstanceId, passedCnt, new HashSet<>());
     this.flowNodeInstances = flowNodeInstances;
   }
 }

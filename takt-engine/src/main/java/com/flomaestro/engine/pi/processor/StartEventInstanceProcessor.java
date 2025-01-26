@@ -7,10 +7,9 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.StartEventInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -25,11 +24,10 @@ public class StartEventInstanceProcessor
   @Inject
   public StartEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
-      VariablesMapper variablesMapper,
       ProcessInstanceMapper processInstanceMapper,
       FeelExpressionHandler feelExpressionHandler,
       Clock clock) {
-    super(ioMappingProcessor, variablesMapper, processInstanceMapper, feelExpressionHandler, clock);
+    super(ioMappingProcessor, processInstanceMapper, feelExpressionHandler, clock);
   }
 
   @Override
@@ -45,7 +43,7 @@ public class StartEventInstanceProcessor
       FlowElements flowElements,
       StartEventInstance startEventInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     startEventInstance.setState(CatchEventStateEnum.FINISHED);
   }

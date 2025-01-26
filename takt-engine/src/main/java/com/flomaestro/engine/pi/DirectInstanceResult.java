@@ -16,6 +16,7 @@ public class DirectInstanceResult {
   private final List<String> sequenceFlows = new ArrayList<>();
   private final Queue<UUID> terminateInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
+  private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
   private DirectInstanceResult() {}
 
@@ -60,6 +61,15 @@ public class DirectInstanceResult {
     return !newFlowNodeInstanceInfos.isEmpty()
         || !terminateInstances.isEmpty()
         || !events.isEmpty();
+  }
+
+  public void addBubbleUpEvent(EventSignal event) {
+    bubbleUpEvents.add(event);
+  }
+
+
+  public EventSignal pollBubbleUpEvent() {
+    return bubbleUpEvents.poll();
   }
 
   public void addEvent(EventSignal event) {

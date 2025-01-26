@@ -26,8 +26,18 @@ public abstract class EventInstance<N extends Event> extends FlowNodeInstance<N>
   }
 
   @Override
+  public void setInitialState() {
+
+  }
+
+  @Override
   public boolean wasAwaiting() {
     return false;
+  }
+
+  @Override
+  public boolean wasNew() {
+    return true;
   }
 
   @Override

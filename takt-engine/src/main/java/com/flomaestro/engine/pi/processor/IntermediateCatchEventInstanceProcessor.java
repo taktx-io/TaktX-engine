@@ -6,7 +6,6 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.IntermediateCatchEventInstance;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -23,9 +22,8 @@ public class IntermediateCatchEventInstanceProcessor
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, variablesMapper, processInstanceMapper, feelExpressionHandler, clock);
+    super(ioMappingProcessor, processInstanceMapper, feelExpressionHandler, clock);
   }
 
   @Override

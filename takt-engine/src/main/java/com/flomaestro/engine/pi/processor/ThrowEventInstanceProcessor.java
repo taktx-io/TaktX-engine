@@ -7,13 +7,12 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.IntermediateCatchEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ThrowEventInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import java.time.Clock;
 import java.util.Optional;
@@ -27,9 +26,8 @@ public abstract class ThrowEventInstanceProcessor<
   protected ThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, clock);
   }
 
   @Override
@@ -40,7 +38,7 @@ public abstract class ThrowEventInstanceProcessor<
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     flowNodeInstance
         .getFlowNode()
@@ -54,6 +52,7 @@ public abstract class ThrowEventInstanceProcessor<
                     FlowNodeInstance<?> catchEventInstance =
                         new IntermediateCatchEventInstance(
                             flowNodeInstance.getParentInstance(), event);
+                    catchEventInstance.setInitialState();
                     FlowNodeInstanceInfo flowNodeInstanceInfo =
                         new FlowNodeInstanceInfo(catchEventInstance, Constants.NONE);
                     directInstanceResult.addNewFlowNodeInstance(
@@ -74,6 +73,6 @@ public abstract class ThrowEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics);
 }

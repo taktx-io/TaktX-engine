@@ -9,19 +9,21 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceException;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.GatewayInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowConditionDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
@@ -34,21 +36,21 @@ public abstract class GatewayInstanceProcessor<
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, clock);
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I gatewayInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     processStartSpecificGatewayInstance(
         instanceResult,
@@ -62,6 +64,7 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -69,7 +72,7 @@ public abstract class GatewayInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables processInstanceVariables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     // Should never happen
@@ -80,7 +83,7 @@ public abstract class GatewayInstanceProcessor<
       ProcessInstance processInstance,
       I gatewayInstance,
       FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      FlowNodeInstanceVariables variables) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
     if (canTriggerOutputFlows(gatewayInstance, flowNodeInstances)) {
       gatewayInstance.resetFlows();
@@ -122,11 +125,12 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }
@@ -137,7 +141,7 @@ public abstract class GatewayInstanceProcessor<
       FlowElements flowElements,
       I flownodeInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificGatewayInstance(

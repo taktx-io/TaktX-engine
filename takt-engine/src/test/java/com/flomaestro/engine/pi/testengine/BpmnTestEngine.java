@@ -119,10 +119,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return new ProcessInstanceDTO(
         processInstanceUpdate.getProcessInstanceKey(),
         processInstanceUpdate.getParentProcessInstanceKey(),
+        processInstanceUpdate.getFlowNodeInstances(),
         processInstanceUpdate.getParentElementIdPath(),
         processInstanceUpdate.getParentElementInstancePath(),
         processInstanceUpdate.getProcessDefinitionKey(),
-        processInstanceUpdate.getFlowNodeInstances());
+        false,
+        Set.of());
   }
 
   public void close() {
@@ -242,6 +244,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       if (previousProcessInstance == null) {
         latestInstantiatedProcessInstanceKey = processInstanceDTO.getProcessInstanceKey();
       }
+
+      VariablesDTO existingVariables =
+          variablesMap.computeIfAbsent(
+              processInstanceUpdate.getProcessInstanceKey(), k -> VariablesDTO.empty());
+      existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
+
     } else if (instanceUpdate instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
       LOG.info("Received FlowNode instance update: " + instanceUpdate);
 
@@ -373,7 +381,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceKey,
-            Constants.NONE_UUID,
             Constants.NONE,
             List.of(),
             List.of(),

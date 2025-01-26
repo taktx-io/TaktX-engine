@@ -7,15 +7,17 @@ import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.BoundaryEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.engine.pi.processor.BoundaryEventInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessorProvider;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -25,43 +27,47 @@ public class FlowInstanceRunner {
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
 
   public void continueNewInstances(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
       ProcessInstance processInstance,
       FlowElements flowElements,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics) {
 
     while (directInstanceResult.hasDirectTriggers()) {
       processDirectTriggers(
+          flowNodeInstanceStore,
           flowNodeInstances,
           processInstance,
           instanceResult,
           directInstanceResult,
           flowElements,
-          processInstanceVariables,
+          flowNodeInstanceVariables,
           processingStatistics);
     }
   }
 
   private void processDirectTriggers(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowNodeInstances flowNodeInstances,
       ProcessInstance processInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
 
     while (!directInstanceResult.eventsEmpty()) {
       EventSignal event = directInstanceResult.pollEvent();
       processEventByFlowNodeInstance(
+          flowNodeInstanceStore,
           flowNodeInstances,
           flowElements,
           processInstance,
           event,
-          event.getSourceInstance(),
+          event.getCurrentInstance(),
           instanceResult,
           directInstanceResult,
           variables,
@@ -70,16 +76,20 @@ public class FlowInstanceRunner {
 
     while (!directInstanceResult.terminateInstancesIsEmpty()) {
       UUID terminateInstance = directInstanceResult.pollTerminateInstance();
-      FlowNodeInstance<?> activityInstance =
-          flowNodeInstances.getInstanceWithInstanceId(terminateInstance);
-      FlowNode node = activityInstance.getFlowNode();
+      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
+          new StoredFlowNodeInstancesWrapper(flowNodeInstances, flowNodeInstanceStore, flowElements);
+      FlowNodeInstance<?> flowNodeInstance =
+          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
+
+      FlowNode node = flowNodeInstance.getFlowNode();
 
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
       processor.processTerminate(
+          flowNodeInstanceStore,
           instanceResult,
           directInstanceResult,
-          activityInstance,
+          flowNodeInstance,
           processInstance,
           variables,
           flowNodeInstances,
@@ -93,6 +103,7 @@ public class FlowInstanceRunner {
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
       processor.processStart(
+          flowNodeInstanceStore,
           instanceResult,
           directInstanceResult,
           flowElements,
@@ -100,13 +111,13 @@ public class FlowInstanceRunner {
           processInstance,
           instanceInfo.inputSequenceFlowId(),
           variables,
-          false,
           flowNodeInstances,
           processingStatistics);
     }
   }
 
   private void processEventByFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
       ProcessInstance processInstance,
@@ -114,7 +125,7 @@ public class FlowInstanceRunner {
       FlowNodeInstance<?> fLowNodeInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
 
     boolean eventHandled = false;
@@ -159,20 +170,9 @@ public class FlowInstanceRunner {
     }
 
     // Still not handled, bubble up if so defined
-    if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() != null) {
-      event.selectParent();
-      directInstanceResult.addEvent(event);
-      while (directInstanceResult.hasDirectTriggers()) {
-        processDirectTriggers(
-            flowNodeInstances.getParentFlowNodeInstances(),
-            processInstance,
-            instanceResult,
-            directInstanceResult,
-            flowElements.getParentElements(),
-            variables,
-            processingStatistics);
-      }
-    } else if (!eventHandled && event.bubbleUp() && fLowNodeInstance.getParentInstance() == null) {
+    if (!eventHandled && event.bubblesUp() && fLowNodeInstance.getParentInstance() != null) {
+      directInstanceResult.addBubbleUpEvent(event);
+    } else if (!eventHandled && event.bubblesUp() && fLowNodeInstance.getParentInstance() == null) {
       // Still not handled and No more bubbling up possible
       directInstanceResult.addTerminateInstance(event.getSourceInstance().getElementInstanceId());
     }

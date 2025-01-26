@@ -8,44 +8,46 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ReceiveTaskInstance;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.UUID;
+import lombok.NoArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
+@NoArgsConstructor
 public class ReceiveTaskInstanceProcessor
     extends ActivityInstanceProcessor<
         ReceiveTask, ReceiveTaskInstance, ContinueFlowElementTriggerDTO> {
-  private final FeelExpressionHandler feelExpressionHandler;
 
   @Inject
   public ReceiveTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
-    this.feelExpressionHandler = feelExpressionHandler;
+    super(feelExpressionHandler, ioMappingProcessor, processInstanceMapper, clock);
   }
 
   @Override
   protected void processStartSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       ReceiveTaskInstance receiveTaskInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     receiveTaskInstance.setState(ActtivityStateEnum.WAITING);
 
@@ -63,6 +65,7 @@ public class ReceiveTaskInstanceProcessor
 
   @Override
   protected void processContinueSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -70,7 +73,7 @@ public class ReceiveTaskInstanceProcessor
       ProcessInstance processInstance,
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     receiveTaskInstance.setState(ActtivityStateEnum.FINISHED);
     terminatingSubscriptionInstanceResult(instanceResult, receiveTaskInstance);
@@ -78,11 +81,12 @@ public class ReceiveTaskInstanceProcessor
 
   @Override
   protected void processTerminateSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       ReceiveTaskInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     terminatingSubscriptionInstanceResult(instanceResult, instance);
   }

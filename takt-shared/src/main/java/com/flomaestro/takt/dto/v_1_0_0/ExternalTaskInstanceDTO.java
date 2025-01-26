@@ -26,11 +26,10 @@ public abstract class ExternalTaskInstanceDTO extends TaskInstanceDTO {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       Set<UUID> boundaryEventIds,
       int attempt,
       List<ScheduleKeyDTO> scheduledKeys) {
-    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
+    super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds);
     this.attempt = attempt;
     this.scheduledKeys = scheduledKeys;
   }

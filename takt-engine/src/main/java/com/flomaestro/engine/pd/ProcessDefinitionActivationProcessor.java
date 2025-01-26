@@ -1,9 +1,8 @@
 package com.flomaestro.engine.pd;
 
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
-import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
@@ -190,7 +189,7 @@ public class ProcessDefinitionActivationProcessor {
                           processDefinitionKey.getProcessDefinitionId(),
                           UUID.randomUUID(),
                           startEvent),
-                      Variables.empty());
+                      ProcessInstanceVariables.empty());
               context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
             });
   }
@@ -199,7 +198,6 @@ public class ProcessDefinitionActivationProcessor {
       String processDefinitionId, UUID processInstanceKey, StartEventDTO startEvent) {
     return new StartCommandDTO(
         processInstanceKey,
-        Constants.NONE_UUID,
         startEvent.getParentId(),
         List.of(),
         List.of(),

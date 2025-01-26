@@ -13,6 +13,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @EqualsAndHashCode
 public class VariableKeyDTO {
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
+  private UUID flowNodeInstancesId;
+  private UUID elementInstanceId;
   private String variableName;
 }

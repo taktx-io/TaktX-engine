@@ -1,6 +1,5 @@
 package com.flomaestro.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.Activity;
 import com.flomaestro.engine.pd.model.BaseElement;
@@ -23,7 +22,6 @@ import com.flomaestro.engine.pd.model.SubProcess;
 import com.flomaestro.engine.pd.model.Task;
 import com.flomaestro.engine.pd.model.ThrowEvent;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
-import com.flomaestro.engine.pi.VariablesMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -46,9 +44,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   @Inject ReceiveTaskInstanceProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
-  @Inject VariablesMapper variablesMapper;
   @Inject ProcessInstanceMapper processInstanceMapper;
-  @Inject ObjectMapper objectMapper;
   @Inject Clock clock;
 
   public FlowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
@@ -120,9 +116,7 @@ public class FlowNodeInstanceProcessorProvider {
       return new MultiInstanceProcessor(
           feelExpressionHandler,
           processor,
-          variablesMapper,
           processInstanceMapper,
-          objectMapper,
           clock);
     }
     return processor;

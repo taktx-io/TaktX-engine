@@ -156,8 +156,8 @@ class MultiInstanceTest {
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasVariableMatching(
-            "outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
+        .hasCollectioneMatching(
+            "outputCollection", oc -> assertThat(oc).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId(
             "callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
@@ -181,13 +181,27 @@ class MultiInstanceTest {
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasVariableMatching(
-            "outputCollection", oc -> assertThat(oc).isEqualTo(List.of("axxx0", "bxxx1", "cxxx2")))
+        .hasCollectioneMatching(
+            "outputCollection", oc -> assertThat(oc).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId(
             "callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
         .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
         .hasInstantiatedElementWithId("EndEvent_1");
+  }
+
+  @Test
+  void testProcessTaskMultiInstanceExpressionParallel()
+      throws IOException,
+          JAXBException,
+          NoSuchAlgorithmException,
+          ParserConfigurationException,
+          SAXException {
+
+    bpmnTestEngine
+        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-expression-parallel.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilCompleted();
   }
 
   @Test

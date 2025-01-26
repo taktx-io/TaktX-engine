@@ -4,6 +4,7 @@ import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.MultiInstanceInstance;
+import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -24,9 +25,12 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   public final ActivityInstance<?> newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
     if (loopCharacteristics != null && !loopCharacteristics.equals(LoopCharacteristics.NONE)) {
-      return new MultiInstanceInstance(this, parentInstance);
+      MultiInstanceInstance multiInstanceInstance = new MultiInstanceInstance(this, parentInstance);
+      return multiInstanceInstance;
     } else {
-      return newActivityInstance(parentInstance);
+      ActivityInstance<?> activityInstance = newActivityInstance(parentInstance);
+      activityInstance.setState(ActtivityStateEnum.INITIAL);
+      return activityInstance;
     }
   }
 

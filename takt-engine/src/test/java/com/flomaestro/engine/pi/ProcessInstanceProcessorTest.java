@@ -161,7 +161,7 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
         .andRespondWithSuccess(VariablesDTO.empty())
-        .waitUntilCompleted(Duration.ofHours(1))
+        .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("SubProcess_1")

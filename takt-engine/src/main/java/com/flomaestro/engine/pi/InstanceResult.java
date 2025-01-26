@@ -1,5 +1,6 @@
 package com.flomaestro.engine.pi;
 
+import com.flomaestro.engine.pd.model.EventSignal;
 import com.flomaestro.engine.pd.model.NewStartCommand;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
@@ -17,6 +18,7 @@ import lombok.Getter;
 @Getter
 public class InstanceResult {
 
+  private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
   private final Queue<InstanceUpdateDTO> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
@@ -76,5 +78,9 @@ public class InstanceResult {
 
   public void cancelSchedule(ScheduleKeyDTO scheduledKey) {
     cancelSchedules.add(scheduledKey);
+  }
+
+  public void addBubbleUpEvent(EventSignal eventSignal) {
+    bubbleUpEvents.add(eventSignal);
   }
 }

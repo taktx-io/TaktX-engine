@@ -11,11 +11,12 @@ import com.flomaestro.engine.pd.MessageSchedulerFactory;
 import com.flomaestro.engine.pd.ScheduleProcessor;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.engine.pi.DefinitionMapper;
+import com.flomaestro.engine.pi.DtoMapper;
 import com.flomaestro.engine.pi.FlowNodeInstancesProcessor;
 import com.flomaestro.engine.pi.Forwarder;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessInstanceProcessor;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.processor.IoMappingProcessor;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
@@ -100,12 +101,13 @@ public class TopologyProducer {
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
   private final KeyValueStoreSupplier keyValueStoreSupplier;
+  private final DtoMapper dtoMapper;
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
-  private final VariablesMapper variablesMapper;
   private final Forwarder forwarder;
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
+  private final IoMappingProcessor ioMappingProcessor;
 
   @Produces
   public Topology buildTopology() {
@@ -229,9 +231,10 @@ public class TopologyProducer {
         .process(
             () ->
                 new ProcessInstanceProcessor(
+                    ioMappingProcessor,
+                    dtoMapper,
                     definitionMapper,
                     instanceMapper,
-                    variablesMapper,
                     forwarder,
                     tenantNamespaceNameWrapper,
                     flowNodeInstancesProcessor,

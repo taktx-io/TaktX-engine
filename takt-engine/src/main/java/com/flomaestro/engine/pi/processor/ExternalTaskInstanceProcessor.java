@@ -13,30 +13,32 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ErrorEventSignal;
 import com.flomaestro.engine.pi.model.EscalationEventSignal;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.ExternalTaskInstance;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.DescribeConfigsResult;
 import org.apache.kafka.common.config.ConfigResource;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 @Setter
@@ -44,7 +46,6 @@ public abstract class ExternalTaskInstanceProcessor<
         E extends ExternalTask, I extends ExternalTaskInstance<E>>
     extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTriggerDTO> {
 
-  private FeelExpressionHandler feelExpressionHandler;
   private long retentionMs;
 
   protected ExternalTaskInstanceProcessor(
@@ -52,11 +53,9 @@ public abstract class ExternalTaskInstanceProcessor<
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
       KafkaClients kafkaClients) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
-    this.feelExpressionHandler = feelExpressionHandler;
+    super(feelExpressionHandler, ioMappingProcessor, processInstanceMapper, clock);
     this.retentionMs =
         getRetentionForTopicConfiguration(
             kafkaClients,
@@ -87,13 +86,14 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processStartSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
@@ -110,6 +110,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processContinueSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -117,7 +118,7 @@ public abstract class ExternalTaskInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
@@ -131,11 +132,7 @@ public abstract class ExternalTaskInstanceProcessor<
     } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
         || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleErrorOrTimeout(
-          instanceResult,
-          directInstanceResult,
-          externalTaskInstance,
-          processInstanceVariables,
-          responseResult);
+          instanceResult, directInstanceResult, externalTaskInstance, variables, responseResult);
     }
   }
 
@@ -143,14 +140,14 @@ public abstract class ExternalTaskInstanceProcessor<
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables flowNodeInstanceVariables,
       ExternalTaskResponseResultDTO responseResult) {
     E externalTask = externalTaskInstance.getFlowNode();
     if (externalTask.getRetries() != null) {
       // We have some kind of retry definition
       JsonNode jsonNode =
           feelExpressionHandler.processFeelExpression(
-              externalTask.getRetries(), processInstanceVariables);
+              externalTask.getRetries(), flowNodeInstanceVariables);
       String retryString = jsonNode.asText();
 
       // Analyze the retry definition
@@ -175,8 +172,9 @@ public abstract class ExternalTaskInstanceProcessor<
           && Boolean.TRUE.equals(responseResult.getAllowRetry())) {
         // Retry allowed, possibly with backoff
         String externalTaskId =
-            getExternalTaskId(externalTask.getWorkerDefinition(), processInstanceVariables);
+            getExternalTaskId(externalTask.getWorkerDefinition(), flowNodeInstanceVariables);
 
+        ioMappingProcessor.addInputVariables(externalTask, flowNodeInstanceVariables);
         if (backoff.isPresent()) {
           // This means for now we do nothing, the retry will be scheduled by the scheduler
           scheduleNextExternalTask(
@@ -184,7 +182,7 @@ public abstract class ExternalTaskInstanceProcessor<
               backoff.get(),
               externalTask,
               externalTaskInstance,
-              ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
+              flowNodeInstanceVariables,
               instanceResult);
         } else {
           // No backoff time defined, retry directly
@@ -193,7 +191,7 @@ public abstract class ExternalTaskInstanceProcessor<
                   externalTaskId,
                   externalTask,
                   externalTaskInstance,
-                  ioMappingProcessor.getInputVariables(externalTask, processInstanceVariables),
+                  flowNodeInstanceVariables,
                   null);
           instanceResult.addExternalTaskRequest(externalTaskInfo);
         }
@@ -208,12 +206,14 @@ public abstract class ExternalTaskInstanceProcessor<
       }
     } else {
       // No retries allowed
+      cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
       directInstanceResult.addEvent(
           new ErrorEventSignal(
               externalTaskInstance,
               responseResult.getName(),
               responseResult.getCode(),
               responseResult.getMessage()));
+      directInstanceResult.addTerminateInstance(externalTaskInstance.getElementInstanceId());
     }
   }
 
@@ -254,16 +254,17 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificActivityInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     // Nothing to do here
   }
 
-  private String getExternalTaskId(String workerDefinition, Variables variables) {
+  private String getExternalTaskId(String workerDefinition, FlowNodeInstanceVariables variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();
   }
@@ -273,7 +274,7 @@ public abstract class ExternalTaskInstanceProcessor<
       String backoff,
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       InstanceResult instanceResult) {
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     ExternalTaskInfo externalTaskInfo =
@@ -286,7 +287,7 @@ public abstract class ExternalTaskInstanceProcessor<
       String workerDefinition,
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       String triggerTime) {
     return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
   }

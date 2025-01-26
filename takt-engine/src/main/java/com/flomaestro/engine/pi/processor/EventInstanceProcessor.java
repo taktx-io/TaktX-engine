@@ -7,15 +7,17 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.EventInstance;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import java.time.Clock;
 import java.util.Set;
+import java.util.UUID;
 import lombok.NoArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
@@ -24,20 +26,20 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   protected EventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, clock);
   }
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     processStartSpecificEventInstance(
         processInstance,
@@ -52,6 +54,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -59,7 +62,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     // Should not occur
@@ -70,7 +73,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       ProcessInstance processInstance,
       I flowNodeInstance,
       FlowNodeInstances flowNodeInstances,
-      Variables variables) {
+      FlowNodeInstanceVariables variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
@@ -81,6 +84,6 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics);
 }

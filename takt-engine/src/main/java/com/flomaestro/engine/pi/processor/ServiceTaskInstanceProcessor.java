@@ -5,7 +5,6 @@ import com.flomaestro.engine.generic.KafkaClients;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.model.ServiceTask;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
-import com.flomaestro.engine.pi.VariablesMapper;
 import com.flomaestro.engine.pi.model.ServiceTaskInstance;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,7 +21,6 @@ public class ServiceTaskInstanceProcessor
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
       KafkaClients kafkaClients) {
     super(
@@ -30,7 +28,6 @@ public class ServiceTaskInstanceProcessor
         clock,
         ioMappingProcessor,
         processInstanceMapper,
-        variablesMapper,
         tenantNamespaceNameWrapper,
         kafkaClients);
   }

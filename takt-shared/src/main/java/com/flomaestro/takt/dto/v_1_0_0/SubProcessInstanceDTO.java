@@ -23,9 +23,8 @@ public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFl
       UUID elementInstanceId,
       ActtivityStateEnum state,
       int passedCnt,
-      int loopCnt,
       Set<UUID> boundaryEventIds) {
-    super(state, elementId, elementInstanceId, passedCnt, loopCnt, boundaryEventIds);
+    super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
     this.flowNodeInstances = flowNodeInstances;
   }
 }

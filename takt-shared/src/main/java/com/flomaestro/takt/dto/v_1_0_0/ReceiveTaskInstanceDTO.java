@@ -26,11 +26,10 @@ public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       String correlationKey,
       Set<UUID> boundaryEventIds,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
-    super(state, elementInstanceId, elementId, passedCnt, loopCnt, boundaryEventIds);
+    super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds);
     this.correlationKey = correlationKey;
     this.messageEventKeys = messageEventKeys;
   }

@@ -48,7 +48,17 @@ public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstanc
   }
 
   @Override
+  public void setInitialState() {
+    // Do nothing
+  }
+
+  @Override
   public boolean stateChanged() {
+    return false;
+  }
+
+  @Override
+  public boolean wasNew() {
     return false;
   }
 

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.engine.pi.model.AbstractVariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +23,6 @@ import org.camunda.feel.valuemapper.ValueMapper;
 import scala.Option;
 import scala.collection.Iterable;
 import scala.collection.JavaConverters;
-import scala.jdk.CollectionConverters;
 
 @ApplicationScoped
 @Slf4j
@@ -41,7 +40,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     this.objectMapper = objectMapper;
   }
 
-  public JsonNode processFeelExpression(String expression, Variables variables) {
+  public JsonNode processFeelExpression(String expression, AbstractVariableScope variables) {
     JsonNode resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
@@ -52,13 +51,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
       if (evaluationResult.isSuccess()) {
         Object expressionResult =
             ((SuccessfulEvaluationResult) evaluationResult).productIterator().next();
-        Object rawResult;
-        if (expressionResult instanceof Iterable<?> iterable) {
-          rawResult = CollectionConverters.IterableHasAsJava(iterable).asJavaCollection();
-        } else {
-          rawResult = expressionResult;
-        }
-        resultNode = objectMapper.valueToTree(rawResult);
+        resultNode = objectMapper.valueToTree(expressionResult);
       } else {
         resultNode = null;
       }
@@ -72,7 +65,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     return resultNode;
   }
 
-  private Context createContext(Variables variables) {
+  private Context createContext(AbstractVariableScope variables) {
     return new Context() {
       @Override
       public VariableProvider variableProvider() {

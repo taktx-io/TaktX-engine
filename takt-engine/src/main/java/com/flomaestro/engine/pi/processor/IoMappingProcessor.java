@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.IoVariableMapping;
 import com.flomaestro.engine.pd.model.WithIoMapping;
-import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.engine.pi.model.AbstractVariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import lombok.NoArgsConstructor;
+import java.util.Set;
 import lombok.Setter;
 
 @ApplicationScoped
-@NoArgsConstructor
 @Setter
 public class IoMappingProcessor {
 
@@ -22,35 +21,27 @@ public class IoMappingProcessor {
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
-  public Variables getOutputVariables(WithIoMapping element, Variables inputVariables) {
-    if (element.getIoMapping().getOutputMappings().isEmpty()) {
-      // No mappings
-      return Variables.empty();
-    }
+  public void addOutputVariables(WithIoMapping element, AbstractVariableScope variables) {
+    Set<IoVariableMapping> outputMappings = element.getIoMapping().getOutputMappings();
 
-    Variables outputVariables = Variables.empty();
-    for (IoVariableMapping mapping : element.getIoMapping().getOutputMappings()) {
-      String varName = mapping.getTarget();
-      JsonNode jsonNode =
-          feelExpressionHandler.processFeelExpression(mapping.getSource(), inputVariables);
-      outputVariables.put(varName, jsonNode);
-    }
-    return outputVariables;
+    addVariables(variables, outputMappings);
   }
 
-  public Variables getInputVariables(WithIoMapping element, Variables variables) {
-    if (element.getIoMapping().getInputMappings().isEmpty()) {
-      // No mappings, return all input variables unmodified
-      return variables;
-    }
-
-    Variables inputVariables = Variables.empty();
-    for (IoVariableMapping mapping : element.getIoMapping().getInputMappings()) {
+  public void addVariables(AbstractVariableScope variables, Set<IoVariableMapping> outputMappings) {
+    for (IoVariableMapping mapping : outputMappings) {
       String varName = mapping.getTarget();
       JsonNode jsonNode =
           feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-      inputVariables.put(varName, jsonNode);
+      variables.put(varName, jsonNode);
     }
-    return inputVariables;
+  }
+
+  public void addInputVariables(WithIoMapping element, AbstractVariableScope variables) {
+    Set<IoVariableMapping> inputMappings = element.getIoMapping().getInputMappings();
+    if (inputMappings.isEmpty()) {
+      return;
+    }
+
+    addVariables(variables, inputMappings);
   }
 }

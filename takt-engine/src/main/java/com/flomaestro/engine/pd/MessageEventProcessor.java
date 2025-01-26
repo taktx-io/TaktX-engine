@@ -147,7 +147,6 @@ public class MessageEventProcessor
                   StartCommandDTO startCommand =
                       new StartCommandDTO(
                           processInstanceKey,
-                          Constants.NONE_UUID,
                           value.getElementId(),
                           List.of(),
                           List.of(),

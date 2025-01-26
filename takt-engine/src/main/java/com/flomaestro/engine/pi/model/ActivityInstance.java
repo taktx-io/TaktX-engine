@@ -1,5 +1,6 @@
 package com.flomaestro.engine.pi.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import java.util.HashSet;
@@ -13,10 +14,16 @@ import lombok.Setter;
 @Setter
 @Getter
 public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInstance<N> {
-  private int loopCnt;
-  private ActtivityStateEnum state = ActtivityStateEnum.INITIAL;
+  private ActtivityStateEnum state = null;
   private boolean stateChanged = false;
-  private boolean stateWasWaiting = false;
+  private boolean wasWaiting = false;
+  private boolean wasNew = false;
+  private boolean iteration = false;
+  private UUID nextIterationId;
+  private JsonNode inputElement;
+  private JsonNode outputElement;
+  private int loopCnt;
+
   private Set<UUID> boundaryEventIds = new HashSet<>();
 
   private Set<BoundaryEventInstance> attachedBoundaryEventInstances = new HashSet<>();
@@ -44,8 +51,9 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
     return attachedBoundaryEventInstances;
   }
 
-  public void increaseLoopCnt() {
-    loopCnt++;
+  @Override
+  public void setInitialState() {
+    setState(ActtivityStateEnum.INITIAL);
   }
 
   @Override
@@ -54,18 +62,30 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
   }
 
   public void setState(ActtivityStateEnum state) {
-    if (this.state != ActtivityStateEnum.INITIAL && this.state != state) {
+    if (this.state == null && state == ActtivityStateEnum.INITIAL) {
+      setDirty();
+    }
+    if (this.state != null &&  this.state != state) {
       stateChanged = true;
+      setDirty();
+    }
+    if (this.state == ActtivityStateEnum.INITIAL && this.state != state) {
+      wasNew = true;
     }
     if (state == ActtivityStateEnum.WAITING) {
-      stateWasWaiting = true;
+      wasWaiting = true;
     }
     this.state = state;
   }
 
   @Override
+  public boolean wasNew() {
+    return wasNew;
+  }
+
+  @Override
   public boolean wasAwaiting() {
-    return stateWasWaiting;
+    return wasWaiting;
   }
 
   @Override
@@ -115,6 +135,6 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return isCompleted();
+    return state == ActtivityStateEnum.FINISHED;
   }
 }

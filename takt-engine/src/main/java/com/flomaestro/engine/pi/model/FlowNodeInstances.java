@@ -36,22 +36,11 @@ public class FlowNodeInstances {
     return instances.get(elementInstanceId);
   }
 
-  public boolean allCompleted() {
-    return instances.values().stream().allMatch(FlowNodeInstance::isCompleted);
-  }
-
   public void determineImplicitCompletedState() {
     updateActiveCountForInstances();
 
-    if (state == ProcessInstanceState.ACTIVE
-        && instances.values().stream().allMatch(FlowNodeInstance::isNotAwaiting)) {
-      if (activeCnt > 0) {
-        throw new IllegalStateException("Active count is greater than 0");
-      }
+    if (state == ProcessInstanceState.ACTIVE && activeCnt == 0) {
       this.setState(ProcessInstanceState.COMPLETED);
-    } else if (state == ProcessInstanceState.ACTIVE
-        && activeCnt == 0) {
-      throw new IllegalStateException("Active count is 0 while some state is active");
     }
   }
 
@@ -75,19 +64,20 @@ public class FlowNodeInstances {
   }
 
   public void updateActiveCountForInstances() {
-    instances
-        .values()
-        .forEach(
-            instance -> {
-                if (instance.stateChanged() && instance.isAwaiting()) {
-                  activeCnt++;
-                } else if (instance.stateChanged() && instance.wasAwaiting()) {
-                  activeCnt--;
-                }
-            });
+    for (FlowNodeInstance<?> instance : instances.values()) {
+      if (instance.wasNew()) {
+        activeCnt++;
+      }
+      if ((instance.wasNew() || instance.wasAwaiting()) && instance.isCompleted()) {
+        activeCnt--;
+      }
+    }
+    if (activeCnt < 0) {
+      throw new IllegalStateException("Active count cannot be negative");
+    }
   }
 
-  public void decreaseActiveCnt() {
-    activeCnt--;
+  public boolean isDirty() {
+    return stateChanged || instances.values().stream().anyMatch(FlowNodeInstance::isDirty);
   }
 }

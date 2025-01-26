@@ -5,18 +5,19 @@ import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class TaskInstanceDTO extends ActivityInstanceDTO {
   public TaskInstanceDTO(
       ActtivityStateEnum state,
       UUID elementInstanceId,
       String elementId,
       int passedCnt,
-      int loopCnt,
       Set<UUID> boundaryEventIds) {
-    super(state, elementId, elementInstanceId, passedCnt, loopCnt, boundaryEventIds);
+    super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
   }
 }

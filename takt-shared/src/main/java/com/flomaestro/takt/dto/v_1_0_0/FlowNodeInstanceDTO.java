@@ -10,12 +10,14 @@ import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "cls")
 @JsonTypeIdResolver(CustomTypeIdResolver.class)
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode
+@ToString
 public abstract class FlowNodeInstanceDTO {
   @JsonProperty("eii")
   private UUID elementInstanceId;

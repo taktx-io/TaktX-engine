@@ -19,10 +19,7 @@ public class FlowNodeInstancesDTO {
   @JsonProperty("ac")
   private int activeCnt;
 
-  public FlowNodeInstancesDTO(
-      ProcessInstanceState state,
-      UUID flowNodeInstancesId,
-      int activeCnt) {
+  public FlowNodeInstancesDTO(ProcessInstanceState state, UUID flowNodeInstancesId, int activeCnt) {
     this.state = state;
     this.flowNodeInstancesId = flowNodeInstancesId;
     this.activeCnt = activeCnt;

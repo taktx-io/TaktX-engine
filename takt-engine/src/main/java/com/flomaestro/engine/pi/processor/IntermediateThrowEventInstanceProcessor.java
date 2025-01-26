@@ -6,14 +6,16 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.IntermediateThrowEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.engine.pi.model.Variables;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.UUID;
 import lombok.NoArgsConstructor;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -24,18 +26,18 @@ public class IntermediateThrowEventInstanceProcessor
   public IntermediateThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, clock);
   }
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
+      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       IntermediateThrowEventInstance instance,
       ProcessInstance processInstance,
-      Variables processInstanceVariables,
+      FlowNodeInstanceVariables processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }
@@ -46,7 +48,7 @@ public class IntermediateThrowEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }

@@ -22,6 +22,7 @@ public abstract class FlowNode extends FlowElement {
   public FlowNodeInstance<?> createAndStoreNewInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
     FlowNodeInstance<?> newInstance = newInstance(parentInstance, flowNodeInstances);
+    newInstance.setInitialState();
     flowNodeInstances.putInstance(newInstance);
     return newInstance;
   }

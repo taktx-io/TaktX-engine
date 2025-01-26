@@ -6,11 +6,11 @@ import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.ExternalTaskInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
+import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.engine.pi.model.ReceivingMessageInstance;
 import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
@@ -21,6 +21,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
+import com.flomaestro.takt.dto.v_1_0_0.IoVariableMappingDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.OneTimeSchedulerDTO;
@@ -36,6 +37,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -44,7 +46,6 @@ import org.apache.kafka.streams.processor.api.Record;
 @ApplicationScoped
 @RequiredArgsConstructor
 public class Forwarder {
-  private final VariablesMapper variablesMapper;
   private final PathExtractor pathExtractor;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final DtoMapper dtoMapper;
@@ -104,7 +105,7 @@ public class Forwarder {
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(catchEventInstance),
               Constants.NONE,
-              variablesMapper.toDTO(info.variables()));
+              info.variables().scopeToDTO());
 
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
@@ -155,7 +156,10 @@ public class Forwarder {
               processInstance.getProcessInstanceKey(), externalTaskInstance.getElementInstanceId());
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
-              scheduleKey, timerEventDefinition, externalTaskResponseResultDTO, Variables.empty());
+              scheduleKey,
+              timerEventDefinition,
+              externalTaskResponseResultDTO,
+              ProcessInstanceVariables.empty());
 
       externalTaskInstance.addScheduledKey(scheduleKey);
       context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
@@ -231,6 +235,8 @@ public class Forwarder {
     Queue<NewStartCommand> newStartCommands = instanceResult.getNewStartCommands();
     while (!newStartCommands.isEmpty()) {
       NewStartCommand newStartCommand = newStartCommands.poll();
+
+      Set<IoVariableMappingDTO> outputMappings = dtoMapper.toDto(newStartCommand.outputMappings());
       StartCommandDTO startCommand =
           new StartCommandDTO(
               newStartCommand.processInstanceKey(),
@@ -239,7 +245,9 @@ public class Forwarder {
               pathExtractor.getElementIdPath(newStartCommand.flowNode()),
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),
-              variablesMapper.toDTO(newStartCommand.variables()));
+              newStartCommand.variables(),
+              newStartCommand.propagateAllToParent(),
+              outputMappings);
 
       context.forward(
           new Record<>(newStartCommand.processInstanceKey(), startCommand, clock.millis()));
@@ -285,6 +293,6 @@ public class Forwarder {
         processDefinitionKey,
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
-        variablesMapper.toDTO(externalTaskInfo.variables()));
+        externalTaskInfo.variables().scopeToDTO());
   }
 }

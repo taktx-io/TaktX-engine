@@ -7,10 +7,9 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.VariablesMapper;
+import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ParallelGatewayInstance;
-import com.flomaestro.engine.pi.model.Variables;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -28,9 +27,8 @@ public class ParallelGatewayInstanceProcessor
       IoMappingProcessor ioMappingProcessor,
       FeelExpressionHandler feelExpressionHandler,
       ProcessInstanceMapper processInstanceMapper,
-      VariablesMapper variablesMapper,
       Clock clock) {
-    super(ioMappingProcessor, feelExpressionHandler, processInstanceMapper, variablesMapper, clock);
+    super(ioMappingProcessor, feelExpressionHandler, processInstanceMapper, clock);
   }
 
   @Override
@@ -46,7 +44,7 @@ public class ParallelGatewayInstanceProcessor
       FlowElements flowElements,
       ParallelGatewayInstance flownodeInstance,
       String inputFlowId,
-      Variables variables,
+      FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
     flownodeInstance.addTriggeredFlow(inputFlowId);
   }

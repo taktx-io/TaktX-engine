@@ -2,6 +2,7 @@ package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -21,6 +22,9 @@ public class ProcessInstanceDTO {
   @JsonProperty("ppi")
   private UUID parentProcessInstanceKey;
 
+  @JsonProperty("fni")
+  private FlowNodeInstancesDTO flowNodeInstances;
+
   @JsonProperty("peip")
   private List<String> parentElementIdPath;
 
@@ -30,21 +34,28 @@ public class ProcessInstanceDTO {
   @JsonProperty("pdk")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("fni")
-  private FlowNodeInstancesDTO flowNodeInstances;
+  @JsonProperty("pp")
+  private boolean propagateAllToParent;
+
+  @JsonProperty("om")
+  private Set<IoVariableMappingDTO> outputMappings;
 
   public ProcessInstanceDTO(
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
+      FlowNodeInstancesDTO flowNodeInstances,
       List<String> parentElementIdPath,
       List<UUID> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
-      FlowNodeInstancesDTO flowNodeInstances) {
+      boolean propagateAllToParent,
+      Set<IoVariableMappingDTO> outputMappings) {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.flowNodeInstances = flowNodeInstances;
     this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
-    this.flowNodeInstances = flowNodeInstances;
+    this.propagateAllToParent = propagateAllToParent;
+    this.outputMappings = outputMappings;
   }
 }
