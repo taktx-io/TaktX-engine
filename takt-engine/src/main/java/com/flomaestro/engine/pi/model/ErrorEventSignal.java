@@ -13,13 +13,8 @@ public class ErrorEventSignal extends EventSignal {
 
   public ErrorEventSignal(
       FlowNodeInstance<?> fLowNodeInstance, String name, String code, String message) {
-    super(fLowNodeInstance, fLowNodeInstance, name);
+    super(fLowNodeInstance, name);
     this.message = message;
     this.code = code;
-  }
-
-  @Override
-  public boolean bubblesUp() {
-    return true;
   }
 }

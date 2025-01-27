@@ -22,13 +22,6 @@ public class ServiceTaskInstanceDTO extends ExternalTaskInstanceDTO {
       int attempt,
       Set<UUID> boundaryEventIds,
       List<ScheduleKeyDTO> scheduledKeys) {
-    super(
-        state,
-        elementInstanceId,
-        elementId,
-        passedCnt,
-        boundaryEventIds,
-        attempt,
-        scheduledKeys);
+    super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds, attempt, scheduledKeys);
   }
 }

@@ -16,5 +16,4 @@ public class ProcessInstanceException extends RuntimeException {
     this.processInstance = processInstance;
     this.flowNodeInstance = flowNodeInstance;
   }
-
 }

@@ -132,13 +132,12 @@ public class FlowNodeInstancesProcessor {
         processingStatistics);
 
     EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
-    while(eventSignal != null) {
+    while (eventSignal != null) {
       instanceResult.addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
     }
 
     flowNodeInstances.determineImplicitCompletedState();
-
   }
 
   public void processTerminate(
@@ -158,7 +157,8 @@ public class FlowNodeInstancesProcessor {
 
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
-      storedFlowNodeInstancesWrapper.getAllInstances()
+      storedFlowNodeInstancesWrapper
+          .getAllInstances()
           .values()
           .forEach(
               instance -> {

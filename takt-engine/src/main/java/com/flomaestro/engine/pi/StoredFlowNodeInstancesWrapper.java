@@ -1,8 +1,6 @@
 package com.flomaestro.engine.pi;
 
 import com.flomaestro.engine.pd.model.FlowElements;
-import com.flomaestro.engine.pi.model.ActivityInstance;
-import com.flomaestro.engine.pi.model.BoundaryEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.WithFlowNodeInstances;
@@ -41,10 +39,13 @@ public class StoredFlowNodeInstancesWrapper {
   }
 
   public Map<UUID, FlowNodeInstance<?>> getAllInstances() {
-    UUID[] minIdPath = generatedKeyPath(flowNodeInstances.getFlowNodeInstancesId(), Constants.MIN_UUID);
-    UUID[] maxIdPath = generatedKeyPath(flowNodeInstances.getFlowNodeInstancesId(), Constants.MAX_UUID);
+    UUID[] minIdPath =
+        generatedKeyPath(flowNodeInstances.getFlowNodeInstancesId(), Constants.MIN_UUID);
+    UUID[] maxIdPath =
+        generatedKeyPath(flowNodeInstances.getFlowNodeInstancesId(), Constants.MAX_UUID);
 
-    try(KeyValueIterator<UUID[], FlowNodeInstanceDTO> range = flowNodeInstanceStore.range(minIdPath, maxIdPath)) {
+    try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =
+        flowNodeInstanceStore.range(minIdPath, maxIdPath)) {
       range.forEachRemaining(
           entry -> {
             FlowNodeInstanceDTO value = entry.value;
@@ -61,14 +62,16 @@ public class StoredFlowNodeInstancesWrapper {
     if (storedFlowNodeInstanceDTO != null) {
       flowNodeInstance = mapper.map(storedFlowNodeInstanceDTO, flowElements);
       if (flowNodeInstance != null) {
-        if (flowNodeInstance instanceof ActivityInstance<?> activityInstance) {
-          setAttachedBoundaryEventInstances(activityInstance);
-        }
         if (flowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
-          withFlowNodeInstances.getFlowNodeInstances().setParentFlowNodeInstances(flowNodeInstances);
+          withFlowNodeInstances
+              .getFlowNodeInstances()
+              .setParentFlowNodeInstances(flowNodeInstances);
         }
         if (flowNodeInstance.getParentElementInstanceId() != null) {
-          FlowNodeInstance<?> instanceWithInstanceId = flowNodeInstances.getParentFlowNodeInstances().getInstanceWithInstanceId(flowNodeInstance.getParentElementInstanceId());
+          FlowNodeInstance<?> instanceWithInstanceId =
+              flowNodeInstances
+                  .getParentFlowNodeInstances()
+                  .getInstanceWithInstanceId(flowNodeInstance.getParentElementInstanceId());
           flowNodeInstance.setParentInstance(instanceWithInstanceId);
         }
         flowNodeInstances.putInstance(flowNodeInstance);
@@ -80,16 +83,4 @@ public class StoredFlowNodeInstancesWrapper {
   private UUID[] generatedKeyPath(UUID parentId, UUID id) {
     return new UUID[] {parentId, id};
   }
-
-
-  void setAttachedBoundaryEventInstances(ActivityInstance<?> activityInstance) {
-      activityInstance
-          .getBoundaryEventIds()
-          .forEach(
-              boundaryEventId -> {
-                BoundaryEventInstance boundaryEventInstance = (BoundaryEventInstance) getInstanceWithInstanceId(boundaryEventId);
-                activityInstance.addBoundaryEvent(boundaryEventInstance);
-              });
-  }
-
 }

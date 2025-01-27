@@ -201,11 +201,7 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(
           newInstanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance,
-          processInstance,
-          directInstanceResult,
-          variables,
-          flowNodeInstances);
+          catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
@@ -232,11 +228,7 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(
           instanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance,
-          processInstance,
-          directInstanceResult,
-          variables,
-          flowNodeInstances);
+          catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,

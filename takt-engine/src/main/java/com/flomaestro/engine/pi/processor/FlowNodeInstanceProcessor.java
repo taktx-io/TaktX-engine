@@ -139,11 +139,7 @@ public abstract class FlowNodeInstanceProcessor<
     }
 
     selectNextNodeIfAllowedContinue(
-        (I) flowNodeInstance,
-        processInstance,
-        directInstanceResult,
-        variables,
-        flowNodeInstances);
+        (I) flowNodeInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
         createFlowNodeInstanceUpdate(
@@ -240,19 +236,19 @@ public abstract class FlowNodeInstanceProcessor<
     }
 
     flownodeInstance.increasePassedCnt();
-      getSelectedSequenceFlows(
-              processInstance, flownodeInstance, flowNodeInstances, flowNodeInstanceVariables)
-          .forEach(
-              sequenceFlow -> {
-                FlowNodeInstance<?> newFlowNodeInstance =
-                    sequenceFlow
-                        .getTargetNode()
-                        .createAndStoreNewInstance(
-                            flownodeInstance.getParentInstance(), flowNodeInstances);
-                directInstanceResult.addNewFlowNodeInstance(
-                    processInstance,
-                    new FlowNodeInstanceInfo(newFlowNodeInstance, sequenceFlow.getId()));
-              });
+    getSelectedSequenceFlows(
+            processInstance, flownodeInstance, flowNodeInstances, flowNodeInstanceVariables)
+        .forEach(
+            sequenceFlow -> {
+              FlowNodeInstance<?> newFlowNodeInstance =
+                  sequenceFlow
+                      .getTargetNode()
+                      .createAndStoreNewInstance(
+                          flownodeInstance.getParentInstance(), flowNodeInstances);
+              directInstanceResult.addNewFlowNodeInstance(
+                  processInstance,
+                  new FlowNodeInstanceInfo(newFlowNodeInstance, sequenceFlow.getId()));
+            });
   }
 
   protected abstract Set<SequenceFlow> getSelectedSequenceFlows(

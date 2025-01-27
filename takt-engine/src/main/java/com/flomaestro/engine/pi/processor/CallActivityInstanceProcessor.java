@@ -73,8 +73,7 @@ public class CallActivityInstanceProcessor
               jsonNode.asText(),
               commandVariables,
               callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
-              callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()
-          ));
+              callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
     } else {
       callActivityInstance.setState(ActtivityStateEnum.FAILED);
     }
@@ -106,5 +105,4 @@ public class CallActivityInstanceProcessor
       ProcessingStatistics processingStatistics) {
     instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
   }
-
 }

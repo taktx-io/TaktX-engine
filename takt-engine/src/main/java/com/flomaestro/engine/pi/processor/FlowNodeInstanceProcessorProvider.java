@@ -114,10 +114,7 @@ public class FlowNodeInstanceProcessorProvider {
     if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
       return new MultiInstanceProcessor(
-          feelExpressionHandler,
-          processor,
-          processInstanceMapper,
-          clock);
+          feelExpressionHandler, processor, processInstanceMapper, clock);
     }
     return processor;
   }

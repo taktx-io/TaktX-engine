@@ -77,7 +77,8 @@ public class FlowInstanceRunner {
     while (!directInstanceResult.terminateInstancesIsEmpty()) {
       UUID terminateInstance = directInstanceResult.pollTerminateInstance();
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-          new StoredFlowNodeInstancesWrapper(flowNodeInstances, flowNodeInstanceStore, flowElements);
+          new StoredFlowNodeInstancesWrapper(
+              flowNodeInstances, flowNodeInstanceStore, flowElements);
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
 
@@ -128,11 +129,15 @@ public class FlowInstanceRunner {
       FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
 
-    boolean eventHandled = false;
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
+      boolean eventHandled = false;
+      StoredFlowNodeInstancesWrapper instancesWrapper =
+          new StoredFlowNodeInstancesWrapper(
+              flowNodeInstances, flowNodeInstanceStore, flowElements);
       // First check for specific codes
-      for (BoundaryEventInstance boundaryEventInstance :
-          activityInstance.getAttachedBoundaryEventInstances()) {
+      for (UUID boundaryEventId : activityInstance.getBoundaryEventIds()) {
+        BoundaryEventInstance boundaryEventInstance =
+            (BoundaryEventInstance) instancesWrapper.getInstanceWithInstanceId(boundaryEventId);
         eventHandled =
             boundaryEventProcessor.processEvent(
                 boundaryEventInstance,
@@ -144,37 +149,48 @@ public class FlowInstanceRunner {
                 flowNodeInstances,
                 processingStatistics);
         if (eventHandled) {
+          if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
+            directInstanceResult.addTerminateInstance(
+                boundaryEventInstance.getAttachedInstanceId());
+          }
           break;
         }
       }
-
-      // Check for catch all events
       if (!eventHandled) {
-        for (BoundaryEventInstance boundaryEventInstance :
-            activityInstance.getAttachedBoundaryEventInstances()) {
-          eventHandled =
-              boundaryEventProcessor.processEventCatchAll(
-                  boundaryEventInstance,
-                  event,
-                  instanceResult,
-                  directInstanceResult,
-                  variables,
-                  processInstance,
-                  flowNodeInstances,
-                  processingStatistics);
+        // If not handled by specific codes, check for catch all
+        for (UUID boundaryEventId : activityInstance.getBoundaryEventIds()) {
+          BoundaryEventInstance boundaryEventInstance =
+              (BoundaryEventInstance) instancesWrapper.getInstanceWithInstanceId(boundaryEventId);
+          if (!eventHandled) {
+            eventHandled =
+                boundaryEventProcessor.processEventCatchAll(
+                    boundaryEventInstance,
+                    event,
+                    instanceResult,
+                    directInstanceResult,
+                    variables,
+                    processInstance,
+                    flowNodeInstances,
+                    processingStatistics);
+          }
           if (eventHandled) {
+            if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
+              directInstanceResult.addTerminateInstance(
+                  boundaryEventInstance.getAttachedInstanceId());
+            }
             break;
           }
         }
       }
-    }
 
-    // Still not handled, bubble up if so defined
-    if (!eventHandled && event.bubblesUp() && fLowNodeInstance.getParentInstance() != null) {
-      directInstanceResult.addBubbleUpEvent(event);
-    } else if (!eventHandled && event.bubblesUp() && fLowNodeInstance.getParentInstance() == null) {
-      // Still not handled and No more bubbling up possible
-      directInstanceResult.addTerminateInstance(event.getSourceInstance().getElementInstanceId());
+      // Still not handled, bubble up if so defined
+      if (!eventHandled && fLowNodeInstance.getParentInstance() != null) {
+        directInstanceResult.addBubbleUpEvent(event);
+      } else if (!eventHandled) {
+        // Still not handled and No more bubbling up possible
+        directInstanceResult.addTerminateInstance(
+            event.getCurrentInstance().getElementInstanceId());
+      }
     }
   }
 }

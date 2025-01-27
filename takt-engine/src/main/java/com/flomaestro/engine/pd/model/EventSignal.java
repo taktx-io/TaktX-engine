@@ -1,27 +1,30 @@
 package com.flomaestro.engine.pd.model;
 
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
-import lombok.AllArgsConstructor;
+import java.util.LinkedList;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-@RequiredArgsConstructor
-@AllArgsConstructor
 @Getter
 @SuperBuilder
 public abstract class EventSignal {
-  @Setter private FlowNodeInstance<?> sourceInstance;
-  @Setter private FlowNodeInstance<?> currentInstance;
-
+  private LinkedList<FlowNodeInstance<?>> pathToSource = new LinkedList<>();
   private final String name;
 
-  public void selectParent() {
-    if (currentInstance.getParentInstance() != null) {
-      currentInstance = currentInstance.getParentInstance();
-    }
+  public EventSignal(FlowNodeInstance<?> fLowNodeInstance, String name) {
+    pathToSource.addFirst(fLowNodeInstance);
+    this.name = name;
   }
 
-  public abstract boolean bubblesUp();
+  public FlowNodeInstance<?> bubbleUp() {
+    FlowNodeInstance<?> parentInstance = pathToSource.getLast().getParentInstance();
+    if (parentInstance != null) {
+      pathToSource.addFirst(parentInstance);
+    }
+    return parentInstance;
+  }
+
+  public FlowNodeInstance<?> getCurrentInstance() {
+    return pathToSource.getFirst();
+  }
 }

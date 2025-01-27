@@ -9,7 +9,6 @@ import com.flomaestro.engine.pi.FlowNodeInstancesProcessor;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.model.CatchEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.FlowNodeInstancesVariables;
@@ -117,14 +116,12 @@ public class SubProcessInstanceProcessor
     Queue<EventSignal> bubbleUpEvents = instanceResult.getBubbleUpEvents();
     EventSignal eventSignal = bubbleUpEvents.poll();
     while (eventSignal != null) {
-      eventSignal.selectParent();
+      eventSignal.bubbleUp();
       directInstanceResult.addEvent(eventSignal);
       eventSignal = bubbleUpEvents.poll();
     }
 
-    if (subProcessInstance.getFlowNodeInstances().getState().isFinished()
-     && subProcessInstance.getAttachedBoundaryEventInstances().stream().allMatch(CatchEventInstance::isCompleted)
-    ) {
+    if (subProcessInstance.getFlowNodeInstances().getState().isFinished()) {
       subProcessInstance.setState(ActtivityStateEnum.FINISHED);
     }
   }

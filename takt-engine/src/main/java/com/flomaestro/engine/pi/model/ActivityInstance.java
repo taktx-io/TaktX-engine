@@ -26,15 +26,12 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   private Set<UUID> boundaryEventIds = new HashSet<>();
 
-  private Set<BoundaryEventInstance> attachedBoundaryEventInstances = new HashSet<>();
-
   protected ActivityInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
     super(parentInstance, flowNode);
   }
 
-  public void addBoundaryEvent(BoundaryEventInstance boundaryEventInstance) {
-    getBoundaryEventIds().add(boundaryEventInstance.getElementInstanceId());
-    getAttachedBoundaryEventInstances().add(boundaryEventInstance);
+  public void addBoundaryEventId(UUID boundaryEventId) {
+    getBoundaryEventIds().add(boundaryEventId);
   }
 
   public Set<UUID> getBoundaryEventIds() {
@@ -42,13 +39,6 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
       boundaryEventIds = new HashSet<>();
     }
     return boundaryEventIds;
-  }
-
-  public Set<BoundaryEventInstance> getAttachedBoundaryEventInstances() {
-    if (attachedBoundaryEventInstances == null) {
-      attachedBoundaryEventInstances = new HashSet<>();
-    }
-    return attachedBoundaryEventInstances;
   }
 
   @Override
@@ -65,7 +55,7 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
     if (this.state == null && state == ActtivityStateEnum.INITIAL) {
       setDirty();
     }
-    if (this.state != null &&  this.state != state) {
+    if (this.state != null && this.state != state) {
       stateChanged = true;
       setDirty();
     }

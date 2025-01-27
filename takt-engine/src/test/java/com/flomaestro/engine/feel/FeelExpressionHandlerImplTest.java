@@ -13,21 +13,26 @@ class FeelExpressionHandlerImplTest {
 
   @Test
   void testNoFeel() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("test", ProcessInstanceVariables.empty());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    JsonNode jsonNode =
+        expressionHandler.processFeelExpression("test", ProcessInstanceVariables.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
   @Test
   void testSimpleFeel() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("=\"test\"", ProcessInstanceVariables.empty());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    JsonNode jsonNode =
+        expressionHandler.processFeelExpression("=\"test\"", ProcessInstanceVariables.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
   @Test
   void testReferToVariableFeel() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var", vars);
@@ -36,7 +41,8 @@ class FeelExpressionHandlerImplTest {
 
   @Test
   void testReferToVariableNotExisting() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var2", vars);
@@ -45,7 +51,8 @@ class FeelExpressionHandlerImplTest {
 
   @Test
   void testCreateRange() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
 
     JsonNode jsonNode = expressionHandler.processFeelExpression("=for i in 1..100 return i", vars);
@@ -55,7 +62,8 @@ class FeelExpressionHandlerImplTest {
 
   @Test
   void testReferToElementInArray() {
-    FeelExpressionHandlerImpl expressionHandler = new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
     ArrayNode arrayNode = new ObjectMapper().createArrayNode();
     arrayNode.add("test1");

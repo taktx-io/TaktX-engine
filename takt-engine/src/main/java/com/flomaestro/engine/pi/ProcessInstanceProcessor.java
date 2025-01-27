@@ -148,8 +148,10 @@ public class ProcessInstanceProcessor
             processStartCommandRecord(triggerRecord.key(), startCommand, processingStatistics);
         case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 ->
             handleContinue(continueFlowElementTrigger2, processingStatistics);
-        case TerminateTriggerDTO terminateTrigger -> handleTerminate(flowNodeInstanceStore, terminateTrigger, processingStatistics);
-        default -> throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
+        case TerminateTriggerDTO terminateTrigger ->
+            handleTerminate(flowNodeInstanceStore, terminateTrigger, processingStatistics);
+        default ->
+            throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (ProcessInstanceException e) {
       handleExceptional(flowNodeInstanceStore, e, processingStatistics);
@@ -248,7 +250,8 @@ public class ProcessInstanceProcessor
 
   private void handleExceptional(
       KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
-      ProcessInstanceException e, ProcessingStatistics processingStatistics) {
+      ProcessInstanceException e,
+      ProcessingStatistics processingStatistics) {
     FlowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
     flowNodeInstance.terminate();
     ProcessInstance processInstance = e.getProcessInstance();
@@ -288,7 +291,8 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       if (flowElements != null) {
-        FlowNodeInstances flowNodeInstances = getFlowNodeInstances(processInstanceDTO.getFlowNodeInstances());
+        FlowNodeInstances flowNodeInstances =
+            getFlowNodeInstances(processInstanceDTO.getFlowNodeInstances());
 
         ProcessInstanceVariables processInstanceVariables =
             new ProcessInstanceVariables(variablesStore, processInstanceKey);
@@ -345,7 +349,8 @@ public class ProcessInstanceProcessor
 
   private void handleTerminate(
       KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
-      TerminateTriggerDTO trigger, ProcessingStatistics processingStatistics) {
+      TerminateTriggerDTO trigger,
+      ProcessingStatistics processingStatistics) {
     InstanceResult instanceResult = InstanceResult.empty();
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceKey());
@@ -355,7 +360,8 @@ public class ProcessInstanceProcessor
         ProcessInstanceVariables processInstanceVariables =
             new ProcessInstanceVariables(
                 variablesStore, processInstanceDTO.getProcessInstanceKey());
-        FlowNodeInstances flowNodeInstances = getFlowNodeInstances(processInstanceDTO.getFlowNodeInstances());
+        FlowNodeInstances flowNodeInstances =
+            getFlowNodeInstances(processInstanceDTO.getFlowNodeInstances());
         FlowNodeInstancesVariables flowNodeInstancesVariables =
             processInstanceVariables.selectFlowNodeInstancesScope(
                 flowNodeInstances.getFlowNodeInstancesId());
@@ -432,10 +438,11 @@ public class ProcessInstanceProcessor
       if (processInstance.isPropagateAllToParent()) {
         variables = VariablesDTO.of(processInstanceVariables.retrieveAndFlattenAll());
       } else {
-        ProcessInstanceVariables outputVariables = new ProcessInstanceVariables(
-            processInstanceVariables.getVariableStore(), processInstance.getProcessInstanceKey());
-        ioMappingProcessor.addVariables(
-            outputVariables, processInstance.getOutputMappings());
+        ProcessInstanceVariables outputVariables =
+            new ProcessInstanceVariables(
+                processInstanceVariables.getVariableStore(),
+                processInstance.getProcessInstanceKey());
+        ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
         variables = VariablesDTO.of(outputVariables.getVariables());
       }
 
@@ -461,13 +468,14 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void storeFlowNodeInstance(FlowNodeInstances flowNodeInstances, FlowNodeInstance<?> fLowNodeInstance) {
+  private void storeFlowNodeInstance(
+      FlowNodeInstances flowNodeInstances, FlowNodeInstance<?> fLowNodeInstance) {
     if (fLowNodeInstance.isDirty()) {
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
 
       UUID[] key =
-          new UUID[]{
-              flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()
+          new UUID[] {
+            flowNodeInstances.getFlowNodeInstancesId(), flowNodeInstanceDTO.getElementInstanceId()
           };
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
     }
@@ -482,12 +490,12 @@ public class ProcessInstanceProcessor
     log.info("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
     UUID[] start =
-        new UUID[]{
-            processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MIN_UUID
+        new UUID[] {
+          processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MIN_UUID
         };
     UUID[] end =
-        new UUID[]{
-            processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID
+        new UUID[] {
+          processInstance.getFlowNodeInstances().getFlowNodeInstancesId(), TaktUUIDSerde.MAX_UUID
         };
 
     try (KeyValueIterator<UUID[], FlowNodeInstanceDTO> range =

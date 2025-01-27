@@ -144,6 +144,7 @@ public class ProcessInstanceAssert {
     consumer.accept(new ObjectMapper(new CBORFactory()).treeToValue(jsonNode, Object.class));
     return this;
   }
+
   public ProcessInstanceAssert hasCollectioneMatching(String var1, Consumer<List> consumer)
       throws JsonProcessingException {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceKey);

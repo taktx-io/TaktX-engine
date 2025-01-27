@@ -43,7 +43,9 @@ public class FlowNodeInstancesVariables extends AbstractVariableScope {
 
   public Map<String, JsonNode> retrieveAndFlattenAll() {
     Map<String, JsonNode> retrieved = retrieveAllInScope();
-    flowNodeInstanceVariables.values().forEach(scope -> retrieved.putAll(scope.retrieveAndFlattenAll()));
+    flowNodeInstanceVariables
+        .values()
+        .forEach(scope -> retrieved.putAll(scope.retrieveAndFlattenAll()));
     return retrieved;
   }
 }

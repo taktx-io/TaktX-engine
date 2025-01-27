@@ -29,8 +29,7 @@ public abstract class AbstractVariableScope {
       UUID processInstanceKey,
       UUID flowNodeInstancesKey,
       UUID elementInstanceKey,
-      AbstractVariableScope parentScope
-  ) {
+      AbstractVariableScope parentScope) {
     this.variableStore = variableStore;
     this.processInstanceKey = processInstanceKey;
     this.flowNodeInstancesKey = flowNodeInstancesKey;
@@ -39,8 +38,8 @@ public abstract class AbstractVariableScope {
   }
 
   public void put(String key, JsonNode value) {
-      dirtyVariables.add(key);
-      variables.put(key, value);
+    dirtyVariables.add(key);
+    variables.put(key, value);
   }
 
   public void merge(VariablesDTO variables) {
@@ -75,13 +74,19 @@ public abstract class AbstractVariableScope {
 
   public Map<String, JsonNode> retrieveAllInScope() {
     if (variableStore != null) {
-      VariableKeyDTO start = new VariableKeyDTO(processInstanceKey, flowNodeInstancesKey, elementInstanceKey, "");
-      VariableKeyDTO end = new VariableKeyDTO(processInstanceKey, flowNodeInstancesKey, elementInstanceKey, "\u00FF");
-      variableStore.range(start, end).forEachRemaining(kv -> {
-        if (!variables.containsKey(kv.key.getVariableName())) {
-          variables.put(kv.key.getVariableName(), kv.value);
-        }
-      });
+      VariableKeyDTO start =
+          new VariableKeyDTO(processInstanceKey, flowNodeInstancesKey, elementInstanceKey, "");
+      VariableKeyDTO end =
+          new VariableKeyDTO(
+              processInstanceKey, flowNodeInstancesKey, elementInstanceKey, "\u00FF");
+      variableStore
+          .range(start, end)
+          .forEachRemaining(
+              kv -> {
+                if (!variables.containsKey(kv.key.getVariableName())) {
+                  variables.put(kv.key.getVariableName(), kv.value);
+                }
+              });
     }
     return variables;
   }
@@ -106,5 +111,4 @@ public abstract class AbstractVariableScope {
   public Set<String> keySet() {
     return variables.keySet();
   }
-
 }

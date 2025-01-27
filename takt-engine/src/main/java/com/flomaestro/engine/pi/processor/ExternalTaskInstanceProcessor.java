@@ -213,7 +213,6 @@ public abstract class ExternalTaskInstanceProcessor<
               responseResult.getName(),
               responseResult.getCode(),
               responseResult.getMessage()));
-      directInstanceResult.addTerminateInstance(externalTaskInstance.getElementInstanceId());
     }
   }
 

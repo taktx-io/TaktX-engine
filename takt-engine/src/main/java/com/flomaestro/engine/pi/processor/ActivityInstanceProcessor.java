@@ -78,7 +78,7 @@ public abstract class ActivityInstanceProcessor<
 
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
-                flownodeInstance.addBoundaryEvent(boundaryEventInstance);
+                flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());
                 directInstanceResult.addNewFlowNodeInstance(
                     processInstance,
                     new FlowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
@@ -86,7 +86,6 @@ public abstract class ActivityInstanceProcessor<
     }
 
     handleFinishedIteration(flownodeInstance, variables);
-
   }
 
   @Override
@@ -116,9 +115,7 @@ public abstract class ActivityInstanceProcessor<
         processingStatistics);
 
     if (flowNodeInstance.isCompleted()) {
-      flowNodeInstance
-          .getAttachedBoundaryEventInstances()
-          .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
+      flowNodeInstance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
     }
 
     handleFinishedIteration(flowNodeInstance, variables);
@@ -133,9 +130,9 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       FlowNodeInstanceVariables variables,
       ProcessingStatistics processingStatistics) {
-    instance
-        .getAttachedBoundaryEventInstances()
-        .forEach(bi -> directInstanceResult.addTerminateInstance(bi.getElementInstanceId()));
+
+    instance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
+
     processTerminateSpecificActivityInstance(
         flowNodeInstanceStore,
         instanceResult,
@@ -190,9 +187,10 @@ public abstract class ActivityInstanceProcessor<
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-
-  private void handleFinishedIteration(ActivityInstance<?> flownodeInstance, FlowNodeInstanceVariables variables) {
-    if(flownodeInstance.getState() == ActtivityStateEnum.FINISHED && flownodeInstance.isIteration()) {
+  private void handleFinishedIteration(
+      ActivityInstance<?> flownodeInstance, FlowNodeInstanceVariables variables) {
+    if (flownodeInstance.getState() == ActtivityStateEnum.FINISHED
+        && flownodeInstance.isIteration()) {
       FlowNode flowNode = flownodeInstance.getFlowNode();
       String outputElement = ((Activity) flowNode).getLoopCharacteristics().getOutputElement();
       JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variables);

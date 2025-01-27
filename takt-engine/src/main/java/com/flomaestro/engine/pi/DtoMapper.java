@@ -178,8 +178,10 @@ public interface DtoMapper {
   }
 
   IoVariableMappingDTO toDto(IoVariableMapping ioVariableMappings);
+
   IoVariableMapping map(IoVariableMappingDTO ioVariableMappings);
 
   Set<IoVariableMappingDTO> toDto(Set<IoVariableMapping> ioVariableMappings);
+
   Set<IoVariableMapping> map(Set<IoVariableMappingDTO> ioVariableMappings);
 }

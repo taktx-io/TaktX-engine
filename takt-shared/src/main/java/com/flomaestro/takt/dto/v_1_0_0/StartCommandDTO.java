@@ -38,7 +38,8 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       List<UUID> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
-    this(processInstanceKey,
+    this(
+        processInstanceKey,
         Constants.NONE_UUID,
         elementId,
         parentElementIdPath,
@@ -58,8 +59,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables,
       boolean propagateAllToParent,
-      Set<IoVariableMappingDTO> outputMappings
-      ) {
+      Set<IoVariableMappingDTO> outputMappings) {
     super(processInstanceKey, List.of(elementId), variables);
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.parentElementIdPath = parentElementIdPath;

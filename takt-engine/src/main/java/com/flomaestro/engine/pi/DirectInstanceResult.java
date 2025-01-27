@@ -67,7 +67,6 @@ public class DirectInstanceResult {
     bubbleUpEvents.add(event);
   }
 
-
   public EventSignal pollBubbleUpEvent() {
     return bubbleUpEvents.poll();
   }

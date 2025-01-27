@@ -3,8 +3,10 @@ package com.flomaestro.engine.pd;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
+import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
+import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
@@ -179,15 +181,16 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              DefinitionScheduleKeyDTO scheduleKey =
-                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
+              UUID processInstanceKey = UUID.randomUUID();
+              InstanceScheduleKeyDTO scheduleKey =
+                  new InstanceScheduleKeyDTO(processInstanceKey, Constants.NONE_UUID);
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
                       scheduleKey,
                       timerEventDefinition,
                       getStartCommand(
                           processDefinitionKey.getProcessDefinitionId(),
-                          UUID.randomUUID(),
+                          processInstanceKey,
                           startEvent),
                       ProcessInstanceVariables.empty());
               context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
