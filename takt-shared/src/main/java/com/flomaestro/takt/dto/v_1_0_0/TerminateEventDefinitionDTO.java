@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 public class TerminateEventDefinitionDTO extends EventDefinitionDTO {
 
   public TerminateEventDefinitionDTO(String id) {
-    super(id, Constants.NONE);
+    super(id, null);
   }
 }

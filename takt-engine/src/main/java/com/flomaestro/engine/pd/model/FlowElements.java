@@ -1,6 +1,5 @@
 package com.flomaestro.engine.pd.model;
 
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +55,7 @@ public class FlowElements {
 
   public FlowNode getStartNode(String elementId) {
     FlowNode flowNode = null;
-    if (!elementId.equals(Constants.NONE)) {
+    if (elementId != null) {
       flowNode = getFlowNode(elementId).orElse(null);
     }
     if (flowNode == null) {

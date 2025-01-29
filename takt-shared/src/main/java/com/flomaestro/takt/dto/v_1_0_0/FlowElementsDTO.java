@@ -51,7 +51,7 @@ public class FlowElementsDTO {
   @JsonIgnore
   public FlowElementDTO getStartNode(String elementId) {
     FlowElementDTO flowNodeDTO;
-    if (!elementId.equals(Constants.NONE)) {
+    if (elementId != null) {
       flowNodeDTO = elements.get(elementId);
     } else {
       List<StartEventDTO> startEvents = getStartEvents();

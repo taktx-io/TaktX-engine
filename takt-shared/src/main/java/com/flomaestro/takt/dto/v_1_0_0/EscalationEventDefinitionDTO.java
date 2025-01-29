@@ -14,7 +14,7 @@ public class EscalationEventDefinitionDTO extends EventDefinitionDTO {
   private String escalationRef;
 
   public EscalationEventDefinitionDTO(String id, String escalationRef) {
-    super(id, Constants.NONE);
+    super(id, null);
     this.escalationRef = escalationRef;
   }
 }

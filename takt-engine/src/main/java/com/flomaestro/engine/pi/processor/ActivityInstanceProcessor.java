@@ -18,7 +18,6 @@ import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import java.time.Clock;
@@ -80,8 +79,7 @@ public abstract class ActivityInstanceProcessor<
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());
                 directInstanceResult.addNewFlowNodeInstance(
-                    processInstance,
-                    new FlowNodeInstanceInfo(boundaryEventInstance, Constants.NONE));
+                    processInstance, new FlowNodeInstanceInfo(boundaryEventInstance, null));
               });
     }
 

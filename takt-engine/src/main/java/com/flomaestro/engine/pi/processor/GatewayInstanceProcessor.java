@@ -13,7 +13,6 @@ import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.GatewayInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowConditionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
@@ -101,7 +100,7 @@ public abstract class GatewayInstanceProcessor<
               .collect(Collectors.toSet());
 
       outgoingFlows.addAll(flowsWithCondition);
-      if (outgoingFlows.isEmpty() && !Constants.NONE.equals(gatewayNode.getDefaultFlow())) {
+      if (outgoingFlows.isEmpty() && gatewayNode.getDefaultFlow() != null) {
         outgoingFlows.add(gatewayNode.getDefaultSequenceFlow());
       } else if (outgoingFlows.isEmpty() && !sequenceFlows.isEmpty()) {
         // Last chance, if no condition is met and no default flow is set, take the outgoing flows

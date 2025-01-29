@@ -12,8 +12,7 @@ import lombok.ToString;
 @NoArgsConstructor
 public class ProcessDTO extends RootElementDTO {
 
-  public static final ProcessDTO NONE =
-      new ProcessDTO(Constants.NONE, Constants.NONE, FlowElementsDTO.EMPTY);
+  public static final ProcessDTO NONE = new ProcessDTO(null, null, null);
 
   @JsonProperty("f")
   private FlowElementsDTO flowElements;

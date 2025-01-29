@@ -16,7 +16,6 @@ import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.engine.pi.model.WithFlowNodeInstances;
 import com.flomaestro.engine.pi.processor.IoMappingProcessor;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
@@ -174,7 +173,8 @@ public class ProcessInstanceProcessor
     ProcessDefinitionDTO processDefinition =
         getProcessDefinitionDTO(startCommand.getProcessDefinitionKey());
 
-    String startNodeId = startCommand.getElementIdPath().getFirst();
+    String startNodeId =
+        startCommand.getElementIdPath() != null ? startCommand.getElementIdPath().getFirst() : null;
     FlowElementDTO startNode =
         processDefinition
             .getDefinitions()
@@ -432,7 +432,7 @@ public class ProcessInstanceProcessor
       InstanceResult instanceResult,
       ProcessInstance processInstance,
       ProcessInstanceVariables processInstanceVariables) {
-    if (!processInstance.getParentProcessInstanceKey().equals(Constants.NONE_UUID)) {
+    if (processInstance.getParentProcessInstanceKey() != null) {
       VariablesDTO variables;
 
       if (processInstance.isPropagateAllToParent()) {
@@ -450,7 +450,7 @@ public class ProcessInstanceProcessor
           new ContinueFlowElementTriggerDTO(
               processInstance.getParentProcessInstanceKey(),
               processInstance.getParentElementInstancePath(),
-              Constants.NONE,
+              null,
               variables));
     }
   }

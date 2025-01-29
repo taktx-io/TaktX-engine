@@ -12,7 +12,6 @@ import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
@@ -104,7 +103,7 @@ public class Forwarder {
           new ContinueFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(catchEventInstance),
-              Constants.NONE,
+              null,
               info.variables().scopeToDTO());
 
       InstanceScheduleKeyDTO scheduledKey =
@@ -134,12 +133,7 @@ public class Forwarder {
 
       ExternalTaskResponseResultDTO externalTaskResponseResult =
           new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.TIMEOUT,
-              false,
-              Constants.NONE,
-              Constants.NONE,
-              Constants.NONE,
-              0L);
+              ExternalTaskResponseType.TIMEOUT, false, null, null, null, 0L);
       ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
           new ExternalTaskResponseTriggerDTO(
               processInstance.getProcessInstanceKey(),
@@ -241,7 +235,7 @@ public class Forwarder {
           new StartCommandDTO(
               newStartCommand.processInstanceKey(),
               processInstance.getProcessInstanceKey(),
-              Constants.NONE,
+              null,
               pathExtractor.getElementIdPath(newStartCommand.flowNode()),
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),

@@ -3,7 +3,6 @@ package com.flomaestro.takt.xml;
 import com.flomaestro.bpmn.TFlowElement;
 import com.flomaestro.bpmn.TProcess;
 import com.flomaestro.bpmn.TRootElement;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDTO;
@@ -23,7 +22,7 @@ public class GenericRootElementMapper implements RootElementMapper {
   public ProcessDTO map(TRootElement tRootElement) {
     if (tRootElement instanceof TProcess tProcess) {
       String id = tProcess.getId();
-      return new ProcessDTO(id, Constants.NONE, mapFlowElements(tProcess.getFlowElement()));
+      return new ProcessDTO(id, null, mapFlowElements(tProcess.getFlowElement()));
     }
     return ProcessDTO.NONE;
   }
@@ -34,7 +33,7 @@ public class GenericRootElementMapper implements RootElementMapper {
     for (JAXBElement<? extends TFlowElement> jaxbFlowElement : jaxbFlowElementList) {
       TFlowElement tFlowElement = jaxbFlowElement.getValue();
       FlowElementDTO flowElement =
-          bpmnMapperFactory.createFlowElementMapper().map(tFlowElement, Constants.NONE);
+          bpmnMapperFactory.createFlowElementMapper().map(tFlowElement, null);
       flowElements.put(flowElement.getId(), flowElement);
     }
     return new FlowElementsDTO(flowElements);

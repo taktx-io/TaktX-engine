@@ -14,7 +14,7 @@ public class MessageEventDefinitionDTO extends EventDefinitionDTO {
   private String messageRef;
 
   public MessageEventDefinitionDTO(String id, String messageRef) {
-    super(id, Constants.NONE);
+    super(id, null);
     this.messageRef = messageRef;
   }
 }

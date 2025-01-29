@@ -10,7 +10,6 @@ import com.flomaestro.engine.pi.model.FlowNodeInstancesVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessorProvider;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
@@ -66,7 +65,7 @@ public class FlowNodeInstancesProcessor {
         flowElements,
         flowNodeInstance,
         processInstance,
-        Constants.NONE,
+        null,
         flowNodeInstanceVariableScope,
         flowNodeInstances,
         processingStatistics);

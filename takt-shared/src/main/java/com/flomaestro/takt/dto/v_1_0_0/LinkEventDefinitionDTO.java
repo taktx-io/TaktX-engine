@@ -14,7 +14,7 @@ public class LinkEventDefinitionDTO extends EventDefinitionDTO {
   private String name;
 
   public LinkEventDefinitionDTO(String id, String name) {
-    super(id, Constants.NONE);
+    super(id, null);
     this.name = name;
   }
 }

@@ -7,7 +7,6 @@ import com.flomaestro.engine.pi.DebuggerUtil;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActivityInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageEventTriggerDTO;
@@ -381,7 +380,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceKey,
-            Constants.NONE,
+            null,
             List.of(),
             List.of(),
             ProcessDefinitionKey.of(activeProcessDefintion),
@@ -492,12 +491,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         activeProcessInstanceKey,
         activeExternalTaskTrigger,
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.SUCCESS,
-            true,
-            Constants.NONE,
-            Constants.NONE,
-            Constants.NONE,
-            0L),
+            ExternalTaskResponseType.SUCCESS, true, null, null, null, 0L),
         of);
     return this;
   }
@@ -509,9 +503,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         new ExternalTaskResponseResultDTO(
             ExternalTaskResponseType.PROMISE,
             true,
-            Constants.NONE,
-            Constants.NONE,
-            Constants.NONE,
+            null,
+            null,
+            null,
             Duration.parse(newTimeout).toMillis()),
         VariablesDTO.empty());
     return this;

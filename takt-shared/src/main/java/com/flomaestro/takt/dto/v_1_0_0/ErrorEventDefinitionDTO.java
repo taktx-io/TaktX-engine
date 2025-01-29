@@ -14,7 +14,7 @@ public class ErrorEventDefinitionDTO extends EventDefinitionDTO {
   private String errorRef;
 
   public ErrorEventDefinitionDTO(String id, String errorRef) {
-    super(id, Constants.NONE);
+    super(id, null);
     this.errorRef = errorRef;
   }
 }

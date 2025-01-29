@@ -3,7 +3,6 @@ package com.flomaestro.engine.pi;
 import com.flomaestro.engine.pd.model.EventSignal;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
 import com.flomaestro.engine.pi.model.ProcessInstance;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +25,7 @@ public class DirectInstanceResult {
 
   public void addNewFlowNodeInstance(
       ProcessInstance processInstance, FlowNodeInstanceInfo flowNodeInstanceInfo) {
-    if (!flowNodeInstanceInfo.inputSequenceFlowId().equals(Constants.NONE)) {
+    if (flowNodeInstanceInfo.inputSequenceFlowId() != null) {
       if (sequenceFlows.contains(flowNodeInstanceInfo.inputSequenceFlowId())) {
         throw new ProcessInstanceException(
             processInstance,

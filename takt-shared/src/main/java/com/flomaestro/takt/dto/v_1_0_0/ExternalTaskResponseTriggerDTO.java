@@ -22,7 +22,7 @@ public class ExternalTaskResponseTriggerDTO extends ContinueFlowElementTriggerDT
       List<UUID> elementInstanceIdPath,
       ExternalTaskResponseResultDTO externalTaskResponseResult,
       VariablesDTO variables) {
-    super(processInstanceKey, elementInstanceIdPath, Constants.NONE, variables);
+    super(processInstanceKey, elementInstanceIdPath, null, variables);
     this.externalTaskResponseResult = externalTaskResponseResult;
   }
 }

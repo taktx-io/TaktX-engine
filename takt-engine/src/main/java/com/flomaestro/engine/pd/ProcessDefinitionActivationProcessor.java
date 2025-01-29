@@ -3,7 +3,6 @@ package com.flomaestro.engine.pd;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
@@ -183,7 +182,7 @@ public class ProcessDefinitionActivationProcessor {
             timerEventDefinition -> {
               UUID processInstanceKey = UUID.randomUUID();
               InstanceScheduleKeyDTO scheduleKey =
-                  new InstanceScheduleKeyDTO(processInstanceKey, Constants.NONE_UUID);
+                  new InstanceScheduleKeyDTO(processInstanceKey, null);
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
                       scheduleKey,
@@ -201,7 +200,7 @@ public class ProcessDefinitionActivationProcessor {
       String processDefinitionId, UUID processInstanceKey, StartEventDTO startEvent) {
     return new StartCommandDTO(
         processInstanceKey,
-        startEvent.getParentId(),
+        startEvent.getParentId() != null ? List.of(startEvent.getParentId()) : null,
         List.of(),
         List.of(),
         new ProcessDefinitionKey(processDefinitionId),

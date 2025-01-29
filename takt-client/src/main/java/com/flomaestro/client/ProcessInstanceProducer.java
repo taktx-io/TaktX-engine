@@ -1,7 +1,6 @@
 package com.flomaestro.client;
 
 import com.flomaestro.takt.Topics;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
@@ -33,7 +32,7 @@ public class ProcessInstanceProducer {
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceKey,
-            Constants.NONE,
+            null,
             List.of(),
             List.of(),
             new ProcessDefinitionKey(processDefinitionId),

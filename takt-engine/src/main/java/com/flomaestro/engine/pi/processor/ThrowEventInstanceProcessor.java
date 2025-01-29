@@ -13,7 +13,6 @@ import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.IntermediateCatchEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ThrowEventInstance;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -54,7 +53,7 @@ public abstract class ThrowEventInstanceProcessor<
                             flowNodeInstance.getParentInstance(), event);
                     catchEventInstance.setInitialState();
                     FlowNodeInstanceInfo flowNodeInstanceInfo =
-                        new FlowNodeInstanceInfo(catchEventInstance, Constants.NONE);
+                        new FlowNodeInstanceInfo(catchEventInstance, null);
                     directInstanceResult.addNewFlowNodeInstance(
                         processInstance, flowNodeInstanceInfo);
                   });

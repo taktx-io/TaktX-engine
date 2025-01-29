@@ -23,7 +23,6 @@ import com.flomaestro.bpmn.TTask;
 import com.flomaestro.bpmn.TThrowEvent;
 import com.flomaestro.takt.dto.v_1_0_0.BoundaryEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventDTO;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.EndEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.EventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExclusiveGatewayDTO;
@@ -118,7 +117,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           mapQNameList(exclusiveGateway.getOutgoing()),
           (exclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
               ? sequenceFlow.getId()
-              : Constants.NONE);
+              : null);
     } else if (gateway instanceof TInclusiveGateway inclusiveGateway) {
       return new InclusiveGatewayDTO(
           inclusiveGateway.getId(),
@@ -127,7 +126,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           mapQNameList(inclusiveGateway.getOutgoing()),
           (inclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
               ? sequenceFlow.getId()
-              : Constants.NONE);
+              : null);
     }
 
     throw new IllegalStateException("Unknown flow element type: " + gateway.getClass().getName());

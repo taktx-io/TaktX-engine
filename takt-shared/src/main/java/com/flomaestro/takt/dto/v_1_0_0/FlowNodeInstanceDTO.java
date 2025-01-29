@@ -1,6 +1,8 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -14,6 +16,7 @@ import lombok.ToString;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonTypeIdResolver(FlowNodeInstanceTypeIdResolver.class)
+@JsonInclude(Include.NON_NULL)
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode

@@ -3,7 +3,6 @@ package com.flomaestro.engine.pd;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
@@ -121,7 +120,7 @@ public class MessageEventProcessor
                       new ContinueFlowElementTriggerDTO(
                           processInstanceKey,
                           subscription.getElementInstanceIdPath(),
-                          Constants.NONE,
+                          null,
                           messageEvent.getVariables());
 
                   context.forward(
@@ -147,7 +146,7 @@ public class MessageEventProcessor
                   StartCommandDTO startCommand =
                       new StartCommandDTO(
                           processInstanceKey,
-                          value.getElementId(),
+                          List.of(value.getElementId()),
                           List.of(),
                           List.of(),
                           new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),

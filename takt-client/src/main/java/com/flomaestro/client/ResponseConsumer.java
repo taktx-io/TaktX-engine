@@ -2,7 +2,6 @@ package com.flomaestro.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
@@ -52,12 +51,7 @@ public class ResponseConsumer {
 
     ExternalTaskResponseResultDTO externalTaskResponseResult =
         new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.SUCCESS,
-            true,
-            Constants.NONE,
-            Constants.NONE,
-            Constants.NONE,
-            0L);
+            ExternalTaskResponseType.SUCCESS, true, null, null, null, 0L);
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             externalTaskTrigger.getProcessInstanceKey(),
@@ -106,12 +100,7 @@ public class ResponseConsumer {
             externalTaskTrigger.getProcessInstanceKey(),
             externalTaskTrigger.getElementInstanceIdPath(),
             new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.PROMISE,
-                true,
-                Constants.NONE,
-                Constants.NONE,
-                Constants.NONE,
-                duration.toMillis()),
+                ExternalTaskResponseType.PROMISE, true, null, null, null, duration.toMillis()),
             VariablesDTO.empty());
     responseEmitter.send(
         new ProducerRecord<>(
