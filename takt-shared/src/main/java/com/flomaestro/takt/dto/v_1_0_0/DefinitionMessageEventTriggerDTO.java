@@ -12,7 +12,7 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class DefinitionMessageEventTriggerDTO extends MessageEventDTO {
 
-  @JsonProperty("vrs")
+  @JsonProperty("v")
   private VariablesDTO variables;
 
   public DefinitionMessageEventTriggerDTO(String messageName, VariablesDTO variables) {

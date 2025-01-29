@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public abstract class ActivityDTO extends FlowNodeDTO implements WithIoMappingDTO {
-  @JsonProperty("lc")
+  @JsonProperty("l")
   private LoopCharacteristicsDTO loopCharacteristics;
 
-  @JsonProperty("io")
+  @JsonProperty("m")
   private InputOutputMappingDTO ioMapping;
 
   protected ActivityDTO(

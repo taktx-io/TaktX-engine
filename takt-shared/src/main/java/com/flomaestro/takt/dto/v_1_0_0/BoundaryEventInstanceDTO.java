@@ -15,7 +15,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class BoundaryEventInstanceDTO extends CatchEventInstanceDTO {
 
-  @JsonProperty("ai")
+  @JsonProperty("a")
   private UUID attachedInstanceId;
 
   public BoundaryEventInstanceDTO(

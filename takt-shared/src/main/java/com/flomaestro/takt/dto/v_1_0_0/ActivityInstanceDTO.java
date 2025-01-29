@@ -14,25 +14,25 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString(callSuper = true)
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
-  @JsonProperty("st")
+  @JsonProperty("s")
   private ActtivityStateEnum state;
 
-  @JsonProperty("be")
+  @JsonProperty("b")
   private Set<UUID> boundaryEventIds;
 
-  @JsonProperty("it")
+  @JsonProperty("t")
   private boolean iteration = false;
 
-  @JsonProperty("ni")
+  @JsonProperty("n")
   private UUID nextIterationId;
 
-  @JsonProperty("ie")
+  @JsonProperty("u")
   private JsonNode inputElement;
 
-  @JsonProperty("oe")
+  @JsonProperty("o")
   private JsonNode outputElement;
 
-  @JsonProperty("lc")
+  @JsonProperty("l")
   private int loopCnt;
 
   protected ActivityInstanceDTO(

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class ThrowEventDTO extends EventDTO {
 
-  @JsonProperty("edf")
+  @JsonProperty("e")
   private Set<EventDefinitionDTO> eventDefinitions;
 
   protected ThrowEventDTO(

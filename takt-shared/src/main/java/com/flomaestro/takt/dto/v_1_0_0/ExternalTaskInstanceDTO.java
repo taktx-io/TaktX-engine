@@ -18,7 +18,7 @@ public abstract class ExternalTaskInstanceDTO extends TaskInstanceDTO {
   @JsonProperty("at")
   private int attempt;
 
-  @JsonProperty("sch")
+  @JsonProperty("k")
   private List<ScheduleKeyDTO> scheduledKeys;
 
   public ExternalTaskInstanceDTO(

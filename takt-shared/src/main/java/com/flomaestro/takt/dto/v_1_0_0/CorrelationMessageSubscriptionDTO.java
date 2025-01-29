@@ -14,16 +14,16 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
-  @JsonProperty("pi")
+  @JsonProperty("p")
   private UUID processInstanceKey;
 
-  @JsonProperty("ck")
+  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("eid")
+  @JsonProperty("e")
   private List<String> elementIdPath;
 
-  @JsonProperty("eiid")
+  @JsonProperty("i")
   private List<UUID> elementInstanceIdPath;
 
   public CorrelationMessageSubscriptionDTO(

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LinkEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("nm")
+  @JsonProperty("a")
   private String name;
 
   public LinkEventDefinitionDTO(String id, String name) {

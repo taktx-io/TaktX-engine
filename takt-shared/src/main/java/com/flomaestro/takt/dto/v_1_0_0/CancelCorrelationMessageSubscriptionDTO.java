@@ -12,7 +12,7 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class CancelCorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
-  @JsonProperty("ck")
+  @JsonProperty("c")
   private String correlationKey;
 
   public CancelCorrelationMessageSubscriptionDTO(String messageName, String correlationKey) {

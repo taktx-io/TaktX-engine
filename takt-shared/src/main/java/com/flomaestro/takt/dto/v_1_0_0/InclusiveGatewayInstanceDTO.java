@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class InclusiveGatewayInstanceDTO extends GatewayInstanceDTO {
 
-  @JsonProperty("tip")
+  @JsonProperty("t")
   private Set<String> triggeredInputFlows;
 
   public InclusiveGatewayInstanceDTO(

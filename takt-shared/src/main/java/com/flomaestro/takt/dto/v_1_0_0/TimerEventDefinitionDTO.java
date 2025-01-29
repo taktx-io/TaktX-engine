@@ -9,13 +9,13 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class TimerEventDefinitionDTO extends EventDefinitionDTO {
-  @JsonProperty("dat")
+  @JsonProperty("dt")
   private String timeDate;
 
-  @JsonProperty("dur")
+  @JsonProperty("du")
   private String timeDuration;
 
-  @JsonProperty("cyc")
+  @JsonProperty("tc")
   private String timeCycle;
 
   public TimerEventDefinitionDTO(

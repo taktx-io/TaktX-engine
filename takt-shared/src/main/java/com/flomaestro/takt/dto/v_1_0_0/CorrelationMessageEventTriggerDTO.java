@@ -12,10 +12,10 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class CorrelationMessageEventTriggerDTO extends MessageEventDTO {
 
-  @JsonProperty("ck")
+  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("vrs")
+  @JsonProperty("v")
   private VariablesDTO variables;
 
   public CorrelationMessageEventTriggerDTO(

@@ -19,7 +19,7 @@ public class VariableKeySerializer implements Serializer<VariableKeyDTO> {
     byte[] serializedProcessInstanceId = uuidSerializer.serialize(topic, processInstanceKey);
     byte[] serializedFlowNodeInstancesId =
         uuidSerializer.serialize(topic, data.getFlowNodeInstancesId());
-    byte[] serializedEleeentInstanceId =
+    byte[] serializedElementInstanceId =
         uuidSerializer.serialize(topic, data.getElementInstanceId());
     byte[] serializedVariableName = stringSerializer.serialize(topic, data.getVariableName());
     // Return a concatenated byte array of the serialized UUID and the serialized variable name
@@ -27,7 +27,7 @@ public class VariableKeySerializer implements Serializer<VariableKeyDTO> {
         new byte
             [serializedProcessInstanceId.length
                 + serializedFlowNodeInstancesId.length
-                + serializedEleeentInstanceId.length
+                + serializedElementInstanceId.length
                 + serializedVariableName.length];
     int index = 0;
     System.arraycopy(
@@ -45,12 +45,12 @@ public class VariableKeySerializer implements Serializer<VariableKeyDTO> {
         serializedFlowNodeInstancesId.length);
     index += serializedFlowNodeInstancesId.length;
     System.arraycopy(
-        serializedEleeentInstanceId,
+        serializedElementInstanceId,
         0,
         serializedVariableKey,
         index,
-        serializedEleeentInstanceId.length);
-    index += serializedFlowNodeInstancesId.length;
+        serializedElementInstanceId.length);
+    index += serializedElementInstanceId.length;
     System.arraycopy(
         serializedVariableName, 0, serializedVariableKey, index, serializedVariableName.length);
     return serializedVariableKey;

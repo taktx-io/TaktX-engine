@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ParallelGatewayInstanceDTO extends GatewayInstanceDTO {
-  @JsonProperty("tf")
+  @JsonProperty("t")
   Set<String> triggeredFlows;
 
   public ParallelGatewayInstanceDTO(

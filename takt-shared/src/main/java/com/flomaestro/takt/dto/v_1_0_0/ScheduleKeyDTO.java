@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import com.flomaestro.takt.CustomTypeIdResolver;
+import com.flomaestro.takt.ScheduleKeyTypeIdResolver;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "cls")
-@JsonTypeIdResolver(CustomTypeIdResolver.class)
+@JsonTypeInfo(use = Id.CUSTOM, property = "c")
+@JsonTypeIdResolver(ScheduleKeyTypeIdResolver.class)
 public interface ScheduleKeyDTO {
   @JsonIgnore
   Object getRecordKey();

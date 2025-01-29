@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public abstract class GatewayInstanceDTO extends FlowNodeInstanceDTO {
-  @JsonProperty("sof")
+  @JsonProperty("f")
   private Set<String> selectedOutputFlows;
 
   protected GatewayInstanceDTO(

@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BoundaryEventDTO extends CatchEventDTO {
 
-  @JsonProperty("ref")
+  @JsonProperty("f")
   private String attachedToRef;
 
-  @JsonProperty("can")
+  @JsonProperty("x")
   private boolean cancelActivity;
 
   public BoundaryEventDTO(

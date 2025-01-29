@@ -5,30 +5,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import com.flomaestro.takt.CustomTypeIdResolver;
+import com.flomaestro.takt.FlowNodeInstanceTypeIdResolver;
 import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "cls")
-@JsonTypeIdResolver(CustomTypeIdResolver.class)
+@JsonTypeInfo(use = Id.CUSTOM, property = "c")
+@JsonTypeIdResolver(FlowNodeInstanceTypeIdResolver.class)
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
 public abstract class FlowNodeInstanceDTO {
-  @JsonProperty("eii")
+  @JsonProperty("i")
   private UUID elementInstanceId;
 
-  @JsonProperty("pei")
+  @JsonProperty("p")
   private UUID parentElementInstanceId;
 
-  @JsonProperty("ei")
+  @JsonProperty("e")
   private String elementId;
 
-  @JsonProperty("pc")
+  @JsonProperty("c")
   private int passedCnt;
 
   protected FlowNodeInstanceDTO(UUID elementInstanceId, String elementId, int passedCnt) {

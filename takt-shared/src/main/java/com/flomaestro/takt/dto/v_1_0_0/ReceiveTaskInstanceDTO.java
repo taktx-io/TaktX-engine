@@ -15,10 +15,10 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
-  @JsonProperty("ck")
+  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("mek")
+  @JsonProperty("m")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 
   public ReceiveTaskInstanceDTO(

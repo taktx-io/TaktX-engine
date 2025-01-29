@@ -12,16 +12,16 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
-  @JsonProperty("fnii")
+  @JsonProperty("f")
   private UUID flowNodeInstancesId;
 
-  @JsonProperty("fni")
+  @JsonProperty("i")
   private FlowNodeInstanceDTO flowNodeInstance;
 
   @JsonProperty("v")
   private VariablesDTO variables;
 
-  @JsonProperty("pt")
+  @JsonProperty("t")
   private long processTime;
 
   public FlowNodeInstanceUpdateDTO(

@@ -20,19 +20,19 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   @JsonProperty("sk")
   private Set<ScheduleKeyDTO> scheduledKeys;
 
-  @JsonProperty("mek")
+  @JsonProperty("mk")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 
-  @JsonProperty("ess")
+  @JsonProperty("es")
   private Set<EscalationSubscriptionDTO> escalationSubscriptions;
 
-  @JsonProperty("ers")
+  @JsonProperty("er")
   private Set<ErrorSubscriptionDTO> errorSubscriptions;
 
-  @JsonProperty("ces")
+  @JsonProperty("cs")
   private boolean catchAllEscalations;
 
-  @JsonProperty("cer")
+  @JsonProperty("cr")
   private boolean catchAllErrors;
 
   protected CatchEventInstanceDTO(

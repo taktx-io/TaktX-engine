@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class EventDTO extends FlowNodeDTO implements WithIoMappingDTO {
 
-  @JsonProperty("iom")
+  @JsonProperty("m")
   private InputOutputMappingDTO ioMapping;
 
   protected EventDTO(

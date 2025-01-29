@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MessageEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("msg")
+  @JsonProperty("r")
   private String messageRef;
 
   public MessageEventDefinitionDTO(String id, String messageRef) {

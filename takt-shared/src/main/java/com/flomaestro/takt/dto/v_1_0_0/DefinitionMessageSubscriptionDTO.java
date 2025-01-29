@@ -11,10 +11,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class DefinitionMessageSubscriptionDTO extends MessageEventDTO {
-  @JsonProperty("pdk")
+  @JsonProperty("d")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("eid")
+  @JsonProperty("e")
   private String elementId;
 
   public DefinitionMessageSubscriptionDTO(

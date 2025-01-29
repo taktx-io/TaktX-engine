@@ -15,7 +15,7 @@ public class ProcessDTO extends RootElementDTO {
   public static final ProcessDTO NONE =
       new ProcessDTO(Constants.NONE, Constants.NONE, FlowElementsDTO.EMPTY);
 
-  @JsonProperty("fe")
+  @JsonProperty("f")
   private FlowElementsDTO flowElements;
 
   public ProcessDTO(String id, String parentId, FlowElementsDTO flowElements) {

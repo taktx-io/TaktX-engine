@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ErrorEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("err")
+  @JsonProperty("er")
   private String errorRef;
 
   public ErrorEventDefinitionDTO(String id, String errorRef) {

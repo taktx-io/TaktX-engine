@@ -14,10 +14,10 @@ public class CallActivityDTO extends ActivityDTO {
   @JsonProperty("ce")
   private String calledElement;
 
-  @JsonProperty("ppv")
+  @JsonProperty("pp")
   private boolean propagateAllParentVariables;
 
-  @JsonProperty("pcv")
+  @JsonProperty("pc")
   private boolean propagateAllChildVariables;
 
   public CallActivityDTO(

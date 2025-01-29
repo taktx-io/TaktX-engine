@@ -10,7 +10,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class ThrowEventInstanceDTO extends EventInstanceDTO {
+public abstract class ThrowEventInstanceDTO extends EventInstanceDTO {
   public ThrowEventInstanceDTO(UUID elementInstanceId, String elementId, int passedCnt) {
     super(elementInstanceId, elementId, passedCnt);
   }

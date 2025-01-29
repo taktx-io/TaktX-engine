@@ -1,7 +1,7 @@
 package com.flomaestro.takt.util;
 
 import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
-import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.UUID;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -13,12 +13,11 @@ public class VariableKeyDeserializer implements Deserializer<VariableKeyDTO> {
     if (data == null) {
       return null;
     }
-    UUID processInstanceKey =
-        uuidDeserializer.deserialize(topic, ByteBuffer.wrap(data, 0, 16).array());
+    UUID processInstanceKey = uuidDeserializer.deserialize(topic, Arrays.copyOfRange(data, 0, 16));
     UUID flowNodeInstancesKey =
-        uuidDeserializer.deserialize(topic, ByteBuffer.wrap(data, 16, 16).array());
+        uuidDeserializer.deserialize(topic, Arrays.copyOfRange(data, 16, 32));
     UUID flowNodeInstanceKey =
-        uuidDeserializer.deserialize(topic, ByteBuffer.wrap(data, 32, 16).array());
+        uuidDeserializer.deserialize(topic, Arrays.copyOfRange(data, 32, 48));
 
     String variableName = new String(data, 48, data.length - 48);
     return new VariableKeyDTO(

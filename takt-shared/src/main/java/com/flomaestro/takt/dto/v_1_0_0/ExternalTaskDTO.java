@@ -13,19 +13,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class ExternalTaskDTO extends TaskDTO {
 
-  @JsonProperty("wd")
+  @JsonProperty("w")
   private String workerDefinition;
 
-  @JsonProperty("rtr")
+  @JsonProperty("rt")
   private String retries;
 
-  @JsonProperty("imp")
+  @JsonProperty("im")
   private String implementation;
 
-  @JsonProperty("hdr")
+  @JsonProperty("h")
   private Map<String, String> headers;
 
-  @JsonProperty("sch")
+  @JsonProperty("sc")
   private List<ScheduleKeyDTO> scheduledKeys;
 
   protected ExternalTaskDTO(

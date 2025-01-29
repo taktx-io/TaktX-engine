@@ -13,25 +13,25 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
-  @JsonProperty("ppik")
+  @JsonProperty("pp")
   private UUID parentProcessInstanceKey;
 
-  @JsonProperty("pei")
+  @JsonProperty("pe")
   private List<String> parentElementIdPath;
 
-  @JsonProperty("peii")
+  @JsonProperty("pi")
   private List<UUID> parentElementInstancePath;
 
-  @JsonProperty("pdk")
+  @JsonProperty("pd")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("fni")
+  @JsonProperty("fi")
   private FlowNodeInstancesDTO flowNodeInstances;
 
   @JsonProperty("v")
   private VariablesDTO variables;
 
-  @JsonProperty("pt")
+  @JsonProperty("t")
   private long processTime;
 
   public ProcessInstanceUpdateDTO(

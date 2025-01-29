@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class MultiInstanceInstanceDTO extends ActivityInstanceDTO
     implements WithFlowNodeInstancesDTO {
-  @JsonProperty("fni")
+  @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
 
   public MultiInstanceInstanceDTO(

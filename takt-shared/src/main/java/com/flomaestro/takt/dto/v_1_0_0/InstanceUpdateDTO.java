@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import com.flomaestro.takt.CustomTypeIdResolver;
+import com.flomaestro.takt.InstanceUpdateTypeIdResolver;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "cls")
-@JsonTypeIdResolver(CustomTypeIdResolver.class)
+@JsonTypeInfo(use = Id.CUSTOM, property = "c")
+@JsonTypeIdResolver(InstanceUpdateTypeIdResolver.class)
 @Setter
 @Getter
 @NoArgsConstructor
@@ -21,7 +21,7 @@ import lombok.ToString;
 @ToString
 public abstract class InstanceUpdateDTO {
 
-  @JsonProperty("pik")
+  @JsonProperty("p")
   private UUID processInstanceKey;
 
   protected InstanceUpdateDTO(UUID processInstanceKey) {

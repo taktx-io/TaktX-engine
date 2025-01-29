@@ -14,7 +14,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFlowNodeInstancesDTO {
 
-  @JsonProperty("fni")
+  @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
 
   public SubProcessInstanceDTO(

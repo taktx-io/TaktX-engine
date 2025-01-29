@@ -10,13 +10,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SequenceFlowDTO extends FlowElementDTO {
 
-  @JsonProperty("src")
+  @JsonProperty("s")
   private String source;
 
-  @JsonProperty("tgt")
+  @JsonProperty("t")
   private String target;
 
-  @JsonProperty("cnd")
+  @JsonProperty("c")
   private FlowConditionDTO condition;
 
   public SequenceFlowDTO(

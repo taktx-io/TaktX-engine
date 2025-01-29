@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ReceiveTaskDTO extends TaskDTO {
 
-  @JsonProperty("msg")
+  @JsonProperty("r")
   private String messageRef;
 
   public ReceiveTaskDTO(

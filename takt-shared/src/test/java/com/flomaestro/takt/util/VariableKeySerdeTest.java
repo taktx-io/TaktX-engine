@@ -10,7 +10,8 @@ class VariableKeySerdeTest {
   @Test
   void test() {
     VariableKeySerde serde = new VariableKeySerde();
-    VariableKeyDTO variableKey = new VariableKeyDTO(UUID.randomUUID(), "variableName");
+    VariableKeyDTO variableKey =
+        new VariableKeyDTO(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "variableName");
     byte[] serialize = serde.serializer().serialize("topic", variableKey);
     VariableKeyDTO deserialize = serde.deserializer().deserialize("topic", serialize);
     Assertions.assertThat(deserialize).isEqualTo(variableKey);

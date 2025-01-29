@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public abstract class CatchEventDTO extends EventDTO implements WithIoMappingDTO {
-  @JsonProperty("edf")
+  @JsonProperty("e")
   protected Set<EventDefinitionDTO> eventDefinitions;
 
   protected CatchEventDTO(

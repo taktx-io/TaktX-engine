@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class GatewayDTO extends FlowNodeDTO {
 
-  @JsonProperty("df")
+  @JsonProperty("d")
   private String defaultFlow;
 
   protected GatewayDTO(
