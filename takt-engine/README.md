@@ -6,6 +6,7 @@
 docker build -f Dockerfile.jvm -t ghcr.io/qunit/takt-engine:1.0.0 .
 docker build --platform linux/amd64 -f Dockerfile.jvm -t ghcr.io/qunit/takt-engine:1.0.0 .
 docker push ghcr.io/qunit/takt-engine:1.0.0 
+docker pull ghcr.io/qunit/takt-engine:1.0.0 
 docker run -it -v ./config:/app/config -e quarkus.config.locations=file:/app/config/kafka-dockerlocal.properties -e tenant=tenant -e namespace=namespace  ghcr.io/qunit/takt-engine:1.0.0
 keytool -import -alias testalias -file ca-certificate.crt -keypass keypass -keystore truststore.jks 
  ```

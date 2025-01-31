@@ -1,5 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -13,6 +15,7 @@ import lombok.Setter;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonTypeIdResolver(MessageEventTypeIdResolver.class)
+@JsonFormat(shape = Shape.ARRAY)
 @Getter
 @Setter
 @EqualsAndHashCode
