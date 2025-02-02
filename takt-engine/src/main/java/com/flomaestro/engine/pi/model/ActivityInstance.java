@@ -5,7 +5,6 @@ import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,22 +18,22 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
   private boolean wasWaiting = false;
   private boolean wasNew = false;
   private boolean iteration = false;
-  private UUID nextIterationId;
+  private long nextIterationId;
   private JsonNode inputElement;
   private JsonNode outputElement;
   private int loopCnt;
 
-  private Set<UUID> boundaryEventIds = new HashSet<>();
+  private Set<Long> boundaryEventIds = new HashSet<>();
 
-  protected ActivityInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
-    super(parentInstance, flowNode);
+  protected ActivityInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 
-  public void addBoundaryEventId(UUID boundaryEventId) {
+  public void addBoundaryEventId(long boundaryEventId) {
     getBoundaryEventIds().add(boundaryEventId);
   }
 
-  public Set<UUID> getBoundaryEventIds() {
+  public Set<Long> getBoundaryEventIds() {
     if (boundaryEventIds == null) {
       boundaryEventIds = new HashSet<>();
     }

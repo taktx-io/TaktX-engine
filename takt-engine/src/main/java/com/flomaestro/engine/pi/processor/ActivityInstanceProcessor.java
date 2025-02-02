@@ -13,16 +13,16 @@ import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.BoundaryEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
 import java.util.Set;
-import java.util.UUID;
 import lombok.NoArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -44,14 +44,15 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      FlowNodeInstances flowNodeInstances,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     processStartSpecificActivityInstance(
@@ -72,7 +73,7 @@ public abstract class ActivityInstanceProcessor<
           .forEach(
               boundaryEvent -> {
                 BoundaryEventInstance boundaryEventInstance =
-                    new BoundaryEventInstance(flownodeInstance.getParentInstance(), boundaryEvent);
+                    new BoundaryEventInstance(flownodeInstance.getParentInstance(), boundaryEvent, flowNodeInstances.nextElementInstanceId());
                 boundaryEventInstance.setState(CatchEventStateEnum.INITIAL);
 
                 boundaryEventInstance.setAttachedInstanceId(
@@ -88,7 +89,7 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -96,7 +97,7 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
 
@@ -121,12 +122,12 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     instance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
@@ -142,18 +143,18 @@ public abstract class ActivityInstanceProcessor<
   }
 
   protected abstract void processStartSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables flowNodeInstanceVariables,
+      VariableScope flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processContinueSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -161,16 +162,16 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       C trigger,
-      FlowNodeInstanceVariables flowNodeInstanceVariables,
+      VariableScope flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics);
 
   @Override
@@ -178,7 +179,7 @@ public abstract class ActivityInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       FlowNodeInstances flowNodeInstances,
-      FlowNodeInstanceVariables variables) {
+      VariableScope variables) {
     if (flowNodeInstance.isIteration()) {
       return Set.of();
     }
@@ -186,7 +187,7 @@ public abstract class ActivityInstanceProcessor<
   }
 
   private void handleFinishedIteration(
-      ActivityInstance<?> flownodeInstance, FlowNodeInstanceVariables variables) {
+      ActivityInstance<?> flownodeInstance, VariableScope variables) {
     if (flownodeInstance.getState() == ActtivityStateEnum.FINISHED
         && flownodeInstance.isIteration()) {
       FlowNode flowNode = flownodeInstance.getFlowNode();

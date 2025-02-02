@@ -8,14 +8,14 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.model.EventInstance;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
 import java.util.Set;
-import java.util.UUID;
 import lombok.NoArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -32,14 +32,14 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      FlowNodeInstances flowNodeInstances, InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     processStartSpecificEventInstance(
         processInstance,
@@ -54,7 +54,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -62,7 +62,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     // Should not occur
@@ -73,7 +73,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       ProcessInstance processInstance,
       I flowNodeInstance,
       FlowNodeInstances flowNodeInstances,
-      FlowNodeInstanceVariables variables) {
+      VariableScope variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
@@ -84,6 +84,6 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics);
 }

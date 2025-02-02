@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import com.flomaestro.takt.FlowNodeInstanceTypeIdResolver;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -26,10 +25,10 @@ import lombok.ToString;
 @ToString
 public abstract class FlowNodeInstanceDTO {
   @JsonProperty("i")
-  private UUID elementInstanceId;
+  private long elementInstanceId;
 
   @JsonProperty("p")
-  private UUID parentElementInstanceId;
+  private long parentElementInstanceId;
 
   @JsonProperty("e")
   private String elementId;
@@ -37,7 +36,7 @@ public abstract class FlowNodeInstanceDTO {
   @JsonProperty("c")
   private int passedCnt;
 
-  protected FlowNodeInstanceDTO(UUID elementInstanceId, String elementId, int passedCnt) {
+  protected FlowNodeInstanceDTO(long elementInstanceId, String elementId, int passedCnt) {
     this.elementInstanceId = elementInstanceId;
     this.elementId = elementId;
     this.passedCnt = passedCnt;
@@ -50,6 +49,11 @@ public abstract class FlowNodeInstanceDTO {
 
   @JsonIgnore
   public boolean isFailed() {
+    return false;
+  }
+
+  @JsonIgnore
+  public boolean isWaiting() {
     return false;
   }
 }

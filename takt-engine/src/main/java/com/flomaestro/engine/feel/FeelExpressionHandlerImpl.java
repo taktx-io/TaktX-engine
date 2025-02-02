@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.flomaestro.engine.pi.model.AbstractVariableScope;
+import com.flomaestro.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,7 +40,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     this.objectMapper = objectMapper;
   }
 
-  public JsonNode processFeelExpression(String expression, AbstractVariableScope variables) {
+  public JsonNode processFeelExpression(String expression, VariableScope variables) {
     JsonNode resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
@@ -65,7 +65,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
     return resultNode;
   }
 
-  private Context createContext(AbstractVariableScope variables) {
+  private Context createContext(VariableScope variables) {
     return new Context() {
       @Override
       public VariableProvider variableProvider() {

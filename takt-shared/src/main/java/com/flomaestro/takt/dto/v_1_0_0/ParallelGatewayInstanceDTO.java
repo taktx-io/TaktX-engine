@@ -2,7 +2,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,7 +14,7 @@ public class ParallelGatewayInstanceDTO extends GatewayInstanceDTO {
   Set<String> triggeredFlows;
 
   public ParallelGatewayInstanceDTO(
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       Set<String> triggeredFlows,
       int passedCnt,

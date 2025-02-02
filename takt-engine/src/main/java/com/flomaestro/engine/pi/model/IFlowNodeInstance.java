@@ -1,13 +1,15 @@
 package com.flomaestro.engine.pi.model;
 
 import com.flomaestro.engine.pd.model.FlowNode;
-import java.util.UUID;
+import java.util.List;
 
 public interface IFlowNodeInstance {
 
-  UUID getElementInstanceId();
+  long getElementInstanceId();
 
   FlowNodeInstance<?> getParentInstance();
 
   FlowNode getFlowNode();
+
+  List<Long> getKeyPath();
 }

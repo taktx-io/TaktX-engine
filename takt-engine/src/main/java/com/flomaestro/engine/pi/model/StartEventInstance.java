@@ -6,8 +6,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StartEventInstance extends CatchEventInstance<StartEvent> {
 
-  public StartEventInstance(FlowNodeInstance<?> parentInstance, StartEvent flowNode) {
-    super(parentInstance, flowNode);
+  public StartEventInstance(FlowNodeInstance<?> parentInstance, StartEvent flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 
   @Override

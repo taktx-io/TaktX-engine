@@ -14,7 +14,7 @@ public class SubProcess extends Activity implements WIthChildElements {
   private FlowElements elements;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance) {
-    return new SubProcessInstance(parentInstance, this);
+  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new SubProcessInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -3,7 +3,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,13 +15,13 @@ import lombok.ToString;
 public class BoundaryEventInstanceDTO extends CatchEventInstanceDTO {
 
   @JsonProperty("a")
-  private UUID attachedInstanceId;
+  private long attachedInstanceId;
 
   public BoundaryEventInstanceDTO(
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
-      UUID attachedInstanceId,
+      long attachedInstanceId,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys,
       CatchEventStateEnum state,
       Set<ScheduleKeyDTO> scheduledKeys) {

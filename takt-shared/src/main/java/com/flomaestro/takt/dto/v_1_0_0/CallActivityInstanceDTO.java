@@ -20,10 +20,10 @@ public class CallActivityInstanceDTO extends ActivityInstanceDTO {
   public CallActivityInstanceDTO(
       ActtivityStateEnum state,
       UUID childProcessInstanceId,
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
-      Set<UUID> boundaryEventIds) {
+      Set<Long> boundaryEventIds) {
     super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
     this.childProcessInstanceId = childProcessInstanceId;
   }

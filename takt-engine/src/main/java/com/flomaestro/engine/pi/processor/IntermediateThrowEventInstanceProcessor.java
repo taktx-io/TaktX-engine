@@ -6,14 +6,14 @@ import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.IntermediateThrowEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
-import java.util.UUID;
 import lombok.NoArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -32,12 +32,12 @@ public class IntermediateThrowEventInstanceProcessor
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       IntermediateThrowEventInstance instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables processInstanceVariables,
+      VariableScope processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }
@@ -48,7 +48,7 @@ public class IntermediateThrowEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }

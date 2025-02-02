@@ -10,11 +10,12 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.model.CallActivityInstance;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -40,14 +41,14 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processStartSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       CallActivityInstance callActivityInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     callActivityInstance.setState(ActtivityStateEnum.WAITING);
 
@@ -81,7 +82,7 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -89,19 +90,19 @@ public class CallActivityInstanceProcessor
       ProcessInstance processInstance,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
-      FlowNodeInstanceVariables processInstanceVariables,
+      VariableScope processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     instance.setState(ActtivityStateEnum.FINISHED);
   }
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       CallActivityInstance instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables processInstanceVariables,
+      VariableScope processInstanceVariables,
       ProcessingStatistics processingStatistics) {
     instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
   }

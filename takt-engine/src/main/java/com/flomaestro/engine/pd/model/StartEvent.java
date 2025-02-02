@@ -14,6 +14,6 @@ public class StartEvent extends CatchEvent {
 
   public StartEventInstance newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new StartEventInstance(parentInstance, this);
+    return new StartEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
   }
 }

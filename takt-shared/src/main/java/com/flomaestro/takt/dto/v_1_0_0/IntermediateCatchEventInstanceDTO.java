@@ -2,7 +2,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,7 +15,7 @@ public class IntermediateCatchEventInstanceDTO extends CatchEventInstanceDTO {
 
   public IntermediateCatchEventInstanceDTO(
       CatchEventStateEnum state,
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
       Set<ScheduleKeyDTO> scheduledKeys,

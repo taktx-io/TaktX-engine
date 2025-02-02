@@ -2,7 +2,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -20,10 +19,10 @@ public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFl
   public SubProcessInstanceDTO(
       FlowNodeInstancesDTO flowNodeInstances,
       String elementId,
-      UUID elementInstanceId,
+      long elementInstanceId,
       ActtivityStateEnum state,
       int passedCnt,
-      Set<UUID> boundaryEventIds) {
+      Set<Long> boundaryEventIds) {
     super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
     this.flowNodeInstances = flowNodeInstances;
   }

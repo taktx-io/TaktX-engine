@@ -12,7 +12,7 @@ public class ProcessInstance {
   private final UUID processInstanceKey;
   private final UUID parentProcessInstanceKey;
   private final List<String> parentElementIdPath;
-  private final List<UUID> parentElementInstancePath;
+  private final List<Long> parentElementInstancePath;
   private final ProcessDefinitionKey processDefinitionKey;
   private final FlowNodeInstances flowNodeInstances;
   private final boolean propagateAllToParent;
@@ -22,7 +22,7 @@ public class ProcessInstance {
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
       List<String> parentElementIdPath,
-      List<UUID> parentElementInstancePath,
+      List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       FlowNodeInstances flowNodeInstances,
       boolean propagateAllToParent,
@@ -36,4 +36,5 @@ public class ProcessInstance {
     this.propagateAllToParent = propagateAllToParent;
     this.outputMappings = outputMappings;
   }
+
 }

@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 public class Task extends Activity {
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance) {
-    return new TaskInstance(parentInstance, this);
+  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new TaskInstance(parentInstance, this, elementInstanceId);
   }
 }

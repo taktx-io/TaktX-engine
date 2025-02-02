@@ -4,19 +4,18 @@ import com.flomaestro.engine.pd.model.EventSignal;
 import com.flomaestro.engine.pd.model.FlowElements;
 import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
-import com.flomaestro.engine.pi.model.FlowNodeInstancesVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
-import java.util.UUID;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
@@ -36,13 +35,13 @@ public class FlowNodeInstancesProcessor {
   }
 
   public void processStart(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       String elementId,
       FlowNodeInstance<?> parentElementInstance,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      FlowNodeInstancesVariables variables,
+      VariableScope variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
 
@@ -55,8 +54,8 @@ public class FlowNodeInstancesProcessor {
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
 
-    FlowNodeInstanceVariables flowNodeInstanceVariableScope =
-        variables.selectFlowNodeInstanceScope(flowNodeInstance.getElementInstanceId());
+    VariableScope flowNodeInstanceVariableScope =
+        variables.selectFlowNodeInstancesScope(flowNodeInstance.getElementInstanceId());
 
     processor.processStart(
         flowNodeInstanceStore,
@@ -84,26 +83,34 @@ public class FlowNodeInstancesProcessor {
   }
 
   public void processContinue(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       int subProcessLevel,
       ContinueFlowElementTriggerDTO trigger,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      FlowNodeInstancesVariables variables,
+      VariableScope variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-        new StoredFlowNodeInstancesWrapper(flowNodeInstances, flowNodeInstanceStore, flowElements);
+        new StoredFlowNodeInstancesWrapper(
+            processInstance.getProcessInstanceKey(),
+            flowNodeInstances,
+            flowNodeInstanceStore,
+            flowElements);
+
     FlowNodeInstance<?> flowNodeInstance =
         storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
             trigger.getElementInstanceIdPath().get(subProcessLevel));
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-    FlowNodeInstanceVariables flowNodeInstanceVariables =
-        variables.selectFlowNodeInstanceScope(flowNodeInstance.getElementInstanceId());
+
+    VariableScope flowNodeInstanceVariables =
+        variables.selectFlowNodeInstancesScope(flowNodeInstance.getElementInstanceId());
+
     flowNodeInstanceVariables.merge(trigger.getVariables());
+
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 
@@ -140,19 +147,22 @@ public class FlowNodeInstancesProcessor {
   }
 
   public void processTerminate(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       TerminateTriggerDTO trigger,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      FlowNodeInstancesVariables flowNodeInstancesVariables,
+      VariableScope flowNodeInstancesVariables,
       FlowElements flowElements,
       ProcessingStatistics processingStatistics) {
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-        new StoredFlowNodeInstancesWrapper(flowNodeInstances, flowNodeInstanceStore, flowElements);
+        new StoredFlowNodeInstancesWrapper(processInstance.getProcessInstanceKey(),
+            flowNodeInstances,
+            flowNodeInstanceStore,
+            flowElements);
 
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
@@ -163,8 +173,8 @@ public class FlowNodeInstancesProcessor {
               instance -> {
                 FlowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-                FlowNodeInstanceVariables flowNodeInstanceVariables =
-                    flowNodeInstancesVariables.selectFlowNodeInstanceScope(
+                VariableScope flowNodeInstanceVariables =
+                    flowNodeInstancesVariables.selectFlowNodeInstancesScope(
                         instance.getElementInstanceId());
                 processor.processTerminate(
                     flowNodeInstanceStore,
@@ -183,8 +193,8 @@ public class FlowNodeInstancesProcessor {
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
               trigger.getElementInstanceIdPath().getFirst());
       if (instance != null) {
-        FlowNodeInstanceVariables flowNodeInstanceVariables =
-            flowNodeInstancesVariables.selectFlowNodeInstanceScope(instance.getElementInstanceId());
+        VariableScope flowNodeInstanceVariables =
+            flowNodeInstancesVariables.selectFlowNodeInstancesScope(instance.getElementInstanceId());
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
         processor.processTerminate(
@@ -202,13 +212,13 @@ public class FlowNodeInstancesProcessor {
   }
 
   protected void continueNewInstances(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables processInstanceVariables,
+      VariableScope processInstanceVariables,
       ProcessingStatistics processingStatistics) {
 
     flowInstanceRunner.continueNewInstances(

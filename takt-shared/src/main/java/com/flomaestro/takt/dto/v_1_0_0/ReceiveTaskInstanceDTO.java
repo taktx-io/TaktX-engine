@@ -3,7 +3,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -23,11 +22,11 @@ public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
   public ReceiveTaskInstanceDTO(
       ActtivityStateEnum state,
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
       String correlationKey,
-      Set<UUID> boundaryEventIds,
+      Set<Long> boundaryEventIds,
       Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
     super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds);
     this.correlationKey = correlationKey;

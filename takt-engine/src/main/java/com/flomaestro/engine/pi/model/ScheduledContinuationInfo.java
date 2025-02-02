@@ -5,4 +5,4 @@ import com.flomaestro.engine.pd.model.TimerEventDefinition;
 public record ScheduledContinuationInfo(
     FlowNodeInstanceWithScheduleKeys catchEventInstance,
     TimerEventDefinition timerEventDefinition,
-    FlowNodeInstanceVariables variables) {}
+    VariableScope variables) {}

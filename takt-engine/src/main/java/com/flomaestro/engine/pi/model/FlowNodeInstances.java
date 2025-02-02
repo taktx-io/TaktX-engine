@@ -5,7 +5,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,26 +12,27 @@ import lombok.Setter;
 @Setter
 public class FlowNodeInstances {
 
-  private final Map<UUID, FlowNodeInstance<?>> instances;
+  private final Map<Long, FlowNodeInstance<?>> instances;
   private int activeCnt;
   private ProcessInstanceState state;
-  private UUID flowNodeInstancesId;
-  private FlowNodeInstances parentFlowNodeInstances;
   private boolean stateChanged;
+  private FlowNodeInstance<?> parentFlowNodeInstance;
+  private long elementInstanceCnt;
+
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
-    this.flowNodeInstancesId = UUID.randomUUID();
     this.state = ProcessInstanceState.ACTIVE;
     this.stateChanged = false;
     this.activeCnt = 0;
+    this.elementInstanceCnt = 0;
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
     instances.put(fLowNodeInstance.getElementInstanceId(), fLowNodeInstance);
   }
 
-  public FlowNodeInstance<?> getInstanceWithInstanceId(UUID elementInstanceId) {
+  public FlowNodeInstance<?> getInstanceWithInstanceId(long elementInstanceId) {
     return instances.get(elementInstanceId);
   }
 
@@ -80,4 +80,9 @@ public class FlowNodeInstances {
   public boolean isDirty() {
     return stateChanged || instances.values().stream().anyMatch(FlowNodeInstance::isDirty);
   }
+
+  public long nextElementInstanceId() {
+    return ++elementInstanceCnt;
+  }
+
 }

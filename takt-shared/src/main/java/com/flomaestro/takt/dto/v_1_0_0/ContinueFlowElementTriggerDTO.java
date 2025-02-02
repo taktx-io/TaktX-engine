@@ -19,11 +19,11 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO
   private String inputFlowId;
 
   @JsonProperty("eiip")
-  private List<UUID> elementInstanceIdPath;
+  private List<Long> elementInstanceIdPath;
 
   public ContinueFlowElementTriggerDTO(
       UUID processInstanceKey,
-      List<UUID> elementInstanceIdPath,
+      List<Long> elementInstanceIdPath,
       String inputFlowId,
       VariablesDTO variables) {
     super(processInstanceKey, List.of(), variables);

@@ -9,8 +9,8 @@ import lombok.Getter;
 public class ParallelGatewayInstance extends GatewayInstance<ParallelGateway> {
   private final Set<String> triggeredFlows = new HashSet<>();
 
-  public ParallelGatewayInstance(FlowNodeInstance<?> parentInstance, ParallelGateway flowNode) {
-    super(parentInstance, flowNode);
+  public ParallelGatewayInstance(FlowNodeInstance<?> parentInstance, ParallelGateway flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 
   @Override

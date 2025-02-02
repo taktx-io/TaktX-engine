@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class TaskInstance extends ActivityInstance<Task> {
-  public TaskInstance(FlowNodeInstance<?> parentInstance, Task flowNode) {
-    super(parentInstance, flowNode);
+  public TaskInstance(FlowNodeInstance<?> parentInstance, Task flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 }

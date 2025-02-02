@@ -1,7 +1,6 @@
 package com.flomaestro.engine.pi.model;
 
 import com.flomaestro.engine.pd.model.BoundaryEvent;
-import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,10 +9,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent> {
-  private UUID attachedInstanceId;
+  private long attachedInstanceId;
 
-  public BoundaryEventInstance(FlowNodeInstance<?> parentInstance, BoundaryEvent flowNode) {
-    super(parentInstance, flowNode);
+  public BoundaryEventInstance(FlowNodeInstance<?> parentInstance, BoundaryEvent flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 
   @Override

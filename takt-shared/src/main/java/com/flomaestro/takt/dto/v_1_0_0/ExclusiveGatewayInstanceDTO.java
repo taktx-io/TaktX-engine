@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class ExclusiveGatewayInstanceDTO extends GatewayInstanceDTO {
   public ExclusiveGatewayInstanceDTO(
-      java.util.UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
       Set<String> selectedOutputFlows) {

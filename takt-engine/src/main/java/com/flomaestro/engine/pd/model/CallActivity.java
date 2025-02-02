@@ -17,7 +17,7 @@ public class CallActivity extends Activity {
   private boolean propagateAllChildVariables;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance) {
-    return new CallActivityInstance(parentInstance, this);
+  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new CallActivityInstance(parentInstance, this, elementInstanceId);
   }
 }

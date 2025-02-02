@@ -20,7 +20,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
   private List<String> parentElementIdPath;
 
   @JsonProperty("peip")
-  private List<UUID> parentElementInstancePath;
+  private List<Long> parentElementInstancePath;
 
   @JsonProperty("pd")
   private ProcessDefinitionKey processDefinitionKey;
@@ -35,7 +35,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       UUID processInstanceKey,
       List<String> elementIds,
       List<String> parentElementIdPath,
-      List<UUID> parentElementInstancePath,
+      List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
     this(
@@ -55,7 +55,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       UUID parentProcessInstanceKey,
       List<String> elementIds,
       List<String> parentElementIdPath,
-      List<UUID> parentElementInstancePath,
+      List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables,
       boolean propagateAllToParent,

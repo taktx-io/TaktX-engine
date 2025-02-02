@@ -152,7 +152,7 @@ class BoundaryEventsTest {
             "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
         .andSendMessageWithCorrelationKey(
             "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
-        .waitUntilElementHasPassed("BoundaryEvent_1", 1)
+        .waitUntilElementHasPassed("BoundaryEvent_1", 3)
         .andRespondWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
@@ -175,9 +175,9 @@ class BoundaryEventsTest {
     bpmnTestEngine
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
+        .waitUntilExternalTaskIsWaitingForResponse("Subprocess_1/Service_Task_1")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
-        .waitUntilExternalTaskIsWaitingForResponse("Service_Task_2")
+        .waitUntilExternalTaskIsWaitingForResponse("Subprocess_1/Service_Task_2")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
         .waitUntilCompleted()
         .assertThatProcess()

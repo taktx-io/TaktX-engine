@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.util.TaktUUIDSerializer;
@@ -159,10 +160,12 @@ public class ProcessInstanceResource {
         && metadata.activeHost().port() == envPort) {
 
       Map<String, JsonNode> variables = new HashMap<>();
+      FlowNodeInstanceKeyDTO minKey = new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MIN_LONG));
+      FlowNodeInstanceKeyDTO maxKey = new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MAX_LONG));
       VariableKeyDTO startVariableKey =
-          new VariableKeyDTO(processId, Constants.MIN_UUID, Constants.MIN_UUID, "");
+          new VariableKeyDTO(minKey, "");
       VariableKeyDTO endVariableKey =
-          new VariableKeyDTO(processId, Constants.MAX_UUID, Constants.MAX_UUID, "\u00ff");
+          new VariableKeyDTO(maxKey, "\u00ff");
       getVariablesStore()
           .range(startVariableKey, endVariableKey)
           .forEachRemaining(

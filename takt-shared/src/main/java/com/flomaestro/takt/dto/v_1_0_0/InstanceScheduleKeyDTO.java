@@ -1,6 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,11 +19,11 @@ public class InstanceScheduleKeyDTO implements ScheduleKeyDTO {
   private UUID processInstanceKey;
 
   @JsonProperty("eiid")
-  private UUID elementInstanceId;
+  private List<Long> elementInstanceIdPath;
 
-  public InstanceScheduleKeyDTO(UUID processInstanceKey, UUID elementInstanceId) {
+  public InstanceScheduleKeyDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
     this.processInstanceKey = processInstanceKey;
-    this.elementInstanceId = elementInstanceId;
+    this.elementInstanceIdPath = elementInstanceIdPath;
   }
 
   @Override

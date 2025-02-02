@@ -29,7 +29,7 @@ public class ProcessInstanceDTO {
   private List<String> parentElementIdPath;
 
   @JsonProperty("peiip")
-  private List<UUID> parentElementInstancePath;
+  private List<Long> parentElementInstancePath;
 
   @JsonProperty("pdk")
   private ProcessDefinitionKey processDefinitionKey;
@@ -45,7 +45,7 @@ public class ProcessInstanceDTO {
       UUID parentProcessInstanceKey,
       FlowNodeInstancesDTO flowNodeInstances,
       List<String> parentElementIdPath,
-      List<UUID> parentElementInstancePath,
+      List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {

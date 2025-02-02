@@ -3,7 +3,6 @@ package com.flomaestro.takt.dto.v_1_0_0;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,13 +17,13 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   private ActtivityStateEnum state;
 
   @JsonProperty("b")
-  private Set<UUID> boundaryEventIds;
+  private Set<Long> boundaryEventIds;
 
   @JsonProperty("t")
   private boolean iteration = false;
 
   @JsonProperty("n")
-  private UUID nextIterationId;
+  private long nextIterationId;
 
   @JsonProperty("u")
   private JsonNode inputElement;
@@ -38,9 +37,9 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   protected ActivityInstanceDTO(
       ActtivityStateEnum state,
       String elementId,
-      UUID elementInstanceId,
+      long elementInstanceId,
       int passedCnt,
-      Set<UUID> boundaryEventIds) {
+      Set<Long> boundaryEventIds) {
     super(elementInstanceId, elementId, passedCnt);
     this.state = state;
     this.boundaryEventIds = boundaryEventIds;
@@ -54,5 +53,10 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   @Override
   public boolean isFailed() {
     return state == ActtivityStateEnum.FAILED;
+  }
+
+  @Override
+  public boolean isWaiting() {
+    return state == ActtivityStateEnum.WAITING;
   }
 }

@@ -7,15 +7,15 @@ import com.flomaestro.engine.pi.model.ActivityInstance;
 import com.flomaestro.engine.pi.model.BoundaryEventInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.engine.pi.processor.BoundaryEventInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessor;
 import com.flomaestro.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -27,13 +27,13 @@ public class FlowInstanceRunner {
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
 
   public void continueNewInstances(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
       ProcessInstance processInstance,
       FlowElements flowElements,
-      FlowNodeInstanceVariables flowNodeInstanceVariables,
+      VariableScope flowNodeInstanceVariables,
       ProcessingStatistics processingStatistics) {
 
     while (directInstanceResult.hasDirectTriggers()) {
@@ -50,13 +50,13 @@ public class FlowInstanceRunner {
   }
 
   private void processDirectTriggers(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowNodeInstances flowNodeInstances,
       ProcessInstance processInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     while (!directInstanceResult.eventsEmpty()) {
@@ -75,10 +75,13 @@ public class FlowInstanceRunner {
     }
 
     while (!directInstanceResult.terminateInstancesIsEmpty()) {
-      UUID terminateInstance = directInstanceResult.pollTerminateInstance();
+      long terminateInstance = directInstanceResult.pollTerminateInstance();
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              flowNodeInstances, flowNodeInstanceStore, flowElements);
+              processInstance.getProcessInstanceKey(),
+              flowNodeInstances,
+              flowNodeInstanceStore,
+              flowElements);
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
 
@@ -118,7 +121,7 @@ public class FlowInstanceRunner {
   }
 
   private void processEventByFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
       ProcessInstance processInstance,
@@ -126,16 +129,19 @@ public class FlowInstanceRunner {
       FlowNodeInstance<?> fLowNodeInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
       boolean eventHandled = false;
       StoredFlowNodeInstancesWrapper instancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              flowNodeInstances, flowNodeInstanceStore, flowElements);
+              processInstance.getProcessInstanceKey(),
+              flowNodeInstances,
+              flowNodeInstanceStore,
+              flowElements);
       // First check for specific codes
-      for (UUID boundaryEventId : activityInstance.getBoundaryEventIds()) {
+      for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
         BoundaryEventInstance boundaryEventInstance =
             (BoundaryEventInstance) instancesWrapper.getInstanceWithInstanceId(boundaryEventId);
         eventHandled =
@@ -158,7 +164,7 @@ public class FlowInstanceRunner {
       }
       if (!eventHandled) {
         // If not handled by specific codes, check for catch all
-        for (UUID boundaryEventId : activityInstance.getBoundaryEventIds()) {
+        for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
           BoundaryEventInstance boundaryEventInstance =
               (BoundaryEventInstance) instancesWrapper.getInstanceWithInstanceId(boundaryEventId);
           if (!eventHandled) {

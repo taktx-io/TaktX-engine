@@ -14,6 +14,6 @@ public class EndEvent extends ThrowEvent {
 
   public EndEventInstance newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new EndEventInstance(parentInstance, this);
+    return new EndEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
   }
 }

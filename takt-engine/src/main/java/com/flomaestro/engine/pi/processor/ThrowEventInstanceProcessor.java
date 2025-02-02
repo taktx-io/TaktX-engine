@@ -9,10 +9,10 @@ import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.model.FlowNodeInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceInfo;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.IntermediateCatchEventInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ThrowEventInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -37,7 +37,7 @@ public abstract class ThrowEventInstanceProcessor<
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     flowNodeInstance
         .getFlowNode()
@@ -50,7 +50,7 @@ public abstract class ThrowEventInstanceProcessor<
                   event -> {
                     FlowNodeInstance<?> catchEventInstance =
                         new IntermediateCatchEventInstance(
-                            flowNodeInstance.getParentInstance(), event);
+                            flowNodeInstance.getParentInstance(), event, processInstance.getFlowNodeInstances().nextElementInstanceId());
                     catchEventInstance.setInitialState();
                     FlowNodeInstanceInfo flowNodeInstanceInfo =
                         new FlowNodeInstanceInfo(catchEventInstance, null);
@@ -72,6 +72,6 @@ public abstract class ThrowEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics);
 }

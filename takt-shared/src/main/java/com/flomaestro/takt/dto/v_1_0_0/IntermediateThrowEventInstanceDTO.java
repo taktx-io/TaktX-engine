@@ -1,6 +1,5 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -13,7 +12,7 @@ import lombok.ToString;
 public class IntermediateThrowEventInstanceDTO extends ThrowEventInstanceDTO {
 
   public IntermediateThrowEventInstanceDTO(
-      UUID elementInstanceId, String elementId, int passedCnt) {
+      long elementInstanceId, String elementId, int passedCnt) {
     super(elementInstanceId, elementId, passedCnt);
   }
 }

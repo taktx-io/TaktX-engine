@@ -17,7 +17,7 @@ public class ReceiveTask extends Activity implements WithMessageReference {
   @Setter private Message referencedMessage;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance) {
-    return new ReceiveTaskInstance(parentInstance, this);
+  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new ReceiveTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -13,7 +13,7 @@ public class ExclusiveGateway extends Gateway {
 
   @Override
   protected ExclusiveGatewayInstance newSpecificGatewayInstance(
-      FlowNodeInstance<?> parentInstance) {
-    return new ExclusiveGatewayInstance(parentInstance, this);
+      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new ExclusiveGatewayInstance(parentInstance, this, elementInstanceId);
   }
 }

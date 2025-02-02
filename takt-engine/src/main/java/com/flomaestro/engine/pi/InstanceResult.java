@@ -8,7 +8,6 @@ import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -19,7 +18,7 @@ import lombok.Getter;
 public class InstanceResult {
 
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
-  private final Queue<InstanceUpdateDTO> instanceUpdates = new ArrayDeque<>();
+  private final Queue<InstanceUpdate> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
   private final Queue<UUID> newTerminateCommands = new ArrayDeque<>();
@@ -37,8 +36,8 @@ public class InstanceResult {
     return new InstanceResult();
   }
 
-  public void addInstanceUpdate(InstanceUpdateDTO processInstanceUpdate) {
-    instanceUpdates.add(processInstanceUpdate);
+  public void addInstanceUpdate(InstanceUpdate instanceUpdate) {
+    instanceUpdates.add(instanceUpdate);
   }
 
   public void addExternalTaskRequest(ExternalTaskInfo externalTaskInfo) {

@@ -6,7 +6,7 @@ import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
 import com.flomaestro.engine.feel.FeelExpressionHandlerImpl;
-import com.flomaestro.engine.pi.model.AbstractVariableScope;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.FixedRateMessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.OneTimeSchedulerDTO;
@@ -30,7 +30,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO message,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
       return scheduleCycle(scheduleKey, timerEventDefinition, message, variables);
@@ -48,7 +48,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
 
     String timeDuration =
         feelExpressionHandler
@@ -65,7 +65,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
     String timeDate =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
@@ -77,7 +77,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
       return scheduleCron(scheduleKey, timerEventDefinition, messages, variables);
     } else {
@@ -89,7 +89,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
 
     String timeCycle =
         feelExpressionHandler
@@ -111,7 +111,7 @@ public class MessageSchedulerFactory {
       ScheduleKeyDTO scheduleKey,
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      AbstractVariableScope variables) {
+      VariableScope variables) {
     String timeCycle =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)

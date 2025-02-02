@@ -17,21 +17,21 @@ import com.flomaestro.engine.pi.model.ErrorEventSignal;
 import com.flomaestro.engine.pi.model.EscalationEventSignal;
 import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.ExternalTaskInstance;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -86,14 +86,14 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processStartSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
@@ -110,7 +110,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -118,7 +118,7 @@ public abstract class ExternalTaskInstanceProcessor<
       ProcessInstance processInstance,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
@@ -140,7 +140,7 @@ public abstract class ExternalTaskInstanceProcessor<
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      FlowNodeInstanceVariables flowNodeInstanceVariables,
+      VariableScope flowNodeInstanceVariables,
       ExternalTaskResponseResultDTO responseResult) {
     E externalTask = externalTaskInstance.getFlowNode();
     if (externalTask.getRetries() != null) {
@@ -253,17 +253,17 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     // Nothing to do here
   }
 
-  private String getExternalTaskId(String workerDefinition, FlowNodeInstanceVariables variables) {
+  private String getExternalTaskId(String workerDefinition, VariableScope variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     return jsonNode.asText();
   }
@@ -273,7 +273,7 @@ public abstract class ExternalTaskInstanceProcessor<
       String backoff,
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       InstanceResult instanceResult) {
     String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
     ExternalTaskInfo externalTaskInfo =
@@ -286,7 +286,7 @@ public abstract class ExternalTaskInstanceProcessor<
       String workerDefinition,
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       String triggerTime) {
     return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
   }

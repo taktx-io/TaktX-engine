@@ -13,7 +13,7 @@ public class InclusiveGateway extends Gateway {
 
   @Override
   protected InclusiveGatewayInstance newSpecificGatewayInstance(
-      FlowNodeInstance<?> parentInstance) {
-    return new InclusiveGatewayInstance(parentInstance, this);
+      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new InclusiveGatewayInstance(parentInstance, this, elementInstanceId);
   }
 }

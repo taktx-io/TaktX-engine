@@ -20,8 +20,8 @@ public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask>
 
   private String correlationKey;
 
-  public ReceiveTaskInstance(FlowNodeInstance<?> parentInstance, ReceiveTask flowNode) {
-    super(parentInstance, flowNode);
+  public ReceiveTaskInstance(FlowNodeInstance<?> parentInstance, ReceiveTask flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
     messageEventKeys = new HashMap<>();
   }
 

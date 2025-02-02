@@ -1,7 +1,8 @@
 package com.flomaestro.engine.pi.model;
 
 import com.flomaestro.engine.pd.model.FlowNode;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,22 +12,27 @@ import lombok.Setter;
 @NoArgsConstructor
 public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeInstance {
 
-  private UUID elementInstanceId;
+  private long elementInstanceId;
 
   private int passedCnt;
 
   private N flowNode;
 
-  private UUID parentElementInstanceId;
-
   private FlowNodeInstance<?> parentInstance;
 
   private boolean dirty = false;
 
-  protected FlowNodeInstance(FlowNodeInstance<?> parentInstance, N flowNode) {
+  protected FlowNodeInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
     this.parentInstance = parentInstance;
-    this.elementInstanceId = UUID.randomUUID();
+    this.elementInstanceId = elementInstanceId;
     this.flowNode = flowNode;
+  }
+
+  @Override
+  public List<Long> getKeyPath() {
+    List<Long> parentKeyPath = parentInstance != null ? parentInstance.getKeyPath() : new ArrayList<>();
+    parentKeyPath.add(elementInstanceId);
+    return parentKeyPath;
   }
 
   public void increasePassedCnt() {

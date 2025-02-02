@@ -11,17 +11,17 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.model.CatchEventInstance;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.CatchEventStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
-import java.util.UUID;
 import lombok.NoArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -49,7 +49,7 @@ public abstract class CatchEventInstanceProcessor<
       FlowElements flowElements,
       I catchEventInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
 
     catchEventInstance.setState(CatchEventStateEnum.FINISHED);
@@ -107,7 +107,7 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -115,7 +115,7 @@ public abstract class CatchEventInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     getInstanceResultForContinue(
@@ -177,12 +177,12 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     terminateSubscriptions(instance, instanceResult);
   }
@@ -192,7 +192,7 @@ public abstract class CatchEventInstanceProcessor<
       EventSignal event,
       InstanceResult newInstanceResult,
       DirectInstanceResult directInstanceResult,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
@@ -205,7 +205,6 @@ public abstract class CatchEventInstanceProcessor<
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
-              flowNodeInstances.getFlowNodeInstancesId(),
               catchEventInstance,
               variables,
               now));
@@ -219,7 +218,7 @@ public abstract class CatchEventInstanceProcessor<
       EventSignal event,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
@@ -232,7 +231,6 @@ public abstract class CatchEventInstanceProcessor<
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
-              flowNodeInstances.getFlowNodeInstancesId(),
               catchEventInstance,
               variables,
               now));

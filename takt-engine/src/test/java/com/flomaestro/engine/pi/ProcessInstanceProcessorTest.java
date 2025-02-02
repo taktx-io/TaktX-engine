@@ -233,7 +233,7 @@ class ProcessInstanceProcessorTest {
         .terminateProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElements("SubProcess_1")
+        .hasTerminatedElementWithId("SubProcess_1")
         .isTerminated();
   }
 
@@ -259,7 +259,7 @@ class ProcessInstanceProcessorTest {
         .parentProcess()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElements("SubProcess_1")
+        .hasTerminatedElementWithId("SubProcess_1")
         .isTerminated();
   }
 
@@ -279,7 +279,7 @@ class ProcessInstanceProcessorTest {
         .terminateElemeent()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElements("SubProcess_1")
+        .hasTerminatedElementWithId("SubProcess_1")
         .isTerminated();
   }
 

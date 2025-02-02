@@ -11,9 +11,9 @@ import lombok.Setter;
 public class SubProcessInstance extends ActivityInstance<SubProcess>
     implements WithFlowNodeInstances {
 
-  private FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
+  private FlowNodeInstances flowNodeInstances;
 
-  public SubProcessInstance(FlowNodeInstance<?> parentInstance, SubProcess flowNode) {
-    super(parentInstance, flowNode);
+  public SubProcessInstance(FlowNodeInstance<?> parentInstance, SubProcess flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 }

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
+import com.flomaestro.engine.pi.model.VariableScope;
 import org.junit.jupiter.api.Test;
 
 class FeelExpressionHandlerImplTest {
@@ -16,7 +16,7 @@ class FeelExpressionHandlerImplTest {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     JsonNode jsonNode =
-        expressionHandler.processFeelExpression("test", ProcessInstanceVariables.empty());
+        expressionHandler.processFeelExpression("test", VariableScope.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
@@ -25,7 +25,7 @@ class FeelExpressionHandlerImplTest {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
     JsonNode jsonNode =
-        expressionHandler.processFeelExpression("=\"test\"", ProcessInstanceVariables.empty());
+        expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
@@ -33,7 +33,7 @@ class FeelExpressionHandlerImplTest {
   void testReferToVariableFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
+    VariableScope vars = VariableScope.empty();
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var", vars);
     assertThat(jsonNode.asText()).isEqualTo("test");
@@ -43,7 +43,7 @@ class FeelExpressionHandlerImplTest {
   void testReferToVariableNotExisting() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
+    VariableScope vars = VariableScope.empty();
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var2", vars);
     assertThat(jsonNode.asText()).isEqualTo("null");
@@ -53,7 +53,7 @@ class FeelExpressionHandlerImplTest {
   void testCreateRange() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
+    VariableScope vars = VariableScope.empty();
 
     JsonNode jsonNode = expressionHandler.processFeelExpression("=for i in 1..100 return i", vars);
     assertThat(jsonNode.isArray()).isTrue();
@@ -64,7 +64,7 @@ class FeelExpressionHandlerImplTest {
   void testReferToElementInArray() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    ProcessInstanceVariables vars = ProcessInstanceVariables.empty();
+    VariableScope vars = VariableScope.empty();
     ArrayNode arrayNode = new ObjectMapper().createArrayNode();
     arrayNode.add("test1");
     arrayNode.add("test2");

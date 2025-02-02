@@ -15,7 +15,7 @@ public class InclusiveGatewayInstanceDTO extends GatewayInstanceDTO {
   private Set<String> triggeredInputFlows;
 
   public InclusiveGatewayInstanceDTO(
-      java.util.UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
       Set<String> triggeredInputFlows,

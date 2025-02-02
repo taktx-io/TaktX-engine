@@ -197,7 +197,6 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "flowNodeInstances.stateChanged", ignore = true)
   @Mapping(target = "flowNodeInstances.instances", ignore = true)
-  @Mapping(target = "flowNodeInstances.parentFlowNodeInstances", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
   MultiInstanceInstance map(MultiInstanceInstanceDTO source, @Context FlowElements flowElements);
@@ -252,7 +251,9 @@ public interface ProcessInstanceMapper {
 
   @Mapping(target = "flowNodeInstances.stateChanged", ignore = true)
   @Mapping(target = "flowNodeInstances.instances", ignore = true)
-  @Mapping(target = "flowNodeInstances.parentFlowNodeInstances", ignore = true)
+  @Mapping(target = "flowNodeInstances.state", source = "flowNodeInstances.state")
+  @Mapping(target = "flowNodeInstances.activeCnt", source = "flowNodeInstances.activeCnt")
+  @Mapping(target = "flowNodeInstances.elementInstanceCnt", source = "flowNodeInstances.elementInstanceCnt")
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventInstanceDTO.class)

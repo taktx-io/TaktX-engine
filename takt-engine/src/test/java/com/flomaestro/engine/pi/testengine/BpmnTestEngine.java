@@ -16,6 +16,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
@@ -31,7 +32,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
-import com.flomaestro.takt.dto.v_1_0_0.WithFlowNodeInstancesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
 import com.flomaestro.takt.xml.BpmnParser;
 import io.smallrye.reactive.messaging.kafka.KafkaConsumerRebalanceListener;
@@ -41,15 +41,18 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.io.IOUtils;
@@ -86,7 +89,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTriggerDTO>>
       definitionToInstancesMap = new HashMap<>();
   private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new HashMap<>();
-  private final Map<UUID, Map<UUID, Map<UUID, FlowNodeInstanceDTO>>> flowNodeInstanceMap =
+  private final Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceMap =
       new HashMap<>();
   private final Map<UUID, VariablesDTO> variablesMap = new HashMap<>();
   private final Map<String, ProcessDefinitionDTO> hashToDefinitionMap = new HashMap<>();
@@ -114,9 +117,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   private static @NotNull ProcessInstanceDTO getProcessInstanceDTO(
-      ProcessInstanceUpdateDTO processInstanceUpdate) {
+      UUID processInstanceKey, ProcessInstanceUpdateDTO processInstanceUpdate) {
     return new ProcessInstanceDTO(
-        processInstanceUpdate.getProcessInstanceKey(),
+        processInstanceKey,
         processInstanceUpdate.getParentProcessInstanceKey(),
         processInstanceUpdate.getFlowNodeInstances(),
         processInstanceUpdate.getParentElementIdPath(),
@@ -203,7 +206,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     reset();
   }
 
-  public void consume(ProcessInstanceTriggerDTO trigger) {
+  public void consume(UUID key2, ProcessInstanceTriggerDTO trigger) {
     LOG.info("Received flow element trigger: " + trigger);
     if (trigger instanceof StartCommandDTO startCommand) {
       Set<UUID> uuids1 =
@@ -217,7 +220,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     }
   }
 
-  public void consume(MessageEventDTO messageEvent) {
+  public void consume(MessageEventKeyDTO key, MessageEventDTO messageEvent) {
     LOG.info("Received message event: " + messageEvent);
     ConcurrentLinkedQueue<MessageEventDTO> messageEvents =
         messageSubscriptionMap.computeIfAbsent(
@@ -225,7 +228,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     messageEvents.add(messageEvent);
   }
 
-  public void consume(ExternalTaskTriggerDTO externalTaskTrigger) {
+  public void consume(UUID key, ExternalTaskTriggerDTO externalTaskTrigger) {
     LOG.info("Received external task trigger: " + externalTaskTrigger);
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
         externalTaskTriggerQueueMap.computeIfAbsent(
@@ -233,44 +236,36 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     externalTaskTriggers.add(externalTaskTrigger);
   }
 
-  public void consume(InstanceUpdateDTO instanceUpdate) {
+  public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + instanceUpdate);
 
-      ProcessInstanceDTO processInstanceDTO = getProcessInstanceDTO(processInstanceUpdate);
+      ProcessInstanceDTO processInstanceDTO = getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
       ProcessInstanceDTO previousProcessInstance =
-          processInstanceMap.put(instanceUpdate.getProcessInstanceKey(), processInstanceDTO);
+          processInstanceMap.put(processInstanceKey, processInstanceDTO);
       if (previousProcessInstance == null) {
         latestInstantiatedProcessInstanceKey = processInstanceDTO.getProcessInstanceKey();
       }
 
       VariablesDTO existingVariables =
           variablesMap.computeIfAbsent(
-              processInstanceUpdate.getProcessInstanceKey(), k -> VariablesDTO.empty());
+              processInstanceKey, k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
 
     } else if (instanceUpdate instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
       LOG.info("Received FlowNode instance update: " + instanceUpdate);
 
-      Map<UUID, Map<UUID, FlowNodeInstanceDTO>> flowNodeInstancesDTOMap =
-          flowNodeInstanceMap.computeIfAbsent(
-              flowNodeInstanceUpdate.getProcessInstanceKey(), id -> new HashMap<>());
-      Map<UUID, FlowNodeInstanceDTO> instanceMap =
-          flowNodeInstancesDTOMap.computeIfAbsent(
-              flowNodeInstanceUpdate.getFlowNodeInstancesId(), id -> new HashMap<>());
-
-      instanceMap.put(
-          flowNodeInstanceUpdate.getFlowNodeInstance().getElementInstanceId(),
-          flowNodeInstanceUpdate.getFlowNodeInstance());
+      FlowNodeInstanceKeyDTO key = new FlowNodeInstanceKeyDTO(processInstanceKey, flowNodeInstanceUpdate.getFlowNodeInstancePath());
+      this.flowNodeInstanceMap.put(key, flowNodeInstanceUpdate.getFlowNodeInstance());
 
       VariablesDTO existingVariables =
           variablesMap.computeIfAbsent(
-              flowNodeInstanceUpdate.getProcessInstanceKey(), k -> VariablesDTO.empty());
+              key.getProcessInstanceKey(), k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(flowNodeInstanceUpdate.getVariables().getVariables());
     }
   }
 
-  public void consume(ProcessDefinitionDTO processDefinition) {
+  public void consume(ProcessDefinitionKey key, ProcessDefinitionDTO processDefinition) {
     LOG.info(
         "Received process definition: "
             + processDefinition
@@ -306,11 +301,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine deployProcessDefinition(String filename)
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
+      throws IOException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     definitionsBeingDeployed = BpmnParser.parse(xml);
@@ -432,7 +423,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                     externalTaskTrigger != null
                         && externalTaskTrigger
                             .getProcessInstanceKey()
-                            .equals(activeProcessInstanceKey));
+                            .equals(activeProcessInstanceKey)
+                        && getFlowNodeInstancesWithElementId(
+                                activeProcessInstanceKey, elementId).stream()
+                            .anyMatch(
+                                FlowNodeInstanceDTO::isWaiting));
+
     return this;
   }
 
@@ -633,10 +629,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return this;
   }
 
-  public BpmnTestEngine waitUntilElementHasPassed(String elementId) {
-    return waitUntilElementHasPassed(elementId, 1, DEFAULT_DURATION);
-  }
-
   public BpmnTestEngine waitUntilElementHasPassed(String elementId, int count) {
     return waitUntilElementHasPassed(elementId, count, DEFAULT_DURATION);
   }
@@ -645,54 +637,29 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     Awaitility.await()
         .atMost(duration)
         .until(
-            () -> getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId, count),
-            instances -> !instances.isEmpty());
+            () -> getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId),
+            instances -> !instances.isEmpty() && instances.getFirst().getPassedCnt() == count);
     return this;
   }
 
   public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
-      UUID processInstanceKey, String elementId, int... count) {
-    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(processInstanceKey);
-
-    return getFlowNodeInstancesWithElementId(
-        processInstanceKey,
-        processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId(),
-        elementId,
-        0,
-        count);
-  }
-
-  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
       UUID processInstanceKey,
-      UUID flowNodeInstancesId,
-      String elementId,
-      int index,
-      int... count) {
-    Map<UUID, Map<UUID, FlowNodeInstanceDTO>> flowNodeInstancesMap =
-        flowNodeInstanceMap.get(processInstanceKey);
-    Map<UUID, FlowNodeInstanceDTO> instanceMap = flowNodeInstancesMap.get(flowNodeInstancesId);
-    String[] split = elementId.split("/");
-    String elementIdSubPath = split[index];
-    int checkCnt = index >= count.length ? count[count.length - 1] : count[index];
-    return instanceMap.values().stream()
-        .filter(i -> i.getElementId().equals(elementIdSubPath) && i.getPassedCnt() >= checkCnt)
-        .flatMap(
-            flowNodeInstanceDTO -> {
-              if (index < split.length - 1
-                  && flowNodeInstanceDTO
-                      instanceof WithFlowNodeInstancesDTO withFlowNodeInstances) {
-                return getFlowNodeInstancesWithElementId(
-                    processInstanceKey,
-                    withFlowNodeInstances.getFlowNodeInstances().getFlowNodeInstancesId(),
-                    elementId,
-                    index + 1,
-                    count)
-                    .stream();
-              } else {
-                return Stream.of(flowNodeInstanceDTO);
-              }
-            })
-        .toList();
+      String elementPath) {
+
+    List<String> elementPathList = Stream.of(elementPath.split("/")).toList();
+    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance = flowNodeInstanceMap.entrySet().stream()
+        .filter(e -> e.getKey().getProcessInstanceKey().equals(processInstanceKey))
+        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByElementIdOnIndex = filteredByProcessInstance;
+
+    for (int index = 0; index < elementPathList.size(); index++) {
+      int currentIndex = index;
+      filteredByElementIdOnIndex = filteredByProcessInstance.entrySet().stream()
+          .filter(e -> e.getValue().getElementId().equals(elementPathList.get(currentIndex)))
+          .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    }
+
+    return new ArrayList<>(filteredByElementIdOnIndex.values());
   }
 
   public BpmnTestEngine sendMessage(String messageName, VariablesDTO variables) {
@@ -777,17 +744,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         .atMost(duration)
         .until(
             () -> {
-              Map<UUID, Map<UUID, FlowNodeInstanceDTO>> flowNodeInstancesMap =
-                  flowNodeInstanceMap.get(activeProcessInstanceKey);
-              ProcessInstanceDTO processInstanceDTO =
-                  processInstanceMap.get(activeProcessInstanceKey);
-              Map<UUID, FlowNodeInstanceDTO> instanceMap =
-                  flowNodeInstancesMap.get(
-                      processInstanceDTO.getFlowNodeInstances().getFlowNodeInstancesId());
-              return instanceMap.values().stream()
-                  .filter(i -> i instanceof ActivityInstanceDTO)
-                  .map(i -> (ActivityInstanceDTO) i)
-                  .anyMatch(a -> a.getElementId().equals(elementId) && a.getState() == state);
+              List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId = getFlowNodeInstancesWithElementId(
+                  activeProcessInstanceKey, elementId);
+              return flowNodeInstanceWithElementId.getFirst() instanceof ActivityInstanceDTO activityInstance
+                  && activityInstance.getState() == state;
             },
             Objects::nonNull);
 

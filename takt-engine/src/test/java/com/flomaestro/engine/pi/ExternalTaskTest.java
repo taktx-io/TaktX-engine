@@ -211,7 +211,7 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)
-        .hasTerminatedElements("ServiceTask_1")
+        .hasTerminatedElementWithId("ServiceTask_1")
         .hasNotPassedElementWithId("EndEvent_1");
   }
 
@@ -238,7 +238,7 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)
-        .hasTerminatedElements("ServiceTask_1")
+        .hasTerminatedElementWithId("ServiceTask_1")
         .hasNotPassedElementWithId("EndEvent_1");
   }
 }

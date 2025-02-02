@@ -183,7 +183,7 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasCollectioneMatching(
             "outputCollection",
-            oc -> assertThat(oc).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
+            oc -> assertThat(oc).containsExactlyInAnyOrder("xxx0", "xxx1", "xxx2"))
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId(
             "callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)

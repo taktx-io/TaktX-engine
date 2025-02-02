@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 public class IntermediateThrowEventInstance extends ThrowEventInstance<IntermediateThrowEvent> {
 
   public IntermediateThrowEventInstance(
-      FlowNodeInstance<?> parentInstance, IntermediateThrowEvent flowNode) {
-    super(parentInstance, flowNode);
+      FlowNodeInstance<?> parentInstance, IntermediateThrowEvent flowNode, long elementInstanceId) {
+    super(parentInstance, flowNode, elementInstanceId);
   }
 
   @Override

@@ -3,7 +3,7 @@ package com.flomaestro.engine.pi.testengine;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -11,7 +11,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 
 public class KafkaConsumerUtil<K, V> {
 
-  private final Consumer<V> consumer;
+  private final BiConsumer<K, V> consumer;
   private KafkaConsumer<K, V> kafkaConsumer;
   private boolean running = true;
 
@@ -20,7 +20,7 @@ public class KafkaConsumerUtil<K, V> {
       String topic,
       String keyDeserializerClass,
       String valueDeserializerClass,
-      Consumer<V> consumer) {
+      BiConsumer<K, V> consumer) {
     this.consumer = consumer;
     Properties props = new Properties();
     String kafkaBootstrapServers =
@@ -45,8 +45,7 @@ public class KafkaConsumerUtil<K, V> {
                     .poll(100)
                     .forEach(
                         record -> {
-                          V value = record.value();
-                          consumer.accept(value);
+                          consumer.accept(record.key(), record.value());
                         });
               }
               try {

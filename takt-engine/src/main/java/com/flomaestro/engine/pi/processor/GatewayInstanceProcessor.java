@@ -9,17 +9,17 @@ import com.flomaestro.engine.pi.InstanceResult;
 import com.flomaestro.engine.pi.ProcessInstanceException;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessingStatistics;
-import com.flomaestro.engine.pi.model.FlowNodeInstanceVariables;
 import com.flomaestro.engine.pi.model.FlowNodeInstances;
 import com.flomaestro.engine.pi.model.GatewayInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowConditionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -42,14 +42,14 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      FlowNodeInstances flowNodeInstances, InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I gatewayInstance,
       ProcessInstance processInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     processStartSpecificGatewayInstance(
         instanceResult,
@@ -63,7 +63,7 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
@@ -71,7 +71,7 @@ public abstract class GatewayInstanceProcessor<
       ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
-      FlowNodeInstanceVariables processInstanceVariables,
+      VariableScope processInstanceVariables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     // Should never happen
@@ -82,7 +82,7 @@ public abstract class GatewayInstanceProcessor<
       ProcessInstance processInstance,
       I gatewayInstance,
       FlowNodeInstances flowNodeInstances,
-      FlowNodeInstanceVariables variables) {
+      VariableScope variables) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
     if (canTriggerOutputFlows(gatewayInstance, flowNodeInstances)) {
       gatewayInstance.resetFlows();
@@ -124,12 +124,12 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<UUID[], FlowNodeInstanceDTO> flowNodeInstanceStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics) {
     processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }
@@ -140,7 +140,7 @@ public abstract class GatewayInstanceProcessor<
       FlowElements flowElements,
       I flownodeInstance,
       String inputFlowId,
-      FlowNodeInstanceVariables variables,
+      VariableScope variables,
       ProcessingStatistics processingStatistics);
 
   protected abstract void processTerminateSpecificGatewayInstance(

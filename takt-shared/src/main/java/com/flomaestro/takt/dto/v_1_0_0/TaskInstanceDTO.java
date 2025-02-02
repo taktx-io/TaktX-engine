@@ -1,7 +1,6 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -14,10 +13,10 @@ import lombok.ToString;
 public class TaskInstanceDTO extends ActivityInstanceDTO {
   public TaskInstanceDTO(
       ActtivityStateEnum state,
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
-      Set<UUID> boundaryEventIds) {
+      Set<Long> boundaryEventIds) {
     super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
   }
 }

@@ -8,13 +8,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 @ApplicationScoped
 public class PathExtractor {
 
-  public List<UUID> getInstancePath(IFlowNodeInstance fLowNodeInstance) {
-    List<UUID> instancePath = new ArrayList<>();
+  public List<Long> getInstancePath(IFlowNodeInstance fLowNodeInstance) {
+    List<Long> instancePath = new ArrayList<>();
     instancePath.add(fLowNodeInstance.getElementInstanceId());
 
     FlowNodeInstance<?> parent = fLowNodeInstance.getParentInstance();

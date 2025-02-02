@@ -14,9 +14,9 @@ import lombok.ToString;
 @NoArgsConstructor
 public class TerminateTriggerDTO extends ProcessInstanceTriggerDTO {
   @JsonProperty("eiip")
-  private List<UUID> elementInstanceIdPath;
+  private List<Long> elementInstanceIdPath;
 
-  public TerminateTriggerDTO(UUID processInstanceKey, List<UUID> elementInstanceIdPath) {
+  public TerminateTriggerDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
     super(processInstanceKey, List.of(), VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
   }

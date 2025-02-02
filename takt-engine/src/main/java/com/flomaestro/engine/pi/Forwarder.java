@@ -6,11 +6,11 @@ import com.flomaestro.engine.pi.model.ExternalTaskInfo;
 import com.flomaestro.engine.pi.model.ExternalTaskInstance;
 import com.flomaestro.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
 import com.flomaestro.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
-import com.flomaestro.engine.pi.model.ProcessInstanceVariables;
 import com.flomaestro.engine.pi.model.ReceivingMessageInstance;
 import com.flomaestro.engine.pi.model.ScheduledContinuationInfo;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
@@ -19,7 +19,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
-import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.IoVariableMappingDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
@@ -69,13 +68,13 @@ public class Forwarder {
   private void forwardInstanceUpdates(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
 
-    Queue<InstanceUpdateDTO> processInstanceUpdates = instanceResult.getInstanceUpdates();
+    Queue<InstanceUpdate> processInstanceUpdates = instanceResult.getInstanceUpdates();
     while (!processInstanceUpdates.isEmpty()) {
-      InstanceUpdateDTO processInstanceUpdate = processInstanceUpdates.poll();
+      InstanceUpdate instanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
-              processInstanceUpdate.getProcessInstanceKey(),
-              processInstanceUpdate,
+              instanceUpdate.processInstanceKey(),
+              instanceUpdate.update(),
               clock.millis()));
     }
   }
@@ -108,7 +107,7 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), catchEventInstance.getElementInstanceId());
+              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(catchEventInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
               scheduledKey,
@@ -147,13 +146,13 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), externalTaskInstance.getElementInstanceId());
+              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(externalTaskInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
               scheduleKey,
               timerEventDefinition,
               externalTaskResponseResultDTO,
-              ProcessInstanceVariables.empty());
+              VariableScope.empty());
 
       externalTaskInstance.addScheduledKey(scheduleKey);
       context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
@@ -270,7 +269,7 @@ public class Forwarder {
         ScheduleKeyDTO scheduledKey =
             new InstanceScheduleKeyDTO(
                 processInstance.getProcessInstanceKey(),
-                externalTask.instance().getElementInstanceId());
+                pathExtractor.getInstancePath(externalTask.instance()));
         OneTimeSchedulerDTO oneTimeScheduler =
             new OneTimeSchedulerDTO(scheduledKey, newExternalTaskTrigger, externalTask.startTime());
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, clock.millis()));

@@ -21,6 +21,7 @@ import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
@@ -33,9 +34,8 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessingStatisticsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
-import com.flomaestro.takt.util.TaktCompositeUUIDSerde;
+import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.util.TaktUUIDSerde;
-import com.flomaestro.takt.util.VariableKeySerde;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -75,7 +75,8 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       new ObjectMapperSerde<>(MessageEventKeyDTO.class);
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
-  public static final Serde<UUID[]> FLOW_NODE_INSTANCE_KEY_SERDE = new TaktCompositeUUIDSerde();
+  public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
+      new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
   public static final ObjectMapperSerde<MessageSchedulerDTO> MESSAGE_SCHEDULER_SERDE =
       new ObjectMapperSerde<>(MessageSchedulerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
@@ -96,7 +97,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class);
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
-  private static final Serde<?> VARIABLES_KEY_SERDE = new VariableKeySerde();
+  private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
+      new ObjectMapperSerde<>(VariableKeyDTO.class);
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;

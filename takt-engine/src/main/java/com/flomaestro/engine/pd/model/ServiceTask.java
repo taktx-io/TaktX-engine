@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 public class ServiceTask extends ExternalTask {
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance) {
-    return new ServiceTaskInstance(parentInstance, this);
+  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+    return new ServiceTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

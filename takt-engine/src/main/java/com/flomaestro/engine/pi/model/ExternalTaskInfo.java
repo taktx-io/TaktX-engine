@@ -6,5 +6,5 @@ public record ExternalTaskInfo(
     String externalTaskId,
     ExternalTask element,
     ExternalTaskInstance<?> instance,
-    FlowNodeInstanceVariables variables,
+    VariableScope variables,
     String startTime) {}

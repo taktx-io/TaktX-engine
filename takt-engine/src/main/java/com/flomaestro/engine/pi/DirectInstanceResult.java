@@ -7,13 +7,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.UUID;
 
 public class DirectInstanceResult {
 
   private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
-  private final Queue<UUID> terminateInstances = new ArrayDeque<>();
+  private final Queue<Long> terminateInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
@@ -44,7 +43,7 @@ public class DirectInstanceResult {
     return newFlowNodeInstanceInfos.poll();
   }
 
-  public UUID pollTerminateInstance() {
+  public long pollTerminateInstance() {
     return terminateInstances.poll();
   }
 
@@ -52,7 +51,7 @@ public class DirectInstanceResult {
     return events.poll();
   }
 
-  public void addTerminateInstance(UUID terminateInstanceId) {
+  public void addTerminateInstance(long terminateInstanceId) {
     this.terminateInstances.add(terminateInstanceId);
   }
 

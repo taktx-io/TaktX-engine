@@ -1,7 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.UUID;
+import java.util.List;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,8 +12,9 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
-  @JsonProperty("f")
-  private UUID flowNodeInstancesId;
+
+  @JsonProperty("ip")
+  private List<Long> flowNodeInstancePath;
 
   @JsonProperty("i")
   private FlowNodeInstanceDTO flowNodeInstance;
@@ -25,15 +26,14 @@ public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
   private long processTime;
 
   public FlowNodeInstanceUpdateDTO(
-      UUID processInstanceKey,
-      UUID flowNodeInstancesId,
+      List<Long> flowNodeInstancePath,
       FlowNodeInstanceDTO flowNodeInstance,
       VariablesDTO variables,
       long processTime) {
-    super(processInstanceKey);
-    this.flowNodeInstancesId = flowNodeInstancesId;
+    this.flowNodeInstancePath = flowNodeInstancePath;
     this.flowNodeInstance = flowNodeInstance;
     this.variables = variables;
     this.processTime = processTime;
   }
+
 }

@@ -1,9 +1,9 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -36,7 +36,7 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   private boolean catchAllErrors;
 
   protected CatchEventInstanceDTO(
-      UUID elementInstanceId,
+      long elementInstanceId,
       String elementId,
       int passedCnt,
       CatchEventStateEnum state,
@@ -46,5 +46,11 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
     this.state = state;
     this.scheduledKeys = scheduledKeys;
     this.messageEventKeys = messageEventKeys;
+  }
+
+  @JsonIgnore
+  @Override
+  public boolean isWaiting() {
+    return state == CatchEventStateEnum.WAITING;
   }
 }
