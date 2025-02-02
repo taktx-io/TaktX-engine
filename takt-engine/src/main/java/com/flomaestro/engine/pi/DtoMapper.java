@@ -66,7 +66,6 @@ public interface DtoMapper {
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)
   @Mapping(target = "sequenceFlows", ignore = true)
-  @Mapping(target = "parentElements", ignore = true)
   FlowElements getFlowElements(FlowElementsDTO flowElements);
 
   @SubclassMapping(source = ExclusiveGatewayDTO.class, target = ExclusiveGateway.class)

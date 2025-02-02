@@ -222,8 +222,7 @@ public class ProcessInstanceProcessor
         processInstanceToUpdate(
             processInstance, flowNodeInstances, processInstanceVariables.scopeToDTO(), clock.millis()));
 
-    FlowElements flowElements =
-        definitionMapper.getFlowElements(processDefinition.getDefinitions());
+    FlowElements flowElements = getFlowElements(processDefinitionKey);
 
     flowNodeInstancesProcessor.processStart(
         flowNodeInstanceStore,
@@ -328,9 +327,7 @@ public class ProcessInstanceProcessor
     return flowElementsCache.computeIfAbsent(
         processDefinitionKey,
         key -> {
-          ValueAndTimestamp<ProcessDefinitionDTO> processDefinitionDTOValueAndTimestamp =
-              definitionsStore.get(key);
-          ProcessDefinitionDTO processDefinitionDTO = processDefinitionDTOValueAndTimestamp.value();
+          ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
           if (processDefinitionDTO != null) {
             return definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
           }

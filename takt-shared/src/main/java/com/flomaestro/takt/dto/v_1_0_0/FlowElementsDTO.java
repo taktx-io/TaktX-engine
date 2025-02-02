@@ -16,7 +16,6 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 public class FlowElementsDTO {
-  public static final FlowElementsDTO EMPTY = new FlowElementsDTO(Map.of());
 
   @JsonProperty("e")
   private Map<String, FlowElementDTO> elements;
