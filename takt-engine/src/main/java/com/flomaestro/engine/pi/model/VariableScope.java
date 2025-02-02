@@ -81,7 +81,12 @@ public class VariableScope {
   public VariablesDTO scopeAndParentsToDto() {
     VariablesDTO dto = scopeToDTO();
     if (parentScope != null) {
-      dto.getVariables().putAll(parentScope.scopeAndParentsToDto().getVariables());
+      VariablesDTO parentVariablesDTO = parentScope.scopeAndParentsToDto();
+      parentVariablesDTO.getVariables().entrySet().forEach(e -> {
+            if (dto.get(e.getKey()) == null) {
+              dto.put(e.getKey(), e.getValue());
+            }
+          });
     }
     return dto;
   }

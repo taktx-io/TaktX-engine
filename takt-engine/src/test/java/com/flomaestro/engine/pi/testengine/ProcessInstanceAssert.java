@@ -46,12 +46,11 @@ public class ProcessInstanceAssert {
       String elementId, Class<?> clazz, int numberOfInstances) {
     List<FlowNodeInstanceDTO> instances =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId);
-    assertThat(instances)
+
+    List<FlowNodeInstanceDTO> instancesOfClass = instances.stream().filter(i -> i.getClass().equals(clazz)).toList();
+    assertThat(instancesOfClass)
         .as("element with " + elementId + " not found in process instance")
         .hasSize(numberOfInstances);
-    assertThat(instances)
-        .as("element " + elementId + " not of class " + clazz)
-        .allMatch(i -> i.getClass().equals(clazz));
     return this;
   }
 

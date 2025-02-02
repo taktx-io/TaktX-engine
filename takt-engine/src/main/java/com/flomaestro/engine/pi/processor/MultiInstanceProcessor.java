@@ -160,6 +160,7 @@ public class MultiInstanceProcessor
       ActivityInstance<?> iterationInstance = activity.newActivityInstance(multiInstanceInstance, flowNodeInstances.nextElementInstanceId());
       iterationInstance.setState(ActtivityStateEnum.INITIAL);
       iterationInstance.setIteration(true);
+      iterationInstance.setLoopCnt(i);
 
       if (firstInstance == null) {
         firstInstance = iterationInstance;
@@ -173,6 +174,7 @@ public class MultiInstanceProcessor
       iterationInstance.setLoopCnt(i);
       multiInstanceInstance.getFlowNodeInstances().putInstance(iterationInstance);
       JsonNode inputElement = inputCollection.get(i);
+      iterationInstance.setInputElement(inputElement);
       VariableScope iterationVariables =
           flowNodeInstancesVariables.selectFlowNodeInstancesScope(
               iterationInstance.getElementInstanceId());
@@ -197,6 +199,10 @@ public class MultiInstanceProcessor
     VariableScope flowNodeInstanceVariables =
         flowNodeInstancesVariables.selectFlowNodeInstancesScope(
             iterationInstance.getElementInstanceId());
+    flowNodeInstanceVariables.put("loopCnt", new IntNode(iterationInstance.getLoopCnt()));
+    flowNodeInstanceVariables.put(
+        multiInstanceInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
+        iterationInstance.getInputElement());
 
     processor.processStart(
         flowNodeInstanceStore,
