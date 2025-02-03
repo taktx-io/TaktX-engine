@@ -13,13 +13,4 @@ public class ParallelGatewayInstanceDTO extends GatewayInstanceDTO {
   @JsonProperty("t")
   Set<String> triggeredFlows;
 
-  public ParallelGatewayInstanceDTO(
-      long elementInstanceId,
-      String elementId,
-      Set<String> triggeredFlows,
-      int passedCnt,
-      Set<String> selectedOutputFlows) {
-    super(elementInstanceId, elementId, passedCnt, selectedOutputFlows);
-    this.triggeredFlows = triggeredFlows;
-  }
 }

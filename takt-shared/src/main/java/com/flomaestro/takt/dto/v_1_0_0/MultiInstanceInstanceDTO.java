@@ -1,7 +1,6 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashSet;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -14,13 +13,4 @@ public class MultiInstanceInstanceDTO extends ActivityInstanceDTO
   @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
 
-  public MultiInstanceInstanceDTO(
-      long elementInstanceId,
-      String elementId,
-      int passedCnt,
-      ActtivityStateEnum state,
-      FlowNodeInstancesDTO flowNodeInstances) {
-    super(state, elementId, elementInstanceId, passedCnt, new HashSet<>());
-    this.flowNodeInstances = flowNodeInstances;
-  }
 }

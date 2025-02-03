@@ -34,17 +34,6 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   @JsonProperty("l")
   private int loopCnt;
 
-  protected ActivityInstanceDTO(
-      ActtivityStateEnum state,
-      String elementId,
-      long elementInstanceId,
-      int passedCnt,
-      Set<Long> boundaryEventIds) {
-    super(elementInstanceId, elementId, passedCnt);
-    this.state = state;
-    this.boundaryEventIds = boundaryEventIds;
-  }
-
   @Override
   public boolean isTerminated() {
     return state == ActtivityStateEnum.TERMINATED;

@@ -36,12 +36,6 @@ public abstract class FlowNodeInstanceDTO {
   @JsonProperty("c")
   private int passedCnt;
 
-  protected FlowNodeInstanceDTO(long elementInstanceId, String elementId, int passedCnt) {
-    this.elementInstanceId = elementInstanceId;
-    this.elementId = elementId;
-    this.passedCnt = passedCnt;
-  }
-
   @JsonIgnore
   public boolean isTerminated() {
     return false;

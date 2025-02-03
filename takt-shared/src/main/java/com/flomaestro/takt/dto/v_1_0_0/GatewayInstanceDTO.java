@@ -13,9 +13,4 @@ public abstract class GatewayInstanceDTO extends FlowNodeInstanceDTO {
   @JsonProperty("f")
   private Set<String> selectedOutputFlows;
 
-  protected GatewayInstanceDTO(
-      long elementInstanceId, String elementId, int passedCnt, Set<String> selectedOutputFlows) {
-    super(elementInstanceId, elementId, passedCnt);
-    this.selectedOutputFlows = selectedOutputFlows;
-  }
 }

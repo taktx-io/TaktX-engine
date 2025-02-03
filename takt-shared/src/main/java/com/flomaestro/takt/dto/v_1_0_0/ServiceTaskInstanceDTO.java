@@ -1,7 +1,5 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
-import java.util.List;
-import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -13,14 +11,4 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class ServiceTaskInstanceDTO extends ExternalTaskInstanceDTO {
 
-  public ServiceTaskInstanceDTO(
-      ActtivityStateEnum state,
-      long elementInstanceId,
-      String elementId,
-      int passedCnt,
-      int attempt,
-      Set<Long> boundaryEventIds,
-      List<ScheduleKeyDTO> scheduledKeys) {
-    super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds, attempt, scheduledKeys);
-  }
 }

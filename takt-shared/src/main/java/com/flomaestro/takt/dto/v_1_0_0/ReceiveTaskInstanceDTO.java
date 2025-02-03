@@ -20,16 +20,4 @@ public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
   @JsonProperty("m")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 
-  public ReceiveTaskInstanceDTO(
-      ActtivityStateEnum state,
-      long elementInstanceId,
-      String elementId,
-      int passedCnt,
-      String correlationKey,
-      Set<Long> boundaryEventIds,
-      Map<MessageEventKeyDTO, Set<String>> messageEventKeys) {
-    super(state, elementInstanceId, elementId, passedCnt, boundaryEventIds);
-    this.correlationKey = correlationKey;
-    this.messageEventKeys = messageEventKeys;
-  }
 }

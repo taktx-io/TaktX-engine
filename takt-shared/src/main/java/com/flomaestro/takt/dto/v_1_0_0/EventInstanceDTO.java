@@ -10,7 +10,4 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public abstract class EventInstanceDTO extends FlowNodeInstanceDTO {
-  protected EventInstanceDTO(long elementInstanceId, String elementId, int passedCnt) {
-    super(elementInstanceId, elementId, passedCnt);
-  }
 }

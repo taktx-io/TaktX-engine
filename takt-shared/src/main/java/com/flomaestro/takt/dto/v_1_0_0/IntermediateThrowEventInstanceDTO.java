@@ -10,9 +10,4 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class IntermediateThrowEventInstanceDTO extends ThrowEventInstanceDTO {
-
-  public IntermediateThrowEventInstanceDTO(
-      long elementInstanceId, String elementId, int passedCnt) {
-    super(elementInstanceId, elementId, passedCnt);
-  }
 }

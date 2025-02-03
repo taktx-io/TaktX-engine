@@ -1,7 +1,6 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,14 +15,4 @@ public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFl
   @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
 
-  public SubProcessInstanceDTO(
-      FlowNodeInstancesDTO flowNodeInstances,
-      String elementId,
-      long elementInstanceId,
-      ActtivityStateEnum state,
-      int passedCnt,
-      Set<Long> boundaryEventIds) {
-    super(state, elementId, elementInstanceId, passedCnt, boundaryEventIds);
-    this.flowNodeInstances = flowNodeInstances;
-  }
 }
