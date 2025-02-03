@@ -23,11 +23,8 @@ import lombok.ToString;
 @NoArgsConstructor
 public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
-  @JsonProperty("sk")
-  private ScheduleKeyDTO scheduleKey;
-
   @JsonProperty("msgs")
-  private SchedulableMessageDTO messages;
+  private SchedulableMessageDTO message;
 
   @JsonProperty("cron")
   private String cron;
@@ -36,19 +33,17 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
   private String instantiation;
 
   public RecurringMessageSchedulerDTO(
-      ScheduleKeyDTO scheduleKey,
-      SchedulableMessageDTO messages,
-      String cron,
-      String instantiation) {
-    this.scheduleKey = scheduleKey;
-    this.messages = messages;
+      SchedulableMessageDTO message, String cron, String instantiation) {
+    this.message = message;
     this.cron = cron;
     this.instantiation = instantiation;
   }
 
   @Override
   public RecurringMessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
+      Instant now,
+      ScheduleKeyDTO scheduleKey,
+      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -58,11 +53,11 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
     if (zonedDateTime.isPresent()) {
       if (now.isAfter(zonedDateTime.get().toInstant())) {
         // Time reached, return triggers
-        triggerConsumer.accept(scheduleKey, messages);
+        triggerConsumer.accept(scheduleKey, message);
 
         // Return a new command with the next execution time
         return new RecurringMessageSchedulerDTO(
-            scheduleKey, messages, parsedCron.asString(), zonedDateTime.get().toString());
+            message, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;

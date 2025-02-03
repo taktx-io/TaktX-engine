@@ -159,7 +159,8 @@ public class FlowNodeInstancesProcessor {
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-        new StoredFlowNodeInstancesWrapper(processInstance.getProcessInstanceKey(),
+        new StoredFlowNodeInstancesWrapper(
+            processInstance.getProcessInstanceKey(),
             flowNodeInstances,
             flowNodeInstanceStore,
             flowElements);
@@ -194,7 +195,8 @@ public class FlowNodeInstancesProcessor {
               trigger.getElementInstanceIdPath().getFirst());
       if (instance != null) {
         VariableScope flowNodeInstanceVariables =
-            flowNodeInstancesVariables.selectFlowNodeInstancesScope(instance.getElementInstanceId());
+            flowNodeInstancesVariables.selectFlowNodeInstancesScope(
+                instance.getElementInstanceId());
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
         processor.processTerminate(

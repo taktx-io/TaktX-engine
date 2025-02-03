@@ -14,7 +14,8 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
     implements WithFlowNodeInstances {
   private FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
 
-  public MultiInstanceInstance(Activity activity, FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+  public MultiInstanceInstance(
+      Activity activity, FlowNodeInstance<?> parentInstance, long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
     setState(ActtivityStateEnum.INITIAL);
   }

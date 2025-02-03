@@ -9,6 +9,4 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {
-
-}
+public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {}

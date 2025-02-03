@@ -73,9 +73,7 @@ public class Forwarder {
       InstanceUpdate instanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
-              instanceUpdate.processInstanceKey(),
-              instanceUpdate.update(),
-              clock.millis()));
+              instanceUpdate.processInstanceKey(), instanceUpdate.update(), clock.millis()));
     }
   }
 
@@ -107,10 +105,10 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(catchEventInstance));
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(catchEventInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
-              scheduledKey,
               dtoMapper.map(info.timerEventDefinition()),
               continueFlowElementTrigger,
               info.variables());
@@ -146,13 +144,11 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(externalTaskInstance));
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(externalTaskInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
-              scheduleKey,
-              timerEventDefinition,
-              externalTaskResponseResultDTO,
-              VariableScope.empty());
+              timerEventDefinition, externalTaskResponseResultDTO, VariableScope.empty());
 
       externalTaskInstance.addScheduledKey(scheduleKey);
       context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
@@ -271,7 +267,7 @@ public class Forwarder {
                 processInstance.getProcessInstanceKey(),
                 pathExtractor.getInstancePath(externalTask.instance()));
         OneTimeSchedulerDTO oneTimeScheduler =
-            new OneTimeSchedulerDTO(scheduledKey, newExternalTaskTrigger, externalTask.startTime());
+            new OneTimeSchedulerDTO(newExternalTaskTrigger, externalTask.startTime());
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, clock.millis()));
       }
     }

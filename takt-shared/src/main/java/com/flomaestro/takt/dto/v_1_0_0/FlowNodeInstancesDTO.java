@@ -18,7 +18,6 @@ public class FlowNodeInstancesDTO {
   @JsonProperty("ei")
   private long elementInstanceCnt;
 
-
   public FlowNodeInstancesDTO(ProcessInstanceState state, int activeCnt, long elementInstanceCnt) {
     this.state = state;
     this.activeCnt = activeCnt;

@@ -14,11 +14,9 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
-  @JsonProperty("sk")
-  private ScheduleKeyDTO scheduleKey;
 
   @JsonProperty("msgs")
-  private SchedulableMessageDTO messages;
+  private SchedulableMessageDTO message;
 
   @JsonProperty("per")
   private String period;
@@ -33,14 +31,12 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
   private String instantiation;
 
   public FixedRateMessageSchedulerDTO(
-      ScheduleKeyDTO scheduleKey,
-      SchedulableMessageDTO messages,
+      SchedulableMessageDTO message,
       String period,
       int repetitions,
       int repeatedCnt,
       String instantiation) {
-    this.scheduleKey = scheduleKey;
-    this.messages = messages;
+    this.message = message;
     this.period = period;
     this.repetitions = repetitions;
     this.repeatedCnt = repeatedCnt;
@@ -49,11 +45,13 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
 
   @Override
   public FixedRateMessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
+      Instant now,
+      ScheduleKeyDTO scheduleKey,
+      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
     Instant instant = Instant.parse(this.instantiation);
     if (now.isAfter(instant)) {
       // Time reached, return triggers
-      triggerConsumer.accept(scheduleKey, messages);
+      triggerConsumer.accept(scheduleKey, message);
 
       if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
         // Return a new command with the next execution time
@@ -63,7 +61,7 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
           nextExecution = now.plus(Duration.parse(period));
         }
         return new FixedRateMessageSchedulerDTO(
-            scheduleKey, messages, period, repetitions, repeatedCnt + 1, nextExecution.toString());
+            message, period, repetitions, repeatedCnt + 1, nextExecution.toString());
       } else {
         // Return null to indicate that this command is done
         return null;

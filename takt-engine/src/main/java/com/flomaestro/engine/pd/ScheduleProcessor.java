@@ -53,6 +53,7 @@ public class ScheduleProcessor
                     MessageSchedulerDTO updatedScheduleCommand =
                         scheduleCommand.evaluate(
                             now,
+                            scheduledKey,
                             (scheduleKey, message) -> {
                               log.info(
                                   "Sending scheduled message at {} {}, {}",

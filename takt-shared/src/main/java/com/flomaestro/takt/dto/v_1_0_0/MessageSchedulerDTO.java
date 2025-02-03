@@ -17,5 +17,7 @@ public interface MessageSchedulerDTO {
 
   @JsonIgnore
   MessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer);
+      Instant now,
+      ScheduleKeyDTO scheduleKey,
+      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer);
 }

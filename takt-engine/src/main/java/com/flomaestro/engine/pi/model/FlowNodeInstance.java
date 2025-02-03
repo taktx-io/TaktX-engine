@@ -22,7 +22,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   private boolean dirty = false;
 
-  protected FlowNodeInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected FlowNodeInstance(
+      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
     this.parentInstance = parentInstance;
     this.elementInstanceId = elementInstanceId;
     this.flowNode = flowNode;
@@ -30,7 +31,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   @Override
   public List<Long> getKeyPath() {
-    List<Long> parentKeyPath = parentInstance != null ? parentInstance.getKeyPath() : new ArrayList<>();
+    List<Long> parentKeyPath =
+        parentInstance != null ? parentInstance.getKeyPath() : new ArrayList<>();
     parentKeyPath.add(elementInstanceId);
     return parentKeyPath;
   }

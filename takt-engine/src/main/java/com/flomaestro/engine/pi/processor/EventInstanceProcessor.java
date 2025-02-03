@@ -33,7 +33,8 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   @Override
   protected void processStartSpecificFlowNodeInstance(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      FlowNodeInstances flowNodeInstances, InstanceResult instanceResult,
+      FlowNodeInstances flowNodeInstances,
+      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,

@@ -9,5 +9,4 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public abstract class EventInstanceDTO extends FlowNodeInstanceDTO {
-}
+public abstract class EventInstanceDTO extends FlowNodeInstanceDTO {}

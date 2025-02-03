@@ -13,7 +13,8 @@ import lombok.experimental.SuperBuilder;
 public class ParallelGateway extends Gateway {
 
   @Override
-  protected GatewayInstance<?> newSpecificGatewayInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+  protected GatewayInstance<?> newSpecificGatewayInstance(
+      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
     return new ParallelGatewayInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -96,10 +96,7 @@ public abstract class FlowNodeInstanceProcessor<
 
     instanceResult.addInstanceUpdate(
         createFlowNodeInstanceUpdate(
-            processInstance,
-            flownodeInstance,
-            flowNodeInstanceVariables,
-            now));
+            processInstance, flownodeInstance, flowNodeInstanceVariables, now));
   }
 
   public final void processContinue(
@@ -143,11 +140,7 @@ public abstract class FlowNodeInstanceProcessor<
         (I) flowNodeInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
-        createFlowNodeInstanceUpdate(
-            processInstance,
-            flowNodeInstance,
-            variables,
-            now));
+        createFlowNodeInstanceUpdate(processInstance, flowNodeInstance, variables, now));
   }
 
   public void processTerminate(
@@ -177,16 +170,11 @@ public abstract class FlowNodeInstanceProcessor<
       processingStatistics.increaseFlowNodesFinished();
 
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(
-              processInstance,
-              instance,
-              variables,
-              now));
+          createFlowNodeInstanceUpdate(processInstance, instance, variables, now));
     }
   }
 
-  protected void addInputVariablesToScope(
-      E flowNode, VariableScope flowNodeInstanceVariables) {
+  protected void addInputVariablesToScope(E flowNode, VariableScope flowNodeInstanceVariables) {
     if (flowNode instanceof WithIoMapping withIoMapping) {
       ioMappingProcessor.addInputVariables(withIoMapping, flowNodeInstanceVariables);
     }
@@ -306,11 +294,9 @@ public abstract class FlowNodeInstanceProcessor<
     List<Long> elementInstanceIdPath = flowNodeInstance.getKeyPath();
     VariablesDTO processInstanceVariablesDTO = variables.scopeToDTO();
     FlowNodeInstanceDTO flowNodeInstanceDTO = processInstanceMapper.map(flowNodeInstance);
-    return new InstanceUpdate(processInstance.getProcessInstanceKey(),
+    return new InstanceUpdate(
+        processInstance.getProcessInstanceKey(),
         new FlowNodeInstanceUpdateDTO(
-          elementInstanceIdPath,
-          flowNodeInstanceDTO,
-          processInstanceVariablesDTO,
-          processTime));
+            elementInstanceIdPath, flowNodeInstanceDTO, processInstanceVariablesDTO, processTime));
   }
 }
