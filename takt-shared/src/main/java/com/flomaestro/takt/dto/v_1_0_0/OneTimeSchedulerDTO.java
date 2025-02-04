@@ -14,22 +14,25 @@ import lombok.ToString;
 @NoArgsConstructor
 public class OneTimeSchedulerDTO implements MessageSchedulerDTO {
 
+  @JsonProperty("sk")
+  private ScheduleKeyDTO scheduleKey;
+
   @JsonProperty("msgs")
   private SchedulableMessageDTO messages;
 
   @JsonProperty("whn")
   private String when;
 
-  public OneTimeSchedulerDTO(SchedulableMessageDTO messages, String when) {
+  public OneTimeSchedulerDTO(
+      ScheduleKeyDTO scheduleKey, SchedulableMessageDTO messages, String when) {
+    this.scheduleKey = scheduleKey;
     this.messages = messages;
     this.when = when;
   }
 
   @Override
   public OneTimeSchedulerDTO evaluate(
-      Instant now,
-      ScheduleKeyDTO scheduleKey,
-      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> consumer) {
+      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> consumer) {
     if (Instant.parse(when).isBefore(now)) {
       // Time reached, return triggers
       consumer.accept(scheduleKey, messages);

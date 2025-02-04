@@ -14,4 +14,5 @@ public class BoundaryEventInstanceDTO extends CatchEventInstanceDTO {
 
   @JsonProperty("a")
   private long attachedInstanceId;
+
 }

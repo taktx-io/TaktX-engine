@@ -33,9 +33,11 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasPassedElementWithId(String elementIdPath, int count) {
-    List<FlowNodeInstanceDTO> flowNodeInstancesWithElementId =
-        bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementIdPath);
-    assertThat(flowNodeInstancesWithElementId).isNotEmpty();
+    List<FlowNodeInstanceDTO> flowNodeInstancesWithElementId = bpmnTestEngine.getFlowNodeInstancesWithElementId(
+        processInstanceKey, elementIdPath);
+    assertThat(
+        flowNodeInstancesWithElementId)
+        .isNotEmpty();
     assertThat(flowNodeInstancesWithElementId.getFirst().getPassedCnt()).isEqualTo(count);
     return this;
   }
@@ -45,8 +47,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> instances =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId);
 
-    List<FlowNodeInstanceDTO> instancesOfClass =
-        instances.stream().filter(i -> i.getClass().equals(clazz)).toList();
+    List<FlowNodeInstanceDTO> instancesOfClass = instances.stream().filter(i -> i.getClass().equals(clazz)).toList();
     assertThat(instancesOfClass)
         .as("element with " + elementId + " not found in process instance")
         .hasSize(numberOfInstances);

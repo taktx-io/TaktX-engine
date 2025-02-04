@@ -19,4 +19,5 @@ public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
   @JsonProperty("m")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
+
 }

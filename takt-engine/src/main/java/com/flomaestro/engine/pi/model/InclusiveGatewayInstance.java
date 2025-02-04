@@ -11,8 +11,7 @@ import lombok.Setter;
 public class InclusiveGatewayInstance extends GatewayInstance<InclusiveGateway> {
   private Set<String> triggeredInputFlows = new HashSet<>();
 
-  public InclusiveGatewayInstance(
-      FlowNodeInstance<?> parentInstance, InclusiveGateway flowNode, long elementInstanceId) {
+  public InclusiveGatewayInstance(FlowNodeInstance<?> parentInstance, InclusiveGateway flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

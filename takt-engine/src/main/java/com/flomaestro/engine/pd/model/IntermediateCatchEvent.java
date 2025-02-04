@@ -15,8 +15,7 @@ public class IntermediateCatchEvent extends CatchEvent {
   @Override
   public FlowNodeInstance<?> newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new IntermediateCatchEventInstance(
-        parentInstance, this, flowNodeInstances.nextElementInstanceId());
+    return new IntermediateCatchEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
   }
 
   public boolean hasLinkEventDefinition(String name) {

@@ -160,12 +160,12 @@ public class ProcessInstanceResource {
         && metadata.activeHost().port() == envPort) {
 
       Map<String, JsonNode> variables = new HashMap<>();
-      FlowNodeInstanceKeyDTO minKey =
-          new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MIN_LONG));
-      FlowNodeInstanceKeyDTO maxKey =
-          new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MAX_LONG));
-      VariableKeyDTO startVariableKey = new VariableKeyDTO(minKey, "");
-      VariableKeyDTO endVariableKey = new VariableKeyDTO(maxKey, "\u00ff");
+      FlowNodeInstanceKeyDTO minKey = new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MIN_LONG));
+      FlowNodeInstanceKeyDTO maxKey = new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MAX_LONG));
+      VariableKeyDTO startVariableKey =
+          new VariableKeyDTO(minKey, "");
+      VariableKeyDTO endVariableKey =
+          new VariableKeyDTO(maxKey, "\u00ff");
       getVariablesStore()
           .range(startVariableKey, endVariableKey)
           .forEachRemaining(

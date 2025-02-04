@@ -240,8 +240,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + instanceUpdate);
 
-      ProcessInstanceDTO processInstanceDTO =
-          getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
+      ProcessInstanceDTO processInstanceDTO = getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
       ProcessInstanceDTO previousProcessInstance =
           processInstanceMap.put(processInstanceKey, processInstanceDTO);
       if (previousProcessInstance == null) {
@@ -249,19 +248,19 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
       }
 
       VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(processInstanceKey, k -> VariablesDTO.empty());
+          variablesMap.computeIfAbsent(
+              processInstanceKey, k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
 
     } else if (instanceUpdate instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
       LOG.info("Received FlowNode instance update: " + instanceUpdate);
 
-      FlowNodeInstanceKeyDTO key =
-          new FlowNodeInstanceKeyDTO(
-              processInstanceKey, flowNodeInstanceUpdate.getFlowNodeInstancePath());
+      FlowNodeInstanceKeyDTO key = new FlowNodeInstanceKeyDTO(processInstanceKey, flowNodeInstanceUpdate.getFlowNodeInstancePath());
       this.flowNodeInstanceMap.put(key, flowNodeInstanceUpdate.getFlowNodeInstance());
 
       VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(key.getProcessInstanceKey(), k -> VariablesDTO.empty());
+          variablesMap.computeIfAbsent(
+              key.getProcessInstanceKey(), k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(flowNodeInstanceUpdate.getVariables().getVariables());
     }
   }
@@ -301,7 +300,8 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             variables));
   }
 
-  public BpmnTestEngine deployProcessDefinition(String filename) throws IOException {
+  public BpmnTestEngine deployProcessDefinition(String filename)
+      throws IOException {
     LOG.info("Deploying process definition: " + filename);
     String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
     definitionsBeingDeployed = BpmnParser.parse(xml);
@@ -424,9 +424,10 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                         && externalTaskTrigger
                             .getProcessInstanceKey()
                             .equals(activeProcessInstanceKey)
-                        && getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId)
-                            .stream()
-                            .anyMatch(FlowNodeInstanceDTO::isWaiting));
+                        && getFlowNodeInstancesWithElementId(
+                                activeProcessInstanceKey, elementId).stream()
+                            .anyMatch(
+                                FlowNodeInstanceDTO::isWaiting));
 
     return this;
   }
@@ -642,22 +643,20 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
-      UUID processInstanceKey, String elementPath) {
+      UUID processInstanceKey,
+      String elementPath) {
 
     List<String> elementPathList = Stream.of(elementPath.split("/")).toList();
-    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance =
-        flowNodeInstanceMap.entrySet().stream()
-            .filter(e -> e.getKey().getProcessInstanceKey().equals(processInstanceKey))
-            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByElementIdOnIndex =
-        filteredByProcessInstance;
+    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance = flowNodeInstanceMap.entrySet().stream()
+        .filter(e -> e.getKey().getProcessInstanceKey().equals(processInstanceKey))
+        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByElementIdOnIndex = filteredByProcessInstance;
 
     for (int index = 0; index < elementPathList.size(); index++) {
       int currentIndex = index;
-      filteredByElementIdOnIndex =
-          filteredByProcessInstance.entrySet().stream()
-              .filter(e -> e.getValue().getElementId().equals(elementPathList.get(currentIndex)))
-              .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+      filteredByElementIdOnIndex = filteredByProcessInstance.entrySet().stream()
+          .filter(e -> e.getValue().getElementId().equals(elementPathList.get(currentIndex)))
+          .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
     return new ArrayList<>(filteredByElementIdOnIndex.values());
@@ -745,10 +744,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         .atMost(duration)
         .until(
             () -> {
-              List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId =
-                  getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId);
-              return flowNodeInstanceWithElementId.getFirst()
-                      instanceof ActivityInstanceDTO activityInstance
+              List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId = getFlowNodeInstancesWithElementId(
+                  activeProcessInstanceKey, elementId);
+              return flowNodeInstanceWithElementId.getFirst() instanceof ActivityInstanceDTO activityInstance
                   && activityInstance.getState() == state;
             },
             Objects::nonNull);

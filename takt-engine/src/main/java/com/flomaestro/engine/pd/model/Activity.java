@@ -25,13 +25,10 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   public final ActivityInstance<?> newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
     if (loopCharacteristics != null && !loopCharacteristics.equals(LoopCharacteristics.NONE)) {
-      MultiInstanceInstance multiInstanceInstance =
-          new MultiInstanceInstance(
-              this, parentInstance, flowNodeInstances.nextElementInstanceId());
+      MultiInstanceInstance multiInstanceInstance = new MultiInstanceInstance(this, parentInstance, flowNodeInstances.nextElementInstanceId());
       return multiInstanceInstance;
     } else {
-      ActivityInstance<?> activityInstance =
-          newActivityInstance(parentInstance, flowNodeInstances.nextElementInstanceId());
+      ActivityInstance<?> activityInstance = newActivityInstance(parentInstance, flowNodeInstances.nextElementInstanceId());
       activityInstance.setState(ActtivityStateEnum.INITIAL);
       return activityInstance;
     }
@@ -48,6 +45,5 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
     getBoundaryEvents().add(boundaryEvent);
   }
 
-  public abstract ActivityInstance<?> newActivityInstance(
-      FlowNodeInstance<?> parentInstance, long elementInstanceId);
+  public abstract ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId);
 }

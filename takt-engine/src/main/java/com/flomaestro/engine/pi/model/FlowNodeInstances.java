@@ -19,6 +19,7 @@ public class FlowNodeInstances {
   private FlowNodeInstance<?> parentFlowNodeInstance;
   private long elementInstanceCnt;
 
+
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
     this.state = ProcessInstanceState.ACTIVE;
@@ -83,4 +84,5 @@ public class FlowNodeInstances {
   public long nextElementInstanceId() {
     return ++elementInstanceCnt;
   }
+
 }

@@ -35,4 +35,5 @@ public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
     this.variables = variables;
     this.processTime = processTime;
   }
+
 }

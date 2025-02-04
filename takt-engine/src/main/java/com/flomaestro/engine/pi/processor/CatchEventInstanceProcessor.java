@@ -203,7 +203,11 @@ public abstract class CatchEventInstanceProcessor<
       selectNextNodeIfAllowedContinue(
           catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
       newInstanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, variables, now));
+          createFlowNodeInstanceUpdate(
+              processInstance,
+              catchEventInstance,
+              variables,
+              now));
       return true;
     }
     return false;
@@ -225,7 +229,11 @@ public abstract class CatchEventInstanceProcessor<
       selectNextNodeIfAllowedContinue(
           catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, variables, now));
+          createFlowNodeInstanceUpdate(
+              processInstance,
+              catchEventInstance,
+              variables,
+              now));
       return true;
     }
     return false;

@@ -25,8 +25,7 @@ public abstract class Gateway extends FlowNode {
             .map(GatewayInstance.class::cast)
             .filter(instance -> instance.getFlowNode().getId().equals(getId()))
             .findFirst();
-    return optGatewayInstance.orElse(
-        newSpecificGatewayInstance(parentInstance, flowNodeInstances.nextElementInstanceId()));
+    return optGatewayInstance.orElse(newSpecificGatewayInstance(parentInstance, flowNodeInstances.nextElementInstanceId()));
   }
 
   protected abstract GatewayInstance<?> newSpecificGatewayInstance(

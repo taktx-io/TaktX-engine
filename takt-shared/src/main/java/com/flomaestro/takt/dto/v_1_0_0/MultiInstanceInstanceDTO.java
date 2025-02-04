@@ -12,4 +12,5 @@ public class MultiInstanceInstanceDTO extends ActivityInstanceDTO
     implements WithFlowNodeInstancesDTO {
   @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
+
 }

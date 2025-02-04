@@ -15,7 +15,6 @@ public class IntermediateThrowEvent extends ThrowEvent {
   @Override
   public FlowNodeInstance<?> newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new IntermediateThrowEventInstance(
-        parentInstance, this, flowNodeInstances.nextElementInstanceId());
+    return new IntermediateThrowEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
   }
 }

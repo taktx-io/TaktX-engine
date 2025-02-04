@@ -6,8 +6,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SendTaskInstance extends ExternalTaskInstance<SendTask> {
 
-  public SendTaskInstance(
-      FlowNodeInstance<?> parentInstance, SendTask flowNode, long elementInstanceId) {
+  public SendTaskInstance(FlowNodeInstance<?> parentInstance, SendTask flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

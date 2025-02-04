@@ -73,10 +73,7 @@ public abstract class ActivityInstanceProcessor<
           .forEach(
               boundaryEvent -> {
                 BoundaryEventInstance boundaryEventInstance =
-                    new BoundaryEventInstance(
-                        flownodeInstance.getParentInstance(),
-                        boundaryEvent,
-                        flowNodeInstances.nextElementInstanceId());
+                    new BoundaryEventInstance(flownodeInstance.getParentInstance(), boundaryEvent, flowNodeInstances.nextElementInstanceId());
                 boundaryEventInstance.setState(CatchEventStateEnum.INITIAL);
 
                 boundaryEventInstance.setAttachedInstanceId(

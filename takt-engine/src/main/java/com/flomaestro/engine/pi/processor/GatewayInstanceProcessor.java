@@ -43,8 +43,7 @@ public abstract class GatewayInstanceProcessor<
   @Override
   protected final void processStartSpecificFlowNodeInstance(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      FlowNodeInstances flowNodeInstances,
-      InstanceResult instanceResult,
+      FlowNodeInstances flowNodeInstances, InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I gatewayInstance,

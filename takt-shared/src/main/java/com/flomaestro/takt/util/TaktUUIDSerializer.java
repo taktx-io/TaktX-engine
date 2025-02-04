@@ -10,8 +10,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class TaktUUIDSerializer extends JsonSerializer<UUID> implements Serializer<UUID> {
   @Override
-  public void serialize(UUID uuid, JsonGenerator gen, SerializerProvider serializers)
-      throws IOException {
+  public void serialize(UUID uuid, JsonGenerator gen, SerializerProvider serializers) throws IOException {
     gen.writeBinary(toByteArray(uuid));
   }
 

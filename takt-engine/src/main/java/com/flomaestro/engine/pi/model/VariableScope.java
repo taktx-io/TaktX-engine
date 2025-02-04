@@ -82,15 +82,11 @@ public class VariableScope {
     VariablesDTO dto = scopeToDTO();
     if (parentScope != null) {
       VariablesDTO parentVariablesDTO = parentScope.scopeAndParentsToDto();
-      parentVariablesDTO
-          .getVariables()
-          .entrySet()
-          .forEach(
-              e -> {
-                if (dto.get(e.getKey()) == null) {
-                  dto.put(e.getKey(), e.getValue());
-                }
-              });
+      parentVariablesDTO.getVariables().entrySet().forEach(e -> {
+            if (dto.get(e.getKey()) == null) {
+              dto.put(e.getKey(), e.getValue());
+            }
+          });
     }
     return dto;
   }
@@ -101,7 +97,9 @@ public class VariableScope {
       result = variables.get(name);
     }
     if (result == null && variableStore != null) {
-      result = variableStore.get(new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), name));
+      result =
+          variableStore.get(
+              new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), name));
     }
     if (result == null && parentScope != null) {
       result = parentScope.get(name);
@@ -123,9 +121,9 @@ public class VariableScope {
     Map<String, JsonNode> stored = new HashMap<>();
     dirtyVariables.forEach(
         key -> {
-          FlowNodeInstanceKeyDTO flowNodeInstanceKey =
-              new FlowNodeInstanceKeyDTO(processInstanceKey, List.of());
-          VariableKeyDTO variableKey = new VariableKeyDTO(flowNodeInstanceKey, key);
+          FlowNodeInstanceKeyDTO flowNodeInstanceKey = new FlowNodeInstanceKeyDTO(processInstanceKey, List.of());
+          VariableKeyDTO variableKey =
+              new VariableKeyDTO(flowNodeInstanceKey, key);
           JsonNode value = variables.get(key);
           variableStore.put(variableKey, value);
           stored.put(key, value);
@@ -135,15 +133,20 @@ public class VariableScope {
 
   public Map<String, JsonNode> retrieveAndFlattenAll() {
     Map<String, JsonNode> retrieved = retrieveAllInScope();
-    childScopes.values().forEach(scope -> retrieved.putAll(scope.retrieveAndFlattenAll()));
+    childScopes
+        .values()
+        .forEach(scope -> retrieved.putAll(scope.retrieveAndFlattenAll()));
     return retrieved;
   }
 
   public Map<String, JsonNode> retrieveAllInScope() {
     if (variableStore != null) {
 
-      VariableKeyDTO start = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), "");
-      VariableKeyDTO end = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), "\u00FF");
+      VariableKeyDTO start =
+          new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), "");
+      VariableKeyDTO end =
+          new VariableKeyDTO(
+              getFlowNodeInstanceKeyForScopePath(), "\u00FF");
       variableStore
           .range(start, end)
           .forEachRemaining(
@@ -155,4 +158,5 @@ public class VariableScope {
     }
     return variables;
   }
+
 }

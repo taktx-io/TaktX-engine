@@ -9,4 +9,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class IntermediateCatchEventInstanceDTO extends CatchEventInstanceDTO {}
+public class IntermediateCatchEventInstanceDTO extends CatchEventInstanceDTO {
+
+}

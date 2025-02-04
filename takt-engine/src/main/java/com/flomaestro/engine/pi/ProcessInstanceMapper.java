@@ -253,9 +253,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "flowNodeInstances.instances", ignore = true)
   @Mapping(target = "flowNodeInstances.state", source = "flowNodeInstances.state")
   @Mapping(target = "flowNodeInstances.activeCnt", source = "flowNodeInstances.activeCnt")
-  @Mapping(
-      target = "flowNodeInstances.elementInstanceCnt",
-      source = "flowNodeInstances.elementInstanceCnt")
+  @Mapping(target = "flowNodeInstances.elementInstanceCnt", source = "flowNodeInstances.elementInstanceCnt")
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventInstanceDTO.class)

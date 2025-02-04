@@ -31,8 +31,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   private boolean catchAllEscalations = false;
   private boolean catchAllErrors = false;
 
-  protected CatchEventInstance(
-      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected CatchEventInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

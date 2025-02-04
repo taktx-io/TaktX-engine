@@ -20,4 +20,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
-public abstract class InstanceUpdateDTO {}
+public abstract class InstanceUpdateDTO {
+
+}

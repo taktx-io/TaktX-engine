@@ -15,7 +15,8 @@ class FeelExpressionHandlerImplTest {
   void testNoFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("test", VariableScope.empty());
+    JsonNode jsonNode =
+        expressionHandler.processFeelExpression("test", VariableScope.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
@@ -23,7 +24,8 @@ class FeelExpressionHandlerImplTest {
   void testSimpleFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty());
+    JsonNode jsonNode =
+        expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty());
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
