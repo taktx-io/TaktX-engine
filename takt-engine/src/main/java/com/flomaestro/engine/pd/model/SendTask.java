@@ -13,7 +13,8 @@ import lombok.experimental.SuperBuilder;
 public class SendTask extends ExternalTask {
 
   @Override
-  public ActivityInstance<?> newActivityInstance(FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(
+      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
     return new SendTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

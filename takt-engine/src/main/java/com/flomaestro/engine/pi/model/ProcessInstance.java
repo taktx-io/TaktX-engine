@@ -36,5 +36,4 @@ public class ProcessInstance {
     this.propagateAllToParent = propagateAllToParent;
     this.outputMappings = outputMappings;
   }
-
 }

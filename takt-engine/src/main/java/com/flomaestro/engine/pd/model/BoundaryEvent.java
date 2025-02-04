@@ -18,6 +18,7 @@ public class BoundaryEvent extends CatchEvent {
   @Override
   public BoundaryEventInstance newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new BoundaryEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
+    return new BoundaryEventInstance(
+        parentInstance, this, flowNodeInstances.nextElementInstanceId());
   }
 }

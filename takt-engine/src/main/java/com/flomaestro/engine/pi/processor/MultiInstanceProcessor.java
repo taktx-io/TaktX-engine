@@ -58,7 +58,8 @@ public class MultiInstanceProcessor
   @Override
   protected void processStartSpecificFlowNodeInstance(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      FlowNodeInstances flowNodeInstances, InstanceResult instanceResult,
+      FlowNodeInstances flowNodeInstances,
+      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
@@ -78,7 +79,11 @@ public class MultiInstanceProcessor
     } else {
       ActivityInstance iterationInstance =
           prepareIterationInstances(
-              activity, multiInstanceInstance, inputCollection, flowNodeInstanceVariables, multiInstanceInstance.getFlowNodeInstances());
+              activity,
+              multiInstanceInstance,
+              inputCollection,
+              flowNodeInstanceVariables,
+              multiInstanceInstance.getFlowNodeInstances());
       loopStartIterations(
           flowNodeInstanceStore,
           instanceResult,
@@ -93,7 +98,10 @@ public class MultiInstanceProcessor
           activity);
       handleCompleted(
           processInstance.getProcessInstanceKey(),
-          flowNodeInstanceStore, flowElements, multiInstanceInstance, flowNodeInstanceVariables);
+          flowNodeInstanceStore,
+          flowElements,
+          multiInstanceInstance,
+          flowNodeInstanceVariables);
     }
   }
 
@@ -157,7 +165,9 @@ public class MultiInstanceProcessor
     ActivityInstance<?> previousIterationInstance = null;
     ActivityInstance<?> firstInstance = null;
     for (int i = 0; i < inputCollection.size(); i++) {
-      ActivityInstance<?> iterationInstance = activity.newActivityInstance(multiInstanceInstance, flowNodeInstances.nextElementInstanceId());
+      ActivityInstance<?> iterationInstance =
+          activity.newActivityInstance(
+              multiInstanceInstance, flowNodeInstances.nextElementInstanceId());
       iterationInstance.setState(ActtivityStateEnum.INITIAL);
       iterationInstance.setIteration(true);
       iterationInstance.setLoopCnt(i);
@@ -250,8 +260,9 @@ public class MultiInstanceProcessor
     ActivityInstance<?> iterationInstance =
         (ActivityInstance<?>) storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(instanceId);
 
-    VariableScope iterationVariables = flowNodeInstanceVariables.selectFlowNodeInstancesScope(
-        iterationInstance.getElementInstanceId());
+    VariableScope iterationVariables =
+        flowNodeInstanceVariables.selectFlowNodeInstancesScope(
+            iterationInstance.getElementInstanceId());
 
     while (iterationInstance != null) {
       processor.processContinue(
@@ -310,8 +321,7 @@ public class MultiInstanceProcessor
     if (iterationInstance.getNextIterationId() >= 0) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceKey,
-              flowNodeInstances, flowNodeInstanceStore, flowElements);
+              processInstanceKey, flowNodeInstances, flowNodeInstanceStore, flowElements);
       return (ActivityInstance<?>)
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
               iterationInstance.getNextIterationId());
@@ -338,7 +348,8 @@ public class MultiInstanceProcessor
               flowNodeInstanceStore,
               flowElements);
 
-      Map<Long, FlowNodeInstance<?>> allInstances = storedFlowNodeInstancesWrapper.getAllInstances();
+      Map<Long, FlowNodeInstance<?>> allInstances =
+          storedFlowNodeInstancesWrapper.getAllInstances();
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)
           .map(flowNodeInstance -> (ActivityInstance<?>) flowNodeInstance)

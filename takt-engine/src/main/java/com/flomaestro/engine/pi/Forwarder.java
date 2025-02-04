@@ -73,9 +73,7 @@ public class Forwarder {
       InstanceUpdate instanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
-              instanceUpdate.processInstanceKey(),
-              instanceUpdate.update(),
-              clock.millis()));
+              instanceUpdate.processInstanceKey(), instanceUpdate.update(), clock.millis()));
     }
   }
 
@@ -107,7 +105,8 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(catchEventInstance));
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(catchEventInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
               scheduledKey,
@@ -146,7 +145,8 @@ public class Forwarder {
 
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), pathExtractor.getInstancePath(externalTaskInstance));
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(externalTaskInstance));
       MessageSchedulerDTO schedule =
           messageSchedulerFactory.schedule(
               scheduleKey,

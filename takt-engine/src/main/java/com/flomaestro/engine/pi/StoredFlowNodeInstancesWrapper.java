@@ -37,7 +37,7 @@ public class StoredFlowNodeInstancesWrapper {
   public FlowNodeInstance<?> getInstanceWithInstanceId(long id) {
     FlowNodeInstance<?> instance = flowNodeInstances.getInstanceWithInstanceId(id);
     if (instance == null) {
-      FlowNodeInstanceKeyDTO key  = generatedKeyPath(flowNodeInstances, id);
+      FlowNodeInstanceKeyDTO key = generatedKeyPath(flowNodeInstances, id);
       instance = getFlowNodeInstanceFromStore(key);
     }
     return instance;
@@ -55,7 +55,9 @@ public class StoredFlowNodeInstancesWrapper {
             FlowNodeInstance<?> instance = mapper.map(value, flowElements);
             instance.setParentInstance(flowNodeInstances.getParentFlowNodeInstance());
 
-            flowNodeInstances.getInstances().putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
+            flowNodeInstances
+                .getInstances()
+                .putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
           });
     }
     return flowNodeInstances.getInstances();
@@ -69,9 +71,7 @@ public class StoredFlowNodeInstancesWrapper {
       if (flowNodeInstance != null) {
         flowNodeInstance.setParentInstance(flowNodeInstances.getParentFlowNodeInstance());
         if (flowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
-          withFlowNodeInstances
-              .getFlowNodeInstances()
-              .setParentFlowNodeInstance(flowNodeInstance);
+          withFlowNodeInstances.getFlowNodeInstances().setParentFlowNodeInstance(flowNodeInstance);
         }
         flowNodeInstances.putInstance(flowNodeInstance);
       }
@@ -79,11 +79,13 @@ public class StoredFlowNodeInstancesWrapper {
     return flowNodeInstance;
   }
 
-  private FlowNodeInstanceKeyDTO generatedKeyPath(FlowNodeInstances parentFlowNodeInstances, long id) {
+  private FlowNodeInstanceKeyDTO generatedKeyPath(
+      FlowNodeInstances parentFlowNodeInstances, long id) {
     LinkedList<Long> keyPath = new LinkedList<>();
     keyPath.addFirst(id);
-    FlowNodeInstance<?> parentFlowNodeInstance = parentFlowNodeInstances.getParentFlowNodeInstance();
-    while(parentFlowNodeInstance != null) {
+    FlowNodeInstance<?> parentFlowNodeInstance =
+        parentFlowNodeInstances.getParentFlowNodeInstance();
+    while (parentFlowNodeInstance != null) {
       keyPath.addFirst(parentFlowNodeInstance.getElementInstanceId());
       parentFlowNodeInstance = parentFlowNodeInstance.getParentInstance();
     }

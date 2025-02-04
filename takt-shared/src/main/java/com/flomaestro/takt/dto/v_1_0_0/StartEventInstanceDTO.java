@@ -9,5 +9,4 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class StartEventInstanceDTO extends CatchEventInstanceDTO {
-}
+public class StartEventInstanceDTO extends CatchEventInstanceDTO {}

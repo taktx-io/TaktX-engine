@@ -13,7 +13,8 @@ public class SubProcessInstance extends ActivityInstance<SubProcess>
 
   private FlowNodeInstances flowNodeInstances;
 
-  public SubProcessInstance(FlowNodeInstance<?> parentInstance, SubProcess flowNode, long elementInstanceId) {
+  public SubProcessInstance(
+      FlowNodeInstance<?> parentInstance, SubProcess flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

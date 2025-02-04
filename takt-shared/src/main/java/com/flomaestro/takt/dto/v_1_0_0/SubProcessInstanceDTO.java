@@ -14,5 +14,4 @@ public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFl
 
   @JsonProperty("f")
   private FlowNodeInstancesDTO flowNodeInstances;
-
 }

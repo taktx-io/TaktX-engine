@@ -13,5 +13,4 @@ public class InclusiveGatewayInstanceDTO extends GatewayInstanceDTO {
 
   @JsonProperty("t")
   private Set<String> triggeredInputFlows;
-
 }

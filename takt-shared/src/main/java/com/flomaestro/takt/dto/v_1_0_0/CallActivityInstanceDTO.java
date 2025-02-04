@@ -15,5 +15,4 @@ public class CallActivityInstanceDTO extends ActivityInstanceDTO {
 
   @JsonProperty("cpi")
   private UUID childProcessInstanceId;
-
 }

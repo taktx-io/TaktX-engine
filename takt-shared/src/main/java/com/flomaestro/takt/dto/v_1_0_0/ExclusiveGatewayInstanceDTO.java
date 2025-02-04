@@ -7,5 +7,4 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class ExclusiveGatewayInstanceDTO extends GatewayInstanceDTO {
-}
+public class ExclusiveGatewayInstanceDTO extends GatewayInstanceDTO {}

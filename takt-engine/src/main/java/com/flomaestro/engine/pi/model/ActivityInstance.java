@@ -25,7 +25,8 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   private Set<Long> boundaryEventIds = new HashSet<>();
 
-  protected ActivityInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected ActivityInstance(
+      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 
