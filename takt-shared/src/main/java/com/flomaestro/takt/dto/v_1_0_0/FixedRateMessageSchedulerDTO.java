@@ -14,8 +14,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
-  @JsonProperty("sk")
-  private ScheduleKeyDTO scheduleKey;
 
   @JsonProperty("msgs")
   private SchedulableMessageDTO messages;
@@ -33,13 +31,11 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
   private String instantiation;
 
   public FixedRateMessageSchedulerDTO(
-      ScheduleKeyDTO scheduleKey,
       SchedulableMessageDTO messages,
       String period,
       int repetitions,
       int repeatedCnt,
       String instantiation) {
-    this.scheduleKey = scheduleKey;
     this.messages = messages;
     this.period = period;
     this.repetitions = repetitions;
@@ -49,7 +45,9 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
 
   @Override
   public FixedRateMessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
+      Instant now,
+      ScheduleKeyDTO scheduleKey,
+      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
     Instant instant = Instant.parse(this.instantiation);
     if (now.isAfter(instant)) {
       // Time reached, return triggers
@@ -63,7 +61,7 @@ public class FixedRateMessageSchedulerDTO implements MessageSchedulerDTO {
           nextExecution = now.plus(Duration.parse(period));
         }
         return new FixedRateMessageSchedulerDTO(
-            scheduleKey, messages, period, repetitions, repeatedCnt + 1, nextExecution.toString());
+            messages, period, repetitions, repeatedCnt + 1, nextExecution.toString());
       } else {
         // Return null to indicate that this command is done
         return null;

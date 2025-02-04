@@ -185,7 +185,6 @@ public class ProcessDefinitionActivationProcessor {
                   new InstanceScheduleKeyDTO(processInstanceKey, List.of());
               MessageSchedulerDTO schedule =
                   messageSchedulerFactory.schedule(
-                      scheduleKey,
                       timerEventDefinition,
                       getStartCommand(
                           processDefinitionKey.getProcessDefinitionId(),

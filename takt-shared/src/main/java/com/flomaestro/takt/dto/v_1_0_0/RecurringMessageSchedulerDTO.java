@@ -23,9 +23,6 @@ import lombok.ToString;
 @NoArgsConstructor
 public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
-  @JsonProperty("sk")
-  private ScheduleKeyDTO scheduleKey;
-
   @JsonProperty("msgs")
   private SchedulableMessageDTO messages;
 
@@ -36,11 +33,7 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
   private String instantiation;
 
   public RecurringMessageSchedulerDTO(
-      ScheduleKeyDTO scheduleKey,
-      SchedulableMessageDTO messages,
-      String cron,
-      String instantiation) {
-    this.scheduleKey = scheduleKey;
+      SchedulableMessageDTO messages, String cron, String instantiation) {
     this.messages = messages;
     this.cron = cron;
     this.instantiation = instantiation;
@@ -48,7 +41,9 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
   @Override
   public RecurringMessageSchedulerDTO evaluate(
-      Instant now, BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
+      Instant now,
+      ScheduleKeyDTO scheduleKey,
+      BiConsumer<ScheduleKeyDTO, SchedulableMessageDTO> triggerConsumer) {
     CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
     CronParser parser = new CronParser(cronDefinition);
     Cron parsedCron = parser.parse(this.cron);
@@ -62,7 +57,7 @@ public class RecurringMessageSchedulerDTO implements MessageSchedulerDTO {
 
         // Return a new command with the next execution time
         return new RecurringMessageSchedulerDTO(
-            scheduleKey, messages, parsedCron.asString(), zonedDateTime.get().toString());
+            messages, parsedCron.asString(), zonedDateTime.get().toString());
       } else {
         // Time not yet reached, return this command
         return this;
