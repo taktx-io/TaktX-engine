@@ -297,8 +297,11 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       if (flowElements != null) {
+
         VariableScope processInstanceVariables =
             new VariableScope(variablesStore, processInstanceKey, null, null);
+
+        mergeVariablesInScope(processInstanceVariables, trigger.getElementInstanceIdPath(), trigger.getVariables());
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
 
@@ -324,6 +327,17 @@ public class ProcessInstanceProcessor
     } else {
       log.warn("Process instance not found for key: {}", processInstanceKey);
     }
+  }
+
+  private void mergeVariablesInScope(VariableScope processInstanceVariables, List<Long> elementInstanceIdPath,
+      VariablesDTO variables) {
+    VariableScope targetScope = processInstanceVariables;
+    if (elementInstanceIdPath != null) {
+      for(int i = 0; i < elementInstanceIdPath.size(); i++) {
+        targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceIdPath.get(i));
+      }
+    }
+    targetScope.merge(variables);
   }
 
   private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {

@@ -5,7 +5,7 @@ import com.flomaestro.client.ExternalTask;
 import com.flomaestro.client.ResponseConsumer;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,7 +17,7 @@ public class TypicalWorker {
 
   @ExternalTask(element = "benchmark-task-200")
   public void doWork(ResponseConsumer responseConsumer) {
-    responseConsumer.respondPromise(Duration.ofSeconds(1));
+//    responseConsumer.respondPromise(Duration.ofSeconds(10));
 
     executor.submit(
         () -> {
@@ -29,7 +29,7 @@ public class TypicalWorker {
             throw new RuntimeException(e);
           }
 
-          responseConsumer.respondSucess();
+          responseConsumer.respondSucess(Map.of("result", "success"));
         });
   }
 }

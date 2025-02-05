@@ -15,6 +15,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 public class InstanceScheduleKeyDTO implements ScheduleKeyDTO {
+
   @JsonProperty("pik")
   private UUID processInstanceKey;
 
@@ -24,10 +25,5 @@ public class InstanceScheduleKeyDTO implements ScheduleKeyDTO {
   public InstanceScheduleKeyDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
     this.processInstanceKey = processInstanceKey;
     this.elementInstanceIdPath = elementInstanceIdPath;
-  }
-
-  @Override
-  public UUID getRecordKey() {
-    return processInstanceKey;
   }
 }

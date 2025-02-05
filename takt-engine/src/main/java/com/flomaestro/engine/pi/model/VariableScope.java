@@ -52,7 +52,9 @@ public class VariableScope {
   }
 
   private void addScopeToPath(LinkedList<Long> path) {
-    path.addFirst(elementInstanceKey);
+    if (elementInstanceKey != null) {
+      path.addFirst(elementInstanceKey);
+    }
     if (parentScope != null) {
       parentScope.addScopeToPath(path);
     }
@@ -101,7 +103,8 @@ public class VariableScope {
       result = variables.get(name);
     }
     if (result == null && variableStore != null) {
-      result = variableStore.get(new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), name));
+      VariableKeyDTO k = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), name);
+      result = variableStore.get(k);
     }
     if (result == null && parentScope != null) {
       result = parentScope.get(name);

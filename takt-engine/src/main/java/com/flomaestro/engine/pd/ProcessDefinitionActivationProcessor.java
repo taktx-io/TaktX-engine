@@ -4,7 +4,6 @@ import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.DefinitionScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
@@ -168,9 +167,10 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              DefinitionScheduleKeyDTO scheduleKey =
-                  new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId());
-              context.forward(new Record<>(scheduleKey, null, clock.millis()));
+              //              DefinitionScheduleKeyDTO scheduleKey =
+              //                  new DefinitionScheduleKeyDTO(processDefinitionKey,
+              // startEvent.getId());
+              //              context.forward(new Record<>(scheduleKey, null, clock.millis()));
             });
   }
 

@@ -1,6 +1,7 @@
 package com.flomaestro.engine.pd;
 
 import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
@@ -39,14 +40,15 @@ public class ScheduleProcessor
         timestamp -> {
           AtomicInteger nrSchedulesProcessed = new AtomicInteger(0);
           long startTime = System.currentTimeMillis();
-          KeyValueStore<ScheduleKeyDTO, MessageSchedulerDTO> scheduleStore =
+          KeyValueStore<InstanceScheduleKeyDTO, MessageSchedulerDTO> scheduleStore =
               context.getStateStore(
                   tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
-          try (KeyValueIterator<ScheduleKeyDTO, MessageSchedulerDTO> all = scheduleStore.all()) {
+          try (KeyValueIterator<InstanceScheduleKeyDTO, MessageSchedulerDTO> all =
+              scheduleStore.all()) {
             all.forEachRemaining(
                 scheduledKeyValue -> {
                   nrSchedulesProcessed.incrementAndGet();
-                  ScheduleKeyDTO scheduledKey = scheduledKeyValue.key;
+                  InstanceScheduleKeyDTO scheduledKey = scheduledKeyValue.key;
                   MessageSchedulerDTO scheduleCommand = scheduledKeyValue.value;
                   if (scheduleCommand != null) {
                     Instant now = Instant.now(clock);
@@ -62,7 +64,9 @@ public class ScheduleProcessor
                                   message);
                               context.forward(
                                   new Record<>(
-                                      scheduledKey.getRecordKey(), message, clock.millis()));
+                                      scheduledKey.getProcessInstanceKey(),
+                                      message,
+                                      clock.millis()));
                             });
                     if (updatedScheduleCommand != null
                         && !updatedScheduleCommand.equals(scheduleCommand)) {
