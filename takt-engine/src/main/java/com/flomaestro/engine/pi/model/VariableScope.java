@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -41,8 +42,22 @@ public class VariableScope {
     return new VariableScope(null, null, null, null);
   }
 
-  private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePath() {
+  private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathStart() {
     return new FlowNodeInstanceKeyDTO(processInstanceKey, getScopePath());
+  }
+
+  private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathEnd() {
+    List<Long> scopePath = getScopePath();
+
+    if (scopePath.isEmpty()) {
+      UUID processInstanceKeyPlusOne = new UUID(processInstanceKey.getMostSignificantBits(),  processInstanceKey.getLeastSignificantBits() + 1);
+      return new FlowNodeInstanceKeyDTO(processInstanceKeyPlusOne, scopePath);
+    } else {
+      Long last = scopePath.getLast();
+      last++;
+      scopePath.set(scopePath.size() - 1, last);
+      return new FlowNodeInstanceKeyDTO(processInstanceKey, scopePath);
+    }
   }
 
   private List<Long> getScopePath() {
@@ -81,7 +96,7 @@ public class VariableScope {
   }
 
   public VariablesDTO scopeAndParentsToDto() {
-    VariablesDTO dto = scopeToDTO();
+    VariablesDTO dto = VariablesDTO.of(retrieveAllInScope());
     if (parentScope != null) {
       VariablesDTO parentVariablesDTO = parentScope.scopeAndParentsToDto();
       parentVariablesDTO
@@ -103,7 +118,7 @@ public class VariableScope {
       result = variables.get(name);
     }
     if (result == null && variableStore != null) {
-      VariableKeyDTO k = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), name);
+      VariableKeyDTO k = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePathStart(), name);
       result = variableStore.get(k);
     }
     if (result == null && parentScope != null) {
@@ -116,24 +131,25 @@ public class VariableScope {
     return variables.keySet();
   }
 
-  public Map<String, JsonNode> persist() {
-    Map<String, JsonNode> stored = persistScope();
-    childScopes.values().forEach(variable -> stored.putAll(variable.persist()));
-    return stored;
+  public void persist() {
+    persistScope(List.of());
   }
 
-  private Map<String, JsonNode> persistScope() {
-    Map<String, JsonNode> stored = new HashMap<>();
+  private void persistScope(List<Long> keyPath) {
     dirtyVariables.forEach(
         key -> {
           FlowNodeInstanceKeyDTO flowNodeInstanceKey =
-              new FlowNodeInstanceKeyDTO(processInstanceKey, List.of());
+              new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
           VariableKeyDTO variableKey = new VariableKeyDTO(flowNodeInstanceKey, key);
           JsonNode value = variables.get(key);
           variableStore.put(variableKey, value);
-          stored.put(key, value);
+          int i = 0;
         });
-    return stored;
+    childScopes.forEach((k, v) -> {
+      List<Long> newPath = new ArrayList<>(keyPath);
+      newPath.add(k);
+      v.persistScope(newPath);
+    });
   }
 
   public Map<String, JsonNode> retrieveAndFlattenAll() {
@@ -145,8 +161,15 @@ public class VariableScope {
   public Map<String, JsonNode> retrieveAllInScope() {
     if (variableStore != null) {
 
-      VariableKeyDTO start = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), "");
-      VariableKeyDTO end = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePath(), "\u00FF");
+      FlowNodeInstanceKeyDTO startflowNodeInstanceKeyForScopePath = getFlowNodeInstanceKeyForScopePathStart();
+      FlowNodeInstanceKeyDTO endflowNodeInstanceKeyForScopePath = getFlowNodeInstanceKeyForScopePathEnd();
+      VariableKeyDTO start = new VariableKeyDTO(startflowNodeInstanceKeyForScopePath, "");
+
+      VariableKeyDTO end = new VariableKeyDTO(endflowNodeInstanceKeyForScopePath, "");
+
+      Map<VariableKeyDTO, Object> varMap = new HashMap<>();
+      variableStore.all().forEachRemaining(kv -> varMap.put(kv.key, kv.value));
+
       variableStore
           .range(start, end)
           .forEachRemaining(
@@ -157,5 +180,23 @@ public class VariableScope {
               });
     }
     return variables;
+  }
+
+  public void mergeAllToParent() {
+    if (parentScope != null) {
+      parentScope.merge(scopeToDTO());
+      clearScope();
+    }
+  }
+
+  private void clearScope() {
+    variables.clear();
+    dirtyVariables.clear();
+  }
+
+  public void putInParent(String varName, JsonNode jsonNode) {
+    if (parentScope != null) {
+      parentScope.put(varName, jsonNode);
+    }
   }
 }

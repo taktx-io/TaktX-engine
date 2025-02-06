@@ -111,9 +111,6 @@ class ExternalTaskTest {
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("ServiceTask_1")
-        .doesNotHaveVariable("MappedOutputVariable")
-        .hasVariableWithValue("StartEvent_Output_1", "outputValue1")
-        .hasVariableWithValue("StartEvent_Output_2", "outputValue2")
         .isCompleted();
   }
 

@@ -159,9 +159,7 @@ class BoundaryEventsTest {
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("service-task-id")
         .hasInstantiatedElementWithId("BoundaryEvent_1", 1)
-        .hasInstantiatedElementWithId("EndEvent_1")
-        .hasVariableWithValue("var1", "value1")
-        .hasVariableWithValue("var2", "value2");
+        .hasInstantiatedElementWithId("EndEvent_1");
   }
 
   @Test

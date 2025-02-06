@@ -41,9 +41,11 @@ public class FlowNodeInstancesProcessor {
       FlowNodeInstance<?> parentElementInstance,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope parentVariableScope,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
+
+    flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
@@ -54,9 +56,6 @@ public class FlowNodeInstancesProcessor {
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
 
-    VariableScope flowNodeInstanceVariableScope =
-        variables.selectFlowNodeInstancesScope(flowNodeInstance.getElementInstanceId());
-
     processor.processStart(
         flowNodeInstanceStore,
         instanceResult,
@@ -65,7 +64,7 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstance,
         processInstance,
         null,
-        flowNodeInstanceVariableScope,
+        parentVariableScope,
         flowNodeInstances,
         processingStatistics);
 
@@ -76,7 +75,7 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstances,
         flowElements,
         processInstance,
-        flowNodeInstanceVariableScope,
+        parentVariableScope,
         processingStatistics);
 
     flowNodeInstances.determineImplicitCompletedState();
@@ -89,7 +88,7 @@ public class FlowNodeInstancesProcessor {
       ContinueFlowElementTriggerDTO trigger,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope parentVariables,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
 
@@ -106,11 +105,6 @@ public class FlowNodeInstancesProcessor {
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
-    VariableScope flowNodeInstanceVariables =
-        variables.selectFlowNodeInstancesScope(flowNodeInstance.getElementInstanceId());
-
-    flowNodeInstanceVariables.merge(trigger.getVariables());
-
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 
@@ -123,7 +117,7 @@ public class FlowNodeInstancesProcessor {
         processInstance,
         flowNodeInstance,
         trigger,
-        flowNodeInstanceVariables,
+        parentVariables,
         flowNodeInstances,
         processingStatistics);
 
@@ -134,7 +128,7 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstances,
         flowElements,
         processInstance,
-        flowNodeInstanceVariables,
+        parentVariables,
         processingStatistics);
 
     EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
@@ -152,7 +146,7 @@ public class FlowNodeInstancesProcessor {
       TerminateTriggerDTO trigger,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      VariableScope flowNodeInstancesVariables,
+      VariableScope parentVariableScope,
       FlowElements flowElements,
       ProcessingStatistics processingStatistics) {
 
@@ -174,16 +168,13 @@ public class FlowNodeInstancesProcessor {
               instance -> {
                 FlowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-                VariableScope flowNodeInstanceVariables =
-                    flowNodeInstancesVariables.selectFlowNodeInstancesScope(
-                        instance.getElementInstanceId());
                 processor.processTerminate(
                     flowNodeInstanceStore,
                     instanceResult,
                     directInstanceResult,
                     instance,
                     processInstance,
-                    flowNodeInstanceVariables,
+                    parentVariableScope,
                     flowNodeInstances,
                     processingStatistics);
               });
@@ -194,9 +185,6 @@ public class FlowNodeInstancesProcessor {
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
               trigger.getElementInstanceIdPath().getFirst());
       if (instance != null) {
-        VariableScope flowNodeInstanceVariables =
-            flowNodeInstancesVariables.selectFlowNodeInstancesScope(
-                instance.getElementInstanceId());
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
         processor.processTerminate(
@@ -205,7 +193,7 @@ public class FlowNodeInstancesProcessor {
             directInstanceResult,
             instance,
             processInstance,
-            flowNodeInstanceVariables,
+            parentVariableScope,
             flowNodeInstances,
             processingStatistics);
       }
@@ -220,7 +208,7 @@ public class FlowNodeInstancesProcessor {
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
       ProcessInstance processInstance,
-      VariableScope processInstanceVariables,
+      VariableScope parentVariableScope,
       ProcessingStatistics processingStatistics) {
 
     flowInstanceRunner.continueNewInstances(
@@ -230,7 +218,7 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstances,
         processInstance,
         flowElements,
-        processInstanceVariables,
+        parentVariableScope,
         processingStatistics);
   }
 }

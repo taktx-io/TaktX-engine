@@ -37,7 +37,7 @@ public class EndEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       EndEventInstance instance,
       ProcessInstance processInstance,
-      VariableScope processInstanceVariables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }

@@ -62,9 +62,6 @@ public class SubProcessInstanceProcessor
     subProcessInstance.setFlowNodeInstances(subFlowNodeInstances);
     subProcessInstance.setState(ActtivityStateEnum.WAITING);
 
-    VariableScope subProcessVariables =
-        flowNodeInstanceVariables.selectFlowNodeInstancesScope(
-            subProcessInstance.getElementInstanceId());
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
 
     flowNodeInstancesProcessor.processStart(
@@ -74,7 +71,7 @@ public class SubProcessInstanceProcessor
         subProcessInstance,
         subProcessElements,
         processInstance,
-        subProcessVariables,
+        flowNodeInstanceVariables,
         subFlowNodeInstances,
         processingStatistics);
 
@@ -99,9 +96,7 @@ public class SubProcessInstanceProcessor
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
     subProcessInstance.getFlowNodeInstances().setParentFlowNodeInstance(subProcessInstance);
-    VariableScope subProcessVariables =
-        flowNodeInstanceVariables.selectFlowNodeInstancesScope(
-            subProcessInstance.getElementInstanceId());
+
     flowNodeInstancesProcessor.processContinue(
         flowNodeInstanceStore,
         instanceResult,
@@ -109,7 +104,7 @@ public class SubProcessInstanceProcessor
         trigger,
         subProcessElements,
         processInstance,
-        subProcessVariables,
+        flowNodeInstanceVariables,
         subProcessInstance.getFlowNodeInstances(),
         processingStatistics);
 

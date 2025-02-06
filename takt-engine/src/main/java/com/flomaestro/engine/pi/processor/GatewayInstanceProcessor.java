@@ -130,7 +130,7 @@ public abstract class GatewayInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
     processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }

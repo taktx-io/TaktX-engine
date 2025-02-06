@@ -25,7 +25,10 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=local #5
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092 #6
-
+      - KAFKA_CLUSTERS_0_PROPERTIES_CONSUMER_KEY_DESERIALIZER=org.apache.kafka.common.serialization.HexDeserializer
+      - KAFKA_CLUSTERS_0_PROPERTIES_CONSUMER_VALUE_DESERIALIZER=org.apache.kafka.common.serialization.HexDeserializer
+      - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_KEY_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
+      - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_VALUE_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
   influxdb:
     image: influxdb:latest
     ports:

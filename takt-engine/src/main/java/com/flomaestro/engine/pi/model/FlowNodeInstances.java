@@ -21,7 +21,7 @@ public class FlowNodeInstances {
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
-    this.state = ProcessInstanceState.ACTIVE;
+    this.state = ProcessInstanceState.START;
     this.stateChanged = false;
     this.activeCnt = 0;
     this.elementInstanceCnt = 0;

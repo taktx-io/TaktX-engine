@@ -403,8 +403,7 @@ public class ProcessInstanceProcessor
             .flowNodeInstances(flowNodeInstancesDTO)
             .build();
 
-    Map<String, JsonNode> stored = processInstanceVariables.persist();
-    VariablesDTO dirtyVariablesDTO = VariablesDTO.of(stored);
+    processInstanceVariables.persist();
 
     if (flowNodeInstances.isStateChanged()) {
       if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
@@ -412,7 +411,10 @@ public class ProcessInstanceProcessor
       }
       instanceResult.addInstanceUpdate(
           processInstanceToUpdate(
-              processInstance, flowNodeInstances, dirtyVariablesDTO, clock.millis()));
+              processInstance,
+              flowNodeInstances,
+              processInstanceVariables.scopeToDTO(),
+              clock.millis()));
     }
 
     if (processInstance.getFlowNodeInstances().getState().isFinished()) {

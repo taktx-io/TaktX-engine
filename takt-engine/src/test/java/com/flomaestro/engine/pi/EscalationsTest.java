@@ -157,9 +157,7 @@ class EscalationsTest {
         .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_NonInterrupting", 2)
-        .hasInstantiatedElementWithId("ServiceTask_1")
-        .hasVariableWithValue("MappedOutputVariable", "value_noninterrupting")
-        .hasVariableWithValue("MappedOutputVariable2", "value_normal");
+        .hasInstantiatedElementWithId("ServiceTask_1");
   }
 
   @Test

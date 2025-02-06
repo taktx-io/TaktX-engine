@@ -21,18 +21,22 @@ public class IoMappingProcessor {
     this.feelExpressionHandler = feelExpressionHandler;
   }
 
-  public void addOutputVariables(WithIoMapping element, VariableScope variables) {
+  public void processOutputMappings(WithIoMapping element, VariableScope variables) {
     Set<IoVariableMapping> outputMappings = element.getIoMapping().getOutputMappings();
 
     addVariables(variables, outputMappings);
   }
 
   public void addVariables(VariableScope variables, Set<IoVariableMapping> outputMappings) {
-    for (IoVariableMapping mapping : outputMappings) {
-      String varName = mapping.getTarget();
-      JsonNode jsonNode =
-          feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-      variables.put(varName, jsonNode);
+    if (outputMappings.isEmpty()) {
+      variables.mergeAllToParent();
+    } else {
+      for (IoVariableMapping mapping : outputMappings) {
+        String varName = mapping.getTarget();
+        JsonNode jsonNode =
+            feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
+        variables.putInParent(varName, jsonNode);
+      }
     }
   }
 

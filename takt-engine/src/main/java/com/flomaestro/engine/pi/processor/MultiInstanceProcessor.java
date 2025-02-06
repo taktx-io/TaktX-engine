@@ -24,9 +24,11 @@ import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.ToIntFunction;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class MultiInstanceProcessor
@@ -206,14 +208,6 @@ public class MultiInstanceProcessor
       DirectInstanceResult directInstanceResult,
       ProcessingStatistics processingStatistics) {
 
-    VariableScope flowNodeInstanceVariables =
-        flowNodeInstancesVariables.selectFlowNodeInstancesScope(
-            iterationInstance.getElementInstanceId());
-    flowNodeInstanceVariables.put("loopCnt", new IntNode(iterationInstance.getLoopCnt()));
-    flowNodeInstanceVariables.put(
-        multiInstanceInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
-        iterationInstance.getInputElement());
-
     processor.processStart(
         flowNodeInstanceStore,
         instanceResult,
@@ -222,7 +216,7 @@ public class MultiInstanceProcessor
         iterationInstance,
         processInstance,
         inputFlowId,
-        flowNodeInstanceVariables,
+        flowNodeInstancesVariables,
         multiInstanceInstance.getFlowNodeInstances(),
         processingStatistics);
 
@@ -260,50 +254,42 @@ public class MultiInstanceProcessor
     ActivityInstance<?> iterationInstance =
         (ActivityInstance<?>) storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(instanceId);
 
-    VariableScope iterationVariables =
-        flowNodeInstanceVariables.selectFlowNodeInstancesScope(
-            iterationInstance.getElementInstanceId());
+    processor.processContinue(
+        flowNodeInstanceStore,
+        instanceResult,
+        directInstanceResult,
+        subProcessLevel,
+        subFlowElements,
+        processInstance,
+        iterationInstance,
+        trigger,
+        flowNodeInstanceVariables,
+        multiInstanceInstance.getFlowNodeInstances(),
+        processingStatistics);
+    if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
 
-    while (iterationInstance != null) {
-      processor.processContinue(
+      iterationInstance =
+          getNextIterationInstance(
+              flowNodeInstanceStore,
+              processInstance.getProcessInstanceKey(),
+              multiInstanceInstance.getFlowNodeInstances(),
+              iterationInstance,
+              flowElements);
+
+      loopStartIterations(
           flowNodeInstanceStore,
           instanceResult,
           directInstanceResult,
-          subProcessLevel,
-          subFlowElements,
+          flowElements,
+          multiInstanceInstance,
           processInstance,
+          trigger.getInputFlowId(),
+          processingStatistics,
           iterationInstance,
-          trigger,
-          iterationVariables,
-          multiInstanceInstance.getFlowNodeInstances(),
-          processingStatistics);
-      if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
-
-        iterationInstance =
-            getNextIterationInstance(
-                flowNodeInstanceStore,
-                processInstance.getProcessInstanceKey(),
-                multiInstanceInstance.getFlowNodeInstances(),
-                iterationInstance,
-                flowElements);
-        if (activity.getLoopCharacteristics().isSequential()) {
-          loopStartIterations(
-              flowNodeInstanceStore,
-              instanceResult,
-              directInstanceResult,
-              flowElements,
-              multiInstanceInstance,
-              processInstance,
-              trigger.getInputFlowId(),
-              processingStatistics,
-              iterationInstance,
-              flowNodeInstanceVariables,
-              activity);
-        }
-      } else {
-        iterationInstance = null;
-      }
+          flowNodeInstanceVariables,
+          activity);
     }
+
     handleCompleted(
         processInstance.getProcessInstanceKey(),
         flowNodeInstanceStore,
@@ -353,8 +339,9 @@ public class MultiInstanceProcessor
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)
           .map(flowNodeInstance -> (ActivityInstance<?>) flowNodeInstance)
-          .map(iterationInstance -> iterationInstance.getOutputElement())
-          .forEach(outputElement -> arrayNode.add(outputElement));
+          .sorted(Comparator.comparingInt((ToIntFunction<ActivityInstance<?>>) ActivityInstance::getLoopCnt))
+          .map(ActivityInstance::getOutputElement)
+          .forEach(arrayNode::add);
       String outputCollection =
           multiInstanceInstance.getFlowNode().getLoopCharacteristics().getOutputCollection();
       if (outputCollection != null) {
@@ -370,7 +357,7 @@ public class MultiInstanceProcessor
       DirectInstanceResult directInstanceResult,
       MultiInstanceInstance instance,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
     FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
     flowNodeInstances
@@ -384,7 +371,7 @@ public class MultiInstanceProcessor
                     directInstanceResult,
                     iteration,
                     processInstance,
-                    variables,
+                    currentVariableScope,
                     flowNodeInstances,
                     processingStatistics));
   }

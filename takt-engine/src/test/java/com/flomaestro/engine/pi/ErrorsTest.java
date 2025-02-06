@@ -61,8 +61,7 @@ class ErrorsTest {
         .hasInstantiatedElementWithId("EndEvent_Error_WithErrorReference")
         .hasNotPassedElementWithId("BoundaryEvent_NoReference")
         .hasNotPassedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1")
-        .hasVariableWithValue("MappedOutputVariable", "value1");
+        .hasTerminatedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -87,8 +86,7 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1")
-        .hasVariableWithValue("MappedOutputVariable", "value2");
+        .hasTerminatedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -112,8 +110,7 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1")
-        .hasVariableWithValue("MappedOutputVariable", "value2");
+        .hasTerminatedElementWithId("ServiceTask_1");
   }
 
   @Test

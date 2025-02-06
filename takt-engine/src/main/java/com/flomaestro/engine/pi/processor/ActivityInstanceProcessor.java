@@ -130,7 +130,7 @@ public abstract class ActivityInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
 
     instance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
@@ -141,7 +141,7 @@ public abstract class ActivityInstanceProcessor<
         directInstanceResult,
         instance,
         processInstance,
-        variables,
+        currentVariableScope,
         processingStatistics);
   }
 

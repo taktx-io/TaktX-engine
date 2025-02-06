@@ -37,7 +37,7 @@ public class IntermediateThrowEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       IntermediateThrowEventInstance instance,
       ProcessInstance processInstance,
-      VariableScope processInstanceVariables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
     // nothing to do
   }

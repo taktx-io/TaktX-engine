@@ -54,7 +54,6 @@ public class StoredFlowNodeInstancesWrapper {
             FlowNodeInstanceDTO value = entry.value;
             FlowNodeInstance<?> instance = mapper.map(value, flowElements);
             instance.setParentInstance(flowNodeInstances.getParentFlowNodeInstance());
-
             flowNodeInstances
                 .getInstances()
                 .putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);

@@ -33,7 +33,7 @@ public class FlowInstanceRunner {
       FlowNodeInstances flowNodeInstances,
       ProcessInstance processInstance,
       FlowElements flowElements,
-      VariableScope flowNodeInstanceVariables,
+      VariableScope parentVariableScope,
       ProcessingStatistics processingStatistics) {
 
     while (directInstanceResult.hasDirectTriggers()) {
@@ -44,7 +44,7 @@ public class FlowInstanceRunner {
           instanceResult,
           directInstanceResult,
           flowElements,
-          flowNodeInstanceVariables,
+          parentVariableScope,
           processingStatistics);
     }
   }
@@ -56,7 +56,7 @@ public class FlowInstanceRunner {
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
-      VariableScope variables,
+      VariableScope parentVariableScope,
       ProcessingStatistics processingStatistics) {
 
     while (!directInstanceResult.eventsEmpty()) {
@@ -70,7 +70,7 @@ public class FlowInstanceRunner {
           event.getCurrentInstance(),
           instanceResult,
           directInstanceResult,
-          variables,
+          parentVariableScope,
           processingStatistics);
     }
 
@@ -95,7 +95,7 @@ public class FlowInstanceRunner {
           directInstanceResult,
           flowNodeInstance,
           processInstance,
-          variables,
+          parentVariableScope,
           flowNodeInstances,
           processingStatistics);
     }
@@ -114,7 +114,7 @@ public class FlowInstanceRunner {
           instanceInfo.flowNodeInstance(),
           processInstance,
           instanceInfo.inputSequenceFlowId(),
-          variables,
+          parentVariableScope,
           flowNodeInstances,
           processingStatistics);
     }
@@ -129,7 +129,7 @@ public class FlowInstanceRunner {
       FlowNodeInstance<?> fLowNodeInstance,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      VariableScope variables,
+      VariableScope parentVariableScope,
       ProcessingStatistics processingStatistics) {
 
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
@@ -144,13 +144,14 @@ public class FlowInstanceRunner {
       for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
         BoundaryEventInstance boundaryEventInstance =
             (BoundaryEventInstance) instancesWrapper.getInstanceWithInstanceId(boundaryEventId);
+
         eventHandled =
             boundaryEventProcessor.processEvent(
                 boundaryEventInstance,
                 event,
                 instanceResult,
                 directInstanceResult,
-                variables,
+                parentVariableScope,
                 processInstance,
                 flowNodeInstances,
                 processingStatistics);
@@ -162,6 +163,7 @@ public class FlowInstanceRunner {
           break;
         }
       }
+
       if (!eventHandled) {
         // If not handled by specific codes, check for catch all
         for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
@@ -174,7 +176,7 @@ public class FlowInstanceRunner {
                     event,
                     instanceResult,
                     directInstanceResult,
-                    variables,
+                    parentVariableScope,
                     processInstance,
                     flowNodeInstances,
                     processingStatistics);

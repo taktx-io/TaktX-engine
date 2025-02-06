@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.30.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
-  <bpmn:process id="task-callactivity-multiinstance-sequential" isExecutable="true">
+  <bpmn:process id="task-callactivity-multiinstance-parallel" isExecutable="true">
     <bpmn:documentation>documen</bpmn:documentation>
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_0v3edbs</bpmn:outgoing>
@@ -18,14 +18,14 @@
       <bpmn:outgoing>Flow_00uez6y</bpmn:outgoing>
       <bpmn:multiInstanceLoopCharacteristics>
         <bpmn:extensionElements>
-          <zeebe:loopCharacteristics inputCollection="=inputCollection" inputElement="inputElement" outputCollection="outputCollection" outputElement="=&#34;xxx&#34; + inputElementCopy" />
+          <zeebe:loopCharacteristics inputCollection="=inputCollection" inputElement="inputElement" outputCollection="outputCollection" outputElement="=inputElement  + &#34;xxx&#34;&#10; + string(loopCnt)" />
         </bpmn:extensionElements>
         <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=false</bpmn:completionCondition>
       </bpmn:multiInstanceLoopCharacteristics>
     </bpmn:callActivity>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="task-callactivity-multiinstance-sequential">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="task-callactivity-multiinstance-parallel">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
         <dc:Bounds x="179" y="99" width="36" height="36" />
       </bpmndi:BPMNShape>

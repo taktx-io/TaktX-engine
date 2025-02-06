@@ -182,7 +182,7 @@ public abstract class CatchEventInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I instance,
       ProcessInstance processInstance,
-      VariableScope variables,
+      VariableScope currentVariableScope,
       ProcessingStatistics processingStatistics) {
     terminateSubscriptions(instance, instanceResult);
   }
@@ -192,18 +192,21 @@ public abstract class CatchEventInstanceProcessor<
       EventSignal event,
       InstanceResult newInstanceResult,
       DirectInstanceResult directInstanceResult,
-      VariableScope variables,
+      VariableScope parentVariableScope,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     long now = clock.millis();
+    VariableScope boundaryEventVariableScope = parentVariableScope.selectFlowNodeInstancesScope(
+        catchEventInstance.getElementInstanceId());
+
     if (catchEventInstance.matchesEvent(event)) {
       getInstanceResultForContinue(
           newInstanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
+          catchEventInstance, processInstance, directInstanceResult, boundaryEventVariableScope, flowNodeInstances);
       newInstanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, variables, now));
+          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, boundaryEventVariableScope, now));
       return true;
     }
     return false;
@@ -214,18 +217,22 @@ public abstract class CatchEventInstanceProcessor<
       EventSignal event,
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      VariableScope variables,
+      VariableScope variableScope,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     long now = clock.millis();
+
+    VariableScope boundaryEventVariableScope = variableScope.selectFlowNodeInstancesScope(
+        catchEventInstance.getElementInstanceId());
+
     if (catchEventInstance.matchesEventCatchAll(event)) {
       getInstanceResultForContinue(
           instanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, processInstance, directInstanceResult, variables, flowNodeInstances);
+          catchEventInstance, processInstance, directInstanceResult, boundaryEventVariableScope, flowNodeInstances);
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, variables, now));
+          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, boundaryEventVariableScope, now));
       return true;
     }
     return false;
