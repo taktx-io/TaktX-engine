@@ -30,9 +30,6 @@ public class ProcessInstanceDTO {
   @JsonProperty("fni")
   private FlowNodeInstancesDTO flowNodeInstances;
 
-  @JsonProperty("peip")
-  private List<String> parentElementIdPath;
-
   @JsonProperty("peiip")
   private List<Long> parentElementInstancePath;
 
@@ -49,7 +46,6 @@ public class ProcessInstanceDTO {
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
       FlowNodeInstancesDTO flowNodeInstances,
-      List<String> parentElementIdPath,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       boolean propagateAllToParent,
@@ -57,7 +53,6 @@ public class ProcessInstanceDTO {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
     this.flowNodeInstances = flowNodeInstances;
-    this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.propagateAllToParent = propagateAllToParent;

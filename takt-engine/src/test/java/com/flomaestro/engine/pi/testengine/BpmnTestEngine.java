@@ -122,7 +122,6 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         processInstanceKey,
         processInstanceUpdate.getParentProcessInstanceKey(),
         processInstanceUpdate.getFlowNodeInstances(),
-        processInstanceUpdate.getParentElementIdPath(),
         processInstanceUpdate.getParentElementInstancePath(),
         processInstanceUpdate.getProcessDefinitionKey(),
         false,

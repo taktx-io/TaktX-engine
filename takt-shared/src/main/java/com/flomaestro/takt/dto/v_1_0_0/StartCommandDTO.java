@@ -16,9 +16,6 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
   @JsonProperty("ppi")
   private UUID parentProcessInstanceKey;
 
-  @JsonProperty("pei")
-  private List<String> parentElementIdPath;
-
   @JsonProperty("peip")
   private List<Long> parentElementInstancePath;
 
