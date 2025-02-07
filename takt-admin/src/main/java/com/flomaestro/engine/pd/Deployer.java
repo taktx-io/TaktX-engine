@@ -17,6 +17,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class Deployer {
   @Inject AdminClient adminClient;
 
+  @ConfigProperty(name = "nl.flommaestro.takt.partitions")
+  int partitions;
+
   @ConfigProperty(name = "nl.flommaestro.takt.tenant")
   String tenant;
 
@@ -36,7 +39,7 @@ public class Deployer {
                       topic ->
                           new NewTopic(
                               tenant + "." + namespace + "." + topic.getTopicName(),
-                              6,
+                              partitions,
                               (short) replicationFactor))
                   .toList());
       topics.all().get();

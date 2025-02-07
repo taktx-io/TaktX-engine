@@ -1,4 +1,4 @@
-package com.flomaestro.app;
+package com.flomaestro.app.workers;
 
 import com.flomaestro.client.BpmnDeployment;
 import io.quarkus.runtime.Startup;
@@ -11,6 +11,4 @@ import java.util.concurrent.Executors;
 @BpmnDeployment(resource = "bpmn/task-multi.bpmn")
 public class TaskMultiWorker {
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-
-
 }

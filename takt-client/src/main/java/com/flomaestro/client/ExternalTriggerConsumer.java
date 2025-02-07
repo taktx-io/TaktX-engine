@@ -285,7 +285,6 @@ public class ExternalTriggerConsumer {
       return;
     }
 
-    log.info("Processing external task trigger for process definition {}", processDefinitionId);
     String externalTaskId = externalTaskTrigger.getExternalTaskId();
     Object workerInstance = definitionMap.get(processDefinitionId);
     ResponseConsumer responseConsumer =
@@ -321,13 +320,13 @@ public class ExternalTriggerConsumer {
     } else {
       responseConsumer.respondError(
           true,
+          "",
+          "",
           "No method matching method found for external task '"
               + externalTaskId
               + "' in jobworker '"
               + aClass.getName()
-              + "'",
-          "",
-          "");
+              + "'");
     }
   }
 

@@ -1,5 +1,8 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +18,8 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
+@JsonFormat(shape = Shape.ARRAY)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProcessInstanceDTO {
   @JsonProperty("pi")
   private UUID processInstanceKey;

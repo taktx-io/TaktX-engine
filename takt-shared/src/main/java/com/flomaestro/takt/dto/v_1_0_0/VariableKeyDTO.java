@@ -23,6 +23,7 @@ import lombok.ToString;
 public class VariableKeyDTO {
   @JsonProperty("flowNodeInstanceKey")
   private FlowNodeInstanceKeyDTO flowNodeInstanceKey;
+
   @JsonProperty("variableName")
   private String variableName;
 }

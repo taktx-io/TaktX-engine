@@ -9,10 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.kafka.common.serialization.Deserializer;
 
-public class TaktLongListDeserializer extends JsonDeserializer<List<Long>> implements Deserializer<List<Long>> {
+public class TaktLongListDeserializer extends JsonDeserializer<List<Long>>
+    implements Deserializer<List<Long>> {
   @Override
-  public List<Long> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-      throws IOException {
+  public List<Long> deserialize(
+      JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
     byte[] bytes = jsonParser.getBinaryValue();
     return getUuid(bytes);
   }

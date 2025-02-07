@@ -301,7 +301,8 @@ public class ProcessInstanceProcessor
         VariableScope processInstanceVariables =
             new VariableScope(variablesStore, processInstanceKey, null, null);
 
-        mergeVariablesInScope(processInstanceVariables, trigger.getElementInstanceIdPath(), trigger.getVariables());
+        mergeVariablesInScope(
+            processInstanceVariables, trigger.getElementInstanceIdPath(), trigger.getVariables());
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
 
@@ -329,11 +330,13 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void mergeVariablesInScope(VariableScope processInstanceVariables, List<Long> elementInstanceIdPath,
+  private void mergeVariablesInScope(
+      VariableScope processInstanceVariables,
+      List<Long> elementInstanceIdPath,
       VariablesDTO variables) {
     VariableScope targetScope = processInstanceVariables;
     if (elementInstanceIdPath != null) {
-      for(int i = 0; i < elementInstanceIdPath.size(); i++) {
+      for (int i = 0; i < elementInstanceIdPath.size(); i++) {
         targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceIdPath.get(i));
       }
     }

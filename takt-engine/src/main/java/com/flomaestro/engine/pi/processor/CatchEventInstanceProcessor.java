@@ -197,16 +197,21 @@ public abstract class CatchEventInstanceProcessor<
       FlowNodeInstances flowNodeInstances,
       ProcessingStatistics processingStatistics) {
     long now = clock.millis();
-    VariableScope boundaryEventVariableScope = parentVariableScope.selectFlowNodeInstancesScope(
-        catchEventInstance.getElementInstanceId());
+    VariableScope boundaryEventVariableScope =
+        parentVariableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
     if (catchEventInstance.matchesEvent(event)) {
       getInstanceResultForContinue(
           newInstanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, processInstance, directInstanceResult, boundaryEventVariableScope, flowNodeInstances);
+          catchEventInstance,
+          processInstance,
+          directInstanceResult,
+          boundaryEventVariableScope,
+          flowNodeInstances);
       newInstanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, boundaryEventVariableScope, now));
+          createFlowNodeInstanceUpdate(
+              processInstance, catchEventInstance, boundaryEventVariableScope, now));
       return true;
     }
     return false;
@@ -223,16 +228,21 @@ public abstract class CatchEventInstanceProcessor<
       ProcessingStatistics processingStatistics) {
     long now = clock.millis();
 
-    VariableScope boundaryEventVariableScope = variableScope.selectFlowNodeInstancesScope(
-        catchEventInstance.getElementInstanceId());
+    VariableScope boundaryEventVariableScope =
+        variableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
     if (catchEventInstance.matchesEventCatchAll(event)) {
       getInstanceResultForContinue(
           instanceResult, directInstanceResult, catchEventInstance, processingStatistics);
       selectNextNodeIfAllowedContinue(
-          catchEventInstance, processInstance, directInstanceResult, boundaryEventVariableScope, flowNodeInstances);
+          catchEventInstance,
+          processInstance,
+          directInstanceResult,
+          boundaryEventVariableScope,
+          flowNodeInstances);
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, boundaryEventVariableScope, now));
+          createFlowNodeInstanceUpdate(
+              processInstance, catchEventInstance, boundaryEventVariableScope, now));
       return true;
     }
     return false;

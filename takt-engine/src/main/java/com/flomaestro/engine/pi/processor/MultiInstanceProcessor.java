@@ -339,7 +339,9 @@ public class MultiInstanceProcessor
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)
           .map(flowNodeInstance -> (ActivityInstance<?>) flowNodeInstance)
-          .sorted(Comparator.comparingInt((ToIntFunction<ActivityInstance<?>>) ActivityInstance::getLoopCnt))
+          .sorted(
+              Comparator.comparingInt(
+                  (ToIntFunction<ActivityInstance<?>>) ActivityInstance::getLoopCnt))
           .map(ActivityInstance::getOutputElement)
           .forEach(arrayNode::add);
       String outputCollection =

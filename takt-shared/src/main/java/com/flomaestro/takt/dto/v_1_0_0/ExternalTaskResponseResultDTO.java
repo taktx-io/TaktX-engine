@@ -1,5 +1,7 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
@@ -11,6 +13,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
+@JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExternalTaskResponseResultDTO {
   @JsonProperty("rt")

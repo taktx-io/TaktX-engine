@@ -1,4 +1,4 @@
-package com.flomaestro.app;
+package com.flomaestro.app.workers;
 
 import com.flomaestro.client.BpmnDeployment;
 import com.flomaestro.client.ExternalTask;
@@ -17,8 +17,22 @@ public class TypicalWorker {
 
   @ExternalTask(element = "benchmark-task-200")
   public void doWork(ResponseConsumer responseConsumer) {
-//    responseConsumer.respondPromise(Duration.ofSeconds(10));
+    executor.submit(
+        () -> {
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException e) {
+            responseConsumer.respondError(
+                false, "Error while sleeping", "SLEEP_ERROR", "SLEEP_ERROR");
+            throw new RuntimeException(e);
+          }
 
+          responseConsumer.respondSucess(Map.of("result", "success"));
+        });
+  }
+
+  @ExternalTask(element = "benchmark-task-200-completed")
+  public void doWorkCompleted(ResponseConsumer responseConsumer) {
     executor.submit(
         () -> {
           try {

@@ -98,8 +98,7 @@ public abstract class FlowNodeInstanceProcessor<
         flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
-        createFlowNodeInstanceUpdate(
-            processInstance, flownodeInstance, currentVariableScope, now));
+        createFlowNodeInstanceUpdate(processInstance, flownodeInstance, currentVariableScope, now));
   }
 
   public final void processContinue(
@@ -120,7 +119,6 @@ public abstract class FlowNodeInstanceProcessor<
 
     VariableScope currentVariableScope =
         parentVariableScope.selectFlowNodeInstancesScope(flowNodeInstance.getElementInstanceId());
-
 
     processingStatistics.increaseFlowNodesContinued();
 
@@ -144,7 +142,11 @@ public abstract class FlowNodeInstanceProcessor<
     }
 
     selectNextNodeIfAllowedContinue(
-        (I) flowNodeInstance, processInstance, directInstanceResult, currentVariableScope, flowNodeInstances);
+        (I) flowNodeInstance,
+        processInstance,
+        directInstanceResult,
+        currentVariableScope,
+        flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
         createFlowNodeInstanceUpdate(processInstance, flowNodeInstance, currentVariableScope, now));
@@ -163,7 +165,8 @@ public abstract class FlowNodeInstanceProcessor<
     if (instance.stateAllowsTerminate()) {
       long now = clock.instant().toEpochMilli();
 
-      VariableScope currentVariableScope = parentVariablesScope.selectFlowNodeInstancesScope(instance.getElementInstanceId());
+      VariableScope currentVariableScope =
+          parentVariablesScope.selectFlowNodeInstancesScope(instance.getElementInstanceId());
       processTerminateSpecificFlowNodeInstance(
           flowNodeInstanceStore,
           instanceResult,

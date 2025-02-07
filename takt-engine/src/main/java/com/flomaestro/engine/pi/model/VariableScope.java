@@ -50,7 +50,10 @@ public class VariableScope {
     List<Long> scopePath = getScopePath();
 
     if (scopePath.isEmpty()) {
-      UUID processInstanceKeyPlusOne = new UUID(processInstanceKey.getMostSignificantBits(),  processInstanceKey.getLeastSignificantBits() + 1);
+      UUID processInstanceKeyPlusOne =
+          new UUID(
+              processInstanceKey.getMostSignificantBits(),
+              processInstanceKey.getLeastSignificantBits() + 1);
       return new FlowNodeInstanceKeyDTO(processInstanceKeyPlusOne, scopePath);
     } else {
       Long last = scopePath.getLast();
@@ -145,11 +148,12 @@ public class VariableScope {
           variableStore.put(variableKey, value);
           int i = 0;
         });
-    childScopes.forEach((k, v) -> {
-      List<Long> newPath = new ArrayList<>(keyPath);
-      newPath.add(k);
-      v.persistScope(newPath);
-    });
+    childScopes.forEach(
+        (k, v) -> {
+          List<Long> newPath = new ArrayList<>(keyPath);
+          newPath.add(k);
+          v.persistScope(newPath);
+        });
   }
 
   public Map<String, JsonNode> retrieveAndFlattenAll() {
@@ -161,8 +165,10 @@ public class VariableScope {
   public Map<String, JsonNode> retrieveAllInScope() {
     if (variableStore != null) {
 
-      FlowNodeInstanceKeyDTO startflowNodeInstanceKeyForScopePath = getFlowNodeInstanceKeyForScopePathStart();
-      FlowNodeInstanceKeyDTO endflowNodeInstanceKeyForScopePath = getFlowNodeInstanceKeyForScopePathEnd();
+      FlowNodeInstanceKeyDTO startflowNodeInstanceKeyForScopePath =
+          getFlowNodeInstanceKeyForScopePathStart();
+      FlowNodeInstanceKeyDTO endflowNodeInstanceKeyForScopePath =
+          getFlowNodeInstanceKeyForScopePathEnd();
       VariableKeyDTO start = new VariableKeyDTO(startflowNodeInstanceKeyForScopePath, "");
 
       VariableKeyDTO end = new VariableKeyDTO(endflowNodeInstanceKeyForScopePath, "");

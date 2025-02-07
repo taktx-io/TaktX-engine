@@ -8,7 +8,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.kafka.common.serialization.Serializer;
 
-public class TaktLongListSerializer extends JsonSerializer<List<Long>> implements Serializer<List<Long>> {
+public class TaktLongListSerializer extends JsonSerializer<List<Long>>
+    implements Serializer<List<Long>> {
   @Override
   public void serialize(List<Long> uuid, JsonGenerator gen, SerializerProvider serializers)
       throws IOException {
@@ -26,6 +27,6 @@ public class TaktLongListSerializer extends JsonSerializer<List<Long>> implement
 
   @Override
   public byte[] serialize(String s, List<Long> uuid) {
-      return toByteArray(uuid);
+    return toByteArray(uuid);
   }
 }

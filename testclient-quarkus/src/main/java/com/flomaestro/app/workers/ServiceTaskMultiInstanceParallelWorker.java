@@ -1,4 +1,4 @@
-package com.flomaestro.app;
+package com.flomaestro.app.workers;
 
 import com.flomaestro.client.ExternalTask;
 import java.util.List;
