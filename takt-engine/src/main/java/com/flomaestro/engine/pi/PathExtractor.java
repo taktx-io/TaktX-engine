@@ -7,6 +7,7 @@ import com.flomaestro.engine.pi.model.IFlowNodeInstance;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 @ApplicationScoped
@@ -28,14 +29,17 @@ public class PathExtractor {
   public List<String> getElementIdPath(FlowNode flowNode) {
     // Create a list of parent element IDs recursively from the element's parent, the order of the
     // list is from the root to the parent of the element
-    List<String> elementIdPath = new ArrayList<>();
-    elementIdPath.add(flowNode.getId());
+    if (flowNode == null) {
+      return null;
+    }
+
+    LinkedList<String> elementIdPath = new LinkedList<>();
+    elementIdPath.addFirst(flowNode.getId());
     FlowElement parent = flowNode.getParentElement();
     while (parent != null) {
-      elementIdPath.add(parent.getId());
+      elementIdPath.addFirst(parent.getId());
       parent = parent.getParentElement();
     }
-    Collections.reverse(elementIdPath);
     return elementIdPath;
   }
 }

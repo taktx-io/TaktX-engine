@@ -372,8 +372,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         new StartCommandDTO(
             processInstanceKey,
             null,
-            List.of(),
-            List.of(),
+            null,
             ProcessDefinitionKey.of(activeProcessDefintion),
             variables);
     processInstanceTriggerEmitter.send(processInstanceKey, startCommand);

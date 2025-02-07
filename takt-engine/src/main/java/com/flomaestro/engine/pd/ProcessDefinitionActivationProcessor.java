@@ -200,8 +200,7 @@ public class ProcessDefinitionActivationProcessor {
     return new StartCommandDTO(
         processInstanceKey,
         startEvent.getParentId() != null ? List.of(startEvent.getParentId()) : null,
-        List.of(),
-        List.of(),
+        null,
         new ProcessDefinitionKey(processDefinitionId),
         VariablesDTO.empty());
   }

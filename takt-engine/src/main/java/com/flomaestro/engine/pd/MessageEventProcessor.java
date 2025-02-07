@@ -148,7 +148,6 @@ public class MessageEventProcessor
                           processInstanceKey,
                           List.of(value.getElementId()),
                           List.of(),
-                          List.of(),
                           new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),
                           messageEvent.getVariables());
 

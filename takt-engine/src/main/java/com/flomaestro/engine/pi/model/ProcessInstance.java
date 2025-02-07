@@ -11,7 +11,6 @@ import lombok.Getter;
 public class ProcessInstance {
   private final UUID processInstanceKey;
   private final UUID parentProcessInstanceKey;
-  private final List<String> parentElementIdPath;
   private final List<Long> parentElementInstancePath;
   private final ProcessDefinitionKey processDefinitionKey;
   private final FlowNodeInstances flowNodeInstances;
@@ -21,7 +20,6 @@ public class ProcessInstance {
   public ProcessInstance(
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
-      List<String> parentElementIdPath,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       FlowNodeInstances flowNodeInstances,
@@ -29,7 +27,6 @@ public class ProcessInstance {
       Set<IoVariableMapping> outputMappings) {
     this.processInstanceKey = processInstanceKey;
     this.parentProcessInstanceKey = parentProcessInstanceKey;
-    this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.flowNodeInstances = flowNodeInstances;

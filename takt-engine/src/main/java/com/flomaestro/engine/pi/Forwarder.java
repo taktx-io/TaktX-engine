@@ -231,7 +231,6 @@ public class Forwarder {
               newStartCommand.processInstanceKey(),
               processInstance.getProcessInstanceKey(),
               null,
-              pathExtractor.getElementIdPath(newStartCommand.flowNode()),
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),
               newStartCommand.variables(),

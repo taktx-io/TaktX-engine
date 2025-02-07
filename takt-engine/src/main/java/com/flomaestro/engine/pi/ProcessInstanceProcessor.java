@@ -210,7 +210,6 @@ public class ProcessInstanceProcessor
         new ProcessInstance(
             processInstanceKey,
             startCommand.getParentProcessInstanceKey(),
-            startCommand.getParentElementIdPath(),
             startCommand.getParentElementInstancePath(),
             processDefinitionKey,
             flowNodeInstances,

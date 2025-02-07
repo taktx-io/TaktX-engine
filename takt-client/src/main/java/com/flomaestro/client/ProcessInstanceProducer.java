@@ -8,7 +8,6 @@ import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
 import com.flomaestro.takt.util.TaktUUIDSerializer;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -33,8 +32,7 @@ public class ProcessInstanceProducer {
         new StartCommandDTO(
             processInstanceKey,
             null,
-            List.of(),
-            List.of(),
+            null,
             new ProcessDefinitionKey(processDefinitionId),
             variables);
     processInstanceTriggerEmitter.send(

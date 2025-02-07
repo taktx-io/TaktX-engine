@@ -34,7 +34,6 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
   public StartCommandDTO(
       UUID processInstanceKey,
       List<String> elementIds,
-      List<String> parentElementIdPath,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
@@ -42,7 +41,6 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
         processInstanceKey,
         null,
         elementIds,
-        parentElementIdPath,
         parentElementInstancePath,
         processDefinitionKey,
         variables,
@@ -54,7 +52,6 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
       List<String> elementIds,
-      List<String> parentElementIdPath,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables,
@@ -62,7 +59,6 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO implements Schedu
       Set<IoVariableMappingDTO> outputMappings) {
     super(processInstanceKey, elementIds, variables);
     this.parentProcessInstanceKey = parentProcessInstanceKey;
-    this.parentElementIdPath = parentElementIdPath;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.propagateAllToParent = propagateAllToParent;
