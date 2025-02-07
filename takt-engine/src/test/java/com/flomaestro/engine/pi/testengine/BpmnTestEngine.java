@@ -705,8 +705,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                     instanceof CorrelationMessageSubscriptionDTO correlationMessageSubscription) {
                   remainingCorrelationKeys.remove(
                       correlationMessageSubscription.getCorrelationKey());
-                  return correlationMessageSubscription.getElementIdPath().contains(elementId)
-                      && remainingCorrelationKeys.isEmpty();
+                  return remainingCorrelationKeys.isEmpty();
                 }
               } while (poll != null);
 

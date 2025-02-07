@@ -169,7 +169,6 @@ public class Forwarder {
           new CorrelationMessageSubscriptionDTO(
               processInstance.getProcessInstanceKey(),
               messageEvent.correlationKey(),
-              pathExtractor.getElementIdPath(instance.getFlowNode()),
               pathExtractor.getInstancePath(instance),
               messageEvent.messageName());
       MessageEventKeyDTO messageEventKey =

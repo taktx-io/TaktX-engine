@@ -20,22 +20,17 @@ public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
   @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("e")
-  private List<String> elementIdPath;
-
   @JsonProperty("i")
   private List<Long> elementInstanceIdPath;
 
   public CorrelationMessageSubscriptionDTO(
       UUID processInstanceKey,
       String correlationKey,
-      List<String> elementIdPath,
       List<Long> elementInstanceIdPath,
       String messageName) {
     super(messageName);
     this.processInstanceKey = processInstanceKey;
     this.correlationKey = correlationKey;
-    this.elementIdPath = elementIdPath;
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }
