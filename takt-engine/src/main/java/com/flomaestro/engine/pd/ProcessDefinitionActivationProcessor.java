@@ -7,7 +7,7 @@ import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
-import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.MessageScheduleDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionActivationDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
@@ -15,6 +15,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartEventDTO;
+import com.flomaestro.takt.dto.v_1_0_0.TimeBucket;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Clock;
 import java.util.List;
@@ -181,9 +182,7 @@ public class ProcessDefinitionActivationProcessor {
         .forEach(
             timerEventDefinition -> {
               UUID processInstanceKey = UUID.randomUUID();
-              InstanceScheduleKeyDTO scheduleKey =
-                  new InstanceScheduleKeyDTO(processInstanceKey, List.of());
-              MessageSchedulerDTO schedule =
+              MessageScheduleDTO schedule =
                   messageSchedulerFactory.schedule(
                       timerEventDefinition,
                       getStartCommand(
@@ -191,7 +190,12 @@ public class ProcessDefinitionActivationProcessor {
                           processInstanceKey,
                           startEvent),
                       new VariableScope(null, null, null, null));
-              context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
+              TimeBucket timeBucket = schedule.getTimeBucket(clock.millis());
+              if (timeBucket != null) {
+                InstanceScheduleKeyDTO scheduleKey =
+                    new InstanceScheduleKeyDTO(processInstanceKey, List.of(), timeBucket);
+                context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
+              }
             });
   }
 

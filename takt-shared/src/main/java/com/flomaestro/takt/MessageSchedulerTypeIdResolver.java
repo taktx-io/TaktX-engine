@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import com.fasterxml.jackson.databind.type.SimpleType;
-import com.flomaestro.takt.dto.v_1_0_0.FixedRateMessageSchedulerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.OneTimeSchedulerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.RecurringMessageSchedulerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FixedRateMessageScheduleDTO;
+import com.flomaestro.takt.dto.v_1_0_0.OneTimeScheduleDTO;
+import com.flomaestro.takt.dto.v_1_0_0.RecurringMessageScheduleDTO;
 import java.io.IOException;
 
 public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
@@ -15,9 +15,9 @@ public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case RecurringMessageSchedulerDTO recurringMessageSchedulerDTO -> "R";
-      case FixedRateMessageSchedulerDTO parsedDefinitionsDTO -> "F";
-      case OneTimeSchedulerDTO oneTimeSchedulerDTO -> "O";
+      case RecurringMessageScheduleDTO recurringMessageSchedulerDTO -> "R";
+      case FixedRateMessageScheduleDTO parsedDefinitionsDTO -> "F";
+      case OneTimeScheduleDTO oneTimeSchedulerDTO -> "O";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -35,9 +35,9 @@ public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) throws IOException {
     return switch (id) {
-      case "R" -> SimpleType.construct(RecurringMessageSchedulerDTO.class);
-      case "F" -> SimpleType.construct(FixedRateMessageSchedulerDTO.class);
-      case "O" -> SimpleType.construct(OneTimeSchedulerDTO.class);
+      case "R" -> SimpleType.construct(RecurringMessageScheduleDTO.class);
+      case "F" -> SimpleType.construct(FixedRateMessageScheduleDTO.class);
+      case "O" -> SimpleType.construct(OneTimeScheduleDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

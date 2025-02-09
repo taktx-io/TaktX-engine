@@ -5,7 +5,6 @@ import com.flomaestro.client.ExternalTask;
 import com.flomaestro.client.ResponseConsumer;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,7 +17,7 @@ public class ServiceTaskSingleWorker {
 
   @ExternalTask(element = "service-task")
   public void doWork(ResponseConsumer responseConsumer) {
-    responseConsumer.respondPromise(Duration.ofSeconds(10));
+//    responseConsumer.respondPromise(Duration.ofSeconds(10));
 
     executor.submit(
         () -> {

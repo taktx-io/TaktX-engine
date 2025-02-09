@@ -12,17 +12,18 @@ import lombok.ToString;
 @ToString
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class InstanceScheduleKeyDTO implements ScheduleKeyDTO {
+public class InstanceScheduleKeyDTO extends ScheduleKeyDTO {
 
-  @JsonProperty("pik")
+  @JsonProperty("p")
   private UUID processInstanceKey;
 
-  @JsonProperty("eiid")
+  @JsonProperty("e")
   private List<Long> elementInstanceIdPath;
 
-  public InstanceScheduleKeyDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
+  public InstanceScheduleKeyDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath, TimeBucket timeBucket) {
+    super(timeBucket);
     this.processInstanceKey = processInstanceKey;
     this.elementInstanceIdPath = elementInstanceIdPath;
   }

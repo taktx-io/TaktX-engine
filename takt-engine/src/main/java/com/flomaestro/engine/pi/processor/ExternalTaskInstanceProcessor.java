@@ -104,8 +104,8 @@ public abstract class ExternalTaskInstanceProcessor<
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
 
-    instanceResult.addScheduledExternalTaskTriggerTimeout(
-        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, retentionMs));
+//    instanceResult.addScheduledExternalTaskTriggerTimeout(
+//        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, retentionMs));
   }
 
   @Override
@@ -152,7 +152,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
       // Analyze the retry definition
       int retries = -1;
-      Optional<String> backoff = Optional.empty();
+      Optional<Duration> backoff = Optional.empty();
       if (isNumeric(retryString)) {
         // Definition is just a number
         retries = Integer.parseInt(retryString);
@@ -270,12 +270,12 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private void scheduleNextExternalTask(
       String workerDefinition,
-      String backoff,
+      Duration backoff,
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
       VariableScope variables,
       InstanceResult instanceResult) {
-    String triggerTime = Instant.now(clock).plus(Duration.parse(backoff)).toString();
+    String triggerTime = Instant.now(clock).plus(backoff).toString();
     ExternalTaskInfo externalTaskInfo =
         getExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
 

@@ -4,7 +4,11 @@ import lombok.Getter;
 
 @Getter
 public enum Stores {
-  SCHEDULES("schedules"),
+  SCHEDULES_SECOND("schedules-second"),
+  SCHEDULES_MINUTE("schedules-minute"),
+  SCHEDULES_HOURLY("schedules-hourly"),
+  SCHEDULES_DAILY("schedules-daily"),
+  SCHEDULES_WEEKLY("schedules-weekly"),
   PROCESS_INSTANCE("pi"),
   FLOW_NODE_INSTANCE("fni"),
   PROCESS_INSTANCE_DEFINITION("pid"),

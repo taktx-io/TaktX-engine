@@ -7,9 +7,9 @@ import lombok.Getter;
 @Getter
 public class RepeatDuration {
   private final int repetitions;
-  private final String duration;
+  private final Duration duration;
 
-  public RepeatDuration(int repetitions, String duration) {
+  private RepeatDuration(int repetitions, Duration duration) {
     this.repetitions = repetitions;
     this.duration = duration;
   }
@@ -19,14 +19,13 @@ public class RepeatDuration {
     try {
       if (parts.length == 1) {
         String part = parts[0].trim();
-        Duration.parse(part);
-        return new RepeatDuration(-1, part);
+        return new RepeatDuration(-1, Duration.parse(part));
       } else if (parts.length == 2) {
         String repetitionString = parts[0].trim(); // remove 'R'
         if (repetitionString.isBlank()) {
           String part = parts[1].trim();
-          Duration.parse(part);
-          return new RepeatDuration(-1, part);
+
+          return new RepeatDuration(-1, Duration.parse(part));
         } else {
           if (repetitionString.charAt(0) != 'R') {
             throw new DateTimeParseException(
@@ -35,12 +34,12 @@ public class RepeatDuration {
                 0);
           } else {
             String part = parts[1].trim();
-            Duration.parse(part);
+
             if (repetitionString.length() == 1) {
-              return new RepeatDuration(-1, part);
+              return new RepeatDuration(-1, Duration.parse(part));
             } else {
               int repetitions = Integer.parseInt(repetitionString.substring(1).trim());
-              return new RepeatDuration(repetitions, part);
+              return new RepeatDuration(repetitions, Duration.parse(part));
             }
           }
         }

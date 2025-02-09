@@ -11,7 +11,7 @@ import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
-import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.MessageScheduleDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import io.quarkus.arc.All;
@@ -38,7 +38,7 @@ public class CustomObjectMapperProvider {
             .allowIfBaseType(DefinitionsTriggerDTO.class)
             .allowIfBaseType(BaseElementDTO.class)
             .allowIfBaseType(SchedulableMessageDTO.class)
-            .allowIfBaseType(MessageSchedulerDTO.class)
+            .allowIfBaseType(MessageScheduleDTO.class)
             .allowIfBaseType(ProcessInstanceTriggerDTO.class)
             .allowIfBaseType(FlowNodeInstanceDTO.class)
             .allowIfBaseType(MessageEventDTO.class)

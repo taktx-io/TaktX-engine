@@ -25,7 +25,7 @@ import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
-import com.flomaestro.takt.dto.v_1_0_0.MessageSchedulerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.MessageScheduleDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
@@ -62,10 +62,10 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(MessageEventDTO.class);
   public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
       DEFINITION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
+      new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
   public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
       CORRELATION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
+      new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessingStatisticsDTO> PROCESSING_STATISTICS_SERDE =
       new ObjectMapperSerde<>(ProcessingStatisticsDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
@@ -77,8 +77,8 @@ public class TopologyProducer {
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
   public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
-  public static final ObjectMapperSerde<MessageSchedulerDTO> MESSAGE_SCHEDULER_SERDE =
-      new ObjectMapperSerde<>(MessageSchedulerDTO.class);
+  public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
+      new ObjectMapperSerde<>(MessageScheduleDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
@@ -193,11 +193,11 @@ public class TopologyProducer {
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((ScheduleKeyDTO) key, (MessageSchedulerDTO) value))
+                                KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.SCHEDULE_COMMANDS.getTopicName()),
-                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
+                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> key instanceof MessageEventKeyDTO,
             Branched.withConsumer(
@@ -304,11 +304,11 @@ public class TopologyProducer {
                 ks ->
                     ks.map(
                             (key, value) ->
-                                KeyValue.pair((ScheduleKeyDTO) key, (MessageSchedulerDTO) value))
+                                KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
                             tenantNamespaceNameWrapper.getPrefixed(
                                 Topics.SCHEDULE_COMMANDS.getTopicName()),
-                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE))))
+                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> value instanceof MessageEventDTO,
             Branched.withConsumer(
@@ -370,21 +370,47 @@ public class TopologyProducer {
   }
 
   private void setupScheduleCommandStream(StreamsBuilder builder) {
+
     StreamsBuilder stateStore =
         builder.addStateStore(
-            keyValueStoreBuilder(
-                keyValueStoreSupplier.get(Stores.SCHEDULES),
-                SCHEDULE_KEY_SERDE,
-                MESSAGE_SCHEDULER_SERDE));
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_SECOND),
+                    SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE))
+            .addStateStore(
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_MINUTE),
+                    SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE))
+            .addStateStore(
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_HOURLY),
+                    SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE))
+            .addStateStore(
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_DAILY),
+                    SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE))
+            .addStateStore(
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_WEEKLY),
+                    SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE));
 
-    KStream<ScheduleKeyDTO, MessageSchedulerDTO> scheduleCommandStream =
+    KStream<ScheduleKeyDTO, MessageScheduleDTO> scheduleCommandStream =
         stateStore.stream(
             tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-            Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULER_SERDE));
+            Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE));
     KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
             () -> new ScheduleProcessor(clock, tenantNamespaceNameWrapper),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename())
+        );
     processStream
         .split()
         .branch(
