@@ -53,6 +53,7 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -110,6 +111,9 @@ public class TopologyProducer {
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private final IoMappingProcessor ioMappingProcessor;
+
+  @ConfigProperty(name = "quarkus.profile")
+  private String activeProfiles;
 
   @Produces
   public Topology buildTopology() {
@@ -404,7 +408,7 @@ public class TopologyProducer {
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE));
     KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
-            () -> new ScheduleProcessor(clock, tenantNamespaceNameWrapper),
+            () -> new ScheduleProcessor(clock, tenantNamespaceNameWrapper, activeProfiles.contains("test")),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),

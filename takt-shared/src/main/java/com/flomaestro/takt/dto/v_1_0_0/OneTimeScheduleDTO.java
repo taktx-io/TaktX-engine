@@ -12,9 +12,6 @@ import lombok.ToString;
 @NoArgsConstructor
 public class OneTimeScheduleDTO extends MessageScheduleDTO {
 
-  @JsonProperty("msgs")
-  private SchedulableMessageDTO message;
-
   @JsonProperty("whn")
   private long when;
 

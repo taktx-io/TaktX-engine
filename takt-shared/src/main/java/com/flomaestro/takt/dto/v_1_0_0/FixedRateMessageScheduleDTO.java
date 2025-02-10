@@ -46,7 +46,6 @@ public class FixedRateMessageScheduleDTO extends MessageScheduleDTO {
   public Long getNextExecutionTime(long from) {
     if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
       long nrOfFits = (from - instantiation) / period;
-      repeatedCnt++;
       return instantiation + (nrOfFits + 1) * period;
     } else {
       // Return null to indicate that this command is done

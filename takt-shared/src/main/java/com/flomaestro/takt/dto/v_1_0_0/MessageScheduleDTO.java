@@ -8,15 +8,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import com.flomaestro.takt.MessageSchedulerTypeIdResolver;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonFormat(shape = Shape.ARRAY)
 @JsonTypeIdResolver(MessageSchedulerTypeIdResolver.class)
 @NoArgsConstructor
+@Getter
 public abstract class MessageScheduleDTO {
 
-  @JsonProperty("msgs")
+  @JsonProperty("msg")
   protected SchedulableMessageDTO message;
 
   public MessageScheduleDTO(SchedulableMessageDTO message) {

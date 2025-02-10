@@ -12,8 +12,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class ExternalTaskTriggerTimeoutDTO extends ProcessInstanceTriggerDTO
-    implements SchedulableMessageDTO {
+public class ExternalTaskTriggerTimeoutDTO extends ProcessInstanceTriggerDTO {
 
   @JsonProperty("eiip")
   private List<UUID> elementInstanceIdPath;

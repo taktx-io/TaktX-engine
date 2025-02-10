@@ -32,8 +32,8 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
   private long instantiation;
 
   public RecurringMessageScheduleDTO(
-      SchedulableMessageDTO messages, String cron, long instantiation) {
-    super(messages);
+      SchedulableMessageDTO message, String cron, long instantiation) {
+    super(message);
     this.cron = cron;
     this.instantiation = instantiation;
   }

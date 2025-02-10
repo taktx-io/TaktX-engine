@@ -25,7 +25,8 @@ import lombok.ToString;
 @Setter
 @EqualsAndHashCode
 @NoArgsConstructor
-public abstract class ProcessInstanceTriggerDTO {
+public abstract class ProcessInstanceTriggerDTO
+    implements SchedulableMessageDTO {
 
   @JsonProperty("pik")
   private UUID processInstanceKey;
