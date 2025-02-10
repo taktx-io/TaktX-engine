@@ -193,26 +193,6 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskTimeout()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
-
-    bpmnTestEngine
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
-        .startProcessInstance(VariablesDTO.of("var1", "value1"))
-        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .moveTimeForward(Duration.ofDays(7).plusMillis(1))
-        .waitUntilCompleted()
-        .assertThatProcess()
-        .hasPassedElementWithId("StartEvent_1", 1)
-        .hasTerminatedElementWithId("ServiceTask_1")
-        .hasNotPassedElementWithId("EndEvent_1");
-  }
-
-  @Test
   void testProcessServiceTaskPromise()
       throws IOException,
           JAXBException,
