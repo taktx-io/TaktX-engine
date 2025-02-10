@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -31,7 +32,6 @@ public class ScheduleProcessor
   private static final int SCHEDULE_INTERVAL_HOUR = 60 * SCHEDULE_INTERVAL_MINUTE;
   private static final int SCHEDULE_INTERVAL_DAY = 24 * SCHEDULE_INTERVAL_HOUR;
   private static final int SCHEDULE_INTERVAL_WEEKLY = 7 * SCHEDULE_INTERVAL_DAY;
-  int scheduleCnt = 0;
 
   private ProcessorContext<Object, SchedulableMessageDTO> context;
   private final Clock clock;
@@ -44,6 +44,7 @@ public class ScheduleProcessor
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreHourly;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreDaily;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreWeekly;
+
 
   public ScheduleProcessor(Clock clock,
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
@@ -81,24 +82,35 @@ public class ScheduleProcessor
   }
 
   private void scheduleProcessBucket() {
+    AtomicLong lastScheduleStartedSecond = new AtomicLong(clock.millis());
+    AtomicLong lastScheduleStartedMinute = new AtomicLong(lastScheduleStartedSecond.longValue());
+    AtomicLong lastScheduleStartedHourly = new AtomicLong(lastScheduleStartedSecond.longValue());
+    AtomicLong lastScheduleStartedDaily = new AtomicLong(lastScheduleStartedSecond.longValue());
+    AtomicLong lastScheduleStartedWeekly = new AtomicLong(lastScheduleStartedSecond.longValue());
+
     context.schedule(Duration.ofMillis(SCHEDULE_INTERVAL_BUCKETS),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
-          long now = clock.millis();
-          scheduleCnt++;
-          if ((scheduleCnt * SCHEDULE_INTERVAL_BUCKETS) % SCHEDULE_INTERVAL_SECOND == 0 || testProfile) {
+          long now = testProfile ? clock.millis() : timestamp;
+
+          if ((timestamp - lastScheduleStartedSecond.get()) > SCHEDULE_INTERVAL_SECOND || testProfile) {
+            lastScheduleStartedSecond.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreSecond, now);
           }
-          if ((scheduleCnt * SCHEDULE_INTERVAL_BUCKETS) % SCHEDULE_INTERVAL_MINUTE == 0 || testProfile) {
+          if ((timestamp - lastScheduleStartedMinute.get()) > SCHEDULE_INTERVAL_MINUTE || testProfile) {
+            lastScheduleStartedMinute.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreMinute, now);
           }
-          if ((scheduleCnt * SCHEDULE_INTERVAL_BUCKETS) % SCHEDULE_INTERVAL_HOUR == 0 || testProfile) {
+          if ((timestamp - lastScheduleStartedHourly.get()) > SCHEDULE_INTERVAL_HOUR || testProfile) {
+            lastScheduleStartedHourly.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreHourly, now);
           }
-          if ((scheduleCnt * SCHEDULE_INTERVAL_BUCKETS) % SCHEDULE_INTERVAL_DAY == 0 || testProfile) {
+          if ((timestamp - lastScheduleStartedDaily.get()) > SCHEDULE_INTERVAL_DAY || testProfile) {
+            lastScheduleStartedDaily.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreDaily, now);
           }
-          if ((scheduleCnt * SCHEDULE_INTERVAL_BUCKETS) % SCHEDULE_INTERVAL_WEEKLY == 0 || testProfile) {
+          if ((timestamp - lastScheduleStartedWeekly.get()) > SCHEDULE_INTERVAL_WEEKLY || testProfile) {
+            lastScheduleStartedWeekly.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreWeekly, now);
           }
         });
