@@ -137,8 +137,15 @@ public class ScheduleProcessor
       while (iterator.hasNext()) {
         Entry<TimedScheduleKeyDTO, MessageScheduleDTO> next = iterator.next();
         if (clock.millis() > next.getKey().time()) {
-          UUID processInstanceKey = next.getValue().getMessage().getProcessInstanceKey();
-          SchedulableMessageDTO message = next.getValue().getMessage();
+          MessageScheduleDTO value = next.getValue();
+          boolean changed = value.triggered();
+          if(changed) {
+            KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store = selectScheduleStore(next.getKey().scheduleKey());
+            store.put(next.getKey().scheduleKey(), value);
+          }
+
+          UUID processInstanceKey = value.getMessage().getProcessInstanceKey();
+          SchedulableMessageDTO message = value.getMessage();
           context.forward(new Record<>(processInstanceKey, message, clock.millis()));
           iterator.remove();
         } else {

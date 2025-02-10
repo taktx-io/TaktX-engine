@@ -34,4 +34,8 @@ public class OneTimeScheduleDTO extends MessageScheduleDTO {
     }
   }
 
+  @Override
+  public boolean triggered() {
+    return false;
+  }
 }

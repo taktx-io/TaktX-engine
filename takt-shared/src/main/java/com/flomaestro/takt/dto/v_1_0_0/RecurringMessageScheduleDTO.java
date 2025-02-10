@@ -62,4 +62,9 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
       return null;
     }
   }
+
+  @Override
+  public boolean triggered() {
+    return false;
+  }
 }

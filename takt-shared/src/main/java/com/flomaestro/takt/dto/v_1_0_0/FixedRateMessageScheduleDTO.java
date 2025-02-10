@@ -44,12 +44,18 @@ public class FixedRateMessageScheduleDTO extends MessageScheduleDTO {
 
   @Override
   public Long getNextExecutionTime(long from) {
-    if (repeatedCnt < (repetitions - 1) || repetitions < 0) {
+    if ((repeatedCnt < repetitions) || repetitions < 0) {
       long nrOfFits = (from - instantiation) / period;
       return instantiation + (nrOfFits + 1) * period;
     } else {
       // Return null to indicate that this command is done
       return null;
     }
+  }
+
+  @Override
+  public boolean triggered() {
+    repeatedCnt++;
+    return true;
   }
 }

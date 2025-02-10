@@ -30,4 +30,7 @@ public abstract class MessageScheduleDTO {
 
   @JsonIgnore
   public abstract Long getNextExecutionTime(long timestamp);
+
+  @JsonIgnore
+  public abstract boolean triggered();
 }
