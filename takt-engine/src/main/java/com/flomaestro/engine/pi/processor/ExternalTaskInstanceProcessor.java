@@ -104,8 +104,8 @@ public abstract class ExternalTaskInstanceProcessor<
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
 
-//    instanceResult.addScheduledExternalTaskTriggerTimeout(
-//        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, retentionMs));
+    //    instanceResult.addScheduledExternalTaskTriggerTimeout(
+    //        new ScheduledExternalTaskTriggerTimeoutInfo(flownodeInstance, retentionMs));
   }
 
   @Override

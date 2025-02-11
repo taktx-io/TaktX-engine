@@ -63,10 +63,10 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(MessageEventDTO.class);
   public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
       DEFINITION_SUBSCRIPTIONS_SERDE =
-      new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
+          new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
   public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
       CORRELATION_SUBSCRIPTIONS_SERDE =
-      new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
+          new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessingStatisticsDTO> PROCESSING_STATISTICS_SERDE =
       new ObjectMapperSerde<>(ProcessingStatisticsDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
@@ -376,7 +376,8 @@ public class TopologyProducer {
   private void setupScheduleCommandStream(StreamsBuilder builder) {
 
     StreamsBuilder stateStore =
-        builder.addStateStore(
+        builder
+            .addStateStore(
                 keyValueStoreBuilder(
                     keyValueStoreSupplier.get(Stores.SCHEDULES_SECOND),
                     SCHEDULE_KEY_SERDE,
@@ -408,13 +409,14 @@ public class TopologyProducer {
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE));
     KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
-            () -> new ScheduleProcessor(clock, tenantNamespaceNameWrapper, activeProfiles.contains("test")),
+            () ->
+                new ScheduleProcessor(
+                    clock, tenantNamespaceNameWrapper, activeProfiles.contains("test")),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename())
-        );
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()));
     processStream
         .split()
         .branch(

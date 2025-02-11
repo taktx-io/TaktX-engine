@@ -11,5 +11,5 @@ public interface IFlowNodeInstance {
 
   FlowNode getFlowNode();
 
-  List<Long> getKeyPath();
+  List<Long> createKeyPath();
 }

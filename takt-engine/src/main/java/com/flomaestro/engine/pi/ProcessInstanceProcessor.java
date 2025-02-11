@@ -482,7 +482,7 @@ public class ProcessInstanceProcessor
     if (fLowNodeInstance.isDirty()) {
       FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
       FlowNodeInstanceKeyDTO key =
-          new FlowNodeInstanceKeyDTO(processInstanceKey, fLowNodeInstance.getKeyPath());
+          new FlowNodeInstanceKeyDTO(processInstanceKey, fLowNodeInstance.createKeyPath());
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
     }
 

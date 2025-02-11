@@ -265,7 +265,8 @@ public class Forwarder {
       } else {
         // Schedule the external task
         OneTimeScheduleDTO oneTimeScheduler =
-            new OneTimeScheduleDTO(newExternalTaskTrigger, Instant.parse(externalTask.startTime()).toEpochMilli());
+            new OneTimeScheduleDTO(
+                newExternalTaskTrigger, Instant.parse(externalTask.startTime()).toEpochMilli());
         ScheduleKeyDTO scheduledKey =
             new InstanceScheduleKeyDTO(
                 processInstance.getProcessInstanceKey(),

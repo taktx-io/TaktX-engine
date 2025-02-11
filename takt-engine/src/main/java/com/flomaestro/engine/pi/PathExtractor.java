@@ -22,5 +22,4 @@ public class PathExtractor {
     Collections.reverse(instancePath);
     return instancePath;
   }
-
 }

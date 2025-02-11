@@ -297,7 +297,7 @@ public abstract class FlowNodeInstanceProcessor<
       FlowNodeInstance<?> flowNodeInstance,
       VariableScope variables,
       long processTime) {
-    List<Long> elementInstanceIdPath = flowNodeInstance.getKeyPath();
+    List<Long> elementInstanceIdPath = flowNodeInstance.createKeyPath();
     VariablesDTO processInstanceVariablesDTO = variables.scopeToDTO();
     FlowNodeInstanceDTO flowNodeInstanceDTO = processInstanceMapper.map(flowNodeInstance);
     return new InstanceUpdate(

@@ -22,7 +22,8 @@ public class InstanceScheduleKeyDTO extends ScheduleKeyDTO {
   @JsonProperty("e")
   private List<Long> elementInstanceIdPath;
 
-  public InstanceScheduleKeyDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath, TimeBucket timeBucket) {
+  public InstanceScheduleKeyDTO(
+      UUID processInstanceKey, List<Long> elementInstanceIdPath, TimeBucket timeBucket) {
     super(timeBucket);
     this.processInstanceKey = processInstanceKey;
     this.elementInstanceIdPath = elementInstanceIdPath;

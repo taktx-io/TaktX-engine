@@ -22,7 +22,8 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
-  private static final CronDefinition CRON_DEFINITION = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
+  private static final CronDefinition CRON_DEFINITION =
+      CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
   private static final CronParser PARSER = new CronParser(CRON_DEFINITION);
 
   @JsonProperty("cron")
@@ -55,7 +56,8 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
     Cron parsedCron = PARSER.parse(this.cron);
     ExecutionTime executionTime = ExecutionTime.forCron(parsedCron);
     Optional<ZonedDateTime> zonedDateTime =
-        executionTime.nextExecution(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
+        executionTime.nextExecution(
+            ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
     if (zonedDateTime.isPresent()) {
       return zonedDateTime.get().toInstant().toEpochMilli();
     } else {

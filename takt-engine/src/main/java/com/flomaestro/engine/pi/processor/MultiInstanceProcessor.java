@@ -186,7 +186,6 @@ public class MultiInstanceProcessor
       iterationInstance.setLoopCnt(i);
       multiInstanceInstance.getFlowNodeInstances().putInstance(iterationInstance);
       JsonNode inputElement = inputCollection.get(i);
-      iterationInstance.setInputElement(inputElement);
       VariableScope iterationVariables =
           flowNodeInstancesVariables.selectFlowNodeInstancesScope(
               iterationInstance.getElementInstanceId());

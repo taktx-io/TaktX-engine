@@ -19,7 +19,6 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
   private boolean wasNew = false;
   private boolean iteration = false;
   private long nextIterationId;
-  private JsonNode inputElement;
   private JsonNode outputElement;
   private int loopCnt;
 

@@ -37,19 +37,16 @@ public class ScheduleProcessor
   private final Clock clock;
   private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
   private final boolean testProfile;
-  private final ConcurrentSkipListMap<TimedScheduleKeyDTO, MessageScheduleDTO> upcomingSchedules = new ConcurrentSkipListMap<>(
-      Comparator.comparingLong(TimedScheduleKeyDTO::time));
+  private final ConcurrentSkipListMap<TimedScheduleKey, MessageScheduleDTO> upcomingSchedules =
+      new ConcurrentSkipListMap<>(Comparator.comparingLong(TimedScheduleKey::time));
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreSecond;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreMinute;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreHourly;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreDaily;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStoreWeekly;
 
-
-  public ScheduleProcessor(Clock clock,
-      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
-      boolean testProfile
-  ) {
+  public ScheduleProcessor(
+      Clock clock, TenantNamespaceNameWrapper tenantNamespaceNameWrapper, boolean testProfile) {
     this.clock = clock;
     this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
     this.testProfile = testProfile;
@@ -59,16 +56,21 @@ public class ScheduleProcessor
   public void init(ProcessorContext<Object, SchedulableMessageDTO> context) {
     this.context = context;
 
-    scheduleStoreSecond = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()));
-    scheduleStoreMinute = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()));
-    scheduleStoreHourly = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()));
-    scheduleStoreDaily = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()));
-    scheduleStoreWeekly = context.getStateStore(
-        tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()));
+    scheduleStoreSecond =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()));
+    scheduleStoreMinute =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()));
+    scheduleStoreHourly =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()));
+    scheduleStoreDaily =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()));
+    scheduleStoreWeekly =
+        context.getStateStore(
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()));
 
     transferBucketToUpcomingSchedules(scheduleStoreSecond, clock.millis());
     transferBucketToUpcomingSchedules(scheduleStoreMinute, clock.millis());
@@ -88,20 +90,24 @@ public class ScheduleProcessor
     AtomicLong lastScheduleStartedDaily = new AtomicLong(lastScheduleStartedSecond.longValue());
     AtomicLong lastScheduleStartedWeekly = new AtomicLong(lastScheduleStartedSecond.longValue());
 
-    context.schedule(Duration.ofMillis(SCHEDULE_INTERVAL_BUCKETS),
+    context.schedule(
+        Duration.ofMillis(SCHEDULE_INTERVAL_BUCKETS),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
           long now = testProfile ? clock.millis() : timestamp;
 
-          if ((timestamp - lastScheduleStartedSecond.get()) > SCHEDULE_INTERVAL_SECOND || testProfile) {
+          if ((timestamp - lastScheduleStartedSecond.get()) > SCHEDULE_INTERVAL_SECOND
+              || testProfile) {
             lastScheduleStartedSecond.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreSecond, now);
           }
-          if ((timestamp - lastScheduleStartedMinute.get()) > SCHEDULE_INTERVAL_MINUTE || testProfile) {
+          if ((timestamp - lastScheduleStartedMinute.get()) > SCHEDULE_INTERVAL_MINUTE
+              || testProfile) {
             lastScheduleStartedMinute.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreMinute, now);
           }
-          if ((timestamp - lastScheduleStartedHourly.get()) > SCHEDULE_INTERVAL_HOUR || testProfile) {
+          if ((timestamp - lastScheduleStartedHourly.get()) > SCHEDULE_INTERVAL_HOUR
+              || testProfile) {
             lastScheduleStartedHourly.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreHourly, now);
           }
@@ -109,56 +115,65 @@ public class ScheduleProcessor
             lastScheduleStartedDaily.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreDaily, now);
           }
-          if ((timestamp - lastScheduleStartedWeekly.get()) > SCHEDULE_INTERVAL_WEEKLY || testProfile) {
+          if ((timestamp - lastScheduleStartedWeekly.get()) > SCHEDULE_INTERVAL_WEEKLY
+              || testProfile) {
             lastScheduleStartedWeekly.set(now);
             transferBucketToUpcomingSchedules(scheduleStoreWeekly, now);
           }
         });
   }
 
-  private void transferBucketToUpcomingSchedules(KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStore, long timestamp) {
+  private void transferBucketToUpcomingSchedules(
+      KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStore, long timestamp) {
     try (KeyValueIterator<ScheduleKeyDTO, MessageScheduleDTO> all = scheduleStore.all()) {
-      all.forEachRemaining(entry -> {
-        ScheduleKeyDTO key = entry.key;
-        MessageScheduleDTO value = entry.value;
-        Long time = value.getNextExecutionTime(timestamp);
-        if (time != null) {
-          upcomingSchedules.put(new TimedScheduleKeyDTO(time, key), value);
-        } else {
-          scheduleStore.delete(key);
-        }
-      });
+      all.forEachRemaining(
+          entry -> {
+            ScheduleKeyDTO key = entry.key;
+            MessageScheduleDTO value = entry.value;
+            Long time = value.getNextExecutionTime(timestamp);
+            if (time != null) {
+              upcomingSchedules.put(new TimedScheduleKey(time, key), value);
+            } else {
+              scheduleStore.delete(key);
+            }
+          });
     }
   }
 
   private void processUpcomingSchedules(ProcessorContext<Object, SchedulableMessageDTO> context) {
-    context.schedule(Duration.ofMillis(SCHEDULE_INTERVAL_UPCOMING), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
-      Iterator<Entry<TimedScheduleKeyDTO, MessageScheduleDTO>> iterator = upcomingSchedules.entrySet().iterator();
-      while (iterator.hasNext()) {
-        Entry<TimedScheduleKeyDTO, MessageScheduleDTO> next = iterator.next();
-        if (clock.millis() > next.getKey().time()) {
-          MessageScheduleDTO value = next.getValue();
-          boolean changed = value.triggered();
-          if(changed) {
-            KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store = selectScheduleStore(next.getKey().scheduleKey());
-            store.put(next.getKey().scheduleKey(), value);
-          }
+    context.schedule(
+        Duration.ofMillis(SCHEDULE_INTERVAL_UPCOMING),
+        PunctuationType.WALL_CLOCK_TIME,
+        (timestamp) -> {
+          Iterator<Entry<TimedScheduleKey, MessageScheduleDTO>> iterator =
+              upcomingSchedules.entrySet().iterator();
+          while (iterator.hasNext()) {
+            Entry<TimedScheduleKey, MessageScheduleDTO> next = iterator.next();
+            if (clock.millis() > next.getKey().time()) {
+              MessageScheduleDTO value = next.getValue();
+              boolean changed = value.triggered();
+              if (changed) {
+                KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store =
+                    selectScheduleStore(next.getKey().scheduleKey());
+                store.put(next.getKey().scheduleKey(), value);
+              }
 
-          UUID processInstanceKey = value.getMessage().getProcessInstanceKey();
-          SchedulableMessageDTO message = value.getMessage();
-          context.forward(new Record<>(processInstanceKey, message, clock.millis()));
-          iterator.remove();
-        } else {
-          // Stop iterating when times are not reached yet
-          break;
-        }
-      }
-    });
+              UUID processInstanceKey = value.getMessage().getProcessInstanceKey();
+              SchedulableMessageDTO message = value.getMessage();
+              context.forward(new Record<>(processInstanceKey, message, clock.millis()));
+              iterator.remove();
+            } else {
+              // Stop iterating when times are not reached yet
+              break;
+            }
+          }
+        });
   }
 
   @Override
   public void process(Record<ScheduleKeyDTO, MessageScheduleDTO> scheduleRecord) {
-    KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStore = selectScheduleStore(scheduleRecord.key());
+    KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> scheduleStore =
+        selectScheduleStore(scheduleRecord.key());
     if (scheduleRecord.value() != null) {
       scheduleStore.put(scheduleRecord.key(), scheduleRecord.value());
     } else {
@@ -166,7 +181,8 @@ public class ScheduleProcessor
     }
   }
 
-  private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> selectScheduleStore(ScheduleKeyDTO key) {
+  private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> selectScheduleStore(
+      ScheduleKeyDTO key) {
     TimeBucket timeBucket = key.getTimeBucket();
     return switch (timeBucket) {
       case SECOND -> scheduleStoreSecond;

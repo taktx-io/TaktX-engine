@@ -17,7 +17,7 @@ public class ServiceTaskSingleWorker {
 
   @ExternalTask(element = "service-task")
   public void doWork(ResponseConsumer responseConsumer) {
-//    responseConsumer.respondPromise(Duration.ofSeconds(10));
+    //    responseConsumer.respondPromise(Duration.ofSeconds(10));
 
     executor.submit(
         () -> {

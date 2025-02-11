@@ -30,9 +30,9 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   @Override
-  public List<Long> getKeyPath() {
+  public List<Long> createKeyPath() {
     List<Long> parentKeyPath =
-        parentInstance != null ? parentInstance.getKeyPath() : new ArrayList<>();
+        parentInstance != null ? parentInstance.createKeyPath() : new ArrayList<>();
     parentKeyPath.add(elementInstanceId);
     return parentKeyPath;
   }
