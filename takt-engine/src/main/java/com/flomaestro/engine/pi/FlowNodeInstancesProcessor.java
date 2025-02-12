@@ -176,7 +176,8 @@ public class FlowNodeInstancesProcessor {
                     processInstance,
                     parentVariableScope,
                     flowNodeInstances,
-                    processingStatistics);
+                    processingStatistics,
+                    flowElements);
               });
       flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
     } else {
@@ -195,7 +196,8 @@ public class FlowNodeInstancesProcessor {
             processInstance,
             parentVariableScope,
             flowNodeInstances,
-            processingStatistics);
+            processingStatistics,
+            flowElements);
       }
     }
     flowNodeInstances.determineImplicitCompletedState();

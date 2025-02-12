@@ -131,7 +131,8 @@ public abstract class ActivityInstanceProcessor<
       I instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
 
     instance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
 

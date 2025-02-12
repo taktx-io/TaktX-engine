@@ -63,6 +63,7 @@ public class SubProcessInstanceProcessor
     subProcessInstance.setState(ActtivityStateEnum.WAITING);
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
+    subProcessElements.getIndex().addAll(flowElements.getIndex());
 
     flowNodeInstancesProcessor.processStart(
         flowNodeInstanceStore,

@@ -36,6 +36,7 @@ public class DefinitionMapper {
     FlowElementsDTO flowElements = definitionsDTO.getRootProcess().getFlowElements();
 
     FlowElements flowElements1 = dtoMapper.getFlowElements(flowElements);
+    flowElements1.indexNodeIds();
     setParentReferences(flowElements1.getElements(), null);
     setMessageReferences(flowElements1.getElements(), definitionsDTO.getMessages());
     setEscalationReferences(flowElements1.getElements(), definitionsDTO.getEscalations());

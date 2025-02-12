@@ -359,7 +359,8 @@ public class MultiInstanceProcessor
       MultiInstanceInstance instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
     flowNodeInstances
         .getInstances()
@@ -374,6 +375,7 @@ public class MultiInstanceProcessor
                     processInstance,
                     currentVariableScope,
                     flowNodeInstances,
-                    processingStatistics));
+                    processingStatistics,
+                    flowElements));
   }
 }

@@ -98,7 +98,8 @@ public abstract class FlowNodeInstanceProcessor<
         flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
-        createFlowNodeInstanceUpdate(processInstance, flownodeInstance, currentVariableScope, now));
+        createFlowNodeInstanceUpdate(
+            processInstance, flownodeInstance, currentVariableScope, now, flowElements));
   }
 
   public final void processContinue(
@@ -149,7 +150,8 @@ public abstract class FlowNodeInstanceProcessor<
         flowNodeInstances);
 
     instanceResult.addInstanceUpdate(
-        createFlowNodeInstanceUpdate(processInstance, flowNodeInstance, currentVariableScope, now));
+        createFlowNodeInstanceUpdate(
+            processInstance, flowNodeInstance, currentVariableScope, now, flowElements));
   }
 
   public void processTerminate(
@@ -160,7 +162,8 @@ public abstract class FlowNodeInstanceProcessor<
       ProcessInstance processInstance,
       VariableScope parentVariablesScope,
       FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     // Only terminate if the instance is ready or waiting
     if (instance.stateAllowsTerminate()) {
       long now = clock.instant().toEpochMilli();
@@ -174,14 +177,16 @@ public abstract class FlowNodeInstanceProcessor<
           (I) instance,
           processInstance,
           currentVariableScope,
-          processingStatistics);
+          processingStatistics,
+          flowElements);
 
       instance.terminate();
 
       processingStatistics.increaseFlowNodesFinished();
 
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, instance, currentVariableScope, now));
+          createFlowNodeInstanceUpdate(
+              processInstance, instance, currentVariableScope, now, flowElements));
     }
   }
 
@@ -290,16 +295,19 @@ public abstract class FlowNodeInstanceProcessor<
       I instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics);
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements);
 
   protected InstanceUpdate createFlowNodeInstanceUpdate(
       ProcessInstance processInstance,
       FlowNodeInstance<?> flowNodeInstance,
       VariableScope variables,
-      long processTime) {
+      long processTime,
+      FlowElements flowElements) {
     List<Long> elementInstanceIdPath = flowNodeInstance.createKeyPath();
     VariablesDTO processInstanceVariablesDTO = variables.scopeToDTO();
-    FlowNodeInstanceDTO flowNodeInstanceDTO = processInstanceMapper.map(flowNodeInstance);
+    FlowNodeInstanceDTO flowNodeInstanceDTO =
+        processInstanceMapper.map(flowNodeInstance, flowElements);
     return new InstanceUpdate(
         processInstance.getProcessInstanceKey(),
         new FlowNodeInstanceUpdateDTO(

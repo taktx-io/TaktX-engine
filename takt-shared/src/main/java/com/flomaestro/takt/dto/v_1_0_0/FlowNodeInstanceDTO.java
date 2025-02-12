@@ -31,7 +31,7 @@ public abstract class FlowNodeInstanceDTO {
   private long parentElementInstanceId;
 
   @JsonProperty("e")
-  private String elementId;
+  private int elementId;
 
   @JsonProperty("c")
   private int passedCnt;

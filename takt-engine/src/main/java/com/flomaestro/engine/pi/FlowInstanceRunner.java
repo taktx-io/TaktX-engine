@@ -97,7 +97,8 @@ public class FlowInstanceRunner {
           processInstance,
           parentVariableScope,
           flowNodeInstances,
-          processingStatistics);
+          processingStatistics,
+          flowElements);
     }
 
     while (!directInstanceResult.newFlowNodeInstancesIsEmpty()) {
@@ -154,7 +155,8 @@ public class FlowInstanceRunner {
                 parentVariableScope,
                 processInstance,
                 flowNodeInstances,
-                processingStatistics);
+                processingStatistics,
+                flowElements);
         if (eventHandled) {
           if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
             directInstanceResult.addTerminateInstance(
@@ -179,7 +181,8 @@ public class FlowInstanceRunner {
                     parentVariableScope,
                     processInstance,
                     flowNodeInstances,
-                    processingStatistics);
+                    processingStatistics,
+                    flowElements);
           }
           if (eventHandled) {
             if (boundaryEventInstance.getFlowNode().isCancelActivity()) {

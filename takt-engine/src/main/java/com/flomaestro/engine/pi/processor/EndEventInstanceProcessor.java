@@ -38,7 +38,8 @@ public class EndEventInstanceProcessor
       EndEventInstance instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     // nothing to do
   }
 

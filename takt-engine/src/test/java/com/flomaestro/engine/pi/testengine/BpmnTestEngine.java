@@ -15,6 +15,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.FlowElementsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceUpdateDTO;
@@ -30,6 +31,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
+import com.flomaestro.takt.dto.v_1_0_0.SubProcessDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
@@ -111,6 +113,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private KafkaProducerUtil<String, DefinitionsTriggerDTO> processDefinitionsTriggerEmitter;
   private KafkaProducerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
+  private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
 
   public BpmnTestEngine(Clock clock) {
     this.mutableClock = (MutableClock) clock;
@@ -341,7 +344,29 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
                   return actualDeployed.equals(expectedDeployed);
                 });
 
+    List<String> indexList =
+        indexProcessDefinition(
+            activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements());
+    indexList.sort(String::compareTo);
+    elementIdIndexMap.put(
+        activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
+        indexList);
     return this;
+  }
+
+  private List<String> indexProcessDefinition(FlowElementsDTO flowElementsDTO) {
+    List<String> elementIdIndex = new ArrayList<>();
+    flowElementsDTO
+        .getElements()
+        .entrySet()
+        .forEach(
+            e -> {
+              elementIdIndex.add(e.getKey());
+              if (e.getValue() instanceof SubProcessDTO subProcessDTO) {
+                elementIdIndex.addAll(indexProcessDefinition(subProcessDTO.getElements()));
+              }
+            });
+    return elementIdIndex;
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
@@ -642,6 +667,16 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
       UUID processInstanceKey, String elementPath) {
 
+    String[] split = elementPath.split(":");
+    String processDefinitionId;
+    if (split.length == 2) {
+      processDefinitionId = split[0];
+      elementPath = split[1];
+    } else {
+      processDefinitionId =
+          activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
+      elementPath = split[0];
+    }
     List<String> elementPathList = Stream.of(elementPath.split("/")).toList();
     Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance =
         flowNodeInstanceMap.entrySet().stream()
@@ -650,11 +685,15 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByElementIdOnIndex =
         filteredByProcessInstance;
 
+    List<String> elementIdIndex = elementIdIndexMap.get(processDefinitionId);
     for (int index = 0; index < elementPathList.size(); index++) {
       int currentIndex = index;
       filteredByElementIdOnIndex =
           filteredByProcessInstance.entrySet().stream()
-              .filter(e -> e.getValue().getElementId().equals(elementPathList.get(currentIndex)))
+              .filter(
+                  e ->
+                      e.getValue().getElementId()
+                          == (elementIdIndex.indexOf(elementPathList.get(currentIndex))))
               .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 

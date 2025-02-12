@@ -131,7 +131,8 @@ public abstract class GatewayInstanceProcessor<
       I instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
   }
 

@@ -158,11 +158,16 @@ class MultiInstanceTest {
         .assertThatProcess()
         .hasCollectioneMatching(
             "outputCollection", oc -> assertThat(oc).containsExactly("axxx0", "bxxx1", "cxxx2"))
-        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-callactivity-multiinstance-sequential:StartEvent_1")
         .hasInstantiatedElementWithId(
-            "callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
-        .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
-        .hasInstantiatedElementWithId("EndEvent_1");
+            "task-callactivity-multiinstance-sequential:callactivity-id/callactivity-id",
+            CallActivityInstanceDTO.class,
+            3)
+        .hasInstantiatedElementWithId(
+            "task-callactivity-multiinstance-sequential:callactivity-id",
+            MultiInstanceInstanceDTO.class,
+            1)
+        .hasInstantiatedElementWithId("task-callactivity-multiinstance-sequential:EndEvent_1");
   }
 
   @Test
@@ -184,11 +189,16 @@ class MultiInstanceTest {
         .hasCollectioneMatching(
             "outputCollection",
             oc -> assertThat(oc).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
-        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("task-callactivity-multiinstance-parallel:StartEvent_1")
         .hasInstantiatedElementWithId(
-            "callactivity-id/callactivity-id", CallActivityInstanceDTO.class, 3)
-        .hasInstantiatedElementWithId("callactivity-id", MultiInstanceInstanceDTO.class, 1)
-        .hasInstantiatedElementWithId("EndEvent_1");
+            "task-callactivity-multiinstance-parallel:callactivity-id/callactivity-id",
+            CallActivityInstanceDTO.class,
+            3)
+        .hasInstantiatedElementWithId(
+            "task-callactivity-multiinstance-parallel:callactivity-id",
+            MultiInstanceInstanceDTO.class,
+            1)
+        .hasInstantiatedElementWithId("task-callactivity-multiinstance-parallel:EndEvent_1");
   }
 
   @Test

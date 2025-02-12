@@ -1,5 +1,7 @@
 package com.flomaestro.engine.pd.model;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,9 +13,18 @@ import lombok.Getter;
 @Getter
 public class FlowElements {
   private final Map<String, FlowElement> elements = new HashMap<>();
+  private final List<String> index = new ArrayList<>();
 
   public FlowElement get(String id) {
     return elements.get(id);
+  }
+
+  public String getIndex(int i) {
+    return index.get(i);
+  }
+
+  public int indexOf(String id) {
+    return index.indexOf(id);
   }
 
   public void addFlowElement(FlowElement flowElement) {
@@ -85,5 +96,22 @@ public class FlowElements {
         .map(IntermediateCatchEvent.class::cast)
         .filter(intermediateCatchEvent -> intermediateCatchEvent.hasLinkEventDefinition(name))
         .findFirst();
+  }
+
+  public void indexNodeIds() {
+    indexNodeIds(elements);
+  }
+
+  private void indexNodeIds(Map<String, FlowElement> elements) {
+    elements
+        .entrySet()
+        .forEach(
+            entry -> {
+              index.add(entry.getKey());
+              if (entry.getValue() instanceof WIthChildElements wIthChildElements) {
+                indexNodeIds(wIthChildElements.getElements().elements);
+              }
+            });
+    index.sort(Comparator.naturalOrder());
   }
 }

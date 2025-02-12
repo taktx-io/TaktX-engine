@@ -168,10 +168,6 @@ public class ProcessInstanceProcessor
       UUID processInstanceKey,
       StartCommandDTO startCommand,
       ProcessingStatistics processingStatistics) {
-    log.info(
-        "Start new process instance: {} definition: {}",
-        processInstanceKey,
-        startCommand.getProcessDefinitionKey());
 
     processingStatistics.increaseProcessInstancesStarted();
 
@@ -244,7 +240,8 @@ public class ProcessInstanceProcessor
         processInstance,
         flowNodeInstances,
         processInstanceVariables,
-        processingStatistics);
+        processingStatistics,
+        flowElements);
   }
 
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
@@ -322,7 +319,8 @@ public class ProcessInstanceProcessor
             processInstance,
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
-            processingStatistics);
+            processingStatistics,
+            flowElements);
       }
     } else {
       log.warn("Process instance not found for key: {}", processInstanceKey);
@@ -385,7 +383,8 @@ public class ProcessInstanceProcessor
             processInstance,
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
-            processingStatistics);
+            processingStatistics,
+            flowElements);
       }
     }
   }
@@ -396,7 +395,8 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
 
     FlowNodeInstancesDTO flowNodeInstancesDTO = flowNodeInstancesToDTO(flowNodeInstances);
 
@@ -430,7 +430,9 @@ public class ProcessInstanceProcessor
     } else {
       processInstanceStore.put(processInstance.getProcessInstanceKey(), processInstanceDTO);
       storeFlowNodeInstances(
-          processInstance.getProcessInstanceKey(), processInstance.getFlowNodeInstances());
+          processInstance.getProcessInstanceKey(),
+          processInstance.getFlowNodeInstances(),
+          flowElements);
     }
   }
 
@@ -471,29 +473,29 @@ public class ProcessInstanceProcessor
   }
 
   private void storeFlowNodeInstances(
-      UUID processInstanceKey, FlowNodeInstances flowNodeInstances) {
+      UUID processInstanceKey, FlowNodeInstances flowNodeInstances, FlowElements flowElements) {
     for (FlowNodeInstance<?> fLowNodeInstance : flowNodeInstances.getInstances().values()) {
-      storeFlowNodeInstance(processInstanceKey, fLowNodeInstance);
+      storeFlowNodeInstance(processInstanceKey, fLowNodeInstance, flowElements);
     }
   }
 
   private void storeFlowNodeInstance(
-      UUID processInstanceKey, FlowNodeInstance<?> fLowNodeInstance) {
+      UUID processInstanceKey, FlowNodeInstance<?> fLowNodeInstance, FlowElements flowElements) {
     if (fLowNodeInstance.isDirty()) {
-      FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance);
+      FlowNodeInstanceDTO flowNodeInstanceDTO = instanceMapper.map(fLowNodeInstance, flowElements);
       FlowNodeInstanceKeyDTO key =
           new FlowNodeInstanceKeyDTO(processInstanceKey, fLowNodeInstance.createKeyPath());
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
     }
 
     if (fLowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
-      storeFlowNodeInstances(processInstanceKey, withFlowNodeInstances.getFlowNodeInstances());
+      storeFlowNodeInstances(
+          processInstanceKey, withFlowNodeInstances.getFlowNodeInstances(), flowElements);
     }
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
-    log.info("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
 
     FlowNodeInstanceKeyDTO start = new FlowNodeInstanceKeyDTO(processInstanceKey, List.of());

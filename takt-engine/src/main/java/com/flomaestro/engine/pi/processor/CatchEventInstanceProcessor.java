@@ -183,7 +183,8 @@ public abstract class CatchEventInstanceProcessor<
       I instance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     terminateSubscriptions(instance, instanceResult);
   }
 
@@ -195,7 +196,8 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope parentVariableScope,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     long now = clock.millis();
     VariableScope boundaryEventVariableScope =
         parentVariableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
@@ -211,7 +213,7 @@ public abstract class CatchEventInstanceProcessor<
           flowNodeInstances);
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, boundaryEventVariableScope, now));
+              processInstance, catchEventInstance, boundaryEventVariableScope, now, flowElements));
       return true;
     }
     return false;
@@ -225,7 +227,8 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope variableScope,
       ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      ProcessingStatistics processingStatistics,
+      FlowElements flowElements) {
     long now = clock.millis();
 
     VariableScope boundaryEventVariableScope =
@@ -242,7 +245,7 @@ public abstract class CatchEventInstanceProcessor<
           flowNodeInstances);
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, boundaryEventVariableScope, now));
+              processInstance, catchEventInstance, boundaryEventVariableScope, now, flowElements));
       return true;
     }
     return false;
