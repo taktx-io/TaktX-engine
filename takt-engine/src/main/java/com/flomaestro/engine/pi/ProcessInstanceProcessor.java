@@ -214,12 +214,10 @@ public class ProcessInstanceProcessor
 
     InstanceResult instanceResult = InstanceResult.empty();
 
+    VariablesDTO updateVariablesAtStart = processInstanceVariables.scopeToDTO();
     instanceResult.addInstanceUpdate(
         processInstanceToUpdate(
-            processInstance,
-            flowNodeInstances,
-            processInstanceVariables.scopeToDTO(),
-            clock.millis()));
+            processInstance, flowNodeInstances, updateVariablesAtStart, clock.millis()));
 
     FlowElements flowElements = getFlowElements(processDefinitionKey);
 
@@ -241,7 +239,8 @@ public class ProcessInstanceProcessor
         flowNodeInstances,
         processInstanceVariables,
         processingStatistics,
-        flowElements);
+        flowElements,
+        updateVariablesAtStart);
   }
 
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
@@ -320,7 +319,8 @@ public class ProcessInstanceProcessor
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
             processingStatistics,
-            flowElements);
+            flowElements,
+            VariablesDTO.empty());
       }
     } else {
       log.warn("Process instance not found for key: {}", processInstanceKey);
@@ -384,7 +384,8 @@ public class ProcessInstanceProcessor
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
             processingStatistics,
-            flowElements);
+            flowElements,
+            VariablesDTO.empty());
       }
     }
   }
@@ -396,7 +397,8 @@ public class ProcessInstanceProcessor
       FlowNodeInstances flowNodeInstances,
       VariableScope processInstanceVariables,
       ProcessingStatistics processingStatistics,
-      FlowElements flowElements) {
+      FlowElements flowElements,
+      VariablesDTO updatedVariablesAtStart) {
 
     FlowNodeInstancesDTO flowNodeInstancesDTO = flowNodeInstancesToDTO(flowNodeInstances);
 
@@ -411,12 +413,13 @@ public class ProcessInstanceProcessor
       if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
+      VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
+
+      VariablesDTO variablesChangedAfterStart = currentVariablesDTO.diff(updatedVariablesAtStart);
+
       instanceResult.addInstanceUpdate(
           processInstanceToUpdate(
-              processInstance,
-              flowNodeInstances,
-              processInstanceVariables.scopeToDTO(),
-              clock.millis()));
+              processInstance, flowNodeInstances, variablesChangedAfterStart, clock.millis()));
     }
 
     if (processInstance.getFlowNodeInstances().getState().isFinished()) {

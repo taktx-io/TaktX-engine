@@ -62,4 +62,17 @@ public class VariablesDTO {
   public JsonNode get(String key) {
     return variables.get(key);
   }
+
+  public VariablesDTO diff(VariablesDTO updatedVariablesAtStart) {
+    Map<String, JsonNode> diff = new HashMap<>();
+    variables.forEach(
+        (key, value) -> {
+          JsonNode startValue = updatedVariablesAtStart.get(key);
+          if (startValue == null || !startValue.equals(value)) {
+            diff.put(key, value);
+          }
+        });
+
+    return new VariablesDTO(diff);
+  }
 }

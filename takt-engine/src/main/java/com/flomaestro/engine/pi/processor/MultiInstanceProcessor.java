@@ -238,6 +238,7 @@ public class MultiInstanceProcessor
     subProcessLevel++;
 
     FlowElements subFlowElements = new FlowElements();
+    subFlowElements.getIndex().addAll(flowElements.getIndex());
     Activity activity = multiInstanceInstance.getFlowNode();
     subFlowElements.addFlowElement(activity);
 

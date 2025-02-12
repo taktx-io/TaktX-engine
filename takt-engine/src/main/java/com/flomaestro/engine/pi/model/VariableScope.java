@@ -95,7 +95,13 @@ public class VariableScope {
   }
 
   public VariablesDTO scopeToDTO() {
-    return new VariablesDTO(variables);
+    Map<String, JsonNode> dirtyVariablesMap = new HashMap<>(variables);
+    getDirtyVariables()
+        .forEach(
+            key -> {
+              dirtyVariablesMap.put(key, variables.get(key));
+            });
+    return new VariablesDTO(dirtyVariablesMap);
   }
 
   public VariablesDTO scopeAndParentsToDto() {
