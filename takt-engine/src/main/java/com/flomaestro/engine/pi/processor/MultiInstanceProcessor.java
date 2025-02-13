@@ -3,7 +3,6 @@ package com.flomaestro.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.IntNode;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.Activity;
 import com.flomaestro.engine.pd.model.FlowElements;
@@ -186,11 +185,7 @@ public class MultiInstanceProcessor
       iterationInstance.setLoopCnt(i);
       multiInstanceInstance.getFlowNodeInstances().putInstance(iterationInstance);
       JsonNode inputElement = inputCollection.get(i);
-      VariableScope iterationVariables =
-          flowNodeInstancesVariables.selectFlowNodeInstancesScope(
-              iterationInstance.getElementInstanceId());
-      iterationVariables.put("loopCnt", new IntNode(i));
-      iterationVariables.put(activity.getLoopCharacteristics().getInputElement(), inputElement);
+      iterationInstance.setInputElement(inputElement);
     }
     return firstInstance;
   }

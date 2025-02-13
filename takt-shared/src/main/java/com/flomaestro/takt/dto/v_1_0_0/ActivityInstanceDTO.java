@@ -25,7 +25,10 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   @JsonProperty("n")
   private long nextIterationId;
 
-  @JsonProperty("o")
+  @JsonProperty("inputElement")
+  private JsonNode inputElement;
+
+  @JsonProperty("oe")
   private JsonNode outputElement;
 
   @JsonProperty("l")

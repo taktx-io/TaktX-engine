@@ -1,6 +1,7 @@
 package com.flomaestro.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.IntNode;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.Activity;
 import com.flomaestro.engine.pd.model.FlowElements;
@@ -54,6 +55,13 @@ public abstract class ActivityInstanceProcessor<
       String inputFlowId,
       VariableScope variables,
       ProcessingStatistics processingStatistics) {
+
+    if (flownodeInstance.isIteration()) {
+      variables.put("loopCnt", new IntNode(flownodeInstance.getLoopCnt()));
+      variables.put(
+          flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
+          flownodeInstance.getInputElement());
+    }
 
     processStartSpecificActivityInstance(
         flowNodeInstanceStore,
