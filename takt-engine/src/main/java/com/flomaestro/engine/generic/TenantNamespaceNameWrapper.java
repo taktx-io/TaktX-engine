@@ -10,10 +10,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @AllArgsConstructor
 public class TenantNamespaceNameWrapper {
 
-  @ConfigProperty(name = "nl.flommaestro.takt.tenant")
+  @ConfigProperty(name = "takt.engine.tenant")
   String tenant;
 
-  @ConfigProperty(name = "nl.flommaestro.takt.namespace")
+  @ConfigProperty(name = "takt.engine.namespace")
   String namespace;
 
   public String getPrefixed(String name) {

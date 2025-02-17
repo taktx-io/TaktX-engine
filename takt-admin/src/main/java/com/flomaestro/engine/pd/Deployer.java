@@ -17,13 +17,13 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class Deployer {
   @Inject AdminClient adminClient;
 
-  @ConfigProperty(name = "nl.flommaestro.takt.partitions")
+  @ConfigProperty(name = "takt.engine.topic.partitions")
   int partitions;
 
-  @ConfigProperty(name = "nl.flommaestro.takt.tenant")
+  @ConfigProperty(name = "takt.engine.tenant")
   String tenant;
 
-  @ConfigProperty(name = "nl.flommaestro.takt.namespace")
+  @ConfigProperty(name = "takt.engine.namespace")
   String namespace;
 
   @ConfigProperty(name = "takt.engine.topic.replication-factor")

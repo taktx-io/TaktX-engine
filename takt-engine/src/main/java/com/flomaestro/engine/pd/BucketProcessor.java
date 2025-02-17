@@ -6,7 +6,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimeBucket;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -48,7 +47,7 @@ public class BucketProcessor {
     fillNextUpcomingSchedules(initialStartTime, currentWindowEnd);
 
     context.schedule(
-        Duration.ofMillis(200),
+        Duration.ofMillis(500),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
           long now = testProfile ? clock.millis() : timestamp;
@@ -60,23 +59,11 @@ public class BucketProcessor {
             TimedScheduleKey key = entry.getKey();
             MessageScheduleDTO schedule = entry.getValue();
             if (key.getTime() < now) {
-              log.info(
-                  "Forwarding schedule {} {} {} {}",
-                  key,
-                  schedule,
-                  Instant.ofEpochMilli(key.getTime()).toString(),
-                  Instant.ofEpochMilli(now).toString());
               SchedulableMessageDTO message = schedule.getMessage();
               context.forward(
                   new Record<>(message.getProcessInstanceKey(), message, key.getTime()));
               iterator.remove();
             } else {
-              log.info(
-                  "Not forwarding schedule {} {} {} {}",
-                  key,
-                  schedule,
-                  Instant.ofEpochMilli(key.getTime()).toString(),
-                  Instant.ofEpochMilli(now).toString());
               break;
             }
           }
@@ -95,22 +82,12 @@ public class BucketProcessor {
   }
 
   private void fillNextUpcomingSchedules(long timestamp, long until) {
-    log.info(
-        "Filling upcoming schedules for time bucket {} from {} to {}",
-        timeBucket.getName(),
-        Instant.ofEpochMilli(timestamp).toString(),
-        Instant.ofEpochMilli(until).toString());
     try (KeyValueIterator<ScheduleKeyDTO, MessageScheduleDTO> all = store.all()) {
       all.forEachRemaining(
           entry -> {
             MessageScheduleDTO schedule = entry.value;
             Long nextExecutionTime = schedule.getNextExecutionTime(timestamp);
             while (nextExecutionTime != null && nextExecutionTime < until) {
-              log.info(
-                  "Adding schedule time {} to upcoming {} {}",
-                  Instant.ofEpochMilli(nextExecutionTime).toString(),
-                  entry.key,
-                  schedule);
               upcomingSchedules.put(new TimedScheduleKey(nextExecutionTime, entry.key), schedule);
               nextExecutionTime = schedule.getNextExecutionTime(nextExecutionTime);
             }
@@ -119,23 +96,11 @@ public class BucketProcessor {
   }
 
   public void process(ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule, long now) {
-    log.info(
-        "Processing schedule {} {} for time {} windowend {}",
-        scheduleKey,
-        schedule,
-        Instant.ofEpochMilli(now).toString(),
-        Instant.ofEpochMilli(currentWindowEnd).toString());
     if (schedule != null) {
       store.put(scheduleKey, schedule);
       Long nextExecutionTime = schedule.getNextExecutionTime(now);
       while (nextExecutionTime != null && nextExecutionTime < currentWindowEnd) {
         TimedScheduleKey key = new TimedScheduleKey(nextExecutionTime, scheduleKey);
-        log.info(
-            "Adding schedule time {} to current window ending {} upcoming {} {}",
-            Instant.ofEpochMilli(nextExecutionTime).toString(),
-            Instant.ofEpochMilli(currentWindowEnd).toString(),
-            key,
-            schedule);
         var existing = upcomingSchedules.put(key, schedule);
         if (existing != null) {
           log.error("overwriting existing schedule {} {}", key, existing);
@@ -143,7 +108,6 @@ public class BucketProcessor {
         nextExecutionTime = schedule.getNextExecutionTime(nextExecutionTime);
       }
     } else {
-      log.info("Deleting schedule {}", scheduleKey);
       store.delete(scheduleKey);
       upcomingSchedules.entrySet().stream()
           .filter(e -> e.getKey().getScheduleKey().equals(scheduleKey))
