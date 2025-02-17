@@ -51,7 +51,7 @@ public class DataServiceDefault implements IDataService, AutoCloseable {
   }
 
   @Override
-  public Data createData(long epochMilli, ProcessingStatisticsDTO dataInDTO)
+  public void createData(long epochMilli, ProcessingStatisticsDTO dataInDTO)
       throws DataServiceException {
     try {
       WriteApi writeApi = influxDBClient.getWriteApi();
@@ -65,7 +65,23 @@ public class DataServiceDefault implements IDataService, AutoCloseable {
       data.setAverageRequestLatencyMs(dataInDTO.getAverageRequestLatencyMs());
       writeApi.writeMeasurement(WritePrecision.NS, data);
       writeApi.close();
-      return data;
+    } catch (InfluxException ie) {
+      throw new DataServiceException("Error while writing data to Influx: " + ie.getMessage());
+    }
+  }
+
+  @Override
+  public void createProcessInstanceData(
+      long timestamp, String processDefinitionId, long averageProcessingTime, int size)
+      throws DataServiceException {
+    try {
+      WriteApi writeApi = influxDBClient.getWriteApi();
+      ProcessInstanceData data = new ProcessInstanceData();
+      data.setTime(Instant.ofEpochMilli(timestamp));
+      data.setDefinitionId(processDefinitionId);
+      data.setAverageProcessingTime(averageProcessingTime);
+      writeApi.writeMeasurement(WritePrecision.NS, data);
+      writeApi.close();
     } catch (InfluxException ie) {
       throw new DataServiceException("Error while writing data to Influx: " + ie.getMessage());
     }
