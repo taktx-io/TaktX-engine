@@ -15,29 +15,27 @@ import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
 @ApplicationScoped
 public class MessageSchedulerFactory {
-  @Inject Clock clock;
-
   @Inject FeelExpressionHandlerImpl feelExpressionHandler;
 
   public MessageScheduleDTO schedule(
       TimerEventDefinitionDTO timerEventDefinition,
+      long now,
       SchedulableMessageDTO message,
       VariableScope variables) {
     if (timerEventDefinition.getTimeCycle() != null
         && !timerEventDefinition.getTimeCycle().isEmpty()) {
-      return scheduleCycle(timerEventDefinition, message, variables);
+      return scheduleCycle(timerEventDefinition, message, variables, now);
     } else if (timerEventDefinition.getTimeDate() != null
         && !timerEventDefinition.getTimeDate().isEmpty()) {
-      return scheduleOneTime(timerEventDefinition, message, variables);
+      return scheduleOneTime(timerEventDefinition, message, variables, now);
     } else if (timerEventDefinition.getTimeDuration() != null
         && !timerEventDefinition.getTimeDuration().isEmpty()) {
-      return scheduleDuration(timerEventDefinition, message, variables);
+      return scheduleDuration(timerEventDefinition, message, variables, now);
     }
     throw new IllegalArgumentException("TimerEventDefinition is not valid");
   }
@@ -45,7 +43,8 @@ public class MessageSchedulerFactory {
   private MessageScheduleDTO scheduleDuration(
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      VariableScope variables) {
+      VariableScope variables,
+      long now) {
 
     String timeDuration =
         feelExpressionHandler
@@ -54,35 +53,39 @@ public class MessageSchedulerFactory {
     RepeatDuration repeatDuration = RepeatDuration.parse(timeDuration);
     Duration duration = repeatDuration.getDuration();
 
-    return new OneTimeScheduleDTO(messages, Instant.now(clock).plus(duration).toEpochMilli());
+    return new OneTimeScheduleDTO(
+        messages, now, Instant.ofEpochMilli(now).plus(duration).toEpochMilli());
   }
 
   private MessageScheduleDTO scheduleOneTime(
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      VariableScope variables) {
+      VariableScope variables,
+      long now) {
     String timeDate =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
             .asText();
-    return new OneTimeScheduleDTO(messages, Instant.parse(timeDate).toEpochMilli());
+    return new OneTimeScheduleDTO(messages, now, Instant.parse(timeDate).toEpochMilli());
   }
 
   private MessageScheduleDTO scheduleCycle(
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      VariableScope variables) {
+      VariableScope variables,
+      long now) {
     if (isValidCron(timerEventDefinition.getTimeCycle())) {
-      return scheduleCron(timerEventDefinition, messages, variables);
+      return scheduleCron(timerEventDefinition, messages, variables, now);
     } else {
-      return scheduleFixedRate(timerEventDefinition, messages, variables);
+      return scheduleFixedRate(timerEventDefinition, messages, variables, now);
     }
   }
 
   private MessageScheduleDTO scheduleFixedRate(
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      VariableScope variables) {
+      VariableScope variables,
+      long now) {
 
     String timeCycle =
         feelExpressionHandler
@@ -90,24 +93,20 @@ public class MessageSchedulerFactory {
             .asText();
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timeCycle);
-    Duration duration = repeatDuration.getDuration();
     return new FixedRateMessageScheduleDTO(
-        messages,
-        repeatDuration.getDuration().toMillis(),
-        repeatDuration.getRepetitions(),
-        0,
-        Instant.now(clock).plus(duration).toEpochMilli());
+        messages, repeatDuration.getDuration().toMillis(), repeatDuration.getRepetitions(), now);
   }
 
   private MessageScheduleDTO scheduleCron(
       TimerEventDefinitionDTO timerEventDefinition,
       SchedulableMessageDTO messages,
-      VariableScope variables) {
+      VariableScope variables,
+      long now) {
     String timeCycle =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
             .asText();
-    return new RecurringMessageScheduleDTO(messages, timeCycle, Instant.now(clock).toEpochMilli());
+    return new RecurringMessageScheduleDTO(messages, timeCycle, now);
   }
 
   private boolean isValidCron(String timeCycle) {

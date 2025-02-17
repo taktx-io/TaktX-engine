@@ -34,6 +34,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessingStatisticsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
+import com.flomaestro.takt.dto.v_1_0_0.TimeBucket;
 import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.util.TaktUUIDSerde;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
@@ -113,7 +114,7 @@ public class TopologyProducer {
   private final IoMappingProcessor ioMappingProcessor;
 
   @ConfigProperty(name = "quarkus.profile")
-  private String activeProfiles;
+  String activeProfiles;
 
   @Produces
   public Topology buildTopology() {
@@ -379,11 +380,6 @@ public class TopologyProducer {
         builder
             .addStateStore(
                 keyValueStoreBuilder(
-                    keyValueStoreSupplier.get(Stores.SCHEDULES_SECOND),
-                    SCHEDULE_KEY_SERDE,
-                    MESSAGE_SCHEDULE_SERDE))
-            .addStateStore(
-                keyValueStoreBuilder(
                     keyValueStoreSupplier.get(Stores.SCHEDULES_MINUTE),
                     SCHEDULE_KEY_SERDE,
                     MESSAGE_SCHEDULE_SERDE))
@@ -401,6 +397,11 @@ public class TopologyProducer {
                 keyValueStoreBuilder(
                     keyValueStoreSupplier.get(Stores.SCHEDULES_WEEKLY),
                     SCHEDULE_KEY_SERDE,
+                    MESSAGE_SCHEDULE_SERDE))
+            .addStateStore(
+                keyValueStoreBuilder(
+                    keyValueStoreSupplier.get(Stores.SCHEDULES_YEARLY),
+                    SCHEDULE_KEY_SERDE,
                     MESSAGE_SCHEDULE_SERDE));
 
     KStream<ScheduleKeyDTO, MessageScheduleDTO> scheduleCommandStream =
@@ -411,12 +412,17 @@ public class TopologyProducer {
         scheduleCommandStream.process(
             () ->
                 new ScheduleProcessor(
-                    clock, tenantNamespaceNameWrapper, activeProfiles.contains("test")),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_SECOND.getStorename()),
+                    clock,
+                    activeProfiles.contains("test"),
+                    (context, name) ->
+                        context.getStateStore(
+                            tenantNamespaceNameWrapper.getPrefixed("schedules-" + name)),
+                    TimeBucket.values()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()),
+            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_YEARLY.getStorename()));
     processStream
         .split()
         .branch(

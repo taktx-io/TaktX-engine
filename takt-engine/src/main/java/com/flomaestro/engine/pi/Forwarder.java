@@ -28,6 +28,7 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
+import com.flomaestro.takt.dto.v_1_0_0.TimeBucket;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -104,19 +105,24 @@ public class Forwarder {
               null,
               info.variables().scopeToDTO());
 
+      long now = clock.millis();
+
       MessageScheduleDTO schedule =
           messageSchedulerFactory.schedule(
               dtoMapper.map(info.timerEventDefinition()),
+              now,
               continueFlowElementTrigger,
               info.variables());
+
+      TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(catchEventInstance),
-              schedule.getTimeBucket(clock.millis()));
+              bucket);
 
       catchEventInstance.addScheduledKey(scheduledKey);
-      context.forward(new Record<>(scheduledKey, schedule, clock.millis()));
+      context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
 
@@ -145,17 +151,20 @@ public class Forwarder {
       String duration = Duration.ofMillis(info.timeoutMs()).toString();
       timerEventDefinition.setTimeDuration(duration);
 
+      long now = clock.millis();
       MessageScheduleDTO schedule =
           messageSchedulerFactory.schedule(
-              timerEventDefinition, externalTaskResponseResultDTO, VariableScope.empty());
+              timerEventDefinition, now, externalTaskResponseResultDTO, VariableScope.empty());
+
+      TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(externalTaskInstance),
-              schedule.getTimeBucket(clock.millis()));
+              bucket);
 
       externalTaskInstance.addScheduledKey(scheduleKey);
-      context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
+      context.forward(new Record<>(scheduleKey, schedule, now));
     }
   }
 
@@ -255,8 +264,8 @@ public class Forwarder {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
       ExternalTaskTriggerDTO newExternalTaskTrigger =
           toTrigger(externalTask, processInstance.getProcessInstanceKey(), definitionKey);
-      if (externalTask.startTime() == null) {
-        // No schedule time, forward directly
+      if (externalTask.backoff() == null) {
+        // No backoff, forward directly
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceKey(),
@@ -264,15 +273,21 @@ public class Forwarder {
                 clock.millis()));
       } else {
         // Schedule the external task
+        long now = clock.millis();
+
         OneTimeScheduleDTO oneTimeScheduler =
             new OneTimeScheduleDTO(
-                newExternalTaskTrigger, Instant.parse(externalTask.startTime()).toEpochMilli());
+                newExternalTaskTrigger,
+                now,
+                Instant.ofEpochMilli(now).plusMillis(externalTask.backoff()).toEpochMilli());
+
+        TimeBucket bucket = TimeBucket.ofMillis(oneTimeScheduler.getNextExecutionTime(now) - now);
         ScheduleKeyDTO scheduledKey =
             new InstanceScheduleKeyDTO(
                 processInstance.getProcessInstanceKey(),
                 pathExtractor.getInstancePath(externalTask.instance()),
-                oneTimeScheduler.getTimeBucket(clock.millis()));
-        context.forward(new Record<>(scheduledKey, oneTimeScheduler, clock.millis()));
+                bucket);
+        context.forward(new Record<>(scheduledKey, oneTimeScheduler, now));
       }
     }
   }

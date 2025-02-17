@@ -29,7 +29,6 @@ import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -275,9 +274,9 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTaskInstance<?> instance,
       VariableScope variables,
       InstanceResult instanceResult) {
-    String triggerTime = Instant.now(clock).plus(backoff).toString();
     ExternalTaskInfo externalTaskInfo =
-        getExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
+        getExternalTaskInfo(
+            workerDefinition, externalTask, instance, variables, backoff.toMillis());
 
     instanceResult.addExternalTaskRequest(externalTaskInfo);
   }
@@ -287,7 +286,7 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
       VariableScope variables,
-      String triggerTime) {
-    return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, triggerTime);
+      Long backoff) {
+    return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, backoff);
   }
 }

@@ -15,27 +15,16 @@ public class OneTimeScheduleDTO extends MessageScheduleDTO {
   @JsonProperty("whn")
   private long when;
 
-  public OneTimeScheduleDTO(SchedulableMessageDTO message, long when) {
-    super(message);
+  public OneTimeScheduleDTO(SchedulableMessageDTO message, long instantiationTime, long when) {
+    super(message, instantiationTime);
     this.when = when;
   }
 
   @Override
-  public TimeBucket getTimeBucket(long now) {
-    return TimeBucket.ofMillis(when - now);
-  }
-
-  @Override
   public Long getNextExecutionTime(long timestamp) {
-    if (when > timestamp) {
-      return when;
-    } else {
+    if (timestamp >= when) {
       return null;
     }
-  }
-
-  @Override
-  public boolean triggered() {
-    return false;
+    return when;
   }
 }

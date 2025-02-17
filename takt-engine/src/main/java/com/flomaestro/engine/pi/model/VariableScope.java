@@ -1,7 +1,6 @@
 package com.flomaestro.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariableKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
@@ -14,11 +13,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Getter
 public class VariableScope {
-  private static final ObjectMapper objectMapper = new ObjectMapper();
   private final HashMap<String, JsonNode> variables = new HashMap<>();
   private final Map<Long, VariableScope> childScopes = new HashMap<>();
   private final Set<String> dirtyVariables = new HashSet<>();
@@ -96,11 +95,7 @@ public class VariableScope {
 
   public VariablesDTO scopeToDTO() {
     Map<String, JsonNode> dirtyVariablesMap = new HashMap<>(variables);
-    getDirtyVariables()
-        .forEach(
-            key -> {
-              dirtyVariablesMap.put(key, variables.get(key));
-            });
+    getDirtyVariables().forEach(key -> dirtyVariablesMap.put(key, variables.get(key)));
     return new VariablesDTO(dirtyVariablesMap);
   }
 
@@ -110,11 +105,10 @@ public class VariableScope {
       VariablesDTO parentVariablesDTO = parentScope.scopeAndParentsToDto();
       parentVariablesDTO
           .getVariables()
-          .entrySet()
           .forEach(
-              e -> {
-                if (dto.get(e.getKey()) == null) {
-                  dto.put(e.getKey(), e.getValue());
+              (key, value) -> {
+                if (dto.get(key) == null) {
+                  dto.put(key, value);
                 }
               });
     }
@@ -152,7 +146,6 @@ public class VariableScope {
           VariableKeyDTO variableKey = new VariableKeyDTO(flowNodeInstanceKey, key);
           JsonNode value = variables.get(key);
           variableStore.put(variableKey, value);
-          int i = 0;
         });
     childScopes.forEach(
         (k, v) -> {
@@ -179,17 +172,14 @@ public class VariableScope {
 
       VariableKeyDTO end = new VariableKeyDTO(endflowNodeInstanceKeyForScopePath, "");
 
-      Map<VariableKeyDTO, Object> varMap = new HashMap<>();
-      variableStore.all().forEachRemaining(kv -> varMap.put(kv.key, kv.value));
-
-      variableStore
-          .range(start, end)
-          .forEachRemaining(
-              kv -> {
-                if (!variables.containsKey(kv.key.getVariableName())) {
-                  variables.put(kv.key.getVariableName(), kv.value);
-                }
-              });
+      try (KeyValueIterator<VariableKeyDTO, JsonNode> range = variableStore.range(start, end)) {
+        range.forEachRemaining(
+            kv -> {
+              if (!variables.containsKey(kv.key.getVariableName())) {
+                variables.put(kv.key.getVariableName(), kv.value);
+              }
+            });
+      }
     }
     return variables;
   }
@@ -210,5 +200,10 @@ public class VariableScope {
     if (parentScope != null) {
       parentScope.put(varName, jsonNode);
     }
+  }
+
+  public void remove(String key) {
+    variables.remove(key);
+    dirtyVariables.remove(key);
   }
 }

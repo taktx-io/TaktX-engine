@@ -1,9 +1,13 @@
 package com.flomaestro.engine.generic;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
+@NoArgsConstructor
+@AllArgsConstructor
 public class TenantNamespaceNameWrapper {
 
   @ConfigProperty(name = "nl.flommaestro.takt.tenant")

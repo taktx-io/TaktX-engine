@@ -29,26 +29,10 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
   @JsonProperty("cron")
   private String cron;
 
-  @JsonProperty("inst")
-  private long instantiation;
-
   public RecurringMessageScheduleDTO(
       SchedulableMessageDTO message, String cron, long instantiation) {
-    super(message);
+    super(message, instantiation);
     this.cron = cron;
-    this.instantiation = instantiation;
-  }
-
-  @Override
-  public TimeBucket getTimeBucket(long now) {
-    Long firstNextExecutionTime = getNextExecutionTime(now);
-    if (firstNextExecutionTime != null) {
-      Long nextNextExecutionTime = getNextExecutionTime(firstNextExecutionTime);
-      if (nextNextExecutionTime != null) {
-        return TimeBucket.ofMillis(nextNextExecutionTime - firstNextExecutionTime);
-      }
-    }
-    return null;
   }
 
   @Override
@@ -63,10 +47,5 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
     } else {
       return null;
     }
-  }
-
-  @Override
-  public boolean triggered() {
-    return false;
   }
 }

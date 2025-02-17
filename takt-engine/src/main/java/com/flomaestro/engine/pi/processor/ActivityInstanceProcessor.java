@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.IntNode;
 import com.flomaestro.engine.feel.FeelExpressionHandler;
 import com.flomaestro.engine.pd.model.Activity;
 import com.flomaestro.engine.pd.model.FlowElements;
-import com.flomaestro.engine.pd.model.FlowNode;
 import com.flomaestro.engine.pd.model.SequenceFlow;
 import com.flomaestro.engine.pi.DirectInstanceResult;
 import com.flomaestro.engine.pi.InstanceResult;
@@ -198,14 +197,15 @@ public abstract class ActivityInstanceProcessor<
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-  private void handleFinishedIteration(
-      ActivityInstance<?> flownodeInstance, VariableScope variables) {
+  private void handleFinishedIteration(I flownodeInstance, VariableScope variables) {
     if (flownodeInstance.getState() == ActtivityStateEnum.FINISHED
         && flownodeInstance.isIteration()) {
-      FlowNode flowNode = flownodeInstance.getFlowNode();
-      String outputElement = ((Activity) flowNode).getLoopCharacteristics().getOutputElement();
+      Activity flowNode = flownodeInstance.getFlowNode();
+      String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
       JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variables);
       flownodeInstance.setOutputElement(jsonNode);
     }
+    variables.remove("loopCnt");
+    variables.remove(flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement());
   }
 }

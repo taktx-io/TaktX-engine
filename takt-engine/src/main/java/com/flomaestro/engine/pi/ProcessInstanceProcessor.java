@@ -168,6 +168,10 @@ public class ProcessInstanceProcessor
       UUID processInstanceKey,
       StartCommandDTO startCommand,
       ProcessingStatistics processingStatistics) {
+    log.info(
+        "Start new process instance: {} definition: {}",
+        processInstanceKey,
+        startCommand.getProcessDefinitionKey());
 
     processingStatistics.increaseProcessInstancesStarted();
 
@@ -333,8 +337,8 @@ public class ProcessInstanceProcessor
       VariablesDTO variables) {
     VariableScope targetScope = processInstanceVariables;
     if (elementInstanceIdPath != null) {
-      for (int i = 0; i < elementInstanceIdPath.size(); i++) {
-        targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceIdPath.get(i));
+      for (Long aLong : elementInstanceIdPath) {
+        targetScope = targetScope.selectFlowNodeInstancesScope(aLong);
       }
     }
     targetScope.merge(variables);
@@ -499,6 +503,7 @@ public class ProcessInstanceProcessor
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
+    log.info("Purging finished process instance: {}", processInstanceKey);
     this.processInstanceStore.delete(processInstanceKey);
 
     FlowNodeInstanceKeyDTO start = new FlowNodeInstanceKeyDTO(processInstanceKey, List.of());
@@ -513,14 +518,11 @@ public class ProcessInstanceProcessor
     VariableKeyDTO variableStartKey = new VariableKeyDTO(flowNodeInstanceKeyStart, "");
     FlowNodeInstanceKeyDTO flownodeInstanceKeyEnd =
         new FlowNodeInstanceKeyDTO(processInstanceKey, List.of(MAX_LONG));
-    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "\u00ff");
+    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "\uffff");
 
     try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
         this.variablesStore.range(variableStartKey, variableEndKey)) {
-      range.forEachRemaining(
-          r -> {
-            this.variablesStore.delete(r.key);
-          });
+      range.forEachRemaining(r -> this.variablesStore.delete(r.key));
     }
   }
 }

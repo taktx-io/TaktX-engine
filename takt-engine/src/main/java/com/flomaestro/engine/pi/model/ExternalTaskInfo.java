@@ -7,4 +7,4 @@ public record ExternalTaskInfo(
     ExternalTask element,
     ExternalTaskInstance<?> instance,
     VariableScope variables,
-    String startTime) {}
+    Long backoff) {}

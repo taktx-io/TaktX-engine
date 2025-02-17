@@ -18,44 +18,28 @@ public class FixedRateMessageScheduleDTO extends MessageScheduleDTO {
   @JsonProperty("rep")
   private int repetitions;
 
-  @JsonProperty("rc")
-  private int repeatedCnt;
-
-  @JsonProperty("inst")
-  private long instantiation;
-
   public FixedRateMessageScheduleDTO(
-      SchedulableMessageDTO message,
-      long period,
-      int repetitions,
-      int repeatedCnt,
-      long instantiation) {
-    super(message);
+      SchedulableMessageDTO message, long period, int repetitions, long instantiation) {
+    super(message, instantiation);
     this.period = period;
     this.repetitions = repetitions;
-    this.repeatedCnt = repeatedCnt;
-    this.instantiation = instantiation;
-  }
-
-  @Override
-  public TimeBucket getTimeBucket(long millis) {
-    return TimeBucket.ofMillis(period);
   }
 
   @Override
   public Long getNextExecutionTime(long from) {
-    if ((repeatedCnt < repetitions) || repetitions < 0) {
-      long nrOfFits = (from - instantiation) / period;
-      return instantiation + (nrOfFits + 1) * period;
-    } else {
-      // Return null to indicate that this command is done
+    if (period <= 0 || from < instantiationTime) {
       return null;
     }
-  }
 
-  @Override
-  public boolean triggered() {
-    repeatedCnt++;
-    return true;
+    long nrOfFits = (from - instantiationTime) / period;
+    if (repetitions < 2) {
+      return instantiationTime + (nrOfFits + 1) * period;
+    } else {
+      if (nrOfFits < repetitions) {
+        return instantiationTime + (nrOfFits + 1) * period;
+      } else {
+        return null;
+      }
+    }
   }
 }

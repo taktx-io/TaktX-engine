@@ -1,23 +1,33 @@
 package com.flomaestro.takt.dto.v_1_0_0;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum TimeBucket {
-  SECOND("S"),
-  MINUTE("M"),
-  HOURLY("H"),
-  DAILY("D"),
-  WEEKLY("W");
-
-  private static final int SECOND_MS = 1000;
-  private static final int MINUTE_MS = 60 * 1000;
-  private static final int HOUR_MS = 60 * 60 * 1000;
-  private static final int DAY_MS = 24 * 60 * 60 * 1000;
+  MINUTE("M", Constants.MINUTE_MS, "minute"),
+  HOURLY("H", Constants.HOUR_MS, "hourly"),
+  DAILY("D", Constants.DAY_MS, "daily"),
+  WEEKLY("W", Constants.WEEK_MS, "weekly"),
+  YEARLY("L", Constants.YEAR_MS, "yearly");
 
   private final String value;
+  private final long periodMs;
+  private final String name;
 
-  TimeBucket(String value) {
+  TimeBucket(String value, long periodMs, String name) {
     this.value = value;
+    this.periodMs = periodMs;
+    this.name = name;
+  }
+
+  @JsonIgnore
+  public String getName() {
+    return name;
+  }
+
+  @JsonIgnore
+  public long getPeriodMs() {
+    return periodMs;
   }
 
   @JsonValue
@@ -26,19 +36,24 @@ public enum TimeBucket {
   }
 
   public static TimeBucket ofMillis(long millis) {
-    if (millis < 0) {
-      throw new IllegalArgumentException("millis must be greater than or equal to 0");
-    }
-    if (millis <= SECOND_MS) {
-      return SECOND;
-    } else if (millis <= MINUTE_MS) {
+    if (millis < Constants.MINUTE_MS) {
       return MINUTE;
-    } else if (millis <= HOUR_MS) {
+    } else if (millis < Constants.HOUR_MS) {
       return HOURLY;
-    } else if (millis <= DAY_MS) {
+    } else if (millis < Constants.DAY_MS) {
+      return DAILY;
+    } else if (millis < Constants.WEEK_MS) {
       return DAILY;
     } else {
-      return WEEKLY;
+      return YEARLY;
     }
+  }
+
+  public static class Constants {
+    public static final long MINUTE_MS = 60000;
+    public static final long HOUR_MS = MINUTE_MS * 60;
+    public static final long DAY_MS = HOUR_MS * 24;
+    public static final long WEEK_MS = DAY_MS * 7;
+    public static final long YEAR_MS = WEEK_MS * 52;
   }
 }

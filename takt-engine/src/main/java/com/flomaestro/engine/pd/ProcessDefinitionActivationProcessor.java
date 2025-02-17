@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 public class ProcessDefinitionActivationProcessor {
+
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
@@ -58,14 +60,15 @@ public class ProcessDefinitionActivationProcessor {
     ProcessDefinitionKey endKey =
         new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), Integer.MAX_VALUE);
 
-    processDefinitionStore
-        .range(startKey, endKey)
-        .forEachRemaining(
-            entry -> {
-              if (!entry.key.equals(processDefinitionKey)) {
-                deactivate(entry.key);
-              }
-            });
+    try (KeyValueIterator<ProcessDefinitionKey, ProcessDefinitionDTO> range =
+        processDefinitionStore.range(startKey, endKey)) {
+      range.forEachRemaining(
+          entry -> {
+            if (!entry.key.equals(processDefinitionKey)) {
+              deactivate(entry.key);
+            }
+          });
+    }
 
     ProcessDefinitionDTO processDefinition = processDefinitionStore.get(processDefinitionKey);
 
@@ -164,6 +167,7 @@ public class ProcessDefinitionActivationProcessor {
 
   private void cancelScheduledStartCommands(
       ProcessDefinitionKey processDefinitionKey, StartEventDTO startEvent) {
+    // TODO ????
     startEvent
         .getTimerEventDefinitions()
         .forEach(
@@ -177,6 +181,7 @@ public class ProcessDefinitionActivationProcessor {
 
   private void scheduleStartCommands(
       ProcessDefinitionKey processDefinitionKey, StartEventDTO startEvent) {
+    long now = clock.millis();
     startEvent
         .getTimerEventDefinitions()
         .forEach(
@@ -185,16 +190,20 @@ public class ProcessDefinitionActivationProcessor {
               MessageScheduleDTO schedule =
                   messageSchedulerFactory.schedule(
                       timerEventDefinition,
+                      now,
                       getStartCommand(
                           processDefinitionKey.getProcessDefinitionId(),
                           processInstanceKey,
                           startEvent),
                       new VariableScope(null, null, null, null));
-              TimeBucket timeBucket = schedule.getTimeBucket(clock.millis());
+              TimeBucket timeBucket =
+                  TimeBucket.ofMillis(
+                      schedule.getNextExecutionTime(schedule.getInstantiationTime())
+                          - schedule.getInstantiationTime());
               if (timeBucket != null) {
                 InstanceScheduleKeyDTO scheduleKey =
                     new InstanceScheduleKeyDTO(processInstanceKey, List.of(), timeBucket);
-                context.forward(new Record<>(scheduleKey, schedule, clock.millis()));
+                context.forward(new Record<>(scheduleKey, schedule, now));
               }
             });
   }

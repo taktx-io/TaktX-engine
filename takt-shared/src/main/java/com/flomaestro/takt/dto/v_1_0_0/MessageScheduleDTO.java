@@ -21,16 +21,14 @@ public abstract class MessageScheduleDTO {
   @JsonProperty("msg")
   protected SchedulableMessageDTO message;
 
-  public MessageScheduleDTO(SchedulableMessageDTO message) {
+  @JsonProperty("it")
+  protected long instantiationTime;
+
+  public MessageScheduleDTO(SchedulableMessageDTO message, long instantiationTime) {
     this.message = message;
+    this.instantiationTime = instantiationTime;
   }
 
   @JsonIgnore
-  public abstract TimeBucket getTimeBucket(long millis);
-
-  @JsonIgnore
   public abstract Long getNextExecutionTime(long timestamp);
-
-  @JsonIgnore
-  public abstract boolean triggered();
 }
