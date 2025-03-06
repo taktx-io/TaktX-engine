@@ -141,11 +141,6 @@ public class TopologyProducer {
             Serdes.String(),
             new ObjectMapperSerde<>(
                 (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
-    builder.addStateStore(
-        keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.PROCESS_DEFINITION),
-            PROCESS_DEFINITION_KEY_SERDE,
-            PROCESS_DEFINITION_SERDE));
 
     // Define the global table
     builder.globalTable(
@@ -165,8 +160,7 @@ public class TopologyProducer {
                 new DefinitionsProcessor(
                     tenantNamespaceNameWrapper, messageSchedulerFactory, clock),
             tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()))
+            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
             (key, value) -> value instanceof ProcessDefinitionDTO,

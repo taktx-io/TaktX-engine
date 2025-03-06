@@ -9,17 +9,16 @@ public enum Stores {
   SCHEDULES_DAILY("schedules-daily"),
   SCHEDULES_WEEKLY("schedules-weekly"),
   SCHEDULES_YEARLY("schedules-yearly"),
-  PROCESS_INSTANCE("pi"),
-  FLOW_NODE_INSTANCE("fni"),
-  PROCESS_INSTANCE_DEFINITION("pid"),
-  DEFINITION_COUNT_BY_ID("d-count-by-id"),
+  PROCESS_INSTANCE("process-instance"),
+  FLOW_NODE_INSTANCE("flownode-instance"),
+  PROCESS_INSTANCE_DEFINITION("process-instance-definition"),
+  DEFINITION_COUNT_BY_ID("definition-count-by-id"),
   XML_BY_HASH("xml-by-hash"),
-  PROCESS_DEFINITION("pd"),
-  GLOBAL_PROCESS_DEFINITION("gpd"),
-  DEFINITION_MESSAGE_SUBSCRIPTION("pd-message-subscription"),
-  CORRELATION_MESSAGE_SUBSCRIPTION("correlation-subscription"),
-  VARIABLES("vars-store"),
-  VERSION_BY_HASH("vre-by-hash");
+  GLOBAL_PROCESS_DEFINITION("global-process-definition"),
+  DEFINITION_MESSAGE_SUBSCRIPTION("definition-message-subscription"),
+  CORRELATION_MESSAGE_SUBSCRIPTION("correlation-message-subscription"),
+  VARIABLES("variables"),
+  VERSION_BY_HASH("version-by-hash");
 
   private final String storename;
 

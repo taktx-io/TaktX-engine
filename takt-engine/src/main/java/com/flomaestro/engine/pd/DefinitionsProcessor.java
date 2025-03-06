@@ -17,6 +17,7 @@ import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @Slf4j
 public class DefinitionsProcessor
@@ -27,11 +28,9 @@ public class DefinitionsProcessor
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
-  private KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
+  private KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> processDefinitionStore;
   private final Map<String, String> hashToXmlCache = new HashMap<>();
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionCache =
-      new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
   private final Clock clock;
 
@@ -55,7 +54,7 @@ public class DefinitionsProcessor
             tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
     this.processDefinitionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
             tenantNamespaceNameWrapper, messageSchedulerFactory, context, clock);
@@ -76,7 +75,7 @@ public class DefinitionsProcessor
 
   public void processDefinitionsRecord(
       String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
-    //    log.info("Processing definitions record for process definition {}", processDefinitionId);
+    log.info("Processing definitions record for process definition {}", processDefinitionId);
     ParsedDefinitionsDTO parsedDefinition = BpmnParser.parse(xmlDefinitions.getXml());
 
     Map<String, Integer> hashVersionPairs =
@@ -104,10 +103,8 @@ public class DefinitionsProcessor
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
       processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
-      processDefinitionStore.put(processDefinitionKey, processDefinitionDTO);
-      processDefinitionCache.put(processDefinitionKey, processDefinitionDTO);
 
-      processDefinitionActivationProcessor.activate(processDefinitionKey);
+      processDefinitionActivationProcessor.activate(processDefinitionDTO);
     } else {
       // Existing version, do not create a new ProcessDefinitionDTO but return the active version
       ProcessDefinitionKey startKey = new ProcessDefinitionKey(processDefinitionId, 1);
@@ -117,8 +114,8 @@ public class DefinitionsProcessor
           .range(startKey, endKey)
           .forEachRemaining(
               entry -> {
-                if (entry.value.getState() == ProcessDefinitionStateEnum.ACTIVE) {
-                  context.forward(new Record(entry.key, entry.value, clock.millis()));
+                if (entry.value.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
+                  context.forward(new Record(entry.key, entry.value.value(), clock.millis()));
                 }
               });
     }

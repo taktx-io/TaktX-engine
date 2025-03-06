@@ -24,13 +24,14 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 public class ProcessDefinitionActivationProcessor {
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
-  private final KeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionStore;
+  private final KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> processDefinitionStore;
 
   public ProcessDefinitionActivationProcessor(
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
@@ -42,42 +43,44 @@ public class ProcessDefinitionActivationProcessor {
     this.clock = clock;
     this.processDefinitionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_DEFINITION.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
   }
 
   public void process(ProcessDefinitionActivationDTO processActivationRecord) {
+    ValueAndTimestamp<ProcessDefinitionDTO> valueAndTimestamp = processDefinitionStore.get(
+        processActivationRecord.getProcessDefinitionKey());
     if (processActivationRecord.getState() == ProcessDefinitionStateEnum.ACTIVE) {
-      activate(processActivationRecord.getProcessDefinitionKey());
+      activate(valueAndTimestamp.value());
     } else if (processActivationRecord.getState() == ProcessDefinitionStateEnum.INACTIVE) {
-      deactivate(processActivationRecord.getProcessDefinitionKey());
+      deactivate(valueAndTimestamp.value());
     }
   }
 
-  public void activate(ProcessDefinitionKey processDefinitionKey) {
+  public void activate(ProcessDefinitionDTO processDefinition) {
     // Deactivate all other versions of the process definition
+    ProcessDefinitionKey processDefinitionKey =
+        ProcessDefinitionKey.of(processDefinition);
     ProcessDefinitionKey startKey =
         new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), 1);
     ProcessDefinitionKey endKey =
         new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), Integer.MAX_VALUE);
 
-    try (KeyValueIterator<ProcessDefinitionKey, ProcessDefinitionDTO> range =
+    try (KeyValueIterator<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> range =
         processDefinitionStore.range(startKey, endKey)) {
       range.forEachRemaining(
           entry -> {
             if (!entry.key.equals(processDefinitionKey)) {
-              deactivate(entry.key);
+              deactivate(entry.value.value());
             }
           });
     }
-
-    ProcessDefinitionDTO processDefinition = processDefinitionStore.get(processDefinitionKey);
 
     ProcessDefinitionDTO activatedDefinition =
         new ProcessDefinitionDTO(
             processDefinition.getDefinitions(),
             processDefinition.getVersion(),
             ProcessDefinitionStateEnum.ACTIVE);
-    processDefinitionStore.put(processDefinitionKey, activatedDefinition);
 
     processDefinition
         .getDefinitions()
@@ -96,20 +99,18 @@ public class ProcessDefinitionActivationProcessor {
     context.forward(new Record<>(latestKey, activatedDefinition, clock.millis()));
   }
 
-  public void deactivate(ProcessDefinitionKey processDefinitionKey) {
-    ProcessDefinitionDTO previousActiveProcessDefinition =
-        processDefinitionStore.get(processDefinitionKey);
-    if (previousActiveProcessDefinition.getState() == ProcessDefinitionStateEnum.INACTIVE) {
+  public void deactivate(ProcessDefinitionDTO processDefinition) {
+    if (processDefinition.getState() == ProcessDefinitionStateEnum.INACTIVE) {
       return;
     }
 
     ProcessDefinitionDTO deactivatedProcessDefinition =
         new ProcessDefinitionDTO(
-            previousActiveProcessDefinition.getDefinitions(),
-            processDefinitionKey.getVersion(),
+            processDefinition.getDefinitions(),
+            processDefinition.getVersion(),
             ProcessDefinitionStateEnum.INACTIVE);
-    processDefinitionStore.put(processDefinitionKey, deactivatedProcessDefinition);
 
+    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(processDefinition);
     deactivatedProcessDefinition
         .getDefinitions()
         .getRootProcess()
