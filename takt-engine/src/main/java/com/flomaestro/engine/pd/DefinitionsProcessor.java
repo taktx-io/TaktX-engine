@@ -30,7 +30,6 @@ public class DefinitionsProcessor
   private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
   private KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> processDefinitionStore;
-  private final Map<String, String> hashToXmlCache = new HashMap<>();
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
   private final Clock clock;
@@ -98,7 +97,6 @@ public class DefinitionsProcessor
       hashVersionPairCache.put(processDefinitionId, hashVersionPairs);
 
       hashToXmlStore.put(hash, xmlDefinitions.getXml());
-      hashToXmlCache.put(hash, xmlDefinitions.getXml());
 
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
