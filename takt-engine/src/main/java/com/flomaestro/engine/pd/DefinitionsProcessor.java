@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 
@@ -64,7 +65,7 @@ public class DefinitionsProcessor
   public void process(Record<String, DefinitionsTriggerDTO> definitionsRecord) {
     if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
       processDefinitionsRecord(
-          definitionsRecord.key(), xmlDefinitions, definitionsRecord.timestamp());
+          definitionsRecord.key(), xmlDefinitions);
     } else if (definitionsRecord.value()
         instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
       processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
@@ -74,7 +75,7 @@ public class DefinitionsProcessor
   }
 
   public void processDefinitionsRecord(
-      String processDefinitionId, XmlDefinitionsDTO xmlDefinitions, long timestamp) {
+      String processDefinitionId, XmlDefinitionsDTO xmlDefinitions) {
     log.info("Processing definitions record for process definition {}", processDefinitionId);
     ParsedDefinitionsDTO parsedDefinition = BpmnParser.parse(xmlDefinitions.getXml());
 
@@ -86,7 +87,6 @@ public class DefinitionsProcessor
     Integer version = hashVersionPairs.get(parsedDefinition.getDefinitionsKey().getHash());
 
     ProcessDefinitionDTO processDefinitionDTO;
-    ProcessDefinitionKey processDefinitionKey;
     if (version == null) {
       version = hashVersionPairs.size() + 1;
 
@@ -102,7 +102,6 @@ public class DefinitionsProcessor
 
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
-      processDefinitionKey = ProcessDefinitionKey.of(processDefinitionDTO);
 
       processDefinitionActivationProcessor.activate(processDefinitionDTO);
     } else {
@@ -110,14 +109,16 @@ public class DefinitionsProcessor
       ProcessDefinitionKey startKey = new ProcessDefinitionKey(processDefinitionId, 1);
       ProcessDefinitionKey endKey =
           new ProcessDefinitionKey(processDefinitionId, Integer.MAX_VALUE);
-      processDefinitionStore
-          .range(startKey, endKey)
-          .forEachRemaining(
-              entry -> {
-                if (entry.value.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
-                  context.forward(new Record(entry.key, entry.value.value(), clock.millis()));
-                }
-              });
+      try(KeyValueIterator<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> range =
+          processDefinitionStore.range(startKey, endKey)) {
+        range
+            .forEachRemaining(
+                entry -> {
+                  if (entry.value.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
+                    context.forward(new Record<>(entry.key, entry.value.value(), clock.millis()));
+                  }
+                });
+      }
     }
   }
 
