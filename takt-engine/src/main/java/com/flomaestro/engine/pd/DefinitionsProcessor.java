@@ -29,7 +29,8 @@ public class DefinitionsProcessor
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
-  private KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> processDefinitionStore;
+  private KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
+      processDefinitionStore;
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
   private final Clock clock;
@@ -54,7 +55,8 @@ public class DefinitionsProcessor
             tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
     this.processDefinitionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
             tenantNamespaceNameWrapper, messageSchedulerFactory, context, clock);
@@ -63,8 +65,7 @@ public class DefinitionsProcessor
   @Override
   public void process(Record<String, DefinitionsTriggerDTO> definitionsRecord) {
     if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
-      processDefinitionsRecord(
-          definitionsRecord.key(), xmlDefinitions);
+      processDefinitionsRecord(definitionsRecord.key(), xmlDefinitions);
     } else if (definitionsRecord.value()
         instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
       processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
@@ -88,6 +89,7 @@ public class DefinitionsProcessor
     ProcessDefinitionDTO processDefinitionDTO;
     if (version == null) {
       version = hashVersionPairs.size() + 1;
+      log.info("Creating new version {} of process definition {}", version, processDefinitionId);
 
       // New version, create a new ProcessDefinitionDTO and store the relevant information
       String hash = parsedDefinition.getDefinitionsKey().getHash();
@@ -104,18 +106,26 @@ public class DefinitionsProcessor
       processDefinitionActivationProcessor.activate(processDefinitionDTO);
     } else {
       // Existing version, do not create a new ProcessDefinitionDTO but return the active version
+      log.info("Version {} of process definition {} already exists", version, processDefinitionId);
       ProcessDefinitionKey startKey = new ProcessDefinitionKey(processDefinitionId, 1);
       ProcessDefinitionKey endKey =
           new ProcessDefinitionKey(processDefinitionId, Integer.MAX_VALUE);
-      try(KeyValueIterator<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> range =
+      try (KeyValueIterator<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> range =
           processDefinitionStore.range(startKey, endKey)) {
-        range
-            .forEachRemaining(
-                entry -> {
-                  if (entry.value.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
-                    context.forward(new Record<>(entry.key, entry.value.value(), clock.millis()));
-                  }
-                });
+        range.forEachRemaining(
+            entry -> {
+              log.info(
+                  "Checking version {} of process definition {}",
+                  entry.key.getVersion(),
+                  processDefinitionId);
+              if (entry.value.value().getState() == ProcessDefinitionStateEnum.ACTIVE) {
+                log.info(
+                    "Found active version {} of process definition {}",
+                    entry.key.getVersion(),
+                    processDefinitionId);
+                context.forward(new Record<>(entry.key, entry.value.value(), clock.millis()));
+              }
+            });
       }
     }
   }

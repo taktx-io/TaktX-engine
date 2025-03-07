@@ -2,53 +2,26 @@ package com.flomaestro.engine.pi;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flomaestro.engine.pi.testengine.BpmnTestEngine;
+import com.flomaestro.engine.pi.testengine.SingletonBpmnTestEngine;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
-import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Clock;
 import java.time.Duration;
-import javax.xml.parsers.ParserConfigurationException;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.xml.sax.SAXException;
 
 @QuarkusTest
 class ExternalTaskTest {
 
-  @Inject Clock clock;
-
-  static BpmnTestEngine bpmnTestEngine;
-
-  @PostConstruct
-  void init() {
-    if (bpmnTestEngine == null) {
-      bpmnTestEngine = new BpmnTestEngine(clock);
-      bpmnTestEngine.init();
-    }
-    bpmnTestEngine.reset();
-  }
-
-  @AfterAll
-  static void closeEngine() {
-    if (bpmnTestEngine != null) {
-      bpmnTestEngine.close();
-    }
+  @BeforeEach
+  void reset() {
+    SingletonBpmnTestEngine.getInstance().reset();
   }
 
   @Test
-  void testProcessServiceTaskSingle()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskSingle() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
@@ -62,14 +35,9 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskSingleFx()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskSingleFx() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
@@ -83,14 +51,9 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskFailed5Retries()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskFailed5Retries() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
@@ -115,14 +78,9 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskFailed3RetriesButThenSucceeds()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskFailed3RetriesButThenSucceeds() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
@@ -139,14 +97,9 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskRetryBackoff()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskRetryBackoff() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -173,13 +126,8 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testSendTask_Single()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testSendTask_Single() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/sendtask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("send-task-id")
@@ -193,14 +141,9 @@ class ExternalTaskTest {
   }
 
   @Test
-  void testProcessServiceTaskPromise()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessServiceTaskPromise() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")

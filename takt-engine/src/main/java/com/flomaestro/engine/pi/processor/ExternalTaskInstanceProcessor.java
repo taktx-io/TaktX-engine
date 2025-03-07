@@ -20,7 +20,6 @@ import com.flomaestro.engine.pi.model.ExternalTaskInstance;
 import com.flomaestro.engine.pi.model.ProcessInstance;
 import com.flomaestro.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import com.flomaestro.engine.pi.model.VariableScope;
-import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
@@ -34,6 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.DescribeConfigsResult;
 import org.apache.kafka.common.config.ConfigResource;
@@ -41,11 +41,12 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 @Setter
+@Slf4j
 public abstract class ExternalTaskInstanceProcessor<
         E extends ExternalTask, I extends ExternalTaskInstance<E>>
     extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTriggerDTO> {
 
-  private long retentionMs;
+  //  private long retentionMs;
 
   protected ExternalTaskInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
@@ -55,11 +56,11 @@ public abstract class ExternalTaskInstanceProcessor<
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
       KafkaClients kafkaClients) {
     super(feelExpressionHandler, ioMappingProcessor, processInstanceMapper, clock);
-    this.retentionMs =
-        getRetentionForTopicConfiguration(
-            kafkaClients,
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()));
+    //    this.retentionMs =
+    //        getRetentionForTopicConfiguration(
+    //            kafkaClients,
+    //            tenantNamespaceNameWrapper.getPrefixed(
+    //                Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()));
   }
 
   public long getRetentionForTopicConfiguration(KafkaClients kafkaClients, String topicName) {
@@ -94,6 +95,7 @@ public abstract class ExternalTaskInstanceProcessor<
       String inputFlowId,
       VariableScope variables,
       ProcessingStatistics processingStatistics) {
+    log.info("Starting external task instance {}", flownodeInstance);
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 

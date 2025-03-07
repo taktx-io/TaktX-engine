@@ -3,59 +3,32 @@ package com.flomaestro.engine.pi;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 
-import com.flomaestro.engine.pi.testengine.BpmnTestEngine;
+import com.flomaestro.engine.pi.testengine.SingletonBpmnTestEngine;
 import com.flomaestro.takt.dto.v_1_0_0.CallActivityInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.MultiInstanceInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SubProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TaskInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
-import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
-import javax.xml.parsers.ParserConfigurationException;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.xml.sax.SAXException;
 
 @QuarkusTest
 class MultiInstanceTest {
 
-  @Inject Clock clock;
-
-  static BpmnTestEngine bpmnTestEngine;
-
-  @PostConstruct
-  void init() {
-    if (bpmnTestEngine == null) {
-      bpmnTestEngine = new BpmnTestEngine(clock);
-      bpmnTestEngine.init();
-    }
-    bpmnTestEngine.reset();
-  }
-
-  @AfterAll
-  static void closeEngine() {
-    if (bpmnTestEngine != null) {
-      bpmnTestEngine.close();
-    }
+  @BeforeEach
+  void reset() {
+    SingletonBpmnTestEngine.getInstance().reset();
   }
 
   @Test
-  void testProcessTaskMultiInstanceParallel()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessTaskMultiInstanceParallel() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
@@ -73,14 +46,9 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessTaskMultiInstanceParallelMany()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessTaskMultiInstanceParallelMany() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
         .startProcessInstance(
             VariablesDTO.of(
@@ -96,14 +64,9 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessTaskMultiInstanceSequentialMany()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessTaskMultiInstanceSequentialMany() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.bpmn")
         .startProcessInstance(
             VariablesDTO.of(
@@ -119,14 +82,9 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessSubTaskMultiInstanceSequential()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessSubTaskMultiInstanceSequential() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
         .waitUntilCompleted()
@@ -141,14 +99,9 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessCallActivityMultiInstanceSequential()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessCallActivityMultiInstanceSequential() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-sequential.bpmn")
         .startProcessInstance(
@@ -171,14 +124,9 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessCallActivityMultiInstanceParallel()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessCallActivityMultiInstanceParallel() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/calledActivity.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/callactivity-multiinstance-parallel.bpmn")
         .startProcessInstance(
@@ -202,27 +150,17 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessTaskMultiInstanceExpressionParallel()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testProcessTaskMultiInstanceExpressionParallel() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-expression-parallel.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilCompleted();
   }
 
   @Test
-  void testReceiveTask_multiInstance()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testReceiveTask_multiInstance() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.empty())

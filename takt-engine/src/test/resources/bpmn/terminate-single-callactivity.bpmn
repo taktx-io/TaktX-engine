@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0pw0wdt" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.30.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
-  <bpmn:process id="subprocess-task-single" isExecutable="true">
+  <bpmn:process id="subprocess-callactivity-single" isExecutable="true">
     <bpmn:documentation>documen</bpmn:documentation>
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_0v3edbs</bpmn:outgoing>
@@ -32,7 +32,7 @@
     </bpmn:subProcess>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="subprocess-task-single">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="subprocess-callactivity-single">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
         <dc:Bounds x="142" y="169" width="36" height="36" />
       </bpmndi:BPMNShape>

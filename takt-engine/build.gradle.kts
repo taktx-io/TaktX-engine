@@ -28,6 +28,7 @@ dependencies {
     implementation("org.camunda.feel:feel-engine:1.19.0")
     implementation("com.cronutils:cron-utils:9.2.1")
 
+    testImplementation(project(":takt-client"))
     testImplementation("io.quarkus:quarkus-jaxb")
     testImplementation("io.quarkus:quarkus-smallrye-reactive-messaging-kafka")
     testImplementation("io.quarkus:quarkus-junit5")

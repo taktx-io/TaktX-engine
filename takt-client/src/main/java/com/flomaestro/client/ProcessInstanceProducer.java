@@ -26,7 +26,7 @@ public class ProcessInstanceProducer {
                 TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
   }
 
-  public void startProcess(String processDefinitionId, VariablesDTO variables) {
+  public UUID startProcess(String processDefinitionId, VariablesDTO variables) {
     UUID processInstanceKey = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
@@ -37,8 +37,10 @@ public class ProcessInstanceProducer {
             variables);
     processInstanceTriggerEmitter.send(
         new ProducerRecord<>(
-            kafkaPropertiesHelper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC),
+            kafkaPropertiesHelper.getPrefixedTopicName(
+                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceKey,
             startCommand));
+    return processInstanceKey;
   }
 }

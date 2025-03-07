@@ -1,53 +1,26 @@
 package com.flomaestro.engine.pi;
 
-import com.flomaestro.engine.pi.testengine.BpmnTestEngine;
+import com.flomaestro.engine.pi.testengine.SingletonBpmnTestEngine;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
-import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
-import javax.xml.parsers.ParserConfigurationException;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.xml.sax.SAXException;
 
 @QuarkusTest
 class IntermediateEventsTest {
 
-  @Inject Clock clock;
-
-  static BpmnTestEngine bpmnTestEngine;
-
-  @PostConstruct
-  void init() {
-    if (bpmnTestEngine == null) {
-      bpmnTestEngine = new BpmnTestEngine(clock);
-      bpmnTestEngine.init();
-    }
-    bpmnTestEngine.reset();
-  }
-
-  @AfterAll
-  static void closeEngine() {
-    if (bpmnTestEngine != null) {
-      bpmnTestEngine.close();
-    }
+  @BeforeEach
+  void reset() {
+    SingletonBpmnTestEngine.getInstance().reset();
   }
 
   @Test
-  void testIntermediateTimerCatch()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testIntermediateTimerCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .setTime(Instant.parse("2024-02-29T07:59:59Z"))
@@ -65,15 +38,9 @@ class IntermediateEventsTest {
   }
 
   @Test
-  void testMessageIntermediateCatch()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testMessageIntermediateCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
-        .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitForMessageSubscription(
             "IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
@@ -88,13 +55,8 @@ class IntermediateEventsTest {
   }
 
   @Test
-  void testLinkIntermediateThrowCatch()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testLinkIntermediateThrowCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/link-intermediate-catch-throw.bpmn")
         .startProcessInstance(VariablesDTO.of("input", "value"))
         .waitUntilCompleted()

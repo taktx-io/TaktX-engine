@@ -38,7 +38,8 @@ public class ProcessDefinitionResource {
             ? extends ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO>>
         STORE_QUERY_PARAMETERS =
             StoreQueryParameters.fromNameAndType(
-                tenantNamespaceNameWrapper.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()),
+                tenantNamespaceNameWrapper.getPrefixed(
+                    Stores.GLOBAL_PROCESS_DEFINITION.getStorename()),
                 QueryableStoreTypes.keyValueStore());
     store = kafkaStreams.store(STORE_QUERY_PARAMETERS);
   }
@@ -50,7 +51,8 @@ public class ProcessDefinitionResource {
 
     Collection<StreamsMetadata> streamsMetadata =
         kafkaStreams.streamsMetadataForStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            tenantNamespaceNameWrapper.getPrefixed(
+                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     streamsMetadata.forEach(
         metadata -> {
           System.out.println("Host: " + metadata.host());

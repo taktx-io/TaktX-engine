@@ -14,7 +14,7 @@ public class FixedClockProducer {
       new MutableClock(Instant.parse(INITIAL_TIME), ZoneId.of("UTC"));
 
   @Produces
-  Clock produceFixedClock() {
+  public Clock produceFixedClock() {
     return FIXED_CLOCK;
   }
 }

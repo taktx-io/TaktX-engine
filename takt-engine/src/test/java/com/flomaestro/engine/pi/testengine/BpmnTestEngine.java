@@ -1,9 +1,8 @@
 package com.flomaestro.engine.pi.testengine;
 
-import com.flomaestro.engine.generic.FixedClockProducer;
+import com.flomaestro.client.TaktClient;
 import com.flomaestro.engine.generic.MutableClock;
 import com.flomaestro.engine.generic.TopologyProducer;
-import com.flomaestro.engine.pi.DebuggerUtil;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ActivityInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
@@ -25,7 +24,6 @@ import com.flomaestro.takt.dto.v_1_0_0.MessageEventKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ParsedDefinitionsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceState;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
@@ -34,12 +32,7 @@ import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SubProcessDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
-import com.flomaestro.takt.dto.v_1_0_0.XmlDefinitionsDTO;
-import com.flomaestro.takt.xml.BpmnParser;
-import io.smallrye.reactive.messaging.kafka.KafkaConsumerRebalanceListener;
-import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,11 +46,12 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.xml.parsers.ParserConfigurationException;
-import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -68,47 +62,37 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
-import org.xml.sax.SAXException;
 
-public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
-
+public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
-  public static final Duration DEFAULT_DURATION;
+  private static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
   private static final String TOPIC_TEST_PREFIX = "test_tenant.test_namespace.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
-  static {
-    if (DebuggerUtil.isDebuggerAttached()) {
-      DEFAULT_DURATION = Duration.ofSeconds(10);
-    } else {
-      DEFAULT_DURATION = Duration.ofSeconds(10);
-    }
-  }
+  private TaktClient taktClient;
 
-  private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new HashMap<>();
+  private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTriggerDTO>>
-      externalTaskTriggerQueueMap = new HashMap<>();
+      externalTaskTriggerQueueMap = new ConcurrentHashMap<>();
   private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTriggerDTO>>
-      definitionToInstancesMap = new HashMap<>();
-  private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new HashMap<>();
+      definitionToInstancesMap = new ConcurrentHashMap<>();
+  private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new ConcurrentHashMap<>();
   private final Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceMap =
-      new HashMap<>();
-  private final Map<UUID, VariablesDTO> variablesMap = new HashMap<>();
-  private final Map<String, ProcessDefinitionDTO> hashToDefinitionMap = new HashMap<>();
+      new ConcurrentHashMap<>();
+  private final Map<UUID, VariablesDTO> variablesMap = new ConcurrentHashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
+  private final Map<String, BiConsumer<UUID, ExternalTaskTriggerDTO>> externalTaskTriggerConsumers =
+      new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceKey;
   private ExternalTaskTriggerDTO activeExternalTaskTrigger;
   private ParsedDefinitionsDTO definitionsBeingDeployed;
+  private final Clock originalClock;
   private final MutableClock mutableClock;
   private UUID latestInstantiatedProcessInstanceKey;
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
-  private KafkaConsumerUtil<UUID, ExternalTaskTriggerDTO> externalTaskTriggerConsumer;
-  private KafkaConsumerUtil<UUID, InstanceUpdateDTO> instanceUpdateConsumer;
-  private KafkaConsumerUtil<ProcessDefinitionKey, ProcessDefinitionDTO>
-      processDefinitionParsedConsumer;
   private KafkaProducerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
   private KafkaProducerUtil<String, DefinitionsTriggerDTO> processDefinitionsTriggerEmitter;
   private KafkaProducerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
@@ -116,6 +100,7 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
 
   public BpmnTestEngine(Clock clock) {
+    this.originalClock = Clock.fixed(clock.instant(), clock.getZone());
     this.mutableClock = (MutableClock) clock;
   }
 
@@ -133,11 +118,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public void close() {
     LOG.info("Closing bpmn test engine");
+    taktClient.stop();
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
-    externalTaskTriggerConsumer.stop();
-    instanceUpdateConsumer.stop();
-    processDefinitionParsedConsumer.stop();
     messageEventEmitter.close();
     processDefinitionsTriggerEmitter.close();
     processInstanceTriggerEmitter.close();
@@ -153,6 +136,22 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
               .map(topic -> new NewTopic(TOPIC_TEST_PREFIX + topic.getTopicName(), 5, (short) 1))
               .toList();
       adminClient.createTopics(topics);
+    }
+
+    try {
+      taktClient =
+          TaktClient.newClientBuilder()
+              .withTenant("test_tenant")
+              .withNamespace("test_namespace")
+              .withBootstrapServers(kafkaBootstrapServers)
+              .build();
+      BiConsumer<UUID, InstanceUpdateDTO> consumer =
+          BpmnTestEngine.this::consume;
+      taktClient.registerInstanceUpdateConsumer(consumer);
+      taktClient.start();
+
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
     }
 
     processInstanceTriggerEmitter =
@@ -184,37 +183,17 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
             MessageEventKeyDeserializer.class.getName(),
             MessageEventDeserializer.class.getName(),
             this::consume);
-    externalTaskTriggerConsumer =
-        new KafkaConsumerUtil<>(
-            "test-group",
-            TOPIC_TEST_PREFIX + Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName(),
-            TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
-            ExternalTaskTriggerDeserializer.class.getName(),
-            this::consume);
-    instanceUpdateConsumer =
-        new KafkaConsumerUtil<>(
-            "test-group",
-            TOPIC_TEST_PREFIX + Topics.INSTANCE_UPDATE_TOPIC.getTopicName(),
-            TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
-            InstanceUpdateDeserializer.class.getName(),
-            this::consume);
-    processDefinitionParsedConsumer =
-        new KafkaConsumerUtil<>(
-            "test-group",
-            TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName(),
-            ProcessDefinitionKeyDeserializer.class.getName(),
-            ProcessDefinitionDeserializer.class.getName(),
-            this::consume);
-    reset();
   }
 
   public void consume(UUID key2, ProcessInstanceTriggerDTO trigger) {
-    LOG.info("Received flow element trigger: " + trigger);
+    LOG.info("Received process instance trigger: " + trigger + " " + trigger.getClass().getName());
     if (trigger instanceof StartCommandDTO startCommand) {
-      Set<UUID> uuids1 =
-          processInstanceParentChildMap.computeIfAbsent(
-              startCommand.getParentProcessInstanceKey(), k -> new HashSet<>());
-      uuids1.add(startCommand.getProcessInstanceKey());
+      if (startCommand.getParentProcessInstanceKey() != null) {
+        Set<UUID> uuids1 =
+            processInstanceParentChildMap.computeIfAbsent(
+                startCommand.getParentProcessInstanceKey(), k -> new ConcurrentSkipListSet<>());
+        uuids1.add(startCommand.getProcessInstanceKey());
+      }
       ConcurrentLinkedQueue<ProcessInstanceTriggerDTO> processInstanceKeyList =
           definitionToInstancesMap.computeIfAbsent(
               startCommand.getProcessDefinitionKey(), k -> new ConcurrentLinkedQueue<>());
@@ -236,14 +215,23 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         externalTaskTriggerQueueMap.computeIfAbsent(
             externalTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
     externalTaskTriggers.add(externalTaskTrigger);
+    LOG.info(
+        "External task triggers: "
+            + externalTaskTriggerQueueMap
+            + " "
+            + System.identityHashCode(externalTaskTriggerQueueMap));
   }
 
   public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
-      LOG.info("Received process instance update: " + instanceUpdate);
+      LOG.info("Received process instance update: " + processInstanceKey + " " + instanceUpdate);
 
       ProcessInstanceDTO processInstanceDTO =
           getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
+      log.info(
+          "Adding to process instance map {} {}",
+          System.identityHashCode(processInstanceMap),
+          processInstanceDTO);
       ProcessInstanceDTO previousProcessInstance =
           processInstanceMap.put(processInstanceKey, processInstanceDTO);
       if (previousProcessInstance == null) {
@@ -268,25 +256,16 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     }
   }
 
-  public void consume(ProcessDefinitionKey key, ProcessDefinitionDTO processDefinition) {
-    LOG.info(
-        "Received process definition: "
-            + processDefinition
-            + " "
-            + processDefinition.getDefinitions().getDefinitionsKey().getHash());
-    if (processDefinition.getState() == ProcessDefinitionStateEnum.ACTIVE) {
-      hashToDefinitionMap.put(
-          processDefinition.getDefinitions().getDefinitionsKey().getHash(), processDefinition);
-    }
-  }
-
   public ExternalTaskTriggerDTO pollExternalTask() {
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
         externalTaskTriggerQueueMap.get(activeProcessInstanceKey);
+    log.info("polled external task queue {} {}", activeProcessInstanceKey, externalTaskTriggers);
     if (externalTaskTriggers == null) {
       return null;
     }
-    return externalTaskTriggers.poll();
+    ExternalTaskTriggerDTO poll = externalTaskTriggers.poll();
+    log.info("polled external task queue {} {}", externalTaskTriggers, poll);
+    return poll;
   }
 
   public void triggerExternalTaskResponse(
@@ -305,13 +284,26 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine deployProcessDefinition(String filename) throws IOException {
     LOG.info("Deploying process definition: " + filename);
-    String xml = IOUtils.toString(BpmnTestEngine.class.getResourceAsStream(filename));
-    definitionsBeingDeployed = BpmnParser.parse(xml);
-    hashToDefinitionMap.clear();
+    definitionsBeingDeployed =
+        taktClient.deployProcessDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
 
-    processDefinitionsTriggerEmitter.send(
-        definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
-        new XmlDefinitionsDTO(xml));
+    BiConsumer<UUID, ExternalTaskTriggerDTO> externalTaskConsumer = this::consume;
+
+    if (externalTaskTriggerConsumers.get(
+            definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId())
+        == null) {
+      LOG.info(
+          "Registering external task consumer for process definition "
+              + definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId());
+      externalTaskTriggerConsumers.put(
+          definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
+          externalTaskConsumer);
+
+      taktClient.registerExternalTaskTriggerConsumer(
+          definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
+          externalTaskConsumer);
+    }
+
     return this;
   }
 
@@ -320,33 +312,25 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine waitForProcessDeployment(Duration duration) {
+    String processDefinitionId =
+        definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId();
+
     activeProcessDefintion =
         Awaitility.await()
             .atMost(duration)
             .until(
                 () ->
-                    hashToDefinitionMap.values().iterator().hasNext()
-                        ? hashToDefinitionMap.values().iterator().next()
-                        : null,
-                obj -> {
-                  if (obj == null) {
-                    return false;
-                  }
-                  String actualDeployed =
-                      obj.getDefinitions().getDefinitionsKey().getProcessDefinitionId();
-                  String expectedDeployed =
-                      definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId();
-                  LOG.info(
-                      "Comparing actual deployed process "
-                          + actualDeployed
-                          + " with "
-                          + expectedDeployed);
-                  return actualDeployed.equals(expectedDeployed);
-                });
+                    taktClient
+                        .getProcessDefinitionByHash(
+                            processDefinitionId,
+                            definitionsBeingDeployed.getDefinitionsKey().getHash())
+                        .orElse(null),
+                Objects::nonNull);
 
     List<String> indexList =
         indexProcessDefinition(
             activeProcessDefintion.getDefinitions().getRootProcess().getFlowElements());
+
     indexList.sort(String::compareTo);
     elementIdIndexMap.put(
         activeProcessDefintion.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
@@ -369,21 +353,12 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
     return elementIdIndex;
   }
 
-  public BpmnTestEngine deployProcessDefinitionAndWait(String filename)
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename) throws IOException {
     return deployProcessDefinitionAndWait(filename, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
+      throws IOException {
     deployProcessDefinition(filename);
     waitForProcessDeployment(duration);
     return this;
@@ -391,55 +366,38 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
-    UUID processInstanceKey = UUID.randomUUID();
-    StartCommandDTO startCommand =
-        new StartCommandDTO(
-            processInstanceKey,
-            null,
-            null,
-            ProcessDefinitionKey.of(activeProcessDefintion),
-            variables);
-    processInstanceTriggerEmitter.send(processInstanceKey, startCommand);
 
-    try {
-      activeProcessInstanceKey =
-          Awaitility.await()
-              .until(
-                  () -> {
-                    ConcurrentLinkedQueue<ProcessInstanceTriggerDTO> flowElementTriggers =
-                        definitionToInstancesMap.get(processDefinitionKey);
-                    if (flowElementTriggers == null || flowElementTriggers.isEmpty()) {
-                      return null;
-                    }
-                    ProcessInstanceTriggerDTO poll = flowElementTriggers.poll();
-                    if (poll instanceof StartCommandDTO startNewProcessInstanceTrigger
-                        && startNewProcessInstanceTrigger
-                            .getProcessDefinitionKey()
-                            .equals(processDefinitionKey)) {
-                      return poll.getProcessInstanceKey();
-                    }
-                    return null;
-                  },
-                  Objects::nonNull);
-    } catch (ConditionTimeoutException e) {
-      LOG.error("Error waiting for process instance to start: " + e);
-      throw new IllegalStateException(e);
-    }
-    try {
-      Awaitility.await()
-          .until(() -> processInstanceMap.get(activeProcessInstanceKey), Objects::nonNull);
-    } catch (ConditionTimeoutException e) {
-      LOG.error("Error waiting for process instance to start: " + e);
-      throw new IllegalStateException(e);
-    }
+    UUID newProcessInstanceKey =
+        taktClient.startProcess(processDefinitionKey.getProcessDefinitionId(), variables);
+
+    log.info("Starting process instance {}", newProcessInstanceKey);
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .until(
+            () -> {
+              log.info(
+                  "Checking processInstanceMap {}", System.identityHashCode(processInstanceMap));
+              return processInstanceMap.containsKey(newProcessInstanceKey);
+            });
+    activeProcessInstanceKey = newProcessInstanceKey;
 
     return this;
   }
 
   public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(String elementId) {
+    return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
+      String elementId, Duration duration) {
+    log.info(
+        "waitUntilExternalTaskIsWaitingForResponse {} {} {}",
+        activeProcessInstanceKey,
+        externalTaskTriggerQueueMap,
+        System.identityHashCode(externalTaskTriggerQueueMap));
     activeExternalTaskTrigger =
         Awaitility.await()
-            .atMost(DEFAULT_DURATION)
+            .atMost(duration)
             .until(
                 this::pollExternalTask,
                 externalTaskTrigger ->
@@ -556,48 +514,26 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
   }
 
   public BpmnTestEngine waitUntilCompleted(Duration duration) {
-    try {
-      Awaitility.await()
-          .atMost(duration)
-          .until(
-              () -> {
-                if (activeProcessInstanceKey != null
-                    && processInstanceMap
-                        .get(activeProcessInstanceKey)
-                        .getFlowNodeInstances()
-                        .getState()
-                        .isFinished()) {
-                  return activeProcessInstanceKey;
-                }
-                return null;
-              },
-              Objects::nonNull);
-    } catch (ConditionTimeoutException e) {
-      LOG.error("Process instance: " + activeProcessInstanceKey + " did not complete in time");
-      LOG.error(processInstanceMap);
-      throw e;
-    }
+    Awaitility.await()
+        .atMost(duration)
+        .until(
+            () -> {
+              if (activeProcessInstanceKey != null
+                  && processInstanceMap
+                      .get(activeProcessInstanceKey)
+                      .getFlowNodeInstances()
+                      .getState()
+                      .isFinished()) {
+                return activeProcessInstanceKey;
+              }
+              return null;
+            },
+            Objects::nonNull);
     return this;
   }
 
   public ProcessInstanceAssert assertThatProcess() {
     return new ProcessInstanceAssert(activeProcessInstanceKey, this);
-  }
-
-  public void reset() {
-    processInstanceParentChildMap.clear();
-    externalTaskTriggerQueueMap.clear();
-    definitionToInstancesMap.clear();
-    processInstanceMap.clear();
-    flowNodeInstanceMap.clear();
-    variablesMap.clear();
-    hashToDefinitionMap.clear();
-    messageSubscriptionMap.clear();
-
-    activeProcessDefintion = null;
-    activeProcessInstanceKey = null;
-    activeExternalTaskTrigger = null;
-    mutableClock.set(Instant.parse(FixedClockProducer.INITIAL_TIME));
   }
 
   public BpmnTestEngine parentProcess() {
@@ -818,5 +754,9 @@ public class BpmnTestEngine implements KafkaConsumerRebalanceListener {
         new TerminateTriggerDTO(
             activeProcessInstanceKey, List.of(selectedFlowNodeInstance.getElementInstanceId())));
     return this;
+  }
+
+  public void reset() {
+    this.mutableClock.set(originalClock.instant());
   }
 }

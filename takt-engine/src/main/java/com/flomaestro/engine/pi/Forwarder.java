@@ -40,11 +40,13 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 @ApplicationScoped
 @RequiredArgsConstructor
+@Slf4j
 public class Forwarder {
   private final PathExtractor pathExtractor;
   private final MessageSchedulerFactory messageSchedulerFactory;
@@ -262,10 +264,15 @@ public class Forwarder {
     Queue<ExternalTaskInfo> externalTaskRequests = instanceResult.getExternalTaskRequests();
     while (!externalTaskRequests.isEmpty()) {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
+      log.info("Forwarding external task request {}", externalTask);
       ExternalTaskTriggerDTO newExternalTaskTrigger =
           toTrigger(externalTask, processInstance.getProcessInstanceKey(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
+        log.info(
+            "Scheduling external task, no backoff {} {}",
+            newExternalTaskTrigger.getProcessInstanceKey(),
+            newExternalTaskTrigger);
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceKey(),
@@ -287,6 +294,7 @@ public class Forwarder {
                 processInstance.getProcessInstanceKey(),
                 pathExtractor.getInstancePath(externalTask.instance()),
                 bucket);
+        log.info("Scheduling external task {} at {}", scheduledKey, oneTimeScheduler);
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, now));
       }
     }

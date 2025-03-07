@@ -7,10 +7,12 @@ import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@ToString(callSuper = true)
 public class StartCommandDTO extends ProcessInstanceTriggerDTO implements SchedulableMessageDTO {
 
   @JsonProperty("ppi")

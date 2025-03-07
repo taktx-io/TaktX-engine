@@ -26,6 +26,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.18.2")
+    implementation("org.awaitility:awaitility:4.2.1")
 
     compileOnly("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
 

@@ -17,7 +17,6 @@ public class TaktClientProvider {
   void init() throws IOException {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
     taktClient = taktClientBuilder.withTenant("tenant").withNamespace("namespace").build();
-    taktClient.start();
   }
 
   @Produces

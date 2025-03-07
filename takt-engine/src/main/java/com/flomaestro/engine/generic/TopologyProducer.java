@@ -284,8 +284,10 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()),
+                            (key, value, recordContext) ->
+                                tenantNamespaceNameWrapper.getPrefixed("external-task-trigger")
+                                    + "-"
+                                    + value.getProcessDefinitionKey().getProcessDefinitionId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
@@ -427,8 +429,10 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.EXTERNAL_TASK_TRIGGER_TOPIC.getTopicName()),
+                            (key, value, recordContext) ->
+                                tenantNamespaceNameWrapper.getPrefixed("external-task-trigger")
+                                    + "-"
+                                    + value.getProcessDefinitionKey().getProcessDefinitionId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(

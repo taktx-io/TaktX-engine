@@ -31,7 +31,8 @@ public class ProcessDefinitionActivationProcessor {
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
-  private final KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>> processDefinitionStore;
+  private final KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
+      processDefinitionStore;
 
   public ProcessDefinitionActivationProcessor(
       TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
@@ -48,8 +49,8 @@ public class ProcessDefinitionActivationProcessor {
   }
 
   public void process(ProcessDefinitionActivationDTO processActivationRecord) {
-    ValueAndTimestamp<ProcessDefinitionDTO> valueAndTimestamp = processDefinitionStore.get(
-        processActivationRecord.getProcessDefinitionKey());
+    ValueAndTimestamp<ProcessDefinitionDTO> valueAndTimestamp =
+        processDefinitionStore.get(processActivationRecord.getProcessDefinitionKey());
     if (processActivationRecord.getState() == ProcessDefinitionStateEnum.ACTIVE) {
       activate(valueAndTimestamp.value());
     } else if (processActivationRecord.getState() == ProcessDefinitionStateEnum.INACTIVE) {
@@ -59,8 +60,7 @@ public class ProcessDefinitionActivationProcessor {
 
   public void activate(ProcessDefinitionDTO processDefinition) {
     // Deactivate all other versions of the process definition
-    ProcessDefinitionKey processDefinitionKey =
-        ProcessDefinitionKey.of(processDefinition);
+    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(processDefinition);
     ProcessDefinitionKey startKey =
         new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), 1);
     ProcessDefinitionKey endKey =

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flomaestro.client.TaktClient;
+import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.inject.Inject;
@@ -28,8 +29,8 @@ public class TestResource {
   private final Map<String, Job> jobs = new HashMap<>();
 
   @GET
-  public Set<String> getProcessDefinitions() {
-    return taktClient.getProcessDefinitionConsumers();
+  public Set<ProcessDefinitionKey> getProcessDefinitions() {
+    return taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
   }
 
   @POST

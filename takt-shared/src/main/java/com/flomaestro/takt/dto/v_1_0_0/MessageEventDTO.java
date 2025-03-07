@@ -12,6 +12,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonTypeIdResolver(MessageEventTypeIdResolver.class)
@@ -20,6 +21,7 @@ import lombok.Setter;
 @Setter
 @EqualsAndHashCode
 @NoArgsConstructor
+@ToString
 public abstract class MessageEventDTO {
   @JsonProperty("m")
   private String messageName;

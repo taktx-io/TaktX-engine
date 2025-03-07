@@ -10,7 +10,6 @@ public enum Topics {
   SCHEDULE_COMMANDS("schedule-commands"),
   INSTANCE_UPDATE_TOPIC("instance-update"),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance-trigger"),
-  EXTERNAL_TASK_TRIGGER_TOPIC("external-task-trigger"),
   PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions-trigger"),
   PROCESSING_STATISTICS_TOPIC("processing-statistics"),
   ;

@@ -1,53 +1,26 @@
 package com.flomaestro.engine.pi;
 
-import com.flomaestro.engine.pi.testengine.BpmnTestEngine;
+import com.flomaestro.engine.pi.testengine.SingletonBpmnTestEngine;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
-import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
-import javax.xml.parsers.ParserConfigurationException;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.xml.sax.SAXException;
 
 @QuarkusTest
 class BoundaryEventsTest {
 
-  @Inject Clock clock;
-
-  static BpmnTestEngine bpmnTestEngine;
-
-  @PostConstruct
-  void init() {
-    if (bpmnTestEngine == null) {
-      bpmnTestEngine = new BpmnTestEngine(clock);
-      bpmnTestEngine.init();
-    }
-    bpmnTestEngine.reset();
-  }
-
-  @AfterAll
-  static void closeEngine() {
-    if (bpmnTestEngine != null) {
-      bpmnTestEngine.close();
-    }
+  @BeforeEach
+  void reset() {
+    SingletonBpmnTestEngine.getInstance().reset();
   }
 
   @Test
-  void testBoundaryTimerTriggered()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimerTriggered() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -62,14 +35,9 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryTimerNotTriggered()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimerNotTriggered() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -85,14 +53,9 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryTimerNonInterrupting()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimerNonInterrupting() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -112,13 +75,8 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryMessageInterrupting()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testBoundaryMessageInterrupting() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1", Set.of("key1"))
@@ -135,13 +93,8 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryMessageNonInterrupting()
-      throws JAXBException,
-          NoSuchAlgorithmException,
-          IOException,
-          ParserConfigurationException,
-          SAXException {
-    bpmnTestEngine
+  void testBoundaryMessageNonInterrupting() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -163,14 +116,9 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Subprocess_1/Service_Task_1")
@@ -187,14 +135,9 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryTimer_SubProcessTriggered_NormalEnd()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimer_SubProcessTriggered_NormalEnd() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
@@ -212,14 +155,9 @@ class BoundaryEventsTest {
   }
 
   @Test
-  void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+  void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd() throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
@@ -241,13 +179,9 @@ class BoundaryEventsTest {
 
   @Test
   void testBoundaryTimer_SubProcessTriggered_NonInterrupting_BoundaryEventEnd_NoEnd()
-      throws IOException,
-          JAXBException,
-          NoSuchAlgorithmException,
-          ParserConfigurationException,
-          SAXException {
+      throws IOException {
 
-    bpmnTestEngine
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess-noendevent.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
