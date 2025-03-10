@@ -1,4 +1,4 @@
-package com.flomaestro.client;
+package com.flomaestro.client.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;

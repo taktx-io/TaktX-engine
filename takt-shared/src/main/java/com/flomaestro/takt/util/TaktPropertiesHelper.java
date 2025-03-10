@@ -15,6 +15,7 @@ public class TaktPropertiesHelper {
   private final String tenant;
 
   private final String namespace;
+
   private final String kafkaBootstrapServers;
 
   private final Properties commonProperties;
@@ -24,7 +25,7 @@ public class TaktPropertiesHelper {
     this.tenant = tenant;
     this.namespace = namespace;
     this.kafkaBootstrapServers = kafkaBootstrapServers;
-    this.commonProperties = loadCommonProperties(kafkaBootstrapServers);
+    this.commonProperties = loadCommonProperties();
   }
 
   public Properties getKafkaConsumerProperties(
@@ -38,10 +39,9 @@ public class TaktPropertiesHelper {
     return props;
   }
 
-  public Properties loadCommonProperties(String kafkaBootstrapServers) throws IOException {
+  public Properties loadCommonProperties() throws IOException {
     String taktKafkaPropertiesFile = System.getenv("TAKT_PROPERTIES_FILE");
     Properties properties = new Properties();
-    properties.setProperty("bootstrap.servers", kafkaBootstrapServers);
     if (taktKafkaPropertiesFile != null) {
       InputStream resourceAsStream = null;
       try {

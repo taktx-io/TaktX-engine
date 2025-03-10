@@ -30,7 +30,7 @@ public class TestResource {
 
   @GET
   public Set<ProcessDefinitionKey> getProcessDefinitions() {
-    return taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
+    return taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions().keySet();
   }
 
   @POST

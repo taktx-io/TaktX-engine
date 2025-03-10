@@ -1,5 +1,6 @@
 package com.flomaestro.client;
 
+import com.flomaestro.client.serdes.ProcessInstanceTriggerSerializer;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;

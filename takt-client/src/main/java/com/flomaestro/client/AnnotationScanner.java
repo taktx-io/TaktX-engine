@@ -7,6 +7,10 @@ import java.util.Set;
 
 public class AnnotationScanner {
 
+  private AnnotationScanner() {
+    // Static helper class
+  }
+
   public static Set<Class<?>> findAnnotatedClasses(Class<?> annotation) {
     try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
       return new HashSet<>(scanResult.getClassesWithAnnotation(annotation.getName()).loadClasses());

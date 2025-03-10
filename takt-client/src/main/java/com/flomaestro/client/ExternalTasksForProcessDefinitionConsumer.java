@@ -1,5 +1,6 @@
 package com.flomaestro.client;
 
+import com.flomaestro.client.serdes.ExternalTaskTriggerJsonDeserializer;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;

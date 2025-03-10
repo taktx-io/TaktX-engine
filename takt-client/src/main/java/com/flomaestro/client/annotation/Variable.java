@@ -1,4 +1,4 @@
-package com.flomaestro.client;
+package com.flomaestro.client.annotation;
 
 import jakarta.inject.Qualifier;
 import java.lang.annotation.ElementType;

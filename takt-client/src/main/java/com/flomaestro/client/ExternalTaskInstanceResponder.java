@@ -2,60 +2,57 @@ package com.flomaestro.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Getter;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-public class ResponseConsumer {
-
+public class ExternalTaskInstanceResponder {
+  private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
-  private final ExternalTaskTriggerDTO externalTaskTrigger;
   private final String topicName;
-  private final ObjectMapper objectMapper;
-  @Getter private boolean asParameter;
+  private final UUID processInstanceKey;
+  private final List<Long> elementInstanceIdPath;
 
-  public ResponseConsumer(
+  public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter,
-      ExternalTaskTriggerDTO externalTaskTrigger,
       String topicName,
-      ObjectMapper objectMapper) {
+      UUID processInstanceKey,
+      List<Long> elementInstanceIdPath) {
     this.responseEmitter = responseEmitter;
-    this.externalTaskTrigger = externalTaskTrigger;
     this.topicName = topicName;
-    this.objectMapper = objectMapper;
-    this.asParameter = false;
+    this.processInstanceKey = processInstanceKey;
+    this.elementInstanceIdPath = elementInstanceIdPath;
   }
 
-  public void respondSucess() {
+  public void respondSuccess() {
     Map<String, JsonNode> variablesMap = new HashMap<>();
-    respondSucess(variablesMap);
+    respondSuccess(variablesMap);
   }
 
-  public void respondSucess(Object variable) {
+  public void respondSuccess(Object variable) {
     Map<String, JsonNode> variablesMap =
-        variable == null ? Map.of() : objectMapper.convertValue(variable, LinkedHashMap.class);
-    respondSucess(variablesMap);
+        variable == null ? Map.of() : OBJECT_MAPPER.convertValue(variable, LinkedHashMap.class);
+    respondSuccess(variablesMap);
   }
 
-  private void respondSucess(Map<String, JsonNode> variablesMap) {
-
+  public void respondSuccess(Map<String, JsonNode> variablesMap) {
     ExternalTaskResponseResultDTO externalTaskResponseResult =
         new ExternalTaskResponseResultDTO(
             ExternalTaskResponseType.SUCCESS, true, null, null, null, 0L);
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
+            processInstanceKey,
+            elementInstanceIdPath,
             externalTaskResponseResult,
             new VariablesDTO(variablesMap));
     responseEmitter.send(
@@ -66,8 +63,8 @@ public class ResponseConsumer {
   public void respondEscalation(EscalationEventException escalationEvent) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
+            processInstanceKey,
+            elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ESCALATION,
                 true,
@@ -82,10 +79,11 @@ public class ResponseConsumer {
   }
 
   public void respondError(boolean allowRetry, String code, String name, String message) {
+
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
+            processInstanceKey,
+            elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ESCALATION, allowRetry, code, name, message, 0L),
             VariablesDTO.empty());
@@ -97,8 +95,8 @@ public class ResponseConsumer {
   public void respondPromise(Duration duration) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
+            processInstanceKey,
+            elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.PROMISE, true, null, null, null, duration.toMillis()),
             VariablesDTO.empty());
@@ -107,7 +105,4 @@ public class ResponseConsumer {
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void setAsParameter() {
-    this.asParameter = true;
-  }
 }

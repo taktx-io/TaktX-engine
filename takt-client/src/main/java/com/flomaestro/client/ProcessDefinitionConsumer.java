@@ -1,5 +1,7 @@
 package com.flomaestro.client;
 
+import com.flomaestro.client.serdes.ProcessDefinitionJsonDeserializer;
+import com.flomaestro.client.serdes.ProcessDefinitionKeyJsonDeserializer;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
@@ -101,6 +103,10 @@ public class ProcessDefinitionConsumer {
 
   public void stop() {
     running = false;
+  }
+
+  public Map<ProcessDefinitionKey, ProcessDefinitionDTO> getDeployedProcessDefinitions() {
+    return definitionMap;
   }
 
   public Map<ProcessDefinitionKey, ProcessDefinitionDTO> getDeployedProcessDefinitions(
