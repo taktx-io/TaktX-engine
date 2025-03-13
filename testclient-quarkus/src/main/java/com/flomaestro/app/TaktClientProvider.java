@@ -26,7 +26,8 @@ public class TaktClientProvider {
       if (taktClient == null) {
         taktClient = taktClientBuilder.withTenant("tenant").withNamespace("namespace").build();
         taktClient.start();
-        taktClient.scanAndDeployBpmnDefinitions();
+        taktClient.deployTaktDeploymentAnnotatedClasses();
+        taktClient.registerAnnotatedWorkers();
       }
     }
   }

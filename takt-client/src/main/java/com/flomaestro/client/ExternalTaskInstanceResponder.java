@@ -17,7 +17,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 public class ExternalTaskInstanceResponder {
-  private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceKey;
@@ -104,5 +104,4 @@ public class ExternalTaskInstanceResponder {
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
-
 }

@@ -4,6 +4,8 @@ import com.flomaestro.client.ExternalTaskInstanceResponder;
 import com.flomaestro.client.annotation.TaktDeployment;
 import com.flomaestro.client.annotation.TaktWorker;
 import com.flomaestro.client.annotation.TaktWorkerMethod;
+import com.flomaestro.client.annotation.Variable;
+import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
@@ -18,7 +20,12 @@ public class TypicalWorker {
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
   @TaktWorkerMethod(taskId = "benchmark-task-200")
-  public void doWork(ExternalTaskInstanceResponder externalTaskInstanceResponder) {
+  public void doWork(
+      ExternalTaskInstanceResponder externalTaskInstanceResponder,
+      ExternalTaskTriggerDTO externalTaskInstanceDTO,
+      Map<String, Object> variables,
+      @Variable("varx1") String variable1,
+      String varx2) {
     executor.submit(
         () -> {
           try {
@@ -34,18 +41,16 @@ public class TypicalWorker {
   }
 
   @TaktWorkerMethod(taskId = "benchmark-task-200-completed")
-  public void doWorkCompleted(ExternalTaskInstanceResponder externalTaskInstanceResponder) {
+  public boolean doWorkCompleted() {
     executor.submit(
         () -> {
           try {
             Thread.sleep(200);
           } catch (InterruptedException e) {
-            externalTaskInstanceResponder.respondError(
-                false, "Error while sleeping", "SLEEP_ERROR", "SLEEP_ERROR");
             throw new RuntimeException(e);
           }
-
-          externalTaskInstanceResponder.respondSuccess(Map.of("result", "success"));
+          return true;
         });
+    return true;
   }
 }

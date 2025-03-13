@@ -4,5 +4,5 @@ import java.lang.reflect.Parameter;
 
 public interface TaktParameterResolverFactory {
 
-  TaktParameterResolver create(Parameter parameter);
+  TaktParameterResolver create(TaktClient taktClient, Parameter parameter);
 }

@@ -145,8 +145,7 @@ public class BpmnTestEngine {
               .withNamespace("test_namespace")
               .withBootstrapServers(kafkaBootstrapServers)
               .build();
-      BiConsumer<UUID, InstanceUpdateDTO> consumer =
-          BpmnTestEngine.this::consume;
+      BiConsumer<UUID, InstanceUpdateDTO> consumer = BpmnTestEngine.this::consume;
       taktClient.registerInstanceUpdateConsumer(consumer);
       taktClient.start();
 

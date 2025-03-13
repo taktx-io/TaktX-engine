@@ -11,7 +11,6 @@ import com.flomaestro.takt.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Parameter;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -24,14 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TaktClient {
 
-  @Getter
-  private final ProcessDefinitionConsumer processDefinitionConsumer;
+  @Getter private final ProcessDefinitionConsumer processDefinitionConsumer;
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ExternalTasksForProcessDefinitionConsumer externalTaskConsumer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ExternalTaskResponder externalTaskResponder;
+  @Getter
   private final TaktParameterResolverFactory parameterResolverFactory;
 
   public TaktClient(
@@ -43,8 +42,10 @@ public class TaktClient {
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
-    this.processInstanceUpdateConsumer = new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
-    this.externalTaskConsumer = new ExternalTasksForProcessDefinitionConsumer(taktPropertiesHelper, executor);
+    this.processInstanceUpdateConsumer =
+        new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
+    this.externalTaskConsumer =
+        new ExternalTasksForProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.externalTaskResponder = externalTaskResponder;
   }
 
@@ -85,12 +86,7 @@ public class TaktClient {
     this.processInstanceUpdateConsumer.addInstanceUpdateConsumer(consumer);
   }
 
-  public void scanAndDeployBpmnDefinitions() {
-    deployAnnotatedClasses();
-    registerWorkers();
-  }
-
-  private void deployAnnotatedClasses() {
+  public void deployTaktDeploymentAnnotatedClasses() {
     try {
       Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktDeployment.class);
       for (Class<?> clazz : annotatedClasses) {
@@ -112,25 +108,23 @@ public class TaktClient {
     }
   }
 
-  private void registerWorkers() {
-      Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktWorker.class);
-      for (Class<?> clazz : annotatedClasses) {
-        TaktWorker annotation = clazz.getAnnotation(TaktWorker.class);
-        if (annotation != null) {
-          Object beanInstance = InstanceProvider.getInstance(clazz);
-          String processDefinitionId = annotation.processDefinitionId();
-          log.info("Registering worker for process definition {}", processDefinitionId);
-          registerExternalTaskTriggerConsumer(processDefinitionId, new JobWorkerExternalTaskTriggerConsumer(this, beanInstance));
-        }
+  public void registerAnnotatedWorkers() {
+    Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktWorker.class);
+    for (Class<?> clazz : annotatedClasses) {
+      TaktWorker annotation = clazz.getAnnotation(TaktWorker.class);
+      if (annotation != null) {
+        Object beanInstance = InstanceProvider.getInstance(clazz);
+        String processDefinitionId = annotation.processDefinitionId();
+        log.info("Registering worker for process definition {}", processDefinitionId);
+        registerExternalTaskTriggerConsumer(
+            processDefinitionId, new JobWorkerExternalTaskTriggerConsumer(this, beanInstance));
       }
+    }
   }
 
-  public ExternalTaskInstanceResponder respondToExternalTask(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
+  public ExternalTaskInstanceResponder respondToExternalTask(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return externalTaskResponder.responderForExternalTaskTrigger(externalTaskTriggerDTO);
-  }
-
-  public TaktParameterResolver getParameterResolver(Parameter parameter) {
-    return parameterResolverFactory.create(parameter);
   }
 
   public static class TaktClientBuilder {
@@ -161,7 +155,8 @@ public class TaktClient {
 
       ExternalTaskResponder externalTaskResponder = new ExternalTaskResponder(taktPropertiesHelper);
 
-      TaktParameterResolverFactory parameterResolverFactory = new DefaultTaktParameterResolverFactory(externalTaskResponder);
+      TaktParameterResolverFactory parameterResolverFactory =
+          new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
       return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
     }
@@ -180,6 +175,5 @@ public class TaktClient {
       this.kafkaBootstrapServers = kafkaBootstrapServers;
       return this;
     }
-
   }
 }

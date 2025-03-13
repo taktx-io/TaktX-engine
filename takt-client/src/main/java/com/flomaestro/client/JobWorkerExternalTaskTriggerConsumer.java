@@ -14,7 +14,8 @@ import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JobWorkerExternalTaskTriggerConsumer implements BiConsumer<UUID, ExternalTaskTriggerDTO> {
+public class JobWorkerExternalTaskTriggerConsumer
+    implements BiConsumer<UUID, ExternalTaskTriggerDTO> {
 
   private final TaktClient taktClient;
   private final Object beanInstance;
@@ -31,7 +32,8 @@ public class JobWorkerExternalTaskTriggerConsumer implements BiConsumer<UUID, Ex
     for (Method declaredMethod : clazz.getDeclaredMethods()) {
       if (declaredMethod.getAnnotation(TaktWorkerMethod.class) != null) {
         log.info("Registering worker method {}", declaredMethod.getName());
-        workerMethods.put(declaredMethod.getAnnotation(TaktWorkerMethod.class).taskId(), declaredMethod);
+        workerMethods.put(
+            declaredMethod.getAnnotation(TaktWorkerMethod.class).taskId(), declaredMethod);
       }
     }
     if (clazz.getSuperclass() != null) {
@@ -43,27 +45,58 @@ public class JobWorkerExternalTaskTriggerConsumer implements BiConsumer<UUID, Ex
   public void accept(UUID uuid, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     Method method = workerMethods.get(externalTaskTriggerDTO.getExternalTaskId());
     if (method == null) {
-      log.error("No worker method found for task id: {}", externalTaskTriggerDTO.getExternalTaskId());
-      taktClient.respondToExternalTask(externalTaskTriggerDTO).respondError(
-          false,
-          "TASK_NOT_FOUND",
-          "Worker method not found",
-          "No worker method found for task id " + externalTaskTriggerDTO.getExternalTaskId());
+      log.error(
+          "No worker method found for task id: {}", externalTaskTriggerDTO.getExternalTaskId());
+      taktClient
+          .respondToExternalTask(externalTaskTriggerDTO)
+          .respondError(
+              false,
+              "TASK_NOT_FOUND",
+              "Worker method not found",
+              "No worker method found for task id " + externalTaskTriggerDTO.getExternalTaskId());
       return;
     }
 
+    TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
+    boolean autoComplete = workerMethod.autoComplate();
+
     Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
-    try {
-      method.invoke(beanInstance, arguments);
-    } catch (IllegalAccessException | InvocationTargetException e) {
-      throw new IllegalStateException(e);
+    boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
+
+    if (autoComplete) {
+      // Rely on result and exceptions to determine success or failure
+
+      try {
+        Object result = method.invoke(beanInstance, arguments);
+        if (methodIsVoid) {
+          taktClient.respondToExternalTask(externalTaskTriggerDTO).respondSuccess();
+        } else {
+          taktClient.respondToExternalTask(externalTaskTriggerDTO).respondSuccess(result);
+        }
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        taktClient
+            .respondToExternalTask(externalTaskTriggerDTO)
+            .respondError(false, "ERROR", "Error", e.getMessage());
+      }
+    } else {
+      // Worker has to respond itself by Responder or TaktClient. Result is ignored
+      try {
+        method.invoke(beanInstance, arguments);
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        taktClient
+            .respondToExternalTask(externalTaskTriggerDTO)
+            .respondError(false, "ERROR", "Error", e.getMessage());
+      }
     }
   }
 
   private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     List<Object> result = new ArrayList<>();
     for (Parameter parameter : method.getParameters()) {
-      TaktParameterResolver parameterResolver = taktClient.getParameterResolver(parameter);
+      TaktParameterResolverFactory parameterResolverFactory =
+          taktClient.getParameterResolverFactory();
+      TaktParameterResolver parameterResolver =
+          parameterResolverFactory.create(taktClient, parameter);
       Object resolved = parameterResolver.resolve(externalTaskTriggerDTO);
       result.add(resolved);
     }

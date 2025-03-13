@@ -35,7 +35,7 @@ public class IoMappingProcessor {
         String varName = mapping.getTarget();
         JsonNode jsonNode =
             feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-        variables.putInParent(varName, jsonNode);
+        variables.put(varName, jsonNode);
       }
     }
   }

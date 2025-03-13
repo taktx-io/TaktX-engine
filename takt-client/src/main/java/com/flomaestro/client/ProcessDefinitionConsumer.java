@@ -150,16 +150,23 @@ public class ProcessDefinitionConsumer {
           }
         });
 
-    while (!assigned.get()) {
-      ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> poll =
-          definitionActivationConsumer.poll(Duration.ofMillis(100));
-      if (poll.count() > 0) {
-        log.error(
-            "Topic {} Received {} records before expecting to received",
-            prefixedTopicName,
-            poll.count());
-      }
-    }
+    //    while (!assigned.get()) {
+    //      try {
+    //        Thread.sleep(100);
+    //      } catch (InterruptedException e) {
+    //        Thread.currentThread().interrupt();
+    //        throw new IllegalStateException(e);
+    //      }
+    //      definitionActivationConsumer.
+    //      ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> poll =
+    //          definitionActivationConsumer.poll(Duration.ofMillis(100));
+    //      if (poll.count() > 0) {
+    //        log.error(
+    //            "Topic {} Received {} records before expecting to received",
+    //            prefixedTopicName,
+    //            poll.count());
+    //      }
+    //    }
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {

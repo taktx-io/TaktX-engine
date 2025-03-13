@@ -29,9 +29,10 @@ public class TaktPropertiesHelper {
   }
 
   public Properties getKafkaConsumerProperties(
-      String groupId, Class<?> keyDeserializer, Class<?> valueDeserializer) throws IOException {
+      String groupId, Class<?> keyDeserializer, Class<?> valueDeserializer) {
     Properties props = new Properties();
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -70,9 +71,10 @@ public class TaktPropertiesHelper {
   }
 
   public Properties getKafkaProducerProperties(
-      Class<? extends Serializer<?>> keySserializer, Class<? extends Serializer<?>> valueSerializer)
-      throws IOException {
+      Class<? extends Serializer<?>> keySserializer,
+      Class<? extends Serializer<?>> valueSerializer) {
     Properties props = new Properties();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySserializer.getName());
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer.getName());
     props.putAll(commonProperties);

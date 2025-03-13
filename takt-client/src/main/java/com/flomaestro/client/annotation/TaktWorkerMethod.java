@@ -8,4 +8,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface TaktWorkerMethod {
   String taskId();
+
+  boolean autoComplate() default true;
 }

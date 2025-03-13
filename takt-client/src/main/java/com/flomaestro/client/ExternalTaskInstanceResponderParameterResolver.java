@@ -6,7 +6,8 @@ public class ExternalTaskInstanceResponderParameterResolver implements TaktParam
 
   private final ExternalTaskResponder externalTaskResponder;
 
-  public ExternalTaskInstanceResponderParameterResolver(ExternalTaskResponder externalTaskResponder) {
+  public ExternalTaskInstanceResponderParameterResolver(
+      ExternalTaskResponder externalTaskResponder) {
     this.externalTaskResponder = externalTaskResponder;
   }
 
