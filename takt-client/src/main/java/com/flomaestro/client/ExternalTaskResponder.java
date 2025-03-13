@@ -14,7 +14,7 @@ public class ExternalTaskResponder {
   private final KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
   private final String topicName;
 
-  public ExternalTaskResponder(TaktPropertiesHelper taktPropertiesHelper)  {
+  public ExternalTaskResponder(TaktPropertiesHelper taktPropertiesHelper) {
     this.topicName =
         taktPropertiesHelper.getPrefixedTopicName(
             Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());

@@ -1,17 +1,12 @@
 package com.flomaestro.engine.pi.testengine;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.TopicPartition;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
@@ -44,31 +39,7 @@ public class KafkaConsumerUtil<K, V> {
 
     kafkaConsumer = new KafkaConsumer<>(props);
 
-    AtomicBoolean assigned = new AtomicBoolean(false);
-
-    kafkaConsumer.subscribe(
-        Collections.singletonList(topic),
-        new ConsumerRebalanceListener() {
-          @Override
-          public void onPartitionsRevoked(Collection<TopicPartition> collection) {}
-
-          @Override
-          public void onPartitionsAssigned(Collection<TopicPartition> collection) {
-            assigned.set(true);
-          }
-        });
-
-    while (!assigned.get()) {
-      ConsumerRecords<K, V> poll = kafkaConsumer.poll(Duration.ofMillis(100));
-      if (poll.count() > 0) {
-        LOG.error(
-            "Topic "
-                + topic
-                + " Received "
-                + poll.count()
-                + " records before expecting to received");
-      }
-    }
+    kafkaConsumer.subscribe(Collections.singletonList(topic));
 
     start();
   }

@@ -20,10 +20,7 @@ public class MapParameterResolver implements TaktParameterResolver {
     externalTaskTriggerDTO
         .getVariables()
         .getVariables()
-        .forEach(
-            (key, value) ->
-              result.put(key, mapper.convertValue(value, Object.class))
-            );
+        .forEach((key, value) -> result.put(key, mapper.convertValue(value, Object.class)));
 
     return result;
   }

@@ -30,8 +30,7 @@ public class TaktClient {
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ExternalTaskResponder externalTaskResponder;
-  @Getter
-  private final TaktParameterResolverFactory parameterResolverFactory;
+  @Getter private final TaktParameterResolverFactory parameterResolverFactory;
 
   public TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,

@@ -8,7 +8,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,15 +17,12 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.TopicPartition;
 
 @Slf4j
 public class ProcessDefinitionConsumer {
@@ -55,7 +51,7 @@ public class ProcessDefinitionConsumer {
             Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName());
 
     log.info("Subscribing to topic {}", prefixedTopicName);
-    subscribeAndWaitUntilPartitionsAssigned(prefixedTopicName);
+    subscribe(prefixedTopicName);
 
     running = true;
 
@@ -134,42 +130,11 @@ public class ProcessDefinitionConsumer {
     return consumerKey;
   }
 
-  private void subscribeAndWaitUntilPartitionsAssigned(String prefixedTopicName) {
-    AtomicBoolean assigned = new AtomicBoolean(false);
-
-    definitionActivationConsumer.subscribe(
-        Collections.singletonList(prefixedTopicName),
-        new ConsumerRebalanceListener() {
-          @Override
-          public void onPartitionsRevoked(Collection<TopicPartition> collection) {}
-
-          @Override
-          public void onPartitionsAssigned(Collection<TopicPartition> collection) {
-            log.info("Partitions assigned: {}", collection);
-            assigned.set(true);
-          }
-        });
-
-    //    while (!assigned.get()) {
-    //      try {
-    //        Thread.sleep(100);
-    //      } catch (InterruptedException e) {
-    //        Thread.currentThread().interrupt();
-    //        throw new IllegalStateException(e);
-    //      }
-    //      definitionActivationConsumer.
-    //      ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> poll =
-    //          definitionActivationConsumer.poll(Duration.ofMillis(100));
-    //      if (poll.count() > 0) {
-    //        log.error(
-    //            "Topic {} Received {} records before expecting to received",
-    //            prefixedTopicName,
-    //            poll.count());
-    //      }
-    //    }
+  private void subscribe(String prefixedTopicName) {
+    definitionActivationConsumer.subscribe(Collections.singletonList(prefixedTopicName));
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {
+  private <K, V> KafkaConsumer<K, V> createConsumer() {
     String groupId = "client-definition-activation-consumer-" + UUID.randomUUID();
 
     log.info("Creating consumer for group id {}", groupId);
