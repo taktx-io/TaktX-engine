@@ -8,7 +8,6 @@ import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
 import com.flomaestro.takt.util.TaktUUIDSerializer;
-import java.io.IOException;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -18,7 +17,7 @@ public class ProcessInstanceProducer {
   private final TaktPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
 
-  public ProcessInstanceProducer(TaktPropertiesHelper kafkaPropertiesHelper) throws IOException {
+  public ProcessInstanceProducer(TaktPropertiesHelper kafkaPropertiesHelper) {
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
 
     processInstanceTriggerEmitter =

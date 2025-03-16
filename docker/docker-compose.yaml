@@ -29,11 +29,20 @@ services:
       - KAFKA_CLUSTERS_0_PROPERTIES_CONSUMER_VALUE_DESERIALIZER=org.apache.kafka.common.serialization.HexDeserializer
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_KEY_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_VALUE_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
-  influxdb:
-    image: influxdb:latest
+
+  prometheus:
+    image: prom/prometheus
     ports:
-      - '8086:8086'
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - "./grafana/data:/var/lib/grafana"
+      - "./grafana/provisioning:/etc/grafana/provisioning"
     environment:
-      - INFLUXDB_DB=metrics
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=adminpassword
+      - GF_SECURITY_ADMIN_PASSWORD=your_password

@@ -3,8 +3,9 @@ package com.flomaestro.engine.pi.testengine;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -14,7 +15,7 @@ public class KafkaConsumerUtil<K, V> {
   private static final Logger LOG = Logger.getLogger(KafkaConsumerUtil.class);
 
   private final String topic;
-  private final BiConsumer<K, V> consumer;
+  private final Consumer<ConsumerRecord<K, V>> consumer;
   private KafkaConsumer<K, V> kafkaConsumer;
   private volatile boolean running = true;
 
@@ -23,7 +24,7 @@ public class KafkaConsumerUtil<K, V> {
       String topic,
       String keyDeserializerClass,
       String valueDeserializerClass,
-      BiConsumer<K, V> consumer) {
+      Consumer<ConsumerRecord<K, V>> consumer) {
     LOG.info("Creating Kafka consumer for topic " + topic);
     this.topic = topic;
     this.consumer = consumer;
@@ -50,11 +51,11 @@ public class KafkaConsumerUtil<K, V> {
               LOG.info("Starting Kafka consumer for topic " + topic);
               while (running) {
                 kafkaConsumer
-                    .poll(100)
+                    .poll(Duration.ofMillis(100))
                     .forEach(
                         record -> {
                           if (running) {
-                            consumer.accept(record.key(), record.value());
+                            consumer.accept(record);
                           }
                         });
               }

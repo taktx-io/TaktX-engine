@@ -18,8 +18,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
@@ -29,11 +30,11 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
  */
 @Slf4j
 public class ExternalTasksForProcessDefinitionConsumer
-    implements BiConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> {
+    implements Consumer<ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO>> {
 
   private final Executor executor;
   private final TaktPropertiesHelper taktPropertiesHelper;
-  private final Map<String, List<BiConsumer<UUID, ExternalTaskTriggerDTO>>>
+  private final Map<String, List<Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>>>
       externalTaskTriggerConsumers = new HashMap<>();
   private final Map<String, AtomicBoolean> runningConsumers = new HashMap<>();
 
@@ -56,17 +57,17 @@ public class ExternalTasksForProcessDefinitionConsumer
   }
 
   public void registerExternalTaskTriggerConsumer(
-      String processDefinitionId, BiConsumer<UUID, ExternalTaskTriggerDTO> consumer) {
+      String processDefinitionId, Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> consumer) {
     log.info("Registering external task consumer for process definition {}", processDefinitionId);
-    List<BiConsumer<UUID, ExternalTaskTriggerDTO>> consumers =
+    List<Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>> consumers =
         externalTaskTriggerConsumers.computeIfAbsent(processDefinitionId, k -> new ArrayList<>());
     consumers.add(consumer);
     subscribeIfNotSubscribedAndConsumersAvailable(processDefinitionId);
   }
 
   @Override
-  public void accept(
-      ProcessDefinitionKey processDefinitionKey, ProcessDefinitionDTO processDefinitionDTO) {
+  public void accept(ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record) {
+    ProcessDefinitionKey processDefinitionKey = record.key();
     subscribeIfNotSubscribedAndConsumersAvailable(processDefinitionKey.getProcessDefinitionId());
   }
 
@@ -103,8 +104,7 @@ public class ExternalTasksForProcessDefinitionConsumer
                     externalTaskTriggerConsumers.get(processDefinitionId).size());
                 externalTaskTriggerConsumers
                     .getOrDefault(processDefinitionId, new ArrayList<>())
-                    .forEach(
-                        c -> c.accept(externalTriggerRecord.key(), externalTriggerRecord.value()));
+                    .forEach(c -> c.accept(externalTriggerRecord));
               }
             }
 

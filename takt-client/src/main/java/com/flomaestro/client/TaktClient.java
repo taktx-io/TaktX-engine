@@ -16,9 +16,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 @Slf4j
 public class TaktClient {
@@ -32,11 +33,10 @@ public class TaktClient {
   private final ExternalTaskResponder externalTaskResponder;
   @Getter private final TaktParameterResolverFactory parameterResolverFactory;
 
-  public TaktClient(
+  private TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ExternalTaskResponder externalTaskResponder,
-      TaktParameterResolverFactory parameterResolverFactory)
-      throws IOException {
+      TaktParameterResolverFactory parameterResolverFactory) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
@@ -73,7 +73,7 @@ public class TaktClient {
   }
 
   public void registerExternalTaskTriggerConsumer(
-      String processDefinitionId, BiConsumer<UUID, ExternalTaskTriggerDTO> consumer) {
+      String processDefinitionId, Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> consumer) {
     this.externalTaskConsumer.registerExternalTaskTriggerConsumer(processDefinitionId, consumer);
   }
 
@@ -81,7 +81,8 @@ public class TaktClient {
     return processInstanceProducer.startProcess(process, variables);
   }
 
-  public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
+  public void registerInstanceUpdateConsumer(
+      Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer) {
     this.processInstanceUpdateConsumer.addInstanceUpdateConsumer(consumer);
   }
 
@@ -138,7 +139,7 @@ public class TaktClient {
       this.kafkaBootstrapServers = System.getenv("KAFKA_BOOTSTRAP_SERVERS");
     }
 
-    public TaktClient build() throws IOException {
+    public TaktClient build() {
       if (tenant == null) {
         throw new IllegalArgumentException("TENANT environment variable is not set");
       }

@@ -1,76 +1,72 @@
 package com.flomaestro.engine.pi;
 
-import com.flomaestro.takt.dto.v_1_0_0.ProcessingStatisticsDTO;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.Timer.Sample;
+import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Singleton
 @Getter
+@RequiredArgsConstructor
 public class ProcessingStatistics {
-  private final AtomicInteger totalProcessInstancesStarted = new AtomicInteger(0);
-  private final AtomicInteger totalProcessInstancesFinished = new AtomicInteger(0);
-  private final AtomicInteger processInstancesStarted = new AtomicInteger(0);
-  private final AtomicInteger processInstancesFinished = new AtomicInteger(0);
-  private final AtomicInteger flowNodesStarted = new AtomicInteger(0);
-  private final AtomicInteger flowNodesContinued = new AtomicInteger(0);
-  private final AtomicInteger flowNodesFinished = new AtomicInteger(0);
-  private final AtomicInteger requestsReceived = new AtomicInteger(0);
-  private final AtomicInteger requestToProcessingLatencyMs = new AtomicInteger(0);
+  private final MeterRegistry meterRegistry;
+  private final Map<UUID, Sample> processInstanceTimers = new ConcurrentHashMap<>();
+  private Counter processInstancesStarted;
+  private Counter processInstancesFinished;
+  private Counter flowNodesStarted;
+  private Counter flowNodesContinued;
+  private Counter flowNodesFinished;
 
-  void reset() {
-    processInstancesStarted.set(0);
-    processInstancesFinished.set(0);
-    flowNodesStarted.set(0);
-    flowNodesContinued.set(0);
-    flowNodesFinished.set(0);
-    requestsReceived.set(0);
-    requestToProcessingLatencyMs.set(0);
+  @PostConstruct
+  void init() {
+    processInstancesStarted = meterRegistry.counter("takt.engine.process_instances_started");
+    processInstancesFinished = meterRegistry.counter("takt.engine.process_instances_finished");
+    flowNodesStarted = meterRegistry.counter("takt.engine.flow_nodes_started");
+    flowNodesContinued = meterRegistry.counter("takt.engine.flow_nodes_continued");
+    flowNodesFinished = meterRegistry.counter("takt.engine.flow_nodes_finished");
+  }
+
+  public void startTimerForProcessInstance(UUID processInstanceKey) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    processInstanceTimers.put(processInstanceKey, sample);
+  }
+
+  public void stopTimerForProcessInstance(UUID processInstanceKey, String processDefinitionKey) {
+    Timer.Sample sample = processInstanceTimers.remove(processInstanceKey);
+    if (sample != null) {
+      Timer timer =
+          meterRegistry.timer(
+              "takt.engine.process_instance_duration",
+              "processDefinitionKey",
+              processDefinitionKey);
+      sample.stop(timer);
+    }
   }
 
   public void increaseProcessInstancesStarted() {
-    totalProcessInstancesStarted.incrementAndGet();
-    processInstancesStarted.incrementAndGet();
+    processInstancesStarted.increment();
   }
 
   public void increaseProcessInstancesFinished() {
-    totalProcessInstancesFinished.incrementAndGet();
-    processInstancesFinished.incrementAndGet();
+    processInstancesFinished.increment();
   }
 
   public void increaseFlowNodesStarted() {
-    flowNodesStarted.incrementAndGet();
+    flowNodesStarted.increment();
   }
 
   public void increaseFlowNodesFinished() {
-    flowNodesFinished.incrementAndGet();
-  }
-
-  public void increaseRequestsReceived() {
-    requestsReceived.incrementAndGet();
-  }
-
-  public void addRequestToProcessingLatency(long latency) {
-    requestToProcessingLatencyMs.addAndGet((int) latency);
+    flowNodesFinished.increment();
   }
 
   public void increaseFlowNodesContinued() {
-    flowNodesContinued.incrementAndGet();
-  }
-
-  public ProcessingStatisticsDTO toDTO() {
-    ProcessingStatisticsDTO statisticsDTO = new ProcessingStatisticsDTO();
-    statisticsDTO.setTotalProcessInstancesFinished(totalProcessInstancesFinished.get());
-    statisticsDTO.setTotalProcessInstancesStarted(totalProcessInstancesStarted.get());
-    statisticsDTO.setFlowNodesFinished(flowNodesFinished.get());
-    statisticsDTO.setFlowNodesContinued(flowNodesContinued.get());
-    statisticsDTO.setFlowNodesStarted(flowNodesStarted.get());
-    statisticsDTO.setProcessInstancesFinished(processInstancesFinished.get());
-    statisticsDTO.setProcessInstancesStarted(processInstancesStarted.get());
-    statisticsDTO.setAverageRequestLatencyMs(
-        requestsReceived.get() == 0
-            ? 0
-            : (float) requestToProcessingLatencyMs.get() / requestsReceived.get());
-    return statisticsDTO;
+    flowNodesContinued.increment();
   }
 }

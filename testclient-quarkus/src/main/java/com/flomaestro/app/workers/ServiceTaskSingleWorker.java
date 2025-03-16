@@ -17,7 +17,7 @@ public class ServiceTaskSingleWorker {
 
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-  @TaktWorkerMethod(taskId = "service-task")
+  @TaktWorkerMethod(taskId = "service-task", autoComplete = false)
   public void doWork(ExternalTaskInstanceResponder externalTaskInstanceResponder) {
 
     executor.submit(

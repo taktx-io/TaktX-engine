@@ -16,6 +16,7 @@ import com.flomaestro.engine.pi.FlowNodeInstancesProcessor;
 import com.flomaestro.engine.pi.Forwarder;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.ProcessInstanceProcessor;
+import com.flomaestro.engine.pi.ProcessingStatistics;
 import com.flomaestro.engine.pi.processor.IoMappingProcessor;
 import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
@@ -30,7 +31,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessingStatisticsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SchedulableMessageDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ScheduleKeyDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
@@ -40,6 +40,7 @@ import com.flomaestro.takt.util.TaktUUIDSerde;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.UUID;
@@ -68,8 +69,6 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
       CORRELATION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
-  public static final ObjectMapperSerde<ProcessingStatisticsDTO> PROCESSING_STATISTICS_SERDE =
-      new ObjectMapperSerde<>(ProcessingStatisticsDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
@@ -115,6 +114,8 @@ public class TopologyProducer {
 
   @ConfigProperty(name = "quarkus.profile")
   String activeProfiles;
+
+  @Inject ProcessingStatistics processingStatistics;
 
   @Produces
   public Topology buildTopology() {
@@ -239,22 +240,12 @@ public class TopologyProducer {
                     forwarder,
                     tenantNamespaceNameWrapper,
                     flowNodeInstancesProcessor,
-                    clock),
+                    clock,
+                    processingStatistics),
             tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
-        .branch(
-            (key, value) -> value instanceof ProcessingStatisticsDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair((String) key, (ProcessingStatisticsDTO) value))
-                        .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.PROCESSING_STATISTICS_TOPIC.getTopicName()),
-                            Produced.with(Serdes.String(), PROCESSING_STATISTICS_SERDE))))
         .branch(
             (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(

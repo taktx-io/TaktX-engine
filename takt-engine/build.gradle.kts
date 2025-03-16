@@ -17,7 +17,13 @@ dependencies {
     implementation("io.quarkus:quarkus-jaxb")
     implementation("io.quarkus:quarkus-resteasy-client")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
-//    implementation("io.quarkus:quarkus-container-image-docker")
+
+    // Micrometer
+    implementation("io.quarkus:quarkus-micrometer")
+    implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
+    implementation("io.quarkus:quarkus-kafka-client")
+
+    //    implementation("io.quarkus:quarkus-container-image-docker")
 //    implementation("io.quarkus:quarkus-cache")
 //    implementation("io.quarkus:quarkus-smallrye-reactive-messaging-kafka")
 //    implementation("io.quarkus:quarkus-arc")

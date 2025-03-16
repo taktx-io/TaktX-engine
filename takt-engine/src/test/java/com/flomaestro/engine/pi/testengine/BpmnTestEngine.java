@@ -49,11 +49,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -82,8 +83,8 @@ public class BpmnTestEngine {
   private final Map<UUID, VariablesDTO> variablesMap = new ConcurrentHashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
       new ConcurrentHashMap<>();
-  private final Map<String, BiConsumer<UUID, ExternalTaskTriggerDTO>> externalTaskTriggerConsumers =
-      new ConcurrentHashMap<>();
+  private final Map<String, Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>>
+      externalTaskTriggerConsumers = new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceKey;
   private ExternalTaskTriggerDTO activeExternalTaskTrigger;
@@ -145,7 +146,7 @@ public class BpmnTestEngine {
               .withNamespace("test_namespace")
               .withBootstrapServers(kafkaBootstrapServers)
               .build();
-      BiConsumer<UUID, InstanceUpdateDTO> consumer = BpmnTestEngine.this::consume;
+      Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer = BpmnTestEngine.this::consume;
       taktClient.registerInstanceUpdateConsumer(consumer);
       taktClient.start();
 
@@ -174,17 +175,19 @@ public class BpmnTestEngine {
             TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.deserializer().getClass().getName(),
             ProcessInstanceTriggerDeserializer.class.getName(),
-            this::consume);
+            this::consumeProcessInstanceTrigger);
     messageEventConsumer =
         new KafkaConsumerUtil<>(
             "test-group",
             TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
             MessageEventKeyDeserializer.class.getName(),
             MessageEventDeserializer.class.getName(),
-            this::consume);
+            this::consumeMessageEvent);
   }
 
-  public void consume(UUID key2, ProcessInstanceTriggerDTO trigger) {
+  public void consumeProcessInstanceTrigger(
+      ConsumerRecord<UUID, ProcessInstanceTriggerDTO> record) {
+    ProcessInstanceTriggerDTO trigger = record.value();
     LOG.info("Received process instance trigger: " + trigger + " " + trigger.getClass().getName());
     if (trigger instanceof StartCommandDTO startCommand) {
       if (startCommand.getParentProcessInstanceKey() != null) {
@@ -200,7 +203,8 @@ public class BpmnTestEngine {
     }
   }
 
-  public void consume(MessageEventKeyDTO key, MessageEventDTO messageEvent) {
+  public void consumeMessageEvent(ConsumerRecord<MessageEventKeyDTO, MessageEventDTO> record) {
+    MessageEventDTO messageEvent = record.value();
     LOG.info("Received message event: " + messageEvent);
     ConcurrentLinkedQueue<MessageEventDTO> messageEvents =
         messageSubscriptionMap.computeIfAbsent(
@@ -208,8 +212,11 @@ public class BpmnTestEngine {
     messageEvents.add(messageEvent);
   }
 
-  public void consume(UUID key, ExternalTaskTriggerDTO externalTaskTrigger) {
+  public void consumeExternalTaskTrigger(ConsumerRecord<UUID, ExternalTaskTriggerDTO> record) {
+    ExternalTaskTriggerDTO externalTaskTrigger = record.value();
+
     LOG.info("Received external task trigger: " + externalTaskTrigger);
+
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
         externalTaskTriggerQueueMap.computeIfAbsent(
             externalTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
@@ -221,7 +228,9 @@ public class BpmnTestEngine {
             + System.identityHashCode(externalTaskTriggerQueueMap));
   }
 
-  public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
+  public void consume(ConsumerRecord<UUID, InstanceUpdateDTO> record) {
+    InstanceUpdateDTO instanceUpdate = record.value();
+    UUID processInstanceKey = record.key();
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + processInstanceKey + " " + instanceUpdate);
 
@@ -286,7 +295,8 @@ public class BpmnTestEngine {
     definitionsBeingDeployed =
         taktClient.deployProcessDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
 
-    BiConsumer<UUID, ExternalTaskTriggerDTO> externalTaskConsumer = this::consume;
+    Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> externalTaskConsumer =
+        this::consumeExternalTaskTrigger;
 
     if (externalTaskTriggerConsumers.get(
             definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId())
@@ -341,11 +351,10 @@ public class BpmnTestEngine {
     List<String> elementIdIndex = new ArrayList<>();
     flowElementsDTO
         .getElements()
-        .entrySet()
         .forEach(
-            e -> {
-              elementIdIndex.add(e.getKey());
-              if (e.getValue() instanceof SubProcessDTO subProcessDTO) {
+            (key, value) -> {
+              elementIdIndex.add(key);
+              if (value instanceof SubProcessDTO subProcessDTO) {
                 elementIdIndex.addAll(indexProcessDefinition(subProcessDTO.getElements()));
               }
             });

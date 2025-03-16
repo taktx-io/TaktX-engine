@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
@@ -20,8 +21,7 @@ public class TaktPropertiesHelper {
 
   private final Properties commonProperties;
 
-  public TaktPropertiesHelper(String tenant, String namespace, String kafkaBootstrapServers)
-      throws IOException {
+  public TaktPropertiesHelper(String tenant, String namespace, String kafkaBootstrapServers) {
     this.tenant = tenant;
     this.namespace = namespace;
     this.kafkaBootstrapServers = kafkaBootstrapServers;
@@ -40,7 +40,8 @@ public class TaktPropertiesHelper {
     return props;
   }
 
-  public Properties loadCommonProperties() throws IOException {
+  @SneakyThrows
+  public Properties loadCommonProperties() {
     String taktKafkaPropertiesFile = System.getenv("TAKT_PROPERTIES_FILE");
     Properties properties = new Properties();
     if (taktKafkaPropertiesFile != null) {
@@ -51,6 +52,9 @@ public class TaktPropertiesHelper {
           resourceAsStream = new FileInputStream(taktKafkaPropertiesFile);
         }
         properties.load(resourceAsStream);
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "Failed to load properties from " + taktKafkaPropertiesFile, e);
       } finally {
         if (resourceAsStream != null) {
           resourceAsStream.close();

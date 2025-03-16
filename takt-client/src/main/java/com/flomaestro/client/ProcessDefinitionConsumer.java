@@ -6,7 +6,6 @@ import com.flomaestro.takt.Topics;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
@@ -17,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -32,7 +31,7 @@ public class ProcessDefinitionConsumer {
   private final Map<ProcessDefinitionKey, String> storedHashes = new ConcurrentHashMap<>();
   private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitionMap =
       new ConcurrentHashMap<>();
-  private final Map<UUID, BiConsumer<ProcessDefinitionKey, ProcessDefinitionDTO>>
+  private final Map<UUID, Consumer<ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO>>>
       processDefinitionUpdateConsumers = new ConcurrentHashMap<>();
   private KafkaConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> definitionActivationConsumer;
 
@@ -43,7 +42,7 @@ public class ProcessDefinitionConsumer {
     this.executor = executor;
   }
 
-  public void subscribeToDefinitionRecords() throws IOException {
+  public void subscribeToDefinitionRecords() {
     definitionActivationConsumer = createConsumer();
 
     String prefixedTopicName =
@@ -86,8 +85,7 @@ public class ProcessDefinitionConsumer {
                   "Notifying {} consumers of process definition update",
                   processDefinitionUpdateConsumers.size());
               processDefinitionUpdateConsumers.forEach(
-                  (key, consumer) ->
-                      consumer.accept(activationRecord.key(), activationRecord.value()));
+                  (key, consumer) -> consumer.accept(activationRecord));
             }
           }
 
@@ -124,7 +122,7 @@ public class ProcessDefinitionConsumer {
   }
 
   public UUID subscribeToProcessDefinitionUpdates(
-      BiConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> consumer) {
+      Consumer<ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO>> consumer) {
     UUID consumerKey = UUID.randomUUID();
     processDefinitionUpdateConsumers.put(consumerKey, consumer);
     return consumerKey;

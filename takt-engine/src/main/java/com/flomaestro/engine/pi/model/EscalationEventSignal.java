@@ -2,10 +2,8 @@ package com.flomaestro.engine.pi.model;
 
 import com.flomaestro.engine.pd.model.EventSignal;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 
 @Getter
-@SuperBuilder
 public class EscalationEventSignal extends EventSignal {
 
   private final String message;

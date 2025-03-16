@@ -262,80 +262,95 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   TaskInstanceDTO map(TaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   BoundaryEventInstanceDTO map(BoundaryEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   StartEventInstanceDTO map(StartEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   IntermediateCatchEventInstanceDTO map(
       IntermediateCatchEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   EndEventInstanceDTO map(EndEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   IntermediateThrowEventInstanceDTO map(
       IntermediateThrowEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ServiceTaskInstanceDTO map(ServiceTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   SendTaskInstanceDTO map(SendTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ReceiveTaskInstanceDTO map(ReceiveTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   SubProcessInstanceDTO map(SubProcessInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   CallActivityInstanceDTO map(CallActivityInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   MultiInstanceInstanceDTO map(MultiInstanceInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ExclusiveGatewayInstanceDTO map(
       ExclusiveGatewayInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   InclusiveGatewayInstanceDTO map(
       InclusiveGatewayInstance source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementId",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ParallelGatewayInstanceDTO map(
       ParallelGatewayInstance source, @Context FlowElements flowElements);
 

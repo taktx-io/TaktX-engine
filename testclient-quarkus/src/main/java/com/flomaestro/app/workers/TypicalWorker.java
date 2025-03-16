@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 public class TypicalWorker {
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-  @TaktWorkerMethod(taskId = "benchmark-task-200")
+  @TaktWorkerMethod(taskId = "benchmark-task-200", autoComplete = false)
   public void doWork(
       ExternalTaskInstanceResponder externalTaskInstanceResponder,
       ExternalTaskTriggerDTO externalTaskInstanceDTO,

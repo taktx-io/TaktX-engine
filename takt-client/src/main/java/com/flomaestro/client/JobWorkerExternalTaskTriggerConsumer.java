@@ -10,12 +10,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 @Slf4j
 public class JobWorkerExternalTaskTriggerConsumer
-    implements BiConsumer<UUID, ExternalTaskTriggerDTO> {
+    implements Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> {
 
   private final TaktClient taktClient;
   private final Object beanInstance;
@@ -42,7 +43,8 @@ public class JobWorkerExternalTaskTriggerConsumer
   }
 
   @Override
-  public void accept(UUID uuid, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
+  public void accept(ConsumerRecord<UUID, ExternalTaskTriggerDTO> record) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO = record.value();
     Method method = workerMethods.get(externalTaskTriggerDTO.getExternalTaskId());
     if (method == null) {
       log.error(
@@ -58,7 +60,7 @@ public class JobWorkerExternalTaskTriggerConsumer
     }
 
     TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
-    boolean autoComplete = workerMethod.autoComplate();
+    boolean autoComplete = workerMethod.autoComplete();
 
     Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
     boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
