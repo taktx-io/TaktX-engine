@@ -13,7 +13,7 @@ dependencies {
     implementation(project(":takt-shared"))
     implementation(project(":takt-client"))
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
-    implementation("io.quarkus:quarkus-smallrye-reactive-messaging-kafka")
+    implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("io.quarkus:quarkus-scheduler")
     implementation("io.quarkus:quarkus-jaxb")
     implementation("io.quarkus:quarkus-arc")

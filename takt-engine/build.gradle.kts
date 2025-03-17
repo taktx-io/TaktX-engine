@@ -1,7 +1,7 @@
 plugins {
     id("java")
     id("com.diffplug.spotless")
-    id("io.quarkus") version "3.15.1"
+    id("io.quarkus") version "3.19.3"
     id("com.google.cloud.tools.jib") version "3.4.4"
 }
 
@@ -36,7 +36,7 @@ dependencies {
 
     testImplementation(project(":takt-client"))
     testImplementation("io.quarkus:quarkus-jaxb")
-    testImplementation("io.quarkus:quarkus-smallrye-reactive-messaging-kafka")
+//    testImplementation("io.quarkus:quarkus-messaging-kafka")
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-junit5-mockito")
     testImplementation("io.quarkus:quarkus-jacoco")
