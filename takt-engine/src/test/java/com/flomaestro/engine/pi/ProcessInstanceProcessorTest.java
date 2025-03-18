@@ -194,7 +194,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsWaiting("SubTask_1")
-        .terminateElemeent()
+        .terminateElementInstance()
         .waitUntilCompleted()
         .assertThatProcess()
         .hasTerminatedElementWithId("SubProcess_1")

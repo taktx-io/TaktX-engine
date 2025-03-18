@@ -2,12 +2,10 @@ package com.flomaestro.client;
 
 import com.flomaestro.client.serdes.ProcessInstanceTriggerSerializer;
 import com.flomaestro.takt.Topics;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionKey;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
-import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
+import com.flomaestro.takt.dto.v_1_0_0.*;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
 import com.flomaestro.takt.util.TaktUUIDSerializer;
+import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -42,5 +40,20 @@ public class ProcessInstanceProducer {
             processInstanceKey,
             startCommand));
     return processInstanceKey;
+  }
+
+  public void terminateProcessInstance(UUID processInstanceKey) {
+    terminateElementInstance(processInstanceKey, List.of());
+  }
+
+  public void terminateElementInstance(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
+    TerminateTriggerDTO terminateTrigger =
+        new TerminateTriggerDTO(processInstanceKey, elementInstanceIdPath);
+    processInstanceTriggerEmitter.send(
+        new ProducerRecord<>(
+            kafkaPropertiesHelper.getPrefixedTopicName(
+                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+            processInstanceKey,
+            terminateTrigger));
   }
 }

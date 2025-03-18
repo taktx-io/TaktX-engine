@@ -7,6 +7,7 @@ import com.flomaestro.takt.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -128,6 +129,16 @@ public class TaktClient {
   public ExternalTaskInstanceResponder respondToExternalTask(
       ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return externalTaskResponder.responderForExternalTaskTrigger(externalTaskTriggerDTO);
+  }
+
+  public void terminateElementInstance(UUID activeProcessInstanceKey) {
+    processInstanceProducer.terminateProcessInstance(activeProcessInstanceKey);
+  }
+
+  public void terminateElementInstance(
+      UUID activeProcessInstanceKey, List<Long> elementInstanceIdPath) {
+    processInstanceProducer.terminateElementInstance(
+        activeProcessInstanceKey, elementInstanceIdPath);
   }
 
   public static class TaktClientBuilder {

@@ -26,7 +26,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessInstanceUpdateDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.SubProcessDTO;
-import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
 import java.io.IOException;
 import java.time.Clock;
@@ -89,7 +88,6 @@ public class BpmnTestEngine {
   private UUID latestInstantiatedProcessInstanceKey;
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
-  private KafkaProducerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
 
@@ -115,7 +113,6 @@ public class BpmnTestEngine {
     taktClient.stop();
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
-    processInstanceTriggerEmitter.close();
   }
 
   public void init() {
@@ -145,11 +142,6 @@ public class BpmnTestEngine {
       throw new IllegalStateException(e);
     }
 
-    processInstanceTriggerEmitter =
-        new KafkaProducerUtil(
-            TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
-            CBORObjectMapperSerializer.class.getName());
     processInstanceTriggerConsumer =
         new KafkaConsumerUtil<>(
             "test-group",
@@ -540,8 +532,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine terminateProcessInstance() {
-    processInstanceTriggerEmitter.send(
-        activeProcessInstanceKey, new TerminateTriggerDTO(activeProcessInstanceKey, List.of()));
+    taktClient.terminateElementInstance(activeProcessInstanceKey);
     return this;
   }
 
@@ -657,10 +648,6 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public ExternalTaskAssert assertThatExternalTask() {
-    return new ExternalTaskAssert(activeExternalTaskTrigger, this);
-  }
-
   public ProcessInstanceDTO getProcessInstance(UUID parentInstanceKey) {
     return processInstanceMap.get(parentInstanceKey);
   }
@@ -706,11 +693,9 @@ public class BpmnTestEngine {
     return waitUntilActivityHasState(elementId, ActtivityStateEnum.WAITING, DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine terminateElemeent() {
-    processInstanceTriggerEmitter.send(
-        activeProcessInstanceKey,
-        new TerminateTriggerDTO(
-            activeProcessInstanceKey, List.of(selectedFlowNodeInstance.getElementInstanceId())));
+  public BpmnTestEngine terminateElementInstance() {
+    taktClient.terminateElementInstance(
+        activeProcessInstanceKey, List.of(selectedFlowNodeInstance.getElementInstanceId()));
     return this;
   }
 
