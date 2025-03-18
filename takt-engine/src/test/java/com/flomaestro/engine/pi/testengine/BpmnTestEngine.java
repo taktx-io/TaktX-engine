@@ -69,8 +69,6 @@ public class BpmnTestEngine {
   private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTriggerDTO>>
       externalTaskTriggerQueueMap = new ConcurrentHashMap<>();
-  private final Map<ProcessDefinitionKey, ConcurrentLinkedQueue<ProcessInstanceTriggerDTO>>
-      definitionToInstancesMap = new ConcurrentHashMap<>();
   private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new ConcurrentHashMap<>();
   private final Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceMap =
       new ConcurrentHashMap<>();
@@ -169,10 +167,6 @@ public class BpmnTestEngine {
                 startCommand.getParentProcessInstanceKey(), k -> new ConcurrentSkipListSet<>());
         uuids1.add(startCommand.getProcessInstanceKey());
       }
-      ConcurrentLinkedQueue<ProcessInstanceTriggerDTO> processInstanceKeyList =
-          definitionToInstancesMap.computeIfAbsent(
-              startCommand.getProcessDefinitionKey(), k -> new ConcurrentLinkedQueue<>());
-      processInstanceKeyList.add(trigger);
     }
   }
 
