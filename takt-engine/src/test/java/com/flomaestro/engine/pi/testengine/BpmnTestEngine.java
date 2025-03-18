@@ -9,10 +9,6 @@ import com.flomaestro.takt.dto.v_1_0_0.ActtivityStateEnum;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageEventTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseResultDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseType;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowElementsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceDTO;
@@ -55,7 +51,6 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -95,8 +90,6 @@ public class BpmnTestEngine {
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
   private KafkaProducerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
-  private KafkaProducerUtil<String, DefinitionsTriggerDTO> processDefinitionsTriggerEmitter;
-  private KafkaProducerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
 
@@ -122,8 +115,6 @@ public class BpmnTestEngine {
     taktClient.stop();
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
-    messageEventEmitter.close();
-    processDefinitionsTriggerEmitter.close();
     processInstanceTriggerEmitter.close();
   }
 
@@ -158,16 +149,6 @@ public class BpmnTestEngine {
         new KafkaProducerUtil(
             TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
             TopologyProducer.PROCESS_INSTANCE_KEY_SERDE.serializer().getClass().getName(),
-            CBORObjectMapperSerializer.class.getName());
-    processDefinitionsTriggerEmitter =
-        new KafkaProducerUtil<>(
-            TOPIC_TEST_PREFIX + Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName(),
-            StringSerializer.class.getName(),
-            CBORObjectMapperSerializer.class.getName());
-    messageEventEmitter =
-        new KafkaProducerUtil<>(
-            TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
-            CBORObjectMapperSerializer.class.getName(),
             CBORObjectMapperSerializer.class.getName());
     processInstanceTriggerConsumer =
         new KafkaConsumerUtil<>(
@@ -274,20 +255,6 @@ public class BpmnTestEngine {
     ExternalTaskTriggerDTO poll = externalTaskTriggers.poll();
     log.info("polled external task queue {} {}", externalTaskTriggers, poll);
     return poll;
-  }
-
-  public void triggerExternalTaskResponse(
-      UUID processInstanceKey,
-      ExternalTaskTriggerDTO externalTaskTrigger,
-      ExternalTaskResponseResultDTO externalTaskResponseResult,
-      VariablesDTO variables) {
-    processInstanceTriggerEmitter.send(
-        processInstanceKey,
-        new ExternalTaskResponseTriggerDTO(
-            externalTaskTrigger.getProcessInstanceKey(),
-            externalTaskTrigger.getElementInstanceIdPath(),
-            externalTaskResponseResult,
-            variables));
   }
 
   public BpmnTestEngine deployProcessDefinition(String filename) throws IOException {
@@ -470,50 +437,33 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine andRespondWithSuccess(VariablesDTO of) {
-    triggerExternalTaskResponse(
-        activeProcessInstanceKey,
-        activeExternalTaskTrigger,
-        new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.SUCCESS, true, null, null, null, 0L),
-        of);
+  public BpmnTestEngine andRespondWithSuccess(VariablesDTO variables) {
+    taktClient
+        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondSuccess(variables.getVariables());
     return this;
   }
 
   public BpmnTestEngine andRespondWithPromise(String newTimeout) {
-    triggerExternalTaskResponse(
-        activeProcessInstanceKey,
-        activeExternalTaskTrigger,
-        new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.PROMISE,
-            true,
-            null,
-            null,
-            null,
-            Duration.parse(newTimeout).toMillis()),
-        VariablesDTO.empty());
+    taktClient
+        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondPromise(Duration.parse(newTimeout));
     return this;
   }
 
   public BpmnTestEngine andRespondWithFailure(
       boolean allowRetry, String name, String code, String message, VariablesDTO variables) {
-    triggerExternalTaskResponse(
-        activeProcessInstanceKey,
-        activeExternalTaskTrigger,
-        new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ERROR, allowRetry, name, message, code, 0L),
-        variables);
+    taktClient
+        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondError(allowRetry, code, name, message, variables);
     return this;
   }
 
   public BpmnTestEngine andRespondWithEscalation(
       String name, String code, String message, VariablesDTO variables) {
-    triggerExternalTaskResponse(
-        activeProcessInstanceKey,
-        activeExternalTaskTrigger,
-        new ExternalTaskResponseResultDTO(
-            ExternalTaskResponseType.ESCALATION, true, name, message, code, 0L),
-        variables);
+    taktClient
+        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondEscalation(name, message, code);
     return this;
   }
 
@@ -648,7 +598,7 @@ public class BpmnTestEngine {
     LOG.info("Sending message: " + messageName);
     DefinitionMessageEventTriggerDTO messageEvent =
         new DefinitionMessageEventTriggerDTO(messageName, variables);
-    messageEventEmitter.send(messageEvent.toMessageEventKey(), messageEvent);
+    taktClient.sendMessage(messageEvent);
     return this;
   }
 
@@ -703,7 +653,7 @@ public class BpmnTestEngine {
     LOG.info("Sending message: " + messageName);
     CorrelationMessageEventTriggerDTO messageEvent =
         new CorrelationMessageEventTriggerDTO(messageName, correlationKey, variables);
-    messageEventEmitter.send(messageEvent.toMessageEventKey(), messageEvent);
+    taktClient.sendMessage(messageEvent);
     return this;
   }
 

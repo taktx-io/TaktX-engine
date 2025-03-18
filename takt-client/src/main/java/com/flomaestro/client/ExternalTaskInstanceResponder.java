@@ -60,36 +60,36 @@ public class ExternalTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondEscalation(EscalationEventException escalationEvent) {
+  public void respondEscalation(String name, String message, String code) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.ESCALATION,
-                true,
-                escalationEvent.getName(),
-                escalationEvent.getMessage(),
-                escalationEvent.getCode(),
-                0L),
+                ExternalTaskResponseType.ESCALATION, true, name, message, code, 0L),
             VariablesDTO.empty());
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondError(boolean allowRetry, String code, String name, String message) {
+  public void respondError(
+      boolean allowRetry, String code, String name, String message, VariablesDTO variables) {
 
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.ESCALATION, allowRetry, code, name, message, 0L),
-            VariablesDTO.empty());
+                ExternalTaskResponseType.ERROR, allowRetry, name, message, code, 0L),
+            variables);
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
+  }
+
+  public void respondError(boolean allowRetry, String code, String name, String message) {
+    respondError(allowRetry, code, name, message, VariablesDTO.empty());
   }
 
   public void respondPromise(Duration duration) {

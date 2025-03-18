@@ -2,11 +2,7 @@ package com.flomaestro.client;
 
 import com.flomaestro.client.annotation.TaktDeployment;
 import com.flomaestro.client.annotation.TaktWorker;
-import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
-import com.flomaestro.takt.dto.v_1_0_0.InstanceUpdateDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ParsedDefinitionsDTO;
-import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
-import com.flomaestro.takt.dto.v_1_0_0.VariablesDTO;
+import com.flomaestro.takt.dto.v_1_0_0.*;
 import com.flomaestro.takt.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,6 +27,7 @@ public class TaktClient {
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ExternalTaskResponder externalTaskResponder;
+  private final MessageEventSender messageEventSender;
   @Getter private final TaktParameterResolverFactory parameterResolverFactory;
 
   private TaktClient(
@@ -41,6 +38,8 @@ public class TaktClient {
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
+    this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
+
     this.processInstanceUpdateConsumer =
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
     this.externalTaskConsumer =
@@ -79,6 +78,10 @@ public class TaktClient {
 
   public UUID startProcess(String process, VariablesDTO variables) {
     return processInstanceProducer.startProcess(process, variables);
+  }
+
+  public void sendMessage(MessageEventDTO messageEventDTO) {
+    messageEventSender.sendMessage(messageEventDTO);
   }
 
   public void registerInstanceUpdateConsumer(
