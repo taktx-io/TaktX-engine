@@ -21,7 +21,7 @@ public class LicenseInfoConfig {
 
     void onStart(@Observes StartupEvent ev) {
         String licenseInfo = """
-            TaktX vX.X.X - Copyright (c) 2025 [Your Company Name]
+            TaktX vX.X.X - Copyright (c) 2025 TaktX B.V. All rights reserved.
             Licensed under TaktX Business Source License V1.0. Free use limited to 3 Kafka partitions.
             See [https://taktx.io/license] for details. For commercial use, contact us at [https://taktx.io/contact].
             """;
