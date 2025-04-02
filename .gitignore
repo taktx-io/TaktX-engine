@@ -2,3 +2,4 @@
 /.gradle/
 /.quarkus/
 /build/
+.DS_Store
