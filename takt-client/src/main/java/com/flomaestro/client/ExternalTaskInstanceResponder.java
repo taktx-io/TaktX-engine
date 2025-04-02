@@ -1,5 +1,16 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
@@ -41,7 +52,7 @@ public class ExternalTaskInstanceResponder {
 
   public void respondSuccess(Object variable) {
     Map<String, JsonNode> variablesMap =
-        variable == null ? Map.of() : OBJECT_MAPPER.convertValue(variable, LinkedHashMap.class);
+        variable == null ? Map.of() : OBJECT_MAPPER.convertValue(variable, new TypeReference<LinkedHashMap<String, JsonNode>>() {});
     respondSuccess(variablesMap);
   }
 

@@ -1,20 +1,27 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import com.fasterxml.jackson.databind.type.SimpleType;
 import com.flomaestro.takt.dto.v_1_0_0.InstanceScheduleKeyDTO;
-import java.io.IOException;
 
 public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case InstanceScheduleKeyDTO instanceScheduleKeyDTO -> "I";
-        //      case DefinitionScheduleKeyDTO definitionScheduleKeyDTO -> "D";
+      case InstanceScheduleKeyDTO ignored -> "I";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -30,10 +37,9 @@ public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id) throws IOException {
+  public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "I" -> SimpleType.construct(InstanceScheduleKeyDTO.class);
-        //      case "D" -> SimpleType.construct(DefinitionScheduleKeyDTO.class);
+      case "I" -> context.constructType(InstanceScheduleKeyDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

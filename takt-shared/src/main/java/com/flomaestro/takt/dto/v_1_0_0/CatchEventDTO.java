@@ -1,3 +1,13 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,7 +21,7 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public abstract class CatchEventDTO extends EventDTO implements WithIoMappingDTO {
+public abstract class CatchEventDTO extends EventDTO {
   @JsonProperty("e")
   protected Set<EventDefinitionDTO> eventDefinitions;
 
@@ -42,11 +52,4 @@ public abstract class CatchEventDTO extends EventDTO implements WithIoMappingDTO
         .collect(Collectors.toSet());
   }
 
-  @JsonIgnore
-  public Set<LinkEventDefinitionDTO> getLinkventDefinitions() {
-    return eventDefinitions.stream()
-        .filter(LinkEventDefinitionDTO.class::isInstance)
-        .map(LinkEventDefinitionDTO.class::cast)
-        .collect(Collectors.toSet());
-  }
 }

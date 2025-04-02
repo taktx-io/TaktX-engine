@@ -1,23 +1,31 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import com.fasterxml.jackson.databind.type.SimpleType;
 import com.flomaestro.takt.dto.v_1_0_0.FixedRateMessageScheduleDTO;
 import com.flomaestro.takt.dto.v_1_0_0.OneTimeScheduleDTO;
 import com.flomaestro.takt.dto.v_1_0_0.RecurringMessageScheduleDTO;
-import java.io.IOException;
 
 public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case RecurringMessageScheduleDTO recurringMessageSchedulerDTO -> "R";
-      case FixedRateMessageScheduleDTO parsedDefinitionsDTO -> "F";
-      case OneTimeScheduleDTO oneTimeSchedulerDTO -> "O";
+      case RecurringMessageScheduleDTO ignored -> "R";
+      case FixedRateMessageScheduleDTO ignored -> "F";
+      case OneTimeScheduleDTO ignored -> "O";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -33,11 +41,11 @@ public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id) throws IOException {
+  public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "R" -> SimpleType.construct(RecurringMessageScheduleDTO.class);
-      case "F" -> SimpleType.construct(FixedRateMessageScheduleDTO.class);
-      case "O" -> SimpleType.construct(OneTimeScheduleDTO.class);
+      case "R" -> context.constructType(RecurringMessageScheduleDTO.class);
+      case "F" -> context.constructType(FixedRateMessageScheduleDTO.class);
+      case "O" -> context.constructType(OneTimeScheduleDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

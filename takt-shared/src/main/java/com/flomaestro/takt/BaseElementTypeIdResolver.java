@@ -1,10 +1,19 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import com.fasterxml.jackson.databind.type.SimpleType;
 import com.flomaestro.takt.dto.v_1_0_0.BoundaryEventDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CallActivityDTO;
 import com.flomaestro.takt.dto.v_1_0_0.EndEventDTO;
@@ -27,35 +36,34 @@ import com.flomaestro.takt.dto.v_1_0_0.SubProcessDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TaskDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateEventDefinitionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TimerEventDefinitionDTO;
-import java.io.IOException;
 
 public class BaseElementTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case BoundaryEventDTO boundaryEventDTO -> "B";
-      case StartEventDTO startEventDTO -> "S";
-      case IntermediateCatchEventDTO intermediateCatchEventDTO -> "IC";
-      case IntermediateThrowEventDTO intermediateThrowEventDTO -> "IT";
-      case EndEventDTO endEventDTO -> "E";
-      case InclusiveGatewayDTO inclusiveGatewayDTO -> "IG";
-      case ParallelGatewayDTO parallelGatewayDTO -> "PG";
-      case ExclusiveGatewayDTO exclusiveGatewayDTO -> "EG";
-      case SubProcessDTO subProcessDTO -> "SP";
-      case CallActivityDTO callActivityDTO -> "CA";
-      case ReceiveTaskDTO receiveTaskDTO -> "RT";
-      case SendTaskDTO sendTaskDTO -> "ST";
-      case ServiceTaskDTO serviceTaskDTO -> "SV";
-      case TaskDTO taskDTO -> "T";
-      case SequenceFlowDTO sequenceFlowDTO -> "Q";
-      case ProcessDTO processDTO -> "P";
-      case LinkEventDefinitionDTO linkEventDefinitionDTO -> "LE";
-      case TerminateEventDefinitionDTO terminateEventDefinitionDTO -> "TE";
-      case EscalationEventDefinitionDTO escalationEventDefinitionDTO -> "ES";
-      case TimerEventDefinitionDTO timerEventDefinitionDTO -> "TM";
-      case ErrorEventDefinitionDTO errorEventDefinitionDTO -> "ER";
-      case MessageEventDefinitionDTO messageEventDefinitionDTO -> "ME";
+      case BoundaryEventDTO ignored -> "B";
+      case StartEventDTO ignored -> "S";
+      case IntermediateCatchEventDTO ignored -> "IC";
+      case IntermediateThrowEventDTO ignored -> "IT";
+      case EndEventDTO ignored -> "E";
+      case InclusiveGatewayDTO ignored -> "IG";
+      case ParallelGatewayDTO ignored -> "PG";
+      case ExclusiveGatewayDTO ignored -> "EG";
+      case SubProcessDTO ignored -> "SP";
+      case CallActivityDTO ignored -> "CA";
+      case ReceiveTaskDTO ignored -> "RT";
+      case SendTaskDTO ignored -> "ST";
+      case ServiceTaskDTO ignored -> "SV";
+      case TaskDTO ignored -> "T";
+      case SequenceFlowDTO ignored -> "Q";
+      case ProcessDTO ignored -> "P";
+      case LinkEventDefinitionDTO ignored -> "LE";
+      case TerminateEventDefinitionDTO ignored -> "TE";
+      case EscalationEventDefinitionDTO ignored -> "ES";
+      case TimerEventDefinitionDTO ignored -> "TM";
+      case ErrorEventDefinitionDTO ignored -> "ER";
+      case MessageEventDefinitionDTO ignored -> "ME";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -71,30 +79,30 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id) throws IOException {
+  public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "B" -> SimpleType.construct(BoundaryEventDTO.class);
-      case "S" -> SimpleType.construct(StartEventDTO.class);
-      case "IC" -> SimpleType.construct(IntermediateCatchEventDTO.class);
-      case "IT" -> SimpleType.construct(IntermediateThrowEventDTO.class);
-      case "E" -> SimpleType.construct(EndEventDTO.class);
-      case "IG" -> SimpleType.construct(InclusiveGatewayDTO.class);
-      case "PG" -> SimpleType.construct(ParallelGatewayDTO.class);
-      case "EG" -> SimpleType.construct(ExclusiveGatewayDTO.class);
-      case "SP" -> SimpleType.construct(SubProcessDTO.class);
-      case "CA" -> SimpleType.construct(CallActivityDTO.class);
-      case "RT" -> SimpleType.construct(ReceiveTaskDTO.class);
-      case "ST" -> SimpleType.construct(SendTaskDTO.class);
-      case "SV" -> SimpleType.construct(ServiceTaskDTO.class);
-      case "T" -> SimpleType.construct(TaskDTO.class);
-      case "Q" -> SimpleType.construct(SequenceFlowDTO.class);
-      case "P" -> SimpleType.construct(ProcessDTO.class);
-      case "LE" -> SimpleType.construct(LinkEventDefinitionDTO.class);
-      case "TE" -> SimpleType.construct(TerminateEventDefinitionDTO.class);
-      case "ES" -> SimpleType.construct(EscalationEventDefinitionDTO.class);
-      case "TM" -> SimpleType.construct(TimerEventDefinitionDTO.class);
-      case "ER" -> SimpleType.construct(ErrorEventDefinitionDTO.class);
-      case "ME" -> SimpleType.construct(MessageEventDefinitionDTO.class);
+      case "B" -> context.constructType(BoundaryEventDTO.class);
+      case "S" -> context.constructType(StartEventDTO.class);
+      case "IC" -> context.constructType(IntermediateCatchEventDTO.class);
+      case "IT" -> context.constructType(IntermediateThrowEventDTO.class);
+      case "E" -> context.constructType(EndEventDTO.class);
+      case "IG" -> context.constructType(InclusiveGatewayDTO.class);
+      case "PG" -> context.constructType(ParallelGatewayDTO.class);
+      case "EG" -> context.constructType(ExclusiveGatewayDTO.class);
+      case "SP" -> context.constructType(SubProcessDTO.class);
+      case "CA" -> context.constructType(CallActivityDTO.class);
+      case "RT" -> context.constructType(ReceiveTaskDTO.class);
+      case "ST" -> context.constructType(SendTaskDTO.class);
+      case "SV" -> context.constructType(ServiceTaskDTO.class);
+      case "T" -> context.constructType(TaskDTO.class);
+      case "Q" -> context.constructType(SequenceFlowDTO.class);
+      case "P" -> context.constructType(ProcessDTO.class);
+      case "LE" -> context.constructType(LinkEventDefinitionDTO.class);
+      case "TE" -> context.constructType(TerminateEventDefinitionDTO.class);
+      case "ES" -> context.constructType(EscalationEventDefinitionDTO.class);
+      case "TM" -> context.constructType(TimerEventDefinitionDTO.class);
+      case "ER" -> context.constructType(ErrorEventDefinitionDTO.class);
+      case "ME" -> context.constructType(MessageEventDefinitionDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

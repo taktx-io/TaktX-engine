@@ -1,10 +1,19 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import com.fasterxml.jackson.databind.type.SimpleType;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerDTO;
@@ -12,20 +21,19 @@ import com.flomaestro.takt.dto.v_1_0_0.ExternalTaskTriggerTimeoutDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartCommandDTO;
 import com.flomaestro.takt.dto.v_1_0_0.StartFlowElementTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.TerminateTriggerDTO;
-import java.io.IOException;
 
 public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case ExternalTaskTriggerTimeoutDTO externalTaskTriggerTimeoutDTO -> "X";
-      case ExternalTaskTriggerDTO externalTaskTriggerDTO -> "E";
-      case StartFlowElementTriggerDTO startFlowElementTriggerDTO -> "S";
-      case TerminateTriggerDTO terminateTriggerDTO -> "T";
-      case ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO -> "R";
-      case ContinueFlowElementTriggerDTO continueFlowElementTriggerDTO -> "C";
-      case StartCommandDTO startCommandDTO -> "A";
+      case ExternalTaskTriggerTimeoutDTO ignored -> "X";
+      case ExternalTaskTriggerDTO ignored -> "E";
+      case StartFlowElementTriggerDTO ignored -> "S";
+      case TerminateTriggerDTO ignored -> "T";
+      case ExternalTaskResponseTriggerDTO ignored -> "R";
+      case ContinueFlowElementTriggerDTO ignored -> "C";
+      case StartCommandDTO ignored -> "A";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -41,15 +49,15 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id) throws IOException {
+  public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "X" -> SimpleType.construct(ExternalTaskTriggerTimeoutDTO.class);
-      case "E" -> SimpleType.construct(ExternalTaskTriggerDTO.class);
-      case "S" -> SimpleType.construct(StartFlowElementTriggerDTO.class);
-      case "T" -> SimpleType.construct(TerminateTriggerDTO.class);
-      case "R" -> SimpleType.construct(ExternalTaskResponseTriggerDTO.class);
-      case "C" -> SimpleType.construct(ContinueFlowElementTriggerDTO.class);
-      case "A" -> SimpleType.construct(StartCommandDTO.class);
+      case "X" -> context.constructType(ExternalTaskTriggerTimeoutDTO.class);
+      case "E" -> context.constructType(ExternalTaskTriggerDTO.class);
+      case "S" -> context.constructType(StartFlowElementTriggerDTO.class);
+      case "T" -> context.constructType(TerminateTriggerDTO.class);
+      case "R" -> context.constructType(ExternalTaskResponseTriggerDTO.class);
+      case "C" -> context.constructType(ContinueFlowElementTriggerDTO.class);
+      case "A" -> context.constructType(StartCommandDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

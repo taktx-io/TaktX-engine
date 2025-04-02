@@ -1,29 +1,37 @@
+/*
+ *
+ *  * TaktX - A high-performance BPMN engine
+ *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
+ *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ *  * Free use is permitted with up to 3 Kafka partitions. See LICENSE file for details.
+ *  * For commercial use or more partitions and features, contact [info@taktx.io] or [https://www.taktx.io/contact].
+ *
+ */
+
 package com.flomaestro.takt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import com.fasterxml.jackson.databind.type.SimpleType;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageEventTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import java.io.IOException;
 
 public class MessageEventTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case DefinitionMessageSubscriptionDTO definitionMessageSubscriptionDTO -> "D";
-      case CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscriptionDTO -> "C";
-      case CorrelationMessageSubscriptionDTO correlationMessageSubscriptionDTO -> "O";
-      case CancelCorrelationMessageSubscriptionDTO cancelCorrelationMessageSubscriptionDTO -> "A";
-      case DefinitionMessageEventTriggerDTO definitionMessageEventTriggerDTO -> "E";
-      case CorrelationMessageEventTriggerDTO correlationMessageEventTriggerDTO -> "R";
+      case DefinitionMessageSubscriptionDTO ignored -> "D";
+      case CancelDefinitionMessageSubscriptionDTO ignored -> "C";
+      case CorrelationMessageSubscriptionDTO ignored -> "O";
+      case CancelCorrelationMessageSubscriptionDTO ignored -> "A";
+      case DefinitionMessageEventTriggerDTO ignored -> "E";
+      case CorrelationMessageEventTriggerDTO ignored -> "R";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -39,14 +47,14 @@ public class MessageEventTypeIdResolver extends TypeIdResolverBase {
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id) throws IOException {
+  public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "D" -> SimpleType.construct(DefinitionMessageSubscriptionDTO.class);
-      case "C" -> SimpleType.construct(CancelDefinitionMessageSubscriptionDTO.class);
-      case "O" -> SimpleType.construct(CorrelationMessageSubscriptionDTO.class);
-      case "A" -> SimpleType.construct(CancelCorrelationMessageSubscriptionDTO.class);
-      case "E" -> SimpleType.construct(DefinitionMessageEventTriggerDTO.class);
-      case "R" -> SimpleType.construct(CorrelationMessageEventTriggerDTO.class);
+      case "D" -> context.constructType(DefinitionMessageSubscriptionDTO.class);
+      case "C" -> context.constructType(CancelDefinitionMessageSubscriptionDTO.class);
+      case "O" -> context.constructType(CorrelationMessageSubscriptionDTO.class);
+      case "A" -> context.constructType(CancelCorrelationMessageSubscriptionDTO.class);
+      case "E" -> context.constructType(DefinitionMessageEventTriggerDTO.class);
+      case "R" -> context.constructType(CorrelationMessageEventTriggerDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }
