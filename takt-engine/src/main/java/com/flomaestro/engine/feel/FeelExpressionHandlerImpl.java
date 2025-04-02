@@ -32,7 +32,7 @@ import org.camunda.feel.syntaxtree.ParsedExpression;
 import org.camunda.feel.valuemapper.ValueMapper;
 import scala.Option;
 import scala.collection.Iterable;
-import scala.collection.JavaConverters;
+import scala.jdk.CollectionConverters;
 
 @ApplicationScoped
 @Slf4j
@@ -92,7 +92,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
           @Override
           public Iterable<String> keys() {
             log.error("THe keys method is called although not all variables might be available");
-            return JavaConverters.asScalaSet(variables.keySet()).toIterable();
+            return CollectionConverters.SetHasAsScala(variables.keySet()).asScala();
           }
         };
       }
