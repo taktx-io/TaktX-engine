@@ -19,7 +19,9 @@ on:
 
 jobs:
   build:
-
+    # Skip this job if it's a pull_request event on a branch that belongs to the same repository
+    # This prevents duplicate runs when pushing to a feature branch with an open PR
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -52,7 +54,7 @@ jobs:
     #   run: gradle build
 
   dependency-submission:
-
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
