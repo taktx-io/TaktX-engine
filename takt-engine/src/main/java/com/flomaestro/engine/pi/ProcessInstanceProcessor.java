@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -54,6 +55,7 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @Slf4j
+@RequiredArgsConstructor
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerDTO, Object, Object> {
 
@@ -75,27 +77,6 @@ public class ProcessInstanceProcessor
   private ProcessorContext<Object, Object> context;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
   private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitionsCache = new HashMap<>();
-
-  public ProcessInstanceProcessor(
-      IoMappingProcessor ioMappingProcessor,
-      DtoMapper dtoMapper,
-      DefinitionMapper definitionMapper,
-      ProcessInstanceMapper instanceMapper,
-      Forwarder forwarder,
-      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
-      FlowNodeInstancesProcessor flowNodeInstancesProcessor,
-      Clock clock,
-      ProcessingStatistics processingStatistics) {
-    this.ioMappingProcessor = ioMappingProcessor;
-    this.definitionMapper = definitionMapper;
-    this.dtoMapper = dtoMapper;
-    this.instanceMapper = instanceMapper;
-    this.forwarder = forwarder;
-    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
-    this.flowNodeInstancesProcessor = flowNodeInstancesProcessor;
-    this.clock = clock;
-    this.processingStatistics = processingStatistics;
-  }
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {

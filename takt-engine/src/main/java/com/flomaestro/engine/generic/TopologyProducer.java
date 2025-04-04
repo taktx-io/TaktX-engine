@@ -243,14 +243,14 @@ public class TopologyProducer {
         .process(
             () ->
                 new ProcessInstanceProcessor(
-                    ioMappingProcessor,
-                    dtoMapper,
                     definitionMapper,
                     instanceMapper,
                     forwarder,
+                    ioMappingProcessor,
                     tenantNamespaceNameWrapper,
                     flowNodeInstancesProcessor,
                     clock,
+                    dtoMapper,
                     processingStatistics),
             tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
