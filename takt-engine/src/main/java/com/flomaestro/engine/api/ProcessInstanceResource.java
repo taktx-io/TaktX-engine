@@ -11,7 +11,7 @@
 package com.flomaestro.engine.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.Constants;
 import com.flomaestro.takt.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
@@ -51,7 +51,7 @@ public class ProcessInstanceResource {
   @Inject KafkaStreams kafkaStreams;
 
   @Inject Client client;
-  @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  @Inject TaktConfiguration taktConfiguration;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -62,7 +62,7 @@ public class ProcessInstanceResource {
 
     Collection<StreamsMetadata> streamsMetadata =
         kafkaStreams.streamsMetadataForStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
 
     streamsMetadata.forEach(
         metadata -> {
@@ -79,7 +79,7 @@ public class ProcessInstanceResource {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<UUID, ProcessInstanceDTO>>
             processInstanceStoreQueryParameters =
                 StoreQueryParameters.fromNameAndType(
-                    tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+                    taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
                     QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(processInstanceStoreQueryParameters);
       } catch (InvalidStateStoreException e) {
@@ -94,7 +94,7 @@ public class ProcessInstanceResource {
         StoreQueryParameters<? extends ReadOnlyKeyValueStore<VariableKeyDTO, JsonNode>>
             storeQueryParameters =
                 StoreQueryParameters.fromNameAndType(
-                    tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
+                    taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()),
                     QueryableStoreTypes.keyValueStore());
         return kafkaStreams.store(storeQueryParameters);
       } catch (InvalidStateStoreException e) {
@@ -113,7 +113,7 @@ public class ProcessInstanceResource {
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             processId,
             new TaktUUIDSerializer());
 
@@ -160,7 +160,7 @@ public class ProcessInstanceResource {
 
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()),
+            taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()),
             processId,
             new TaktUUIDSerializer());
 

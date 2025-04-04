@@ -17,5 +17,4 @@ import jakarta.enterprise.context.ApplicationScoped;
 @Startup
 @ApplicationScoped
 @TaktDeployment(resource = "bpmn/task-multi.bpmn")
-public class TaskMultiWorker {
-}
+public class TaskMultiWorker {}

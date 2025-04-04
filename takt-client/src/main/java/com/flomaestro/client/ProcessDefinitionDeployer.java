@@ -26,6 +26,7 @@ public class ProcessDefinitionDeployer {
   }
 
   public ParsedDefinitionsDTO deploy(String xml) {
+    log.info("Deploying XML {}", xml);
     ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);
     xmlEmitter.send(
         new ProducerRecord<>(

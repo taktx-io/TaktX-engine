@@ -10,7 +10,7 @@
 
 package com.flomaestro.engine.pd;
 
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.takt.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
@@ -34,7 +34,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 public class MessageEventProcessor
     implements Processor<MessageEventKeyDTO, MessageEventDTO, Object, Object> {
 
-  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final TaktConfiguration taktConfiguration;
 
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<MessageEventKeyDTO, DefinitionMessageSubscriptions>
@@ -43,8 +43,8 @@ public class MessageEventProcessor
       correlationMessageSubscriptionStore;
   private final Clock clock;
 
-  public MessageEventProcessor(TenantNamespaceNameWrapper tenantNamespaceNameWrapper, Clock clock) {
-    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+  public MessageEventProcessor(TaktConfiguration taktConfiguration, Clock clock) {
+    this.taktConfiguration = taktConfiguration;
     this.clock = clock;
   }
 
@@ -53,12 +53,10 @@ public class MessageEventProcessor
     this.context = context;
     this.definitionMessageSubscriptionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()));
     this.correlationMessageSubscriptionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()));
   }
 
   @Override

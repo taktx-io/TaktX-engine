@@ -13,7 +13,7 @@ package com.flomaestro.engine.pi;
 import static com.flomaestro.takt.dto.v_1_0_0.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.engine.pd.model.FlowElements;
 import com.flomaestro.engine.pd.model.IoVariableMapping;
@@ -63,7 +63,7 @@ public class ProcessInstanceProcessor
   private final ProcessInstanceMapper instanceMapper;
   private final Forwarder forwarder;
   private final IoMappingProcessor ioMappingProcessor;
-  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final TaktConfiguration taktConfiguration;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private final Clock clock;
   private final DtoMapper dtoMapper;
@@ -83,17 +83,15 @@ public class ProcessInstanceProcessor
     this.context = context;
     this.definitionsStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     this.variablesStore =
-        context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()));
+        context.getStateStore(taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()));
     this.processInstanceStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()));
     this.flowNodeInstanceStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()));
+            taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()));
   }
 
   @Override
@@ -113,7 +111,7 @@ public class ProcessInstanceProcessor
       }
     } catch (ProcessInstanceException e) {
       handleExceptional(flowNodeInstanceStore, e);
-    } catch (Throwable t) {
+    } catch (Throwable t) { // NOSONAR
       log.error("Internal error occurred for", t);
     }
   }

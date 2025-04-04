@@ -12,6 +12,7 @@ package com.flomaestro.engine.generic;
 
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.pd.Stores;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -21,10 +22,10 @@ import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 @Persistent
 public class PersistentKeyValueStoreSupplier implements KeyValueStoreSupplier {
 
-  @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  @Inject TaktConfiguration taktConfiguration;
 
   @Override
   public KeyValueBytesStoreSupplier get(Stores store) {
-    return persistentKeyValueStore(tenantNamespaceNameWrapper.getPrefixed(store.getStorename()));
+    return persistentKeyValueStore(taktConfiguration.getPrefixed(store.getStorename()));
   }
 }

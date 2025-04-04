@@ -61,7 +61,7 @@ import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   private static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  private static final String TOPIC_TEST_PREFIX = "test_tenant.test_namespace.";
+  private static final String TOPIC_TEST_PREFIX = "tenant.namespace.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   private TaktClient taktClient;
@@ -120,7 +120,7 @@ public class BpmnTestEngine {
         AdminClient.create(Map.of("bootstrap.servers", kafkaBootstrapServers))) {
       List<NewTopic> topics =
           Arrays.stream(Topics.values())
-              .map(topic -> new NewTopic(TOPIC_TEST_PREFIX + topic.getTopicName(), 5, (short) 1))
+              .map(topic -> new NewTopic(TOPIC_TEST_PREFIX + topic.getTopicName(), 3, (short) 1))
               .toList();
       adminClient.createTopics(topics);
     }
@@ -128,8 +128,8 @@ public class BpmnTestEngine {
     try {
       taktClient =
           TaktClient.newClientBuilder()
-              .withTenant("test_tenant")
-              .withNamespace("test_namespace")
+              .withTenant("tenant")
+              .withNamespace("namespace")
               .withBootstrapServers(kafkaBootstrapServers)
               .build();
       Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer = BpmnTestEngine.this::consume;
@@ -315,7 +315,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename) throws IOException {
-    return deployProcessDefinitionAndWait(filename, DEFAULT_DURATION);
+    return deployProcessDefinitionAndWait(filename, Duration.ofMinutes(2));
   }
 
   public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)

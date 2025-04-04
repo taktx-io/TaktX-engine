@@ -13,6 +13,7 @@ package com.flomaestro.engine.generic;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.pd.CorrelationMessageSubscriptions;
 import com.flomaestro.engine.pd.DefinitionMessageSubscriptions;
 import com.flomaestro.engine.pd.DefinitionsProcessor;
@@ -50,7 +51,6 @@ import com.flomaestro.takt.util.TaktUUIDSerde;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
-import jakarta.inject.Inject;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.UUID;
@@ -65,7 +65,6 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -118,14 +117,10 @@ public class TopologyProducer {
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
   private final Forwarder forwarder;
-  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final TaktConfiguration taktConfiguration;
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private final IoMappingProcessor ioMappingProcessor;
-
-  @ConfigProperty(name = "quarkus.profile")
-  String activeProfiles;
-
-  @Inject ProcessingStatistics processingStatistics;
+  private final ProcessingStatistics processingStatistics;
 
   @Produces
   public Topology buildTopology() {
@@ -155,23 +150,19 @@ public class TopologyProducer {
 
     // Define the global table
     builder.globalTable(
-        tenantNamespaceNameWrapper.getPrefixed(
-            Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
+        taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
         Materialized.<ProcessDefinitionKey, ProcessDefinitionDTO>as(
                 keyValueStoreSupplier.get(Stores.GLOBAL_PROCESS_DEFINITION))
             .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
             .withValueSerde(PROCESS_DEFINITION_SERDE));
 
     builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+            taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () ->
-                new DefinitionsProcessor(
-                    tenantNamespaceNameWrapper, messageSchedulerFactory, clock),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
+            () -> new DefinitionsProcessor(taktConfiguration, messageSchedulerFactory, clock),
+            taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()),
+            taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
             (key, value) -> value instanceof ProcessDefinitionDTO,
@@ -182,7 +173,7 @@ public class TopologyProducer {
                                 KeyValue.pair(
                                     (ProcessDefinitionKey) key, (ProcessDefinitionDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
         .branch(
@@ -193,7 +184,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
@@ -205,8 +196,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.SCHEDULE_COMMANDS.getTopicName()),
+                            taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> key instanceof MessageEventKeyDTO,
@@ -216,7 +206,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((MessageEventKeyDTO) key, (MessageEventDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
   }
@@ -237,8 +227,7 @@ public class TopologyProducer {
             keyValueStoreSupplier.get(Stores.VARIABLES), VARIABLES_KEY_SERDE, VARIABLES_SERDE));
 
     builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+            taktConfiguration.getPrefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
         .process(
             () ->
@@ -247,14 +236,14 @@ public class TopologyProducer {
                     instanceMapper,
                     forwarder,
                     ioMappingProcessor,
-                    tenantNamespaceNameWrapper,
+                    taktConfiguration,
                     flowNodeInstancesProcessor,
                     clock,
                     dtoMapper,
                     processingStatistics),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VARIABLES.getStorename()))
+            taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+            taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
         .branch(
             (key, value) -> value instanceof ProcessInstanceTriggerDTO,
@@ -264,7 +253,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
@@ -274,7 +263,7 @@ public class TopologyProducer {
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((UUID) key, (InstanceUpdateDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
                             Produced.with(PROCESS_INSTANCE_KEY_SERDE, INSTANCE_UPDATE_SERDE))))
         .branch(
@@ -286,7 +275,7 @@ public class TopologyProducer {
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
                             (key, value, recordContext) ->
-                                tenantNamespaceNameWrapper.getPrefixed("external-task-trigger")
+                                taktConfiguration.getPrefixed("external-task-trigger")
                                     + "-"
                                     + value.getProcessDefinitionKey().getProcessDefinitionId(),
                             Produced.with(
@@ -297,7 +286,7 @@ public class TopologyProducer {
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
@@ -308,8 +297,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
-                                Topics.SCHEDULE_COMMANDS.getTopicName()),
+                            taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> value instanceof MessageEventDTO,
@@ -319,7 +307,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((MessageEventKeyDTO) key, (MessageEventDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
   }
@@ -337,14 +325,12 @@ public class TopologyProducer {
             CORRELATION_SUBSCRIPTIONS_SERDE));
 
     builder.stream(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
+            taktConfiguration.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
         .process(
-            () -> new MessageEventProcessor(tenantNamespaceNameWrapper, clock),
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
+            () -> new MessageEventProcessor(taktConfiguration, clock),
+            taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
+            taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
         .branch(
             (key, value) -> value instanceof DefinitionsTriggerDTO,
@@ -354,7 +340,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((String) key, (DefinitionsTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))))
         .branch(
@@ -365,7 +351,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
@@ -403,23 +389,22 @@ public class TopologyProducer {
 
     KStream<ScheduleKeyDTO, MessageScheduleDTO> scheduleCommandStream =
         stateStore.stream(
-            tenantNamespaceNameWrapper.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
+            taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
             Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE));
     KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
             () ->
                 new ScheduleProcessor(
                     clock,
-                    activeProfiles.contains("test"),
+                    taktConfiguration.getActiveProfiles().contains("test"),
                     (context, name) ->
-                        context.getStateStore(
-                            tenantNamespaceNameWrapper.getPrefixed("schedules-" + name)),
+                        context.getStateStore(taktConfiguration.getPrefixed("schedules-" + name)),
                     TimeBucket.values()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()),
-            tenantNamespaceNameWrapper.getPrefixed(Stores.SCHEDULES_YEARLY.getStorename()));
+            taktConfiguration.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
+            taktConfiguration.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
+            taktConfiguration.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
+            taktConfiguration.getPrefixed(Stores.SCHEDULES_WEEKLY.getStorename()),
+            taktConfiguration.getPrefixed(Stores.SCHEDULES_YEARLY.getStorename()));
     processStream
         .split()
         .branch(
@@ -431,7 +416,7 @@ public class TopologyProducer {
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
                             (key, value, recordContext) ->
-                                tenantNamespaceNameWrapper.getPrefixed("external-task-trigger")
+                                taktConfiguration.getPrefixed("external-task-trigger")
                                     + "-"
                                     + value.getProcessDefinitionKey().getProcessDefinitionId(),
                             Produced.with(
@@ -444,7 +429,7 @@ public class TopologyProducer {
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
                         .to(
-                            tenantNamespaceNameWrapper.getPrefixed(
+                            taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));

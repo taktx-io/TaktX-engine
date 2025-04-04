@@ -17,6 +17,7 @@ dependencies {
     implementation("io.quarkus:quarkus-jaxb")
     implementation("io.quarkus:quarkus-resteasy-client")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+    implementation("com.javax0.license3j:license3j:3.3.0")
 
     // Micrometer
     implementation("io.quarkus:quarkus-micrometer")

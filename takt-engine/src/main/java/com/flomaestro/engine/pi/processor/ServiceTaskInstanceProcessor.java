@@ -11,8 +11,6 @@
 package com.flomaestro.engine.pi.processor;
 
 import com.flomaestro.engine.feel.FeelExpressionHandler;
-import com.flomaestro.engine.generic.KafkaClients;
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
 import com.flomaestro.engine.pd.model.ServiceTask;
 import com.flomaestro.engine.pi.ProcessInstanceMapper;
 import com.flomaestro.engine.pi.model.ServiceTaskInstance;
@@ -30,15 +28,7 @@ public class ServiceTaskInstanceProcessor
       FeelExpressionHandler feelExpressionHandler,
       Clock clock,
       IoMappingProcessor ioMappingProcessor,
-      ProcessInstanceMapper processInstanceMapper,
-      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
-      KafkaClients kafkaClients) {
-    super(
-        feelExpressionHandler,
-        clock,
-        ioMappingProcessor,
-        processInstanceMapper,
-        tenantNamespaceNameWrapper,
-        kafkaClients);
+      ProcessInstanceMapper processInstanceMapper) {
+    super(feelExpressionHandler, clock, ioMappingProcessor, processInstanceMapper);
   }
 }

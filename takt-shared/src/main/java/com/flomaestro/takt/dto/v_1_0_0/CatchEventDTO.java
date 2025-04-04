@@ -51,5 +51,4 @@ public abstract class CatchEventDTO extends EventDTO {
         .map(MessageEventDefinitionDTO.class::cast)
         .collect(Collectors.toSet());
   }
-
 }

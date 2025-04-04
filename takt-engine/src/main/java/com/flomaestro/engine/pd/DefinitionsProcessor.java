@@ -10,7 +10,7 @@
 
 package com.flomaestro.engine.pd;
 
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionsTriggerDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ParsedDefinitionsDTO;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionActivationDTO;
@@ -34,7 +34,7 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 public class DefinitionsProcessor
     implements Processor<String, DefinitionsTriggerDTO, Object, Object> {
 
-  private final TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  private final TaktConfiguration taktConfiguration;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, String> hashToXmlStore;
@@ -46,10 +46,10 @@ public class DefinitionsProcessor
   private final Clock clock;
 
   public DefinitionsProcessor(
-      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
+      TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
       Clock clock) {
-    this.tenantNamespaceNameWrapper = tenantNamespaceNameWrapper;
+    this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
     this.clock = clock;
   }
@@ -58,18 +58,15 @@ public class DefinitionsProcessor
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
     this.hashToXmlStore =
-        context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.XML_BY_HASH.getStorename()));
+        context.getStateStore(taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()));
     this.hashVersionPairStore =
-        context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
+        context.getStateStore(taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
     this.processDefinitionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
-            tenantNamespaceNameWrapper, messageSchedulerFactory, context, clock);
+            taktConfiguration, messageSchedulerFactory, context, clock);
   }
 
   @Override

@@ -10,7 +10,7 @@
 
 package com.flomaestro.engine.pd;
 
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.pi.model.VariableScope;
 import com.flomaestro.takt.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
 import com.flomaestro.takt.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
@@ -45,7 +45,7 @@ public class ProcessDefinitionActivationProcessor {
       processDefinitionStore;
 
   public ProcessDefinitionActivationProcessor(
-      TenantNamespaceNameWrapper tenantNamespaceNameWrapper,
+      TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
       ProcessorContext<Object, Object> context,
       Clock clock) {
@@ -54,8 +54,7 @@ public class ProcessDefinitionActivationProcessor {
     this.clock = clock;
     this.processDefinitionStore =
         context.getStateStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
   }
 
   public void process(ProcessDefinitionActivationDTO processActivationRecord) {

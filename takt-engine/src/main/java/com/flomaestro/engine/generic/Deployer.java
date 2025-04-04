@@ -10,36 +10,36 @@
 
 package com.flomaestro.engine.generic;
 
+import com.flomaestro.engine.config.TaktConfiguration;
+import com.flomaestro.engine.license.LicenseManager;
 import com.flomaestro.takt.Topics;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
+import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.ListTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.apache.kafka.clients.admin.TopicDescription;
 
 @ApplicationScoped
-@Startup
+@Startup(value = 10000)
+@RequiredArgsConstructor
+@Slf4j
 public class Deployer {
-  @Inject AdminClient adminClient;
 
-  @ConfigProperty(name = "takt.engine.topic.partitions")
-  int partitions;
-
-  @ConfigProperty(name = "takt.engine.tenant")
-  String tenant;
-
-  @ConfigProperty(name = "takt.engine.namespace")
-  String namespace;
-
-  @ConfigProperty(name = "takt.engine.topic.replication-factor")
-  int replicationFactor;
+  final AdminClient adminClient;
+  final TaktConfiguration taktConfiguration;
+  final LicenseManager licenseManager;
 
   @PostConstruct
   void init() {
@@ -49,26 +49,95 @@ public class Deployer {
       List<String> toCreate = new ArrayList<>();
       List<String> list = listTopicsResult.names().get().stream().toList();
       for (Topics topic : Topics.values()) {
-        String name = tenant + "." + namespace + "." + topic.getTopicName();
+        String name = taktConfiguration.getPrefixed(topic.getTopicName());
         if (list.contains(name)) {
           continue;
         }
         toCreate.add(name);
       }
 
+      int partitions = taktConfiguration.getPartitions();
+
       CreateTopicsResult topics =
           adminClient.createTopics(
               toCreate.stream()
                   .map(
-                      topic -> {
-                        return new NewTopic(topic, partitions, (short) replicationFactor);
-                      })
+                      topic ->
+                          new NewTopic(
+                              topic, partitions, (short) taktConfiguration.getReplicationFactor()))
                   .toList());
+
       topics.all().get();
+
+      validateTopicAccordingLicense();
     } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
+  }
+
+  private boolean validateTopicAccordingLicense() throws ExecutionException, InterruptedException {
+    Map<String, Integer> topicPartitions = checkKafkaTopicPartitions();
+
+    int maxPartitionsUsed =
+        topicPartitions.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+
+    System.out.println("   Kafka topics configuration:");
+    topicPartitions.forEach(
+        (topic, partitions) ->
+            System.out.println("   - " + topic + ": " + partitions + " partitions"));
+
+    int partitionLimit = licenseManager.getPartitionLimit();
+    if (maxPartitionsUsed > partitionLimit) {
+      String errorMessage =
+          String.format(
+              "❌ LICENSE VIOLATION: Maximum allowed partitions is %d, but %d partitions found in topic(s):",
+              partitionLimit, maxPartitionsUsed);
+
+      System.out.println(errorMessage);
+
+      System.out.println("   Shutting down due to license violation...");
+      // Also log the error
+      log.error(errorMessage);
+      topicPartitions.entrySet().stream()
+          .filter(entry -> entry.getValue() > partitionLimit)
+          .forEach(
+              entry ->
+                  log.error(
+                      "Topic {} has {} partitions, exceeding license limit of {}",
+                      entry.getKey(),
+                      entry.getValue(),
+                      partitionLimit));
+
+      // Exit the application
+      Runtime.getRuntime().halt(1);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Checks all Kafka topics defined in configuration and returns their partition counts
+   *
+   * @return Map of topic names to their partition counts
+   * @throws ExecutionException If there's an error communicating with Kafka
+   * @throws InterruptedException If the operation is interrupted
+   */
+  private Map<String, Integer> checkKafkaTopicPartitions()
+      throws ExecutionException, InterruptedException {
+    // Parse topics from configuration
+    // Get topic information from Kafka
+    List<String> prefixedTopics =
+        Arrays.stream(Topics.values())
+            .map(topic -> taktConfiguration.getPrefixed(topic.getTopicName()))
+            .toList();
+    DescribeTopicsResult topicsResult = adminClient.describeTopics(prefixedTopics);
+    Map<String, TopicDescription> topicDescriptions = topicsResult.allTopicNames().get();
+
+    // Return map of topic names to partition counts
+    return topicDescriptions.entrySet().stream()
+        .collect(
+            Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().partitions().size()));
   }
 }

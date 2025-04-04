@@ -10,17 +10,15 @@
 
 package com.flomaestro.engine.generic;
 
+import com.flomaestro.engine.config.TaktConfiguration;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class KeyValueStoreSupplierProducer {
 
-  @Inject
-  @ConfigProperty(name = "takt.engine.keyvaluestoretype")
-  String supplierType;
+  @Inject TaktConfiguration config;
 
   @Inject @InMemory InMemoryKeyValueStoreSupplier inMemoryKeyValueStoreSupplier;
 
@@ -28,6 +26,7 @@ public class KeyValueStoreSupplierProducer {
 
   @Produces
   public KeyValueStoreSupplier produceKeyValueStoreSupplier() {
+    String supplierType = config.getSupplierType();
     if ("persistent".equalsIgnoreCase(supplierType)) {
       return persistentKeyValueStoreSupplier;
     } else if ("inmemory".equalsIgnoreCase(supplierType)) {

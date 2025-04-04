@@ -49,7 +49,8 @@ public class BpmnParser {
 
       Unmarshaller un = context.createUnmarshaller();
       @SuppressWarnings("unchecked")
-      JAXBElement<TDefinitions> definitions = (JAXBElement<TDefinitions>) un.unmarshal(new StringReader(xml));
+      JAXBElement<TDefinitions> definitions =
+          (JAXBElement<TDefinitions>) un.unmarshal(new StringReader(xml));
       String hash = SHA256.getHash(xml);
       BpmnMapper mapper = new BpmnMapperFactory(namespaces).createBpmnMapper();
       return mapper.map(definitions.getValue(), hash);

@@ -10,7 +10,7 @@
 
 package com.flomaestro.engine.api;
 
-import com.flomaestro.engine.generic.TenantNamespaceNameWrapper;
+import com.flomaestro.engine.config.TaktConfiguration;
 import com.flomaestro.engine.generic.TopologyProducer;
 import com.flomaestro.engine.pd.Stores;
 import com.flomaestro.takt.dto.v_1_0_0.ProcessDefinitionDTO;
@@ -25,7 +25,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,6 +32,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.StreamsMetadata;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
@@ -40,18 +40,17 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 public class ProcessDefinitionResource {
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> store;
   @Inject KafkaStreams kafkaStreams;
-  @Inject TenantNamespaceNameWrapper tenantNamespaceNameWrapper;
+  @Inject TaktConfiguration taktConfiguration;
 
   @PostConstruct
   void init() {
     StoreQueryParameters<
             ? extends ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO>>
-        STORE_QUERY_PARAMETERS =
+        storeQueryParameters =
             StoreQueryParameters.fromNameAndType(
-                tenantNamespaceNameWrapper.getPrefixed(
-                    Stores.GLOBAL_PROCESS_DEFINITION.getStorename()),
+                taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()),
                 QueryableStoreTypes.keyValueStore());
-    store = kafkaStreams.store(STORE_QUERY_PARAMETERS);
+    store = kafkaStreams.store(storeQueryParameters);
   }
 
   @GET
@@ -61,14 +60,15 @@ public class ProcessDefinitionResource {
 
     Collection<StreamsMetadata> streamsMetadata =
         kafkaStreams.streamsMetadataForStore(
-            tenantNamespaceNameWrapper.getPrefixed(
-                Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+            taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     streamsMetadata.forEach(
         metadata -> {
           System.out.println("Host: " + metadata.host());
           System.out.println("Port: " + metadata.port());
         });
-    store.all().forEachRemaining(record -> processDefinitionKeys.add(record.key));
+    try (KeyValueIterator<ProcessDefinitionKey, ProcessDefinitionDTO> all = store.all()) {
+      all.forEachRemaining(pdRecord -> processDefinitionKeys.add(pdRecord.key));
+    }
     return processDefinitionKeys;
   }
 
@@ -76,8 +76,7 @@ public class ProcessDefinitionResource {
   @Path("/{processDefinitionKey}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getProcessDefinition(
-      @PathParam("processDefinitionKey") String processDefinitionKeyString)
-      throws UnknownHostException {
+      @PathParam("processDefinitionKey") String processDefinitionKeyString) {
 
     String envHost = System.getenv("injectedhost");
 
@@ -88,7 +87,7 @@ public class ProcessDefinitionResource {
         new ProcessDefinitionKey(processDefinitionName, processDefinitionVersion);
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
-            tenantNamespaceNameWrapper.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             processDefinitionKey,
             TopologyProducer.PROCESS_DEFINITION_KEY_SERDE.serializer());
 
@@ -115,7 +114,7 @@ public class ProcessDefinitionResource {
     try {
       return new URI("http://" + host + ":" + port + "/process-definitions/" + id);
     } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 }

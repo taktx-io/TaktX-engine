@@ -52,7 +52,10 @@ public class ExternalTaskInstanceResponder {
 
   public void respondSuccess(Object variable) {
     Map<String, JsonNode> variablesMap =
-        variable == null ? Map.of() : OBJECT_MAPPER.convertValue(variable, new TypeReference<LinkedHashMap<String, JsonNode>>() {});
+        variable == null
+            ? Map.of()
+            : OBJECT_MAPPER.convertValue(
+                variable, new TypeReference<LinkedHashMap<String, JsonNode>>() {});
     respondSuccess(variablesMap);
   }
 
