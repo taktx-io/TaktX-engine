@@ -1,17 +1,11 @@
-name: Continuous Integration
+name: Release
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/**'
-      - 'fix/**'
-      - 'release/**'
-  pull_request:
-    branches: [ main ]
+  release:
+    types: [ published ]
 
 jobs:
-  build-and-test:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -25,21 +19,46 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build and test
+      - name: Extract version
+        id: extract_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate license change date
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
+          mkdir -p src/main/resources/META-INF/
+          echo "$CHANGE_DATE" > src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
+          echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
+
+      - name: Build with Gradle
         run: ./gradlew build
 
-      # Only run more extensive checks on PRs and main branch to save CI minutes
-      - name: Dependency check
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'TaktX'
-          path: '.'
-          format: 'HTML'
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
+            --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
+            -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
+            -t ghcr.io/${{ github.repository_owner }}/taktx-engine:latest \
+            .
 
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          name: test-reports
-          path: '**/build/reports/tests/'
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}
+          docker push ghcr.io/${{ github.repository_owner }}/taktx-engine:latest
+
+      - name: Publish to Maven Central
+        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.GPG_PASSPHRASE }}
