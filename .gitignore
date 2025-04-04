@@ -3,3 +3,5 @@
 /.quarkus/
 /build/
 .DS_Store
+/takt-shared/bin/
+/docker/grafana/data/
