@@ -16,6 +16,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for Git-based versioning
           token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use the token for authentication
+          ref: ${{ github.event.repository.default_branch }}  # Explicitly checkout the default branch
 
       - name: Set up JDK 21
         uses: actions/setup-java@v3
@@ -23,11 +24,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
-
-      - name: Install GitHub CLI
-        run: |
-          sudo apt update
-          sudo apt install -y gh
 
       - name: Extract version
         id: extract_version
@@ -39,20 +35,16 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
-      - name: Commit version updates
+      - name: Update version files
         run: |
-          # Determine default branch
-          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-          echo "Default branch is $DEFAULT_BRANCH"
+          # Get default branch name
+          DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Working on branch: $DEFAULT_BRANCH"
           
+          # Configure git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Create a new branch from the current default branch
-          git fetch origin $DEFAULT_BRANCH
-          git checkout -b version-bump-${{ steps.extract_version.outputs.VERSION }} origin/$DEFAULT_BRANCH
-          
-          # Apply version changes
           # Update root build.gradle.kts with version
           if ! grep -q "version = " build.gradle.kts; then
             # Add version if it doesn't exist
@@ -87,7 +79,7 @@ jobs:
           sed -i "s/Version:       .*/Version:       ${{ steps.extract_version.outputs.VERSION }}/g" VERSION.txt
           sed -i "s/Release Date:  .*/Release Date:  $RELEASE_DATE/g" VERSION.txt
           
-          # Commit and push changes
+          # Commit and push changes directly to the default branch
           git add build.gradle.kts */build.gradle.kts gradle/libs.versions.toml VERSION.txt
           
           # Only attempt to commit if there are changes
@@ -95,14 +87,18 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update versions to ${{ steps.extract_version.outputs.VERSION }} [skip ci]"
-            git push origin version-bump-${{ steps.extract_version.outputs.VERSION }}
             
-            # Create PR using GitHub CLI
-            gh pr create --base $DEFAULT_BRANCH \
-              --head version-bump-${{ steps.extract_version.outputs.VERSION }} \
-              --title "Update versions to ${{ steps.extract_version.outputs.VERSION }} [skip ci]" \
-              --body "This PR updates versions in Gradle files, Version Catalog, and VERSION.txt to match the released version ${{ steps.extract_version.outputs.VERSION }}. IMPORTANT: This PR is created automatically by the release process. It should be merged without additional CI runs. The commit message includes [skip ci] to prevent redundant workflow runs."
+            # Handle potential branch protection by checking if direct push is allowed
+            if git push origin $DEFAULT_BRANCH; then
+              echo "::notice::Version updates pushed directly to $DEFAULT_BRANCH branch"
+            else
+              echo "::warning::Could not push directly to $DEFAULT_BRANCH. This may be due to branch protection rules."
+              echo "Version updates will still be used for building artifacts in this workflow run."
+            fi
           fi
+          
+          # Regardless of whether we could push, the local working directory has the updated files
+          # for subsequent steps to use when building and publishing
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
