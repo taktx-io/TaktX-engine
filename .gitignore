@@ -5,3 +5,4 @@
 .DS_Store
 /taktx-shared/bin/
 /docker/grafana/data/
+/.vscode/
