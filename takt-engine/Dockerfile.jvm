@@ -18,7 +18,7 @@ WORKDIR /app
 COPY build/quarkus-app /app/
 
 # Copy license information
-COPY ../LICENSE.md /app/LICENSE.md
+COPY LICENSE.md /app/LICENSE.md
 
 # Add license change date file
 RUN echo "${CHANGE_DATE}" > /app/LICENSE_CHANGE_DATE.txt

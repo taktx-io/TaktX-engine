@@ -21,14 +21,24 @@ jobs:
 
       - name: Extract version
         id: extract_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          # Handle both v-prefixed and non-v-prefixed tags
+          TAG=${GITHUB_REF#refs/tags/}
+          # Remove 'v' prefix if present
+          VERSION=${TAG#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
 
       - name: Generate license change date
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
           CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
-          mkdir -p src/main/resources/META-INF/
-          echo "$CHANGE_DATE" > src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
+          mkdir -p takt-engine/src/main/resources/META-INF/
+          echo "$CHANGE_DATE" > takt-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
+          # Also create a file for the Docker build to use
+          echo "$CHANGE_DATE" > LICENSE_CHANGE_DATE.txt
+          # Copy license file to takt-engine directory for Docker build
+          cp LICENSE.md takt-engine/
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
 
       - name: Build with Gradle
@@ -36,6 +46,9 @@ jobs:
 
       - name: Build Docker image
         run: |
+          # Copy the LICENSE_CHANGE_DATE.txt file to the takt-engine directory for Docker build
+          cp LICENSE_CHANGE_DATE.txt takt-engine/
+          
           docker build \
             --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
             --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
