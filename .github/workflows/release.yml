@@ -10,6 +10,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -99,8 +100,8 @@ jobs:
             # Create PR using GitHub CLI
             gh pr create --base $DEFAULT_BRANCH \
               --head version-bump-${{ steps.extract_version.outputs.VERSION }} \
-              --title "Update versions to ${{ steps.extract_version.outputs.VERSION }}" \
-              --body "This PR updates versions in Gradle files, Version Catalog, and VERSION.txt to match the released version ${{ steps.extract_version.outputs.VERSION }}."
+              --title "Update versions to ${{ steps.extract_version.outputs.VERSION }} [skip ci]" \
+              --body "This PR updates versions in Gradle files, Version Catalog, and VERSION.txt to match the released version ${{ steps.extract_version.outputs.VERSION }}. IMPORTANT: This PR is created automatically by the release process. It should be merged without additional CI runs. The commit message includes [skip ci] to prevent redundant workflow runs."
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
