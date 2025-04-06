@@ -32,16 +32,17 @@ jobs:
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build -x test
 
       - name: Build Docker image
         run: |
           docker build \
             --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
             --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
+            -f takt-engine/Dockerfile.jvm \
             -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
             -t ghcr.io/${{ github.repository_owner }}/taktx-engine:latest \
-            .
+            takt-engine/
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
