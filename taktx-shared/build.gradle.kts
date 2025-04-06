@@ -1,7 +1,7 @@
 plugins {
     id("java")
-    id("com.github.bjornvester.xjc") version "1.8.1"
-    id("com.diffplug.spotless")
+    alias(libs.plugins.xjc)
+    alias(libs.plugins.spotless)
     `maven-publish`
 }
 
@@ -9,22 +9,22 @@ group = "io.taktx"
 version = "1.0.0-SNAPSHOT"
 
 dependencies {
-    implementation("com.cronutils:cron-utils:9.2.1")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.18.2")
-    implementation("org.apache.kafka:kafka-clients:3.7.1")
+    implementation(libs.cronutils)
+    implementation(libs.jackson.annotations)
+    implementation(libs.jackson.databind)
+    implementation(libs.jackson.cbor)
+    implementation(libs.kafka.clients)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
-    testImplementation("org.assertj:assertj-core:3.24.2")
-    testImplementation("org.mockito:mockito-core:3.12.4")
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations:2.15.3")
-    testImplementation("org.reflections:reflections:0.10.2")
-    testImplementation("org.glassfish.jaxb:jaxb-runtime:3.0.2")
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.params)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.jackson.annotations)
+    testImplementation(libs.reflections)
+    testImplementation(libs.jaxb.runtime)
 
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }
 
 
@@ -37,6 +37,10 @@ xjc {
     defaultPackage.set("io.taktx.bpmn")
 }
 
+// Adds dependency locking to ensure reproducible builds
+dependencyLocking {
+    lockAllConfigurations()
+}
 
 publishing {
     publications {

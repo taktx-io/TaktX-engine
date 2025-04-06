@@ -1,7 +1,7 @@
 plugins {
     id("java")
-    id("com.google.cloud.tools.jib") version "3.4.4"
-    id("com.diffplug.spotless") version "6.25.0"
+    alias(libs.plugins.jib)
+    alias(libs.plugins.spotless)
 }
 
 allprojects {
@@ -9,10 +9,26 @@ allprojects {
         mavenLocal()
         mavenCentral()
     }
+    
+    // Apply dependency constraints to all modules
+    configurations.all {
+        resolutionStrategy {
+            // Force specific versions for common dependencies
+            force(libs.jackson.annotations.get())
+            force(libs.jackson.databind.get())
+            force(libs.jackson.cbor.get())
+            force(libs.cronutils.get())
+        }
+    }
 }
 
 spotless {
     java {
         googleJavaFormat()
     }
+}
+
+// Adds dependency locking to ensure reproducible builds
+dependencyLocking {
+    lockAllConfigurations()
 }

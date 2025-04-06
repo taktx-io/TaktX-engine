@@ -51,6 +51,18 @@ jobs:
             fi
           done
           
+          # Update Version Catalog if it exists
+          if [ -f "gradle/libs.versions.toml" ]; then
+            # Check if there's a project version in the catalog
+            if grep -q "\[metadata\]" "gradle/libs.versions.toml"; then
+              # Update existing metadata section with project version
+              sed -i "/\[metadata\]/,/\[/ s/projectVersion = \".*\"/projectVersion = \"${{ steps.extract_version.outputs.VERSION }}\"/g" "gradle/libs.versions.toml"
+            else
+              # Add metadata section with project version
+              echo -e "\n[metadata]\nprojectVersion = \"${{ steps.extract_version.outputs.VERSION }}\"" >> "gradle/libs.versions.toml"
+            fi
+          fi
+          
           # Update VERSION.txt with new version info
           RELEASE_DATE=$(date +%Y-%m-%d)
           sed -i "s/Version:       .*/Version:       ${{ steps.extract_version.outputs.VERSION }}/g" VERSION.txt

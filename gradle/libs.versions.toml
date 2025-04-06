@@ -1,0 +1,63 @@
+[versions]
+quarkus = "3.19.3"
+jackson = "2.18.2" 
+cronutils = "9.2.1"
+lombok = "1.18.30"
+junit = "5.10.1"
+assertj = "3.24.2"
+mapstruct = "1.6.0"
+kafka = "3.7.0"
+camunda-feel = "1.19.0"
+awaitility = "4.2.1"
+mockito = "3.12.4"
+reflections = "0.10.2"
+jaxb = "3.0.2"
+license3j = "3.3.0"
+
+[libraries]
+# Quarkus dependencies
+quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+quarkus-camel-bom = { module = "io.quarkus.platform:quarkus-camel-bom", version.ref = "quarkus" }
+quarkus-kafka-streams = { module = "io.quarkus:quarkus-kafka-streams" }
+quarkus-jaxb = { module = "io.quarkus:quarkus-jaxb" }
+quarkus-resteasy-client = { module = "io.quarkus:quarkus-resteasy-client" }
+quarkus-micrometer = { module = "io.quarkus:quarkus-micrometer" }
+quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micrometer-registry-prometheus" }
+quarkus-kafka-client = { module = "io.quarkus:quarkus-kafka-client" }
+quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
+quarkus-junit5-mockito = { module = "io.quarkus:quarkus-junit5-mockito" }
+quarkus-jacoco = { module = "io.quarkus:quarkus-jacoco" }
+
+# Jackson
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
+
+# Utility libraries
+cronutils = { module = "com.cronutils:cron-utils", version.ref = "cronutils" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+camunda-feel = { module = "org.camunda.feel:feel-engine", version.ref = "camunda-feel" }
+license3j = { module = "com.javax0.license3j:license3j", version.ref = "license3j" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
+
+# Testing
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+testcontainers-kafka = { module = "org.testcontainers:kafka" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+reflections = { module = "org.reflections:reflections", version.ref = "reflections" }
+jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb" }
+
+[plugins]
+quarkus = { id = "io.quarkus", version.ref = "quarkus" }
+jib = { id = "com.google.cloud.tools.jib", version = "3.4.4" }
+spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
+xjc = { id = "com.github.bjornvester.xjc", version = "1.8.1" }
+
+[metadata]
+projectVersion = "1.0.0-SNAPSHOT"
