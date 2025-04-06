@@ -32,16 +32,40 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
+      - name: Update version in build files
+        run: |
+          # Update root build.gradle.kts with version
+          if ! grep -q "version = " build.gradle.kts; then
+            # Add version if it doesn't exist
+            echo "" >> build.gradle.kts
+            echo "version = \"${{ steps.extract_version.outputs.VERSION }}\"" >> build.gradle.kts
+          else
+            # Update existing version
+            sed -i "s/version = \".*\"/version = \"${{ steps.extract_version.outputs.VERSION }}\"/g" build.gradle.kts
+          fi
+          
+          # Update module build.gradle.kts files with version
+          for MODULE_BUILD in */build.gradle.kts; do
+            if grep -q "version = " "$MODULE_BUILD"; then
+              sed -i "s/version = \".*\"/version = \"${{ steps.extract_version.outputs.VERSION }}\"/g" "$MODULE_BUILD"
+            fi
+          done
+          
+          # Update VERSION.txt with new version info
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          sed -i "s/Version:       .*/Version:       ${{ steps.extract_version.outputs.VERSION }}/g" VERSION.txt
+          sed -i "s/Release Date:  .*/Release Date:  $RELEASE_DATE/g" VERSION.txt
+
       - name: Generate license change date
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
           CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
-          mkdir -p takt-engine/src/main/resources/META-INF/
-          echo "$CHANGE_DATE" > takt-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
+          mkdir -p taktx-engine/src/main/resources/META-INF/
+          echo "$CHANGE_DATE" > taktx-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
           # Also create a file for the Docker build to use
           echo "$CHANGE_DATE" > LICENSE_CHANGE_DATE.txt
-          # Copy license file to takt-engine directory for Docker build
-          cp LICENSE.md takt-engine/
+          # Copy license file to taktx-engine directory for Docker build
+          cp LICENSE.md taktx-engine/
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
 
       - name: Build with Gradle
@@ -49,16 +73,16 @@ jobs:
 
       - name: Build Docker image
         run: |
-          # Copy the LICENSE_CHANGE_DATE.txt file to the takt-engine directory for Docker build
-          cp LICENSE_CHANGE_DATE.txt takt-engine/
+          # Copy the LICENSE_CHANGE_DATE.txt file to the taktx-engine directory for Docker build
+          cp LICENSE_CHANGE_DATE.txt taktx-engine/
           
           docker build \
             --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
             --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
-            -f takt-engine/Dockerfile.jvm \
+            -f taktx-engine/Dockerfile.jvm \
             -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
             -t ghcr.io/${{ github.repository_owner }}/taktx-engine:latest \
-            takt-engine/
+            taktx-engine/
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2

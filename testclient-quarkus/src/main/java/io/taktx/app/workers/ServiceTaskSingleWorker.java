@@ -1,0 +1,36 @@
+package io.taktx.app.workers;
+
+import io.quarkus.runtime.Startup;
+import io.taktx.client.ExternalTaskInstanceResponder;
+import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.TaktWorker;
+import io.taktx.client.annotation.TaktWorkerMethod;
+import jakarta.enterprise.context.ApplicationScoped;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+@Startup
+@ApplicationScoped
+@TaktDeployment(resource = "/bpmn/servicetask-single-clean.bpmn")
+@TaktWorker(processDefinitionId = "service-task-single")
+public class ServiceTaskSingleWorker {
+
+  private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+  @TaktWorkerMethod(taskId = "service-task", autoComplete = false)
+  public void doWork(ExternalTaskInstanceResponder externalTaskInstanceResponder) {
+
+    executor.submit(
+        () -> {
+          try {
+            Thread.sleep(50);
+          } catch (InterruptedException e) {
+            externalTaskInstanceResponder.respondError(
+                false, "Error while sleeping", "SLEEP_ERROR", "SLEEP_ERROR");
+            Thread.currentThread().interrupt();
+          }
+
+          externalTaskInstanceResponder.respondSuccess();
+        });
+  }
+}

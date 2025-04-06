@@ -18,8 +18,8 @@ dependencies {
     implementation("io.quarkus:quarkus-resteasy-client")
     implementation("io.quarkus:quarkus-resteasy-jackson")
     implementation("io.quarkus:quarkus-jackson")
-    implementation(project(":takt-client"))
-    implementation(project(":takt-shared"))
+    implementation(project(":taktx-client"))
+    implementation(project(":taktx-shared"))
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-junit5-mockito")

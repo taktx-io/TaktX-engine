@@ -1,0 +1,73 @@
+package io.taktx.engine.pi;
+
+import io.quarkus.test.junit.QuarkusTest;
+import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+@QuarkusTest
+class IntermediateEventsTest {
+
+  @BeforeEach
+  void reset() {
+    SingletonBpmnTestEngine.getInstance().reset();
+  }
+
+  @Test
+  void testIntermediateTimerCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/timer-intermediate-catch.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .setTime(Instant.parse("2024-02-29T07:59:59Z"))
+        .waitFor(Duration.ofSeconds(1))
+        .assertThatProcess()
+        .isStillActive()
+        .toProcessLevel()
+        .moveTimeForward(Duration.ofMillis(1001))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("CatchEvent_1")
+        .hasInstantiatedElementWithId("Task_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
+  }
+
+  @Test
+  void testMessageIntermediateCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
+        .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
+        .waitForMessageSubscription(
+            "IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
+        .andSendMessageWithCorrelationKey(
+            "IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("MessageIntermediateCatchEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasVariableWithValue("var1", "value1");
+  }
+
+  @Test
+  void testLinkIntermediateThrowCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/link-intermediate-catch-throw.bpmn")
+        .startProcessInstance(VariablesDTO.of("input", "value"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("Throw_1")
+        .hasInstantiatedElementWithId("Catch_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasNotPassedElementWithId("Catch_2")
+        .hasVariableWithValue("input", "value")
+        .hasVariableWithValue("linkOutput_1", 123)
+        .hasVariableWithValue("linkOutput_2", 456);
+  }
+}

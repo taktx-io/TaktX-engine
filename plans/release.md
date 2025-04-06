@@ -277,13 +277,13 @@ LABEL license.change_date="${CHANGE_DATE}"
 
 WORKDIR /app
 
-COPY takt-engine/build/libs/takt-engine-*.jar /app/takt-engine.jar
+COPY taktx-engine/build/libs/taktx-engine-*.jar /app/taktx-engine.jar
 COPY LICENSE.md /app/LICENSE.md
 COPY LICENSE_CHANGE_DATE.txt /app/LICENSE_CHANGE_DATE.txt
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/takt-engine.jar"]
+ENTRYPOINT ["java", "-jar", "/app/taktx-engine.jar"]
 ```
 
 ### 4.2 LicenseInfoConfig Updates

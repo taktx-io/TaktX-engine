@@ -1,3 +1,3 @@
-rootProject.name = "takt"
+rootProject.name = "taktx"
 
-include("takt-shared", "takt-client", "takt-engine", "testclient-quarkus", "takt-admin")
+include("taktx-shared", "taktx-client", "taktx-engine", "testclient-quarkus")
