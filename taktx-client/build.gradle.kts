@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.taktx"
-version = "1.0.0-SNAPSHOT"
+version = "0.0.2-alpha6"
 
 repositories {
     mavenCentral()

@@ -32,3 +32,4 @@ spotless {
 dependencyLocking {
     lockAllConfigurations()
 }
+version = "0.0.2-alpha6"
