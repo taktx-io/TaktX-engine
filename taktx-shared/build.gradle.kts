@@ -3,10 +3,10 @@ plugins {
     alias(libs.plugins.xjc)
     alias(libs.plugins.spotless)
     `maven-publish`
+    id("signing")
 }
 
-group = "io.taktx"
-version = "0.0.2-alpha6"
+// Group and version are inherited from the root project
 
 dependencies {
     implementation(libs.cronutils)
@@ -27,7 +27,6 @@ dependencies {
     annotationProcessor(libs.lombok)
 }
 
-
 tasks.test {
     useJUnitPlatform()
 }
@@ -35,6 +34,14 @@ tasks.test {
 xjc {
     markGenerated.set(true)
     defaultPackage.set("io.taktx.bpmn")
+}
+
+// These are required for Maven Central
+java {
+    withJavadocJar()
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Adds dependency locking to ensure reproducible builds
@@ -47,10 +54,11 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
 
+            // Maven Central requires POM metadata
             pom {
-                name.set("My Library")
-                description.set("A great library for ...")
-                url.set("https://github.com/your-repo")
+                name.set("TaktX Shared")
+                description.set("Shared library for TaktX BPM Engine with licensing controls for Kafka partition limits")
+                url.set("https://github.com/taktx-io/TaktX-engine")
 
                 licenses {
                     license {
@@ -61,26 +69,31 @@ publishing {
 
                 developers {
                     developer {
-                        id.set("your-id")
-                        name.set("Your Name")
-                        email.set("your-email@example.com")
+                        id.set("taktx")
+                        name.set("TaktX Development Team")
+                        email.set("info@taktx.io")
                     }
                 }
 
                 scm {
-                    connection.set("scm:git:git://github.com/your-repo.git")
-                    developerConnection.set("scm:git:ssh://github.com/your-repo.git")
-                    url.set("https://github.com/your-repo")
+                    connection.set("scm:git:git://github.com/taktx-io/TaktX-engine.git")
+                    developerConnection.set("scm:git:ssh://github.com/taktx-io/TaktX-engine.git")
+                    url.set("https://github.com/taktx-io/TaktX-engine")
                 }
             }
         }
     }
+}
 
-    repositories {
-        maven {
-            name = "local"
-            url = uri("file://~/.m2")
-        }
+// Maven Central requires signed artifacts
+// This uses environment variables to avoid storing credentials in the repo
+signing {
+    val signingKey = System.getenv("GPG_PRIVATE_KEY")
+    val signingPassword = System.getenv("GPG_PASSPHRASE")
+    
+    if (signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign(publishing.publications["mavenJava"])
     }
 }
 
