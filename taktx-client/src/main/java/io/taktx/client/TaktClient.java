@@ -27,6 +27,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 public class TaktClient {
 
   @Getter private final ProcessDefinitionConsumer processDefinitionConsumer;
+  @Getter private final TaktParameterResolverFactory parameterResolverFactory;
+
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ExternalTasksForProcessDefinitionConsumer externalTaskConsumer;
@@ -34,7 +36,6 @@ public class TaktClient {
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ExternalTaskResponder externalTaskResponder;
   private final MessageEventSender messageEventSender;
-  @Getter private final TaktParameterResolverFactory parameterResolverFactory;
 
   private TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,

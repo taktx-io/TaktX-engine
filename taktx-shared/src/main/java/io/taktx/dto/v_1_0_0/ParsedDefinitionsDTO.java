@@ -2,6 +2,7 @@ package io.taktx.dto.v_1_0_0;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -10,9 +11,10 @@ import lombok.ToString;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-@Builder
+@Builder(toBuilder = true)
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
 public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
   @JsonProperty("dk")
   private DefinitionsKey definitionsKey;
@@ -28,17 +30,4 @@ public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
 
   @JsonProperty("err")
   private Map<String, ErrorDTO> errors;
-
-  public ParsedDefinitionsDTO(
-      DefinitionsKey definitionsKey,
-      ProcessDTO rootProcess,
-      Map<String, MessageDTO> messages,
-      Map<String, EscalationDTO> escalations,
-      Map<String, ErrorDTO> errors) {
-    this.definitionsKey = definitionsKey;
-    this.rootProcess = rootProcess;
-    this.messages = messages;
-    this.escalations = escalations;
-    this.errors = errors;
-  }
 }

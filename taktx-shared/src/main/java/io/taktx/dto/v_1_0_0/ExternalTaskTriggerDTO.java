@@ -3,6 +3,7 @@ package io.taktx.dto.v_1_0_0;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @EqualsAndHashCode
+@Builder
 public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
   @JsonProperty("pik")

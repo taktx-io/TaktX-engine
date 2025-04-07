@@ -31,6 +31,18 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Configure javadoc to work with Lombok
+tasks.javadoc {
+    options {
+        this as StandardJavadocDocletOptions
+        addStringOption("Xdoclint:none", "-quiet")
+        addBooleanOption("html5", true)
+        // Use Java 21 compatibility for modern language features
+        addStringOption("source", "21")
+    }
+    isFailOnError = false
+}
+
 xjc {
     markGenerated.set(true)
     defaultPackage.set("io.taktx.bpmn")
@@ -40,8 +52,6 @@ xjc {
 java {
     withJavadocJar()
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Adds dependency locking to ensure reproducible builds

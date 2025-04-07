@@ -1,0 +1,60 @@
+package io.taktx.client;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class ExternalTaskInstanceResponderParameterResolverTest {
+
+  private ExternalTaskResponder mockExternalTaskResponder;
+  private ExternalTaskInstanceResponderParameterResolver resolver;
+  private ExternalTaskInstanceResponder mockResponder;
+  private ExternalTaskTriggerDTO mockTriggerDTO;
+
+  @BeforeEach
+  void setUp() {
+    mockExternalTaskResponder = mock(ExternalTaskResponder.class);
+    resolver = new ExternalTaskInstanceResponderParameterResolver(mockExternalTaskResponder);
+
+    mockResponder = mock(ExternalTaskInstanceResponder.class);
+    mockTriggerDTO = mock(ExternalTaskTriggerDTO.class);
+
+    // Set up the mock to return our mock responder
+    when(mockExternalTaskResponder.responderForExternalTaskTrigger(mockTriggerDTO))
+        .thenReturn(mockResponder);
+  }
+
+  @Test
+  void shouldResolveExternalTaskInstanceResponder() {
+    // When
+    Object result = resolver.resolve(mockTriggerDTO);
+
+    // Then
+    verify(mockExternalTaskResponder).responderForExternalTaskTrigger(mockTriggerDTO);
+    assertThat(result).isEqualTo(mockResponder);
+  }
+
+  @Test
+  void shouldCallResponderWithCorrectTrigger() {
+    // Given
+    UUID processInstanceKey = UUID.randomUUID();
+    List<Long> elementInstanceIdPath = List.of(1001L, 1002L);
+
+    ExternalTaskTriggerDTO realTriggerDTO = mock(ExternalTaskTriggerDTO.class);
+    when(realTriggerDTO.getProcessInstanceKey()).thenReturn(processInstanceKey);
+    when(realTriggerDTO.getElementInstanceIdPath()).thenReturn(elementInstanceIdPath);
+
+    // When
+    resolver.resolve(realTriggerDTO);
+
+    // Then
+    verify(mockExternalTaskResponder).responderForExternalTaskTrigger(realTriggerDTO);
+  }
+}

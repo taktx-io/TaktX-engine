@@ -3,8 +3,10 @@ package io.taktx.client.serdes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.io.IOException;
+import lombok.Getter;
 import org.apache.kafka.common.serialization.Deserializer;
 
+@Getter
 public abstract class JsonDeserializer<T> implements Deserializer<T> {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());

@@ -11,7 +11,6 @@ import io.taktx.dto.v_1_0_0.ErrorDTO;
 import io.taktx.dto.v_1_0_0.EscalationDTO;
 import io.taktx.dto.v_1_0_0.MessageDTO;
 import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder;
 import io.taktx.dto.v_1_0_0.ProcessDTO;
 import jakarta.xml.bind.JAXBElement;
 import java.util.HashMap;
@@ -26,7 +25,8 @@ public class GenericBpmnMapper implements BpmnMapper {
 
   public ParsedDefinitionsDTO map(TDefinitions definitions, String hash) {
 
-    ParsedDefinitionsDTOBuilder builder = ParsedDefinitionsDTO.builder();
+    io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO.ParsedDefinitionsDTOBuilder builder =
+        io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO.builder();
     HashMap<String, MessageDTO> messages = new HashMap<>();
     HashMap<String, EscalationDTO> escalations = new HashMap<>();
     HashMap<String, ErrorDTO> errors = new HashMap<>();

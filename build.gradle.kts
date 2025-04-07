@@ -26,6 +26,14 @@ allprojects {
     }
 }
 
+// Set Java compatibility for all projects
+plugins.withType<JavaPlugin> {
+    configure<JavaPluginExtension> {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
+
 // Maven Central publishing configuration
 nexusPublishing {
     repositories {
