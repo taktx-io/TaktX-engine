@@ -15,10 +15,8 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
-import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.StartEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -47,23 +45,20 @@ public class StartEventInstanceProcessor
 
   @Override
   protected void processStartSpecificEventInstance(
-      ProcessInstance processInstance,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       StartEventInstance startEventInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     startEventInstance.setState(CatchEventStateEnum.FINISHED);
   }
 
   @Override
   protected void processContinueSpecificCatchEventInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
-      StartEventInstance flowNodeInstance,
-      ProcessingStatistics processingStatistics) {
+      StartEventInstance flowNodeInstance) {
     // No specific processing for continue
   }
 

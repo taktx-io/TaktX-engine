@@ -13,26 +13,21 @@ package io.taktx.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.v_1_0_0.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import java.util.UUID;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -51,15 +46,12 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processStartSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       CallActivityInstance callActivityInstance,
-      ProcessInstance processInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     callActivityInstance.setState(ActtivityStateEnum.WAITING);
 
     UUID newProcessInstanceKey = UUID.randomUUID();
@@ -76,15 +68,17 @@ public class CallActivityInstanceProcessor
         commandVariables = variables.scopeToDTO();
       }
 
-      instanceResult.addNewStartCommand(
-          new NewStartCommand(
-              newProcessInstanceKey,
-              flowNode,
-              callActivityInstance,
-              jsonNode.asText(),
-              commandVariables,
-              callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
-              callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
+      processingContext
+          .getInstanceResult()
+          .addNewStartCommand(
+              new NewStartCommand(
+                  newProcessInstanceKey,
+                  flowNode,
+                  callActivityInstance,
+                  jsonNode.asText(),
+                  commandVariables,
+                  callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
+                  callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
     } else {
       callActivityInstance.setState(ActtivityStateEnum.FAILED);
     }
@@ -92,28 +86,22 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
-      VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope processInstanceVariables) {
     instance.setState(ActtivityStateEnum.FINISHED);
   }
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       CallActivityInstance instance,
-      ProcessInstance processInstance,
-      VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics) {
-    instanceResult.addTerminateCommand(instance.getChildProcessInstanceId());
+      VariableScope processInstanceVariables) {
+    processingContext.getInstanceResult().addTerminateCommand(instance.getChildProcessInstanceId());
   }
 }

@@ -12,23 +12,18 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
-import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.TaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -46,42 +41,33 @@ public class TaskInstanceProcessor
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       TaskInstance instance,
-      ProcessInstance processInstance,
-      VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope processInstanceVariables) {
     // Nothing to do here
   }
 
   @Override
   protected void processStartSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       TaskInstance flowNodeInstance,
-      ProcessInstance processInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     flowNodeInstance.setState(ActtivityStateEnum.FINISHED);
   }
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
-      VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope processInstanceVariables) {
     // Nothing to do here
   }
 }

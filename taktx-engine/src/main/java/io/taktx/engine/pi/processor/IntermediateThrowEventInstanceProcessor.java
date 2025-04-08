@@ -10,22 +10,17 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IntermediateThrowEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @NoArgsConstructor
@@ -42,25 +37,21 @@ public class IntermediateThrowEventInstanceProcessor
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       IntermediateThrowEventInstance instance,
-      ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements) {
     // nothing to do
   }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       IntermediateThrowEventInstance flowNodeInstance,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     // nothing to do
   }
 }

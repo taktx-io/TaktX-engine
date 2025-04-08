@@ -11,15 +11,12 @@
 package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pd.model.Event;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -27,7 +24,6 @@ import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class EventInstanceProcessor<E extends Event, I extends EventInstance<?>>
@@ -42,40 +38,32 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      ProcessingContext processingContext,
       FlowNodeInstances flowNodeInstances,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
-      ProcessInstance processInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     processStartSpecificEventInstance(
-        processInstance,
-        instanceResult,
+        processingContext,
         directInstanceResult,
         flowElements,
         flowNodeInstance,
         inputFlowId,
-        variables,
-        processingStatistics);
+        variables);
   }
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope variables,
-      FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      FlowNodeInstances flowNodeInstances) {
     // Should not occur
   }
 
@@ -89,12 +77,10 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   }
 
   protected abstract void processStartSpecificEventInstance(
-      ProcessInstance processInstance,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics);
+      VariableScope variables);
 }

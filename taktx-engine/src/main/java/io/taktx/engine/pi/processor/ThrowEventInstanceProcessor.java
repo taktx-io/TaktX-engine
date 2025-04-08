@@ -14,9 +14,8 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
@@ -41,14 +40,12 @@ public abstract class ThrowEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
-      ProcessInstance processInstance,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     flowNodeInstance
         .getFlowNode()
         .getLinkventDefinition()
@@ -58,6 +55,7 @@ public abstract class ThrowEventInstanceProcessor<
                   flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());
               intermediateCatchEvent.ifPresent(
                   event -> {
+                    ProcessInstance processInstance = processingContext.getProcessInstance();
                     FlowNodeInstance<?> catchEventInstance =
                         new IntermediateCatchEventInstance(
                             flowNodeInstance.getParentInstance(),
@@ -71,19 +69,13 @@ public abstract class ThrowEventInstanceProcessor<
                   });
             });
     processStartSpecificThrowEventInstance(
-        instanceResult,
-        directInstanceResult,
-        flowElements,
-        flowNodeInstance,
-        variables,
-        processingStatistics);
+        processingContext, directInstanceResult, flowElements, flowNodeInstance, variables);
   }
 
   protected abstract void processStartSpecificThrowEventInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flowNodeInstance,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics);
+      VariableScope variables);
 }

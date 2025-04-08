@@ -17,7 +17,7 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.VariableScope;
@@ -49,13 +49,12 @@ public class ExclusiveGatewayInstanceProcessor
 
   @Override
   protected void processStartSpecificGatewayInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       ExclusiveGatewayInstance flownodeInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     // nothing to do
   }
 

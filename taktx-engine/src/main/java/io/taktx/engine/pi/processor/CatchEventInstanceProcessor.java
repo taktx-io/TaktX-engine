@@ -13,8 +13,6 @@ package io.taktx.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.v_1_0_0.CatchEventStateEnum;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EventSignal;
@@ -23,7 +21,7 @@ import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
@@ -33,7 +31,6 @@ import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class CatchEventInstanceProcessor<
@@ -53,14 +50,12 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
-      ProcessInstance processInstance,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I catchEventInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
 
     catchEventInstance.setState(CatchEventStateEnum.FINISHED);
 
@@ -89,9 +84,11 @@ public abstract class CatchEventInstanceProcessor<
           .ifPresent(
               timerEventDefinition -> {
                 catchEventInstance.setState(CatchEventStateEnum.WAITING);
-                instanceResult.addNewScheduledContinuation(
-                    new ScheduledContinuationInfo(
-                        catchEventInstance, timerEventDefinition, variables));
+                processingContext
+                    .getInstanceResult()
+                    .addNewScheduledContinuation(
+                        new ScheduledContinuationInfo(
+                            catchEventInstance, timerEventDefinition, variables));
               });
     }
     catchEventInstance
@@ -109,7 +106,9 @@ public abstract class CatchEventInstanceProcessor<
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
                   new NewCorrelationSubscriptionMessageEventInfo(
                       messageName, correlationKey, catchEventInstance);
-              instanceResult.addNewCorrelationSubcriptionMessageEvent(messageInfo);
+              processingContext
+                  .getInstanceResult()
+                  .addNewCorrelationSubcriptionMessageEvent(messageInfo);
             });
   }
 
@@ -117,33 +116,28 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope variables,
-      FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
-    getInstanceResultForContinue(
-        instanceResult, directInstanceResult, flowNodeInstance, processingStatistics);
+      FlowNodeInstances flowNodeInstances) {
+    getInstanceResultForContinue(processingContext, directInstanceResult, flowNodeInstance);
   }
 
   private void getInstanceResultForContinue(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
-      I flowNodeInstance,
-      ProcessingStatistics processingStatistics) {
+      I flowNodeInstance) {
 
     if (shouldCancel(flowNodeInstance)) {
       flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
-      terminateSubscriptions(flowNodeInstance, instanceResult);
+      terminateSubscriptions(flowNodeInstance, processingContext.getInstanceResult());
     }
     processContinueSpecificCatchEventInstance(
-        instanceResult, directInstanceResult, flowNodeInstance, processingStatistics);
+        processingContext, directInstanceResult, flowNodeInstance);
   }
 
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
@@ -178,43 +172,38 @@ public abstract class CatchEventInstanceProcessor<
   }
 
   protected abstract void processContinueSpecificCatchEventInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
-      I flowNodeInstance,
-      ProcessingStatistics processingStatistics);
+      I flowNodeInstance);
 
   protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       I instance,
-      ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements) {
-    terminateSubscriptions(instance, instanceResult);
+    terminateSubscriptions(instance, processingContext.getInstanceResult());
   }
 
   public boolean processEvent(
+      ProcessingContext processingContext,
       I catchEventInstance,
       EventSignal event,
-      InstanceResult newInstanceResult,
       DirectInstanceResult directInstanceResult,
       VariableScope parentVariableScope,
-      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements) {
     long now = clock.millis();
     VariableScope boundaryEventVariableScope =
         parentVariableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
+    InstanceResult newInstanceResult = processingContext.getInstanceResult();
     if (catchEventInstance.matchesEvent(event)) {
-      getInstanceResultForContinue(
-          newInstanceResult, directInstanceResult, catchEventInstance, processingStatistics);
+      getInstanceResultForContinue(processingContext, directInstanceResult, catchEventInstance);
+      ProcessInstance processInstance = processingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,
@@ -230,14 +219,12 @@ public abstract class CatchEventInstanceProcessor<
   }
 
   public boolean processEventCatchAll(
+      ProcessingContext processingContext,
       I catchEventInstance,
       EventSignal event,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       VariableScope variableScope,
-      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements) {
     long now = clock.millis();
 
@@ -245,8 +232,9 @@ public abstract class CatchEventInstanceProcessor<
         variableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
     if (catchEventInstance.matchesEventCatchAll(event)) {
-      getInstanceResultForContinue(
-          instanceResult, directInstanceResult, catchEventInstance, processingStatistics);
+      InstanceResult instanceResult = processingContext.getInstanceResult();
+      getInstanceResultForContinue(processingContext, directInstanceResult, catchEventInstance);
+      ProcessInstance processInstance = processingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,

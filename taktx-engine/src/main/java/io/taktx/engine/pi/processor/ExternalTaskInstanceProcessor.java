@@ -17,8 +17,6 @@ import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
 import io.taktx.dto.v_1_0_0.ExternalTaskResponseResultDTO;
 import io.taktx.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.v_1_0_0.ExternalTaskResponseType;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
@@ -26,12 +24,11 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.ExternalTaskInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
@@ -41,7 +38,6 @@ import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 @Setter
@@ -60,40 +56,35 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processStartSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
-      ProcessInstance processInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     log.info("Starting external task instance {}", flownodeInstance);
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
     retryDirectly(
         getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),
-        instanceResult);
+        processingContext.getInstanceResult());
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
   }
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
+    InstanceResult instanceResult = processingContext.getInstanceResult();
 
     if (ExternalTaskResponseType.SUCCESS == responseResult.getResponseType()) {
       handleSuccess(instanceResult, externalTaskInstance);
@@ -258,13 +249,10 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       I instance,
-      ProcessInstance processInstance,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     // Nothing to do here
   }
 

@@ -11,8 +11,6 @@
 package io.taktx.engine.pi;
 
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.v_1_0_0.ProcessInstanceState;
 import io.taktx.dto.v_1_0_0.TerminateTriggerDTO;
 import io.taktx.engine.pd.model.EventSignal;
@@ -20,13 +18,11 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 public class FlowNodeInstancesProcessor {
@@ -45,15 +41,12 @@ public class FlowNodeInstancesProcessor {
   }
 
   public void processStart(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       String elementId,
       FlowNodeInstance<?> parentElementInstance,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       VariableScope parentVariableScope,
-      FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      FlowNodeInstances flowNodeInstances) {
 
     flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
 
@@ -67,46 +60,37 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
 
     processor.processStart(
-        flowNodeInstanceStore,
-        instanceResult,
+        processingContext,
         directInstanceResult,
         flowElements,
         flowNodeInstance,
-        processInstance,
         null,
         parentVariableScope,
-        flowNodeInstances,
-        processingStatistics);
+        flowNodeInstances);
 
     continueNewInstances(
-        flowNodeInstanceStore,
-        instanceResult,
+        processingContext,
         directInstanceResult,
         flowNodeInstances,
         flowElements,
-        processInstance,
-        parentVariableScope,
-        processingStatistics);
+        parentVariableScope);
 
     flowNodeInstances.determineImplicitCompletedState();
   }
 
   public void processContinue(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       int subProcessLevel,
       ContinueFlowElementTriggerDTO trigger,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       VariableScope parentVariables,
-      FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      FlowNodeInstances flowNodeInstances) {
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstance.getProcessInstanceKey(),
+            processingContext.getProcessInstance().getProcessInstanceKey(),
             flowNodeInstances,
-            flowNodeInstanceStore,
+            processingContext.getFlowNodeInstanceStore(),
             flowElements);
 
     FlowNodeInstance<?> flowNodeInstance =
@@ -119,31 +103,21 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 
     processor.processContinue(
-        flowNodeInstanceStore,
-        instanceResult,
+        processingContext,
         directInstanceResult,
         subProcessLevel,
         flowElements,
-        processInstance,
         flowNodeInstance,
         trigger,
         parentVariables,
-        flowNodeInstances,
-        processingStatistics);
+        flowNodeInstances);
 
     continueNewInstances(
-        flowNodeInstanceStore,
-        instanceResult,
-        directInstanceResult,
-        flowNodeInstances,
-        flowElements,
-        processInstance,
-        parentVariables,
-        processingStatistics);
+        processingContext, directInstanceResult, flowNodeInstances, flowElements, parentVariables);
 
     EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
     while (eventSignal != null) {
-      instanceResult.addBubbleUpEvent(eventSignal);
+      processingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
     }
 
@@ -151,22 +125,19 @@ public class FlowNodeInstancesProcessor {
   }
 
   public void processTerminate(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       TerminateTriggerDTO trigger,
-      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       VariableScope parentVariableScope,
-      FlowElements flowElements,
-      ProcessingStatistics processingStatistics) {
+      FlowElements flowElements) {
 
     DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstance.getProcessInstanceKey(),
+            processingContext.getProcessInstance().getProcessInstanceKey(),
             flowNodeInstances,
-            flowNodeInstanceStore,
+            processingContext.getFlowNodeInstanceStore(),
             flowElements);
 
     if (trigger.getElementInstanceIdPath().isEmpty()) {
@@ -179,14 +150,11 @@ public class FlowNodeInstancesProcessor {
                 FlowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
                 processor.processTerminate(
-                    flowNodeInstanceStore,
-                    instanceResult,
+                    processingContext,
                     directInstanceResult,
                     instance,
-                    processInstance,
                     parentVariableScope,
                     flowNodeInstances,
-                    processingStatistics,
                     flowElements);
               });
       flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
@@ -199,14 +167,11 @@ public class FlowNodeInstancesProcessor {
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
         processor.processTerminate(
-            flowNodeInstanceStore,
-            instanceResult,
+            processingContext,
             directInstanceResult,
             instance,
-            processInstance,
             parentVariableScope,
             flowNodeInstances,
-            processingStatistics,
             flowElements);
       }
     }
@@ -214,23 +179,17 @@ public class FlowNodeInstancesProcessor {
   }
 
   protected void continueNewInstances(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
-      ProcessInstance processInstance,
-      VariableScope parentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      VariableScope parentVariableScope) {
 
     flowInstanceRunner.continueNewInstances(
-        flowNodeInstanceStore,
-        instanceResult,
+        processingContext,
         directInstanceResult,
         flowNodeInstances,
-        processInstance,
         flowElements,
-        parentVariableScope,
-        processingStatistics);
+        parentVariableScope);
   }
 }

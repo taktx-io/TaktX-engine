@@ -10,8 +10,6 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
@@ -20,14 +18,12 @@ import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.FlowNodeInstances;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.processor.BoundaryEventInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -37,60 +33,48 @@ public class FlowInstanceRunner {
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
 
   public void continueNewInstances(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowNodeInstances flowNodeInstances,
-      ProcessInstance processInstance,
       FlowElements flowElements,
-      VariableScope parentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      VariableScope parentVariableScope) {
 
     while (directInstanceResult.hasDirectTriggers()) {
       processDirectTriggers(
-          flowNodeInstanceStore,
+          processingContext,
           flowNodeInstances,
-          processInstance,
-          instanceResult,
           directInstanceResult,
           flowElements,
-          parentVariableScope,
-          processingStatistics);
+          parentVariableScope);
     }
   }
 
   private void processDirectTriggers(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      ProcessingContext processingContext,
       FlowNodeInstances flowNodeInstances,
-      ProcessInstance processInstance,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
-      VariableScope parentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      VariableScope parentVariableScope) {
 
     while (!directInstanceResult.eventsEmpty()) {
       EventSignal event = directInstanceResult.pollEvent();
       processEventByFlowNodeInstance(
-          flowNodeInstanceStore,
+          processingContext,
           flowNodeInstances,
           flowElements,
-          processInstance,
           event,
           event.getCurrentInstance(),
-          instanceResult,
           directInstanceResult,
-          parentVariableScope,
-          processingStatistics);
+          parentVariableScope);
     }
 
     while (!directInstanceResult.terminateInstancesIsEmpty()) {
       long terminateInstance = directInstanceResult.pollTerminateInstance();
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstance.getProcessInstanceKey(),
+              processingContext.getProcessInstance().getProcessInstanceKey(),
               flowNodeInstances,
-              flowNodeInstanceStore,
+              processingContext.getFlowNodeInstanceStore(),
               flowElements);
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
@@ -100,14 +84,11 @@ public class FlowInstanceRunner {
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
       processor.processTerminate(
-          flowNodeInstanceStore,
-          instanceResult,
+          processingContext,
           directInstanceResult,
           flowNodeInstance,
-          processInstance,
           parentVariableScope,
           flowNodeInstances,
-          processingStatistics,
           flowElements);
     }
 
@@ -118,38 +99,32 @@ public class FlowInstanceRunner {
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
       processor.processStart(
-          flowNodeInstanceStore,
-          instanceResult,
+          processingContext,
           directInstanceResult,
           flowElements,
           instanceInfo.flowNodeInstance(),
-          processInstance,
           instanceInfo.inputSequenceFlowId(),
           parentVariableScope,
-          flowNodeInstances,
-          processingStatistics);
+          flowNodeInstances);
     }
   }
 
   private void processEventByFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      ProcessingContext processingContext,
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       EventSignal event,
       FlowNodeInstance<?> fLowNodeInstance,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
-      VariableScope parentVariableScope,
-      ProcessingStatistics processingStatistics) {
+      VariableScope parentVariableScope) {
 
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
       boolean eventHandled = false;
       StoredFlowNodeInstancesWrapper instancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstance.getProcessInstanceKey(),
+              processingContext.getProcessInstance().getProcessInstanceKey(),
               flowNodeInstances,
-              flowNodeInstanceStore,
+              processingContext.getFlowNodeInstanceStore(),
               flowElements);
       // First check for specific codes
       for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
@@ -158,14 +133,12 @@ public class FlowInstanceRunner {
 
         eventHandled =
             boundaryEventProcessor.processEvent(
+                processingContext,
                 boundaryEventInstance,
                 event,
-                instanceResult,
                 directInstanceResult,
                 parentVariableScope,
-                processInstance,
                 flowNodeInstances,
-                processingStatistics,
                 flowElements);
         if (eventHandled) {
           if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
@@ -184,14 +157,12 @@ public class FlowInstanceRunner {
           if (!eventHandled) {
             eventHandled =
                 boundaryEventProcessor.processEventCatchAll(
+                    processingContext,
                     boundaryEventInstance,
                     event,
-                    instanceResult,
                     directInstanceResult,
                     parentVariableScope,
-                    processInstance,
                     flowNodeInstances,
-                    processingStatistics,
                     flowElements);
           }
           if (eventHandled) {

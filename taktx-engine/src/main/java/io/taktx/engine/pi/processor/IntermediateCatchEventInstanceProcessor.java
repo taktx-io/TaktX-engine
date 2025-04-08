@@ -13,9 +13,8 @@ package io.taktx.engine.pi.processor;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -43,10 +42,9 @@ public class IntermediateCatchEventInstanceProcessor
 
   @Override
   protected void processContinueSpecificCatchEventInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
-      IntermediateCatchEventInstance flowNodeInstance,
-      ProcessingStatistics processingStatistics) {
+      IntermediateCatchEventInstance flowNodeInstance) {
     // nothing to do
   }
 

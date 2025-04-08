@@ -175,24 +175,27 @@ public class ProcessInstanceProcessor
 
     FlowElements flowElements = getFlowElements(processDefinitionKey);
 
+    ProcessingContext processingContext =
+        ProcessingContext.builder()
+            .processInstance(processInstance)
+            .processingStatistics(processingStatistics)
+            .instanceResult(instanceResult)
+            .flowNodeInstanceStore(flowNodeInstanceStore)
+            .build();
+
     flowNodeInstancesProcessor.processStart(
-        flowNodeInstanceStore,
-        instanceResult,
+        processingContext,
         startEventId,
         null,
         flowElements,
-        processInstance,
         processInstanceVariables,
-        flowNodeInstances,
-        processingStatistics);
+        flowNodeInstances);
 
     processResultAndForward(
-        instanceResult,
+        processingContext,
         processDefinitionKey,
-        processInstance,
         flowNodeInstances,
         processInstanceVariables,
-        processingStatistics,
         flowElements,
         updateVariablesAtStart);
   }
@@ -252,24 +255,26 @@ public class ProcessInstanceProcessor
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
 
+        ProcessingContext processingContext =
+            ProcessingContext.builder()
+                .processInstance(processInstance)
+                .processingStatistics(processingStatistics)
+                .instanceResult(instanceResult)
+                .flowNodeInstanceStore(flowNodeInstanceStore)
+                .build();
         flowNodeInstancesProcessor.processContinue(
-            flowNodeInstanceStore,
-            instanceResult,
+            processingContext,
             0,
             trigger,
             flowElements,
-            processInstance,
             processInstanceVariables,
-            processInstance.getFlowNodeInstances(),
-            processingStatistics);
+            processInstance.getFlowNodeInstances());
 
         processResultAndForward(
-            instanceResult,
+            processingContext,
             processInstance.getProcessDefinitionKey(),
-            processInstance,
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
-            processingStatistics,
             flowElements,
             VariablesDTO.empty());
       }
@@ -317,23 +322,25 @@ public class ProcessInstanceProcessor
                 variablesStore, processInstanceDTO.getProcessInstanceKey(), null, null);
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
 
+        ProcessingContext processingContext =
+            ProcessingContext.builder()
+                .flowNodeInstanceStore(flowNodeInstanceStore)
+                .processInstance(processInstance)
+                .processingStatistics(processingStatistics)
+                .instanceResult(instanceResult)
+                .build();
         flowNodeInstancesProcessor.processTerminate(
-            flowNodeInstanceStore,
-            instanceResult,
+            processingContext,
             trigger,
-            processInstance,
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
-            flowElements,
-            processingStatistics);
+            flowElements);
 
         processResultAndForward(
-            instanceResult,
+            processingContext,
             processInstance.getProcessDefinitionKey(),
-            processInstance,
             processInstance.getFlowNodeInstances(),
             processInstanceVariables,
-            processingStatistics,
             flowElements,
             VariablesDTO.empty());
       }
@@ -341,23 +348,23 @@ public class ProcessInstanceProcessor
   }
 
   private void processResultAndForward(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       ProcessDefinitionKey processDefinitionKey,
-      ProcessInstance processInstance,
       FlowNodeInstances flowNodeInstances,
       VariableScope processInstanceVariables,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements,
       VariablesDTO updatedVariablesAtStart) {
 
     FlowNodeInstancesDTO flowNodeInstancesDTO = flowNodeInstancesToDTO(flowNodeInstances);
 
+    ProcessInstance processInstance = processingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder()
             .flowNodeInstances(flowNodeInstancesDTO)
             .build();
 
     processInstanceVariables.persist();
+    InstanceResult instanceResult = processingContext.getInstanceResult();
 
     if (flowNodeInstances.isStateChanged()) {
       if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {

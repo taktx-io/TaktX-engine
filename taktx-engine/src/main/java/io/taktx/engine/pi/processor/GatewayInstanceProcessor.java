@@ -12,8 +12,6 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.v_1_0_0.FlowConditionDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.Gateway;
@@ -22,7 +20,7 @@ import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -32,7 +30,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 @NoArgsConstructor
 public abstract class GatewayInstanceProcessor<
@@ -52,39 +49,32 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
+      ProcessingContext processingContext,
       FlowNodeInstances flowNodeInstances,
-      InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I gatewayInstance,
-      ProcessInstance processInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics) {
+      VariableScope variables) {
     processStartSpecificGatewayInstance(
-        instanceResult,
+        processingContext,
         directInstanceResult,
         flowElements,
         gatewayInstance,
         inputFlowId,
-        variables,
-        processingStatistics);
+        variables);
   }
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       int subProcessLevel,
       FlowElements flowElements,
-      ProcessInstance processInstance,
       I flowNodeInstance,
       C trigger,
       VariableScope processInstanceVariables,
-      FlowNodeInstances flowNodeInstances,
-      ProcessingStatistics processingStatistics) {
+      FlowNodeInstances flowNodeInstances) {
     // Should never happen
   }
 
@@ -135,25 +125,22 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       I instance,
-      ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      ProcessingStatistics processingStatistics,
       FlowElements flowElements) {
-    processTerminateSpecificGatewayInstance(instanceResult, directInstanceResult, instance);
+    processTerminateSpecificGatewayInstance(
+        processingContext.getInstanceResult(), directInstanceResult, instance);
   }
 
   protected abstract void processStartSpecificGatewayInstance(
-      InstanceResult instanceResult,
+      ProcessingContext processingContext,
       DirectInstanceResult directInstanceResult,
       FlowElements flowElements,
       I flownodeInstance,
       String inputFlowId,
-      VariableScope variables,
-      ProcessingStatistics processingStatistics);
+      VariableScope variables);
 
   protected abstract void processTerminateSpecificGatewayInstance(
       InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I instance);
