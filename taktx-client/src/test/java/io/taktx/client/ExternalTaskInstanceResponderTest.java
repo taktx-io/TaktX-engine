@@ -38,6 +38,7 @@ class ExternalTaskInstanceResponderTest {
             mockProducer, topicName, processInstanceKey, elementInstanceIdPath);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondSuccessWithNoVariables() {
     // When
@@ -59,6 +60,7 @@ class ExternalTaskInstanceResponderTest {
     assertSuccessResult(resultDTO);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondSuccessWithCustomObject() {
     // Given
@@ -84,6 +86,7 @@ class ExternalTaskInstanceResponderTest {
     assertSuccessResult(resultDTO);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondSuccessWithVariablesMap() {
     // Given
@@ -110,6 +113,7 @@ class ExternalTaskInstanceResponderTest {
     assertSuccessResult(resultDTO);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondEscalation() {
     // Given
@@ -136,6 +140,7 @@ class ExternalTaskInstanceResponderTest {
     assertEscalationResult(resultDTO, name, message, code);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondError() {
     // Given
@@ -163,6 +168,7 @@ class ExternalTaskInstanceResponderTest {
     assertErrorResult(resultDTO, allowRetry, name, message, code);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondErrorWithVariables() {
     // Given
@@ -191,6 +197,7 @@ class ExternalTaskInstanceResponderTest {
     assertErrorResult(resultDTO, allowRetry, name, message, code);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   void respondPromise() {
     // Given
