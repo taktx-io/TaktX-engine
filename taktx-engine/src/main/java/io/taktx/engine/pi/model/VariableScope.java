@@ -11,9 +11,9 @@
 package io.taktx.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.v_1_0_0.VariableKeyDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.FlowNodeInstanceKeyDTO;
+import io.taktx.dto.VariableKeyDTO;
+import io.taktx.dto.VariablesDTO;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

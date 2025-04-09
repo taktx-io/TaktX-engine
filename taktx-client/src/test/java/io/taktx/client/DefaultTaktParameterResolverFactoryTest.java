@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import io.taktx.client.annotation.Variable;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Map;

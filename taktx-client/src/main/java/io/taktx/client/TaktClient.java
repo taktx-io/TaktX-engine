@@ -2,12 +2,12 @@ package io.taktx.client;
 
 import io.taktx.client.annotation.TaktDeployment;
 import io.taktx.client.annotation.TaktWorker;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
-import io.taktx.dto.v_1_0_0.InstanceUpdateDTO;
-import io.taktx.dto.v_1_0_0.MessageEventDTO;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.InstanceUpdateDTO;
+import io.taktx.dto.MessageEventDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
 import java.io.IOException;

@@ -6,7 +6,7 @@ import io.taktx.client.annotation.TaktDeployment;
 import io.taktx.client.annotation.TaktWorker;
 import io.taktx.client.annotation.TaktWorkerMethod;
 import io.taktx.client.annotation.Variable;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;

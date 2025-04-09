@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.InclusiveGateway;

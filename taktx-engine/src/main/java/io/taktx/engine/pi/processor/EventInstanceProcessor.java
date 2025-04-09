@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.pd.model.Event;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;

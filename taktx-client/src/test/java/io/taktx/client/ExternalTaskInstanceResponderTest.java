@@ -3,10 +3,10 @@ package io.taktx.client;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseResultDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseType;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ExternalTaskResponseResultDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;

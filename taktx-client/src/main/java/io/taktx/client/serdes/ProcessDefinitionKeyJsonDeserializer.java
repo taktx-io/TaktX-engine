@@ -1,6 +1,6 @@
 package io.taktx.client.serdes;
 
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
+import io.taktx.dto.ProcessDefinitionKey;
 
 public class ProcessDefinitionKeyJsonDeserializer extends JsonDeserializer<ProcessDefinitionKey> {
 

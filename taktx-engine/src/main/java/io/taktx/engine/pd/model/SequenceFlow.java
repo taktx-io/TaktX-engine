@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pd.model;
 
-import io.taktx.dto.v_1_0_0.FlowConditionDTO;
+import io.taktx.dto.FlowConditionDTO;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;

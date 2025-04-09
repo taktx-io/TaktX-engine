@@ -2,7 +2,7 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import org.junit.jupiter.api.Test;
 
 class ExternalTaskTriggerJsonDeserializerTest {

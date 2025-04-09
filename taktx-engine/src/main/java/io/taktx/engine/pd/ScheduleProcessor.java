@@ -10,10 +10,10 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.v_1_0_0.MessageScheduleDTO;
-import io.taktx.dto.v_1_0_0.SchedulableMessageDTO;
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
-import io.taktx.dto.v_1_0_0.TimeBucket;
+import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.dto.SchedulableMessageDTO;
+import io.taktx.dto.ScheduleKeyDTO;
+import io.taktx.dto.TimeBucket;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;

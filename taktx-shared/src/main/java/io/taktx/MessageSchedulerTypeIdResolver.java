@@ -14,9 +14,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.FixedRateMessageScheduleDTO;
-import io.taktx.dto.v_1_0_0.OneTimeScheduleDTO;
-import io.taktx.dto.v_1_0_0.RecurringMessageScheduleDTO;
+import io.taktx.dto.FixedRateMessageScheduleDTO;
+import io.taktx.dto.OneTimeScheduleDTO;
+import io.taktx.dto.RecurringMessageScheduleDTO;
 
 public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
 

@@ -1,7 +1,7 @@
 package io.taktx.engine.pi;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;

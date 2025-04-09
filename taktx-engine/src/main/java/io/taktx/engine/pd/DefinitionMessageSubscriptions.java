@@ -12,9 +12,9 @@ package io.taktx.engine.pd;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.taktx.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.MessageEventKeyDTO;
+import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
+import io.taktx.dto.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.MessageEventKeyDTO;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;

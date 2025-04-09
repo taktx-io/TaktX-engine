@@ -2,7 +2,7 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.v_1_0_0.ProcessInstanceTriggerDTO;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import org.junit.jupiter.api.Test;
 
 class ProcessDefinitionKeyJsonDeserializerTest {

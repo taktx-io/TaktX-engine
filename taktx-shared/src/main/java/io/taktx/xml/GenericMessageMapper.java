@@ -1,7 +1,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TMessage;
-import io.taktx.dto.v_1_0_0.MessageDTO;
+import io.taktx.dto.MessageDTO;
 
 public class GenericMessageMapper implements MessageMapper {
 

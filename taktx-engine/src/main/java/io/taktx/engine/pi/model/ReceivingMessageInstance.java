@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.MessageEventKeyDTO;
+import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.Map;
 import java.util.Set;

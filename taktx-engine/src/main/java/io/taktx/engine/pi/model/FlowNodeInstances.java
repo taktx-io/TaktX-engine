@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.ProcessInstanceState;
+import io.taktx.dto.ProcessInstanceState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.LinkedHashMap;
 import java.util.Map;

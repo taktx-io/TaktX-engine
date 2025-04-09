@@ -14,21 +14,21 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.BoundaryEventInstanceDTO;
-import io.taktx.dto.v_1_0_0.CallActivityInstanceDTO;
-import io.taktx.dto.v_1_0_0.EndEventInstanceDTO;
-import io.taktx.dto.v_1_0_0.ExclusiveGatewayInstanceDTO;
-import io.taktx.dto.v_1_0_0.InclusiveGatewayInstanceDTO;
-import io.taktx.dto.v_1_0_0.IntermediateCatchEventInstanceDTO;
-import io.taktx.dto.v_1_0_0.IntermediateThrowEventInstanceDTO;
-import io.taktx.dto.v_1_0_0.MultiInstanceInstanceDTO;
-import io.taktx.dto.v_1_0_0.ParallelGatewayInstanceDTO;
-import io.taktx.dto.v_1_0_0.ReceiveTaskInstanceDTO;
-import io.taktx.dto.v_1_0_0.SendTaskInstanceDTO;
-import io.taktx.dto.v_1_0_0.ServiceTaskInstanceDTO;
-import io.taktx.dto.v_1_0_0.StartEventInstanceDTO;
-import io.taktx.dto.v_1_0_0.SubProcessInstanceDTO;
-import io.taktx.dto.v_1_0_0.TaskInstanceDTO;
+import io.taktx.dto.BoundaryEventInstanceDTO;
+import io.taktx.dto.CallActivityInstanceDTO;
+import io.taktx.dto.EndEventInstanceDTO;
+import io.taktx.dto.ExclusiveGatewayInstanceDTO;
+import io.taktx.dto.InclusiveGatewayInstanceDTO;
+import io.taktx.dto.IntermediateCatchEventInstanceDTO;
+import io.taktx.dto.IntermediateThrowEventInstanceDTO;
+import io.taktx.dto.MultiInstanceInstanceDTO;
+import io.taktx.dto.ParallelGatewayInstanceDTO;
+import io.taktx.dto.ReceiveTaskInstanceDTO;
+import io.taktx.dto.SendTaskInstanceDTO;
+import io.taktx.dto.ServiceTaskInstanceDTO;
+import io.taktx.dto.StartEventInstanceDTO;
+import io.taktx.dto.SubProcessInstanceDTO;
+import io.taktx.dto.TaskInstanceDTO;
 
 public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
 

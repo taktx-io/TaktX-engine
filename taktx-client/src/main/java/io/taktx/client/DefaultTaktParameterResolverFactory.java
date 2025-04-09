@@ -3,7 +3,7 @@ package io.taktx.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.client.annotation.Variable;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 

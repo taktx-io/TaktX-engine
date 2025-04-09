@@ -13,10 +13,10 @@ package io.taktx.engine.pi.processor;
 import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseResultDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseType;
+import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.ExternalTaskResponseResultDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;

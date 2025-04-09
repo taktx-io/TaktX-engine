@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pd.model;
 
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import java.util.Set;
 import java.util.UUID;

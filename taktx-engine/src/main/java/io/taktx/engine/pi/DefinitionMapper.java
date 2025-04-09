@@ -10,11 +10,11 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.v_1_0_0.ErrorDTO;
-import io.taktx.dto.v_1_0_0.EscalationDTO;
-import io.taktx.dto.v_1_0_0.FlowElementsDTO;
-import io.taktx.dto.v_1_0_0.MessageDTO;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
+import io.taktx.dto.ErrorDTO;
+import io.taktx.dto.EscalationDTO;
+import io.taktx.dto.FlowElementsDTO;
+import io.taktx.dto.MessageDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.CatchEvent;

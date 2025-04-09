@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 
 public interface FlowNodeInstanceWithScheduleKeys extends IFlowNodeInstance {
   void addScheduledKey(ScheduleKeyDTO scheduledKey);

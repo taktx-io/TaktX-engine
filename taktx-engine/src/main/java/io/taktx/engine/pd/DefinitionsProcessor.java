@@ -10,13 +10,13 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.v_1_0_0.DefinitionsTriggerDTO;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionActivationDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionStateEnum;
-import io.taktx.dto.v_1_0_0.XmlDefinitionsDTO;
+import io.taktx.dto.DefinitionsTriggerDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.ProcessDefinitionActivationDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessDefinitionStateEnum;
+import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.xml.BpmnParser;
 import java.time.Clock;

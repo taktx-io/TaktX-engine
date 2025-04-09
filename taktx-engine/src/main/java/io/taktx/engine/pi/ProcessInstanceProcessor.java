@@ -10,24 +10,24 @@
 
 package io.taktx.engine.pi;
 
-import static io.taktx.dto.v_1_0_0.Constants.MAX_LONG;
+import static io.taktx.dto.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowElementDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstancesDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
-import io.taktx.dto.v_1_0_0.ProcessInstanceDTO;
-import io.taktx.dto.v_1_0_0.ProcessInstanceState;
-import io.taktx.dto.v_1_0_0.ProcessInstanceTriggerDTO;
-import io.taktx.dto.v_1_0_0.ProcessInstanceUpdateDTO;
-import io.taktx.dto.v_1_0_0.StartCommandDTO;
-import io.taktx.dto.v_1_0_0.TerminateTriggerDTO;
-import io.taktx.dto.v_1_0_0.VariableKeyDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowElementDTO;
+import io.taktx.dto.FlowNodeInstanceDTO;
+import io.taktx.dto.FlowNodeInstanceKeyDTO;
+import io.taktx.dto.FlowNodeInstancesDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessInstanceDTO;
+import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.ProcessInstanceUpdateDTO;
+import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.VariableKeyDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.FlowElements;

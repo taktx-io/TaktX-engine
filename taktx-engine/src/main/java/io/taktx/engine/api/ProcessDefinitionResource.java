@@ -10,8 +10,8 @@
 
 package io.taktx.engine.api;
 
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.pd.Stores;

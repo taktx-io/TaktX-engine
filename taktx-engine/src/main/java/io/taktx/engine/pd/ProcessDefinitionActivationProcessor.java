@@ -10,21 +10,21 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.InstanceScheduleKeyDTO;
-import io.taktx.dto.v_1_0_0.MessageDTO;
-import io.taktx.dto.v_1_0_0.MessageEventDTO;
-import io.taktx.dto.v_1_0_0.MessageScheduleDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionActivationDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionStateEnum;
-import io.taktx.dto.v_1_0_0.SchedulableMessageDTO;
-import io.taktx.dto.v_1_0_0.StartCommandDTO;
-import io.taktx.dto.v_1_0_0.StartEventDTO;
-import io.taktx.dto.v_1_0_0.TimeBucket;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
+import io.taktx.dto.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.InstanceScheduleKeyDTO;
+import io.taktx.dto.MessageDTO;
+import io.taktx.dto.MessageEventDTO;
+import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.dto.ProcessDefinitionActivationDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessDefinitionStateEnum;
+import io.taktx.dto.SchedulableMessageDTO;
+import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartEventDTO;
+import io.taktx.dto.TimeBucket;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;

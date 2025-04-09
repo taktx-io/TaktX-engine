@@ -10,10 +10,10 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeInstanceDTO;
+import io.taktx.dto.FlowNodeInstanceUpdateDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.SequenceFlow;

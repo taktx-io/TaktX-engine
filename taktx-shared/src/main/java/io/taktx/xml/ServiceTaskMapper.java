@@ -1,9 +1,9 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TServiceTask;
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
-import io.taktx.dto.v_1_0_0.LoopCharacteristicsDTO;
-import io.taktx.dto.v_1_0_0.ServiceTaskDTO;
+import io.taktx.dto.InputOutputMappingDTO;
+import io.taktx.dto.LoopCharacteristicsDTO;
+import io.taktx.dto.ServiceTaskDTO;
 
 public interface ServiceTaskMapper extends Mapper {
   String DEFAULT_RETRIES = "3";

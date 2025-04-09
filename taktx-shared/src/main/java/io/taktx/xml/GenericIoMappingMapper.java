@@ -1,7 +1,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TBaseElement;
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
+import io.taktx.dto.InputOutputMappingDTO;
 import java.util.Set;
 
 public class GenericIoMappingMapper implements IoMappingMapper {

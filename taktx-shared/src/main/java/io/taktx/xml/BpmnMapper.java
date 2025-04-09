@@ -1,7 +1,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TDefinitions;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
 
 public interface BpmnMapper {
 

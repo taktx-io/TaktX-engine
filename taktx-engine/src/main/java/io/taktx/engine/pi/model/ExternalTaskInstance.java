@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.ExternalTask;
 import java.util.ArrayList;
 import java.util.List;

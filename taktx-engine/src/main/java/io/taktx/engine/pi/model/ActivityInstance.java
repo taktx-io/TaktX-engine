@@ -11,7 +11,7 @@
 package io.taktx.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
+import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashSet;
 import java.util.Set;

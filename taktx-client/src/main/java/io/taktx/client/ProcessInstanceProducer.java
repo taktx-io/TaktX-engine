@@ -2,11 +2,11 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
-import io.taktx.dto.v_1_0_0.ProcessInstanceTriggerDTO;
-import io.taktx.dto.v_1_0_0.StartCommandDTO;
-import io.taktx.dto.v_1_0_0.TerminateTriggerDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
 import java.util.List;

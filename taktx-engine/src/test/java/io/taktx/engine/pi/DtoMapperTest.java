@@ -3,10 +3,10 @@ package io.taktx.engine.pi;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
-import io.taktx.dto.v_1_0_0.IoVariableMappingDTO;
-import io.taktx.dto.v_1_0_0.LinkEventDefinitionDTO;
-import io.taktx.dto.v_1_0_0.StartEventDTO;
+import io.taktx.dto.InputOutputMappingDTO;
+import io.taktx.dto.IoVariableMappingDTO;
+import io.taktx.dto.LinkEventDefinitionDTO;
+import io.taktx.dto.StartEventDTO;
 import io.taktx.engine.pd.model.FlowElement;
 import io.taktx.engine.pd.model.StartEvent;
 import java.util.Set;

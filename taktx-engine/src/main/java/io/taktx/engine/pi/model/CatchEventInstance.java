@@ -10,9 +10,9 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.CatchEventStateEnum;
-import io.taktx.dto.v_1_0_0.MessageEventKeyDTO;
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
+import io.taktx.dto.CatchEventStateEnum;
+import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.ErrorEventDefinition;
 import io.taktx.engine.pd.model.EscalationEventDefinition;

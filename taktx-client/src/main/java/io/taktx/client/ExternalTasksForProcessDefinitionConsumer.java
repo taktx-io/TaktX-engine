@@ -1,9 +1,9 @@
 package io.taktx.client;
 
 import io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializer;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
+import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
 import java.time.Duration;

@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
+import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import java.util.List;
 import java.util.Set;

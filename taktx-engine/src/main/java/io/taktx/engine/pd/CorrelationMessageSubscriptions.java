@@ -12,7 +12,7 @@ package io.taktx.engine.pd;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.taktx.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;

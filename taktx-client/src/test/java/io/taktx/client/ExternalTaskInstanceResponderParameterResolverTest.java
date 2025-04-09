@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,9 +1,9 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TCallActivity;
-import io.taktx.dto.v_1_0_0.CallActivityDTO;
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
-import io.taktx.dto.v_1_0_0.LoopCharacteristicsDTO;
+import io.taktx.dto.CallActivityDTO;
+import io.taktx.dto.InputOutputMappingDTO;
+import io.taktx.dto.LoopCharacteristicsDTO;
 
 public class GenericCallActivityMapper implements CallActivityMapper {
 

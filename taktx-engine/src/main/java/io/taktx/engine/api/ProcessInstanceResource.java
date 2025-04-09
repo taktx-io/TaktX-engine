@@ -11,10 +11,10 @@
 package io.taktx.engine.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.Constants;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.v_1_0_0.ProcessInstanceDTO;
-import io.taktx.dto.v_1_0_0.VariableKeyDTO;
+import io.taktx.dto.Constants;
+import io.taktx.dto.FlowNodeInstanceKeyDTO;
+import io.taktx.dto.ProcessInstanceDTO;
+import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
 import io.taktx.util.TaktUUIDSerializer;

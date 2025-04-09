@@ -2,8 +2,8 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.XmlDefinitionSerializer;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
-import io.taktx.dto.v_1_0_0.XmlDefinitionsDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.xml.BpmnParser;
 import lombok.extern.slf4j.Slf4j;

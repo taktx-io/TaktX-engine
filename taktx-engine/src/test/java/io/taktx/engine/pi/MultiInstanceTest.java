@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.taktx.dto.v_1_0_0.CallActivityInstanceDTO;
-import io.taktx.dto.v_1_0_0.MultiInstanceInstanceDTO;
-import io.taktx.dto.v_1_0_0.SubProcessInstanceDTO;
-import io.taktx.dto.v_1_0_0.TaskInstanceDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.CallActivityInstanceDTO;
+import io.taktx.dto.MultiInstanceInstanceDTO;
+import io.taktx.dto.SubProcessInstanceDTO;
+import io.taktx.dto.TaskInstanceDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import java.io.IOException;
 import java.util.List;

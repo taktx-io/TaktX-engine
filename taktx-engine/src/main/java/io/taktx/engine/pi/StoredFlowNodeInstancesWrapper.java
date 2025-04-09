@@ -10,9 +10,9 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.v_1_0_0.Constants;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceDTO;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceKeyDTO;
+import io.taktx.dto.Constants;
+import io.taktx.dto.FlowNodeInstanceDTO;
+import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;

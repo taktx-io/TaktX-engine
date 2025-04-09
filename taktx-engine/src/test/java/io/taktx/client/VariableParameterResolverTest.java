@@ -3,8 +3,8 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import org.junit.jupiter.api.Test;
 
 class VariableParameterResolverTest {

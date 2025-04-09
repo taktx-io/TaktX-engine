@@ -1,7 +1,7 @@
 package io.taktx.client;
 
 import io.taktx.client.annotation.TaktWorkerMethod;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;

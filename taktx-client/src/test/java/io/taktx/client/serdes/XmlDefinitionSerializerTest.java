@@ -2,7 +2,7 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.v_1_0_0.XmlDefinitionsDTO;
+import io.taktx.dto.XmlDefinitionsDTO;
 import org.junit.jupiter.api.Test;
 
 class XmlDefinitionSerializerTest {

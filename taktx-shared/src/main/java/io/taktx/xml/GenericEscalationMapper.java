@@ -1,7 +1,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TEscalation;
-import io.taktx.dto.v_1_0_0.EscalationDTO;
+import io.taktx.dto.EscalationDTO;
 
 public class GenericEscalationMapper implements EscalationMapper {
 

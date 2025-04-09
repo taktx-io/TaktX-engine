@@ -11,8 +11,8 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ReceiveTask;
 import io.taktx.engine.pi.DirectInstanceResult;

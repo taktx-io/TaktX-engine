@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pd.model;
 
-import io.taktx.dto.v_1_0_0.ActtivityStateEnum;
+import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;

@@ -2,8 +2,8 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
 import java.util.UUID;

@@ -14,12 +14,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
-import io.taktx.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageEventTriggerDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
+import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
+import io.taktx.dto.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
+import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 
 public class MessageEventTypeIdResolver extends TypeIdResolverBase {
 

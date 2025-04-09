@@ -14,9 +14,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionActivationDTO;
-import io.taktx.dto.v_1_0_0.XmlDefinitionsDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.ProcessDefinitionActivationDTO;
+import io.taktx.dto.XmlDefinitionsDTO;
 
 public class DefinitionsTriggerTypeIdResolver extends TypeIdResolverBase {
 

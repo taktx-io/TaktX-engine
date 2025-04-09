@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

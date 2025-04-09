@@ -1,7 +1,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TLoopCharacteristics;
-import io.taktx.dto.v_1_0_0.LoopCharacteristicsDTO;
+import io.taktx.dto.LoopCharacteristicsDTO;
 import jakarta.xml.bind.JAXBElement;
 
 public interface LoopCharacteristicsMapper {

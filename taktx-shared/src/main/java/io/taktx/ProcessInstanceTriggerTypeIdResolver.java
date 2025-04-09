@@ -14,13 +14,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerTimeoutDTO;
-import io.taktx.dto.v_1_0_0.StartCommandDTO;
-import io.taktx.dto.v_1_0_0.StartFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.TerminateTriggerDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerTimeoutDTO;
+import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
+import io.taktx.dto.TerminateTriggerDTO;
 
 public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
 

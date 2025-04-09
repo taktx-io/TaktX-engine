@@ -1,6 +1,6 @@
 package io.taktx.client.serdes;
 
-import io.taktx.dto.v_1_0_0.MessageEventDTO;
+import io.taktx.dto.MessageEventDTO;
 
 public class MessageEventSerializer extends JsonSerializer<MessageEventDTO> {
 

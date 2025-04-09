@@ -1,9 +1,9 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TReceiveTask;
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
-import io.taktx.dto.v_1_0_0.LoopCharacteristicsDTO;
-import io.taktx.dto.v_1_0_0.ReceiveTaskDTO;
+import io.taktx.dto.InputOutputMappingDTO;
+import io.taktx.dto.LoopCharacteristicsDTO;
+import io.taktx.dto.ReceiveTaskDTO;
 
 public interface ReceiveTaskMapper extends Mapper {
 

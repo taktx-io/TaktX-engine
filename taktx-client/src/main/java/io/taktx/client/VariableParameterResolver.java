@@ -2,7 +2,7 @@ package io.taktx.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 
 public class VariableParameterResolver implements TaktParameterResolver {
 

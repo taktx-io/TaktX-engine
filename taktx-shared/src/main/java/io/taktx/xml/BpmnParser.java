@@ -11,7 +11,7 @@
 package io.taktx.xml;
 
 import io.taktx.bpmn.TDefinitions;
-import io.taktx.dto.v_1_0_0.ParsedDefinitionsDTO;
+import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.util.SHA256;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBElement;

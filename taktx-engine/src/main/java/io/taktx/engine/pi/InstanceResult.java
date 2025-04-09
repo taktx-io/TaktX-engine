@@ -10,8 +10,8 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.ScheduleKeyDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.ExternalTaskInfo;

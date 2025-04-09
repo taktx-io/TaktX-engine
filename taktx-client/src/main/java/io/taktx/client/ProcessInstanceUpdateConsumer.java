@@ -2,7 +2,7 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.InstanceUpdateJsonDeserializer;
-import io.taktx.dto.v_1_0_0.InstanceUpdateDTO;
+import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
 import java.io.IOException;

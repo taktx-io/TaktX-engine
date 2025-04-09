@@ -3,8 +3,8 @@ package io.taktx.engine.pi;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
-import io.taktx.dto.v_1_0_0.VariablesDTO;
+import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import java.io.IOException;
 import java.time.Duration;

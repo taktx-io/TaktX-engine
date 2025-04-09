@@ -10,7 +10,7 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.v_1_0_0.InstanceUpdateDTO;
+import io.taktx.dto.InstanceUpdateDTO;
 import java.util.UUID;
 
 public record InstanceUpdate(UUID processInstanceKey, InstanceUpdateDTO update) {}

@@ -10,17 +10,17 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.v_1_0_0.CancelCorrelationMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.CancelDefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.v_1_0_0.CorrelationMessageEventTriggerDTO;
-import io.taktx.dto.v_1_0_0.CorrelationMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageEventTriggerDTO;
-import io.taktx.dto.v_1_0_0.DefinitionMessageSubscriptionDTO;
-import io.taktx.dto.v_1_0_0.MessageEventDTO;
-import io.taktx.dto.v_1_0_0.MessageEventKeyDTO;
-import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
-import io.taktx.dto.v_1_0_0.StartCommandDTO;
+import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
+import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.CorrelationMessageEventTriggerDTO;
+import io.taktx.dto.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.DefinitionMessageEventTriggerDTO;
+import io.taktx.dto.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.MessageEventDTO;
+import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.StartCommandDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import java.time.Clock;
 import java.util.HashMap;

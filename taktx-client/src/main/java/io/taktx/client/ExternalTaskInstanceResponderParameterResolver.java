@@ -1,6 +1,6 @@
 package io.taktx.client;
 
-import io.taktx.dto.v_1_0_0.ExternalTaskTriggerDTO;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 
 public class ExternalTaskInstanceResponderParameterResolver implements TaktParameterResolver {
 

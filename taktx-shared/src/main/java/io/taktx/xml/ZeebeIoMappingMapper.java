@@ -2,8 +2,8 @@ package io.taktx.xml;
 
 import io.taktx.bpmn.IoMapping;
 import io.taktx.bpmn.TBaseElement;
-import io.taktx.dto.v_1_0_0.InputOutputMappingDTO;
-import io.taktx.dto.v_1_0_0.IoVariableMappingDTO;
+import io.taktx.dto.InputOutputMappingDTO;
+import io.taktx.dto.IoVariableMappingDTO;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;

@@ -14,8 +14,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.v_1_0_0.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.v_1_0_0.ProcessInstanceUpdateDTO;
+import io.taktx.dto.FlowNodeInstanceUpdateDTO;
+import io.taktx.dto.ProcessInstanceUpdateDTO;
 
 public class InstanceUpdateTypeIdResolver extends TypeIdResolverBase {
 
