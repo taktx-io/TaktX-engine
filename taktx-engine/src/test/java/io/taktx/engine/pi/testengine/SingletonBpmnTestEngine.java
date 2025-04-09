@@ -11,7 +11,7 @@ public class SingletonBpmnTestEngine {
 
   public static BpmnTestEngine getInstance() {
     if (instance == null) {
-      instance = new BpmnTestEngine(new FixedClockProducer().produceFixedClock());
+      instance = new BpmnTestEngine(new FixedClockProducer().produceClock());
       instance.init();
     }
     return instance;
