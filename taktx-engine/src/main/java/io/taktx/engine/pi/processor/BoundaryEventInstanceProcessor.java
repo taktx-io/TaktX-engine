@@ -14,7 +14,7 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -42,7 +42,7 @@ public class BoundaryEventInstanceProcessor
 
   @Override
   protected void processContinueSpecificCatchEventInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       BoundaryEventInstance boundaryEventInstance) {
     if (shouldCancel(boundaryEventInstance)) {

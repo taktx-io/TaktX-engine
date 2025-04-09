@@ -22,14 +22,14 @@ import org.apache.kafka.streams.state.KeyValueStore;
  * reduces parameter lists and improves maintainability.
  */
 @Getter
-public class ProcessingContext {
+public class ProcessInstanceProcessingContext {
   private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private final InstanceResult instanceResult;
   private final ProcessInstance processInstance;
   private final ProcessingStatistics processingStatistics;
 
   @Builder
-  public ProcessingContext(
+  public ProcessInstanceProcessingContext(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       InstanceResult instanceResult,
       ProcessInstance processInstance,

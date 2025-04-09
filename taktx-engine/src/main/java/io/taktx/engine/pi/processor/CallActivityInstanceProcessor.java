@@ -16,11 +16,11 @@ import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.v_1_0_0.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -46,9 +46,8 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processStartSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       CallActivityInstance callActivityInstance,
       String inputFlowId,
       VariableScope variables) {
@@ -68,7 +67,7 @@ public class CallActivityInstanceProcessor
         commandVariables = variables.scopeToDTO();
       }
 
-      processingContext
+      processInstanceProcessingContext
           .getInstanceResult()
           .addNewStartCommand(
               new NewStartCommand(
@@ -86,10 +85,9 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
@@ -98,10 +96,12 @@ public class CallActivityInstanceProcessor
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       CallActivityInstance instance,
       VariableScope processInstanceVariables) {
-    processingContext.getInstanceResult().addTerminateCommand(instance.getChildProcessInstanceId());
+    processInstanceProcessingContext
+        .getInstanceResult()
+        .addTerminateCommand(instance.getChildProcessInstanceId());
   }
 }

@@ -19,9 +19,9 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.StoredFlowNodeInstancesWrapper;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
@@ -63,10 +63,8 @@ public class MultiInstanceProcessor
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      FlowNodeInstances flowNodeInstances,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
       VariableScope flowNodeInstanceVariables) {
@@ -87,23 +85,24 @@ public class MultiInstanceProcessor
               inputCollection,
               multiInstanceInstance.getFlowNodeInstances());
       loopStartIterations(
-          processingContext,
-          directInstanceResult,
-          flowElements,
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
           multiInstanceInstance,
           inputFlowId,
           iterationInstance,
           flowNodeInstanceVariables,
           activity);
       handleCompleted(
-          processingContext, flowElements, multiInstanceInstance, flowNodeInstanceVariables);
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext.getFlowElements(),
+          multiInstanceInstance,
+          flowNodeInstanceVariables);
     }
   }
 
   private void loopStartIterations(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
       ActivityInstance<?> iterationInstance,
@@ -111,13 +110,12 @@ public class MultiInstanceProcessor
       Activity activity) {
     while (iterationInstance != null) {
       startIteration(
-          processingContext,
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
           iterationInstance,
-          flowElements,
           multiInstanceInstance,
           inputFlowId,
-          flowNodeInstancesVariables,
-          directInstanceResult);
+          flowNodeInstancesVariables);
       if (iterationInstance.isAwaiting()) {
         multiInstanceInstance.setState(ActtivityStateEnum.WAITING);
       }
@@ -125,20 +123,20 @@ public class MultiInstanceProcessor
         if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
           iterationInstance =
               getNextIterationInstance(
-                  processingContext,
+                  processInstanceProcessingContext,
                   multiInstanceInstance.getFlowNodeInstances(),
                   iterationInstance,
-                  flowElements);
+                  flowNodeInstanceProcessingContext.getFlowElements());
         } else {
           iterationInstance = null;
         }
       } else {
         iterationInstance =
             getNextIterationInstance(
-                processingContext,
+                processInstanceProcessingContext,
                 multiInstanceInstance.getFlowNodeInstances(),
                 iterationInstance,
-                flowElements);
+                flowNodeInstanceProcessingContext.getFlowElements());
       }
     }
   }
@@ -175,41 +173,41 @@ public class MultiInstanceProcessor
     return firstInstance;
   }
 
-  private ActivityInstance<?> startIteration(
-      ProcessingContext processingContext,
+  private void startIteration(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       ActivityInstance<?> iterationInstance,
-      FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
-      VariableScope flowNodeInstancesVariables,
-      DirectInstanceResult directInstanceResult) {
+      VariableScope flowNodeInstancesVariables) {
 
+    FlowNodeInstanceProcessingContext iterationFlowNodeInstanceProcessingContext =
+        new FlowNodeInstanceProcessingContext(
+            multiInstanceInstance.getFlowNodeInstances(),
+            flowNodeInstanceProcessingContext.getFlowElements(),
+            flowNodeInstanceProcessingContext.getDirectInstanceResult());
     processor.processStart(
-        processingContext,
-        directInstanceResult,
-        flowElements,
+        processInstanceProcessingContext,
+        iterationFlowNodeInstanceProcessingContext,
         iterationInstance,
         inputFlowId,
-        flowNodeInstancesVariables,
-        multiInstanceInstance.getFlowNodeInstances());
-
-    return iterationInstance;
+        flowNodeInstancesVariables);
   }
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
       ContinueFlowElementTriggerDTO trigger,
-      VariableScope flowNodeInstanceVariables,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope flowNodeInstanceVariables) {
     subProcessLevel++;
 
     FlowElements subFlowElements = new FlowElements();
-    subFlowElements.getIndex().addAll(flowElements.getIndex());
+    subFlowElements
+        .getIndex()
+        .addAll(flowNodeInstanceProcessingContext.getFlowElements().getIndex());
     Activity activity = multiInstanceInstance.getFlowNode();
     subFlowElements.addFlowElement(activity);
 
@@ -217,36 +215,38 @@ public class MultiInstanceProcessor
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
             multiInstanceInstance.getFlowNodeInstances(),
-            processingContext.getFlowNodeInstanceStore(),
-            flowElements);
+            processInstanceProcessingContext.getFlowNodeInstanceStore(),
+            flowNodeInstanceProcessingContext.getFlowElements());
 
     ActivityInstance<?> iterationInstance =
         (ActivityInstance<?>) storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(instanceId);
 
+    FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
+        new FlowNodeInstanceProcessingContext(
+            multiInstanceInstance.getFlowNodeInstances(),
+            subFlowElements,
+            flowNodeInstanceProcessingContext.getDirectInstanceResult());
     processor.processContinue(
-        processingContext,
-        directInstanceResult,
+        processInstanceProcessingContext,
+        subFlowNodeInstanceProcessingContext,
         subProcessLevel,
-        subFlowElements,
         iterationInstance,
         trigger,
-        flowNodeInstanceVariables,
-        multiInstanceInstance.getFlowNodeInstances());
+        flowNodeInstanceVariables);
     if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
 
       iterationInstance =
           getNextIterationInstance(
-              processingContext,
+              processInstanceProcessingContext,
               multiInstanceInstance.getFlowNodeInstances(),
               iterationInstance,
-              flowElements);
+              flowNodeInstanceProcessingContext.getFlowElements());
 
       loopStartIterations(
-          processingContext,
-          directInstanceResult,
-          flowElements,
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
           multiInstanceInstance,
           trigger.getInputFlowId(),
           iterationInstance,
@@ -255,20 +255,23 @@ public class MultiInstanceProcessor
     }
 
     handleCompleted(
-        processingContext, flowElements, multiInstanceInstance, flowNodeInstanceVariables);
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext.getFlowElements(),
+        multiInstanceInstance,
+        flowNodeInstanceVariables);
   }
 
   private ActivityInstance<?> getNextIterationInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstances flowNodeInstances,
       ActivityInstance<?> iterationInstance,
       FlowElements flowElements) {
     if (iterationInstance.getNextIterationId() >= 0) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
               flowNodeInstances,
-              processingContext.getFlowNodeInstanceStore(),
+              processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowElements);
       return (ActivityInstance<?>)
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
@@ -279,7 +282,7 @@ public class MultiInstanceProcessor
   }
 
   private static void handleCompleted(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
       VariableScope flowNodeInstancesVariables) {
@@ -290,9 +293,9 @@ public class MultiInstanceProcessor
 
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
               multiInstanceInstance.getFlowNodeInstances(),
-              processingContext.getFlowNodeInstanceStore(),
+              processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowElements);
 
       Map<Long, FlowNodeInstance<?>> allInstances =
@@ -315,11 +318,10 @@ public class MultiInstanceProcessor
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       MultiInstanceInstance instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
+      VariableScope currentVariableScope) {
     FlowNodeInstances flowNodeInstances = instance.getFlowNodeInstances();
     flowNodeInstances
         .getInstances()
@@ -327,11 +329,9 @@ public class MultiInstanceProcessor
         .forEach(
             iteration ->
                 processor.processTerminate(
-                    processingContext,
-                    directInstanceResult,
+                    processInstanceProcessingContext,
+                    flowNodeInstanceProcessingContext,
                     iteration,
-                    currentVariableScope,
-                    flowNodeInstances,
-                    flowElements));
+                    currentVariableScope));
   }
 }

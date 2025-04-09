@@ -16,14 +16,13 @@ import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EventSignal;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CatchEventInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
@@ -50,9 +49,8 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I catchEventInstance,
       String inputFlowId,
       VariableScope variables) {
@@ -84,7 +82,7 @@ public abstract class CatchEventInstanceProcessor<
           .ifPresent(
               timerEventDefinition -> {
                 catchEventInstance.setState(CatchEventStateEnum.WAITING);
-                processingContext
+                processInstanceProcessingContext
                     .getInstanceResult()
                     .addNewScheduledContinuation(
                         new ScheduledContinuationInfo(
@@ -106,7 +104,7 @@ public abstract class CatchEventInstanceProcessor<
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
                   new NewCorrelationSubscriptionMessageEventInfo(
                       messageName, correlationKey, catchEventInstance);
-              processingContext
+              processInstanceProcessingContext
                   .getInstanceResult()
                   .addNewCorrelationSubcriptionMessageEvent(messageInfo);
             });
@@ -116,28 +114,30 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
-      VariableScope variables,
-      FlowNodeInstances flowNodeInstances) {
-    getInstanceResultForContinue(processingContext, directInstanceResult, flowNodeInstance);
+      VariableScope variables) {
+    getInstanceResultForContinue(
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+        flowNodeInstance);
   }
 
   private void getInstanceResultForContinue(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       I flowNodeInstance) {
 
     if (shouldCancel(flowNodeInstance)) {
       flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
-      terminateSubscriptions(flowNodeInstance, processingContext.getInstanceResult());
+      terminateSubscriptions(
+          flowNodeInstance, processInstanceProcessingContext.getInstanceResult());
     }
     processContinueSpecificCatchEventInstance(
-        processingContext, directInstanceResult, flowNodeInstance);
+        processInstanceProcessingContext, directInstanceResult, flowNodeInstance);
   }
 
   private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
@@ -172,7 +172,7 @@ public abstract class CatchEventInstanceProcessor<
   }
 
   protected abstract void processContinueSpecificCatchEventInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       I flowNodeInstance);
 
@@ -180,70 +180,76 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
-    terminateSubscriptions(instance, processingContext.getInstanceResult());
+      VariableScope currentVariableScope) {
+    terminateSubscriptions(instance, processInstanceProcessingContext.getInstanceResult());
   }
 
   public boolean processEvent(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I catchEventInstance,
       EventSignal event,
-      DirectInstanceResult directInstanceResult,
-      VariableScope parentVariableScope,
-      FlowNodeInstances flowNodeInstances,
-      FlowElements flowElements) {
+      VariableScope parentVariableScope) {
     long now = clock.millis();
     VariableScope boundaryEventVariableScope =
         parentVariableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
-    InstanceResult newInstanceResult = processingContext.getInstanceResult();
+    InstanceResult newInstanceResult = processInstanceProcessingContext.getInstanceResult();
     if (catchEventInstance.matchesEvent(event)) {
-      getInstanceResultForContinue(processingContext, directInstanceResult, catchEventInstance);
-      ProcessInstance processInstance = processingContext.getProcessInstance();
+      getInstanceResultForContinue(
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+          catchEventInstance);
+      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,
-          directInstanceResult,
           boundaryEventVariableScope,
-          flowNodeInstances);
+          flowNodeInstanceProcessingContext);
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, boundaryEventVariableScope, now, flowElements));
+              processInstance,
+              catchEventInstance,
+              boundaryEventVariableScope,
+              now,
+              flowNodeInstanceProcessingContext.getFlowElements()));
       return true;
     }
     return false;
   }
 
   public boolean processEventCatchAll(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I catchEventInstance,
       EventSignal event,
       DirectInstanceResult directInstanceResult,
-      VariableScope variableScope,
-      FlowNodeInstances flowNodeInstances,
-      FlowElements flowElements) {
+      VariableScope variableScope) {
     long now = clock.millis();
 
     VariableScope boundaryEventVariableScope =
         variableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
 
     if (catchEventInstance.matchesEventCatchAll(event)) {
-      InstanceResult instanceResult = processingContext.getInstanceResult();
-      getInstanceResultForContinue(processingContext, directInstanceResult, catchEventInstance);
-      ProcessInstance processInstance = processingContext.getProcessInstance();
+      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
+      getInstanceResultForContinue(
+          processInstanceProcessingContext, directInstanceResult, catchEventInstance);
+      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(
           catchEventInstance,
           processInstance,
-          directInstanceResult,
           boundaryEventVariableScope,
-          flowNodeInstances);
+          flowNodeInstanceProcessingContext);
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, boundaryEventVariableScope, now, flowElements));
+              processInstance,
+              catchEventInstance,
+              boundaryEventVariableScope,
+              now,
+              flowNodeInstanceProcessingContext.getFlowElements()));
       return true;
     }
     return false;

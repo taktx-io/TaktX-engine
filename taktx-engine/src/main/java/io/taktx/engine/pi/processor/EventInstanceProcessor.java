@@ -12,11 +12,10 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.pd.model.Event;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -38,17 +37,14 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      FlowNodeInstances flowNodeInstances,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flowNodeInstance,
       String inputFlowId,
       VariableScope variables) {
     processStartSpecificEventInstance(
-        processingContext,
-        directInstanceResult,
-        flowElements,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         flowNodeInstance,
         inputFlowId,
         variables);
@@ -56,14 +52,12 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
-      VariableScope variables,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope variables) {
     // Should not occur
   }
 
@@ -77,9 +71,8 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   }
 
   protected abstract void processStartSpecificEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flowNodeInstance,
       String inputFlowId,
       VariableScope variables);

@@ -10,12 +10,11 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
-import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
@@ -40,9 +39,8 @@ public abstract class ThrowEventInstanceProcessor<
 
   @Override
   protected void processStartSpecificEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flowNodeInstance,
       String inputFlowId,
       VariableScope variables) {
@@ -52,10 +50,13 @@ public abstract class ThrowEventInstanceProcessor<
         .ifPresent(
             linkEventDefinition -> {
               Optional<IntermediateCatchEvent> intermediateCatchEvent =
-                  flowElements.getIntermediateCatchEventWithName(linkEventDefinition.getName());
+                  flowNodeInstanceProcessingContext
+                      .getFlowElements()
+                      .getIntermediateCatchEventWithName(linkEventDefinition.getName());
               intermediateCatchEvent.ifPresent(
                   event -> {
-                    ProcessInstance processInstance = processingContext.getProcessInstance();
+                    ProcessInstance processInstance =
+                        processInstanceProcessingContext.getProcessInstance();
                     FlowNodeInstance<?> catchEventInstance =
                         new IntermediateCatchEventInstance(
                             flowNodeInstance.getParentInstance(),
@@ -64,18 +65,21 @@ public abstract class ThrowEventInstanceProcessor<
                     catchEventInstance.setInitialState();
                     FlowNodeInstanceInfo flowNodeInstanceInfo =
                         new FlowNodeInstanceInfo(catchEventInstance, null);
-                    directInstanceResult.addNewFlowNodeInstance(
-                        processInstance, flowNodeInstanceInfo);
+                    flowNodeInstanceProcessingContext
+                        .getDirectInstanceResult()
+                        .addNewFlowNodeInstance(processInstance, flowNodeInstanceInfo);
                   });
             });
     processStartSpecificThrowEventInstance(
-        processingContext, directInstanceResult, flowElements, flowNodeInstance, variables);
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
+        flowNodeInstance,
+        variables);
   }
 
   protected abstract void processStartSpecificThrowEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flowNodeInstance,
       VariableScope variables);
 }

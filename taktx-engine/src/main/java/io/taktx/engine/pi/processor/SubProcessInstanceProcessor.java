@@ -18,9 +18,10 @@ import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.FlowNodeInstancesProcessor;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
@@ -52,9 +53,8 @@ public class SubProcessInstanceProcessor
 
   @Override
   protected void processStartSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       SubProcessInstance subProcessInstance,
       String inputFlowId,
       VariableScope flowNodeInstanceVariables) {
@@ -65,15 +65,17 @@ public class SubProcessInstanceProcessor
     subProcessInstance.setState(ActtivityStateEnum.WAITING);
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
-    subProcessElements.getIndex().addAll(flowElements.getIndex());
-
+    subProcessElements
+        .getIndex()
+        .addAll(flowNodeInstanceProcessingContext.getFlowElements().getIndex());
+    FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
+        new FlowNodeInstanceProcessingContext(subFlowNodeInstances, subProcessElements);
     flowNodeInstancesProcessor.processStart(
-        processingContext,
+        processInstanceProcessingContext,
+        subFlowNodeInstanceProcessingContext,
         null,
         subProcessInstance,
-        subProcessElements,
-        flowNodeInstanceVariables,
-        subFlowNodeInstances);
+        flowNodeInstanceVariables);
 
     if (subFlowNodeInstances.getState().isFinished()) {
       subProcessInstance.setState(ActtivityStateEnum.FINISHED);
@@ -82,10 +84,9 @@ public class SubProcessInstanceProcessor
 
   @Override
   protected void processContinueSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       SubProcessInstance subProcessInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope flowNodeInstanceVariables) {
@@ -93,20 +94,22 @@ public class SubProcessInstanceProcessor
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
     subProcessInstance.getFlowNodeInstances().setParentFlowNodeInstance(subProcessInstance);
-
+    FlowNodeInstanceProcessingContext subFlowNodeContext =
+        new FlowNodeInstanceProcessingContext(
+            subProcessInstance.getFlowNodeInstances(), subProcessElements);
     flowNodeInstancesProcessor.processContinue(
-        processingContext,
+        processInstanceProcessingContext,
+        subFlowNodeContext,
         subProcessLevel,
         trigger,
-        subProcessElements,
-        flowNodeInstanceVariables,
-        subProcessInstance.getFlowNodeInstances());
+        flowNodeInstanceVariables);
 
-    Queue<EventSignal> bubbleUpEvents = processingContext.getInstanceResult().getBubbleUpEvents();
+    Queue<EventSignal> bubbleUpEvents =
+        processInstanceProcessingContext.getInstanceResult().getBubbleUpEvents();
     EventSignal eventSignal = bubbleUpEvents.poll();
     while (eventSignal != null) {
       eventSignal.bubbleUp();
-      directInstanceResult.addEvent(eventSignal);
+      flowNodeInstanceProcessingContext.getDirectInstanceResult().addEvent(eventSignal);
       eventSignal = bubbleUpEvents.poll();
     }
 
@@ -117,7 +120,7 @@ public class SubProcessInstanceProcessor
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       SubProcessInstance subProcessInstance,
       VariableScope flowNodeInstanceVariables) {
@@ -128,9 +131,10 @@ public class SubProcessInstanceProcessor
 
     TerminateTriggerDTO trigger =
         new TerminateTriggerDTO(
-            processingContext.getProcessInstance().getProcessInstanceKey(), List.of());
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            List.of());
     flowNodeInstancesProcessor.processTerminate(
-        processingContext,
+        processInstanceProcessingContext,
         trigger,
         flowNodeInstances,
         flowNodeInstanceVariables,

@@ -20,20 +20,11 @@ dependencies {
     implementation(libs.quarkus.micrometer.registry.prometheus)
     implementation(libs.quarkus.kafka.client)
 
-    //    implementation("io.quarkus:quarkus-container-image-docker")
-//    implementation("io.quarkus:quarkus-cache")
-//    implementation("io.quarkus:quarkus-smallrye-reactive-messaging-kafka")
-//    implementation("io.quarkus:quarkus-arc")
-//    implementation("io.quarkus:quarkus-smallrye-openapi")
-//    implementation("io.quarkus:quarkus-resteasy-jackson")
-//    implementation("io.quarkus:quarkus-jackson")
-
     implementation(libs.camunda.feel)
     implementation(libs.cronutils)
 
     testImplementation(project(":taktx-client"))
     testImplementation(libs.quarkus.jaxb)
-//    testImplementation("io.quarkus:quarkus-messaging-kafka")
     testImplementation(libs.quarkus.junit5)
     testImplementation(libs.quarkus.junit5.mockito)
     testImplementation(libs.quarkus.jacoco)

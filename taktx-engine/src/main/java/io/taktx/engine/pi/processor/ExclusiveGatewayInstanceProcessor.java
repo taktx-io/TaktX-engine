@@ -13,11 +13,11 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ExclusiveGateway;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.VariableScope;
@@ -49,9 +49,8 @@ public class ExclusiveGatewayInstanceProcessor
 
   @Override
   protected void processStartSpecificGatewayInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       ExclusiveGatewayInstance flownodeInstance,
       String inputFlowId,
       VariableScope variables) {

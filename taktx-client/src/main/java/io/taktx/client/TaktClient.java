@@ -54,24 +54,42 @@ public class TaktClient {
     this.externalTaskResponder = externalTaskResponder;
   }
 
+  /**
+   * Creates a new TaktClientBuilder instance to create a new TaktClient.
+   *
+   * @return A new TaktClientBuilder instance.
+   */
   public static TaktClientBuilder newClientBuilder() {
     return new TaktClientBuilder();
   }
 
+  /**
+   * Starts the TaktClient, which subscribes to process definition records and process definition
+   * updates.
+   */
   public void start() {
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.processDefinitionConsumer.subscribeToProcessDefinitionUpdates(this.externalTaskConsumer);
   }
 
+  /** Stops the TaktClient, which unsubscribes from process definition records and process */
   public void stop() {
     this.processDefinitionConsumer.stop();
     this.externalTaskConsumer.stop();
   }
 
+  /**
+   * Deploys a process definition from an InputStream.
+   *
+   * @param inputStream The InputStream containing the process definition XML.
+   * @return The parsed definitions DTO.
+   * @throws IOException If an error occurs while reading the InputStream.
+   */
   public ParsedDefinitionsDTO deployProcessDefinition(InputStream inputStream) throws IOException {
     return this.processDefinitionDeployer.deploy(new String(inputStream.readAllBytes()));
   }
 
+  /** Retrieves a process definition by its ID. */
   public Optional<ProcessDefinitionDTO> getProcessDefinitionByHash(
       String processDefinitionId, String hash) {
     return this.processDefinitionConsumer.getDeployedProcessDefinitionbyHash(
@@ -83,19 +101,23 @@ public class TaktClient {
     this.externalTaskConsumer.registerExternalTaskTriggerConsumer(processDefinitionId, consumer);
   }
 
+  /** Starts a process instance with the given process definition ID and variables. */
   public UUID startProcess(String process, VariablesDTO variables) {
     return processInstanceProducer.startProcess(process, variables);
   }
 
+  /** Sends a message event to the engine. */
   public void sendMessage(MessageEventDTO messageEventDTO) {
     messageEventSender.sendMessage(messageEventDTO);
   }
 
+  /** Registers a consumer for process instance updates. */
   public void registerInstanceUpdateConsumer(
       Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer) {
     this.processInstanceUpdateConsumer.addInstanceUpdateConsumer(consumer);
   }
 
+  /** Deploys process definitions from classes annotated with @TaktDeployment. */
   public void deployTaktDeploymentAnnotatedClasses() {
     try {
       Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktDeployment.class);
@@ -118,6 +140,7 @@ public class TaktClient {
     }
   }
 
+  /** Registers workers for process definitions from classes annotated with @TaktWorker. */
   public void registerAnnotatedWorkers() {
     Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktWorker.class);
     for (Class<?> clazz : annotatedClasses) {
@@ -132,21 +155,28 @@ public class TaktClient {
     }
   }
 
+  /** Responds to an external task trigger. */
   public ExternalTaskInstanceResponder respondToExternalTask(
       ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return externalTaskResponder.responderForExternalTaskTrigger(externalTaskTriggerDTO);
   }
 
-  public void terminateElementInstance(UUID activeProcessInstanceKey) {
-    processInstanceProducer.terminateProcessInstance(activeProcessInstanceKey);
+  /** Terminates a process instance. */
+  public void terminateElementInstance(UUID processInstanceKey) {
+    processInstanceProducer.terminateProcessInstance(processInstanceKey);
   }
 
+  /** Terminates an element instance within a process instance */
   public void terminateElementInstance(
       UUID activeProcessInstanceKey, List<Long> elementInstanceIdPath) {
     processInstanceProducer.terminateElementInstance(
         activeProcessInstanceKey, elementInstanceIdPath);
   }
 
+  /**
+   * Builder class for creating TaktClient instances. Requires TENANT, NAMESPACE, and
+   * KAFKA_BOOTSTRAP_SERVERS environment variables to be set or configured via the builder methods.
+   */
   public static class TaktClientBuilder {
 
     private String tenant;

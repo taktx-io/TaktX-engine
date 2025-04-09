@@ -22,37 +22,31 @@ import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.time.Clock;
 
 @ApplicationScoped
 public class FlowNodeInstancesProcessor {
 
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
-  private final Clock clock;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
-      FlowInstanceRunner flowInstanceRunner,
-      Clock clock) {
+      FlowInstanceRunner flowInstanceRunner) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
-    this.clock = clock;
   }
 
   public void processStart(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       String elementId,
       FlowNodeInstance<?> parentElementInstance,
-      FlowElements flowElements,
-      VariableScope parentVariableScope,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope parentVariableScope) {
 
+    FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
     flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
 
-    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-
-    FlowNode flowNode = flowElements.getStartNode(elementId);
+    FlowNode flowNode = flowNodeInstanceProcessingContext.getFlowElements().getStartNode(elementId);
     FlowNodeInstance<?> flowNodeInstance =
         flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
 
@@ -60,86 +54,77 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
 
     processor.processStart(
-        processingContext,
-        directInstanceResult,
-        flowElements,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         flowNodeInstance,
         null,
-        parentVariableScope,
-        flowNodeInstances);
+        parentVariableScope);
 
     continueNewInstances(
-        processingContext,
-        directInstanceResult,
-        flowNodeInstances,
-        flowElements,
-        parentVariableScope);
+        processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
 
     flowNodeInstances.determineImplicitCompletedState();
   }
 
   public void processContinue(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
       ContinueFlowElementTriggerDTO trigger,
-      FlowElements flowElements,
-      VariableScope parentVariables,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope parentVariables) {
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processingContext.getProcessInstance().getProcessInstanceKey(),
-            flowNodeInstances,
-            processingContext.getFlowNodeInstanceStore(),
-            flowElements);
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+            processInstanceProcessingContext.getFlowNodeInstanceStore(),
+            flowNodeInstanceProcessingContext.getFlowElements());
 
     FlowNodeInstance<?> flowNodeInstance =
         storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
             trigger.getElementInstanceIdPath().get(subProcessLevel));
 
-    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNodeInstance.getFlowNode());
 
     processor.processContinue(
-        processingContext,
-        directInstanceResult,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         subProcessLevel,
-        flowElements,
         flowNodeInstance,
         trigger,
-        parentVariables,
-        flowNodeInstances);
+        parentVariables);
 
     continueNewInstances(
-        processingContext, directInstanceResult, flowNodeInstances, flowElements, parentVariables);
+        processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariables);
 
+    DirectInstanceResult directInstanceResult =
+        flowNodeInstanceProcessingContext.getDirectInstanceResult();
     EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
     while (eventSignal != null) {
-      processingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
+      processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
     }
 
-    flowNodeInstances.determineImplicitCompletedState();
+    flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
   }
 
   public void processTerminate(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       TerminateTriggerDTO trigger,
       FlowNodeInstances flowNodeInstances,
       VariableScope parentVariableScope,
       FlowElements flowElements) {
 
-    DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
             flowNodeInstances,
-            processingContext.getFlowNodeInstanceStore(),
+            processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowElements);
 
+    FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
+        new FlowNodeInstanceProcessingContext(flowNodeInstances, flowElements);
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instance and the process instance itself
       storedFlowNodeInstancesWrapper
@@ -150,12 +135,10 @@ public class FlowNodeInstancesProcessor {
                 FlowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
                 processor.processTerminate(
-                    processingContext,
-                    directInstanceResult,
+                    processInstanceProcessingContext,
+                    flowNodeInstanceProcessingContext,
                     instance,
-                    parentVariableScope,
-                    flowNodeInstances,
-                    flowElements);
+                    parentVariableScope);
               });
       flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
     } else {
@@ -167,29 +150,21 @@ public class FlowNodeInstancesProcessor {
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
         processor.processTerminate(
-            processingContext,
-            directInstanceResult,
+            processInstanceProcessingContext,
+            flowNodeInstanceProcessingContext,
             instance,
-            parentVariableScope,
-            flowNodeInstances,
-            flowElements);
+            parentVariableScope);
       }
     }
     flowNodeInstances.determineImplicitCompletedState();
   }
 
   protected void continueNewInstances(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowNodeInstances flowNodeInstances,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       VariableScope parentVariableScope) {
 
     flowInstanceRunner.continueNewInstances(
-        processingContext,
-        directInstanceResult,
-        flowNodeInstances,
-        flowElements,
-        parentVariableScope);
+        processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
   }
 }

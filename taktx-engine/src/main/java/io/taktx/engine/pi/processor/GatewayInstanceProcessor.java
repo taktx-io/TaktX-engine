@@ -13,14 +13,14 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.v_1_0_0.FlowConditionDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -49,17 +49,14 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      FlowNodeInstances flowNodeInstances,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I gatewayInstance,
       String inputFlowId,
       VariableScope variables) {
     processStartSpecificGatewayInstance(
-        processingContext,
-        directInstanceResult,
-        flowElements,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         gatewayInstance,
         inputFlowId,
         variables);
@@ -67,14 +64,12 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       I flowNodeInstance,
       C trigger,
-      VariableScope processInstanceVariables,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope processInstanceVariables) {
     // Should never happen
   }
 
@@ -125,19 +120,19 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
+      VariableScope currentVariableScope) {
     processTerminateSpecificGatewayInstance(
-        processingContext.getInstanceResult(), directInstanceResult, instance);
+        processInstanceProcessingContext.getInstanceResult(),
+        flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+        instance);
   }
 
   protected abstract void processStartSpecificGatewayInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flownodeInstance,
       String inputFlowId,
       VariableScope variables);

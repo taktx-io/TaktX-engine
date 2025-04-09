@@ -17,11 +17,11 @@ import io.taktx.dto.v_1_0_0.CatchEventStateEnum;
 import io.taktx.dto.v_1_0_0.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
@@ -50,10 +50,8 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final void processStartSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      FlowNodeInstances flowNodeInstances,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flownodeInstance,
       String inputFlowId,
       VariableScope variables) {
@@ -66,9 +64,8 @@ public abstract class ActivityInstanceProcessor<
     }
 
     processStartSpecificActivityInstance(
-        processingContext,
-        directInstanceResult,
-        flowElements,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         flownodeInstance,
         inputFlowId,
         variables);
@@ -83,15 +80,19 @@ public abstract class ActivityInstanceProcessor<
                     new BoundaryEventInstance(
                         flownodeInstance.getParentInstance(),
                         boundaryEvent,
-                        flowNodeInstances.nextElementInstanceId());
+                        flowNodeInstanceProcessingContext
+                            .getFlowNodeInstances()
+                            .nextElementInstanceId());
                 boundaryEventInstance.setState(CatchEventStateEnum.INITIAL);
 
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());
-                directInstanceResult.addNewFlowNodeInstance(
-                    processingContext.getProcessInstance(),
-                    new FlowNodeInstanceInfo(boundaryEventInstance, null));
+                flowNodeInstanceProcessingContext
+                    .getDirectInstanceResult()
+                    .addNewFlowNodeInstance(
+                        processInstanceProcessingContext.getProcessInstance(),
+                        new FlowNodeInstanceInfo(boundaryEventInstance, null));
               });
     }
 
@@ -100,26 +101,29 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       I flowNodeInstance,
       C trigger,
-      VariableScope variables,
-      FlowNodeInstances flowNodeInstances) {
+      VariableScope variables) {
 
     processContinueSpecificActivityInstance(
-        processingContext,
-        directInstanceResult,
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
         subProcessLevel,
-        flowElements,
         flowNodeInstance,
         trigger,
         variables);
 
     if (flowNodeInstance.isCompleted()) {
-      flowNodeInstance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
+      flowNodeInstance
+          .getBoundaryEventIds()
+          .forEach(
+              id ->
+                  flowNodeInstanceProcessingContext
+                      .getDirectInstanceResult()
+                      .addTerminateInstance(id));
     }
 
     handleFinishedIteration(flowNodeInstance, variables);
@@ -127,37 +131,43 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
+      VariableScope currentVariableScope) {
 
-    instance.getBoundaryEventIds().forEach(directInstanceResult::addTerminateInstance);
+    instance
+        .getBoundaryEventIds()
+        .forEach(
+            id ->
+                flowNodeInstanceProcessingContext
+                    .getDirectInstanceResult()
+                    .addTerminateInstance(id));
 
     processTerminateSpecificActivityInstance(
-        processingContext, directInstanceResult, instance, currentVariableScope);
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+        instance,
+        currentVariableScope);
   }
 
   protected abstract void processStartSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I flownodeInstance,
       String inputFlowId,
       VariableScope flowNodeInstanceVariables);
 
   protected abstract void processContinueSpecificActivityInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       int subProcessLevel,
-      FlowElements flowElements,
       I externalTaskInstance,
       C trigger,
       VariableScope flowNodeInstanceVariables);
 
   protected abstract void processTerminateSpecificActivityInstance(
-      ProcessingContext processingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       I instance,
       VariableScope variables);

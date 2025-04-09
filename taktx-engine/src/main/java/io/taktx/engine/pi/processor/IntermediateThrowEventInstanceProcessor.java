@@ -10,11 +10,10 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IntermediateThrowEvent;
-import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -37,19 +36,17 @@ public class IntermediateThrowEventInstanceProcessor
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       IntermediateThrowEventInstance instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
+      VariableScope currentVariableScope) {
     // nothing to do
   }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       IntermediateThrowEventInstance flowNodeInstance,
       VariableScope variables) {
     // nothing to do

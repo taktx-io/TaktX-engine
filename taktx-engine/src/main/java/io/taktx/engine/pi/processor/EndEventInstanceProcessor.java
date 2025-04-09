@@ -11,10 +11,9 @@
 package io.taktx.engine.pi.processor;
 
 import io.taktx.engine.pd.model.EndEvent;
-import io.taktx.engine.pd.model.FlowElements;
-import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
-import io.taktx.engine.pi.ProcessingContext;
+import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -37,19 +36,17 @@ public class EndEventInstanceProcessor
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       EndEventInstance instance,
-      VariableScope currentVariableScope,
-      FlowElements flowElements) {
+      VariableScope currentVariableScope) {
     // nothing to do
   }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
-      ProcessingContext processingContext,
-      DirectInstanceResult directInstanceResult,
-      FlowElements flowElements,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       EndEventInstance flowNodeInstance,
       VariableScope variables) {
     // nothing to do
