@@ -511,7 +511,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine setTime(Instant newInstant) {
-    log.info("Setting the time to: " + newInstant);
+    log.info("Setting the time to: {}", newInstant);
     mutableClock.set(newInstant);
     return this;
   }

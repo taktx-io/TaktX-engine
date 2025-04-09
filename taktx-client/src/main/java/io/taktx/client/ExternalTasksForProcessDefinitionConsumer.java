@@ -6,7 +6,6 @@ import io.taktx.dto.v_1_0_0.ProcessDefinitionDTO;
 import io.taktx.dto.v_1_0_0.ProcessDefinitionKey;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,8 +65,9 @@ public class ExternalTasksForProcessDefinitionConsumer
   }
 
   @Override
-  public void accept(ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> record) {
-    ProcessDefinitionKey processDefinitionKey = record.key();
+  public void accept(
+      ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> processDefinitionRecord) {
+    ProcessDefinitionKey processDefinitionKey = processDefinitionRecord.key();
     subscribeIfNotSubscribedAndConsumersAvailable(processDefinitionKey.getProcessDefinitionId());
   }
 
@@ -107,15 +107,12 @@ public class ExternalTasksForProcessDefinitionConsumer
                     .forEach(c -> c.accept(externalTriggerRecord));
               }
             }
-
-          } catch (IOException e) {
-            throw new IllegalStateException(e);
           }
         },
         executor);
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer(String groupId) throws IOException {
+  private <K, V> KafkaConsumer<K, V> createConsumer(String groupId) {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId, TaktUUIDDeserializer.class, ExternalTaskTriggerJsonDeserializer.class);

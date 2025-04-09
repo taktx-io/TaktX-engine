@@ -15,8 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class EndEventInstanceProcessorTest {
 
-  @InjectMocks
-  EndEventInstanceProcessor endEventInstanceProcessor;
+  @InjectMocks EndEventInstanceProcessor endEventInstanceProcessor;
 
   @Test
   void testProcessTerminateSpecificFlowNodeInstance() {
@@ -27,7 +26,6 @@ class EndEventInstanceProcessorTest {
                 Mockito.mock(FlowNodeInstanceProcessingContext.class),
                 Mockito.mock(EndEventInstance.class),
                 Mockito.mock(VariableScope.class)));
-
   }
 
   @Test
@@ -38,9 +36,6 @@ class EndEventInstanceProcessorTest {
                 Mockito.mock(ProcessInstanceProcessingContext.class),
                 Mockito.mock(FlowNodeInstanceProcessingContext.class),
                 Mockito.mock(EndEventInstance.class),
-                Mockito.mock(VariableScope.class)
-            ));
+                Mockito.mock(VariableScope.class)));
   }
-
-
 }
