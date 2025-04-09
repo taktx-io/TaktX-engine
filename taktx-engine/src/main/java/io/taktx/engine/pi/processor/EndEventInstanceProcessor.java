@@ -31,6 +31,7 @@ public class EndEventInstanceProcessor
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
       Clock clock) {
+
     super(ioMappingProcessor, processInstanceMapper, clock);
   }
 

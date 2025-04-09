@@ -11,11 +11,31 @@
 package io.taktx.engine.generic;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 public class ClockProducer {
+
+  public static final String INITIAL_TIME = "2024-02-28T10:00:00Z";
+  public static final Clock FIXED_CLOCK =
+      new MutableClock(Instant.parse(INITIAL_TIME), ZoneId.of("UTC"));
+  public static final Clock SYSTEM_CLOCK = Clock.systemUTC();
+
+  @Inject
+  @ConfigProperty(name = "quarkus.profile")
+  String activeProfile;
+
   @Produces
   Clock produceClock() {
-    return Clock.systemUTC();
+    if ("test".equals(activeProfile)) {
+      // Return a fixed clock for testing
+      return FIXED_CLOCK;
+    } else {
+      // Return a system clock for other profiles
+      return SYSTEM_CLOCK;
+    }
   }
 }

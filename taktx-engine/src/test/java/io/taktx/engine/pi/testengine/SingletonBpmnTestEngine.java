@@ -1,6 +1,6 @@
 package io.taktx.engine.pi.testengine;
 
-import io.taktx.engine.generic.FixedClockProducer;
+import io.taktx.engine.generic.ClockProducer;
 
 public class SingletonBpmnTestEngine {
   private static BpmnTestEngine instance;
@@ -11,7 +11,7 @@ public class SingletonBpmnTestEngine {
 
   public static BpmnTestEngine getInstance() {
     if (instance == null) {
-      instance = new BpmnTestEngine(new FixedClockProducer().produceClock());
+      instance = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
       instance.init();
     }
     return instance;
