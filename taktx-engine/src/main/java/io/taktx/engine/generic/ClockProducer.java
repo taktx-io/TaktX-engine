@@ -10,13 +10,18 @@
 
 package io.taktx.engine.generic;
 
+import io.taktx.engine.config.TaktConfiguration;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
-import jakarta.inject.Inject;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@ApplicationScoped
+@RequiredArgsConstructor
+@Slf4j
 public class ClockProducer {
 
   public static final String INITIAL_TIME = "2024-02-28T10:00:00Z";
@@ -24,17 +29,17 @@ public class ClockProducer {
       new MutableClock(Instant.parse(INITIAL_TIME), ZoneId.of("UTC"));
   public static final Clock SYSTEM_CLOCK = Clock.systemUTC();
 
-  @Inject
-  @ConfigProperty(name = "quarkus.profile")
-  String activeProfile;
+  final TaktConfiguration taktConfiguration;
 
   @Produces
   Clock produceClock() {
-    if ("test".equals(activeProfile)) {
+    if (taktConfiguration.inTestMode()) {
       // Return a fixed clock for testing
+      log.info("Using fixed clock for testing");
       return FIXED_CLOCK;
     } else {
       // Return a system clock for other profiles
+      log.info("Using system clock for prd");
       return SYSTEM_CLOCK;
     }
   }

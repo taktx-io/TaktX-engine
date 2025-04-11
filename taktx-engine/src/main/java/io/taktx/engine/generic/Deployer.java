@@ -57,6 +57,19 @@ public class Deployer {
       }
 
       int partitions = taktConfiguration.getPartitions();
+      int partitionLimit = licenseManager.getPartitionLimit();
+      if (partitions > partitionLimit) {
+        String errorMessage =
+            String.format(
+                "❌ LICENSE VIOLATION: Maximum allowed partitions is %d, but %d partitions found in topic(s):",
+                partitionLimit, partitionLimit);
+
+        System.out.println(errorMessage);
+        System.out.println("   Shutting down due to license violation...");
+
+        // Exit the application
+        Runtime.getRuntime().halt(1);
+      }
 
       CreateTopicsResult topics =
           adminClient.createTopics(
@@ -77,7 +90,7 @@ public class Deployer {
     }
   }
 
-  private boolean validateTopicAccordingLicense() throws ExecutionException, InterruptedException {
+  private void validateTopicAccordingLicense() throws ExecutionException, InterruptedException {
     Map<String, Integer> topicPartitions = checkKafkaTopicPartitions();
 
     int maxPartitionsUsed =
@@ -112,16 +125,14 @@ public class Deployer {
 
       // Exit the application
       Runtime.getRuntime().halt(1);
-      return false;
     }
-    return true;
   }
 
   /**
    * Checks all Kafka topics defined in configuration and returns their partition counts
    *
    * @return Map of topic names to their partition counts
-   * @throws ExecutionException If there's an error communicating with Kafka
+   * @throws ExecutionException   If there's an error communicating with Kafka
    * @throws InterruptedException If the operation is interrupted
    */
   private Map<String, Integer> checkKafkaTopicPartitions()

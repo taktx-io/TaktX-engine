@@ -396,7 +396,7 @@ public class TopologyProducer {
             () ->
                 new ScheduleProcessor(
                     clock,
-                    taktConfiguration.getActiveProfiles().contains("test"),
+                    taktConfiguration.inTestMode(),
                     (context, name) ->
                         context.getStateStore(taktConfiguration.getPrefixed("schedules-" + name)),
                     TimeBucket.values()),
