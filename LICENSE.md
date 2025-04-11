@@ -1,4 +1,4 @@
-# TaktX Business Source License 1.1
+# TaktX Business Source License 1.0
 
 ## Parameters
 
@@ -7,19 +7,23 @@
 **Licensed Work:** TaktX Engine  
 The Licensed Work is (c) 2025 TaktX B.V.
 
-**Additional Use Grant:** You may make use of the Licensed Work, provided that you may not use the Licensed Work for a Process Automation Service.
+**Additional Use Grant:** You may make use of the Licensed Work, including in production environments, provided that:
 
-A "Process Automation Service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating and managing process instances, managing enterprise resources through workflow processes, or managing human or system tasks, where such functionality is used for generating revenue from such third parties.
+1. You may not use the Licensed Work for a Process Automation Service.
 
-The use of the Licensed Work is also limited to a maximum of 3 Kafka partitions for non-commercial purposes. For commercial use or to use more than 3 Kafka partitions, a commercial license must be obtained.
+   A "Process Automation Service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating and managing process instances, managing enterprise resources through workflow processes, or managing human or system tasks, where such functionality is used for generating revenue from such third parties.
 
-**Production Use Definition:** "Production Use" means using the Licensed Work in a production environment to process live data or serve traffic as part of a commercial or non-commercial offering to third parties. The use of the Licensed Work in any commercial setting is explicitly prohibited without a commercial license.
+2. Kafka Topic Limitation: Each Kafka topic created or used by the Licensed Work 
+   is limited to a maximum of 5 partitions per topic. There is no limit on the
+   number of topics or deployments.
 
 **Change Date:** Four years from the date of each release
 
 **Change License:** Apache License, Version 2.0
 
 For information about alternative licensing arrangements for the Software, please visit: [https://taktx.io/contact](https://taktx.io/contact)
+
+Commercial licenses with increased partition limits and additional features can be obtained at [https://taktx.io/pricing](https://taktx.io/pricing).
 
 ## Notice
 
@@ -28,6 +32,8 @@ The Business Source License (this document, or the "License") is not an Open Sou
 ## Anti-Tampering Provision
 
 The Licensed Work contains license protection mechanisms designed to detect modifications to the Licensed Work's license verification system or attempts to circumvent license restrictions. These mechanisms are essential parts of the Licensed Work and are protected by this License.
+
+The Licensed Work validates partition limits at runtime to enforce license compliance. 
 
 Any attempt to modify, disable, or circumvent these license protection mechanisms is a violation of this License and will automatically terminate your rights under this License. Such tampering includes but is not limited to:
 
@@ -40,11 +46,13 @@ Legitimate use of the Licensed Work for development and testing purposes (such a
 
 ---
 
-## Business Source License 1.1
+## Standard Business Source License Terms
+
+The following standard terms of the Business Source License are modified by the Additional Use Grant above, which takes precedence in case of any conflict.
 
 ### Terms
 
-The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor may make an Additional Use Grant, above, permitting limited production use.
+The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and use the Licensed Work as specified in the Additional Use Grant above.
 
 Effective on the Change Date, or the fourth anniversary of the first publicly available distribution of a specific version of the Licensed Work under this License, whichever comes first, the Licensor hereby grants you rights under the terms of the Change License, and the rights granted in the paragraph above terminate.
 

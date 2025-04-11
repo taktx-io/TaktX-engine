@@ -1,0 +1,72 @@
+version: "3"
+services:
+  kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9095:9095' #1
+      - '9094:9094' #1
+      - '9092:9092' #1
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_CONTROLLER_BROKER_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094,DOCKER://:9095
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094,DOCKER://host.docker.internal:9095
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT,DOCKER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+
+  postgresql:
+    image: postgres:14
+    hostname: postgresql
+    environment:
+      POSTGRES_DB: "conduktor-console"
+      POSTGRES_USER: "conduktor"
+      POSTGRES_PASSWORD: "change_me"
+
+  conduktor-console:
+    image: conduktor/conduktor-console:1.30.0
+    depends_on:
+      - postgresql
+    ports:
+      - "8085:8080"
+    environment:
+      # Enterprise license key
+      # CDK_LICENSE: ""
+      # External database configuration
+      CDK_DATABASE_URL: "postgresql://conduktor:change_me@postgresql:5432/conduktor-console"
+      # Local admin credentials
+      CDK_ADMIN_EMAIL: "admin@taktx.io"
+      CDK_ADMIN_PASSWORD: "Admin123Password!"
+      # Connection to the Cortex Monitoring container
+      CDK_MONITORING_CORTEX-URL: http://conduktor-monitoring:9009/
+      CDK_MONITORING_ALERT-MANAGER-URL: http://conduktor-monitoring:9010/
+      CDK_MONITORING_CALLBACK-URL: http://conduktor-console:8080/monitoring/api/
+      CDK_MONITORING_NOTIFICATIONS-CALLBACK-URL: http://localhost:8080
+
+  conduktor-monitoring:
+    image: conduktor/conduktor-console-cortex:1.30.0
+    environment:
+      # Connection to the Console container
+      CDK_CONSOLE-URL: "http://conduktor-console:8080"
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - "./grafana/data:/var/lib/grafana"
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=your_password
+
+volumes:
+  pg_data: {}
+  conduktor_data: {}

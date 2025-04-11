@@ -61,7 +61,7 @@ public class Deployer {
       if (partitions > partitionLimit) {
         String errorMessage =
             String.format(
-                "❌ LICENSE VIOLATION: Maximum allowed partitions is %d, but %d partitions found in topic(s):",
+                "❌ LICENSE VIOLATION: Maximum allowed partitions is %d, but %d partitions configured:",
                 partitionLimit, partitionLimit);
 
         System.out.println(errorMessage);
