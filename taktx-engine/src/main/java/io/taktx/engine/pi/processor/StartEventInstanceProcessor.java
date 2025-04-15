@@ -39,7 +39,7 @@ public class StartEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudHandleTimerxEvents() {
+  protected boolean shoudHandleTimerEvents() {
     return false;
   }
 

@@ -75,7 +75,7 @@ public abstract class CatchEventInstanceProcessor<
               catchEventInstance.addErrorSubscription(errorEventDefinition);
             });
 
-    if (shoudHandleTimerxEvents()) {
+    if (shoudHandleTimerEvents()) {
       catchEventInstance
           .getFlowNode()
           .getTimerEventDefinition()
@@ -110,7 +110,7 @@ public abstract class CatchEventInstanceProcessor<
             });
   }
 
-  protected abstract boolean shoudHandleTimerxEvents();
+  protected abstract boolean shoudHandleTimerEvents();
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(

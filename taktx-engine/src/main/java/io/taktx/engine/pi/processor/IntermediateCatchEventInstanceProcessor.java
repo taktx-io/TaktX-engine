@@ -36,7 +36,7 @@ public class IntermediateCatchEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudHandleTimerxEvents() {
+  protected boolean shoudHandleTimerEvents() {
     return true;
   }
 

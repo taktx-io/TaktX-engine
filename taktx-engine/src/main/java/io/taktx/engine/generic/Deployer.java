@@ -132,7 +132,7 @@ public class Deployer {
    * Checks all Kafka topics defined in configuration and returns their partition counts
    *
    * @return Map of topic names to their partition counts
-   * @throws ExecutionException   If there's an error communicating with Kafka
+   * @throws ExecutionException If there's an error communicating with Kafka
    * @throws InterruptedException If the operation is interrupted
    */
   private Map<String, Integer> checkKafkaTopicPartitions()

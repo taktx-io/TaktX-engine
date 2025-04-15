@@ -57,3 +57,10 @@ spotless {
 dependencyLocking {
     lockAllConfigurations()
 }
+
+tasks.withType<JacocoReport> {
+    executionData.setFrom(files(
+        "${buildDir}/jacoco/test.exec",
+        "${buildDir}/jacoco-quarkus.exec"
+    ))
+}
