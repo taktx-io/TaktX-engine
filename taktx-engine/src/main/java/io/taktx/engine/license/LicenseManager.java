@@ -217,6 +217,7 @@ public class LicenseManager {
   }
 
   private void loadLicense() throws LicenseException {
+    log.info("Checking for license file at " + LICENSE_PATH.toFile().getAbsolutePath());
     File licenseFile = LICENSE_PATH.toFile();
     if (!licenseFile.exists()) {
       // Exit the application

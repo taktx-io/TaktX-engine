@@ -61,8 +61,7 @@ public class LicenseInfoConfig {
         Licensed under TaktX Business Source License v1.1.
 
         TERMS SUMMARY:
-        - Free non-production use limited to 3 Kafka partitions
-        - Production use prohibited without a commercial license
+        - Free use (including production) limited to 3 Kafka partitions per topic used by the engine
         - This version will be available under Apache License 2.0 in four years
         - No warranty or liability (provided "AS IS")
 
@@ -83,7 +82,6 @@ public class LicenseInfoConfig {
       System.out.println("⚠️ No valid commercial license found. Running with limitations:");
       System.out.println("  • Maximum 3 Kafka partitions");
       System.out.println("  • Premium features disabled");
-      System.out.println("  • Production use prohibited");
       System.out.println(
           "For commercial use and to unlock premium features, contact us at [https://taktx.io/contact].");
     }
@@ -107,7 +105,6 @@ public class LicenseInfoConfig {
               ⚠️ No valid commercial license found. Running with limitations:
                 • Maximum 3 Kafka partitions
                 • Premium features disabled
-                • Production use prohibited
               For commercial use and to unlock premium features, contact us at [https://taktx.io/contact].
               """);
     }
