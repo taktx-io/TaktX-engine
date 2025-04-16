@@ -151,4 +151,33 @@ public class Deployer {
         .collect(
             Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().partitions().size()));
   }
+
+  public void createTopicsForProcessDefinition(String processDefinitionId) {
+
+      try {
+        List<String> prefixedTopics = List.of(
+                taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId,
+                taktConfiguration.getPrefixed("process-instance-trigger-") + processDefinitionId
+        );
+
+        int partitions = taktConfiguration.getPartitions();
+        log.info("Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
+        CreateTopicsResult topics =
+                adminClient.createTopics(
+                        prefixedTopics.stream()
+                                .map(
+                                        topic ->
+                                                new NewTopic(
+                                                        topic, partitions, (short) taktConfiguration.getReplicationFactor()))
+                                .toList());
+        topics.all().get();
+
+      } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+      } catch (ExecutionException e) {
+          throw new RuntimeException(e);
+      }
+
+
+  }
 }

@@ -18,6 +18,7 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.generic.Deployer;
 import io.taktx.xml.BpmnParser;
 import java.time.Clock;
 import java.util.HashMap;
@@ -43,15 +44,18 @@ public class DefinitionsProcessor
       processDefinitionStore;
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
+  private final Deployer deployer;
   private final Clock clock;
 
   public DefinitionsProcessor(
       TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
+      Deployer deployer,
       Clock clock) {
     this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
-    this.clock = clock;
+      this.deployer = deployer;
+      this.clock = clock;
   }
 
   @Override
@@ -96,6 +100,10 @@ public class DefinitionsProcessor
     ProcessDefinitionDTO processDefinitionDTO;
     if (version == null) {
       version = hashVersionPairs.size() + 1;
+      if (version == 1) {
+        // First version, create the corresponding topics explicitely
+        deployer.createTopicsForProcessDefinition(parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
+      }
       log.info("Creating new version {} of process definition {}", version, processDefinitionId);
 
       // New version, create a new ProcessDefinitionDTO and store the relevant information

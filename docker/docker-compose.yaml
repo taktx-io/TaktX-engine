@@ -7,6 +7,7 @@ services:
       - '9094:9094' #1
       - '9092:9092' #1
     environment:
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_CFG_CONTROLLER_BROKER_ID=0
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
