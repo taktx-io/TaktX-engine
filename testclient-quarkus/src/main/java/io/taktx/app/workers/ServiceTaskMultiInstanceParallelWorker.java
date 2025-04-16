@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 // @BpmnDeployment(resource = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
 @Startup
 @ApplicationScoped
-@TaktWorker(processDefinitionId = "servicetask-multiinstance-parallel")
+//@TaktWorker(processDefinitionId = "servicetask-multiinstance-parallel")
 public class ServiceTaskMultiInstanceParallelWorker {
   @TaktWorkerMethod(taskId = "create-collection-id")
   public CreateCollectionResults createCollection() {

@@ -17,72 +17,33 @@ public class TaktPropertiesHelper {
 
   private final String namespace;
 
-  private final String kafkaBootstrapServers;
+  private final Properties kafkaProperties;
 
-  private final Properties commonProperties;
-
-  public TaktPropertiesHelper(String tenant, String namespace, String kafkaBootstrapServers) {
+  public TaktPropertiesHelper(String tenant, String namespace, Properties kafkaProperties) {
     this.tenant = tenant;
     this.namespace = namespace;
-    this.kafkaBootstrapServers = kafkaBootstrapServers;
-    this.commonProperties = loadCommonProperties();
+    this.kafkaProperties = kafkaProperties;
   }
 
   public Properties getKafkaConsumerProperties(
       String groupId, Class<?> keyDeserializer, Class<?> valueDeserializer) {
     Properties props = new Properties();
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
     props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.putAll(commonProperties);
+    props.putAll(kafkaProperties);
     return props;
-  }
-
-  @SneakyThrows
-  public Properties loadCommonProperties() {
-    String taktKafkaPropertiesFile = System.getenv("TAKT_PROPERTIES_FILE");
-    Properties properties = new Properties();
-    if (taktKafkaPropertiesFile != null) {
-      InputStream resourceAsStream = null;
-      try {
-        resourceAsStream = getClass().getResourceAsStream(taktKafkaPropertiesFile);
-        if (resourceAsStream == null) {
-          resourceAsStream = new FileInputStream(taktKafkaPropertiesFile);
-        }
-        properties.load(resourceAsStream);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to load properties from " + taktKafkaPropertiesFile, e);
-      } finally {
-        if (resourceAsStream != null) {
-          resourceAsStream.close();
-        }
-      }
-    }
-    System.getenv()
-        .forEach(
-            (k, v) -> {
-              if (k.startsWith("TAKT_KAFKA_")) {
-                // remove the prefix and convert to lower case and replace underscores with dots
-                String lowercaseKey =
-                    k.substring("TAKT_KAFKA_".length()).toLowerCase().replace("_", ".");
-                properties.put(lowercaseKey, v);
-              }
-            });
-    return properties;
   }
 
   public Properties getKafkaProducerProperties(
       Class<? extends Serializer<?>> keySserializer,
       Class<? extends Serializer<?>> valueSerializer) {
     Properties props = new Properties();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySserializer.getName());
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer.getName());
-    props.putAll(commonProperties);
+    props.putAll(kafkaProperties);
     return props;
   }
 

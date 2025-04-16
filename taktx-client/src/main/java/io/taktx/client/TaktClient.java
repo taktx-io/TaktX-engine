@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
@@ -181,12 +182,11 @@ public class TaktClient {
 
     private String tenant;
     private String namespace;
-    private String kafkaBootstrapServers;
+    private Properties kafkaProperties;
 
     private TaktClientBuilder() {
       this.tenant = System.getenv("TENANT");
       this.namespace = System.getenv("NAMESPACE");
-      this.kafkaBootstrapServers = System.getenv("KAFKA_BOOTSTRAP_SERVERS");
     }
 
     public TaktClient build() {
@@ -196,12 +196,12 @@ public class TaktClient {
       if (namespace == null) {
         throw new IllegalArgumentException("NAMESPACE environment variable is not set");
       }
-      if (kafkaBootstrapServers == null) {
+      if (kafkaProperties == null) {
         throw new IllegalArgumentException(
-            "KAFKA_BOOTSTRAP_SERVERS environment variable is not set");
+            "Kakfa properties should be passed");
       }
       TaktPropertiesHelper taktPropertiesHelper =
-          new TaktPropertiesHelper(tenant, namespace, kafkaBootstrapServers);
+          new TaktPropertiesHelper(tenant, namespace, kafkaProperties);
 
       ExternalTaskResponder externalTaskResponder = new ExternalTaskResponder(taktPropertiesHelper);
 
@@ -221,8 +221,8 @@ public class TaktClient {
       return this;
     }
 
-    public TaktClientBuilder withBootstrapServers(String kafkaBootstrapServers) {
-      this.kafkaBootstrapServers = kafkaBootstrapServers;
+    public TaktClientBuilder withKafkaProperties(Properties kafkaProperties) {
+      this.kafkaProperties = kafkaProperties;
       return this;
     }
   }

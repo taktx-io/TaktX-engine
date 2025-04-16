@@ -164,7 +164,7 @@ public class Deployer {
       int partitions = taktConfiguration.getPartitions();
       log.info(
           "Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
-      CreateTopicsResult topics =
+        CreateTopicsResult topics =
           adminClient.createTopics(
               prefixedTopics.stream()
                   .map(
