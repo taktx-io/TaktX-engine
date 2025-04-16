@@ -161,7 +161,9 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () -> new DefinitionsProcessor(taktConfiguration, messageSchedulerFactory, deployer, clock),
+            () ->
+                new DefinitionsProcessor(
+                    taktConfiguration, messageSchedulerFactory, deployer, clock),
             taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()

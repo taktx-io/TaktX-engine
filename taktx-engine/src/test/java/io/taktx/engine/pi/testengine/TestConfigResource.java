@@ -10,8 +10,7 @@ public class TestConfigResource implements QuarkusTestResourceLifecycleManager {
     // Set the property before the application starts
     return Map.of(
         "taktx.test", "true",
-        "kafka.devservices.auto-create-topics", "false"
-    );
+        "kafka.devservices.auto-create-topics", "false");
   }
 
   @Override

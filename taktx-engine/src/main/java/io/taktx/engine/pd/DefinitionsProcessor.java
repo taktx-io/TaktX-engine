@@ -54,8 +54,8 @@ public class DefinitionsProcessor
       Clock clock) {
     this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
-      this.deployer = deployer;
-      this.clock = clock;
+    this.deployer = deployer;
+    this.clock = clock;
   }
 
   @Override
@@ -102,7 +102,8 @@ public class DefinitionsProcessor
       version = hashVersionPairs.size() + 1;
       if (version == 1) {
         // First version, create the corresponding topics explicitely
-        deployer.createTopicsForProcessDefinition(parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
+        deployer.createTopicsForProcessDefinition(
+            parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
       }
       log.info("Creating new version {} of process definition {}", version, processDefinitionId);
 

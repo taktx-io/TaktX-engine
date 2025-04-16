@@ -155,31 +155,29 @@ public class Deployer {
 
   public void createTopicsForProcessDefinition(String processDefinitionId) {
 
-      try {
-        List<String> prefixedTopics = List.of(
-                taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId
-        );
+    try {
+      List<String> prefixedTopics =
+          List.of(taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId);
 
-        Set<String> strings = adminClient.listTopics().names().get();
+      Set<String> strings = adminClient.listTopics().names().get();
 
-        int partitions = taktConfiguration.getPartitions();
-        log.info("Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
-        CreateTopicsResult topics =
-                adminClient.createTopics(
-                        prefixedTopics.stream()
-                                .map(
-                                        topic ->
-                                                new NewTopic(
-                                                        topic, partitions, (short) taktConfiguration.getReplicationFactor()))
-                                .toList());
-        topics.all().get();
+      int partitions = taktConfiguration.getPartitions();
+      log.info(
+          "Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
+      CreateTopicsResult topics =
+          adminClient.createTopics(
+              prefixedTopics.stream()
+                  .map(
+                      topic ->
+                          new NewTopic(
+                              topic, partitions, (short) taktConfiguration.getReplicationFactor()))
+                  .toList());
+      topics.all().get();
 
-      } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-      } catch (ExecutionException e) {
-          throw new RuntimeException(e);
-      }
-
-
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
