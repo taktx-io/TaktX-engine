@@ -6,7 +6,6 @@ import io.taktx.client.TaktClient.TaktClientBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 
 @Startup
@@ -20,7 +19,7 @@ public class TaktClientProvider {
   }
 
   @PostConstruct
-  void init() throws IOException {
+  void init() {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
     synchronized (TaktClientProvider.class) {
       if (taktClient == null) {

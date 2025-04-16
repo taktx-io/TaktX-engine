@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -156,9 +157,10 @@ public class Deployer {
 
       try {
         List<String> prefixedTopics = List.of(
-                taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId,
-                taktConfiguration.getPrefixed("process-instance-trigger-") + processDefinitionId
+                taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId
         );
+
+        Set<String> strings = adminClient.listTopics().names().get();
 
         int partitions = taktConfiguration.getPartitions();
         log.info("Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
