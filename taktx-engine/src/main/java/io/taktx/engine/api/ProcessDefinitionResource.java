@@ -78,8 +78,6 @@ public class ProcessDefinitionResource {
   public Response getProcessDefinition(
       @PathParam("processDefinitionKey") String processDefinitionKeyString) {
 
-    String envHost = System.getenv("injectedhost");
-
     String[] split = processDefinitionKeyString.split("\\.");
     String processDefinitionName = split[0];
     Integer processDefinitionVersion = Integer.parseInt(split[1]);
@@ -93,7 +91,7 @@ public class ProcessDefinitionResource {
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(envHost)) {
+    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost()) && metadata.activeHost().port() == taktConfiguration.getPort()) {
       ProcessDefinitionDTO processDefinition = store.get(processDefinitionKey);
       if (processDefinition == null) {
         return Response.status(Response.Status.NOT_FOUND).build();

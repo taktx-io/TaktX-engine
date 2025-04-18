@@ -7,19 +7,19 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 @Getter
 public class TaktConfiguration {
-  @ConfigProperty(name = "takt.engine.tenant")
+  @ConfigProperty(name = "taktx.engine.tenant")
   String tenant;
 
-  @ConfigProperty(name = "takt.engine.namespace")
+  @ConfigProperty(name = "taktx.engine.namespace")
   String namespace;
 
-  @ConfigProperty(name = "takt.engine.keyvaluestoretype")
+  @ConfigProperty(name = "taktx.engine.keyvaluestoretype")
   String supplierType;
 
-  @ConfigProperty(name = "takt.engine.topic.replication-factor")
+  @ConfigProperty(name = "taktx.engine.topic.replication-factor")
   int replicationFactor;
 
-  @ConfigProperty(name = "takt.engine.topic.partitions")
+  @ConfigProperty(name = "taktx.engine.topic.partitions")
   int partitions;
 
   @ConfigProperty(name = "kafka.bootstrap.servers")
@@ -27,6 +27,13 @@ public class TaktConfiguration {
 
   @ConfigProperty(name = "taktx.test", defaultValue = "false")
   String isTest;
+
+  @ConfigProperty(name = "taktx.engine.host", defaultValue = "false")
+  String host;
+
+  @ConfigProperty(name = "taktx.engine.port", defaultValue = "8080")
+  int port;
+
 
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);

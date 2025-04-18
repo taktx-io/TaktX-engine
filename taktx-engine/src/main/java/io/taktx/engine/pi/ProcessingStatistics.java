@@ -36,11 +36,11 @@ public class ProcessingStatistics {
 
   @PostConstruct
   void init() {
-    processInstancesStarted = meterRegistry.counter("takt.engine.process_instances_started");
-    processInstancesFinished = meterRegistry.counter("takt.engine.process_instances_finished");
-    flowNodesStarted = meterRegistry.counter("takt.engine.flow_nodes_started");
-    flowNodesContinued = meterRegistry.counter("takt.engine.flow_nodes_continued");
-    flowNodesFinished = meterRegistry.counter("takt.engine.flow_nodes_finished");
+    processInstancesStarted = meterRegistry.counter("taktx.engine.process_instances_started");
+    processInstancesFinished = meterRegistry.counter("taktx.engine.process_instances_finished");
+    flowNodesStarted = meterRegistry.counter("taktx.engine.flow_nodes_started");
+    flowNodesContinued = meterRegistry.counter("taktx.engine.flow_nodes_continued");
+    flowNodesFinished = meterRegistry.counter("taktx.engine.flow_nodes_finished");
   }
 
   public void startTimerForProcessInstance(UUID processInstanceKey) {
@@ -53,7 +53,7 @@ public class ProcessingStatistics {
     if (sample != null) {
       Timer timer =
           meterRegistry.timer(
-              "takt.engine.process_instance_duration",
+              "taktx.engine.process_instance_duration",
               "processDefinitionKey",
               processDefinitionKey);
       sample.stop(timer);

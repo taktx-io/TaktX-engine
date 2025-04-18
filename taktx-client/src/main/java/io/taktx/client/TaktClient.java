@@ -197,8 +197,7 @@ public class TaktClient {
         throw new IllegalArgumentException("NAMESPACE environment variable is not set");
       }
       if (kafkaProperties == null) {
-        throw new IllegalArgumentException(
-            "Kakfa properties should be passed");
+        throw new IllegalArgumentException("Kakfa properties should be passed");
       }
       TaktPropertiesHelper taktPropertiesHelper =
           new TaktPropertiesHelper(tenant, namespace, kafkaProperties);

@@ -13,7 +13,7 @@
             <entry key="KAFKA_SSL_TRUSTSTORE_PASSWORD" value="changeit" />
             <entry key="KAFKA_SSL_TRUSTSTORE_TYPE" value="jks" />
             <entry key="kafka.bootstrap.servers" value="db-kafka-ams3-87954-do-user-251588-0.e.db.ondigitalocean.com:25073" />
-            <entry key="takt.engine.topic.partitions" value="3" />
+            <entry key="taktx.engine.topic.partitions" value="3" />
           </map>
         </option>
         <option name="executionName" />

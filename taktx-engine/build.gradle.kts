@@ -14,6 +14,10 @@ dependencies {
     implementation(libs.quarkus.resteasy.client)
     implementation(libs.jackson.cbor)
     implementation(libs.license3j)
+    implementation("io.quarkus:quarkus-smallrye-openapi")
+    implementation("io.quarkus:quarkus-swagger-ui")
+    implementation("io.quarkus:quarkus-resteasy-jackson")
+    implementation("io.quarkus:quarkus-jackson")
 
     // Micrometer
     implementation(libs.quarkus.micrometer)

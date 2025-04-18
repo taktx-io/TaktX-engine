@@ -6,11 +6,10 @@ import io.taktx.client.TaktClient.TaktClientBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
-import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Startup
 @Slf4j
@@ -18,29 +17,29 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class TaktClientProvider {
   private static TaktClient taktClient;
 
-  @ConfigProperty(name ="takt.engine.tenant", defaultValue = "tenant")
-  String tenant;
-  @ConfigProperty(name ="takt.engine.namespace", defaultValue = "namespace")
-  String namespace;
-  @ConfigProperty(name ="takt.engine.namespace", defaultValue = "namespace")
-  String namespace;
-
   public TaktClientProvider() {
     log.info("TaktClientProvider instantiated");
   }
 
   @PostConstruct
-  void init() {
+  void init() throws IOException {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
     synchronized (TaktClientProvider.class) {
       if (taktClient == null) {
         Properties properties = new Properties();
-        properties.load(new FileInputStream());
-        taktClient = taktClientBuilder
-            .withTenant("tenant")
-            .withNamespace("namespace")
-            .withKafkaProperties(properties)
-            .build();
+
+        String taktPropertiesFile = System.getenv("TAKTX_PROPERTIES_FILE");
+        log.info("TaktClientProvider taktPropertiesFile: {}", taktPropertiesFile);
+        try (FileInputStream fileInputStream = new FileInputStream(taktPropertiesFile)) {
+          properties.load(fileInputStream);
+        }
+
+        taktClient =
+            taktClientBuilder
+                .withTenant(properties.getProperty("taktx.engine.tenant"))
+                .withNamespace(properties.getProperty("taktx.engine.namespace"))
+                .withKafkaProperties(properties)
+                .build();
         taktClient.start();
         taktClient.deployTaktDeploymentAnnotatedClasses();
         taktClient.registerAnnotatedWorkers();

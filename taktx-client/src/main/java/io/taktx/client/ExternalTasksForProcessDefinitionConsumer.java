@@ -45,10 +45,7 @@ public class ExternalTasksForProcessDefinitionConsumer
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.externalTriggerPollMs =
         Long.parseLong(
-            taktPropertiesHelper
-                .getKafkaProperties()
-                .getOrDefault("poll.timeout", 100)
-                .toString());
+            taktPropertiesHelper.getKafkaProperties().getOrDefault("poll.timeout", 100).toString());
   }
 
   public void stop() {

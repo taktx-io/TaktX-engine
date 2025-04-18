@@ -1,7 +1,6 @@
 package io.taktx.app.workers;
 
 import io.quarkus.runtime.Startup;
-import io.taktx.client.annotation.TaktWorker;
 import io.taktx.client.annotation.TaktWorkerMethod;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
@@ -12,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 // @BpmnDeployment(resource = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
 @Startup
 @ApplicationScoped
-//@TaktWorker(processDefinitionId = "servicetask-multiinstance-parallel")
+// @TaktWorker(processDefinitionId = "servicetask-multiinstance-parallel")
 public class ServiceTaskMultiInstanceParallelWorker {
   @TaktWorkerMethod(taskId = "create-collection-id")
   public CreateCollectionResults createCollection() {

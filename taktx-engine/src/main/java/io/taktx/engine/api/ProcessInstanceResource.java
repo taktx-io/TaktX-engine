@@ -69,7 +69,7 @@ public class ProcessInstanceResource {
           System.out.println("Host: " + metadata.host());
           System.out.println("Port: " + metadata.port());
         });
-    processInstanceStore.all().forEachRemaining(record -> processInstances.add(record.key));
+    processInstanceStore.all().forEachRemaining(processInstanceRecord -> processInstances.add(processInstanceRecord.key));
     return processInstances;
   }
 
@@ -108,9 +108,6 @@ public class ProcessInstanceResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getProcessInstance(@PathParam("processId") UUID processId) {
 
-    String envHost = System.getenv("injectedhost");
-    int envPort = Integer.parseInt(System.getenv("injectedport"));
-
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
@@ -120,8 +117,8 @@ public class ProcessInstanceResource {
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       log.info("no metadata available for key {}", processId);
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(envHost)
-        && metadata.activeHost().port() == envPort) {
+    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost())
+        && metadata.activeHost().port() == taktConfiguration.getPort()) {
       log.info(
           "host and port match {}:{} ", metadata.activeHost().host(), metadata.activeHost().port());
       ProcessInstanceDTO processInstanceDTO = getProcessInstanceStore().get(processId);
@@ -136,8 +133,8 @@ public class ProcessInstanceResource {
 
       log.info(
           "Host and port differ from injected {}:{}, redirecting to host: {} port: {}",
-          envHost,
-          envPort,
+          taktConfiguration.getHost(),
+          taktConfiguration.getPort(),
           metadata.activeHost().host(),
           metadata.activeHost().port());
 
@@ -197,7 +194,7 @@ public class ProcessInstanceResource {
     try {
       return new URI("http://" + host + ":" + port + "/process-instances/" + id);
     } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
+      throw new IllegalArgumentException(e);
     }
   }
 
@@ -205,7 +202,7 @@ public class ProcessInstanceResource {
     try {
       return new URI("http://" + host + ":" + port + "/process-instances/" + id + "/variables");
     } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
+      throw new IllegalArgumentException(e);
     }
   }
 }

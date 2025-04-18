@@ -1,12 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="testclient digitalocean" type="QuarkusRunConfigurationType" factoryName="Quarkus">
+  <configuration default="false" name="testclient-local" type="QuarkusRunConfigurationType" factoryName="Quarkus">
     <module name="taktx.testclient-quarkus.main" />
     <QsGradleRunConfiguration>
       <ExternalSystemSettings>
         <option name="env">
           <map>
-            <entry key="KAFKA_BOOTSTRAP_SERVERS" value="db-kafka-ams3-87954-do-user-251588-0.e.db.ondigitalocean.com:25073" />
-            <entry key="TAKTX_PROPERTIES_FILE" value="$PROJECT_DIR$/testclient-quarkus/config/kafka-digitalocean.properties" />
+            <entry key="TAKTX_PROPERTIES_FILE" value="$PROJECT_DIR$/testclient-quarkus/config/kafka-dockerlocal.properties" />
           </map>
         </option>
         <option name="executionName" />

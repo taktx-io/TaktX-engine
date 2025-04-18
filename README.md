@@ -79,10 +79,11 @@ TaktX Engine can be configured using application properties or environment varia
 
 ```properties
 # Core Engine Configuration
-takt.engine.keyvaluestoretype=inmemory
-takt.engine.tenant=tenant
-takt.engine.namespace=namespace
-takt.engine.topic.partitions=3  # Free version limit
+taktx.engine.keyvaluestoretype=inmemory
+taktx.engine.tenant=tenant
+taktx.engine.host=localhost
+taktx.engine.namespace=namespace
+taktx.engine.topic.partitions=3  # Free version limit
 ```
 
 ## Licensing

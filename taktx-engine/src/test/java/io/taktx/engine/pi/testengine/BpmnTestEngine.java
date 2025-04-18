@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -125,11 +126,14 @@ public class BpmnTestEngine {
       adminClient.createTopics(topics);
     }
 
+    Properties kakaProperties = new Properties();
+    kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
+
     taktClient =
         TaktClient.newClientBuilder()
             .withTenant("tenant")
             .withNamespace("namespace")
-            .withBootstrapServers(kafkaBootstrapServers)
+            .withKafkaProperties(kakaProperties)
             .build();
     Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer = BpmnTestEngine.this::consume;
     taktClient.registerInstanceUpdateConsumer(consumer);

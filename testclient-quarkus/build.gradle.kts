@@ -11,6 +11,7 @@ dependencies {
     implementation("io.quarkus:quarkus-arc")
     implementation(libs.quarkus.jaxb)
     implementation("io.quarkus:quarkus-smallrye-openapi")
+    implementation("io.quarkus:quarkus-swagger-ui")
     implementation(libs.quarkus.resteasy.client)
     implementation("io.quarkus:quarkus-resteasy-jackson")
     implementation("io.quarkus:quarkus-jackson")

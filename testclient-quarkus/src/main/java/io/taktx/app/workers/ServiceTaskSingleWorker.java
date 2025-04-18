@@ -8,11 +8,13 @@ import io.taktx.client.annotation.TaktWorkerMethod;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import lombok.extern.slf4j.Slf4j;
 
 @Startup
 @ApplicationScoped
 @TaktDeployment(resource = "/bpmn/servicetask-single-clean.bpmn")
 @TaktWorker(processDefinitionId = "service-task-single")
+@Slf4j
 public class ServiceTaskSingleWorker {
 
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -23,6 +25,7 @@ public class ServiceTaskSingleWorker {
     executor.submit(
         () -> {
           try {
+            log.info("Service-task-worker started");
             Thread.sleep(50);
           } catch (InterruptedException e) {
             externalTaskInstanceResponder.respondError(
@@ -30,6 +33,7 @@ public class ServiceTaskSingleWorker {
             Thread.currentThread().interrupt();
           }
 
+          log.info("Service-task-worker stopped");
           externalTaskInstanceResponder.respondSuccess();
         });
   }
