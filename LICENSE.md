@@ -4,7 +4,7 @@
 
 **Licensor:** TaktX B.V.
 
-**Licensed Work:** TaktX Engine  
+**Licensed Work:** TaktX Engine
 The Licensed Work is (c) 2025 TaktX B.V.
 
 **Additional Use Grant:** You may make use of the Licensed Work, including in production environments, provided that:
@@ -13,9 +13,11 @@ The Licensed Work is (c) 2025 TaktX B.V.
 
    A "Process Automation Service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating and managing process instances, managing enterprise resources through workflow processes, or managing human or system tasks, where such functionality is used for generating revenue from such third parties.
 
-2. Kafka Topic Limitation: Each Kafka topic created or used by the Licensed Work 
-   is limited to a maximum of 5 partitions per topic. There is no limit on the
-   number of topics or deployments.
+2. Community Edition Limitations: Your use of the Licensed Work is subject to the following limitations:
+   
+   a. Kafka Topic Limitation: Each Kafka topic created or used by the Licensed Work is limited to a maximum of 3 partitions per topic. There is no limit on the number of topics or deployments.
+   
+   b. Additional feature limitations may apply as documented in the product documentation.
 
 **Change Date:** Four years from the date of each release
 
@@ -33,7 +35,7 @@ The Business Source License (this document, or the "License") is not an Open Sou
 
 The Licensed Work contains license protection mechanisms designed to detect modifications to the Licensed Work's license verification system or attempts to circumvent license restrictions. These mechanisms are essential parts of the Licensed Work and are protected by this License.
 
-The Licensed Work validates partition limits at runtime to enforce license compliance. 
+The Licensed Work validates partition limits and premium feature access at runtime to enforce license compliance.
 
 Any attempt to modify, disable, or circumvent these license protection mechanisms is a violation of this License and will automatically terminate your rights under this License. Such tampering includes but is not limited to:
 
@@ -78,9 +80,17 @@ SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OR LIMITATION OF LIABILITY FOR CON
 
 **Attribution:** The Business Source License concept and framework was created by MariaDB Corporation Ab and is used with permission. "Business Source License" is a trademark of MariaDB Corporation Ab.
 
+## Governing Law
+
+This License shall be governed by and construed in accordance with the laws of the Netherlands. Any disputes arising under this License shall be subject to the exclusive jurisdiction of the courts in the Netherlands.
+
+## Severability
+
+If any provision of this License is held to be unenforceable or invalid, such provision will be changed and interpreted to accomplish the objectives of such provision to the greatest extent possible under applicable law and the remaining provisions will continue in full force and effect.
+
 ## Version-Specific Information
 
-Each release of the Licensed Work will contain specific version information, including the release date. The Change Date for each version is exactly four years after its release date. Users can determine the specific Change Date for their version by referring to the VERSION.txt file included with each distribution or by visiting [https://taktx.io/versions](https://taktx.io/versions).
+Each release of the Licensed Work will contain specific version information in the VERSION.txt file included with each distribution or as listed at [https://taktx.io/versions](https://taktx.io/versions).
 
 ## Acceptance
 
