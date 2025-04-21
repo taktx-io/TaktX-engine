@@ -11,7 +11,15 @@ The Licensed Work is (c) 2025 TaktX B.V.
 
 1. You may not use the Licensed Work for a Process Automation Service.
 
-   A "Process Automation Service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating and managing process instances, managing enterprise resources through workflow processes, or managing human or system tasks, where such functionality is used for generating revenue from such third parties.
+   A "Process Automation Service" means any commercial offering where you provide third parties (other than your employees and contractors) with access to the functionality of TaktX Engine, either directly or indirectly, as a managed service, platform-as-a-service, or similar offering where:
+   
+   a. Third parties can create, deploy, or manage business processes or workflows; or
+   
+   b. You are operating TaktX Engine on behalf of third parties to automate their business processes; and
+   
+   c. Such service generates revenue from these third parties.
+
+   This restriction is intended to prevent using the Licensed Work to compete with TaktX's own commercial offerings.
 
 2. Community Edition Limitations: Your use of the Licensed Work is subject to the following limitations:
    
