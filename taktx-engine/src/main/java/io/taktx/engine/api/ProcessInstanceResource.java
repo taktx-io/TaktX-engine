@@ -70,8 +70,9 @@ public class ProcessInstanceResource {
           System.out.println("Host: " + metadata.host());
           System.out.println("Port: " + metadata.port());
         });
-    try(KeyValueIterator<UUID, ProcessInstanceDTO> all = processInstanceStore.all()) {
-      all.forEachRemaining(processInstanceRecord -> processInstances.add(processInstanceRecord.key));
+    try (KeyValueIterator<UUID, ProcessInstanceDTO> all = processInstanceStore.all()) {
+      all.forEachRemaining(
+          processInstanceRecord -> processInstances.add(processInstanceRecord.key));
     }
     return processInstances;
   }
@@ -173,11 +174,9 @@ public class ProcessInstanceResource {
           new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MAX_LONG));
       VariableKeyDTO startVariableKey = new VariableKeyDTO(minKey, "");
       VariableKeyDTO endVariableKey = new VariableKeyDTO(maxKey, "\u00ff");
-      try(KeyValueIterator<VariableKeyDTO, JsonNode> range = getVariablesStore()
-          .range(startVariableKey, endVariableKey)){
-      range
-          .forEachRemaining(
-              entry -> variables.put(entry.key.getVariableName(), entry.value));
+      try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
+          getVariablesStore().range(startVariableKey, endVariableKey)) {
+        range.forEachRemaining(entry -> variables.put(entry.key.getVariableName(), entry.value));
       }
       return Response.ok(variables).build();
     } else {
