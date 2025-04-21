@@ -1,6 +1,6 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,11 +10,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class ErrorSubscriptionDTO {
-  @JsonProperty("n")
   private String name;
 
-  @JsonProperty("c")
   private String code;
 
   public ErrorSubscriptionDTO(String name, String code) {

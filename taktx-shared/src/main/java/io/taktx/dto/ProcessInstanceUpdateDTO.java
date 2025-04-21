@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -13,22 +12,16 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
-  @JsonProperty("pp")
   private UUID parentProcessInstanceKey;
 
-  @JsonProperty("pi")
   private List<Long> parentElementInstancePath;
 
-  @JsonProperty("pd")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("fi")
   private FlowNodeInstancesDTO flowNodeInstances;
 
-  @JsonProperty("v")
   private VariablesDTO variables;
 
-  @JsonProperty("t")
   private long processTime;
 
   public ProcessInstanceUpdateDTO(

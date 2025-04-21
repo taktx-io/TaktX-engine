@@ -1,6 +1,7 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,11 +11,10 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
+@JsonFormat(shape = Shape.ARRAY)
 public class ProcessDefinitionKey {
-  @JsonProperty("pd")
   private String processDefinitionId;
 
-  @JsonProperty("v")
   private Integer version;
 
   public ProcessDefinitionKey(String processDefinitionId) {

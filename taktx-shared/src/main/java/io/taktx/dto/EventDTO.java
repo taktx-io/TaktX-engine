@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -11,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class EventDTO extends FlowNodeDTO implements WithIoMappingDTO {
 
-  @JsonProperty("m")
   private InputOutputMappingDTO ioMapping;
 
   protected EventDTO(

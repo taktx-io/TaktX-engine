@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,13 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SequenceFlowDTO extends FlowElementDTO {
 
-  @JsonProperty("s")
   private String source;
 
-  @JsonProperty("t")
   private String target;
 
-  @JsonProperty("c")
   private FlowConditionDTO condition;
 
   public SequenceFlowDTO(

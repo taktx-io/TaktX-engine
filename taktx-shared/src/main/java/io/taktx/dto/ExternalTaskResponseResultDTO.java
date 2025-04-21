@@ -3,7 +3,6 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,22 +15,16 @@ import lombok.ToString;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExternalTaskResponseResultDTO {
-  @JsonProperty("rt")
   private ExternalTaskResponseType responseType;
 
-  @JsonProperty("to")
   private long timeout;
 
-  @JsonProperty("n")
   private String name;
 
-  @JsonProperty("c")
   private String code;
 
-  @JsonProperty("m")
   private String message;
 
-  @JsonProperty("ar")
   private Boolean allowRetry;
 
   public ExternalTaskResponseResultDTO(

@@ -7,7 +7,6 @@ import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -26,7 +25,6 @@ public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
       CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
   private static final CronParser PARSER = new CronParser(CRON_DEFINITION);
 
-  @JsonProperty("cron")
   private String cron;
 
   public RecurringMessageScheduleDTO(

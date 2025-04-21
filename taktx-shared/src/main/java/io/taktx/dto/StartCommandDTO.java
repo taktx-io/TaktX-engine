@@ -10,7 +10,6 @@
 
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -25,19 +24,14 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
-  @JsonProperty("ppi")
   private UUID parentProcessInstanceKey;
 
-  @JsonProperty("peip")
   private List<Long> parentElementInstancePath;
 
-  @JsonProperty("pd")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("pp")
   private boolean propagateAllToParent;
 
-  @JsonProperty("om")
   private Set<IoVariableMappingDTO> outputMappings;
 
   public StartCommandDTO(

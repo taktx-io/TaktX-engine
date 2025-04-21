@@ -34,7 +34,6 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.port", defaultValue = "8080")
   int port;
 
-
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }

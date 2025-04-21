@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -10,10 +9,8 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public abstract class ActivityDTO extends FlowNodeDTO implements WithIoMappingDTO {
-  @JsonProperty("l")
   private LoopCharacteristicsDTO loopCharacteristics;
 
-  @JsonProperty("m")
   private InputOutputMappingDTO ioMapping;
 
   protected ActivityDTO(

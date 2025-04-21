@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -24,16 +23,12 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 public abstract class FlowNodeInstanceDTO {
-  @JsonProperty("i")
   private long elementInstanceId;
 
-  @JsonProperty("p")
   private long parentElementInstanceId;
 
-  @JsonProperty("e")
   private int elementId;
 
-  @JsonProperty("c")
   private int passedCnt;
 
   @JsonIgnore

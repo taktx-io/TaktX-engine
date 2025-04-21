@@ -3,7 +3,6 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -21,25 +20,18 @@ import lombok.experimental.SuperBuilder;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProcessInstanceDTO {
-  @JsonProperty("pi")
   private UUID processInstanceKey;
 
-  @JsonProperty("ppi")
   private UUID parentProcessInstanceKey;
 
-  @JsonProperty("fni")
   private FlowNodeInstancesDTO flowNodeInstances;
 
-  @JsonProperty("peiip")
   private List<Long> parentElementInstancePath;
 
-  @JsonProperty("pdk")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("pp")
   private boolean propagateAllToParent;
 
-  @JsonProperty("om")
   private Set<IoVariableMappingDTO> outputMappings;
 
   public ProcessInstanceDTO(

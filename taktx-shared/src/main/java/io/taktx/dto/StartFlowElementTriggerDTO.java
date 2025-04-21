@@ -10,7 +10,6 @@
 
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -26,7 +25,6 @@ import lombok.ToString;
 @NoArgsConstructor
 public abstract class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
 
-  @JsonProperty("ifi")
   private String inputFlowId;
 
   protected StartFlowElementTriggerDTO(

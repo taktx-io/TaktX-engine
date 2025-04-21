@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class EscalationEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("esc")
   private String escalationRef;
 
   public EscalationEventDefinitionDTO(String id, String escalationRef) {

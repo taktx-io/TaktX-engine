@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -14,13 +13,10 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
-  @JsonProperty("p")
   private UUID processInstanceKey;
 
-  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("i")
   private List<Long> elementInstanceIdPath;
 
   public CorrelationMessageSubscriptionDTO(

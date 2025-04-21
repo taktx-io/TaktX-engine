@@ -91,7 +91,8 @@ public class ProcessDefinitionResource {
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost()) && metadata.activeHost().port() == taktConfiguration.getPort()) {
+    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost())
+        && metadata.activeHost().port() == taktConfiguration.getPort()) {
       ProcessDefinitionDTO processDefinition = store.get(processDefinitionKey);
       if (processDefinition == null) {
         return Response.status(Response.Status.NOT_FOUND).build();

@@ -11,7 +11,6 @@
 package io.taktx.engine.pd;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +26,6 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class CorrelationMessageSubscriptions {
 
-  @JsonProperty("im")
   private Map<String, CorrelationMessageSubscriptionDTO> instances;
 
   public CorrelationMessageSubscriptions(Map<String, CorrelationMessageSubscriptionDTO> instances) {

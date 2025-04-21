@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MessageEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("r")
   private String messageRef;
 
   public MessageEventDefinitionDTO(String id, String messageRef) {

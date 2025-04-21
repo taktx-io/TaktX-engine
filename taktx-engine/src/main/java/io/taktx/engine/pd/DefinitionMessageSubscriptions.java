@@ -11,7 +11,6 @@
 package io.taktx.engine.pd;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.MessageEventKeyDTO;
@@ -27,7 +26,6 @@ import lombok.Setter;
 @Setter
 @EqualsAndHashCode
 public class DefinitionMessageSubscriptions {
-  @JsonProperty("def")
   private Map<MessageEventKeyDTO, DefinitionMessageSubscriptionDTO> definitions;
 
   public DefinitionMessageSubscriptions(

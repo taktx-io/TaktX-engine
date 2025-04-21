@@ -11,7 +11,6 @@
 package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -22,7 +21,6 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public abstract class CatchEventDTO extends EventDTO {
-  @JsonProperty("e")
   protected Set<EventDefinitionDTO> eventDefinitions;
 
   protected CatchEventDTO(

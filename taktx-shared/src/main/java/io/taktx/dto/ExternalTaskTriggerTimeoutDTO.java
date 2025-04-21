@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -14,7 +13,6 @@ import lombok.ToString;
 @NoArgsConstructor
 public class ExternalTaskTriggerTimeoutDTO extends ProcessInstanceTriggerDTO {
 
-  @JsonProperty("eiip")
   private List<UUID> elementInstanceIdPath;
 
   public ExternalTaskTriggerTimeoutDTO(UUID processInstanceKey, List<UUID> elementInstanceIdPath) {

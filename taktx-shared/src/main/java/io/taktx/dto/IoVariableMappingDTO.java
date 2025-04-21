@@ -1,6 +1,6 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,12 +8,11 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class IoVariableMappingDTO {
 
-  @JsonProperty("s")
   private String source;
 
-  @JsonProperty("t")
   private String target;
 
   public IoVariableMappingDTO(String source, String target) {

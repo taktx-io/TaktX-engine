@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,19 +12,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class ExternalTaskDTO extends TaskDTO {
 
-  @JsonProperty("w")
   private String workerDefinition;
 
-  @JsonProperty("rt")
   private String retries;
 
-  @JsonProperty("im")
   private String implementation;
 
-  @JsonProperty("h")
   private Map<String, String> headers;
 
-  @JsonProperty("sc")
   private List<ScheduleKeyDTO> scheduledKeys;
 
   protected ExternalTaskDTO(

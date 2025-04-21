@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,10 +11,8 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class CorrelationMessageEventTriggerDTO extends MessageEventDTO {
 
-  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("v")
   private VariablesDTO variables;
 
   public CorrelationMessageEventTriggerDTO(

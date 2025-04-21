@@ -1,6 +1,6 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,14 +8,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class MessageDTO {
-  @JsonProperty("id")
   private String id;
 
-  @JsonProperty("nm")
   private String name;
 
-  @JsonProperty("ck")
   private String correlationKey;
 
   public MessageDTO(String id, String name, String correlationKey) {

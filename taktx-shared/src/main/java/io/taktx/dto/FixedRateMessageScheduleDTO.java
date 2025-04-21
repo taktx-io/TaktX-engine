@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,10 +11,8 @@ import lombok.ToString;
 @NoArgsConstructor
 public class FixedRateMessageScheduleDTO extends MessageScheduleDTO {
 
-  @JsonProperty("per")
   private long period;
 
-  @JsonProperty("rep")
   private int repetitions;
 
   public FixedRateMessageScheduleDTO(

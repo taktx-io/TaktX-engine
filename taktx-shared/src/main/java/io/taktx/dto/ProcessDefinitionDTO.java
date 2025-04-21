@@ -1,6 +1,6 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,15 +10,13 @@ import lombok.ToString;
 @Getter
 @ToString
 @NoArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class ProcessDefinitionDTO {
 
-  @JsonProperty("dfn")
   private ParsedDefinitionsDTO definitions;
 
-  @JsonProperty("vsn")
   private Integer version;
 
-  @JsonProperty("stt")
   private ProcessDefinitionStateEnum state;
 
   public ProcessDefinitionDTO(

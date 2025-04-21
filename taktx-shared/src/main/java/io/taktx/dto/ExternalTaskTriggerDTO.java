@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
@@ -16,19 +15,14 @@ import lombok.ToString;
 @Builder
 public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
-  @JsonProperty("pik")
   private UUID processInstanceKey;
 
-  @JsonProperty("pdk")
   private ProcessDefinitionKey processDefinitionKey;
 
-  @JsonProperty("etid")
   private String externalTaskId;
 
-  @JsonProperty("eiid")
   private List<Long> elementInstanceIdPath;
 
-  @JsonProperty("vrs")
   private VariablesDTO variables;
 
   public ExternalTaskTriggerDTO(

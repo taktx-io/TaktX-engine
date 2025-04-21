@@ -3,7 +3,6 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -23,7 +22,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 public abstract class MessageEventDTO {
-  @JsonProperty("m")
   private String messageName;
 
   protected MessageEventDTO(String messageName) {

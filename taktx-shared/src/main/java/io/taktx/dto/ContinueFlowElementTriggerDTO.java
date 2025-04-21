@@ -10,7 +10,6 @@
 
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -24,10 +23,8 @@ import lombok.ToString;
 @NoArgsConstructor
 public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
 
-  @JsonProperty("ifi")
   private String inputFlowId;
 
-  @JsonProperty("eiip")
   private List<Long> elementInstanceIdPath;
 
   public ContinueFlowElementTriggerDTO(

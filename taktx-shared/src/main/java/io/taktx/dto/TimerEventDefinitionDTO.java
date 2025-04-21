@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -9,13 +8,10 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class TimerEventDefinitionDTO extends EventDefinitionDTO {
-  @JsonProperty("dt")
   private String timeDate;
 
-  @JsonProperty("du")
   private String timeDuration;
 
-  @JsonProperty("tc")
   private String timeCycle;
 
   public TimerEventDefinitionDTO(

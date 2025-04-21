@@ -1,7 +1,8 @@
 package io.taktx.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
@@ -18,11 +19,11 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @EqualsAndHashCode
+@JsonFormat(shape = Shape.ARRAY)
 public class VariablesDTO {
 
   public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
-  @JsonProperty("v")
   private Map<String, JsonNode> variables;
 
   public VariablesDTO(Map<String, JsonNode> variables) {

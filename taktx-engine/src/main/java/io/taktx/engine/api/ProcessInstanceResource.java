@@ -41,6 +41,7 @@ import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.StreamsMetadata;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
@@ -69,7 +70,9 @@ public class ProcessInstanceResource {
           System.out.println("Host: " + metadata.host());
           System.out.println("Port: " + metadata.port());
         });
-    processInstanceStore.all().forEachRemaining(processInstanceRecord -> processInstances.add(processInstanceRecord.key));
+    try(KeyValueIterator<UUID, ProcessInstanceDTO> all = processInstanceStore.all()) {
+      all.forEachRemaining(processInstanceRecord -> processInstances.add(processInstanceRecord.key));
+    }
     return processInstances;
   }
 
@@ -152,9 +155,6 @@ public class ProcessInstanceResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getProcessInstanceVariables(@PathParam("processId") UUID processId) {
 
-    String envHost = System.getenv("injectedhost");
-    int envPort = Integer.parseInt(System.getenv("injectedport"));
-
     KeyQueryMetadata metadata =
         kafkaStreams.queryMetadataForKey(
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()),
@@ -163,8 +163,8 @@ public class ProcessInstanceResource {
 
     if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(envHost)
-        && metadata.activeHost().port() == envPort) {
+    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost())
+        && metadata.activeHost().port() == taktConfiguration.getPort()) {
 
       Map<String, JsonNode> variables = new HashMap<>();
       FlowNodeInstanceKeyDTO minKey =
@@ -173,12 +173,12 @@ public class ProcessInstanceResource {
           new FlowNodeInstanceKeyDTO(processId, List.of(Constants.MAX_LONG));
       VariableKeyDTO startVariableKey = new VariableKeyDTO(minKey, "");
       VariableKeyDTO endVariableKey = new VariableKeyDTO(maxKey, "\u00ff");
-      getVariablesStore()
-          .range(startVariableKey, endVariableKey)
+      try(KeyValueIterator<VariableKeyDTO, JsonNode> range = getVariablesStore()
+          .range(startVariableKey, endVariableKey)){
+      range
           .forEachRemaining(
-              entry -> {
-                variables.put(entry.key.getVariableName(), entry.value);
-              });
+              entry -> variables.put(entry.key.getVariableName(), entry.value));
+      }
       return Response.ok(variables).build();
     } else {
       URI uri =

@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +11,6 @@ import lombok.ToString;
 @NoArgsConstructor
 public class OneTimeScheduleDTO extends MessageScheduleDTO {
 
-  @JsonProperty("whn")
   private long when;
 
   public OneTimeScheduleDTO(SchedulableMessageDTO message, long instantiationTime, long when) {

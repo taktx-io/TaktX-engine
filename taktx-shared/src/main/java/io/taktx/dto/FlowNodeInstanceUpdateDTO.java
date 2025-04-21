@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -12,17 +11,12 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
-
-  @JsonProperty("ip")
   private List<Long> flowNodeInstancePath;
 
-  @JsonProperty("i")
   private FlowNodeInstanceDTO flowNodeInstance;
 
-  @JsonProperty("v")
   private VariablesDTO variables;
 
-  @JsonProperty("t")
   private long processTime;
 
   public FlowNodeInstanceUpdateDTO(

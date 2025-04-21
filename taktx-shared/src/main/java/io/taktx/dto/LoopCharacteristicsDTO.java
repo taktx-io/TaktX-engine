@@ -1,6 +1,6 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,23 +8,19 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class LoopCharacteristicsDTO {
   public static final LoopCharacteristicsDTO NONE =
       new LoopCharacteristicsDTO(false, "", "", "", "");
 
-  @JsonProperty("s")
   private boolean sequential;
 
-  @JsonProperty("ic")
   private String inputCollection;
 
-  @JsonProperty("ie")
   private String inputElement;
 
-  @JsonProperty("oc")
   private String outputCollection;
 
-  @JsonProperty("oe")
   private String outputElement;
 
   public LoopCharacteristicsDTO(

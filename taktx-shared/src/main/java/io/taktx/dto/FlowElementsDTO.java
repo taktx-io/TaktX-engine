@@ -1,7 +1,7 @@
 package io.taktx.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,9 +15,9 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class FlowElementsDTO {
 
-  @JsonProperty("e")
   private Map<String, FlowElementDTO> elements;
 
   public FlowElementsDTO(Map<String, FlowElementDTO> elements) {

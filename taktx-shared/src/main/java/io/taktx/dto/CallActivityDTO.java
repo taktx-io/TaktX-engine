@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -11,13 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CallActivityDTO extends ActivityDTO {
 
-  @JsonProperty("ce")
   private String calledElement;
 
-  @JsonProperty("pp")
   private boolean propagateAllParentVariables;
 
-  @JsonProperty("pc")
   private boolean propagateAllChildVariables;
 
   public CallActivityDTO(

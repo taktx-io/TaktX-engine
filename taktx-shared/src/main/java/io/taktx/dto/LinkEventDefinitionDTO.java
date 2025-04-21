@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LinkEventDefinitionDTO extends EventDefinitionDTO {
 
-  @JsonProperty("a")
   private String name;
 
   public LinkEventDefinitionDTO(String id, String name) {

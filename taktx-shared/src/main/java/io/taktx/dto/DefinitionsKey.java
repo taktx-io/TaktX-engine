@@ -1,6 +1,7 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,14 +11,13 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
+@JsonFormat(shape = Shape.ARRAY)
 public class DefinitionsKey {
 
   public static final DefinitionsKey NONE = new DefinitionsKey("", "");
 
-  @JsonProperty("p")
   private String processDefinitionId;
 
-  @JsonProperty("h")
   private String hash;
 
   public DefinitionsKey(String processDefinitionId, String hash) {

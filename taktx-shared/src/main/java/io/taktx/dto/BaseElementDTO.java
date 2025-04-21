@@ -3,7 +3,6 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -20,10 +19,8 @@ import lombok.NoArgsConstructor;
 @JsonTypeIdResolver(BaseElementTypeIdResolver.class)
 @NoArgsConstructor
 public abstract class BaseElementDTO {
-  @JsonProperty("i")
   private String id;
 
-  @JsonProperty("p")
   private String parentId;
 
   protected BaseElementDTO(String id, String parentId) {

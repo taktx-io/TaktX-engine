@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.Set;
 import lombok.Data;
@@ -14,9 +13,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class ReceiveTaskInstanceDTO extends TaskInstanceDTO {
 
-  @JsonProperty("c")
   private String correlationKey;
 
-  @JsonProperty("m")
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
 }
