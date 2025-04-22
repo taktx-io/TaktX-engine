@@ -64,7 +64,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.ParallelGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.ParallelGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   ParallelGatewayInstance map(
@@ -73,7 +73,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.InclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.InclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   InclusiveGatewayInstance map(
@@ -82,7 +82,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.ExclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.ExclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   ExclusiveGatewayInstance map(
@@ -91,7 +91,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -102,7 +102,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -113,7 +113,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.IntermediateCatchEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -125,7 +125,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.EndEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.EndEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   EndEventInstance map(EndEventInstanceDTO source, @Context FlowElements flowElements);
@@ -133,7 +133,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   IntermediateThrowEventInstance map(
@@ -142,7 +142,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.ServiceTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.ServiceTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -153,7 +153,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.SendTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.SendTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -164,7 +164,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.ReceiveTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.ReceiveTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -175,7 +175,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -190,7 +190,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.CallActivity)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.CallActivity)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -201,7 +201,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.Activity)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.Activity)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -214,7 +214,7 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
-          "java((io.taktx.engine.pd.model.Task)flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow())")
+          "java((io.taktx.engine.pd.model.Task)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "stateChanged", ignore = true)
@@ -224,7 +224,7 @@ public interface ProcessInstanceMapper {
 
   default FlowElements getChildElements(SubProcessInstanceDTO source, FlowElements flowElements) {
     FlowNode flowNode =
-        flowElements.getFlowNode(flowElements.getIndex(source.getElementId())).orElseThrow();
+        flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow();
     SubProcess subProcess2 = (SubProcess) flowNode;
     return subProcess2.getElements();
   }
@@ -270,95 +270,95 @@ public interface ProcessInstanceMapper {
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   TaskInstanceDTO map(TaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   BoundaryEventInstanceDTO map(BoundaryEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   StartEventInstanceDTO map(StartEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   IntermediateCatchEventInstanceDTO map(
       IntermediateCatchEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   EndEventInstanceDTO map(EndEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   IntermediateThrowEventInstanceDTO map(
       IntermediateThrowEventInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   ServiceTaskInstanceDTO map(ServiceTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   SendTaskInstanceDTO map(SendTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   ReceiveTaskInstanceDTO map(ReceiveTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   SubProcessInstanceDTO map(SubProcessInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   CallActivityInstanceDTO map(CallActivityInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   MultiInstanceInstanceDTO map(MultiInstanceInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   ExclusiveGatewayInstanceDTO map(
       ExclusiveGatewayInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   InclusiveGatewayInstanceDTO map(
       InclusiveGatewayInstance source, @Context FlowElements flowElements);
 
   @Mapping(
-      target = "elementId",
+      target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   ParallelGatewayInstanceDTO map(

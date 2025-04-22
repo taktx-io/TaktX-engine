@@ -27,7 +27,9 @@ public abstract class FlowNodeInstanceDTO {
 
   private long parentElementInstanceId;
 
-  private int elementId;
+  private int elementIndex;
+
+  private String elementId;
 
   private int passedCnt;
 

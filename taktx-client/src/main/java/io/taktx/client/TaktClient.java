@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -113,8 +114,7 @@ public class TaktClient {
   }
 
   /** Registers a consumer for process instance updates. */
-  public void registerInstanceUpdateConsumer(
-      Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer) {
+  public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
     this.processInstanceUpdateConsumer.addInstanceUpdateConsumer(consumer);
   }
 

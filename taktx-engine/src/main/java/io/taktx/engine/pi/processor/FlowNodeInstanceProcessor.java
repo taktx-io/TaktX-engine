@@ -289,6 +289,8 @@ public abstract class FlowNodeInstanceProcessor<
     VariablesDTO processInstanceVariablesDTO = variables.scopeToDTO();
     FlowNodeInstanceDTO flowNodeInstanceDTO =
         processInstanceMapper.map(flowNodeInstance, flowElements);
+    String elementId = flowElements.getIndex().get(flowNodeInstanceDTO.getElementIndex());
+    flowNodeInstanceDTO.setElementId(elementId);
     return new InstanceUpdate(
         processInstance.getProcessInstanceKey(),
         new FlowNodeInstanceUpdateDTO(

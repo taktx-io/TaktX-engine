@@ -45,6 +45,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -135,7 +136,7 @@ public class BpmnTestEngine {
             .withNamespace("namespace")
             .withKafkaProperties(kakaProperties)
             .build();
-    Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer = BpmnTestEngine.this::consume;
+    BiConsumer<UUID, InstanceUpdateDTO> consumer = BpmnTestEngine.this::consume;
     taktClient.registerInstanceUpdateConsumer(consumer);
     taktClient.start();
 
@@ -195,9 +196,7 @@ public class BpmnTestEngine {
             + System.identityHashCode(externalTaskTriggerQueueMap));
   }
 
-  public void consume(ConsumerRecord<UUID, InstanceUpdateDTO> instanceUpdateRecord) {
-    InstanceUpdateDTO instanceUpdate = instanceUpdateRecord.value();
-    UUID processInstanceKey = instanceUpdateRecord.key();
+  public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + processInstanceKey + " " + instanceUpdate);
 
@@ -571,7 +570,7 @@ public class BpmnTestEngine {
           filteredByProcessInstance.entrySet().stream()
               .filter(
                   e ->
-                      e.getValue().getElementId()
+                      e.getValue().getElementIndex()
                           == (elementIdIndex.indexOf(elementPathList.get(currentIndex))))
               .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }

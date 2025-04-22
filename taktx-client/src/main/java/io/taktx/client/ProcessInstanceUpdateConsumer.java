@@ -13,9 +13,8 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 /**
@@ -28,7 +27,7 @@ public class ProcessInstanceUpdateConsumer {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private boolean running = false;
-  private final List<Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>>> instanceUpdateConsumers =
+  private final List<BiConsumer<UUID, InstanceUpdateDTO>> instanceUpdateConsumers =
       new ArrayList<>();
 
   public ProcessInstanceUpdateConsumer(
@@ -37,8 +36,7 @@ public class ProcessInstanceUpdateConsumer {
     this.executor = executor;
   }
 
-  public void addInstanceUpdateConsumer(
-      Consumer<ConsumerRecord<UUID, InstanceUpdateDTO>> consumer) {
+  public void addInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
       subscribeToTopic();
     }
@@ -76,7 +74,9 @@ public class ProcessInstanceUpdateConsumer {
         .forEach(
             instanceUpdateRecord ->
                 instanceUpdateConsumers.forEach(
-                    instanceUpdateConsumer -> instanceUpdateConsumer.accept(instanceUpdateRecord)));
+                    instanceUpdateConsumer ->
+                        instanceUpdateConsumer.accept(
+                            instanceUpdateRecord.key(), instanceUpdateRecord.value())));
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {
