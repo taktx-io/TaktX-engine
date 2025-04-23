@@ -10,6 +10,7 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.quarkus.security.User;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BaseElement;
@@ -31,6 +32,7 @@ import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pd.model.ThrowEvent;
+import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -48,7 +50,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject InclusiveGatewayInstanceProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   @Inject BoundaryEventInstanceProcessor boundaryEventProcessor;
-  @Inject TaskInstanceProcessor taskProcessor;
+  @Inject @DefaultTaskProcessor TaskInstanceProcessor taskProcessor;
   @Inject SubProcessInstanceProcessor subProcessProcessor;
   @Inject CallActivityInstanceProcessor callActivityProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
@@ -56,6 +58,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject FeelExpressionHandler feelExpressionHandler;
   @Inject ProcessInstanceMapper processInstanceMapper;
   @Inject Clock clock;
+  @Inject @UserTaskProcessor UserTaskInstanceProcessor userTaskProcessor;
 
   public FlowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
     if (element instanceof ThrowEvent throwEvent) {
@@ -107,6 +110,8 @@ public class FlowNodeInstanceProcessorProvider {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
+    } else if (element instanceof UserTask) {
+      processor = userTaskProcessor;
     } else if (element instanceof SendTask) {
       processor = sendTaskProcessor;
     } else if (element instanceof SubProcess) {

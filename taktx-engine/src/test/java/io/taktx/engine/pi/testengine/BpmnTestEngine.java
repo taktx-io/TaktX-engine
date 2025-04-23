@@ -347,6 +347,9 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(String elementId) {
     return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
   }
+  public BpmnTestEngine waitUntilUserTaskIsWaitingForResponse(String elementId) {
+    return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
+  }
 
   public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
       String elementId, Duration duration) {

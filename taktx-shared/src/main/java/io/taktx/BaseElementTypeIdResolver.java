@@ -36,6 +36,7 @@ import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
 import io.taktx.dto.TerminateEventDefinitionDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
+import io.taktx.dto.UserTaskDTO;
 
 public class BaseElementTypeIdResolver extends TypeIdResolverBase {
 
@@ -55,6 +56,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case ReceiveTaskDTO ignored -> "RT";
       case SendTaskDTO ignored -> "ST";
       case ServiceTaskDTO ignored -> "SV";
+      case UserTaskDTO ignored -> "UT";
       case TaskDTO ignored -> "T";
       case SequenceFlowDTO ignored -> "Q";
       case ProcessDTO ignored -> "P";
@@ -94,6 +96,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "RT" -> context.constructType(ReceiveTaskDTO.class);
       case "ST" -> context.constructType(SendTaskDTO.class);
       case "SV" -> context.constructType(ServiceTaskDTO.class);
+      case "UT" -> context.constructType(UserTaskDTO.class);
       case "T" -> context.constructType(TaskDTO.class);
       case "Q" -> context.constructType(SequenceFlowDTO.class);
       case "P" -> context.constructType(ProcessDTO.class);

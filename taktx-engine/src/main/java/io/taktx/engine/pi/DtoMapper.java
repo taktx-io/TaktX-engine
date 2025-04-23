@@ -36,6 +36,7 @@ import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
+import io.taktx.dto.UserTaskDTO;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.CallActivity;
@@ -62,6 +63,7 @@ import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pd.model.TimerEventDefinition;
+import io.taktx.engine.pd.model.UserTask;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 import org.mapstruct.Builder;
@@ -84,6 +86,7 @@ public interface DtoMapper {
   @SubclassMapping(source = InclusiveGatewayDTO.class, target = InclusiveGateway.class)
   @SubclassMapping(source = StartEventDTO.class, target = StartEvent.class)
   @SubclassMapping(source = EndEventDTO.class, target = EndEvent.class)
+  @SubclassMapping(source = UserTaskDTO.class, target = UserTask.class)
   @SubclassMapping(source = ServiceTaskDTO.class, target = ServiceTask.class)
   @SubclassMapping(source = SendTaskDTO.class, target = SendTask.class)
   @SubclassMapping(source = ReceiveTaskDTO.class, target = ReceiveTask.class)
@@ -100,6 +103,10 @@ public interface DtoMapper {
   @Mapping(target = "attachedActivity", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
   BoundaryEvent map(BoundaryEventDTO boundaryEventDTO);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  UserTask map(UserTaskDTO userTask);
 
   @Mapping(target = "boundaryEvents", ignore = true)
   @Mapping(target = "parentElement", ignore = true)

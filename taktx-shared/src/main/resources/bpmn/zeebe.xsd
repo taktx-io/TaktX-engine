@@ -21,6 +21,35 @@
       <xs:attribute name="retries" type="xs:string"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="userTask">
+    <xs:complexType id="UserTask">
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="assignmentDefinition">
+    <xs:complexType id="AssignmentDefinition" >
+      <xs:attribute name="assignee" type="xs:string"/>
+      <xs:attribute name="candidateGroups" type="xs:string"/>
+      <xs:attribute name="candidateUsers" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="taskSchedule">
+    <xs:complexType id="TaskSchedule" >
+      <xs:attribute name="dueDate" type="xs:string"/>
+      <xs:attribute name="followUpDate" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="priorityDefinition">
+    <xs:complexType id="PriorityDefinition" >
+      <xs:attribute name="priority" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="formDefinition">
+    <xs:complexType id="FormDefinition">
+      <xs:attribute name="externalReference" type="xs:string"/>
+      <xs:attribute name="formId" type="xs:string"/>
+      <xs:attribute name="formKey" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="taskHeaders">
     <xs:complexType id="taskHeaders" >
       <xs:sequence>

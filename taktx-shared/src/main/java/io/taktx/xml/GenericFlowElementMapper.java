@@ -21,6 +21,7 @@ import io.taktx.bpmn.TStartEvent;
 import io.taktx.bpmn.TSubProcess;
 import io.taktx.bpmn.TTask;
 import io.taktx.bpmn.TThrowEvent;
+import io.taktx.bpmn.TUserTask;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CatchEventDTO;
 import io.taktx.dto.EndEventDTO;
@@ -208,6 +209,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               bpmnMapperFactory
                   .createReceiveTaskMapper()
                   .map(receiveTask, parentId, loopCharacteristics, ioMapping);
+      case TUserTask userTask ->
+          activityFlowElement =
+              bpmnMapperFactory
+                  .createUserTaskMapper()
+                  .map(userTask, parentId, loopCharacteristics, ioMapping);
       case TTask task ->
           activityFlowElement =
               new TaskDTO(

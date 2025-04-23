@@ -27,6 +27,7 @@ import lombok.NoArgsConstructor;
 
 @ApplicationScoped
 @NoArgsConstructor
+@DefaultTaskProcessor
 public class TaskInstanceProcessor
     extends ActivityInstanceProcessor<Task, TaskInstance, ContinueFlowElementTriggerDTO> {
 
