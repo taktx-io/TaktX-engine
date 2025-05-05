@@ -22,13 +22,16 @@ public class TaktPropertiesHelper {
   }
 
   public Properties getKafkaConsumerProperties(
-      String groupId, Class<?> keyDeserializer, Class<?> valueDeserializer) {
+      String groupId,
+      Class<?> keyDeserializer,
+      Class<?> valueDeserializer,
+      String autoOffsetResetConfig) {
     Properties props = new Properties();
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
     props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetResetConfig);
     props.putAll(kafkaProperties);
     return props;
   }

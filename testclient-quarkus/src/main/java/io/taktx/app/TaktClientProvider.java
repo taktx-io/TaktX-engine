@@ -45,14 +45,9 @@ public class TaktClientProvider {
                 .build();
         taktClient.start();
         taktClient.deployTaktDeploymentAnnotatedClasses();
-        taktClient.registerAnnotatedWorkers();
         taktClient.registerInstanceUpdateConsumer(
-            new BiConsumer<UUID, InstanceUpdateDTO>() {
-              @Override
-              public void accept(UUID uuid, InstanceUpdateDTO instanceUpdateDTO) {
-                log.info("InstanceUpdateDTO: {}", instanceUpdateDTO);
-              }
-            });
+            (uuid, instanceUpdateDTO) ->
+                log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
       }
     }
   }

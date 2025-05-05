@@ -14,6 +14,7 @@ import static io.taktx.dto.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ExternalTaskMetaDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -71,6 +72,8 @@ public class ProcessInstanceProcessor
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       definitionsStore;
+  private ReadOnlyKeyValueStore<String, ExternalTaskMetaDTO> externalTaskMetaStore;
+
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
@@ -84,6 +87,9 @@ public class ProcessInstanceProcessor
     this.definitionsStore =
         context.getStateStore(
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
+    this.externalTaskMetaStore =
+        context.getStateStore(
+            taktConfiguration.getPrefixed(Stores.EXTERNAL_TASK_META.getStorename()));
     this.variablesStore =
         context.getStateStore(taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()));
     this.processInstanceStore =

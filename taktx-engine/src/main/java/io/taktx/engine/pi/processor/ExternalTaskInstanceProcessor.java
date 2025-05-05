@@ -14,6 +14,8 @@ import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.ExternalTaskMetaDTO;
+import io.taktx.dto.ExternalTaskMetaState;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
@@ -38,6 +40,7 @@ import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 @NoArgsConstructor
 @Setter
@@ -64,6 +67,30 @@ public abstract class ExternalTaskInstanceProcessor<
     log.info("Starting external task instance {}", flownodeInstance);
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
+
+    ReadOnlyKeyValueStore<String, ExternalTaskMetaDTO> externalTaskMetaStore =
+        processInstanceProcessingContext.getExternalTaskMetaStore();
+    ExternalTaskMetaDTO externalTaskMeta = externalTaskMetaStore.get(externalTaskId);
+    if (externalTaskMeta == null || externalTaskMeta.getState() != ExternalTaskMetaState.CREATED) {
+      log.warn(
+          "Topic for External task {} is not created, failing external task instance {}",
+          externalTaskId,
+          flownodeInstance);
+      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
+      handleErrorOrTimeout(
+          instanceResult,
+          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+          flownodeInstance,
+          variables,
+          new ExternalTaskResponseResultDTO(
+              ExternalTaskResponseType.ERROR,
+              false,
+              "Topic not created",
+              "Topic not created",
+              "Topic not created",
+              -1L));
+      return;
+    }
 
     retryDirectly(
         getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),

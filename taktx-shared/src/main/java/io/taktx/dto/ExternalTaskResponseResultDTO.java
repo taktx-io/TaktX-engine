@@ -17,8 +17,6 @@ import lombok.ToString;
 public class ExternalTaskResponseResultDTO {
   private ExternalTaskResponseType responseType;
 
-  private long timeout;
-
   private String name;
 
   private String code;
@@ -26,6 +24,8 @@ public class ExternalTaskResponseResultDTO {
   private String message;
 
   private Boolean allowRetry;
+
+  private long timeout;
 
   public ExternalTaskResponseResultDTO(
       ExternalTaskResponseType responseType,

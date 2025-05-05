@@ -1,7 +1,9 @@
 package io.taktx.client;
 
 import jakarta.enterprise.inject.spi.CDI;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class InstanceProvider {
 
   private static Environment environment;
@@ -30,7 +32,18 @@ public class InstanceProvider {
   }
 
   private static <T> T getQuarkusBean(Class<T> clazz) {
-    return CDI.current().select(clazz).get();
+    try {
+      // Check if CDI is available before trying to use it
+      log.info("Getting quarkus bean for {}", clazz.getName());
+      return CDI.current().select(clazz).get();
+    } catch (IllegalStateException e) {
+      // CDI container is not available yet - fallback to creating a new instance
+      log.warn(
+          "CDI container returning error {} for {}. Creating new instance instead.",
+          e.getMessage(),
+          clazz.getName());
+      return createNewInstance(clazz);
+    }
   }
 
   private static <T> T getSpringBean(Class<T> clazz) {

@@ -77,8 +77,6 @@ public class BpmnTestEngine {
   private final Map<UUID, VariablesDTO> variablesMap = new ConcurrentHashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
       new ConcurrentHashMap<>();
-  private final Map<String, Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>>
-      externalTaskTriggerConsumers = new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceKey;
   private ExternalTaskTriggerDTO activeExternalTaskTrigger;
@@ -249,21 +247,6 @@ public class BpmnTestEngine {
 
     Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> externalTaskConsumer =
         this::consumeExternalTaskTrigger;
-
-    if (externalTaskTriggerConsumers.get(
-            definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId())
-        == null) {
-      LOG.info(
-          "Registering external task consumer for process definition "
-              + definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId());
-      externalTaskTriggerConsumers.put(
-          definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
-          externalTaskConsumer);
-
-      taktClient.registerExternalTaskTriggerConsumer(
-          definitionsBeingDeployed.getDefinitionsKey().getProcessDefinitionId(),
-          externalTaskConsumer);
-    }
 
     return this;
   }

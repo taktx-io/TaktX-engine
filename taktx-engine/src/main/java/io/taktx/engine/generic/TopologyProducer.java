@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
 import io.taktx.dto.DefinitionsTriggerDTO;
+import io.taktx.dto.ExternalTaskMetaDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -57,6 +58,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.Serdes.StringSerde;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -109,6 +111,9 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
       new ObjectMapperSerde<>(VariableKeyDTO.class);
+  private static final Serde<String> EXTERNAL_TASK_ID_SERDE = new StringSerde();
+  private static final Serde<ExternalTaskMetaDTO> EXTERNAL_TASK_META_SERDE =
+      new ObjectMapperSerde<>(ExternalTaskMetaDTO.class);
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
@@ -215,6 +220,13 @@ public class TopologyProducer {
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.EXTERNAL_TASK_META_TOPIC.getTopicName()),
+        Materialized.<String, ExternalTaskMetaDTO>as(
+                keyValueStoreSupplier.get(Stores.EXTERNAL_TASK_META))
+            .withKeySerde(EXTERNAL_TASK_ID_SERDE)
+            .withValueSerde(EXTERNAL_TASK_META_SERDE));
+
     builder.addStateStore(
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.PROCESS_INSTANCE),
@@ -280,7 +292,7 @@ public class TopologyProducer {
                             (key, value, recordContext) ->
                                 taktConfiguration.getPrefixed("external-task-trigger")
                                     + "-"
-                                    + value.getProcessDefinitionKey().getProcessDefinitionId(),
+                                    + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(

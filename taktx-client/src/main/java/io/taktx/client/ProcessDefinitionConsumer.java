@@ -140,7 +140,8 @@ public class ProcessDefinitionConsumer {
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId,
             ProcessDefinitionKeyJsonDeserializer.class,
-            ProcessDefinitionJsonDeserializer.class);
+            ProcessDefinitionJsonDeserializer.class,
+            Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getAutoOffsetReset());
     return new KafkaConsumer<>(props);
   }
 }
