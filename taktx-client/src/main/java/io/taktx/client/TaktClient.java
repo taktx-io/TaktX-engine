@@ -1,6 +1,7 @@
 package io.taktx.client;
 
 import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.topicmanagement.TopicMatcher;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
@@ -36,29 +37,23 @@ public class TaktClient {
   private final ExternalTaskResponder externalTaskResponder;
   private final MessageEventSender messageEventSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
-  private final ExternalTaskMetaTopicConsumer externalTaskMetaConsumer;
+  private final TopicMatcher topicMatcher;
 
   private TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ExternalTaskResponder externalTaskResponder,
-      TaktParameterResolverFactory parameterResolverFactory,
-      ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
+      TaktParameterResolverFactory parameterResolverFactory) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
-    this.processInstanceUpdateConsumer = new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
+    this.processInstanceUpdateConsumer =
+        new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
     this.externalTaskResponder = externalTaskResponder;
-    this.externalTaskTriggerTopicConsumer = new ExternalTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
-    if (externalTaskTriggerConsumer != null) {
-      this.externalTaskMetaConsumer = new ExternalTaskMetaTopicConsumer(taktPropertiesHelper, executor);
-      ExternalTaskMetaConsumer metaMonitor = new ExternalTaskMetaMonitor(externalTaskTriggerConsumer.getJobIds(),
-          unused -> externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(externalTaskTriggerConsumer));
-      this.externalTaskMetaConsumer.subscribeToExternalTaskMetaInfo(metaMonitor);
-    } else {
-      this.externalTaskMetaConsumer = null;
-    }
+    this.externalTaskTriggerTopicConsumer =
+        new ExternalTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
+    this.topicMatcher = new TopicMatcher(taktPropertiesHelper, executor);
   }
 
   /**
@@ -81,9 +76,21 @@ public class TaktClient {
   /** Stops the TaktClient, which unsubscribes from process definition records and process */
   public void stop() {
     this.processDefinitionConsumer.stop();
-    if (this.externalTaskTriggerTopicConsumer != null){
+    if (this.externalTaskTriggerTopicConsumer != null) {
       this.externalTaskTriggerTopicConsumer.stop();
     }
+  }
+
+  public void registerInitialFixedTopics() {
+    this.topicMatcher.registerInitialFixedTopics();
+  }
+
+  public void startTopicMatcher() {
+    topicMatcher.start();
+  }
+
+  public void requestTopicState(String topicName, int partitions) {
+    this.topicMatcher.requestTopicState(topicName, partitions);
   }
 
   /**
@@ -157,6 +164,12 @@ public class TaktClient {
         activeProcessInstanceKey, elementInstanceIdPath);
   }
 
+  public void registerExternalTaskConsumer(
+      String[] externalTaskIds, Consumer<ExternalTaskTriggerDTO> consumeExternalTaskTrigger) {
+    this.externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(
+        Set.of(externalTaskIds), consumeExternalTaskTrigger);
+  }
+
   /**
    * Builder class for creating TaktClient instances. Requires TENANT, NAMESPACE, and
    * KAFKA_BOOTSTRAP_SERVERS environment variables to be set or configured via the builder methods.
@@ -166,12 +179,10 @@ public class TaktClient {
     private String tenant;
     private String namespace;
     private Properties kafkaProperties;
-    private ExternalTaskTriggerConsumer externalTaskTriggerConsumer;
 
     private TaktClientBuilder() {
       this.tenant = System.getenv("TENANT");
       this.namespace = System.getenv("NAMESPACE");
-      this.externalTaskTriggerConsumer = null;
     }
 
     public TaktClient build() {
@@ -193,7 +204,7 @@ public class TaktClient {
       TaktParameterResolverFactory parameterResolverFactory =
           new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
-      return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory, externalTaskTriggerConsumer);
+      return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
     }
 
     public TaktClientBuilder withTenant(String tenant) {
@@ -210,11 +221,5 @@ public class TaktClient {
       this.kafkaProperties = kafkaProperties;
       return this;
     }
-
-    public TaktClientBuilder withExternalTaskTriggerConsumer(ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
-      this.externalTaskTriggerConsumer = externalTaskTriggerConsumer;
-      return this;
-    }
-
   }
 }

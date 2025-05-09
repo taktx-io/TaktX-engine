@@ -100,11 +100,6 @@ public class DefinitionsProcessor
     ProcessDefinitionDTO processDefinitionDTO;
     if (version == null) {
       version = hashVersionPairs.size() + 1;
-      if (version == 1) {
-        // First version, create the corresponding topics explicitely
-        deployer.createTopicsForProcessDefinition(
-            parsedDefinition.getDefinitionsKey().getProcessDefinitionId());
-      }
       log.info("Creating new version {} of process definition {}", version, processDefinitionId);
 
       // New version, create a new ProcessDefinitionDTO and store the relevant information

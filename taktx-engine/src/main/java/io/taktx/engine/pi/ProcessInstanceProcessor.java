@@ -14,7 +14,6 @@ import static io.taktx.dto.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.ExternalTaskMetaDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -27,6 +26,7 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
@@ -72,7 +72,7 @@ public class ProcessInstanceProcessor
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       definitionsStore;
-  private ReadOnlyKeyValueStore<String, ExternalTaskMetaDTO> externalTaskMetaStore;
+  private ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore;
 
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
@@ -88,8 +88,7 @@ public class ProcessInstanceProcessor
         context.getStateStore(
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     this.externalTaskMetaStore =
-        context.getStateStore(
-            taktConfiguration.getPrefixed(Stores.EXTERNAL_TASK_META.getStorename()));
+        context.getStateStore(taktConfiguration.getPrefixed(Stores.TOPIC_META.getStorename()));
     this.variablesStore =
         context.getStateStore(taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()));
     this.processInstanceStore =
@@ -182,12 +181,7 @@ public class ProcessInstanceProcessor
     FlowElements flowElements = getFlowElements(processDefinitionKey);
 
     ProcessInstanceProcessingContext processInstanceProcessingContext =
-        ProcessInstanceProcessingContext.builder()
-            .processInstance(processInstance)
-            .processingStatistics(processingStatistics)
-            .instanceResult(instanceResult)
-            .flowNodeInstanceStore(flowNodeInstanceStore)
-            .build();
+        createProcessInstanceProcessingContext(processInstance, instanceResult);
 
     FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
         new FlowNodeInstanceProcessingContext(flowNodeInstances, flowElements);
@@ -205,6 +199,17 @@ public class ProcessInstanceProcessor
         processInstanceVariables,
         flowElements,
         updateVariablesAtStart);
+  }
+
+  private ProcessInstanceProcessingContext createProcessInstanceProcessingContext(
+      ProcessInstance processInstance, InstanceResult instanceResult) {
+    return ProcessInstanceProcessingContext.builder()
+        .processInstance(processInstance)
+        .processingStatistics(processingStatistics)
+        .instanceResult(instanceResult)
+        .flowNodeInstanceStore(flowNodeInstanceStore)
+        .externalTaskMetaStore(externalTaskMetaStore)
+        .build();
   }
 
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
@@ -263,12 +268,7 @@ public class ProcessInstanceProcessor
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
-            ProcessInstanceProcessingContext.builder()
-                .processInstance(processInstance)
-                .processingStatistics(processingStatistics)
-                .instanceResult(instanceResult)
-                .flowNodeInstanceStore(flowNodeInstanceStore)
-                .build();
+            createProcessInstanceProcessingContext(processInstance, instanceResult);
 
         FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
             new FlowNodeInstanceProcessingContext(

@@ -85,7 +85,7 @@ public class ProcessInstanceUpdateConsumer {
             "instance-update-consumer",
             TaktUUIDDeserializer.class,
             InstanceUpdateJsonDeserializer.class,
-            Topics.INSTANCE_UPDATE_TOPIC.getAutoOffsetReset());
+            "latest");
     return new KafkaConsumer<>(props);
   }
 }

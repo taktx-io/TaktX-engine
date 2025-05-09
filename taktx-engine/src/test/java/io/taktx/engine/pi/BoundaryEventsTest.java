@@ -24,7 +24,7 @@ class BoundaryEventsTest {
   void testBoundaryTimerTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
@@ -41,7 +41,7 @@ class BoundaryEventsTest {
   void testBoundaryTimerNotTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/boundary-timer.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
@@ -59,7 +59,8 @@ class BoundaryEventsTest {
   void testBoundaryTimerNonInterrupting() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-non-interrupting.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-timer-non-interrupting.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .moveTimeForward(Duration.ofMinutes(10).plusMillis(1))
@@ -98,7 +99,8 @@ class BoundaryEventsTest {
   @Test
   void testBoundaryMessageNonInterrupting() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-message-non-interrupting.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-message-non-interrupting.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1", Set.of("key1"))
@@ -122,7 +124,8 @@ class BoundaryEventsTest {
   void testBoundaryTimer_SubProcessTriggered_BoundaryEventEnd() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-timer-subprocess.bpmn", "TaskDefinition", "TaskDefinition2")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Subprocess_1/Service_Task_1")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
@@ -141,7 +144,8 @@ class BoundaryEventsTest {
   void testBoundaryTimer_SubProcessTriggered_NormalEnd() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-timer-subprocess.bpmn", "TaskDefinition", "TaskDefinition2")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))
@@ -161,7 +165,8 @@ class BoundaryEventsTest {
   void testBoundaryTimer_NotTriggered_Subprocess_NormalEnd() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-timer-subprocess.bpmn", "TaskDefinition", "TaskDefinition2")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
         .andRespondWithSuccess(VariablesDTO.of("success", "true"))
@@ -185,7 +190,8 @@ class BoundaryEventsTest {
       throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/boundary-timer-subprocess-noendevent.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/boundary-timer-subprocess-noendevent.bpmn", "TaskDefinition", "TaskDefinition2")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("Service_Task_1")
         .moveTimeForward(Duration.ofMinutes(5).plusMillis(1))

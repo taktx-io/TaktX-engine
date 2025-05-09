@@ -13,12 +13,12 @@ public class TaktPropertiesHelper {
 
   private final String namespace;
 
-  private final Properties kafkaProperties;
+  private final Properties taktProperties;
 
-  public TaktPropertiesHelper(String tenant, String namespace, Properties kafkaProperties) {
+  public TaktPropertiesHelper(String tenant, String namespace, Properties taktProperties) {
     this.tenant = tenant;
     this.namespace = namespace;
-    this.kafkaProperties = kafkaProperties;
+    this.taktProperties = taktProperties;
   }
 
   public Properties getKafkaConsumerProperties(
@@ -32,7 +32,7 @@ public class TaktPropertiesHelper {
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
     props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetResetConfig);
-    props.putAll(kafkaProperties);
+    props.putAll(taktProperties);
     return props;
   }
 
@@ -42,11 +42,23 @@ public class TaktPropertiesHelper {
     Properties props = new Properties();
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySserializer.getName());
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer.getName());
-    props.putAll(kafkaProperties);
+    props.putAll(taktProperties);
     return props;
   }
 
   public String getPrefixedTopicName(String topic) {
     return tenant + "." + namespace + "." + topic;
+  }
+
+  public boolean getAutoCreate() {
+    return Boolean.parseBoolean(taktProperties.getProperty("taktx.auto.create.topics", "true"));
+  }
+
+  public int getDefaultPartitions() {
+    return 3;
+  }
+
+  public short getDefaultReplicationFactor() {
+    return 1;
   }
 }

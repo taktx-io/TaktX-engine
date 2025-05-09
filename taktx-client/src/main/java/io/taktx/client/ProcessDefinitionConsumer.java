@@ -141,7 +141,7 @@ public class ProcessDefinitionConsumer {
             groupId,
             ProcessDefinitionKeyJsonDeserializer.class,
             ProcessDefinitionJsonDeserializer.class,
-            Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getAutoOffsetReset());
+            "earliest");
     return new KafkaConsumer<>(props);
   }
 }

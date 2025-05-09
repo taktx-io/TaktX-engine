@@ -14,11 +14,10 @@ import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ActtivityStateEnum;
-import io.taktx.dto.ExternalTaskMetaDTO;
-import io.taktx.dto.ExternalTaskMetaState;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
@@ -41,6 +40,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @NoArgsConstructor
 @Setter
@@ -68,10 +68,7 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
-    ReadOnlyKeyValueStore<String, ExternalTaskMetaDTO> externalTaskMetaStore =
-        processInstanceProcessingContext.getExternalTaskMetaStore();
-    ExternalTaskMetaDTO externalTaskMeta = externalTaskMetaStore.get(externalTaskId);
-    if (externalTaskMeta == null || externalTaskMeta.getState() != ExternalTaskMetaState.CREATED) {
+    if (!topicExists(processInstanceProcessingContext.getExternalTaskMetaStore(), externalTaskId)) {
       log.warn(
           "Topic for External task {} is not created, failing external task instance {}",
           externalTaskId,
@@ -97,6 +94,12 @@ public abstract class ExternalTaskInstanceProcessor<
         processInstanceProcessingContext.getInstanceResult());
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
+  }
+
+  private boolean topicExists(
+      ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore,
+      String externalTaskId) {
+    return externalTaskMetaStore.get("external-task-trigger-" + externalTaskId) != null;
   }
 
   @Override

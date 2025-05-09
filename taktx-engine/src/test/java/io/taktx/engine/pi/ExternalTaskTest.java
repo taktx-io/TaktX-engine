@@ -25,7 +25,7 @@ class ExternalTaskTest {
   void testProcessServiceTaskSingle() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
@@ -41,7 +41,7 @@ class ExternalTaskTest {
   void testProcessServiceTaskSingleFx() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-fx.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
@@ -57,7 +57,7 @@ class ExternalTaskTest {
   void testProcessServiceTaskFailed5Retries() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
@@ -84,7 +84,7 @@ class ExternalTaskTest {
   void testProcessServiceTaskFailed3RetriesButThenSucceeds() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
@@ -103,7 +103,8 @@ class ExternalTaskTest {
   void testProcessServiceTaskRetryBackoff() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/servicetask-single-retry-backoff.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .andRespondWithFailure(true, "fail", "123", "failure", VariablesDTO.of("failed1", "true"))
@@ -131,7 +132,7 @@ class ExternalTaskTest {
   @Test
   void testSendTask_Single() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/sendtask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/sendtask-single.bpmn", "send-task-id")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("send-task-id")
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
@@ -147,7 +148,7 @@ class ExternalTaskTest {
   void testProcessServiceTaskPromise() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithPromise("P10D")

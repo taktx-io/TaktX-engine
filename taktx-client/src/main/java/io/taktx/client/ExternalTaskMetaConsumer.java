@@ -1,7 +1,7 @@
 package io.taktx.client;
 
-import io.taktx.dto.ExternalTaskMetaDTO;
+import io.taktx.dto.TopicMetaDTO;
 
 public interface ExternalTaskMetaConsumer {
-  void accept(String jobId, ExternalTaskMetaDTO meta);
+  void accept(String jobId, TopicMetaDTO meta);
 }

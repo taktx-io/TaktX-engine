@@ -16,7 +16,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
 import io.taktx.dto.DefinitionsTriggerDTO;
-import io.taktx.dto.ExternalTaskMetaDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -32,6 +31,7 @@ import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
@@ -112,8 +112,8 @@ public class TopologyProducer {
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
       new ObjectMapperSerde<>(VariableKeyDTO.class);
   private static final Serde<String> EXTERNAL_TASK_ID_SERDE = new StringSerde();
-  private static final Serde<ExternalTaskMetaDTO> EXTERNAL_TASK_META_SERDE =
-      new ObjectMapperSerde<>(ExternalTaskMetaDTO.class);
+  private static final Serde<TopicMetaDTO> EXTERNAL_TASK_META_SERDE =
+      new ObjectMapperSerde<>(TopicMetaDTO.class);
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
@@ -221,9 +221,8 @@ public class TopologyProducer {
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
     builder.globalTable(
-        taktConfiguration.getPrefixed(Topics.EXTERNAL_TASK_META_TOPIC.getTopicName()),
-        Materialized.<String, ExternalTaskMetaDTO>as(
-                keyValueStoreSupplier.get(Stores.EXTERNAL_TASK_META))
+        taktConfiguration.getPrefixed(Topics.TOPIC_META_TOPIC.getTopicName()),
+        Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META))
             .withKeySerde(EXTERNAL_TASK_ID_SERDE)
             .withValueSerde(EXTERNAL_TASK_META_SERDE));
 

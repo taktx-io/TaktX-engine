@@ -16,7 +16,6 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.license.LicenseManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -25,10 +24,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
-import org.apache.kafka.clients.admin.ListTopicsResult;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 
 @ApplicationScoped
@@ -42,53 +38,7 @@ public class Deployer {
   final LicenseManager licenseManager;
 
   @PostConstruct
-  void init() {
-    try {
-      ListTopicsResult listTopicsResult = adminClient.listTopics();
-
-      List<String> toCreate = new ArrayList<>();
-      List<String> list = listTopicsResult.names().get().stream().toList();
-      for (Topics topic : Topics.values()) {
-        String name = taktConfiguration.getPrefixed(topic.getTopicName());
-        if (list.contains(name)) {
-          continue;
-        }
-        toCreate.add(name);
-      }
-
-      int partitions = taktConfiguration.getPartitions();
-      int partitionLimit = licenseManager.getPartitionLimit();
-      if (partitions > partitionLimit) {
-        String errorMessage =
-            String.format(
-                "❌ LICENSE VIOLATION: Maximum allowed partitions is %d, but %d partitions configured:",
-                partitionLimit, partitionLimit);
-
-        System.out.println(errorMessage);
-        System.out.println("   Shutting down due to license violation...");
-
-        // Exit the application
-        Runtime.getRuntime().halt(1);
-      }
-
-      CreateTopicsResult topics =
-          adminClient.createTopics(
-              toCreate.stream()
-                  .map(
-                      topic ->
-                          new NewTopic(
-                              topic, partitions, (short) taktConfiguration.getReplicationFactor()))
-                  .toList());
-
-      topics.all().get();
-
-      validateTopicAccordingLicense();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(e);
-    }
-  }
+  void init() {}
 
   private void validateTopicAccordingLicense() throws ExecutionException, InterruptedException {
     Map<String, Integer> topicPartitions = checkKafkaTopicPartitions();
@@ -150,31 +100,5 @@ public class Deployer {
     return topicDescriptions.entrySet().stream()
         .collect(
             Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().partitions().size()));
-  }
-
-  public void createTopicsForProcessDefinition(String processDefinitionId) {
-
-    try {
-      List<String> prefixedTopics =
-          List.of(taktConfiguration.getPrefixed("external-task-trigger-") + processDefinitionId);
-
-      int partitions = taktConfiguration.getPartitions();
-      log.info(
-          "Creating topics for process definition {}: {}", processDefinitionId, prefixedTopics);
-      CreateTopicsResult topics =
-          adminClient.createTopics(
-              prefixedTopics.stream()
-                  .map(
-                      topic ->
-                          new NewTopic(
-                              topic, partitions, (short) taktConfiguration.getReplicationFactor()))
-                  .toList());
-      topics.all().get();
-
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(e);
-    }
   }
 }

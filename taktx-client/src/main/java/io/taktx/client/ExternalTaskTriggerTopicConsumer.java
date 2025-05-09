@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -22,7 +23,8 @@ public class ExternalTaskTriggerTopicConsumer {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private KafkaConsumer<UUID, ExternalTaskTriggerDTO> externalTaskTriggerKafkaConsumer;
-
+  private final Object consumerLock = new Object(); // Lock for synchronization
+  private CompletableFuture<Void> consumerFuture;
   private volatile boolean running = false;
 
   ExternalTaskTriggerTopicConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
@@ -30,39 +32,90 @@ public class ExternalTaskTriggerTopicConsumer {
     this.executor = executor;
   }
 
-  public void subscribeToExternalTaskTriggerTopics(ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
-    externalTaskTriggerKafkaConsumer = createConsumer();
+  public void subscribeToExternalTaskTriggerTopics(
+      Set<String> jobIds, Consumer<ExternalTaskTriggerDTO> externalTaskTriggerConsumer) {
+    log.info("Subscribing to job ids {}", jobIds);
+    List<String> topics =
+        jobIds.stream()
+            .map(
+                jobId ->
+                    taktPropertiesHelper.getPrefixedTopicName("external-task-trigger-" + jobId))
+            .toList();
 
-    log.info("Subscribing to job ids {}", externalTaskTriggerConsumer.getJobIds());
-    subscribe(externalTaskTriggerConsumer.getJobIds());
+    // Stop the previous consumer if it's running
+    stop();
 
-    running = true;
+    // Wait for previous future to complete to avoid thread issues
+    if (consumerFuture != null) {
+      try {
+        consumerFuture.join();
+      } catch (Exception e) {
+        log.warn("Error while waiting for previous consumer to complete", e);
+      }
+    }
 
-    CompletableFuture.runAsync(
-        () -> {
-          while (running) {
-            ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
-                externalTaskTriggerKafkaConsumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
-                records) {
-              externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
-            }
-          }
+    synchronized (consumerLock) {
+      // Create a new consumer if needed
+      if (externalTaskTriggerKafkaConsumer == null) {
+        externalTaskTriggerKafkaConsumer = createConsumer();
+      }
 
-          externalTaskTriggerKafkaConsumer.unsubscribe();
-          externalTaskTriggerKafkaConsumer.close();
-        },
-        executor);
+      // Subscribe to the topics
+      externalTaskTriggerKafkaConsumer.subscribe(topics);
+
+      // Mark as running
+      running = true;
+
+      // Start the consumer in a new thread
+      consumerFuture =
+          CompletableFuture.runAsync(
+              () -> {
+                try {
+                  while (running) {
+                    synchronized (consumerLock) {
+                      if (!running || externalTaskTriggerKafkaConsumer == null) {
+                        break;
+                      }
+
+                      ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
+                          externalTaskTriggerKafkaConsumer.poll(Duration.ofMillis(100));
+
+                      for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
+                          records) {
+                        externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
+                      }
+                    }
+
+                    // Small sleep outside the lock to prevent tight loop
+                    try {
+                      Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                      Thread.currentThread().interrupt();
+                      break;
+                    }
+                  }
+                } finally {
+                  // Clean up the resources when the thread exits
+                  synchronized (consumerLock) {
+                    if (externalTaskTriggerKafkaConsumer != null) {
+                      try {
+                        externalTaskTriggerKafkaConsumer.unsubscribe();
+                        externalTaskTriggerKafkaConsumer.close();
+                      } catch (Exception e) {
+                        log.error("Error closing Kafka consumer", e);
+                      } finally {
+                        externalTaskTriggerKafkaConsumer = null;
+                      }
+                    }
+                  }
+                }
+              },
+              executor);
+    }
   }
 
   public void stop() {
     running = false;
-  }
-
-  private void subscribe(Set<String> jobIds) {
-    List<String> topics = jobIds.stream()
-        .map(jobId -> taktPropertiesHelper.getPrefixedTopicName("external-task-trigger-" + jobId)).toList();
-    externalTaskTriggerKafkaConsumer.subscribe(topics);
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() {

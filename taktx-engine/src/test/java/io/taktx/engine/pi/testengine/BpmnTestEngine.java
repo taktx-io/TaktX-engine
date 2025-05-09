@@ -32,7 +32,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,12 +44,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -116,14 +111,6 @@ public class BpmnTestEngine {
   public void init() {
     String kafkaBootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
-    try (AdminClient adminClient =
-        AdminClient.create(Map.of("bootstrap.servers", kafkaBootstrapServers))) {
-      List<NewTopic> topics =
-          Arrays.stream(Topics.values())
-              .map(topic -> new NewTopic(TOPIC_TEST_PREFIX + topic.getTopicName(), 3, (short) 1))
-              .toList();
-      adminClient.createTopics(topics);
-    }
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
@@ -134,8 +121,10 @@ public class BpmnTestEngine {
             .withNamespace("namespace")
             .withKafkaProperties(kakaProperties)
             .build();
-    BiConsumer<UUID, InstanceUpdateDTO> consumer = BpmnTestEngine.this::consume;
-    taktClient.registerInstanceUpdateConsumer(consumer);
+    taktClient.registerInitialFixedTopics();
+    taktClient.startTopicMatcher();
+    Topics.managedFixedTopics().forEach(t -> taktClient.requestTopicState(t.getTopicName(), 5));
+    taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
     taktClient.start();
 
     processInstanceTriggerConsumer =
@@ -177,9 +166,7 @@ public class BpmnTestEngine {
     messageEvents.add(messageEvent);
   }
 
-  public void consumeExternalTaskTrigger(
-      ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord) {
-    ExternalTaskTriggerDTO externalTaskTrigger = externalTaskTriggerRecord.value();
+  public void consumeExternalTaskTrigger(ExternalTaskTriggerDTO externalTaskTrigger) {
 
     LOG.info("Received external task trigger: " + externalTaskTrigger);
 
@@ -240,13 +227,13 @@ public class BpmnTestEngine {
     return poll;
   }
 
-  public BpmnTestEngine deployProcessDefinition(String filename) throws IOException {
+  public BpmnTestEngine deployProcessDefinition(String filename, String... externalTaskIds)
+      throws IOException {
     LOG.info("Deploying process definition: " + filename);
+    registerTopics(externalTaskIds);
+    subscribeToTopics(externalTaskIds);
     definitionsBeingDeployed =
         taktClient.deployProcessDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
-
-    Consumer<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> externalTaskConsumer =
-        this::consumeExternalTaskTrigger;
 
     return this;
   }
@@ -296,15 +283,28 @@ public class BpmnTestEngine {
     return elementIdIndex;
   }
 
-  public BpmnTestEngine deployProcessDefinitionAndWait(String filename) throws IOException {
-    return deployProcessDefinitionAndWait(filename, Duration.ofMinutes(2));
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename, String... externalTaskIds)
+      throws IOException {
+    return deployProcessDefinitionAndWait(filename, Duration.ofMinutes(2), externalTaskIds);
   }
 
-  public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)
-      throws IOException {
-    deployProcessDefinition(filename);
+  public BpmnTestEngine deployProcessDefinitionAndWait(
+      String filename, Duration duration, String... externalTaskIds) throws IOException {
+    deployProcessDefinition(filename, externalTaskIds);
     waitForProcessDeployment(duration);
     return this;
+  }
+
+  private void subscribeToTopics(String[] externalTaskIds) {
+    if (externalTaskIds.length > 0) {
+      taktClient.registerExternalTaskConsumer(externalTaskIds, this::consumeExternalTaskTrigger);
+    }
+  }
+
+  private void registerTopics(String... externalTaskIds) {
+    for (String externalTaskId : externalTaskIds) {
+      taktClient.requestTopicState("external-task-trigger-" + externalTaskId, 5);
+    }
   }
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {
