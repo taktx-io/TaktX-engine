@@ -3,7 +3,6 @@ package io.taktx.client;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import io.taktx.client.annotation.TaktDeployment;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 

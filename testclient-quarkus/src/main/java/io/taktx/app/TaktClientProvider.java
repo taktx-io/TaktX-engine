@@ -3,15 +3,12 @@ package io.taktx.app;
 import io.quarkus.runtime.Startup;
 import io.taktx.client.TaktClient;
 import io.taktx.client.TaktClient.TaktClientBuilder;
-import io.taktx.dto.InstanceUpdateDTO;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-import java.util.UUID;
-import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 
 @Startup
@@ -46,8 +43,7 @@ public class TaktClientProvider {
         taktClient.start();
         taktClient.deployTaktDeploymentAnnotatedClasses();
         taktClient.registerInstanceUpdateConsumer(
-            (uuid, instanceUpdateDTO) ->
-                log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
+            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
       }
     }
   }
