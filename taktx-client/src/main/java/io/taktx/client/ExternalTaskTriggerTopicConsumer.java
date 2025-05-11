@@ -8,11 +8,9 @@ import io.taktx.util.TaktUUIDDeserializer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -34,10 +32,10 @@ public class ExternalTaskTriggerTopicConsumer {
   }
 
   public void subscribeToExternalTaskTriggerTopics(
-      Set<String> jobIds, Consumer<ExternalTaskTriggerDTO> externalTaskTriggerConsumer) {
-    log.info("Subscribing to job ids {}", jobIds);
+      ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
+    log.info("Subscribing to job ids {}", externalTaskTriggerConsumer.getJobIds());
     List<String> topics =
-        jobIds.stream()
+        externalTaskTriggerConsumer.getJobIds().stream()
             .map(
                 jobId ->
                     taktPropertiesHelper.getPrefixedTopicName(

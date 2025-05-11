@@ -17,13 +17,11 @@ public class DefaultTaktParameterResolverFactory implements TaktParameterResolve
   }
 
   @Override
-  public TaktParameterResolver create(TaktClient taktClient, Parameter parameter) {
+  public TaktParameterResolver create(Parameter parameter) {
     if (parameter.getType().isAssignableFrom(ExternalTaskTriggerDTO.class)) {
       return new ExternalTaskTriggerDTOParameterResolver();
     } else if (parameter.getType().isAssignableFrom(ExternalTaskInstanceResponder.class)) {
       return new ExternalTaskInstanceResponderParameterResolver(externalTaskResponder);
-    } else if (parameter.getType().isAssignableFrom(TaktClient.class)) {
-      return new TaktClientParameterResolver(taktClient);
     } else if (parameter.getAnnotation(Variable.class) != null) {
       return new VariableParameterResolver(
           OBJECT_MAPPER, parameter.getType(), parameter.getAnnotation(Variable.class).value());

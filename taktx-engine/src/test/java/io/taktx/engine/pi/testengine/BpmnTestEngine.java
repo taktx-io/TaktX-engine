@@ -1,6 +1,7 @@
 package io.taktx.engine.pi.testengine;
 
 import io.taktx.Topics;
+import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.TaktClient;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.ActtivityStateEnum;
@@ -298,7 +299,18 @@ public class BpmnTestEngine {
 
   private void subscribeToTopics(String[] externalTaskIds) {
     if (externalTaskIds.length > 0) {
-      taktClient.registerExternalTaskConsumer(externalTaskIds, this::consumeExternalTaskTrigger);
+      taktClient.registerExternalTaskConsumer(
+          new ExternalTaskTriggerConsumer() {
+            @Override
+            public Set<String> getJobIds() {
+              return Set.of(externalTaskIds);
+            }
+
+            @Override
+            public void accept(ExternalTaskTriggerDTO value) {
+              BpmnTestEngine.this.consumeExternalTaskTrigger(value);
+            }
+          });
     }
   }
 
@@ -583,9 +595,8 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitForMessageSubscription(
-      String receiveTaskMessage, String elementId, Set<String> correlationKeys) {
-    return waitForMessageSubscription(
-        receiveTaskMessage, correlationKeys, DEFAULT_DURATION);
+      String receiveTaskMessage, Set<String> correlationKeys) {
+    return waitForMessageSubscription(receiveTaskMessage, correlationKeys, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitForMessageSubscription(

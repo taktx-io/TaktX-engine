@@ -243,7 +243,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/receive-task.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("key1"))
+        .waitForMessageSubscription("ReceiveTaskMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "ReceiveTaskMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted();

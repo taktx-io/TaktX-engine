@@ -167,8 +167,7 @@ class MultiInstanceTest {
         .deployProcessDefinitionAndWait("/bpmn/receive-task-multiinstance.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.empty())
-        .waitForMessageSubscription(
-            "ReceiveTaskMessage", "Receive_Task_1", Set.of("1", "2", "3", "4", "5"))
+        .waitForMessageSubscription("ReceiveTaskMessage", Set.of("1", "2", "3", "4", "5"))
         .andSendMessageWithCorrelationKey(
             "ReceiveTaskMessage", "5", VariablesDTO.of("var1", "value1"))
         .andSendMessageWithCorrelationKey(

@@ -20,7 +20,6 @@ import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,12 +28,12 @@ public class TaktClient {
 
   @Getter private final ProcessDefinitionConsumer processDefinitionConsumer;
   @Getter private final TaktParameterResolverFactory parameterResolverFactory;
+  @Getter private final ExternalTaskResponder externalTaskResponder;
 
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
-  private final ExternalTaskResponder externalTaskResponder;
   private final MessageEventSender messageEventSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
   private final TopicMatcher topicMatcher;
@@ -165,9 +164,9 @@ public class TaktClient {
   }
 
   public void registerExternalTaskConsumer(
-      String[] externalTaskIds, Consumer<ExternalTaskTriggerDTO> consumeExternalTaskTrigger) {
+      ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
     this.externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(
-        Set.of(externalTaskIds), consumeExternalTaskTrigger);
+        externalTaskTriggerConsumer);
   }
 
   /**

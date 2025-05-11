@@ -45,8 +45,7 @@ class IntermediateEventsTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/message-intermediate-catch.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription(
-            "IntermediateCatchMessage", "MessageIntermediateCatchEvent_1", Set.of("key1"))
+        .waitForMessageSubscription("IntermediateCatchMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "IntermediateCatchMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()

@@ -83,7 +83,7 @@ class BoundaryEventsTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/boundary-message.bpmn")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription("BoundaryMessage", "BoundaryEvent_1", Set.of("key1"))
+        .waitForMessageSubscription("BoundaryMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "BoundaryMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
@@ -103,7 +103,7 @@ class BoundaryEventsTest {
             "/bpmn/boundary-message-non-interrupting.bpmn", "service-task-id")
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .waitForMessageSubscription("BoundaryEventMessage", "BoundaryEvent_1", Set.of("key1"))
+        .waitForMessageSubscription("BoundaryEventMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "BoundaryEventMessage", "key1", VariablesDTO.of("var1", "value1"))
         .andSendMessageWithCorrelationKey(
