@@ -15,6 +15,7 @@ import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
+import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
@@ -289,8 +290,8 @@ public class TopologyProducer {
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
                             (key, value, recordContext) ->
-                                taktConfiguration.getPrefixed("external-task-trigger")
-                                    + "-"
+                                taktConfiguration.getPrefixed(
+                                        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX)
                                     + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
@@ -430,9 +431,9 @@ public class TopologyProducer {
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
                             (key, value, recordContext) ->
-                                taktConfiguration.getPrefixed("external-task-trigger")
-                                    + "-"
-                                    + value.getProcessDefinitionKey().getProcessDefinitionId(),
+                                taktConfiguration.getPrefixed(
+                                        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX)
+                                    + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(

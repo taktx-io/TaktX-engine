@@ -4,6 +4,7 @@ import io.taktx.Topics;
 import io.taktx.client.TaktClient;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.Constants;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
@@ -303,7 +304,8 @@ public class BpmnTestEngine {
 
   private void registerTopics(String... externalTaskIds) {
     for (String externalTaskId : externalTaskIds) {
-      taktClient.requestTopicState("external-task-trigger-" + externalTaskId, 5);
+      taktClient.requestTopicState(
+          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 5);
     }
   }
 
@@ -431,7 +433,7 @@ public class BpmnTestEngine {
       String name, String code, String message, VariablesDTO variables) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
-        .respondEscalation(name, message, code);
+        .respondEscalation(name, message, code, variables);
     return this;
   }
 
@@ -583,11 +585,11 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitForMessageSubscription(
       String receiveTaskMessage, String elementId, Set<String> correlationKeys) {
     return waitForMessageSubscription(
-        receiveTaskMessage, elementId, correlationKeys, DEFAULT_DURATION);
+        receiveTaskMessage, correlationKeys, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitForMessageSubscription(
-      String messageName, String elementId, Set<String> correlationKeys, Duration duration) {
+      String messageName, Set<String> correlationKeys, Duration duration) {
     Set<String> remainingCorrelationKeys = new HashSet<>(correlationKeys);
     Awaitility.await()
         .atMost(duration)

@@ -74,14 +74,14 @@ public class ExternalTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondEscalation(String name, String message, String code) {
+  public void respondEscalation(String name, String message, String code, VariablesDTO variables) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ESCALATION, true, name, message, code, 0L),
-            VariablesDTO.empty());
+            variables);
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));

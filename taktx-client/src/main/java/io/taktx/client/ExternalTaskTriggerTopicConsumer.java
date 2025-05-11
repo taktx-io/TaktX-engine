@@ -1,6 +1,7 @@
 package io.taktx.client;
 
 import io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializer;
+import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
@@ -39,7 +40,8 @@ public class ExternalTaskTriggerTopicConsumer {
         jobIds.stream()
             .map(
                 jobId ->
-                    taktPropertiesHelper.getPrefixedTopicName("external-task-trigger-" + jobId))
+                    taktPropertiesHelper.getPrefixedTopicName(
+                        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + jobId))
             .toList();
 
     // Stop the previous consumer if it's running

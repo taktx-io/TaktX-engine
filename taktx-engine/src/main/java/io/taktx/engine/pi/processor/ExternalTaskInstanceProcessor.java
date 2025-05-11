@@ -14,6 +14,7 @@ import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
@@ -99,7 +100,8 @@ public abstract class ExternalTaskInstanceProcessor<
   private boolean topicExists(
       ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore,
       String externalTaskId) {
-    return externalTaskMetaStore.get("external-task-trigger-" + externalTaskId) != null;
+    return externalTaskMetaStore.get(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)
+        != null;
   }
 
   @Override
@@ -111,6 +113,7 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTaskResponseTriggerDTO trigger,
       VariableScope variables) {
 
+    log.info("Continuing external task instance {}", trigger);
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
