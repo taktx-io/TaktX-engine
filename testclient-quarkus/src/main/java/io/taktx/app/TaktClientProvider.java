@@ -1,17 +1,17 @@
 package io.taktx.app;
 
 import io.quarkus.runtime.Startup;
+import io.taktx.Topics;
+import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.TaktClient;
 import io.taktx.client.TaktClient.TaktClientBuilder;
-import io.taktx.dto.InstanceUpdateDTO;
+import io.taktx.dto.Constants;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-import java.util.UUID;
-import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 
 @Startup
@@ -43,16 +43,24 @@ public class TaktClientProvider {
                 .withNamespace(properties.getProperty("taktx.engine.namespace"))
                 .withKafkaProperties(properties)
                 .build();
+        taktClient.registerInitialFixedTopics();
+        taktClient.startTopicMatcher();
+        Topics.managedFixedTopics().forEach(t -> taktClient.requestTopicState(t.getTopicName(), 5));
         taktClient.start();
         taktClient.deployTaktDeploymentAnnotatedClasses();
-        taktClient.registerAnnotatedWorkers();
+        AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
+            new AnnotationScanningExternalTaskTriggerConsumer(
+                taktClient.getParameterResolverFactory(), taktClient.getExternalTaskResponder());
+        taktClient.registerExternalTaskConsumer(externalTaskTriggerConsumer);
+        externalTaskTriggerConsumer
+            .getJobIds()
+            .forEach(
+                jobId ->
+                    taktClient.requestTopicState(
+                        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + jobId, 3));
+
         taktClient.registerInstanceUpdateConsumer(
-            new BiConsumer<UUID, InstanceUpdateDTO>() {
-              @Override
-              public void accept(UUID uuid, InstanceUpdateDTO instanceUpdateDTO) {
-                log.info("InstanceUpdateDTO: {}", instanceUpdateDTO);
-              }
-            });
+            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
       }
     }
   }

@@ -3,7 +3,6 @@ package io.taktx.app.workers;
 import io.quarkus.runtime.Startup;
 import io.taktx.client.ExternalTaskInstanceResponder;
 import io.taktx.client.annotation.TaktDeployment;
-import io.taktx.client.annotation.TaktWorker;
 import io.taktx.client.annotation.TaktWorkerMethod;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.concurrent.ExecutorService;
@@ -13,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 @Startup
 @ApplicationScoped
 @TaktDeployment(resource = "/bpmn/servicetask-single-clean.bpmn")
-@TaktWorker(processDefinitionId = "service-task-single")
 @Slf4j
 public class ServiceTaskSingleWorker {
 

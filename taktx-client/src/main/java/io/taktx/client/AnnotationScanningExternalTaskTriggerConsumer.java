@@ -1,0 +1,113 @@
+package io.taktx.client;
+
+import io.taktx.client.annotation.TaktWorkerMethod;
+import io.taktx.dto.ExternalTaskTriggerDTO;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTaskTriggerConsumer {
+
+  private final Map<String, Method> workerMethods = new HashMap<>();
+  private final Map<String, Object> workerInstances = new HashMap<>();
+  private final TaktParameterResolverFactory parameterResolverFactory;
+  private final ExternalTaskResponder externalTaskResponder;
+
+  public AnnotationScanningExternalTaskTriggerConsumer(
+      TaktParameterResolverFactory parameterResolverFactory,
+      ExternalTaskResponder externalTaskResponder) {
+    this.parameterResolverFactory = parameterResolverFactory;
+    this.externalTaskResponder = externalTaskResponder;
+
+    Set<Class<?>> annotatedClasses =
+        AnnotationScanner.findClassesWithAnnotatedMethods(TaktWorkerMethod.class);
+    log.info(
+        "Found {} classes with @TaktWorkerMethod annotation: {}",
+        annotatedClasses.size(),
+        annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
+    for (Class<?> clazz : annotatedClasses) {
+      Object instance = InstanceProvider.getInstance(clazz);
+      Stream.of(clazz.getDeclaredMethods())
+          .filter(m -> m.isAnnotationPresent(TaktWorkerMethod.class))
+          .forEach(
+              m -> {
+                TaktWorkerMethod annotation = m.getAnnotation(TaktWorkerMethod.class);
+                String taskId = annotation.taskId();
+                workerMethods.put(taskId, m);
+                workerInstances.put(taskId, instance);
+              });
+    }
+  }
+
+  @Override
+  public Set<String> getJobIds() {
+    return workerMethods.keySet();
+  }
+
+  @Override
+  public void accept(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
+    String taskId = externalTaskTriggerDTO.getExternalTaskId();
+    Method method = workerMethods.get(taskId);
+    Object beanInstance = workerInstances.get(taskId);
+    if (method == null || beanInstance == null) {
+      throw new IllegalStateException(
+          "No worker method or bean instance found for task ID: " + taskId);
+    }
+
+    TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
+    boolean autoComplete = workerMethod.autoComplete();
+
+    Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
+    boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
+
+    if (autoComplete) {
+      // Rely on result and exceptions to determine success or failure
+
+      try {
+        Object result = method.invoke(beanInstance, arguments);
+        if (methodIsVoid) {
+          externalTaskResponder
+              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+              .respondSuccess();
+        } else {
+          externalTaskResponder
+              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+              .respondSuccess(result);
+        }
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondError(false, "ERROR", "Error", e.getMessage());
+      }
+    } else {
+      // Worker has to respond itself by Responder or TaktClient. Result is ignored
+      try {
+        method.invoke(beanInstance, arguments);
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondError(false, "ERROR", "Error", e.getMessage());
+      }
+    }
+  }
+
+  private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
+    List<Object> result = new ArrayList<>();
+    for (Parameter parameter : method.getParameters()) {
+      TaktParameterResolver parameterResolver = parameterResolverFactory.create(parameter);
+      Object resolved = parameterResolver.resolve(externalTaskTriggerDTO);
+      result.add(resolved);
+    }
+
+    return result.toArray();
+  }
+}

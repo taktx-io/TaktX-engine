@@ -25,6 +25,7 @@ public enum Stores {
   DEFINITION_COUNT_BY_ID("definition-count-by-id"),
   XML_BY_HASH("xml-by-hash"),
   GLOBAL_PROCESS_DEFINITION("global-process-definition"),
+  TOPIC_META("topic-meta"),
   DEFINITION_MESSAGE_SUBSCRIPTION("definition-message-subscription"),
   CORRELATION_MESSAGE_SUBSCRIPTION("correlation-message-subscription"),
   VARIABLES("variables"),

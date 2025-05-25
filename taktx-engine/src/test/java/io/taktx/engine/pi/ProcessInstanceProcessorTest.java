@@ -89,7 +89,7 @@ class ProcessInstanceProcessorTest {
   @Test
   void testSubProcessServiceTaskSingle() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
         .andRespondWithSuccess(VariablesDTO.empty())
@@ -103,7 +103,7 @@ class ProcessInstanceProcessorTest {
   @Test
   void testSubProcessTaskNested() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
         .andRespondWithSuccess(VariablesDTO.empty())
@@ -243,7 +243,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/receive-task.bpmn")
         .waitForProcessDeployment()
         .startProcessInstance(VariablesDTO.of("correlationKey", "key1"))
-        .waitForMessageSubscription("ReceiveTaskMessage", "Receive_Task_1", Set.of("key1"))
+        .waitForMessageSubscription("ReceiveTaskMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "ReceiveTaskMessage", "key1", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted();

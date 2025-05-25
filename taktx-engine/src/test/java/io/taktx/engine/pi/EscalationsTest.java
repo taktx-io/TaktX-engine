@@ -22,7 +22,7 @@ class EscalationsTest {
   void testInterruptingEscalationTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithEscalation(
@@ -49,7 +49,7 @@ class EscalationsTest {
   void testInterruptingEscalation_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithEscalation(
@@ -74,7 +74,7 @@ class EscalationsTest {
   void testInterruptingEscalation_NoCode_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithEscalation(null, null, null, VariablesDTO.of("var1", "value1"))
@@ -95,7 +95,7 @@ class EscalationsTest {
   void testNonInterruptingEscalationTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondWithEscalation(
@@ -125,7 +125,8 @@ class EscalationsTest {
   void testInterruptingEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondWithEscalation(
@@ -149,7 +150,8 @@ class EscalationsTest {
   void testNonInterruptingEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondWithEscalation(
@@ -183,7 +185,8 @@ class EscalationsTest {
   void testNoEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
+        .deployProcessDefinitionAndWait(
+            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))

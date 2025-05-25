@@ -140,7 +140,8 @@ public class ProcessDefinitionConsumer {
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId,
             ProcessDefinitionKeyJsonDeserializer.class,
-            ProcessDefinitionJsonDeserializer.class);
+            ProcessDefinitionJsonDeserializer.class,
+            "earliest");
     return new KafkaConsumer<>(props);
   }
 }

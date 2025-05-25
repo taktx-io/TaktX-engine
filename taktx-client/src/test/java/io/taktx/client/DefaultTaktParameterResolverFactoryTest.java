@@ -15,13 +15,11 @@ import org.junit.jupiter.api.Test;
 class DefaultTaktParameterResolverFactoryTest {
 
   private DefaultTaktParameterResolverFactory factory;
-  private TaktClient taktClient;
   private ExternalTaskResponder externalTaskResponder;
 
   @BeforeEach
   void setUp() {
     externalTaskResponder = mock(ExternalTaskResponder.class);
-    taktClient = mock(TaktClient.class);
     factory = new DefaultTaktParameterResolverFactory(externalTaskResponder);
   }
 
@@ -34,7 +32,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
+    TaktParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(ExternalTaskTriggerDTOParameterResolver.class);
@@ -49,23 +47,10 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
+    TaktParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(ExternalTaskInstanceResponderParameterResolver.class);
-  }
-
-  @Test
-  void shouldCreateTaktClientParameterResolver() throws NoSuchMethodException {
-    // Given
-    Method method = TestService.class.getDeclaredMethod("methodWithTaktClient", TaktClient.class);
-    Parameter parameter = method.getParameters()[0];
-
-    // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
-
-    // Then
-    assertThat(resolver).isInstanceOf(TaktClientParameterResolver.class);
   }
 
   @Test
@@ -76,7 +61,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
+    TaktParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(VariableParameterResolver.class);
@@ -89,7 +74,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
+    TaktParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(MapParameterResolver.class);
@@ -102,7 +87,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(taktClient, parameter);
+    TaktParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(VariableParameterResolver.class);

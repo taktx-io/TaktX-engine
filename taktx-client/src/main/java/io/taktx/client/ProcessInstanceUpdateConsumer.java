@@ -84,7 +84,8 @@ public class ProcessInstanceUpdateConsumer {
         taktPropertiesHelper.getKafkaConsumerProperties(
             "instance-update-consumer",
             TaktUUIDDeserializer.class,
-            InstanceUpdateJsonDeserializer.class);
+            InstanceUpdateJsonDeserializer.class,
+            "latest");
     return new KafkaConsumer<>(props);
   }
 }

@@ -68,8 +68,10 @@ public class BucketProcessor {
             Entry<TimedScheduleKey, MessageScheduleDTO> entry = iterator.next();
             TimedScheduleKey key = entry.getKey();
             MessageScheduleDTO schedule = entry.getValue();
+            log.info("Checking schedule {} vs now {}", key, now);
             if (key.getTime() < now) {
               SchedulableMessageDTO message = schedule.getMessage();
+              log.info("Processing schedule {} message {}", key, message);
               context.forward(
                   new Record<>(message.getProcessInstanceKey(), message, key.getTime()));
               iterator.remove();

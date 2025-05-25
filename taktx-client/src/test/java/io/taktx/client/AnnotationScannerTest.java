@@ -11,7 +11,10 @@ class AnnotationScannerTest {
 
   @Test
   void testScan() {
-    Set<Class<?>> annotatedClasses = AnnotationScanner.findAnnotatedClasses(TaktDeployment.class);
-    assertThat(annotatedClasses).containsExactly(AnnotationScannerTest.class);
+    Set<TaktDeployment> taktDeployments = AnnotationScanner.findTaktDeployments();
+    assertThat(taktDeployments).hasSize(1);
+
+    TaktDeployment taktDeployment = taktDeployments.iterator().next();
+    assertThat(taktDeployment.resource()).isEqualTo("test");
   }
 }
