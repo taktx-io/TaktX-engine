@@ -58,6 +58,7 @@ public class BpmnMapperFactory {
       return new GenericSendTaskMapper();
     }
   }
+
   public UserTaskMapper createUserTaskMapper() {
     if (namespaces.contains(NS_ZEEBE_1_0)) {
       return new ZeebeUserTaskMapper();

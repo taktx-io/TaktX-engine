@@ -141,7 +141,6 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
       this.catchAllEscalations = false;
       escalationSubscriptions.add(
           new EscalationSubscription(
-              escalationEventDefinition.getReferencedEscalation().name(),
               escalationEventDefinition.getReferencedEscalation().escalationCode()));
     } else {
       this.catchAllEscalations = true;
@@ -151,9 +150,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
   public void addErrorSubscription(ErrorEventDefinition errorEventDefinition) {
     if (errorEventDefinition.getReferencedError() != null) {
       errorSubscriptions.add(
-          new ErrorSubscription(
-              errorEventDefinition.getReferencedError().name(),
-              errorEventDefinition.getReferencedError().code()));
+          new ErrorSubscription(errorEventDefinition.getReferencedError().code()));
     } else {
       this.catchAllErrors = true;
     }

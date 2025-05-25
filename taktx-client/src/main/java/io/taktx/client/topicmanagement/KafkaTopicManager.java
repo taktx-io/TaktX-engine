@@ -3,7 +3,9 @@ package io.taktx.client.topicmanagement;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -56,12 +58,18 @@ public class KafkaTopicManager {
                                   topicName,
                                   topicMetaDTO.getNrPartitions());
                               future.complete(
-                                  new TopicMetaDTO(topicName, topicMetaDTO.getNrPartitions()));
+                                  new TopicMetaDTO(
+                                      topicName,
+                                      topicMetaDTO.getNrPartitions(),
+                                      topicMetaDTO.getCleanupPolicy()));
                             }
                           });
                 } else {
                   future.complete(
-                      new TopicMetaDTO(topicName, topicDescription.partitions().size()));
+                      new TopicMetaDTO(
+                          topicName,
+                          topicDescription.partitions().size(),
+                          topicMetaDTO.getCleanupPolicy()));
                 }
               } else {
                 log.info("Topic {} does not exist, creating...", topicName);
@@ -70,6 +78,15 @@ public class KafkaTopicManager {
                         topicName,
                         topicMetaDTO.getNrPartitions(),
                         taktPropertiesHelper.getDefaultReplicationFactor());
+
+                // Add cleanup policy configuration
+                if (topicMetaDTO.getCleanupPolicy() != null) {
+                  Map<String, String> configs = new HashMap<>();
+                  configs.put(
+                      "cleanup.policy", topicMetaDTO.getCleanupPolicy().getKafkaPolicyValue());
+                  newTopic.configs(configs);
+                }
+
                 adminClient
                     .createTopics(Collections.singleton(newTopic))
                     .all()
@@ -79,7 +96,10 @@ public class KafkaTopicManager {
                             future.completeExceptionally(ex);
                           } else {
                             future.complete(
-                                new TopicMetaDTO(topicName, topicMetaDTO.getNrPartitions()));
+                                new TopicMetaDTO(
+                                    topicName,
+                                    topicMetaDTO.getNrPartitions(),
+                                    topicMetaDTO.getCleanupPolicy()));
                           }
                         });
               }

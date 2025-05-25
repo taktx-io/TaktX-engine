@@ -10,19 +10,15 @@
 
 package io.taktx.engine.pi.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import io.taktx.dto.AssignmentDefinitionDTO;
+import io.taktx.dto.PriorityDefinitionDTO;
+import io.taktx.dto.TaskScheduleDTO;
+import io.taktx.engine.pd.model.UserTask;
 
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-@Setter
-public class EscalationSubscription {
-  private String code;
-
-  public boolean matchesEvent(EscalationEventSignal event) {
-    return code.equals(event.getCode());
-  }
-}
+public record UserTaskInfo(
+    UserTask element,
+    UserTaskInstance instance,
+    VariableScope variables,
+    AssignmentDefinitionDTO assignmentDefinition,
+    TaskScheduleDTO taskSchedule,
+    PriorityDefinitionDTO priorityDefinition) {}

@@ -25,8 +25,8 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(
-            false, "Error_1tlo99v", "456", "message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithFailure(
+            false, "456", "message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -47,8 +47,8 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(
-            false, "Error_1tlo99v", "478", "message", VariablesDTO.of("var1", "value2"))
+        .andRespondToExternalTaskWithFailure(
+            false, "Error_1tlo99v", "message", VariablesDTO.of("var1", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -67,7 +67,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithFailure(false, null, null, null, VariablesDTO.of("var1", "value2"))
+        .andRespondToExternalTaskWithFailure(false, null, null, VariablesDTO.of("var1", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -86,8 +86,8 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithFailure(
-            false, "Error_1tlo99v", "456", "error message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithFailure(
+            false, "456", "error message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -105,8 +105,8 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithFailure(
-            false, "Error_1tlo99v", "789", "error message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithFailure(
+            false, "Error_1tlo99v", "error message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -124,7 +124,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")

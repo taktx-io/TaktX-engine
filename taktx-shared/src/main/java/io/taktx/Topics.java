@@ -7,20 +7,24 @@ import lombok.Getter;
 
 @Getter
 public enum Topics {
-  TOPIC_META_TOPIC("topic-meta", true),
-  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation", false),
-  MESSAGE_EVENT_TOPIC("message-event", false),
-  SCHEDULE_COMMANDS("schedule-commands", false),
-  INSTANCE_UPDATE_TOPIC("instance-update", false),
-  PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance", false),
-  PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions", false);
+  TOPIC_META_TOPIC("topic-meta", true, CleanupPolicy.DELETE),
+  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation", false, CleanupPolicy.DELETE),
+  MESSAGE_EVENT_TOPIC("message-event", false, CleanupPolicy.DELETE),
+  SCHEDULE_COMMANDS("schedule-commands", false, CleanupPolicy.DELETE),
+  INSTANCE_UPDATE_TOPIC("instance-update", false, CleanupPolicy.DELETE),
+  PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance", false, CleanupPolicy.DELETE),
+  PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions", false, CleanupPolicy.DELETE),
+  USER_TASK_TRIGGER_TOPIC("usertasks", false, CleanupPolicy.COMPACT),
+  USER_TASK_RESPONSE_TOPIC("usertasks-response", false, CleanupPolicy.DELETE);
 
   private final String topicName;
   private final boolean initialAvailable;
+  private final CleanupPolicy cleanupPolicy;
 
-  Topics(String topicName, boolean initialAvailable) {
+  Topics(String topicName, boolean initialAvailable, CleanupPolicy cleanupPolicy) {
     this.topicName = topicName;
     this.initialAvailable = initialAvailable;
+    this.cleanupPolicy = cleanupPolicy;
   }
 
   public static Set<Topics> initialFixedTopics() {

@@ -17,11 +17,9 @@ import lombok.Getter;
 @Getter
 public abstract class EventSignal {
   private final LinkedList<FlowNodeInstance<?>> pathToSource = new LinkedList<>();
-  private final String name;
 
-  protected EventSignal(FlowNodeInstance<?> fLowNodeInstance, String name) {
+  protected EventSignal(FlowNodeInstance<?> fLowNodeInstance) {
     pathToSource.addFirst(fLowNodeInstance);
-    this.name = name;
   }
 
   public void bubbleUp() {

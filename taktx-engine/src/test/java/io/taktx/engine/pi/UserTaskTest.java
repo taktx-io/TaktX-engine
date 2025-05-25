@@ -19,10 +19,59 @@ class UserTaskTest {
   }
 
   @Test
-  void testZeebeUserTask() throws IOException {
-
+  void testZeebeUserTask_CompleteSuccesFully() throws IOException {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
-        .startProcessInstance(VariablesDTO.of("usertask", "1"));
+        .startProcessInstance(VariablesDTO.of("usertask", "1"))
+        .waitUntilUserTaskIsWaitingForResponse("UserTask_1")
+        .assertThatUserTask()
+        .hasAssignee("assignee")
+        .hasCandidateGroups("candidategroups")
+        .hasCandidateUsers("candidateusers")
+        .hasPriority("10")
+        .hasDueDate("2010-01-01")
+        .hasFollowupDate("2020-02-02")
+        .toProcessLevel()
+        .andCompleteUserTaskWithSuccess(VariablesDTO.of("usertask", "1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableWithValue("usertask", "1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("UserTask_1")
+        .hasInstantiatedElementWithId("EndEvent_1");
+  }
+
+  @Test
+  void testZeebeUserTask_CompleteWithError() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
+        .startProcessInstance(VariablesDTO.of("usertask", "1"))
+        .waitUntilUserTaskIsWaitingForResponse("UserTask_1")
+        .andCompleteUserTaskWithError("code", "message", VariablesDTO.of("usertask", "1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableWithValue("usertask", "1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("UserTask_1")
+        .hasTerminatedElementWithId("UserTask_1")
+        .hasNotPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_Error");
+  }
+
+  @Test
+  void testZeebeUserTask_CompleteWithEscalation() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
+        .startProcessInstance(VariablesDTO.of("usertask", "1"))
+        .waitUntilUserTaskIsWaitingForResponse("UserTask_1")
+        .andCompleteUserTaskWithEscalation("code2", "message", VariablesDTO.of("usertask", "1"))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasVariableWithValue("usertask", "1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("UserTask_1")
+        .hasTerminatedElementWithId("UserTask_1")
+        .hasNotPassedElementWithId("EndEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_Escalation");
   }
 }

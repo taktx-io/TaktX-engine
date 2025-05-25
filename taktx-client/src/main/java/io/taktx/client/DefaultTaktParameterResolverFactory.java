@@ -10,9 +10,9 @@ import java.util.Map;
 public class DefaultTaktParameterResolverFactory implements TaktParameterResolverFactory {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
-  private final ExternalTaskResponder externalTaskResponder;
+  private final ProcessInstanceResponder externalTaskResponder;
 
-  public DefaultTaktParameterResolverFactory(ExternalTaskResponder externalTaskResponder) {
+  public DefaultTaktParameterResolverFactory(ProcessInstanceResponder externalTaskResponder) {
     this.externalTaskResponder = externalTaskResponder;
   }
 

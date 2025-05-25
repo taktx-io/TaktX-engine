@@ -29,6 +29,7 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -40,6 +41,7 @@ import io.taktx.engine.pi.model.ReceivingMessageInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
@@ -70,6 +72,7 @@ public class Forwarder {
       ProcessInstanceDTO processInstanceDTO) {
     forwardInstanceUpdates(context, instanceResult);
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstanceDTO);
+    forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstanceDTO);
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
     forwardCancelSchedules(context, instanceResult);
@@ -151,7 +154,7 @@ public class Forwarder {
 
       ExternalTaskResponseResultDTO externalTaskResponseResult =
           new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.TIMEOUT, false, null, null, null, 0L);
+              ExternalTaskResponseType.TIMEOUT, false, null, null, 0L);
       ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
           new ExternalTaskResponseTriggerDTO(
               processInstance.getProcessInstanceKey(),
@@ -266,6 +269,23 @@ public class Forwarder {
     }
   }
 
+  private void forwardUserTaskTriggers(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessDefinitionKey definitionKey,
+      ProcessInstanceDTO processInstance) {
+    Queue<UserTaskInfo> userTasks = instanceResult.getUserTasks();
+    while (!userTasks.isEmpty()) {
+      UserTaskInfo userTask = userTasks.poll();
+      log.info("Forwarding user task {}", userTask);
+      UserTaskTriggerDTO userTaskTriggerDTO =
+          toUserTaskTrigger(userTask, processInstance.getProcessInstanceKey(), definitionKey);
+      context.forward(
+          new Record<>(
+              processInstance.getProcessInstanceKey(), userTaskTriggerDTO, clock.millis()));
+    }
+  }
+
   private void forwardExternalTaskRequests(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
@@ -276,7 +296,8 @@ public class Forwarder {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
       log.info("Forwarding external task request {}", externalTask);
       ExternalTaskTriggerDTO newExternalTaskTrigger =
-          toTrigger(externalTask, processInstance.getProcessInstanceKey(), definitionKey);
+          toExternalTaskTrigger(
+              externalTask, processInstance.getProcessInstanceKey(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
         log.info(
@@ -310,7 +331,7 @@ public class Forwarder {
     }
   }
 
-  private ExternalTaskTriggerDTO toTrigger(
+  private ExternalTaskTriggerDTO toExternalTaskTrigger(
       ExternalTaskInfo externalTaskInfo,
       UUID processInstanceKey,
       ProcessDefinitionKey processDefinitionKey) {
@@ -320,5 +341,20 @@ public class Forwarder {
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
         externalTaskInfo.variables().scopeToDTO());
+  }
+
+  private UserTaskTriggerDTO toUserTaskTrigger(
+      UserTaskInfo userTaskInfo,
+      UUID processInstanceKey,
+      ProcessDefinitionKey processDefinitionKey) {
+    return new UserTaskTriggerDTO(
+        processInstanceKey,
+        processDefinitionKey,
+        userTaskInfo.instance().getFlowNode().getId(),
+        pathExtractor.getInstancePath(userTaskInfo.instance()),
+        userTaskInfo.assignmentDefinition(),
+        userTaskInfo.taskSchedule(),
+        userTaskInfo.priorityDefinition(),
+        userTaskInfo.variables().scopeToDTO());
   }
 }

@@ -19,6 +19,7 @@ import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.UserTaskInfo;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.UUID;
@@ -32,6 +33,7 @@ public class InstanceResult {
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
   private final Queue<UUID> newTerminateCommands = new ArrayDeque<>();
+  private final Queue<UserTaskInfo> userTasks = new ArrayDeque<>();
   private final Queue<ContinueFlowElementTriggerDTO> continuations = new ArrayDeque<>();
   private final Queue<NewCorrelationSubscriptionMessageEventInfo>
       newCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
@@ -44,6 +46,10 @@ public class InstanceResult {
 
   public static InstanceResult empty() {
     return new InstanceResult();
+  }
+
+  public void addUserTask(UserTaskInfo userTask) {
+    userTasks.add(userTask);
   }
 
   public void addInstanceUpdate(InstanceUpdate instanceUpdate) {

@@ -16,13 +16,12 @@ import lombok.Getter;
 @Getter
 public class EscalationEventSignal extends EventSignal {
 
-  private final String message;
   private final String code;
+  private final String message;
 
-  public EscalationEventSignal(
-      FlowNodeInstance<?> fLowNodeInstance, String name, String code, String message) {
-    super(fLowNodeInstance, name);
-    this.message = message;
+  public EscalationEventSignal(FlowNodeInstance<?> fLowNodeInstance, String code, String message) {
+    super(fLowNodeInstance);
     this.code = code;
+    this.message = message;
   }
 }

@@ -13,14 +13,14 @@ import org.junit.jupiter.api.Test;
 
 class ExternalTaskInstanceResponderParameterResolverTest {
 
-  private ExternalTaskResponder mockExternalTaskResponder;
+  private ProcessInstanceResponder mockExternalTaskResponder;
   private ExternalTaskInstanceResponderParameterResolver resolver;
   private ExternalTaskInstanceResponder mockResponder;
   private ExternalTaskTriggerDTO mockTriggerDTO;
 
   @BeforeEach
   void setUp() {
-    mockExternalTaskResponder = mock(ExternalTaskResponder.class);
+    mockExternalTaskResponder = mock(ProcessInstanceResponder.class);
     resolver = new ExternalTaskInstanceResponderParameterResolver(mockExternalTaskResponder);
 
     mockResponder = mock(ExternalTaskInstanceResponder.class);

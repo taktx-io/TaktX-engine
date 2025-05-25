@@ -77,7 +77,6 @@ public class TopicMonitor {
       Map<String, String> topicsToScan =
           currentTopicMetas.keySet().stream()
               .collect(Collectors.toMap(taktConfiguration::getPrefixed, name -> name));
-      log.info("Scanning topics {}", topicsToScan.keySet());
       try {
         // Get a map of futures for each topic
         Map<String, KafkaFuture<TopicDescription>> topicFutures =
@@ -94,8 +93,6 @@ public class TopicMonitor {
           // Try to get the topic description
           TopicDescription topicDescription = entry.getValue().get();
 
-          log.info(
-              "Topic {} has {} partitions", prefixedName, topicDescription.partitions().size());
           // Topic exists, process it
           existingTopicNames.add(originalName);
 

@@ -6,6 +6,6 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 public class TaskSchedule {
-    private String dueDate;
-    private String followUpDate;
+  private String dueDate;
+  private String followUpDate;
 }

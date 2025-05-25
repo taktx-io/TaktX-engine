@@ -1,8 +1,10 @@
 package io.taktx.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class ExternalTaskInstanceResponderTest {
-  private KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> mockProducer;
+  private KafkaProducer<UUID, ContinueFlowElementTriggerDTO> mockProducer;
   private ExternalTaskInstanceResponder responder;
   private UUID processInstanceKey;
   private List<Long> elementInstanceIdPath;
@@ -45,18 +47,19 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess();
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
     assertSuccessResult(resultDTO);
   }
 
@@ -71,18 +74,17 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess(testDto);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    assertRecordBasics(externalTaskResponseTriggerRecord);
+    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
-
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
     assertSuccessResult(resultDTO);
   }
 
@@ -98,18 +100,19 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess(variables);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    assertRecordBasics(externalTaskResponseTriggerRecord);
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
+        assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    assertTriggerBasics(externalTaskResponseTriggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
     assertSuccessResult(resultDTO);
   }
 
@@ -117,27 +120,27 @@ class ExternalTaskInstanceResponderTest {
   @Test
   void respondEscalation() {
     // Given
-    String name = "escalation-name";
     String message = "escalation-message";
     String code = "ESC-001";
 
     // When
-    responder.respondEscalation(name, message, code);
+    responder.respondEscalation(code, message);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    assertRecordBasics(externalTaskResponseTriggerRecord);
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
+        assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    assertTriggerBasics(externalTaskResponseTriggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
-    assertEscalationResult(resultDTO, name, message, code);
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
+    assertEscalationResult(resultDTO, code, message);
   }
 
   @SuppressWarnings("unchecked")
@@ -146,26 +149,26 @@ class ExternalTaskInstanceResponderTest {
     // Given
     boolean allowRetry = true;
     String code = "ERR-001";
-    String name = "error-name";
     String message = "error-message";
 
     // When
-    responder.respondError(allowRetry, code, name, message);
+    responder.respondError(allowRetry, code, message);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    assertRecordBasics(externalTaskResponseTriggerRecord);
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
+        assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    assertTriggerBasics(externalTaskResponseTriggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
-    assertErrorResult(resultDTO, allowRetry, name, message, code);
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
+    assertErrorResult(resultDTO, allowRetry, code, message);
   }
 
   @SuppressWarnings("unchecked")
@@ -174,27 +177,27 @@ class ExternalTaskInstanceResponderTest {
     // Given
     boolean allowRetry = false;
     String code = "ERR-002";
-    String name = "error-name-2";
     String message = "error-message-2";
     VariablesDTO variables = VariablesDTO.of("errorKey", "errorValue");
 
     // When
-    responder.respondError(allowRetry, code, name, message, variables);
+    responder.respondError(allowRetry, code, message, variables);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    assertRecordBasics(externalTaskResponseTriggerRecord);
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
+        assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    assertTriggerBasics(externalTaskResponseTriggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
-    assertErrorResult(resultDTO, allowRetry, name, message, code);
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
+    assertErrorResult(resultDTO, allowRetry, code, message);
   }
 
   @SuppressWarnings("unchecked")
@@ -207,82 +210,72 @@ class ExternalTaskInstanceResponderTest {
     responder.respondPromise(duration);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ExternalTaskResponseTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ExternalTaskResponseTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
-    assertTriggerBasics(triggerDTO);
+    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
-    ExternalTaskResponseResultDTO resultDTO = triggerDTO.getExternalTaskResponseResult();
+    ExternalTaskResponseResultDTO resultDTO =
+        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
     assertPromiseResult(resultDTO, duration);
   }
 
   // Helper assertion methods
-  private void assertRecordBasics(
-      ProducerRecord<UUID, ExternalTaskResponseTriggerDTO> externalTaskResponseTriggerRecord) {
-    org.assertj.core.api.Assertions.assertThat(externalTaskResponseTriggerRecord.topic())
-        .isEqualTo(topicName);
-    org.assertj.core.api.Assertions.assertThat(externalTaskResponseTriggerRecord.key())
-        .isEqualTo(processInstanceKey);
+  private ExternalTaskResponseTriggerDTO assertRecordBasics(
+      ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord) {
+    assertThat(externalTaskResponseTriggerRecord.topic()).isEqualTo(topicName);
+    assertThat(externalTaskResponseTriggerRecord.key()).isEqualTo(processInstanceKey);
+    assertThat(externalTaskResponseTriggerRecord.value())
+        .isInstanceOf(ExternalTaskResponseTriggerDTO.class);
+    return (ExternalTaskResponseTriggerDTO) externalTaskResponseTriggerRecord.value();
   }
 
-  private void assertTriggerBasics(ExternalTaskResponseTriggerDTO triggerDTO) {
-    org.assertj.core.api.Assertions.assertThat(triggerDTO.getProcessInstanceKey())
-        .isEqualTo(processInstanceKey);
-    org.assertj.core.api.Assertions.assertThat(triggerDTO.getElementInstanceIdPath())
-        .isEqualTo(elementInstanceIdPath);
+  private ExternalTaskResponseTriggerDTO assertTriggerBasics(
+      ContinueFlowElementTriggerDTO triggerDTO) {
+    assertThat(triggerDTO.getProcessInstanceKey()).isEqualTo(processInstanceKey);
+    assertThat(triggerDTO.getElementInstanceIdPath()).isEqualTo(elementInstanceIdPath);
+    assertThat(triggerDTO).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
+    return (ExternalTaskResponseTriggerDTO) triggerDTO;
   }
 
   private void assertSuccessResult(ExternalTaskResponseResultDTO resultDTO) {
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getResponseType())
-        .isEqualTo(ExternalTaskResponseType.SUCCESS);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getAllowRetry()).isTrue();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getName()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getMessage()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getCode()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getTimeout()).isZero();
+    assertThat(resultDTO.getResponseType()).isEqualTo(ExternalTaskResponseType.SUCCESS);
+    assertThat(resultDTO.getAllowRetry()).isTrue();
+    assertThat(resultDTO.getMessage()).isNull();
+    assertThat(resultDTO.getCode()).isNull();
+    assertThat(resultDTO.getTimeout()).isZero();
   }
 
   private void assertEscalationResult(
-      ExternalTaskResponseResultDTO resultDTO, String name, String message, String code) {
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getResponseType())
-        .isEqualTo(ExternalTaskResponseType.ESCALATION);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getAllowRetry()).isTrue();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getName()).isEqualTo(name);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getMessage()).isEqualTo(message);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getCode()).isEqualTo(code);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getTimeout()).isZero();
+      ExternalTaskResponseResultDTO resultDTO, String code, String message) {
+    assertThat(resultDTO.getResponseType()).isEqualTo(ExternalTaskResponseType.ESCALATION);
+    assertThat(resultDTO.getAllowRetry()).isTrue();
+    assertThat(resultDTO.getMessage()).isEqualTo(message);
+    assertThat(resultDTO.getCode()).isEqualTo(code);
+    assertThat(resultDTO.getTimeout()).isZero();
   }
 
   private void assertErrorResult(
-      ExternalTaskResponseResultDTO resultDTO,
-      boolean allowRetry,
-      String name,
-      String message,
-      String code) {
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getResponseType())
-        .isEqualTo(ExternalTaskResponseType.ERROR);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getAllowRetry()).isEqualTo(allowRetry);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getName()).isEqualTo(name);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getMessage()).isEqualTo(message);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getCode()).isEqualTo(code);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getTimeout()).isZero();
+      ExternalTaskResponseResultDTO resultDTO, boolean allowRetry, String code, String message) {
+    assertThat(resultDTO.getResponseType()).isEqualTo(ExternalTaskResponseType.ERROR);
+    assertThat(resultDTO.getAllowRetry()).isEqualTo(allowRetry);
+    assertThat(resultDTO.getMessage()).isEqualTo(message);
+    assertThat(resultDTO.getCode()).isEqualTo(code);
+    assertThat(resultDTO.getTimeout()).isZero();
   }
 
   private void assertPromiseResult(ExternalTaskResponseResultDTO resultDTO, Duration duration) {
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getResponseType())
-        .isEqualTo(ExternalTaskResponseType.PROMISE);
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getAllowRetry()).isTrue();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getName()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getMessage()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getCode()).isNull();
-    org.assertj.core.api.Assertions.assertThat(resultDTO.getTimeout())
-        .isEqualTo(duration.toMillis());
+    assertThat(resultDTO.getResponseType()).isEqualTo(ExternalTaskResponseType.PROMISE);
+    assertThat(resultDTO.getAllowRetry()).isTrue();
+    assertThat(resultDTO.getMessage()).isNull();
+    assertThat(resultDTO.getCode()).isNull();
+    assertThat(resultDTO.getTimeout()).isEqualTo(duration.toMillis());
   }
 
   @Data

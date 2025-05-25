@@ -25,7 +25,7 @@ class VariablesTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithSuccess(VariablesDTO.of("var2", "value2"))
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasVariableWithValue("StartEvent_Output_1", "outputValue1")

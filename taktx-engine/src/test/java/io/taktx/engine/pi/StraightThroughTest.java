@@ -24,7 +24,7 @@ class StraightThroughTest {
         .deployProcessDefinitionAndWait("/bpmn/straight-through.bpmn", "external-task")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ExternalTask_1")
-        .andRespondWithSuccess(VariablesDTO.empty())
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
         .isTerminated()

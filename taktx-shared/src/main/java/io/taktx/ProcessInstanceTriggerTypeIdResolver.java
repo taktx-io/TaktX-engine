@@ -21,6 +21,7 @@ import io.taktx.dto.ExternalTaskTriggerTimeoutDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
 
 public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
 
@@ -32,6 +33,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
       case StartFlowElementTriggerDTO ignored -> "S";
       case TerminateTriggerDTO ignored -> "T";
       case ExternalTaskResponseTriggerDTO ignored -> "R";
+      case UserTaskResponseTriggerDTO ignored -> "U";
       case ContinueFlowElementTriggerDTO ignored -> "C";
       case StartCommandDTO ignored -> "A";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
@@ -56,6 +58,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
       case "S" -> context.constructType(StartFlowElementTriggerDTO.class);
       case "T" -> context.constructType(TerminateTriggerDTO.class);
       case "R" -> context.constructType(ExternalTaskResponseTriggerDTO.class);
+      case "U" -> context.constructType(UserTaskResponseTriggerDTO.class);
       case "C" -> context.constructType(ContinueFlowElementTriggerDTO.class);
       case "A" -> context.constructType(StartCommandDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);

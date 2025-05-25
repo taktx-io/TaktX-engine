@@ -20,11 +20,11 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
   private final TaktParameterResolverFactory parameterResolverFactory;
-  private final ExternalTaskResponder externalTaskResponder;
+  private final ProcessInstanceResponder externalTaskResponder;
 
   public AnnotationScanningExternalTaskTriggerConsumer(
       TaktParameterResolverFactory parameterResolverFactory,
-      ExternalTaskResponder externalTaskResponder) {
+      ProcessInstanceResponder externalTaskResponder) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.externalTaskResponder = externalTaskResponder;
 
@@ -86,7 +86,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", "Error", e.getMessage());
+            .respondError(false, "ERROR", e.getMessage());
       }
     } else {
       // Worker has to respond itself by Responder or TaktClient. Result is ignored
@@ -95,7 +95,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", "Error", e.getMessage());
+            .respondError(false, "ERROR", e.getMessage());
       }
     }
   }

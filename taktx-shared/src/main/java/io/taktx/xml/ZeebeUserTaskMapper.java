@@ -33,32 +33,35 @@ public class ZeebeUserTaskMapper implements UserTaskMapper {
     PriorityDefinitionDTO priorityDefinitionDTO = null;
 
     AssignmentDefinitionDTO assignmentDefinitionDTO = null;
-    Optional<AssignmentDefinition> assignmentDefinition = ExtensionElementHelper.extractExtensionElement(
-        userTask.getExtensionElements(), AssignmentDefinition.class);
+    Optional<AssignmentDefinition> assignmentDefinition =
+        ExtensionElementHelper.extractExtensionElement(
+            userTask.getExtensionElements(), AssignmentDefinition.class);
     if (assignmentDefinition.isPresent()) {
-      assignmentDefinitionDTO = new AssignmentDefinitionDTO(
-          assignmentDefinition.get().getAssignee(),
-          assignmentDefinition.get().getCandidateGroups(),
-          assignmentDefinition.get().getCandidateUsers());
+      assignmentDefinitionDTO =
+          new AssignmentDefinitionDTO(
+              assignmentDefinition.get().getAssignee(),
+              assignmentDefinition.get().getCandidateGroups(),
+              assignmentDefinition.get().getCandidateUsers());
     }
 
-    Optional<TaskSchedule> taskSchedule = ExtensionElementHelper.extractExtensionElement(
-        userTask.getExtensionElements(), TaskSchedule.class);
+    Optional<TaskSchedule> taskSchedule =
+        ExtensionElementHelper.extractExtensionElement(
+            userTask.getExtensionElements(), TaskSchedule.class);
     if (taskSchedule.isPresent()) {
-      taskScheduleDTO = new TaskScheduleDTO(
-          taskSchedule.get().getDueDate(),
-          taskSchedule.get().getFollowUpDate());
+      taskScheduleDTO =
+          new TaskScheduleDTO(
+              taskSchedule.get().getDueDate(), taskSchedule.get().getFollowUpDate());
     }
 
-    Optional<PriorityDefinition> priorityDefinition = ExtensionElementHelper.extractExtensionElement(
-        userTask.getExtensionElements(), PriorityDefinition.class);
+    Optional<PriorityDefinition> priorityDefinition =
+        ExtensionElementHelper.extractExtensionElement(
+            userTask.getExtensionElements(), PriorityDefinition.class);
     if (priorityDefinition.isPresent()) {
-      priorityDefinitionDTO = new PriorityDefinitionDTO(
-          priorityDefinition.get().getPriority());
+      priorityDefinitionDTO = new PriorityDefinitionDTO(priorityDefinition.get().getPriority());
     }
 
     UserTaskTypeEnum userTaskTypeEnum;
-    if (userTaskElement.isPresent()){
+    if (userTaskElement.isPresent()) {
       // Zeebe user task
       userTaskTypeEnum = UserTaskTypeEnum.ZEEBE;
     } else {

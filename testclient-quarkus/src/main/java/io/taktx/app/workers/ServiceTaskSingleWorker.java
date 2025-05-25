@@ -27,7 +27,7 @@ public class ServiceTaskSingleWorker {
             Thread.sleep(50);
           } catch (InterruptedException e) {
             externalTaskInstanceResponder.respondError(
-                false, "Error while sleeping", "SLEEP_ERROR", "SLEEP_ERROR");
+                false, "Error while sleeping", "SLEEP_ERROR");
             Thread.currentThread().interrupt();
           }
 

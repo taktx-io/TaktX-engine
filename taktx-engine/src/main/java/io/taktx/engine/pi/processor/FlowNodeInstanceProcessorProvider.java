@@ -10,7 +10,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.quarkus.security.User;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BaseElement;

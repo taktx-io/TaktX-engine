@@ -15,5 +15,5 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PriorityDefinitionDTO {
-    private String priority;
+  private String priority;
 }

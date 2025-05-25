@@ -15,11 +15,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.ExternalTaskResponseResultDTO;
-import io.taktx.dto.ExternalTaskResponseTriggerDTO;
-import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.UserTaskResponseResultDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
+import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,14 +27,14 @@ import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-public class ExternalTaskInstanceResponder {
+public class UserTaskInstanceResponder {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceKey;
   private final List<Long> elementInstanceIdPath;
 
-  public ExternalTaskInstanceResponder(
+  public UserTaskInstanceResponder(
       KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter,
       String topicName,
       UUID processInstanceKey,
@@ -61,13 +60,13 @@ public class ExternalTaskInstanceResponder {
   }
 
   public void respondSuccess(Map<String, JsonNode> variablesMap) {
-    ExternalTaskResponseResultDTO externalTaskResponseResult =
-        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L);
-    ExternalTaskResponseTriggerDTO processInstanceTrigger =
-        new ExternalTaskResponseTriggerDTO(
+    UserTaskResponseResultDTO userTaskResponseResult =
+        new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
+    UserTaskResponseTriggerDTO processInstanceTrigger =
+        new UserTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
-            externalTaskResponseResult,
+            userTaskResponseResult,
             new VariablesDTO(variablesMap));
     responseEmitter.send(
         new ProducerRecord<>(
@@ -79,47 +78,31 @@ public class ExternalTaskInstanceResponder {
   }
 
   public void respondEscalation(String code, String message, VariablesDTO variables) {
-    ExternalTaskResponseTriggerDTO processInstanceTrigger =
-        new ExternalTaskResponseTriggerDTO(
+    UserTaskResponseTriggerDTO processInstanceTrigger =
+        new UserTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.ESCALATION, true, code, message, 0L),
+            new UserTaskResponseResultDTO(UserTaskResponseType.ESCALATION, code, message),
             variables);
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondError(
-      boolean allowRetry, String code, String message, VariablesDTO variables) {
+  public void respondError(String code, String message, VariablesDTO variables) {
 
-    ExternalTaskResponseTriggerDTO processInstanceTrigger =
-        new ExternalTaskResponseTriggerDTO(
+    UserTaskResponseTriggerDTO processInstanceTrigger =
+        new UserTaskResponseTriggerDTO(
             processInstanceKey,
             elementInstanceIdPath,
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.ERROR, allowRetry, code, message, 0L),
+            new UserTaskResponseResultDTO(UserTaskResponseType.ERROR, code, message),
             variables);
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondError(boolean allowRetry, String code, String message) {
-    respondError(allowRetry, code, message, VariablesDTO.empty());
-  }
-
-  public void respondPromise(Duration duration) {
-    ExternalTaskResponseTriggerDTO processInstanceTrigger =
-        new ExternalTaskResponseTriggerDTO(
-            processInstanceKey,
-            elementInstanceIdPath,
-            new ExternalTaskResponseResultDTO(
-                ExternalTaskResponseType.PROMISE, true, null, null, duration.toMillis()),
-            VariablesDTO.empty());
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
+  public void respondError(String code, String message) {
+    respondError(code, message, VariablesDTO.empty());
   }
 }

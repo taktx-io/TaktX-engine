@@ -1,5 +1,6 @@
 package io.taktx.client.topicmanagement;
 
+import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.client.serdes.ExternalTaskMetaSerializer;
 import io.taktx.client.serdes.TopicMetaJsonDeserializer;
@@ -78,10 +79,11 @@ public class TopicMatcher {
     running = false;
   }
 
-  public void requestTopicState(String topicName, int partitions) {
+  public void requestTopicState(String topicName, int partitions, CleanupPolicy cleanupPolicy) {
     TopicMetaDTO topicMetaDTO = new TopicMetaDTO();
     topicMetaDTO.setTopicName(topicName);
     topicMetaDTO.setNrPartitions(partitions);
+    topicMetaDTO.setCleanupPolicy(cleanupPolicy);
     producer.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(Topics.TOPIC_META_TOPIC.getTopicName()),
@@ -92,7 +94,10 @@ public class TopicMatcher {
   public void registerInitialFixedTopics() {
     for (Topics topic : Topics.initialFixedTopics()) {
       TopicMetaDTO topicMeta =
-          new TopicMetaDTO(topic.getTopicName(), taktPropertiesHelper.getDefaultPartitions());
+          new TopicMetaDTO(
+              topic.getTopicName(),
+              taktPropertiesHelper.getDefaultPartitions(),
+              topic.getCleanupPolicy());
       kafkaTopicManager
           .ensureTopicMatches(topicMeta)
           .thenAccept(v -> log.info("Fixed topic {} registered and created", topic.getTopicName()))

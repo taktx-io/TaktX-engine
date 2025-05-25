@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AssignmentDefinitionDTO {
-    private String assignee;
-    private String candidateGroups;
-    private String candidateUsers;
+  private String assignee;
+  private String candidateGroups;
+  private String candidateUsers;
 }

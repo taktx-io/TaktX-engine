@@ -25,11 +25,8 @@ class EscalationsTest {
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation(
-            "Escalation_02db004",
-            "interrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -52,11 +49,8 @@ class EscalationsTest {
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation(
-            "Escalation_02db004",
-            "non-matching",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "non-matching", "escalation message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -77,7 +71,7 @@ class EscalationsTest {
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation(null, null, null, VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(null, null, VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -98,17 +92,11 @@ class EscalationsTest {
         .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondWithEscalation(
-            "Escalation_16vkrj5",
-            "noninterrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation(
-            "Escalation_16vkrj5",
-            "noninterrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
-        .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -129,11 +117,8 @@ class EscalationsTest {
             "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithEscalation(
-            "Escalation_02db004",
-            "interrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -154,21 +139,12 @@ class EscalationsTest {
             "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithEscalation(
-            "Escalation_16vkrj5",
-            "noninterrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation(
-            "Escalation_16vkrj5",
-            "noninterrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
-        .andRespondWithEscalation(
-            "Escalation_02db004",
-            "interrupting",
-            "escalation message",
-            VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithEscalation(
+            "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -189,7 +165,7 @@ class EscalationsTest {
             "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondWithSuccess(VariablesDTO.of("var1", "value1"))
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")

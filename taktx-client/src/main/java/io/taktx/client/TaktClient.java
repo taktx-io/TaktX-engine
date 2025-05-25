@@ -1,5 +1,6 @@
 package io.taktx.client;
 
+import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.TaktDeployment;
 import io.taktx.client.topicmanagement.TopicMatcher;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -7,6 +8,7 @@ import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
@@ -28,7 +30,7 @@ public class TaktClient {
 
   @Getter private final ProcessDefinitionConsumer processDefinitionConsumer;
   @Getter private final TaktParameterResolverFactory parameterResolverFactory;
-  @Getter private final ExternalTaskResponder externalTaskResponder;
+  @Getter private final ProcessInstanceResponder processInstanceResponder;
 
   private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
   private final ProcessDefinitionDeployer processDefinitionDeployer;
@@ -36,11 +38,12 @@ public class TaktClient {
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final MessageEventSender messageEventSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
+  private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
   private final TopicMatcher topicMatcher;
 
   private TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,
-      ExternalTaskResponder externalTaskResponder,
+      ProcessInstanceResponder processInstanceResponder,
       TaktParameterResolverFactory parameterResolverFactory) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
@@ -49,9 +52,11 @@ public class TaktClient {
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
     this.processInstanceUpdateConsumer =
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
-    this.externalTaskResponder = externalTaskResponder;
+    this.processInstanceResponder = processInstanceResponder;
     this.externalTaskTriggerTopicConsumer =
         new ExternalTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
+    this.userTaskTriggerTopicConsumer =
+        new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
     this.topicMatcher = new TopicMatcher(taktPropertiesHelper, executor);
   }
 
@@ -88,8 +93,8 @@ public class TaktClient {
     topicMatcher.start();
   }
 
-  public void requestTopicState(String topicName, int partitions) {
-    this.topicMatcher.requestTopicState(topicName, partitions);
+  public void requestTopicState(String topicName, int partitions, CleanupPolicy cleanupPolicy) {
+    this.topicMatcher.requestTopicState(topicName, partitions, cleanupPolicy);
   }
 
   /**
@@ -148,7 +153,12 @@ public class TaktClient {
   /** Responds to an external task trigger. */
   public ExternalTaskInstanceResponder respondToExternalTask(
       ExternalTaskTriggerDTO externalTaskTriggerDTO) {
-    return externalTaskResponder.responderForExternalTaskTrigger(externalTaskTriggerDTO);
+    return processInstanceResponder.responderForExternalTaskTrigger(externalTaskTriggerDTO);
+  }
+
+  /** Completes a user task. */
+  public UserTaskInstanceResponder completeUserTask(UserTaskTriggerDTO userTaskTriggerDTO) {
+    return processInstanceResponder.responderForUserTaskTrigger(userTaskTriggerDTO);
   }
 
   /** Terminates a process instance. */
@@ -167,6 +177,10 @@ public class TaktClient {
       ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
     this.externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(
         externalTaskTriggerConsumer);
+  }
+
+  public void registerUserTaskConsumer(UserTaskTriggerConsumer userTaskTriggerConsumer) {
+    this.userTaskTriggerTopicConsumer.subscribeToUserTaskTriggerTopics(userTaskTriggerConsumer);
   }
 
   /**
@@ -198,7 +212,8 @@ public class TaktClient {
       TaktPropertiesHelper taktPropertiesHelper =
           new TaktPropertiesHelper(tenant, namespace, kafkaProperties);
 
-      ExternalTaskResponder externalTaskResponder = new ExternalTaskResponder(taktPropertiesHelper);
+      ProcessInstanceResponder externalTaskResponder =
+          new ProcessInstanceResponder(taktPropertiesHelper);
 
       TaktParameterResolverFactory parameterResolverFactory =
           new DefaultTaktParameterResolverFactory(externalTaskResponder);

@@ -15,11 +15,11 @@ import org.junit.jupiter.api.Test;
 class DefaultTaktParameterResolverFactoryTest {
 
   private DefaultTaktParameterResolverFactory factory;
-  private ExternalTaskResponder externalTaskResponder;
+  private ProcessInstanceResponder externalTaskResponder;
 
   @BeforeEach
   void setUp() {
-    externalTaskResponder = mock(ExternalTaskResponder.class);
+    externalTaskResponder = mock(ProcessInstanceResponder.class);
     factory = new DefaultTaktParameterResolverFactory(externalTaskResponder);
   }
 

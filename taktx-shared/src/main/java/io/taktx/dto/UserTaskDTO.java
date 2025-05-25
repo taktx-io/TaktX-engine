@@ -29,13 +29,7 @@ public class UserTaskDTO extends TaskDTO {
       AssignmentDefinitionDTO assignmentDefinitionDTO,
       TaskScheduleDTO taskScheduleDTO,
       PriorityDefinitionDTO priorityDefinitionDTO) {
-    super(
-        id,
-        parentId,
-        incoming,
-        outgoing,
-        loopCharacteristics,
-        ioMapping);
+    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.headers = headers;
     this.userTaskType = userTaskType;
     this.assignmentDefinition = assignmentDefinitionDTO;

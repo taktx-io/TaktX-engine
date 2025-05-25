@@ -33,6 +33,7 @@ import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
@@ -108,6 +109,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
   public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class);
+  public static final ObjectMapperSerde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(UserTaskTriggerDTO.class);
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
@@ -316,6 +319,15 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
+        .branch(
+            (key, value) -> value instanceof UserTaskTriggerDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((UUID) key, (UserTaskTriggerDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.USER_TASK_TRIGGER_TOPIC.getTopicName()),
+                            Produced.with(PROCESS_INSTANCE_KEY_SERDE, USER_TASK_TRIGGER_SERDE))))
         .branch(
             (key, value) -> value instanceof MessageEventDTO,
             Branched.withConsumer(

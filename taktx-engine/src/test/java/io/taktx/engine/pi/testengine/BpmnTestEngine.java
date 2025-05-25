@@ -1,8 +1,10 @@
 package io.taktx.engine.pi.testengine;
 
+import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.TaktClient;
+import io.taktx.client.UserTaskTriggerConsumer;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.Constants;
@@ -26,6 +28,7 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.SubProcessDTO;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.generic.MutableClock;
 import io.taktx.engine.generic.TopologyProducer;
@@ -68,6 +71,8 @@ public class BpmnTestEngine {
   private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTriggerDTO>>
       externalTaskTriggerQueueMap = new ConcurrentHashMap<>();
+  private final Map<UUID, ConcurrentLinkedQueue<UserTaskTriggerDTO>> userTaskTriggerQueueMap =
+      new ConcurrentHashMap<>();
   private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new ConcurrentHashMap<>();
   private final Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceMap =
       new ConcurrentHashMap<>();
@@ -77,6 +82,7 @@ public class BpmnTestEngine {
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceKey;
   private ExternalTaskTriggerDTO activeExternalTaskTrigger;
+  private UserTaskTriggerDTO activeUserTaskTrigger;
   private ParsedDefinitionsDTO definitionsBeingDeployed;
   private final Clock originalClock;
   private final MutableClock mutableClock;
@@ -125,8 +131,10 @@ public class BpmnTestEngine {
             .build();
     taktClient.registerInitialFixedTopics();
     taktClient.startTopicMatcher();
-    Topics.managedFixedTopics().forEach(t -> taktClient.requestTopicState(t.getTopicName(), 5));
+    Topics.managedFixedTopics()
+        .forEach(t -> taktClient.requestTopicState(t.getTopicName(), 3, t.getCleanupPolicy()));
     taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
+    taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);
     taktClient.start();
 
     processInstanceTriggerConsumer =
@@ -183,6 +191,21 @@ public class BpmnTestEngine {
             + System.identityHashCode(externalTaskTriggerQueueMap));
   }
 
+  public void consumeUserTaskTrigger(UserTaskTriggerDTO userTaskTrigger) {
+
+    LOG.info("Received user task trigger: " + userTaskTrigger);
+
+    ConcurrentLinkedQueue<UserTaskTriggerDTO> externalTaskTriggers =
+        userTaskTriggerQueueMap.computeIfAbsent(
+            userTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
+    externalTaskTriggers.add(userTaskTrigger);
+    LOG.info(
+        "User task triggers: "
+            + userTaskTriggerQueueMap
+            + " "
+            + System.identityHashCode(userTaskTriggerQueueMap));
+  }
+
   public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info("Received process instance update: " + processInstanceKey + " " + instanceUpdate);
@@ -217,6 +240,18 @@ public class BpmnTestEngine {
     }
   }
 
+  public UserTaskTriggerDTO pollUserTask() {
+    ConcurrentLinkedQueue<UserTaskTriggerDTO> externalTaskTriggers =
+        userTaskTriggerQueueMap.get(activeProcessInstanceKey);
+    log.info("polled user task queue {} {}", activeProcessInstanceKey, externalTaskTriggers);
+    if (externalTaskTriggers == null) {
+      return null;
+    }
+    UserTaskTriggerDTO poll = externalTaskTriggers.poll();
+    log.info("polled user task queue {} {}", externalTaskTriggers, poll);
+    return poll;
+  }
+
   public ExternalTaskTriggerDTO pollExternalTask() {
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
         externalTaskTriggerQueueMap.get(activeProcessInstanceKey);
@@ -233,7 +268,7 @@ public class BpmnTestEngine {
       throws IOException {
     LOG.info("Deploying process definition: " + filename);
     registerTopics(externalTaskIds);
-    subscribeToTopics(externalTaskIds);
+    subscribeToExternalTaskTopics(externalTaskIds);
     definitionsBeingDeployed =
         taktClient.deployProcessDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
 
@@ -297,7 +332,17 @@ public class BpmnTestEngine {
     return this;
   }
 
-  private void subscribeToTopics(String[] externalTaskIds) {
+  public void subscribeToUserTaskTopic() {
+    taktClient.registerUserTaskConsumer(
+        new UserTaskTriggerConsumer() {
+          @Override
+          public void accept(UserTaskTriggerDTO value) {
+            BpmnTestEngine.this.consumeUserTaskTrigger(value);
+          }
+        });
+  }
+
+  private void subscribeToExternalTaskTopics(String[] externalTaskIds) {
     if (externalTaskIds.length > 0) {
       taktClient.registerExternalTaskConsumer(
           new ExternalTaskTriggerConsumer() {
@@ -317,7 +362,7 @@ public class BpmnTestEngine {
   private void registerTopics(String... externalTaskIds) {
     for (String externalTaskId : externalTaskIds) {
       taktClient.requestTopicState(
-          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 5);
+          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 5, CleanupPolicy.COMPACT);
     }
   }
 
@@ -344,8 +389,30 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(String elementId) {
     return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
   }
+
   public BpmnTestEngine waitUntilUserTaskIsWaitingForResponse(String elementId) {
-    return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
+    return waitUntilUserTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilUserTaskIsWaitingForResponse(String elementId, Duration duration) {
+    log.info(
+        "waitUntilUserTaskIsWaitingForResponse {} {} {}",
+        activeProcessInstanceKey,
+        externalTaskTriggerQueueMap,
+        System.identityHashCode(externalTaskTriggerQueueMap));
+    activeUserTaskTrigger =
+        Awaitility.await()
+            .atMost(duration)
+            .until(
+                this::pollUserTask,
+                userTaskTrigger ->
+                    userTaskTrigger != null
+                        && userTaskTrigger.getProcessInstanceKey().equals(activeProcessInstanceKey)
+                        && getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId)
+                            .stream()
+                            .anyMatch(FlowNodeInstanceDTO::isWaiting));
+
+    return this;
   }
 
   public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
@@ -422,33 +489,50 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine andRespondWithSuccess(VariablesDTO variables) {
+  public BpmnTestEngine andRespondToExternalTaskWithSuccess(VariablesDTO variables) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
         .respondSuccess(variables.getVariables());
     return this;
   }
 
-  public BpmnTestEngine andRespondWithPromise(String newTimeout) {
+  public BpmnTestEngine andCompleteUserTaskWithSuccess(VariablesDTO variables) {
+    taktClient.completeUserTask(activeUserTaskTrigger).respondSuccess(variables.getVariables());
+    return this;
+  }
+
+  public BpmnTestEngine andCompleteUserTaskWithError(
+      String code, String message, VariablesDTO variables) {
+    taktClient.completeUserTask(activeUserTaskTrigger).respondError(code, message, variables);
+    return this;
+  }
+
+  public BpmnTestEngine andCompleteUserTaskWithEscalation(
+      String code, String message, VariablesDTO variables) {
+    taktClient.completeUserTask(activeUserTaskTrigger).respondEscalation(code, message, variables);
+    return this;
+  }
+
+  public BpmnTestEngine andRespondToExternalTaskWithPromise(String newTimeout) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
         .respondPromise(Duration.parse(newTimeout));
     return this;
   }
 
-  public BpmnTestEngine andRespondWithFailure(
-      boolean allowRetry, String name, String code, String message, VariablesDTO variables) {
+  public BpmnTestEngine andRespondToExternalTaskWithFailure(
+      boolean allowRetry, String code, String message, VariablesDTO variables) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
-        .respondError(allowRetry, code, name, message, variables);
+        .respondError(allowRetry, code, message, variables);
     return this;
   }
 
-  public BpmnTestEngine andRespondWithEscalation(
-      String name, String code, String message, VariablesDTO variables) {
+  public BpmnTestEngine andRespondToExternalTaskWithEscalation(
+      String code, String message, VariablesDTO variables) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
-        .respondEscalation(name, message, code, variables);
+        .respondEscalation(code, message, variables);
     return this;
   }
 
@@ -477,6 +561,10 @@ public class BpmnTestEngine {
 
   public ProcessInstanceAssert assertThatProcess() {
     return new ProcessInstanceAssert(activeProcessInstanceKey, this);
+  }
+
+  public UserTaskAssert assertThatUserTask() {
+    return new UserTaskAssert(activeUserTaskTrigger, this);
   }
 
   public BpmnTestEngine parentProcess() {

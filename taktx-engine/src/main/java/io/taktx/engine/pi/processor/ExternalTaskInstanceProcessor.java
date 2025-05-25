@@ -97,7 +97,6 @@ public abstract class ExternalTaskInstanceProcessor<
                 false,
                 "Topic not created",
                 "Topic not created",
-                "Topic not created",
                 -1L));
         return;
       }
@@ -242,10 +241,7 @@ public abstract class ExternalTaskInstanceProcessor<
           ExternalTaskResponseResultDTO responseResult) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
-            externalTaskInstance,
-            responseResult.getName(),
-            responseResult.getCode(),
-            responseResult.getMessage()));
+            externalTaskInstance, responseResult.getCode(), responseResult.getMessage()));
   }
 
   private void handleNoRetriesAllowed(
@@ -265,10 +261,7 @@ public abstract class ExternalTaskInstanceProcessor<
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
     directInstanceResult.addEvent(
         new EscalationEventSignal(
-            externalTaskInstance,
-            responseResult.getName(),
-            responseResult.getCode(),
-            responseResult.getMessage()));
+            externalTaskInstance, responseResult.getCode(), responseResult.getMessage()));
   }
 
   private void handlePromise(

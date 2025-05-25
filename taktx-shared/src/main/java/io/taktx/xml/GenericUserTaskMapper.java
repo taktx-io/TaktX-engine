@@ -26,7 +26,6 @@ public class GenericUserTaskMapper implements UserTaskMapper {
         UserTaskTypeEnum.JOBWORKER,
         null,
         null,
-        null
-        );
+        null);
   }
 }

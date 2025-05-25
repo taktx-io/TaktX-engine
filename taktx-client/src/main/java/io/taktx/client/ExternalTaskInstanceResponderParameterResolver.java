@@ -4,10 +4,10 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 
 public class ExternalTaskInstanceResponderParameterResolver implements TaktParameterResolver {
 
-  private final ExternalTaskResponder externalTaskResponder;
+  private final ProcessInstanceResponder externalTaskResponder;
 
   public ExternalTaskInstanceResponderParameterResolver(
-      ExternalTaskResponder externalTaskResponder) {
+      ProcessInstanceResponder externalTaskResponder) {
     this.externalTaskResponder = externalTaskResponder;
   }
 

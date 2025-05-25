@@ -2,19 +2,20 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
-import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
-public class ExternalTaskResponder {
+public class ProcessInstanceResponder {
 
-  private final KafkaProducer<UUID, ExternalTaskResponseTriggerDTO> responseEmitter;
+  private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;
 
-  public ExternalTaskResponder(TaktPropertiesHelper taktPropertiesHelper) {
+  public ProcessInstanceResponder(TaktPropertiesHelper taktPropertiesHelper) {
     this.topicName =
         taktPropertiesHelper.getPrefixedTopicName(
             Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
@@ -31,5 +32,14 @@ public class ExternalTaskResponder {
         topicName,
         externalTaskTriggerDTO.getProcessInstanceKey(),
         externalTaskTriggerDTO.getElementInstanceIdPath());
+  }
+
+  public UserTaskInstanceResponder responderForUserTaskTrigger(
+      UserTaskTriggerDTO userTaskTriggerDTO) {
+    return new UserTaskInstanceResponder(
+        responseEmitter,
+        topicName,
+        userTaskTriggerDTO.getProcessInstanceKey(),
+        userTaskTriggerDTO.getElementInstanceIdPath());
   }
 }

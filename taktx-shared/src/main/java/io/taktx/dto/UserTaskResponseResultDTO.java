@@ -14,27 +14,16 @@ import lombok.ToString;
 @ToString
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ExternalTaskResponseResultDTO {
-  private ExternalTaskResponseType responseType;
+public class UserTaskResponseResultDTO {
+  private UserTaskResponseType responseType;
 
   private String code;
 
   private String message;
 
-  private Boolean allowRetry;
-
-  private long timeout;
-
-  public ExternalTaskResponseResultDTO(
-      ExternalTaskResponseType responseType,
-      Boolean allowRetry,
-      String code,
-      String message,
-      long timeout) {
+  public UserTaskResponseResultDTO(UserTaskResponseType responseType, String code, String message) {
     this.responseType = responseType;
     this.code = code;
     this.message = message;
-    this.allowRetry = allowRetry;
-    this.timeout = timeout;
   }
 }

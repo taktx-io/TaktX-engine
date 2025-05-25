@@ -29,6 +29,7 @@ import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
 import io.taktx.dto.SubProcessInstanceDTO;
 import io.taktx.dto.TaskInstanceDTO;
+import io.taktx.dto.UserTaskInstanceDTO;
 
 public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
 
@@ -50,6 +51,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case InclusiveGatewayInstanceDTO ignored -> "N";
       case ParallelGatewayInstanceDTO ignored -> "P";
       case ExclusiveGatewayInstanceDTO ignored -> "X";
+      case UserTaskInstanceDTO ignored -> "U";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -81,6 +83,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case "B" -> context.constructType(BoundaryEventInstanceDTO.class);
       case "N" -> context.constructType(InclusiveGatewayInstanceDTO.class);
       case "P" -> context.constructType(ParallelGatewayInstanceDTO.class);
+      case "U" -> context.constructType(UserTaskInstanceDTO.class);
       case "X" -> context.constructType(ExclusiveGatewayInstanceDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };

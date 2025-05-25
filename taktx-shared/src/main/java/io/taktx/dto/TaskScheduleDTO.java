@@ -15,6 +15,6 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TaskScheduleDTO {
-    private String dueDate;
-    private String followUpDate;
+  private String dueDate;
+  private String followUpDate;
 }
