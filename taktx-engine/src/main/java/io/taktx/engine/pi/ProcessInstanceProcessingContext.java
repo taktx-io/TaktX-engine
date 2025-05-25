@@ -14,6 +14,7 @@ import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.pi.model.ProcessInstance;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -29,6 +30,7 @@ public class ProcessInstanceProcessingContext {
   private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private final ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>>
       externalTaskMetaStore;
+  private final Map<String, TopicMetaDTO> topicStore;
   private final InstanceResult instanceResult;
   private final ProcessInstance processInstance;
   private final ProcessingStatistics processingStatistics;
@@ -37,11 +39,13 @@ public class ProcessInstanceProcessingContext {
   public ProcessInstanceProcessingContext(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore,
+      Map<String, TopicMetaDTO> topicStore,
       InstanceResult instanceResult,
       ProcessInstance processInstance,
       ProcessingStatistics processingStatistics) {
     this.flowNodeInstanceStore = flowNodeInstanceStore;
     this.externalTaskMetaStore = externalTaskMetaStore;
+    this.topicStore = topicStore;
     this.instanceResult = instanceResult;
     this.processInstance = processInstance;
     this.processingStatistics = processingStatistics;

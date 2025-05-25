@@ -30,6 +30,7 @@ import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.generic.TopicMonitor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
@@ -69,7 +70,7 @@ public class ProcessInstanceProcessor
   private final Clock clock;
   private final DtoMapper dtoMapper;
   private final ProcessingStatistics processingStatistics;
-
+  private final TopicMonitor topicMonitor;
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       definitionsStore;
   private ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore;
@@ -209,6 +210,7 @@ public class ProcessInstanceProcessor
         .instanceResult(instanceResult)
         .flowNodeInstanceStore(flowNodeInstanceStore)
         .externalTaskMetaStore(externalTaskMetaStore)
+        .topicStore(topicMonitor.getLatestTopicInfo())
         .build();
   }
 
@@ -339,6 +341,7 @@ public class ProcessInstanceProcessor
                 .processInstance(processInstance)
                 .processingStatistics(processingStatistics)
                 .instanceResult(instanceResult)
+                .topicStore(topicMonitor.getLatestTopicInfo())
                 .build();
         flowNodeInstancesProcessor.processTerminate(
             processInstanceProcessingContext,

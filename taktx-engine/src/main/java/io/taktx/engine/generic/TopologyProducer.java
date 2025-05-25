@@ -128,6 +128,7 @@ public class TopologyProducer {
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private final IoMappingProcessor ioMappingProcessor;
   private final ProcessingStatistics processingStatistics;
+  private final TopicMonitor topicMonitor;
 
   @Produces
   public Topology buildTopology() {
@@ -255,7 +256,8 @@ public class TopologyProducer {
                     flowNodeInstancesProcessor,
                     clock,
                     dtoMapper,
-                    processingStatistics),
+                    processingStatistics,
+                    topicMonitor),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

@@ -36,12 +36,11 @@ import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
+import java.util.Map;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @NoArgsConstructor
 @Setter
@@ -69,7 +68,7 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
-    if (!topicExists(processInstanceProcessingContext.getExternalTaskMetaStore(), externalTaskId)) {
+    if (!topicExists(processInstanceProcessingContext.getTopicStore(), externalTaskId)) {
       log.warn(
           "Topic for External task {} is not created, failing external task instance {}",
           externalTaskId,
@@ -97,11 +96,8 @@ public abstract class ExternalTaskInstanceProcessor<
     flownodeInstance.setAttempt(0);
   }
 
-  private boolean topicExists(
-      ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore,
-      String externalTaskId) {
-    return externalTaskMetaStore.get(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)
-        != null;
+  private boolean topicExists(Map<String, TopicMetaDTO> topicStore, String externalTaskId) {
+    return topicStore.get(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId) != null;
   }
 
   @Override

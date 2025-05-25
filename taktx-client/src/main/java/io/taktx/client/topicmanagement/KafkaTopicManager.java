@@ -5,7 +5,6 @@ import io.taktx.util.TaktPropertiesHelper;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -23,7 +22,7 @@ public class KafkaTopicManager {
     this.adminClient = AdminClient.create(kafkaProperties);
   }
 
-  public CompletableFuture<TopicMetaDTO> ensureTopicMAtches(TopicMetaDTO topicMetaDTO) {
+  public CompletableFuture<TopicMetaDTO> ensureTopicMatches(TopicMetaDTO topicMetaDTO) {
     CompletableFuture<TopicMetaDTO> future = new CompletableFuture<>();
 
     String topicName = taktPropertiesHelper.getPrefixedTopicName(topicMetaDTO.getTopicName());
@@ -87,7 +86,7 @@ public class KafkaTopicManager {
     return future;
   }
 
-  public CompletableFuture<TopicDescription> topicDescription(String topicName) {
+  private CompletableFuture<TopicDescription> topicDescription(String topicName) {
     CompletableFuture<TopicDescription> future = new CompletableFuture<>();
 
     adminClient
@@ -99,24 +98,6 @@ public class KafkaTopicManager {
                 future.complete(null);
               } else {
                 future.complete(topicDescription.values().iterator().next());
-              }
-            });
-
-    return future;
-  }
-
-  public CompletableFuture<Set<String>> listTopics() {
-    CompletableFuture<Set<String>> future = new CompletableFuture<>();
-
-    adminClient
-        .listTopics()
-        .names()
-        .whenComplete(
-            (names, ex) -> {
-              if (ex != null) {
-                future.completeExceptionally(ex);
-              } else {
-                future.complete(names);
               }
             });
 

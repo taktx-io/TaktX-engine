@@ -59,7 +59,7 @@ public class TopicMatcher {
                 topicMetaConsumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<String, TopicMetaDTO> metaRecord : records) {
               kafkaTopicManager
-                  .ensureTopicMAtches(metaRecord.value())
+                  .ensureTopicMatches(metaRecord.value())
                   .whenComplete(
                       (v, e) -> {
                         log.info("Topic {} updated", metaRecord.key());
@@ -94,7 +94,7 @@ public class TopicMatcher {
       TopicMetaDTO topicMeta =
           new TopicMetaDTO(topic.getTopicName(), taktPropertiesHelper.getDefaultPartitions());
       kafkaTopicManager
-          .ensureTopicMAtches(topicMeta)
+          .ensureTopicMatches(topicMeta)
           .thenAccept(v -> log.info("Fixed topic {} registered and created", topic.getTopicName()))
           .exceptionally(
               ex -> {
