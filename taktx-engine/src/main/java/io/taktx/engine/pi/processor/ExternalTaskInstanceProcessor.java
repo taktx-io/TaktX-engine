@@ -57,6 +57,10 @@ public abstract class ExternalTaskInstanceProcessor<
     super(feelExpressionHandler, ioMappingProcessor, processInstanceMapper, clock);
   }
 
+  private boolean topicExists(Map<String, TopicMetaDTO> topicStore, String externalTaskId) {
+    return topicStore.get(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId) != null;
+  }
+
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
@@ -68,25 +72,35 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
-    if (!topicExists(processInstanceProcessingContext.getTopicStore(), externalTaskId)) {
+    if (!topicExists(
+        processInstanceProcessingContext.getTopicStore().getLatestTopicInfo(), externalTaskId)) {
+      // Force rescan of topics, we do not do it always as it is an expensive operation
       log.warn(
-          "Topic for External task {} is not created, failing external task instance {}",
-          externalTaskId,
-          flownodeInstance);
-      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
-      handleErrorOrTimeout(
-          instanceResult,
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
-          flownodeInstance,
-          variables,
-          new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.ERROR,
-              false,
-              "Topic not created",
-              "Topic not created",
-              "Topic not created",
-              -1L));
-      return;
+          "Topic for External task {} is not created, force rescanning topics and check again",
+          externalTaskId);
+      processInstanceProcessingContext.getTopicStore().scanTopicsMeta();
+      // Now check again if the topic exists
+      if (!topicExists(
+          processInstanceProcessingContext.getTopicStore().getLatestTopicInfo(), externalTaskId)) {
+        log.warn(
+            "Topic for External task {} is really not created, failing external task instance {}",
+            externalTaskId,
+            flownodeInstance);
+        InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
+        handleErrorOrTimeout(
+            instanceResult,
+            flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+            flownodeInstance,
+            variables,
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.ERROR,
+                false,
+                "Topic not created",
+                "Topic not created",
+                "Topic not created",
+                -1L));
+        return;
+      }
     }
 
     retryDirectly(
@@ -94,10 +108,6 @@ public abstract class ExternalTaskInstanceProcessor<
         processInstanceProcessingContext.getInstanceResult());
     flownodeInstance.setState(ActtivityStateEnum.WAITING);
     flownodeInstance.setAttempt(0);
-  }
-
-  private boolean topicExists(Map<String, TopicMetaDTO> topicStore, String externalTaskId) {
-    return topicStore.get(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId) != null;
   }
 
   @Override

@@ -63,24 +63,9 @@ public class TopicMonitor {
   }
 
   @Scheduled(every = "5S", delay = 5, delayUnit = TimeUnit.SECONDS)
-  public void scanTopicsMeta() throws ExecutionException, InterruptedException {
+  public void scanTopicsMeta() {
     if (topicMetaStore == null && state == KafkaStreams.State.RUNNING) {
-      StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, TopicMetaDTO>>
-          storeQueryParameters =
-              StoreQueryParameters.fromNameAndType(
-                  taktConfiguration.getPrefixed(Topics.TOPIC_META_TOPIC.getTopicName()),
-                  QueryableStoreTypes.keyValueStore());
-      try {
-        topicMetaStore = kafkaStreams.store(storeQueryParameters);
-        if (topicMetaStore == null) {
-          log.error("Topic meta store is null");
-          return;
-        }
-      } catch (StreamsNotStartedException e) {
-        log.error("Failed to get topic meta store", e);
-        topicMetaStore = null;
-        return;
-      }
+      getTopicMetaStore();
     }
 
     if (topicMetaStore != null) {
@@ -92,6 +77,7 @@ public class TopicMonitor {
       Map<String, String> topicsToScan =
           currentTopicMetas.keySet().stream()
               .collect(Collectors.toMap(taktConfiguration::getPrefixed, name -> name));
+      log.info("Scanning topics {}", topicsToScan.keySet());
       try {
         // Get a map of futures for each topic
         Map<String, KafkaFuture<TopicDescription>> topicFutures =
@@ -105,35 +91,45 @@ public class TopicMonitor {
           String prefixedName = entry.getKey();
           String originalName = topicsToScan.get(prefixedName);
 
-          try {
-            // Try to get the topic description
-            TopicDescription topicDescription = entry.getValue().get();
+          // Try to get the topic description
+          TopicDescription topicDescription = entry.getValue().get();
 
-            // Topic exists, process it
-            existingTopicNames.add(originalName);
+          log.info(
+              "Topic {} has {} partitions", prefixedName, topicDescription.partitions().size());
+          // Topic exists, process it
+          existingTopicNames.add(originalName);
 
-            // Create or update the topic metadata
-            TopicMetaDTO topicMeta = currentTopicMetas.get(originalName);
-            if (topicMeta == null) {
-              topicMeta = new TopicMetaDTO();
-              topicMeta.setTopicName(originalName);
-            }
-
-            topicMeta.setNrPartitions(topicDescription.partitions().size());
-            topicInfo.put(originalName, topicMeta);
-
-          } catch (ExecutionException e) {
-            // Topic doesn't exist, log and continue
-            log.debug("Topic {} does not exist", prefixedName);
+          // Create or update the topic metadata
+          TopicMetaDTO topicMeta = currentTopicMetas.get(originalName);
+          if (topicMeta == null) {
+            topicMeta = new TopicMetaDTO();
+            topicMeta.setTopicName(originalName);
           }
+
+          topicMeta.setNrPartitions(topicDescription.partitions().size());
+          topicInfo.put(originalName, topicMeta);
         }
 
         // Remove entries for topics that no longer exist
         topicInfo.keySet().removeIf(name -> !existingTopicNames.contains(name));
 
-      } catch (InterruptedException e) {
+      } catch (ExecutionException | InterruptedException e) {
         log.error("Failed to get topic information", e);
+        Thread.currentThread().interrupt(); // Restore interrupted status
       }
+    }
+  }
+
+  private void getTopicMetaStore() {
+    StoreQueryParameters<? extends ReadOnlyKeyValueStore<String, TopicMetaDTO>>
+        storeQueryParameters =
+            StoreQueryParameters.fromNameAndType(
+                taktConfiguration.getPrefixed(Topics.TOPIC_META_TOPIC.getTopicName()),
+                QueryableStoreTypes.keyValueStore());
+    try {
+      topicMetaStore = kafkaStreams.store(storeQueryParameters);
+    } catch (StreamsNotStartedException e) {
+      log.error("Failed to get topic meta store", e);
     }
   }
 

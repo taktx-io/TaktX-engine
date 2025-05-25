@@ -210,7 +210,7 @@ public class ProcessInstanceProcessor
         .instanceResult(instanceResult)
         .flowNodeInstanceStore(flowNodeInstanceStore)
         .externalTaskMetaStore(externalTaskMetaStore)
-        .topicStore(topicMonitor.getLatestTopicInfo())
+        .topicStore(topicMonitor)
         .build();
   }
 
@@ -341,7 +341,7 @@ public class ProcessInstanceProcessor
                 .processInstance(processInstance)
                 .processingStatistics(processingStatistics)
                 .instanceResult(instanceResult)
-                .topicStore(topicMonitor.getLatestTopicInfo())
+                .topicStore(topicMonitor)
                 .build();
         flowNodeInstancesProcessor.processTerminate(
             processInstanceProcessingContext,

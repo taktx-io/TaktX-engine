@@ -64,6 +64,7 @@ public class KafkaTopicManager {
                       new TopicMetaDTO(topicName, topicDescription.partitions().size()));
                 }
               } else {
+                log.info("Topic {} does not exist, creating...", topicName);
                 NewTopic newTopic =
                     new NewTopic(
                         topicName,
