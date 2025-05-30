@@ -1,14 +1,16 @@
 package io.taktx.dto;
 
 import java.util.Set;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter
+@Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class StartEventDTO extends CatchEventDTO {
+
+  private boolean interrupting;
 
   public StartEventDTO(
       String id,
@@ -16,7 +18,9 @@ public class StartEventDTO extends CatchEventDTO {
       Set<String> incoming,
       Set<String> outgoing,
       Set<EventDefinitionDTO> eventDefinitions,
-      InputOutputMappingDTO ioMapping) {
+      InputOutputMappingDTO ioMapping,
+      boolean interrupting) {
     super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
+    this.interrupting = interrupting;
   }
 }

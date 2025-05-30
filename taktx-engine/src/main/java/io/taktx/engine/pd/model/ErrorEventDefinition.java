@@ -10,6 +10,7 @@
 
 package io.taktx.engine.pd.model;
 
+import io.taktx.engine.pi.model.ErrorEventSignal;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
@@ -20,4 +21,18 @@ public class ErrorEventDefinition extends EventDefinition {
   private String errorRef;
 
   @Setter private ErrorEvent referencedError;
+
+  public boolean handlesEvent(EventSignal event) {
+    if (event instanceof ErrorEventSignal errorEventSignal) {
+      return referencedError != null && referencedError.code().equals(errorEventSignal.getCode());
+    }
+    return false;
+  }
+
+  public boolean handlesEventCatchAll(EventSignal event) {
+    if (event instanceof ErrorEventSignal) {
+      return referencedError == null;
+    }
+    return false;
+  }
 }

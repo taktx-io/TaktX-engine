@@ -31,7 +31,8 @@ class DtoMapperTest {
             Set.of("incoming"),
             Set.of("outgoing"),
             Set.of(eventDefinition),
-            ioMapping);
+            ioMapping,
+            true);
     FlowElement map = dtoMapper.getFlowElement(startEventDTO);
 
     assertNotNull(map);
@@ -43,5 +44,6 @@ class DtoMapperTest {
     assertThat(startEvent2.getOutgoing()).containsExactly("outgoing");
     assertThat(startEvent2.getEventDefinitions().iterator().next().getId())
         .isEqualTo("eventDefinitionId");
+    assertThat(startEvent2.isInterrupting()).isTrue();
   }
 }

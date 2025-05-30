@@ -10,6 +10,7 @@
 
 package io.taktx.engine.pd.model;
 
+import io.taktx.engine.pi.model.EscalationEventSignal;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
@@ -20,4 +21,19 @@ public class EscalationEventDefinition extends EventDefinition {
   private String escalationRef;
 
   @Setter private EscalationEvent referencedEscalation;
+
+  public boolean handlesEvent(EventSignal event) {
+    if (event instanceof EscalationEventSignal escalationEventSignal) {
+      return referencedEscalation != null
+          && referencedEscalation.escalationCode().equals(escalationEventSignal.getCode());
+    }
+    return false;
+  }
+
+  public boolean handlesEventCatchAll(EventSignal event) {
+    if (event instanceof EscalationEventSignal) {
+      return referencedEscalation == null;
+    }
+    return false;
+  }
 }

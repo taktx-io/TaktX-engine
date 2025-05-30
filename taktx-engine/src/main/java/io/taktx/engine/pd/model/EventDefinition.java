@@ -15,4 +15,13 @@ import lombok.experimental.SuperBuilder;
 
 @Getter
 @SuperBuilder
-public class EventDefinition extends RootElement {}
+public class EventDefinition extends RootElement {
+
+  public boolean handlesEvent(EventSignal event) {
+    return false;
+  }
+
+  public boolean handlesEventCatchAll(EventSignal event) {
+    return false;
+  }
+}

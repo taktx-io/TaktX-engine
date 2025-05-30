@@ -144,7 +144,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           bpmnMapperFactory
               .createEventDefinitionMapper()
               .map(startEvent.getEventDefinition(), parentId),
-          ioMapping);
+          ioMapping,
+          startEvent.isIsInterrupting());
     } else if (tCatchEvent instanceof TBoundaryEvent boundaryEvent) {
       return new BoundaryEventDTO(
           boundaryEvent.getId(),

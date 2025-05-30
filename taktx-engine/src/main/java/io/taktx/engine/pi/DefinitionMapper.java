@@ -122,6 +122,9 @@ public class DefinitionMapper {
                   }
                 });
       }
+      if (flowElement instanceof WIthChildElements withChildElements) {
+        setEscalationReferences(withChildElements.getElements().getElements(), escalations);
+      }
     }
   }
 

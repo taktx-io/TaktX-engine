@@ -21,6 +21,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public class StartEvent extends CatchEvent {
+  private boolean interrupting;
 
   public StartEventInstance newInstance(
       FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {

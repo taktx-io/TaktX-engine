@@ -53,7 +53,7 @@ public class DirectInstanceResult {
     return newFlowNodeInstanceInfos.poll();
   }
 
-  public long pollTerminateInstance() {
+  public Long pollTerminateInstance() {
     return terminateInstances.poll();
   }
 
@@ -81,17 +81,5 @@ public class DirectInstanceResult {
 
   public void addEvent(EventSignal event) {
     events.add(event);
-  }
-
-  public boolean eventsEmpty() {
-    return events.isEmpty();
-  }
-
-  public boolean terminateInstancesIsEmpty() {
-    return terminateInstances.isEmpty();
-  }
-
-  public boolean newFlowNodeInstancesIsEmpty() {
-    return newFlowNodeInstanceInfos.isEmpty();
   }
 }

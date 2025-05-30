@@ -206,4 +206,18 @@ class BoundaryEventsTest {
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
   }
+
+  @Test
+  void test_EventSubProcess_ErrorTriggered() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .andRespondToExternalTaskWithFailure(
+            false, "errorCode", "error message", VariablesDTO.empty())
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasTerminatedElementWithId("ServiceTask_1");
+  }
 }

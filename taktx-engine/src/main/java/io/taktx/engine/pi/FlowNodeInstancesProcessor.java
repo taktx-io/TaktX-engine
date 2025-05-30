@@ -98,14 +98,6 @@ public class FlowNodeInstancesProcessor {
     continueNewInstances(
         processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariables);
 
-    DirectInstanceResult directInstanceResult =
-        flowNodeInstanceProcessingContext.getDirectInstanceResult();
-    EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
-    while (eventSignal != null) {
-      processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
-      eventSignal = directInstanceResult.pollBubbleUpEvent();
-    }
-
     flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
   }
 
@@ -166,5 +158,13 @@ public class FlowNodeInstancesProcessor {
 
     flowInstanceRunner.continueNewInstances(
         processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
+
+    DirectInstanceResult directInstanceResult =
+        flowNodeInstanceProcessingContext.getDirectInstanceResult();
+    EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
+    while (eventSignal != null) {
+      processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
+      eventSignal = directInstanceResult.pollBubbleUpEvent();
+    }
   }
 }
