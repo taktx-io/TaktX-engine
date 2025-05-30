@@ -138,19 +138,44 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  @Disabled
   void testScheduledStart_R5() throws IOException {
-
+    // All executed timers fall within the same time bucket
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/schedule_start_r5.bpmn")
-        .moveTimeForward(Duration.ofSeconds(3))
+        .moveTimeForward(Duration.ofMillis(2001))
         .waitForNewProcessInstance()
         .waitUntilCompleted()
-        .moveTimeForward(Duration.ofSeconds(2))
+        .moveTimeForward(Duration.ofMillis(2000))
         .waitForNewProcessInstance()
         .waitUntilCompleted()
-        .assertThatProcess()
-        .hasInstantiatedElementWithId("Task", 1);
+        .moveTimeForward(Duration.ofMillis(2000))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMillis(2000))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMillis(2000))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted();
+  }
+
+  @Test
+  void testScheduledStart_R60() throws IOException {
+    // The last timer falls into the next time bucket
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/schedule_start_r60.bpmn")
+        .moveTimeForward(Duration.ofMillis(20001))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMillis(20000))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMillis(20000))
+        .waitForNewProcessInstance(Duration.ofMillis(60000))
+        .waitUntilCompleted()
+        .moveTimeForward(Duration.ofMillis(20000))
+        .waitForNewProcessInstance()
+        .waitUntilCompleted();
   }
 
   @Test

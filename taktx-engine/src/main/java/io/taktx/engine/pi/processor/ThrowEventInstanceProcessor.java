@@ -10,11 +10,14 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.ErrorEventSignal;
+import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
@@ -44,6 +47,31 @@ public abstract class ThrowEventInstanceProcessor<
       I flowNodeInstance,
       String inputFlowId,
       VariableScope variables) {
+
+    flowNodeInstance
+        .getFlowNode()
+        .getErrorEventDefinition()
+        .ifPresent(
+            errorEventDefinition -> {
+              EventSignal errorEvent =
+                  new ErrorEventSignal(
+                      flowNodeInstance, errorEventDefinition.getReferencedError().code(), "");
+              flowNodeInstanceProcessingContext.getDirectInstanceResult().addEvent(errorEvent);
+            });
+
+    flowNodeInstance
+        .getFlowNode()
+        .getEscalationEventDefinition()
+        .ifPresent(
+            errorEventDefinition -> {
+              EventSignal errorEvent =
+                  new EscalationEventSignal(
+                      flowNodeInstance,
+                      errorEventDefinition.getReferencedEscalation().escalationCode(),
+                      "");
+              flowNodeInstanceProcessingContext.getDirectInstanceResult().addEvent(errorEvent);
+            });
+
     flowNodeInstance
         .getFlowNode()
         .getLinkventDefinition()
@@ -70,6 +98,7 @@ public abstract class ThrowEventInstanceProcessor<
                         .addNewFlowNodeInstance(processInstance, flowNodeInstanceInfo);
                   });
             });
+
     processStartSpecificThrowEventInstance(
         processInstanceProcessingContext,
         flowNodeInstanceProcessingContext,

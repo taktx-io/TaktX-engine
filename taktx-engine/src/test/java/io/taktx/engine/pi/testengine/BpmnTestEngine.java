@@ -440,10 +440,14 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitForNewProcessInstance() {
+    return waitForNewProcessInstance(DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitForNewProcessInstance(Duration duration) {
     UUID referenceProcessInstanceKey = latestInstantiatedProcessInstanceKey;
     activeProcessInstanceKey =
         Awaitility.await()
-            .atMost(DEFAULT_DURATION)
+            .atMost(duration)
             .until(
                 () -> latestInstantiatedProcessInstanceKey,
                 instance -> !Objects.equals(referenceProcessInstanceKey, instance));
@@ -597,7 +601,8 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine moveTimeForward(Duration duration) {
     mutableClock.advanceBy(duration);
-    log.info("Advanced the time by {} to {}", duration, Instant.now(mutableClock));
+    Instant now = Instant.now(mutableClock);
+    log.info("Advanced the time by {} to {} {}", duration, now, now.toEpochMilli());
     return this;
   }
 

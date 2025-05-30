@@ -12,7 +12,7 @@ package io.taktx.engine.pd;
 
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
-import io.taktx.dto.InstanceScheduleKeyDTO;
+import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.MessageDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageScheduleDTO;
@@ -29,7 +29,6 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.List;
-import java.util.UUID;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
@@ -196,32 +195,29 @@ public class ProcessDefinitionActivationProcessor {
         .getTimerEventDefinitions()
         .forEach(
             timerEventDefinition -> {
-              UUID processInstanceKey = UUID.randomUUID();
               MessageScheduleDTO schedule =
                   messageSchedulerFactory.schedule(
                       timerEventDefinition,
                       now,
-                      getStartCommand(
-                          processDefinitionKey.getProcessDefinitionId(),
-                          processInstanceKey,
-                          startEvent),
+                      getStartCommand(processDefinitionKey.getProcessDefinitionId(), startEvent),
                       new VariableScope(null, null, null, null));
               TimeBucket timeBucket =
                   TimeBucket.ofMillis(
                       schedule.getNextExecutionTime(schedule.getInstantiationTime())
                           - schedule.getInstantiationTime());
               if (timeBucket != null) {
-                InstanceScheduleKeyDTO scheduleKey =
-                    new InstanceScheduleKeyDTO(processInstanceKey, List.of(), timeBucket);
+                DefinitionScheduleKeyDTO scheduleKey =
+                    new DefinitionScheduleKeyDTO(
+                        processDefinitionKey, startEvent.getId(), timeBucket);
                 context.forward(new Record<>(scheduleKey, schedule, now));
               }
             });
   }
 
   private static SchedulableMessageDTO getStartCommand(
-      String processDefinitionId, UUID processInstanceKey, StartEventDTO startEvent) {
+      String processDefinitionId, StartEventDTO startEvent) {
     return new StartCommandDTO(
-        processInstanceKey,
+        null,
         startEvent.getParentId() != null ? List.of(startEvent.getParentId()) : null,
         null,
         new ProcessDefinitionKey(processDefinitionId),

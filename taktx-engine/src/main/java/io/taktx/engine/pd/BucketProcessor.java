@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.PunctuationType;
@@ -64,6 +65,7 @@ public class BucketProcessor {
 
           Iterator<Entry<TimedScheduleKey, MessageScheduleDTO>> iterator =
               upcomingSchedules.entrySet().iterator();
+          log.info("Checking schedules for time bucket {} at time {}", timeBucket.getName(), now);
           while (iterator.hasNext()) {
             Entry<TimedScheduleKey, MessageScheduleDTO> entry = iterator.next();
             TimedScheduleKey key = entry.getKey();
@@ -71,9 +73,12 @@ public class BucketProcessor {
             log.info("Checking schedule {} vs now {}", key, now);
             if (key.getTime() < now) {
               SchedulableMessageDTO message = schedule.getMessage();
+              UUID processInstanceKey = message.getProcessInstanceKey();
+              if (processInstanceKey == null) {
+                processInstanceKey = UUID.randomUUID(); // Assign a new UUID if not set
+              }
               log.info("Processing schedule {} message {}", key, message);
-              context.forward(
-                  new Record<>(message.getProcessInstanceKey(), message, key.getTime()));
+              context.forward(new Record<>(processInstanceKey, message, key.getTime()));
               iterator.remove();
             } else {
               break;
@@ -87,19 +92,29 @@ public class BucketProcessor {
             }
 
             long previousWindowEnd = currentWindowEnd;
-            currentWindowEnd = now + timeBucket.getPeriodMs();
+            currentWindowEnd = currentWindowEnd + timeBucket.getPeriodMs();
             fillNextUpcomingSchedules(previousWindowEnd, currentWindowEnd);
           }
         });
   }
 
   private void fillNextUpcomingSchedules(long timestamp, long until) {
+    log.info(
+        "Filling next schedules for time bucket {} between {} and {}",
+        timeBucket.getName(),
+        timestamp,
+        until);
     try (KeyValueIterator<ScheduleKeyDTO, MessageScheduleDTO> all = store.all()) {
       all.forEachRemaining(
           entry -> {
             MessageScheduleDTO schedule = entry.value;
             Long nextExecutionTime = schedule.getNextExecutionTime(timestamp);
             while (nextExecutionTime != null && nextExecutionTime < until) {
+              log.info(
+                  "Adding schedule {} for key {} at time {}",
+                  schedule,
+                  entry.key,
+                  nextExecutionTime);
               upcomingSchedules.put(new TimedScheduleKey(nextExecutionTime, entry.key), schedule);
               nextExecutionTime = schedule.getNextExecutionTime(nextExecutionTime);
             }
@@ -111,7 +126,7 @@ public class BucketProcessor {
     if (schedule != null) {
       store.put(scheduleKey, schedule);
       Long nextExecutionTime = schedule.getNextExecutionTime(now);
-      while (nextExecutionTime != null && nextExecutionTime < currentWindowEnd) {
+      while (nextExecutionTime != null && nextExecutionTime <= currentWindowEnd) {
         TimedScheduleKey key = new TimedScheduleKey(nextExecutionTime, scheduleKey);
         var existing = upcomingSchedules.put(key, schedule);
         if (existing != null) {

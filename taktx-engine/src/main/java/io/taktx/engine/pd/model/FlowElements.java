@@ -41,6 +41,14 @@ public class FlowElements {
     elements.put(flowElement.getId(), flowElement);
   }
 
+  public List<SubProcess> getEventTriggeredSubProcesses() {
+    return elements.values().stream()
+        .filter(SubProcess.class::isInstance)
+        .map(SubProcess.class::cast)
+        .filter(SubProcess::isTriggeredByEvent)
+        .toList();
+  }
+
   public List<StartEvent> getStartEvents() {
     return elements.values().stream()
         .filter(StartEvent.class::isInstance)

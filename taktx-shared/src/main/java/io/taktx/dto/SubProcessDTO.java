@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 public class SubProcessDTO extends ActivityDTO {
 
   private FlowElementsDTO elements;
+  private boolean triggeredByEvent;
 
   public SubProcessDTO(
       String id,
@@ -19,9 +20,11 @@ public class SubProcessDTO extends ActivityDTO {
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
       FlowElementsDTO elements,
-      InputOutputMappingDTO ioMapping) {
+      InputOutputMappingDTO ioMapping,
+      boolean triggeredByEvent) {
 
     super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
     this.elements = elements;
+    this.triggeredByEvent = triggeredByEvent;
   }
 }

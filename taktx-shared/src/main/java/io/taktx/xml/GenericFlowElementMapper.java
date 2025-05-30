@@ -241,7 +241,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
                 mapQNameList(subProcess.getOutgoing()),
                 loopCharacteristics,
                 new FlowElementsDTO(elements),
-                ioMapping);
+                ioMapping,
+                subProcess.isTriggeredByEvent());
       }
       case TCallActivity callActivity ->
           activityFlowElement =

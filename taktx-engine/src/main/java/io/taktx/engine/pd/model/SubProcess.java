@@ -22,6 +22,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class SubProcess extends Activity implements WIthChildElements {
   private FlowElements elements;
+  private boolean triggeredByEvent;
 
   @Override
   public ActivityInstance<?> newActivityInstance(

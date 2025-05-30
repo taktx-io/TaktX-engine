@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
+import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.InstanceScheduleKeyDTO;
 
 public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
@@ -21,6 +22,7 @@ public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
+      case DefinitionScheduleKeyDTO ignored -> "D";
       case InstanceScheduleKeyDTO ignored -> "I";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
@@ -39,6 +41,7 @@ public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
+      case "D" -> context.constructType(DefinitionScheduleKeyDTO.class);
       case "I" -> context.constructType(InstanceScheduleKeyDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };

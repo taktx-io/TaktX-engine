@@ -15,4 +15,6 @@ import java.util.UUID;
 @JsonTypeIdResolver(ProcessInstanceTriggerTypeIdResolver.class)
 public interface SchedulableMessageDTO {
   UUID getProcessInstanceKey();
+
+  void setProcessInstanceKey(UUID processInstanceKey);
 }
