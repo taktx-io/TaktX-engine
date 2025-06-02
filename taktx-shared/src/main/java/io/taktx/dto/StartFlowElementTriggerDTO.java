@@ -23,16 +23,16 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public abstract class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
+public class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
 
-  private String inputFlowId;
+  private List<Long> parentElementInstanceIdPath;
 
-  protected StartFlowElementTriggerDTO(
+  public StartFlowElementTriggerDTO(
       UUID processInstanceKey,
+      List<Long> parentElementInstanceIdPath,
       List<String> elementIdPath,
-      String inputFlowId,
       VariablesDTO variables) {
     super(processInstanceKey, elementIdPath, variables);
-    this.inputFlowId = inputFlowId;
+    this.parentElementInstanceIdPath = parentElementInstanceIdPath;
   }
 }

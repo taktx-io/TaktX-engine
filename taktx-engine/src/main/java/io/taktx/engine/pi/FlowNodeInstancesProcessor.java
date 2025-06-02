@@ -12,28 +12,39 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.StartEvent;
+import io.taktx.engine.pd.model.SubProcess;
+import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.ScheduledStartInfo;
+import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class FlowNodeInstancesProcessor {
 
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
+  private final PathExtractor pathExtractor;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
-      FlowInstanceRunner flowInstanceRunner) {
+      FlowInstanceRunner flowInstanceRunner,
+      PathExtractor pathExtractor) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
+    this.pathExtractor = pathExtractor;
   }
 
   public void processStart(
@@ -44,9 +55,46 @@ public class FlowNodeInstancesProcessor {
       VariableScope parentVariableScope) {
 
     FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
+
     flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
 
-    FlowNode flowNode = flowNodeInstanceProcessingContext.getFlowElements().getStartNode(elementId);
+    // first check if we need to start timer triggers for event subprocesses with corresponding
+    // timer start events
+    FlowElements flowElements = flowNodeInstanceProcessingContext.getFlowElements();
+    List<SubProcess> eventTriggeredSubProcesses = flowElements.getEventTriggeredSubProcesses();
+    for (SubProcess eventTriggeredSubProcess : eventTriggeredSubProcesses) {
+      List<StartEvent> startEvents = eventTriggeredSubProcess.getElements().getStartEvents();
+      for (StartEvent startEvent : startEvents) {
+        Optional<TimerEventDefinition> optTimerEventDefinition =
+            startEvent.getTimerEventDefinition();
+        if (optTimerEventDefinition.isPresent()) {
+          TimerEventDefinition timerEventDefinition = optTimerEventDefinition.get();
+          ScheduledStartInfo scheduledStartInfo =
+              new ScheduledStartInfo(
+                  flowNodeInstances.getParentFlowNodeInstance(),
+                  eventTriggeredSubProcess,
+                  timerEventDefinition);
+          processInstanceProcessingContext
+              .getInstanceResult()
+              .addScheduledStart(scheduledStartInfo);
+        }
+      }
+    }
+
+    FlowNode flowNode = flowElements.getStartNode(elementId);
+
+    // Check if we happen to be in an event subprocess that is triggered by an event and terminate
+    // all awaiting instances
+    // if the start event is interrupting
+    if (parentElementInstance instanceof SubProcessInstance subProcessInstance) {
+      if (subProcessInstance.getFlowNode().isTriggeredByEvent()) {
+        if (flowNode instanceof StartEvent startEvent) {
+          if (startEvent.isInterrupting()) {
+            flowNodeInstanceProcessingContext.getDirectInstanceResult().setTerminateParent();
+          }
+        }
+      }
+    }
     FlowNodeInstance<?> flowNodeInstance =
         flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
 
@@ -64,6 +112,40 @@ public class FlowNodeInstancesProcessor {
         processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
 
     flowNodeInstances.determineImplicitCompletedState();
+  }
+
+  public void processStartFlowElement(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      StartFlowElementTriggerDTO trigger,
+      VariableScope parentVariableScope) {
+
+    FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
+    Optional<FlowNode> optFlowNode =
+        flowNodeInstanceProcessingContext
+            .getFlowElements()
+            .getFlowNode(trigger.getElementIdPath().getLast());
+    if (optFlowNode.isPresent()) {
+      FlowNode flowNode = optFlowNode.get();
+      FlowNodeInstance<?> parentElementInstance = null;
+      FlowNodeInstance<?> flowNodeInstance =
+          flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
+
+      FlowNodeInstanceProcessor<?, ?, ?> processor =
+          flowNodeInstanceProcessorProvider.getProcessor(flowNode);
+
+      processor.processStart(
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
+          flowNodeInstance,
+          null,
+          parentVariableScope);
+
+      continueNewInstances(
+          processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
+
+      flowNodeInstances.determineImplicitCompletedState();
+    }
   }
 
   public void processContinue(
@@ -161,6 +243,22 @@ public class FlowNodeInstancesProcessor {
 
     DirectInstanceResult directInstanceResult =
         flowNodeInstanceProcessingContext.getDirectInstanceResult();
+
+    if (directInstanceResult.getTerminateParent()) {
+      List<Long> instancePath =
+          pathExtractor.getInstancePath(
+              flowNodeInstanceProcessingContext.getFlowNodeInstances().getParentFlowNodeInstance());
+      if (!instancePath.isEmpty()) {
+        instancePath.remove(instancePath.size() - 1);
+      }
+      processInstanceProcessingContext
+          .getInstanceResult()
+          .addTerminateCommand(
+              new TerminateTriggerDTO(
+                  processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+                  instancePath));
+    }
+
     EventSignal eventSignal = directInstanceResult.pollBubbleUpEvent();
     while (eventSignal != null) {
       processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);

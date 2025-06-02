@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1dfis0t" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.30.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1dfis0t" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.30.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
   <bpmn:process id="Process_0h71d2n" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_1qo3nes</bpmn:outgoing>
@@ -16,7 +16,7 @@
       <bpmn:incoming>Flow_1qo3nes</bpmn:incoming>
       <bpmn:outgoing>Flow_1t7dbk1</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:subProcess id="Event_Subprocess" name="timer event subprocess" triggeredByEvent="true">
+    <bpmn:subProcess id="Timer_Event_Subprocess" name="timer event subprocess" triggeredByEvent="true">
       <bpmn:task id="Activity_0g36m0j">
         <bpmn:incoming>Flow_02xg8h0</bpmn:incoming>
         <bpmn:outgoing>Flow_1x24obm</bpmn:outgoing>
@@ -27,7 +27,9 @@
       <bpmn:sequenceFlow id="Flow_1x24obm" sourceRef="Activity_0g36m0j" targetRef="Event_0w329ku" />
       <bpmn:startEvent id="Event_0tcrh3f">
         <bpmn:outgoing>Flow_02xg8h0</bpmn:outgoing>
-        <bpmn:timerEventDefinition id="TimerEventDefinition_1oxmzhs" />
+        <bpmn:timerEventDefinition id="TimerEventDefinition_1oxmzhs">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
       </bpmn:startEvent>
       <bpmn:sequenceFlow id="Flow_02xg8h0" sourceRef="Event_0tcrh3f" targetRef="Activity_0g36m0j" />
     </bpmn:subProcess>
@@ -228,7 +230,7 @@
         <di:waypoint x="1180" y="300" />
         <di:waypoint x="1232" y="300" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Activity_13z7bdk_di" bpmnElement="Event_Subprocess" isExpanded="true">
+      <bpmndi:BPMNShape id="Activity_13z7bdk_di" bpmnElement="Timer_Event_Subprocess" isExpanded="true">
         <dc:Bounds x="530" y="300" width="400" height="160" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>

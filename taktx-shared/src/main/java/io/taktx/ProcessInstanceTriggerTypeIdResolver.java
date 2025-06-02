@@ -17,7 +17,6 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
-import io.taktx.dto.ExternalTaskTriggerTimeoutDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
@@ -28,7 +27,6 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case ExternalTaskTriggerTimeoutDTO ignored -> "X";
       case ExternalTaskTriggerDTO ignored -> "E";
       case StartFlowElementTriggerDTO ignored -> "S";
       case TerminateTriggerDTO ignored -> "T";
@@ -53,7 +51,6 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "X" -> context.constructType(ExternalTaskTriggerTimeoutDTO.class);
       case "E" -> context.constructType(ExternalTaskTriggerDTO.class);
       case "S" -> context.constructType(StartFlowElementTriggerDTO.class);
       case "T" -> context.constructType(TerminateTriggerDTO.class);

@@ -53,10 +53,28 @@ public class StoredFlowNodeInstancesWrapper {
     return instance;
   }
 
+  public Map<Long, FlowNodeInstance<?>> getAlParentlInstances() {
+    FlowNodeInstanceKeyDTO keyMin =
+        generatedKeyPath(
+            flowNodeInstances.getParentFlowNodeInstance().getParentInstance(), Constants.MIN_LONG);
+    FlowNodeInstanceKeyDTO keyMax =
+        generatedKeyPath(
+            flowNodeInstances.getParentFlowNodeInstance().getParentInstance(), Constants.MAX_LONG);
+
+    retrieveRangeFromStore(keyMin, keyMax);
+    return flowNodeInstances.getInstances();
+  }
+
   public Map<Long, FlowNodeInstance<?>> getAllInstances() {
     FlowNodeInstanceKeyDTO keyMin = generatedKeyPath(flowNodeInstances, Constants.MIN_LONG);
     FlowNodeInstanceKeyDTO keyMax = generatedKeyPath(flowNodeInstances, Constants.MAX_LONG);
 
+    retrieveRangeFromStore(keyMin, keyMax);
+    return flowNodeInstances.getInstances();
+  }
+
+  private void retrieveRangeFromStore(
+      FlowNodeInstanceKeyDTO keyMin, FlowNodeInstanceKeyDTO keyMax) {
     try (KeyValueIterator<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> range =
         flowNodeInstanceStore.range(keyMin, keyMax)) {
       range.forEachRemaining(
@@ -69,7 +87,6 @@ public class StoredFlowNodeInstancesWrapper {
                 .putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
           });
     }
-    return flowNodeInstances.getInstances();
   }
 
   private FlowNodeInstance<?> getFlowNodeInstanceFromStore(FlowNodeInstanceKeyDTO keyPath) {
@@ -97,6 +114,16 @@ public class StoredFlowNodeInstancesWrapper {
     while (parentFlowNodeInstance != null) {
       keyPath.addFirst(parentFlowNodeInstance.getElementInstanceId());
       parentFlowNodeInstance = parentFlowNodeInstance.getParentInstance();
+    }
+    return new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
+  }
+
+  private FlowNodeInstanceKeyDTO generatedKeyPath(FlowNodeInstance<?> flowNodeInstance, Long id) {
+    LinkedList<Long> keyPath = new LinkedList<>();
+    keyPath.addFirst(id);
+    while (flowNodeInstance != null) {
+      keyPath.addFirst(flowNodeInstance.getElementInstanceId());
+      flowNodeInstance = flowNodeInstance.getParentInstance();
     }
     return new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
   }

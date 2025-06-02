@@ -22,11 +22,22 @@ public class DirectInstanceResult {
 
   private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
+  private boolean terminateParent;
   private final Queue<Long> terminateInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
-  private DirectInstanceResult() {}
+  private DirectInstanceResult() {
+    terminateParent = false;
+  }
+
+  public void setTerminateParent() {
+    this.terminateParent = true;
+  }
+
+  public boolean getTerminateParent() {
+    return terminateParent;
+  }
 
   public static DirectInstanceResult empty() {
     return new DirectInstanceResult();

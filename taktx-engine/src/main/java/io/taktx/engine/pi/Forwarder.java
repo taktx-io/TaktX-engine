@@ -26,6 +26,7 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
@@ -40,6 +41,7 @@ import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ReceivingMessageInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
+import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
@@ -76,6 +78,7 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
     forwardCancelSchedules(context, instanceResult);
+    forwardScheduledStarts(context, instanceResult, processInstanceDTO);
     forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
     forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
     forwardTerminateCommands(context, instanceResult);
@@ -101,6 +104,36 @@ public class Forwarder {
     while (!cancelSchedules.isEmpty()) {
       ScheduleKeyDTO scheduledKey = cancelSchedules.poll();
       context.forward(new Record<>(scheduledKey, null, clock.millis()));
+    }
+  }
+
+  private void forwardScheduledStarts(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstanceDTO processInstance) {
+    Queue<ScheduledStartInfo> scheduledStartInfos = instanceResult.getScheduledStartInfos();
+    while (!scheduledStartInfos.isEmpty()) {
+      ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
+      StartFlowElementTriggerDTO startFlowElementTrigger =
+          new StartFlowElementTriggerDTO(
+              processInstance.getProcessInstanceKey(),
+              pathExtractor.getInstancePath(scheduledStartInfo.parentInstance()),
+              pathExtractor.getElementPath(scheduledStartInfo.flowNodeToStart()),
+              VariablesDTO.empty());
+
+      long now = clock.millis();
+
+      MessageScheduleDTO schedule =
+          messageSchedulerFactory.schedule(
+              dtoMapper.map(scheduledStartInfo.timerEventDefinition()),
+              now,
+              startFlowElementTrigger,
+              VariableScope.empty());
+
+      TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
+      InstanceScheduleKeyDTO scheduledKey =
+          new InstanceScheduleKeyDTO(processInstance.getProcessInstanceKey(), List.of(), bucket);
+      context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
 
@@ -226,11 +259,11 @@ public class Forwarder {
 
   private void forwardTerminateCommands(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
-    Queue<UUID> newTerminateCommands = instanceResult.getNewTerminateCommands();
+    Queue<TerminateTriggerDTO> newTerminateCommands = instanceResult.getNewTerminateCommands();
     while (!newTerminateCommands.isEmpty()) {
-      UUID processInstanceKey = newTerminateCommands.poll();
-      TerminateTriggerDTO terminateTrigger = new TerminateTriggerDTO(processInstanceKey, List.of());
-      context.forward(new Record<>(processInstanceKey, terminateTrigger, clock.millis()));
+      TerminateTriggerDTO terminateTrigger = newTerminateCommands.poll();
+      context.forward(
+          new Record<>(terminateTrigger.getProcessInstanceKey(), terminateTrigger, clock.millis()));
     }
   }
 

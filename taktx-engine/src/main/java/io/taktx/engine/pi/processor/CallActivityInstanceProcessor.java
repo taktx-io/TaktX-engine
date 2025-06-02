@@ -13,6 +13,7 @@ package io.taktx.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
@@ -26,6 +27,7 @@ import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.List;
 import java.util.UUID;
 import lombok.NoArgsConstructor;
 
@@ -102,6 +104,7 @@ public class CallActivityInstanceProcessor
       VariableScope processInstanceVariables) {
     processInstanceProcessingContext
         .getInstanceResult()
-        .addTerminateCommand(instance.getChildProcessInstanceId());
+        .addTerminateCommand(
+            new TerminateTriggerDTO(instance.getChildProcessInstanceId(), List.of()));
   }
 }

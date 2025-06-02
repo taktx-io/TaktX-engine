@@ -187,12 +187,6 @@ public class FlowInstanceRunner {
                     new FlowNodeInstanceInfo(eventSubProcessInstance, null);
                 directInstanceResult.addNewFlowNodeInstance(
                     processInstanceProcessingContext.getProcessInstance(), flowNodeInstanceInfo);
-
-                // Determine if the event is interrupting
-                if (startEvent.isInterrupting()) {
-                  directInstanceResult.addTerminateInstance(
-                      event.getCurrentInstance().getElementInstanceId());
-                }
                 eventHandled = true;
               }
             }
@@ -216,12 +210,6 @@ public class FlowInstanceRunner {
                       new FlowNodeInstanceInfo(eventSubProcessInstance, null);
                   directInstanceResult.addNewFlowNodeInstance(
                       processInstanceProcessingContext.getProcessInstance(), flowNodeInstanceInfo);
-
-                  // Determine if the event is interrupting
-                  if (startEvent.isInterrupting()) {
-                    directInstanceResult.addTerminateInstance(
-                        event.getCurrentInstance().getElementInstanceId());
-                  }
                   eventHandled = true;
                 }
               }

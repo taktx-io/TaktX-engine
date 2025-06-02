@@ -6,6 +6,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -91,5 +92,15 @@ class EventSubprocessTest {
         .hasPassedElementWithId("Activity_1jz01tr/Event_0utmfy5", 1)
         .hasPassedElementWithId("Activity_1jz01tr/Activity_0xpyuez", 1)
         .hasPassedElementWithId("Activity_1jz01tr/Event_1ffpqj3", 1);
+  }
+
+  @Test
+  void test_EventSubProcess_TimerTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .moveTimeForward(Duration.ofSeconds(11))
+        .waitUntilCompleted();
   }
 }

@@ -25,6 +25,7 @@ import io.taktx.dto.ProcessInstanceState;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariableKeyDTO;
@@ -108,6 +109,8 @@ public class ProcessInstanceProcessor
       switch (trigger) {
         case StartCommandDTO startCommand ->
             processStartCommandRecord(triggerRecord.key(), startCommand);
+        case StartFlowElementTriggerDTO starteFlowElementTrigger ->
+            handleStartFlowElement(starteFlowElementTrigger);
         case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 ->
             handleContinue(continueFlowElementTrigger2);
         case TerminateTriggerDTO terminateTrigger ->
@@ -250,6 +253,42 @@ public class ProcessInstanceProcessor
     return new InstanceUpdate(
         processInstance.getProcessInstanceKey(),
         new ProcessInstanceUpdateDTO(processInstanceDTO, variables, processTime));
+  }
+
+  public void handleStartFlowElement(StartFlowElementTriggerDTO trigger) {
+    InstanceResult instanceResult = InstanceResult.empty();
+    UUID processInstanceKey = trigger.getProcessInstanceKey();
+    ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceKey);
+    if (processInstanceDTO != null) {
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      VariableScope processInstanceVariables =
+          new VariableScope(variablesStore, processInstanceKey, null, null);
+      mergeVariablesInScope(
+          processInstanceVariables,
+          trigger.getParentElementInstanceIdPath(),
+          trigger.getVariables());
+      ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+      ProcessInstanceProcessingContext processInstanceProcessingContext =
+          createProcessInstanceProcessingContext(processInstance, instanceResult);
+
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
+          new FlowNodeInstanceProcessingContext(
+              processInstance.getFlowNodeInstances(), flowElements);
+
+      flowNodeInstancesProcessor.processStartFlowElement(
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
+          trigger,
+          processInstanceVariables);
+
+      processResultAndForward(
+          processInstanceProcessingContext,
+          processInstance.getProcessDefinitionKey(),
+          processInstance.getFlowNodeInstances(),
+          processInstanceVariables,
+          flowElements,
+          VariablesDTO.empty());
+    }
   }
 
   public void handleContinue(ContinueFlowElementTriggerDTO trigger) {

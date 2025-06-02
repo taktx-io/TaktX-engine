@@ -20,7 +20,6 @@ import lombok.Getter;
  */
 @Getter
 public class FlowNodeInstanceProcessingContext {
-
   private final FlowNodeInstances flowNodeInstances;
   private final FlowElements flowElements;
   private final DirectInstanceResult directInstanceResult;
