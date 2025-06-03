@@ -20,11 +20,13 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.TimerEventDefinition;
+import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.engine.pi.model.WithFlowNodeInstances;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -118,18 +120,44 @@ public class FlowNodeInstancesProcessor {
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       StartFlowElementTriggerDTO trigger,
+      int subProcessLevel,
       VariableScope parentVariableScope) {
 
-    FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
+    FlowNodeInstance<?> parentFlowNodeInstance = null;
+    FlowNodeInstances parentFlowNodeInstances =
+        flowNodeInstanceProcessingContext.getFlowNodeInstances();
+    FlowElements parentFlowElements = flowNodeInstanceProcessingContext.getFlowElements();
+    while (subProcessLevel < trigger.getParentElementInstanceIdPath().size()) {
+      // drill down into the flownode instances to find the final parent element instance
+      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
+          new StoredFlowNodeInstancesWrapper(
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              parentFlowNodeInstances,
+              processInstanceProcessingContext.getFlowNodeInstanceStore(),
+              parentFlowElements);
+      parentFlowNodeInstance =
+          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
+              trigger.getParentElementInstanceIdPath().get(subProcessLevel++));
+      if (parentFlowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances
+          && parentFlowNodeInstance.getFlowNode() instanceof WIthChildElements wIthChildElements) {
+        parentFlowNodeInstances = withFlowNodeInstances.getFlowNodeInstances();
+        parentFlowElements = wIthChildElements.getElements();
+      } else {
+        parentFlowNodeInstances = null;
+        parentFlowElements = null;
+        throw new IllegalStateException(
+            "Parent element instance is not a WithFlowNodeInstances or WIthChildElements type: "
+                + parentFlowNodeInstance.getClass().getName());
+      }
+    }
+
+    FlowNodeInstances flowNodeInstances = parentFlowNodeInstances;
     Optional<FlowNode> optFlowNode =
-        flowNodeInstanceProcessingContext
-            .getFlowElements()
-            .getFlowNode(trigger.getElementIdPath().getLast());
+        parentFlowElements.getFlowNode(trigger.getElementIdPath().getLast());
     if (optFlowNode.isPresent()) {
       FlowNode flowNode = optFlowNode.get();
-      FlowNodeInstance<?> parentElementInstance = null;
       FlowNodeInstance<?> flowNodeInstance =
-          flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
+          flowNode.createAndStoreNewInstance(parentFlowNodeInstance, flowNodeInstances);
 
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           flowNodeInstanceProcessorProvider.getProcessor(flowNode);

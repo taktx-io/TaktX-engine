@@ -101,6 +101,29 @@ class EventSubprocessTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .moveTimeForward(Duration.ofSeconds(11))
-        .waitUntilCompleted();
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1", 1)
+        .hasNotPassedElementWithId("ServiceTask_1")
+        .hasPassedElementWithId("Timer_Event_Subprocess", 1);
+  }
+
+  @Test
+  void test_EventSubProcessInSubProcess_TimerTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn", "ServiceTask_1")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
+        .moveTimeForward(Duration.ofSeconds(11))
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1", 1)
+        .hasInstantiatedElementWithId("SubProcess_1")
+        .hasPassedElementWithId("SubProcess_1/SubStartEvent_1", 1)
+        .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess", 1)
+        .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Event_0tcrh3f", 1)
+        .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Activity_0g36m0j", 1)
+        .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Event_0w329ku", 1)
+        .hasNotPassedElementWithId("SubProcess_1/EndEvent_1");
   }
 }

@@ -279,6 +279,7 @@ public class ProcessInstanceProcessor
           processInstanceProcessingContext,
           flowNodeInstanceProcessingContext,
           trigger,
+          0,
           processInstanceVariables);
 
       processResultAndForward(
