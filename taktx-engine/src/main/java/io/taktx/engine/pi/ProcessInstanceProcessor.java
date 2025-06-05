@@ -127,7 +127,7 @@ public class ProcessInstanceProcessor
 
   private void processStartCommandRecord(UUID processInstanceKey, StartCommandDTO startCommand) {
     log.info(
-        "Start new process instance: {} definition: {}",
+        "Start new process instanceToContinue: {} definition: {}",
         processInstanceKey,
         startCommand.getProcessDefinitionKey());
 
@@ -137,8 +137,7 @@ public class ProcessInstanceProcessor
     ProcessDefinitionDTO processDefinition =
         getProcessDefinitionDTO(startCommand.getProcessDefinitionKey());
 
-    String startNodeId =
-        startCommand.getElementIdPath() != null ? startCommand.getElementIdPath().getFirst() : null;
+    String startNodeId = startCommand.getElementId();
 
     FlowElementDTO startNode =
         processDefinition
@@ -332,7 +331,7 @@ public class ProcessInstanceProcessor
             VariablesDTO.empty());
       }
     } else {
-      log.warn("Process instance not found for key: {}", processInstanceKey);
+      log.warn("Process instanceToContinue not found for key: {}", processInstanceKey);
     }
   }
 
@@ -510,7 +509,7 @@ public class ProcessInstanceProcessor
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
-    log.info("Purging finished process instance: {}", processInstanceKey);
+    log.info("Purging finished process instanceToContinue: {}", processInstanceKey);
     this.processingStatistics.stopTimerForProcessInstance(
         processInstanceKey, processInstance.getProcessDefinitionKey().getProcessDefinitionId());
 

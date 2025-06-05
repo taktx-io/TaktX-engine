@@ -64,7 +64,7 @@ public class ReceiveTaskInstanceProcessor
         .getInstanceResult()
         .addNewCorrelationSubcriptionMessageEvent(
             new NewCorrelationSubscriptionMessageEventInfo(
-                messageName, correlationKey, receiveTaskInstance));
+                messageName, correlationKey, receiveTaskInstance, null));
   }
 
   @Override

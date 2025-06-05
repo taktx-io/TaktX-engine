@@ -158,7 +158,7 @@ public abstract class FlowNodeInstanceProcessor<
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       FlowNodeInstance<?> instance,
       VariableScope parentVariablesScope) {
-    // Only terminate if the instance is ready or waiting
+    // Only terminate if the instanceToContinue is ready or waiting
     if (instance.stateAllowsTerminate()) {
       long now = clock.instant().toEpochMilli();
 

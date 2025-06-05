@@ -123,7 +123,7 @@ public class MessageSchedulerFactory {
 
     // validate expression
     try {
-      // get a predefined instance
+      // get a predefined instanceToContinue
       CronDefinition cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);
 
       // create a parser based on provided definition

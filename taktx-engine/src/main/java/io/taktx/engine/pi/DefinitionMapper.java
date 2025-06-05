@@ -147,6 +147,9 @@ public class DefinitionMapper {
                           messageDTO.getCorrelationKey()));
                 });
       }
+      if (flowElement instanceof WIthChildElements withChildElements) {
+        setMessageReferences(withChildElements.getElements().getElements(), messages);
+      }
     }
   }
 

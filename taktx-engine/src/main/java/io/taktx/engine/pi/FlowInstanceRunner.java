@@ -178,7 +178,7 @@ public class FlowInstanceRunner {
             Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
             for (EventDefinition eventDefinition : eventDefinitions) {
               if (eventDefinition.handlesEvent(event)) {
-                // Create a new instance for the event subprocess
+                // Create a new instanceToContinue for the event subprocess
                 FlowNodeInstance<?> eventSubProcessInstance =
                     eventSsubProcess.newInstance(
                         fLowNodeInstance.getParentInstance(),
@@ -201,7 +201,7 @@ public class FlowInstanceRunner {
               Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
               for (EventDefinition eventDefinition : eventDefinitions) {
                 if (eventDefinition.handlesEventCatchAll(event)) {
-                  // Create a new instance for the event subprocess
+                  // Create a new instanceToContinue for the event subprocess
                   FlowNodeInstance<?> eventSubProcessInstance =
                       eventSsubProcess.newInstance(
                           fLowNodeInstance.getParentInstance(),

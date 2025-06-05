@@ -14,15 +14,18 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ProcessInstanceState;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.MessageEventDefinition;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
@@ -39,14 +42,17 @@ public class FlowNodeInstancesProcessor {
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
   private final PathExtractor pathExtractor;
+  private final FeelExpressionHandler feelExpressionHandler;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
-      PathExtractor pathExtractor) {
+      PathExtractor pathExtractor,
+      FeelExpressionHandler feelExpressionHandler) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
     this.pathExtractor = pathExtractor;
+    this.feelExpressionHandler = feelExpressionHandler;
   }
 
   public void processStart(
@@ -80,6 +86,30 @@ public class FlowNodeInstancesProcessor {
               .getInstanceResult()
               .addScheduledStart(scheduledStartInfo);
         }
+
+        Optional<MessageEventDefinition> optMessageventDefinition =
+            startEvent.getMessageventDefinition();
+        if (optMessageventDefinition.isPresent()) {
+          MessageEventDefinition messageEventDefinition = optMessageventDefinition.get();
+
+          String correlationKey =
+              feelExpressionHandler
+                  .processFeelExpression(
+                      messageEventDefinition.getReferencedMessage().correlationKey(),
+                      parentVariableScope)
+                  .asText();
+
+          NewCorrelationSubscriptionMessageEventInfo messageSubscription =
+              new NewCorrelationSubscriptionMessageEventInfo(
+                  messageEventDefinition.getReferencedMessage().name(),
+                  correlationKey,
+                  flowNodeInstances.getParentFlowNodeInstance(),
+                  eventTriggeredSubProcess);
+
+          processInstanceProcessingContext
+              .getInstanceResult()
+              .addNewCorrelationSubcriptionMessageEvent(messageSubscription);
+        }
       }
     }
 
@@ -88,15 +118,13 @@ public class FlowNodeInstancesProcessor {
     // Check if we happen to be in an event subprocess that is triggered by an event and terminate
     // all awaiting instances
     // if the start event is interrupting
-    if (parentElementInstance instanceof SubProcessInstance subProcessInstance) {
-      if (subProcessInstance.getFlowNode().isTriggeredByEvent()) {
-        if (flowNode instanceof StartEvent startEvent) {
-          if (startEvent.isInterrupting()) {
-            flowNodeInstanceProcessingContext.getDirectInstanceResult().setTerminateParent();
-          }
-        }
-      }
+    if (parentElementInstance instanceof SubProcessInstance subProcessInstance
+        && subProcessInstance.getFlowNode().isTriggeredByEvent()
+        && flowNode instanceof StartEvent startEvent
+        && startEvent.isInterrupting()) {
+      flowNodeInstanceProcessingContext.getDirectInstanceResult().setTerminateParent();
     }
+
     FlowNodeInstance<?> flowNodeInstance =
         flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
 
@@ -128,7 +156,7 @@ public class FlowNodeInstancesProcessor {
         flowNodeInstanceProcessingContext.getFlowNodeInstances();
     FlowElements parentFlowElements = flowNodeInstanceProcessingContext.getFlowElements();
     while (subProcessLevel < trigger.getParentElementInstanceIdPath().size()) {
-      // drill down into the flownode instances to find the final parent element instance
+      // drill down into the flownode instances to find the final parent element instanceToContinue
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
@@ -143,17 +171,14 @@ public class FlowNodeInstancesProcessor {
         parentFlowNodeInstances = withFlowNodeInstances.getFlowNodeInstances();
         parentFlowElements = wIthChildElements.getElements();
       } else {
-        parentFlowNodeInstances = null;
-        parentFlowElements = null;
         throw new IllegalStateException(
-            "Parent element instance is not a WithFlowNodeInstances or WIthChildElements type: "
+            "Parent element instanceToContinue is not a WithFlowNodeInstances or WIthChildElements type: "
                 + parentFlowNodeInstance.getClass().getName());
       }
     }
 
     FlowNodeInstances flowNodeInstances = parentFlowNodeInstances;
-    Optional<FlowNode> optFlowNode =
-        parentFlowElements.getFlowNode(trigger.getElementIdPath().getLast());
+    Optional<FlowNode> optFlowNode = parentFlowElements.getFlowNode(trigger.getElementId());
     if (optFlowNode.isPresent()) {
       FlowNode flowNode = optFlowNode.get();
       FlowNodeInstance<?> flowNodeInstance =
@@ -228,7 +253,8 @@ public class FlowNodeInstancesProcessor {
     FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
         new FlowNodeInstanceProcessingContext(flowNodeInstances, flowElements);
     if (trigger.getElementInstanceIdPath().isEmpty()) {
-      // Terminate all elements in the process instance and the process instance itself
+      // Terminate all elements in the process instanceToContinue and the process instanceToContinue
+      // itself
       storedFlowNodeInstancesWrapper
           .getAllInstances()
           .values()
@@ -244,7 +270,7 @@ public class FlowNodeInstancesProcessor {
               });
       flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
     } else {
-      // Terminate the specific element instance in the process instance
+      // Terminate the specific element instanceToContinue in the process instanceToContinue
       FlowNodeInstance<?> instance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
               trigger.getElementInstanceIdPath().getFirst());
@@ -277,7 +303,7 @@ public class FlowNodeInstancesProcessor {
           pathExtractor.getInstancePath(
               flowNodeInstanceProcessingContext.getFlowNodeInstances().getParentFlowNodeInstance());
       if (!instancePath.isEmpty()) {
-        instancePath.remove(instancePath.size() - 1);
+        instancePath.removeLast();
       }
       processInstanceProcessingContext
           .getInstanceResult()

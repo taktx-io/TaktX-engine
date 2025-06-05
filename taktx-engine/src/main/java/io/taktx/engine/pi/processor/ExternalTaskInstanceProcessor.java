@@ -68,7 +68,7 @@ public abstract class ExternalTaskInstanceProcessor<
       I flownodeInstance,
       String inputFlowId,
       VariableScope variables) {
-    log.info("Starting external task instance {}", flownodeInstance);
+    log.info("Starting external task instanceToContinue {}", flownodeInstance);
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
@@ -83,7 +83,7 @@ public abstract class ExternalTaskInstanceProcessor<
       if (!topicExists(
           processInstanceProcessingContext.getTopicStore().getLatestTopicInfo(), externalTaskId)) {
         log.warn(
-            "Topic for External task {} is really not created, failing external task instance {}",
+            "Topic for External task {} is really not created, failing external task instanceToContinue {}",
             externalTaskId,
             flownodeInstance);
         InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
@@ -118,7 +118,7 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTaskResponseTriggerDTO trigger,
       VariableScope variables) {
 
-    log.info("Continuing external task instance {}", trigger);
+    log.info("Continuing external task instanceToContinue {}", trigger);
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
@@ -192,7 +192,7 @@ public abstract class ExternalTaskInstanceProcessor<
         backoff = Optional.ofNullable(repeatDuration.getDuration());
       } catch (DateTimeParseException e) {
         // Definition is not a valid repeat duration, since retries is still set
-        // to -1 it will fail the task and the process instance
+        // to -1 it will fail the task and the process instanceToContinue
       }
     }
 

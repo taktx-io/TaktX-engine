@@ -156,7 +156,11 @@ public class BpmnTestEngine {
   public void consumeProcessInstanceTrigger(
       ConsumerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord) {
     ProcessInstanceTriggerDTO trigger = processInstanceTriggerRecord.value();
-    LOG.info("Received process instance trigger: " + trigger + " " + trigger.getClass().getName());
+    LOG.info(
+        "Received process instanceToContinue trigger: "
+            + trigger
+            + " "
+            + trigger.getClass().getName());
     if (trigger instanceof StartCommandDTO startCommand
         && startCommand.getParentProcessInstanceKey() != null) {
       Set<UUID> uuids1 =
@@ -208,12 +212,16 @@ public class BpmnTestEngine {
 
   public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
     if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
-      LOG.info("Received process instance update: " + processInstanceKey + " " + instanceUpdate);
+      LOG.info(
+          "Received process instanceToContinue update: "
+              + processInstanceKey
+              + " "
+              + instanceUpdate);
 
       ProcessInstanceDTO processInstanceDTO =
           getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
       log.info(
-          "Adding to process instance map {} {}",
+          "Adding to process instanceToContinue map {} {}",
           System.identityHashCode(processInstanceMap),
           processInstanceDTO);
       ProcessInstanceDTO previousProcessInstance =
@@ -227,7 +235,7 @@ public class BpmnTestEngine {
       existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
 
     } else if (instanceUpdate instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
-      LOG.info("Received FlowNode instance update: " + instanceUpdate);
+      LOG.info("Received FlowNode instanceToContinue update: " + instanceUpdate);
 
       FlowNodeInstanceKeyDTO key =
           new FlowNodeInstanceKeyDTO(
@@ -372,7 +380,7 @@ public class BpmnTestEngine {
     UUID newProcessInstanceKey =
         taktClient.startProcess(processDefinitionKey.getProcessDefinitionId(), variables);
 
-    log.info("Starting process instance {}", newProcessInstanceKey);
+    log.info("Starting process instanceToContinue {}", newProcessInstanceKey);
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
         .until(

@@ -34,11 +34,12 @@ import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
+import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.ExternalTaskInstance;
+import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
-import io.taktx.engine.pi.model.ReceivingMessageInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
@@ -118,7 +119,7 @@ public class Forwarder {
           new StartFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(scheduledStartInfo.parentInstance()),
-              pathExtractor.getElementPath(scheduledStartInfo.flowNodeToStart()),
+              scheduledStartInfo.flowNodeToStart().getId(),
               VariablesDTO.empty());
 
       long now = clock.millis();
@@ -225,17 +226,21 @@ public class Forwarder {
     while (!newCorrelationSubscriptionMessageEventInfos.isEmpty()) {
       NewCorrelationSubscriptionMessageEventInfo messageEvent =
           newCorrelationSubscriptionMessageEventInfos.poll();
-      ReceivingMessageInstance instance = messageEvent.instance();
+      FlowNodeInstance<?> instanceToContinue = messageEvent.elementInstance();
       CorrelationMessageSubscriptionDTO correlationMessageSubscriptionTrigger =
           new CorrelationMessageSubscriptionDTO(
               processInstance.getProcessInstanceKey(),
               messageEvent.correlationKey(),
-              pathExtractor.getInstancePath(instance),
+              instanceToContinue != null ? pathExtractor.getInstancePath(instanceToContinue) : null,
+              messageEvent.flowNodeToStart() != null
+                  ? messageEvent.flowNodeToStart().getId()
+                  : null,
               messageEvent.messageName());
       MessageEventKeyDTO messageEventKey =
           correlationMessageSubscriptionTrigger.toMessageEventKey();
-      instance.addMessageSubscriptionWithCorrelationKey(
-          messageEventKey, messageEvent.correlationKey());
+      if (instanceToContinue instanceof CatchEventInstance<?> catchEventInstance)
+        catchEventInstance.addMessageSubscriptionWithCorrelationKey(
+            messageEventKey, messageEvent.correlationKey());
       context.forward(
           new Record<>(messageEventKey, correlationMessageSubscriptionTrigger, clock.millis()));
     }

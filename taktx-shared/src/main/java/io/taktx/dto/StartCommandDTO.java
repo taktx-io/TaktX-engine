@@ -26,6 +26,8 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
   private UUID parentProcessInstanceKey;
 
+  private String elementId;
+
   private List<Long> parentElementInstancePath;
 
   private ProcessDefinitionKey processDefinitionKey;
@@ -36,14 +38,14 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
   public StartCommandDTO(
       UUID processInstanceKey,
-      List<String> elementIds,
+      String elementId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
     this(
         processInstanceKey,
         null,
-        elementIds,
+        elementId,
         parentElementInstancePath,
         processDefinitionKey,
         variables,
@@ -54,14 +56,15 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
   public StartCommandDTO(
       UUID processInstanceKey,
       UUID parentProcessInstanceKey,
-      List<String> elementIds,
+      String elementId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {
-    super(processInstanceKey, elementIds, variables);
+    super(processInstanceKey, variables);
     this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.elementId = elementId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.propagateAllToParent = propagateAllToParent;

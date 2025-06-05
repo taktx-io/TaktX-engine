@@ -10,5 +10,10 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.engine.pd.model.FlowNode;
+
 public record NewCorrelationSubscriptionMessageEventInfo(
-    String messageName, String correlationKey, ReceivingMessageInstance instance) {}
+    String messageName,
+    String correlationKey,
+    FlowNodeInstance<?> elementInstance,
+    FlowNode flowNodeToStart) {}

@@ -21,6 +21,7 @@ import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import java.time.Clock;
 import java.util.HashMap;
@@ -61,29 +62,26 @@ public class MessageEventProcessor
 
   @Override
   public void process(Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
-    if (messageEventRecord.value()
-        instanceof DefinitionMessageSubscriptionDTO startEventMessageSubscription) {
-      storeDefinitionMessageSubscription(messageEventRecord.key(), startEventMessageSubscription);
-    } else if (messageEventRecord.value()
-        instanceof CorrelationMessageSubscriptionDTO correlatingMessageSubscription) {
-      storeCorrelationMessageSubscription(messageEventRecord.key(), correlatingMessageSubscription);
-    } else if (messageEventRecord.value()
-        instanceof CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription) {
-      cancelDefinitionMessageSubscription(
-          messageEventRecord.key(), cancelDefinitionMessageSubscription);
-    } else if (messageEventRecord.value()
-        instanceof CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription) {
-      cancelCorrelationMessageSubscription(
-          messageEventRecord.key(), cancelCorrelatingMessageSubscription);
-    } else if (messageEventRecord.value()
-        instanceof DefinitionMessageEventTriggerDTO messageEvent) {
-      processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
-    } else if (messageEventRecord.value()
-        instanceof CorrelationMessageEventTriggerDTO messageEvent) {
-      processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
-    } else {
-      throw new IllegalArgumentException(
-          "Unknown message event type" + messageEventRecord.value().getClass());
+    switch (messageEventRecord.value()) {
+      case DefinitionMessageSubscriptionDTO startEventMessageSubscription ->
+          storeDefinitionMessageSubscription(
+              messageEventRecord.key(), startEventMessageSubscription);
+      case CorrelationMessageSubscriptionDTO correlatingMessageSubscription ->
+          storeCorrelationMessageSubscription(
+              messageEventRecord.key(), correlatingMessageSubscription);
+      case CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription ->
+          cancelDefinitionMessageSubscription(
+              messageEventRecord.key(), cancelDefinitionMessageSubscription);
+      case CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription ->
+          cancelCorrelationMessageSubscription(
+              messageEventRecord.key(), cancelCorrelatingMessageSubscription);
+      case DefinitionMessageEventTriggerDTO messageEvent ->
+          processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
+      case CorrelationMessageEventTriggerDTO messageEvent ->
+          processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
+      default ->
+          throw new IllegalArgumentException(
+              "Unknown message event type" + messageEventRecord.value().getClass());
     }
   }
 
@@ -124,15 +122,28 @@ public class MessageEventProcessor
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
                   UUID processInstanceKey = subscription.getProcessInstanceKey();
-                  ContinueFlowElementTriggerDTO flowElementTrigger =
-                      new ContinueFlowElementTriggerDTO(
-                          processInstanceKey,
-                          subscription.getElementInstanceIdPath(),
-                          null,
-                          messageEvent.getVariables());
+                  if (subscription.getElementId() == null) {
+                    ContinueFlowElementTriggerDTO flowElementTrigger =
+                        new ContinueFlowElementTriggerDTO(
+                            processInstanceKey,
+                            subscription.getElementInstanceIdPath(),
+                            null,
+                            messageEvent.getVariables());
 
-                  context.forward(
-                      new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
+                    context.forward(
+                        new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
+                  } else {
+                    StartFlowElementTriggerDTO flowElementTrigger =
+                        new StartFlowElementTriggerDTO(
+                            processInstanceKey,
+                            subscription.getElementInstanceIdPath() == null
+                                ? List.of()
+                                : subscription.getElementInstanceIdPath(),
+                            subscription.getElementId(),
+                            messageEvent.getVariables());
+                    context.forward(
+                        new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
+                  }
                 }
               });
     }
@@ -154,7 +165,7 @@ public class MessageEventProcessor
                   StartCommandDTO startCommand =
                       new StartCommandDTO(
                           processInstanceKey,
-                          List.of(value.getElementId()),
+                          value.getElementId(),
                           List.of(),
                           new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),
                           messageEvent.getVariables());

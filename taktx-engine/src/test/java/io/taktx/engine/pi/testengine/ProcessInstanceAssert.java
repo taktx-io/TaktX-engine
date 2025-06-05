@@ -48,7 +48,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> instancesOfClass =
         instances.stream().filter(i -> i.getClass().equals(clazz)).toList();
     assertThat(instancesOfClass)
-        .as("element with " + elementId + " not found in process instance")
+        .as("element with " + elementId + " not found in process instanceToContinue")
         .hasSize(numberOfInstances);
     return this;
   }
@@ -57,7 +57,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> instances =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId);
     assertThat(instances)
-        .as("element with " + elementId + " not found in process instance")
+        .as("element with " + elementId + " not found in process instanceToContinue")
         .hasSize(count);
     return this;
   }
@@ -70,7 +70,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> bpmnElementState =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId);
     assertThat(bpmnElementState)
-        .as("element with " + elementId + " not found in process instance")
+        .as("element with " + elementId + " not found in process instanceToContinue")
         .isNotEmpty();
     assertThat(bpmnElementState.getFirst().isTerminated())
         .as("element " + elementId + " was not terminated")
@@ -82,7 +82,7 @@ public class ProcessInstanceAssert {
     List<FlowNodeInstanceDTO> bpmnElementState =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceKey, elementId);
     assertThat(bpmnElementState)
-        .as("element with " + elementId + " not found in process instance")
+        .as("element with " + elementId + " not found in process instanceToContinue")
         .isNotEmpty();
     assertThat(bpmnElementState.getFirst().isFailed())
         .as("element " + elementId + " was not terminated")
@@ -117,7 +117,7 @@ public class ProcessInstanceAssert {
     assertThat(
             bpmnElementState.isEmpty()
                 || bpmnElementState.stream().allMatch(state -> state.getPassedCnt() == 0))
-        .as("element with " + elementId + " not found in process instance")
+        .as("element with " + elementId + " not found in process instanceToContinue")
         .isTrue();
     return this;
   }

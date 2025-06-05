@@ -65,12 +65,10 @@ public class BucketProcessor {
 
           Iterator<Entry<TimedScheduleKey, MessageScheduleDTO>> iterator =
               upcomingSchedules.entrySet().iterator();
-          log.info("Checking schedules for time bucket {} at time {}", timeBucket.getName(), now);
           while (iterator.hasNext()) {
             Entry<TimedScheduleKey, MessageScheduleDTO> entry = iterator.next();
             TimedScheduleKey key = entry.getKey();
             MessageScheduleDTO schedule = entry.getValue();
-            log.info("Checking schedule {} vs now {}", key, now);
             if (key.getTime() < now) {
               SchedulableMessageDTO message = schedule.getMessage();
               UUID processInstanceKey = message.getProcessInstanceKey();

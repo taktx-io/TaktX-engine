@@ -103,7 +103,7 @@ public abstract class CatchEventInstanceProcessor<
               String messageName = message.name();
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
                   new NewCorrelationSubscriptionMessageEventInfo(
-                      messageName, correlationKey, catchEventInstance);
+                      messageName, correlationKey, catchEventInstance, null);
               processInstanceProcessingContext
                   .getInstanceResult()
                   .addNewCorrelationSubcriptionMessageEvent(messageInfo);

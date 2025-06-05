@@ -28,7 +28,6 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
-import java.util.List;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
@@ -218,7 +217,7 @@ public class ProcessDefinitionActivationProcessor {
       String processDefinitionId, StartEventDTO startEvent) {
     return new StartCommandDTO(
         null,
-        startEvent.getParentId() != null ? List.of(startEvent.getParentId()) : null,
+        startEvent.getParentId(),
         null,
         new ProcessDefinitionKey(processDefinitionId),
         VariablesDTO.empty());

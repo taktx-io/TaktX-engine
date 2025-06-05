@@ -15,7 +15,7 @@ public class TerminateTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 
   public TerminateTriggerDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
-    super(processInstanceKey, List.of(), VariablesDTO.empty());
+    super(processInstanceKey, VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }

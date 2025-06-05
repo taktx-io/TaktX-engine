@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import io.taktx.ProcessInstanceTriggerTypeIdResolver;
-import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -28,14 +27,10 @@ public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO
 
   private UUID processInstanceKey;
 
-  private List<String> elementIdPath;
-
   private VariablesDTO variables;
 
-  protected ProcessInstanceTriggerDTO(
-      UUID processInstanceKey, List<String> elementIdPath, VariablesDTO variables) {
+  protected ProcessInstanceTriggerDTO(UUID processInstanceKey, VariablesDTO variables) {
     this.processInstanceKey = processInstanceKey;
-    this.elementIdPath = elementIdPath;
     this.variables = variables;
   }
 }
