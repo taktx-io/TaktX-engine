@@ -130,6 +130,25 @@ class EventSubprocessTest {
   @Test
   void test_EventSubProcessInSubProcess_MessageTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn", "ServiceTask_1")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
+        .andSendMessageWithCorrelationKey("message", "123", VariablesDTO.empty())
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1", 1)
+        .hasInstantiatedElementWithId("SubProcess_1")
+        .hasPassedElementWithId("SubProcess_1/SubStartEvent_1", 1)
+        .hasPassedElementWithId("SubProcess_1/Message_Event_Subprocess", 1)
+        .hasPassedElementWithId("SubProcess_1/Message_Event_Subprocess/Message_Event_1", 1)
+        .hasPassedElementWithId("SubProcess_1/Message_Event_Subprocess/Activity_13ak8hs", 1)
+        .hasPassedElementWithId("SubProcess_1/Message_Event_Subprocess/Event_1fhl4l4", 1)
+        .hasNotPassedElementWithId("SubProcess_1/EndEvent_1");
+  }
+
+  @Test
+  void test_EventSubProcess_MessageTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
