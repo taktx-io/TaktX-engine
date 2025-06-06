@@ -75,7 +75,10 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
   private static MessageEventDefinitionDTO mapMessageEventDefinition(
       TMessageEventDefinition messageEventDefinition) {
     return new MessageEventDefinitionDTO(
-        messageEventDefinition.getId(), messageEventDefinition.getMessageRef().getLocalPart());
+        messageEventDefinition.getId(),
+        messageEventDefinition.getMessageRef() != null
+            ? messageEventDefinition.getMessageRef().getLocalPart()
+            : null);
   }
 
   private TimerEventDefinitionDTO mapTimerEventDefinition(

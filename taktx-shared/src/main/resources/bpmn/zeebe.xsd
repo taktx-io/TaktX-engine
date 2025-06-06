@@ -67,6 +67,12 @@
       <xs:attribute name="correlationKey" use="required"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="script">
+    <xs:complexType>
+      <xs:attribute name="expression" use="required"/>
+      <xs:attribute name="resultVariable" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
   <xs:element name="ioMapping">
     <xs:complexType id="ioMapping">

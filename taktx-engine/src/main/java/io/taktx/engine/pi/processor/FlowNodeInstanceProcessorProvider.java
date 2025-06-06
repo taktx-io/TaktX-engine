@@ -25,6 +25,7 @@ import io.taktx.engine.pd.model.IntermediateThrowEvent;
 import io.taktx.engine.pd.model.LoopCharacteristics;
 import io.taktx.engine.pd.model.ParallelGateway;
 import io.taktx.engine.pd.model.ReceiveTask;
+import io.taktx.engine.pd.model.ScriptTask;
 import io.taktx.engine.pd.model.SendTask;
 import io.taktx.engine.pd.model.ServiceTask;
 import io.taktx.engine.pd.model.StartEvent;
@@ -52,6 +53,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject @DefaultTaskProcessor TaskInstanceProcessor taskProcessor;
   @Inject SubProcessInstanceProcessor subProcessProcessor;
   @Inject CallActivityInstanceProcessor callActivityProcessor;
+  @Inject ScriptTaskInstanceProcessor scriptTaskProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   @Inject ReceiveTaskInstanceProcessor receiveTaskProcessor;
   @Inject FeelExpressionHandler feelExpressionHandler;
@@ -113,6 +115,8 @@ public class FlowNodeInstanceProcessorProvider {
       processor = userTaskProcessor;
     } else if (element instanceof SendTask) {
       processor = sendTaskProcessor;
+    } else if (element instanceof ScriptTask) {
+      processor = scriptTaskProcessor;
     } else if (element instanceof SubProcess) {
       processor = subProcessProcessor;
     } else if (element instanceof CallActivity) {

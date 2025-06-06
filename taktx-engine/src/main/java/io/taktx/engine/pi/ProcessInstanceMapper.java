@@ -23,6 +23,7 @@ import io.taktx.dto.MultiInstanceInstanceDTO;
 import io.taktx.dto.ParallelGatewayInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ReceiveTaskInstanceDTO;
+import io.taktx.dto.ScriptTaskInstanceDTO;
 import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
@@ -45,6 +46,7 @@ import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ParallelGatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ReceiveTaskInstance;
+import io.taktx.engine.pi.model.ScriptTaskInstance;
 import io.taktx.engine.pi.model.SendTaskInstance;
 import io.taktx.engine.pi.model.ServiceTaskInstance;
 import io.taktx.engine.pi.model.StartEventInstance;
@@ -166,6 +168,17 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
+          "java((io.taktx.engine.pd.model.ScriptTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
+  @Mapping(target = "wasWaiting", ignore = true)
+  @Mapping(target = "wasNew", ignore = true)
+  ScriptTaskInstance map(ScriptTaskInstanceDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
           "java((io.taktx.engine.pd.model.UserTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
@@ -255,6 +268,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(target = SendTaskInstance.class, source = SendTaskInstanceDTO.class)
   @SubclassMapping(target = UserTaskInstance.class, source = UserTaskInstanceDTO.class)
   @SubclassMapping(target = ReceiveTaskInstance.class, source = ReceiveTaskInstanceDTO.class)
+  @SubclassMapping(target = ScriptTaskInstance.class, source = ScriptTaskInstanceDTO.class)
   @SubclassMapping(target = SubProcessInstance.class, source = SubProcessInstanceDTO.class)
   @SubclassMapping(target = CallActivityInstance.class, source = CallActivityInstanceDTO.class)
   @SubclassMapping(target = MultiInstanceInstance.class, source = MultiInstanceInstanceDTO.class)
@@ -337,6 +351,12 @@ public interface ProcessInstanceMapper {
       target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
+  ScriptTaskInstanceDTO map(ScriptTaskInstance source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "elementIndex",
+      expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   UserTaskInstanceDTO map(UserTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -397,6 +417,7 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(source = SendTaskInstance.class, target = SendTaskInstanceDTO.class)
   @SubclassMapping(source = UserTaskInstance.class, target = UserTaskInstanceDTO.class)
   @SubclassMapping(source = ReceiveTaskInstance.class, target = ReceiveTaskInstanceDTO.class)
+  @SubclassMapping(source = ScriptTaskInstance.class, target = ScriptTaskInstanceDTO.class)
   @SubclassMapping(source = SubProcessInstance.class, target = SubProcessInstanceDTO.class)
   @SubclassMapping(source = CallActivityInstance.class, target = CallActivityInstanceDTO.class)
   @SubclassMapping(source = MultiInstanceInstance.class, target = MultiInstanceInstanceDTO.class)

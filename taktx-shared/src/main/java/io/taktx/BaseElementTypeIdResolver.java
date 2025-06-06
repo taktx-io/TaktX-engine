@@ -28,6 +28,7 @@ import io.taktx.dto.MessageEventDefinitionDTO;
 import io.taktx.dto.ParallelGatewayDTO;
 import io.taktx.dto.ProcessDTO;
 import io.taktx.dto.ReceiveTaskDTO;
+import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.ServiceTaskDTO;
@@ -56,6 +57,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case ReceiveTaskDTO ignored -> "RT";
       case SendTaskDTO ignored -> "ST";
       case ServiceTaskDTO ignored -> "SV";
+      case ScriptTaskDTO ignored -> "SC";
       case UserTaskDTO ignored -> "UT";
       case TaskDTO ignored -> "T";
       case SequenceFlowDTO ignored -> "Q";
@@ -95,6 +97,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "CA" -> context.constructType(CallActivityDTO.class);
       case "RT" -> context.constructType(ReceiveTaskDTO.class);
       case "ST" -> context.constructType(SendTaskDTO.class);
+      case "SC" -> context.constructType(ScriptTaskDTO.class);
       case "SV" -> context.constructType(ServiceTaskDTO.class);
       case "UT" -> context.constructType(UserTaskDTO.class);
       case "T" -> context.constructType(TaskDTO.class);

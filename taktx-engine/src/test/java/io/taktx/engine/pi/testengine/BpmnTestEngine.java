@@ -173,7 +173,7 @@ public class BpmnTestEngine {
   public void consumeMessageEvent(
       ConsumerRecord<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
     MessageEventDTO messageEvent = messageEventRecord.value();
-    LOG.info("Received message event: " + messageEvent);
+    LOG.info("Received message event: {}" + messageEvent);
     ConcurrentLinkedQueue<MessageEventDTO> messageEvents =
         messageSubscriptionMap.computeIfAbsent(
             messageEvent.getMessageName(), k -> new ConcurrentLinkedQueue<>());
@@ -199,10 +199,10 @@ public class BpmnTestEngine {
 
     LOG.info("Received user task trigger: " + userTaskTrigger);
 
-    ConcurrentLinkedQueue<UserTaskTriggerDTO> externalTaskTriggers =
+    ConcurrentLinkedQueue<UserTaskTriggerDTO> uerTaskTriggers =
         userTaskTriggerQueueMap.computeIfAbsent(
             userTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
-    externalTaskTriggers.add(userTaskTrigger);
+    uerTaskTriggers.add(userTaskTrigger);
     LOG.info(
         "User task triggers: "
             + userTaskTriggerQueueMap

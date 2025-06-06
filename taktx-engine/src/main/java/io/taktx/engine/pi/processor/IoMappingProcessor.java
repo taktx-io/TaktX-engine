@@ -37,15 +37,15 @@ public class IoMappingProcessor {
     addVariables(variables, outputMappings);
   }
 
-  public void addVariables(VariableScope variables, Set<IoVariableMapping> outputMappings) {
-    if (outputMappings.isEmpty()) {
+  public void addVariables(VariableScope variables, Set<IoVariableMapping> mappings) {
+    if (mappings.isEmpty()) {
       variables.mergeAllToParent();
     } else {
-      for (IoVariableMapping mapping : outputMappings) {
+      for (IoVariableMapping mapping : mappings) {
         String varName = mapping.getTarget();
         JsonNode jsonNode =
             feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-        variables.put(varName, jsonNode);
+        variables.getParentScope().put(varName, jsonNode);
       }
     }
   }

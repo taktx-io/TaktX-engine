@@ -67,6 +67,14 @@ public class BpmnMapperFactory {
     }
   }
 
+  public ScriptTaskMapper createScriptTaskMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeScriptTaskMapper();
+    } else {
+      return new GenericScriptTaskMapper();
+    }
+  }
+
   public ReceiveTaskMapper createReceiveTaskMapper() {
     return new GenericReceiveTaskMapper();
   }

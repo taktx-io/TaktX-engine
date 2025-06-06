@@ -29,6 +29,7 @@ import io.taktx.dto.LinkEventDefinitionDTO;
 import io.taktx.dto.MessageEventDefinitionDTO;
 import io.taktx.dto.ParallelGatewayDTO;
 import io.taktx.dto.ReceiveTaskDTO;
+import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.ServiceTaskDTO;
@@ -56,6 +57,7 @@ import io.taktx.engine.pd.model.LinkEventDefinition;
 import io.taktx.engine.pd.model.MessageEventDefinition;
 import io.taktx.engine.pd.model.ParallelGateway;
 import io.taktx.engine.pd.model.ReceiveTask;
+import io.taktx.engine.pd.model.ScriptTask;
 import io.taktx.engine.pd.model.SendTask;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pd.model.ServiceTask;
@@ -90,6 +92,7 @@ public interface DtoMapper {
   @SubclassMapping(source = ServiceTaskDTO.class, target = ServiceTask.class)
   @SubclassMapping(source = SendTaskDTO.class, target = SendTask.class)
   @SubclassMapping(source = ReceiveTaskDTO.class, target = ReceiveTask.class)
+  @SubclassMapping(source = ScriptTaskDTO.class, target = ScriptTask.class)
   @SubclassMapping(source = TaskDTO.class, target = Task.class)
   @SubclassMapping(source = SubProcessDTO.class, target = SubProcess.class)
   @SubclassMapping(source = SequenceFlowDTO.class, target = SequenceFlow.class)
@@ -120,6 +123,10 @@ public interface DtoMapper {
   @Mapping(target = "parentElement", ignore = true)
   @Mapping(target = "referencedMessage", ignore = true)
   ReceiveTask map(ReceiveTaskDTO receiveTask);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  ScriptTask map(ScriptTaskDTO scriptTask);
 
   @Mapping(target = "boundaryEvents", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
