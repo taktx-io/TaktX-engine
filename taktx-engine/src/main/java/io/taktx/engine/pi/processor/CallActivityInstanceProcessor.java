@@ -18,7 +18,6 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.NewStartCommand;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -89,7 +88,6 @@ public class CallActivityInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
@@ -99,7 +97,7 @@ public class CallActivityInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       CallActivityInstance instance,
       VariableScope processInstanceVariables) {
     processInstanceProcessingContext

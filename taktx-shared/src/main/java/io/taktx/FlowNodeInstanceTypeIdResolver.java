@@ -24,6 +24,7 @@ import io.taktx.dto.IntermediateThrowEventInstanceDTO;
 import io.taktx.dto.MultiInstanceInstanceDTO;
 import io.taktx.dto.ParallelGatewayInstanceDTO;
 import io.taktx.dto.ReceiveTaskInstanceDTO;
+import io.taktx.dto.ScriptTaskInstanceDTO;
 import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
@@ -36,22 +37,23 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case CallActivityInstanceDTO ignored -> "C";
-      case ReceiveTaskInstanceDTO ignored -> "R";
-      case SendTaskInstanceDTO ignored -> "D";
-      case ServiceTaskInstanceDTO ignored -> "V";
-      case TaskInstanceDTO ignored -> "T";
-      case SubProcessInstanceDTO ignored -> "S";
-      case MultiInstanceInstanceDTO ignored -> "M";
-      case EndEventInstanceDTO ignored -> "E";
-      case IntermediateThrowEventInstanceDTO ignored -> "W";
-      case IntermediateCatchEventInstanceDTO ignored -> "I";
       case StartEventInstanceDTO ignored -> "A";
       case BoundaryEventInstanceDTO ignored -> "B";
+      case CallActivityInstanceDTO ignored -> "C";
+      case SendTaskInstanceDTO ignored -> "D";
+      case EndEventInstanceDTO ignored -> "E";
+      case ScriptTaskInstanceDTO ignored -> "F";
+      case IntermediateCatchEventInstanceDTO ignored -> "I";
+      case MultiInstanceInstanceDTO ignored -> "M";
       case InclusiveGatewayInstanceDTO ignored -> "N";
       case ParallelGatewayInstanceDTO ignored -> "P";
-      case ExclusiveGatewayInstanceDTO ignored -> "X";
+      case ReceiveTaskInstanceDTO ignored -> "R";
+      case SubProcessInstanceDTO ignored -> "S";
       case UserTaskInstanceDTO ignored -> "U";
+      case ServiceTaskInstanceDTO ignored -> "V";
+      case IntermediateThrowEventInstanceDTO ignored -> "W";
+      case ExclusiveGatewayInstanceDTO ignored -> "X";
+      case TaskInstanceDTO ignored -> "T";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -69,22 +71,23 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "C" -> context.constructType(CallActivityInstanceDTO.class);
-      case "R" -> context.constructType(ReceiveTaskInstanceDTO.class);
-      case "D" -> context.constructType(SendTaskInstanceDTO.class);
-      case "V" -> context.constructType(ServiceTaskInstanceDTO.class);
-      case "T" -> context.constructType(TaskInstanceDTO.class);
-      case "S" -> context.constructType(SubProcessInstanceDTO.class);
-      case "M" -> context.constructType(MultiInstanceInstanceDTO.class);
-      case "E" -> context.constructType(EndEventInstanceDTO.class);
-      case "W" -> context.constructType(IntermediateThrowEventInstanceDTO.class);
-      case "I" -> context.constructType(IntermediateCatchEventInstanceDTO.class);
       case "A" -> context.constructType(StartEventInstanceDTO.class);
       case "B" -> context.constructType(BoundaryEventInstanceDTO.class);
+      case "C" -> context.constructType(CallActivityInstanceDTO.class);
+      case "D" -> context.constructType(SendTaskInstanceDTO.class);
+      case "E" -> context.constructType(EndEventInstanceDTO.class);
+      case "F" -> context.constructType(ScriptTaskInstanceDTO.class);
+      case "I" -> context.constructType(IntermediateCatchEventInstanceDTO.class);
+      case "M" -> context.constructType(MultiInstanceInstanceDTO.class);
       case "N" -> context.constructType(InclusiveGatewayInstanceDTO.class);
       case "P" -> context.constructType(ParallelGatewayInstanceDTO.class);
+      case "R" -> context.constructType(ReceiveTaskInstanceDTO.class);
+      case "S" -> context.constructType(SubProcessInstanceDTO.class);
       case "U" -> context.constructType(UserTaskInstanceDTO.class);
+      case "V" -> context.constructType(ServiceTaskInstanceDTO.class);
+      case "W" -> context.constructType(IntermediateThrowEventInstanceDTO.class);
       case "X" -> context.constructType(ExclusiveGatewayInstanceDTO.class);
+      case "T" -> context.constructType(TaskInstanceDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

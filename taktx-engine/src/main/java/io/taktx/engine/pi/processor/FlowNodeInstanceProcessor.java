@@ -108,7 +108,6 @@ public abstract class FlowNodeInstanceProcessor<
   public final void processContinue(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       FlowNodeInstance<?> flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope parentVariableScope) {
@@ -126,7 +125,6 @@ public abstract class FlowNodeInstanceProcessor<
     this.processContinueSpecificFlowNodeInstance(
         processInstanceProcessingContext,
         flowNodeInstanceProcessingContext,
-        subProcessLevel,
         (I) flowNodeInstance,
         (C) trigger,
         currentVariableScope);
@@ -268,7 +266,6 @@ public abstract class FlowNodeInstanceProcessor<
   protected abstract void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I flowNodeInstance,
       C trigger,
       VariableScope variables);

@@ -442,7 +442,7 @@ public class BpmnTestEngine {
                             .equals(activeProcessInstanceKey)
                         && getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId)
                             .stream()
-                            .anyMatch(FlowNodeInstanceDTO::isWaiting));
+                            .allMatch(FlowNodeInstanceDTO::isWaiting));
 
     return this;
   }

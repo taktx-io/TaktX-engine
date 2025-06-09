@@ -66,7 +66,6 @@ public abstract class GatewayInstanceProcessor<
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I flowNodeInstance,
       C trigger,
       VariableScope processInstanceVariables) {

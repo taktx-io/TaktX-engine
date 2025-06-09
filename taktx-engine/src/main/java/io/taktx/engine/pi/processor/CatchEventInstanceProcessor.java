@@ -116,7 +116,6 @@ public abstract class CatchEventInstanceProcessor<
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope variables) {

@@ -187,7 +187,7 @@ public class ProcessInstanceProcessor
         createProcessInstanceProcessingContext(processInstance, instanceResult);
 
     FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
-        new FlowNodeInstanceProcessingContext(flowNodeInstances, flowElements);
+        new FlowNodeInstanceProcessingContext(flowNodeInstances, 0, flowElements);
     flowNodeInstancesProcessor.processStart(
         processInstanceProcessingContext,
         flowNodeInstanceProcessingContext,
@@ -272,13 +272,12 @@ public class ProcessInstanceProcessor
 
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
           new FlowNodeInstanceProcessingContext(
-              processInstance.getFlowNodeInstances(), flowElements);
+              processInstance.getFlowNodeInstances(), 0, flowElements);
 
       flowNodeInstancesProcessor.processStartFlowElement(
           processInstanceProcessingContext,
           flowNodeInstanceProcessingContext,
           trigger,
-          0,
           processInstanceVariables);
 
       processResultAndForward(
@@ -313,12 +312,11 @@ public class ProcessInstanceProcessor
 
         FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
             new FlowNodeInstanceProcessingContext(
-                processInstance.getFlowNodeInstances(), flowElements);
+                processInstance.getFlowNodeInstances(), 0, flowElements);
 
         flowNodeInstancesProcessor.processContinue(
             processInstanceProcessingContext,
             flowNodeInstanceProcessingContext,
-            0,
             trigger,
             processInstanceVariables);
 
@@ -382,12 +380,16 @@ public class ProcessInstanceProcessor
                 .instanceResult(instanceResult)
                 .topicStore(topicMonitor)
                 .build();
+
+        FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
+            new FlowNodeInstanceProcessingContext(
+                processInstance.getFlowNodeInstances(), 0, flowElements);
+
         flowNodeInstancesProcessor.processTerminate(
             processInstanceProcessingContext,
+            flowNodeInstanceProcessingContext,
             trigger,
-            processInstance.getFlowNodeInstances(),
-            processInstanceVariables,
-            flowElements);
+            processInstanceVariables);
 
         processResultAndForward(
             processInstanceProcessingContext,

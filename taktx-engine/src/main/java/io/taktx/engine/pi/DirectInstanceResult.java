@@ -22,21 +22,19 @@ public class DirectInstanceResult {
 
   private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
-  private boolean terminateParent;
+  private List<Long> terminateParentPath;
   private final Queue<Long> terminateInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
-  private DirectInstanceResult() {
-    terminateParent = false;
+  private DirectInstanceResult() {}
+
+  public void setTerminateParentPath(List<Long> instancePath) {
+    this.terminateParentPath = instancePath != null ? new ArrayList<>(instancePath) : null;
   }
 
-  public void setTerminateParent() {
-    this.terminateParent = true;
-  }
-
-  public boolean getTerminateParent() {
-    return terminateParent;
+  public List<Long> getTerminateParentPath() {
+    return terminateParentPath;
   }
 
   public static DirectInstanceResult empty() {
@@ -79,7 +77,8 @@ public class DirectInstanceResult {
   public boolean hasDirectTriggers() {
     return !newFlowNodeInstanceInfos.isEmpty()
         || !terminateInstances.isEmpty()
-        || !events.isEmpty();
+        || !events.isEmpty()
+        || terminateParentPath != null;
   }
 
   public void addBubbleUpEvent(EventSignal event) {

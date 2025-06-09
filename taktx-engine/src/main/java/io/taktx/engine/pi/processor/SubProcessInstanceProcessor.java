@@ -17,7 +17,6 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.FlowNodeInstancesProcessor;
 import io.taktx.engine.pi.ProcessInstanceMapper;
@@ -69,14 +68,22 @@ public class SubProcessInstanceProcessor
         .getIndex()
         .addAll(flowNodeInstanceProcessingContext.getFlowElements().getIndex());
     FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
-        new FlowNodeInstanceProcessingContext(subFlowNodeInstances, subProcessElements);
+        new FlowNodeInstanceProcessingContext(
+            subFlowNodeInstances,
+            flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
+            subProcessElements);
     flowNodeInstancesProcessor.processStart(
         processInstanceProcessingContext,
         subFlowNodeInstanceProcessingContext,
         null,
         subProcessInstance,
         flowNodeInstanceVariables);
-
+    flowNodeInstanceProcessingContext
+        .getDirectInstanceResult()
+        .setTerminateParentPath(
+            subFlowNodeInstanceProcessingContext
+                .getDirectInstanceResult()
+                .getTerminateParentPath());
     if (subFlowNodeInstances.getState().isFinished()) {
       subProcessInstance.setState(ActtivityStateEnum.FINISHED);
     }
@@ -86,23 +93,19 @@ public class SubProcessInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       SubProcessInstance subProcessInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope flowNodeInstanceVariables) {
-    subProcessLevel++;
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
     subProcessInstance.getFlowNodeInstances().setParentFlowNodeInstance(subProcessInstance);
     FlowNodeInstanceProcessingContext subFlowNodeContext =
         new FlowNodeInstanceProcessingContext(
-            subProcessInstance.getFlowNodeInstances(), subProcessElements);
+            subProcessInstance.getFlowNodeInstances(),
+            flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
+            subProcessElements);
     flowNodeInstancesProcessor.processContinue(
-        processInstanceProcessingContext,
-        subFlowNodeContext,
-        subProcessLevel,
-        trigger,
-        flowNodeInstanceVariables);
+        processInstanceProcessingContext, subFlowNodeContext, trigger, flowNodeInstanceVariables);
 
     Queue<EventSignal> bubbleUpEvents =
         processInstanceProcessingContext.getInstanceResult().getBubbleUpEvents();
@@ -121,13 +124,19 @@ public class SubProcessInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       SubProcessInstance subProcessInstance,
       VariableScope flowNodeInstanceVariables) {
 
-    // Terminate all childelements
     FlowNodeInstances flowNodeInstances = subProcessInstance.getFlowNodeInstances();
     flowNodeInstances.setParentFlowNodeInstance(subProcessInstance);
+
+    // Terminate all childelements
+    FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
+        new FlowNodeInstanceProcessingContext(
+            flowNodeInstances,
+            flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
+            subProcessInstance.getFlowNode().getElements());
 
     TerminateTriggerDTO trigger =
         new TerminateTriggerDTO(
@@ -135,9 +144,8 @@ public class SubProcessInstanceProcessor
             List.of());
     flowNodeInstancesProcessor.processTerminate(
         processInstanceProcessingContext,
+        subFlowNodeInstanceProcessingContext,
         trigger,
-        flowNodeInstances,
-        flowNodeInstanceVariables,
-        subProcessInstance.getFlowNode().getElements());
+        flowNodeInstanceVariables);
   }
 }

@@ -18,7 +18,6 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -103,7 +102,6 @@ public abstract class ActivityInstanceProcessor<
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I flowNodeInstance,
       C trigger,
       VariableScope variables) {
@@ -111,7 +109,6 @@ public abstract class ActivityInstanceProcessor<
     processContinueSpecificActivityInstance(
         processInstanceProcessingContext,
         flowNodeInstanceProcessingContext,
-        subProcessLevel,
         flowNodeInstance,
         trigger,
         variables);
@@ -146,7 +143,7 @@ public abstract class ActivityInstanceProcessor<
 
     processTerminateSpecificActivityInstance(
         processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+        flowNodeInstanceProcessingContext,
         instance,
         currentVariableScope);
   }
@@ -161,14 +158,13 @@ public abstract class ActivityInstanceProcessor<
   protected abstract void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I externalTaskInstance,
       C trigger,
       VariableScope flowNodeInstanceVariables);
 
   protected abstract void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I instance,
       VariableScope variables);
 

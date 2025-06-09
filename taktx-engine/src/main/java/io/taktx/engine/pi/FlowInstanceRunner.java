@@ -25,6 +25,7 @@ import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 
@@ -103,6 +104,36 @@ public class FlowInstanceRunner {
           parentVariableScope);
       instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
     }
+
+    List<Long> terminateParentPath = directInstanceResult.getTerminateParentPath();
+    if (currentContextIsParentOfPath(terminateParentPath, flowNodeInstanceProcessingContext)) {
+
+      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
+          new StoredFlowNodeInstancesWrapper(
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              processInstanceProcessingContext.getFlowNodeInstanceStore(),
+              flowNodeInstanceProcessingContext.getFlowElements());
+
+      Map<Long, FlowNodeInstance<?>> allInstances =
+          storedFlowNodeInstancesWrapper.getAllInstances();
+
+      for (FlowNodeInstance<?> flowNodeInstance : allInstances.values()) {
+        if (flowNodeInstance.isAwaiting()
+            && flowNodeInstance.getElementInstanceId() != terminateParentPath.getLast()) {
+          directInstanceResult.addTerminateInstance(flowNodeInstance.getElementInstanceId());
+        }
+      }
+      directInstanceResult.setTerminateParentPath(null);
+    }
+  }
+
+  private boolean currentContextIsParentOfPath(
+      List<Long> terminateParentPath,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
+
+    return terminateParentPath != null
+        && flowNodeInstanceProcessingContext.getSubProcessLevel() == terminateParentPath.size() - 1;
   }
 
   private void processEventByFlowNodeInstance(
@@ -112,9 +143,9 @@ public class FlowInstanceRunner {
       FlowNodeInstance<?> fLowNodeInstance,
       DirectInstanceResult directInstanceResult,
       VariableScope parentVariableScope) {
+    boolean eventHandled = false;
 
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
-      boolean eventHandled = false;
       StoredFlowNodeInstancesWrapper instancesWrapper =
           new StoredFlowNodeInstancesWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
@@ -164,23 +195,46 @@ public class FlowInstanceRunner {
           }
         }
       }
+    }
+    // Still not handled
+    if (!eventHandled) {
+      // First check any event subprocesses which are able to handle this event
 
-      // Still not handled
+      // First do a round for specific event codes
+      List<SubProcess> eventTriggeredSubProcesses =
+          flowNodeInstanceProcessingContext.getFlowElements().getEventTriggeredSubProcesses();
+      for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
+        List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
+        for (StartEvent startEvent : startEvents) {
+          Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
+          for (EventDefinition eventDefinition : eventDefinitions) {
+            if (eventDefinition.handlesEvent(event)) {
+              // Create a new instanceToContinue for the event subprocess
+              FlowNodeInstance<?> eventSubProcessInstance =
+                  eventSsubProcess.createAndStoreNewInstance(
+                      fLowNodeInstance.getParentInstance(),
+                      flowNodeInstanceProcessingContext.getFlowNodeInstances());
+              FlowNodeInstanceInfo flowNodeInstanceInfo =
+                  new FlowNodeInstanceInfo(eventSubProcessInstance, null);
+              directInstanceResult.addNewFlowNodeInstance(
+                  processInstanceProcessingContext.getProcessInstance(), flowNodeInstanceInfo);
+              eventHandled = true;
+            }
+          }
+        }
+      }
+
+      // Now for catch all events
       if (!eventHandled) {
-        // First check any event subprocesses which are able to handle this event
-
-        // First do a round for specific event codes
-        List<SubProcess> eventTriggeredSubProcesses =
-            flowNodeInstanceProcessingContext.getFlowElements().getEventTriggeredSubProcesses();
         for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
           List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
           for (StartEvent startEvent : startEvents) {
             Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
             for (EventDefinition eventDefinition : eventDefinitions) {
-              if (eventDefinition.handlesEvent(event)) {
+              if (eventDefinition.handlesEventCatchAll(event)) {
                 // Create a new instanceToContinue for the event subprocess
                 FlowNodeInstance<?> eventSubProcessInstance =
-                    eventSsubProcess.newInstance(
+                    eventSsubProcess.createAndStoreNewInstance(
                         fLowNodeInstance.getParentInstance(),
                         flowNodeInstanceProcessingContext.getFlowNodeInstances());
                 FlowNodeInstanceInfo flowNodeInstanceInfo =
@@ -188,30 +242,6 @@ public class FlowInstanceRunner {
                 directInstanceResult.addNewFlowNodeInstance(
                     processInstanceProcessingContext.getProcessInstance(), flowNodeInstanceInfo);
                 eventHandled = true;
-              }
-            }
-          }
-        }
-
-        // Now for catch all events
-        if (!eventHandled) {
-          for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
-            List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
-            for (StartEvent startEvent : startEvents) {
-              Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
-              for (EventDefinition eventDefinition : eventDefinitions) {
-                if (eventDefinition.handlesEventCatchAll(event)) {
-                  // Create a new instanceToContinue for the event subprocess
-                  FlowNodeInstance<?> eventSubProcessInstance =
-                      eventSsubProcess.newInstance(
-                          fLowNodeInstance.getParentInstance(),
-                          flowNodeInstanceProcessingContext.getFlowNodeInstances());
-                  FlowNodeInstanceInfo flowNodeInstanceInfo =
-                      new FlowNodeInstanceInfo(eventSubProcessInstance, null);
-                  directInstanceResult.addNewFlowNodeInstance(
-                      processInstanceProcessingContext.getProcessInstance(), flowNodeInstanceInfo);
-                  eventHandled = true;
-                }
               }
             }
           }

@@ -113,7 +113,6 @@ public abstract class ExternalTaskInstanceProcessor<
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger,
       VariableScope variables) {
@@ -288,7 +287,7 @@ public abstract class ExternalTaskInstanceProcessor<
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       I instance,
       VariableScope variables) {
     // Nothing to do here

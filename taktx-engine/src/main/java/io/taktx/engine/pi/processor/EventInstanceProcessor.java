@@ -54,7 +54,6 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope variables) {

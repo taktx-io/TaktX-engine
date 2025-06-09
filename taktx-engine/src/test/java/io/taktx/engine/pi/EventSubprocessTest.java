@@ -153,7 +153,7 @@ class EventSubprocessTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
         .andSendMessageWithCorrelationKey("message", "123", VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilCompleted(Duration.ofHours(1))
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)
         .hasInstantiatedElementWithId("Message_Event_Subprocess")

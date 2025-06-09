@@ -185,6 +185,7 @@ public class MultiInstanceProcessor
         new FlowNodeInstanceProcessingContext(
             multiInstanceInstance.getFlowNodeInstances(),
             flowNodeInstanceProcessingContext.getFlowElements(),
+            flowNodeInstanceProcessingContext.getSubProcessLevel(),
             flowNodeInstanceProcessingContext.getDirectInstanceResult());
     processor.processStart(
         processInstanceProcessingContext,
@@ -198,11 +199,9 @@ public class MultiInstanceProcessor
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       MultiInstanceInstance multiInstanceInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope flowNodeInstanceVariables) {
-    subProcessLevel++;
 
     FlowElements subFlowElements = new FlowElements();
     subFlowElements
@@ -211,7 +210,10 @@ public class MultiInstanceProcessor
     Activity activity = multiInstanceInstance.getFlowNode();
     subFlowElements.addFlowElement(activity);
 
-    long instanceId = trigger.getElementInstanceIdPath().get(subProcessLevel);
+    long instanceId =
+        trigger
+            .getElementInstanceIdPath()
+            .get(flowNodeInstanceProcessingContext.getSubProcessLevel() + 1);
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
@@ -227,11 +229,11 @@ public class MultiInstanceProcessor
         new FlowNodeInstanceProcessingContext(
             multiInstanceInstance.getFlowNodeInstances(),
             subFlowElements,
+            flowNodeInstanceProcessingContext.getSubProcessLevel(),
             flowNodeInstanceProcessingContext.getDirectInstanceResult());
     processor.processContinue(
         processInstanceProcessingContext,
         subFlowNodeInstanceProcessingContext,
-        subProcessLevel,
         iterationInstance,
         trigger,
         flowNodeInstanceVariables);

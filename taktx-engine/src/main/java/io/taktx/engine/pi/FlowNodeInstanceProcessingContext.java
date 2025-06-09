@@ -23,18 +23,21 @@ public class FlowNodeInstanceProcessingContext {
   private final FlowNodeInstances flowNodeInstances;
   private final FlowElements flowElements;
   private final DirectInstanceResult directInstanceResult;
+  private final int subProcessLevel;
 
   public FlowNodeInstanceProcessingContext(
-      FlowNodeInstances flowNodeInstances, FlowElements flowElements) {
-    this(flowNodeInstances, flowElements, DirectInstanceResult.empty());
+      FlowNodeInstances flowNodeInstances, int subProcessLevel, FlowElements flowElements) {
+    this(flowNodeInstances, flowElements, subProcessLevel, DirectInstanceResult.empty());
   }
 
   public FlowNodeInstanceProcessingContext(
       FlowNodeInstances flowNodeInstances,
       FlowElements flowElements,
+      int subProcessLevel,
       DirectInstanceResult directInstanceResult) {
     this.flowNodeInstances = flowNodeInstances;
     this.flowElements = flowElements;
+    this.subProcessLevel = subProcessLevel;
     this.directInstanceResult = directInstanceResult;
   }
 }

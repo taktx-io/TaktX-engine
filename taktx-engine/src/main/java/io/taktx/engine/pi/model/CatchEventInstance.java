@@ -77,6 +77,7 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     }
     if (this.state != null && this.state != state) {
       stateChanged = true;
+      setDirty();
     }
     if (this.state == CatchEventStateEnum.INITIAL && this.state != state) {
       wasNew = true;

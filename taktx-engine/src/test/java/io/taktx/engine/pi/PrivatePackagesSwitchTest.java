@@ -6,7 +6,6 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,9 @@ class PrivatePackagesSwitchTest {
             "/bpmn/private-packages-switch.bpmn",
             "sales-configuration.payment-account.retrieve-arrangements",
             "sales-configuration.payment-account.retrieve-type",
-            "sales-configuration.payment-account.determine-contractants")
+            "sales-configuration.payment-account.determine-contractants",
+            "customer-interaction.actions.end-process-with-activity",
+            "sales-configuration.order.cancel")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilUserTaskIsWaitingForResponse("aanvraag-stappen")
         .andCompleteUserTaskWithSuccess(VariablesDTO.of("var2", "value2"))
@@ -41,6 +42,22 @@ class PrivatePackagesSwitchTest {
             VariablesDTO.of("selectedPaymentAccountArrangement", "arrangement1"))
         .waitUntilExternalTaskIsWaitingForResponse("Activity_0a3nzhe")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("accountType", "student2"))
-        .waitFor(Duration.ofSeconds(10));
+        .waitUntilExternalTaskIsWaitingForResponse("Activity_1lmrbre/Activity_0k9vm1m")
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .waitUntilCompleted()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_switch_retail_packages", 1)
+        .hasPassedElementWithId("Gateway_0lkrm2u", 1)
+        .hasPassedElementWithId("Activity_0uehql5", 1)
+        .hasPassedElementWithId("Gateway_1yg9gvo", 1)
+        .hasPassedElementWithId("Activity_0a3nzhe", 1)
+        .hasPassedElementWithId("Activity_0goz9aj", 1)
+        .hasPassedElementWithId("Event_1wffwmu", 1)
+        .hasPassedElementWithId("Activity_1lmrbre/Event_0ho34h3", 1)
+        .hasPassedElementWithId("Activity_1lmrbre/Gateway_1f067s6", 1)
+        .hasPassedElementWithId("Activity_1lmrbre/Gateway_0u566ex", 1)
+        .hasPassedElementWithId("Activity_1lmrbre/Activity_0k9vm1m", 1)
+        .hasPassedElementWithId("Activity_1lmrbre/Event_0ltlnng", 1)
+        .hasPassedElementWithId("Activity_1lmrbre", 1);
   }
 }

@@ -16,7 +16,6 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ScriptType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ScriptTask;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -64,7 +63,6 @@ public class ScriptTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       ScriptTaskInstance externalTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope flowNodeInstanceVariables) {
@@ -74,7 +72,7 @@ public class ScriptTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       ScriptTaskInstance instance,
       VariableScope variables) {
     // Nothing to do here

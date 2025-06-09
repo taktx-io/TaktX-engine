@@ -15,7 +15,6 @@ import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ReceiveTask;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
@@ -71,7 +70,6 @@ public class ReceiveTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
@@ -83,7 +81,7 @@ public class ReceiveTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       ReceiveTaskInstance instance,
       VariableScope processInstanceVariables) {
     terminatingSubscriptionInstanceResult(

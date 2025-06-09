@@ -137,7 +137,6 @@ public class UserTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      int subProcessLevel,
       UserTaskInstance userTaskInstance,
       UserTaskResponseTriggerDTO trigger,
       VariableScope variableScope) {
@@ -180,7 +179,7 @@ public class UserTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       UserTaskInstance instance,
       VariableScope variables) {
     // no specific termination logic for user tasks
