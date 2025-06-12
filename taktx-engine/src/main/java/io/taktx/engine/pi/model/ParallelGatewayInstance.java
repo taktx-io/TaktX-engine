@@ -14,8 +14,10 @@ import io.taktx.engine.pd.model.ParallelGateway;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor
 public class ParallelGatewayInstance extends GatewayInstance<ParallelGateway> {
   private final Set<String> triggeredFlows = new HashSet<>();
 

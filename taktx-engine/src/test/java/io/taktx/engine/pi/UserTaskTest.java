@@ -21,6 +21,7 @@ class UserTaskTest {
   @Test
   void testZeebeUserTask_CompleteSuccesFully() throws IOException {
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds()
         .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
         .startProcessInstance(VariablesDTO.of("usertask", "1"))
         .waitUntilUserTaskIsWaitingForResponse("UserTask_1")
@@ -44,6 +45,7 @@ class UserTaskTest {
   @Test
   void testZeebeUserTask_CompleteWithError() throws IOException {
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds()
         .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
         .startProcessInstance(VariablesDTO.of("usertask", "1"))
         .waitUntilUserTaskIsWaitingForResponse("UserTask_1")
@@ -61,6 +63,7 @@ class UserTaskTest {
   @Test
   void testZeebeUserTask_CompleteWithEscalation() throws IOException {
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds()
         .deployProcessDefinitionAndWait("/bpmn/usertask.bpmn")
         .startProcessInstance(VariablesDTO.of("usertask", "1"))
         .waitUntilUserTaskIsWaitingForResponse("UserTask_1")

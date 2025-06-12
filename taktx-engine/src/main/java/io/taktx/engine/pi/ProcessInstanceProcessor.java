@@ -339,8 +339,10 @@ public class ProcessInstanceProcessor
       VariablesDTO variables) {
     VariableScope targetScope = processInstanceVariables;
     if (elementInstanceIdPath != null) {
-      for (Long aLong : elementInstanceIdPath) {
-        targetScope = targetScope.selectFlowNodeInstancesScope(aLong);
+      // merge into the nearest parent scope
+      for (int i = 0; i < elementInstanceIdPath.size() - 2; i++) {
+        Long elementInstanceId = elementInstanceIdPath.get(i);
+        targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceId);
       }
     }
     targetScope.merge(variables);
@@ -480,11 +482,12 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private static FlowNodeInstancesDTO flowNodeInstancesToDTO(FlowNodeInstances flowNodeInstances) {
+  private FlowNodeInstancesDTO flowNodeInstancesToDTO(FlowNodeInstances flowNodeInstances) {
     return new FlowNodeInstancesDTO(
         flowNodeInstances.getState(),
         flowNodeInstances.getActiveCnt(),
-        flowNodeInstances.getElementInstanceCnt());
+        flowNodeInstances.getElementInstanceCnt(),
+        flowNodeInstances.getGatewayInstances());
   }
 
   private void storeFlowNodeInstances(

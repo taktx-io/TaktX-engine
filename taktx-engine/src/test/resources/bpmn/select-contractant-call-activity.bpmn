@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="c9765a6" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.7.0">
+  <bpmn:process id="select-contractant-lb-call-activity" name="Select Contractant" isExecutable="true">
+    <bpmn:startEvent id="Event_0lg53i2">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=applicantType" target="applicantType" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_1rjd64z</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_0ww6lfl">
+      <bpmn:incoming>Flow_18ogchx</bpmn:incoming>
+      <bpmn:outgoing>Flow_1fctwqr</bpmn:outgoing>
+      <bpmn:outgoing>Flow_137a9xf</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_01yrju3">
+      <bpmn:incoming>Flow_0gdf35x</bpmn:incoming>
+      <bpmn:incoming>Flow_160f5dc</bpmn:incoming>
+      <bpmn:outgoing>Flow_0bselmx</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_1vagd75" name="Contractant selected">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=contractant" target="contractant" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0bselmx</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="select-contractant" name="Select contractant">
+      <bpmn:documentation>To be added screenshots:
+https://confluence.dev.rabobank.nl/display/TPCA/1.+Configurations+screen+-+new</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:input source="=applicantList" target="applicantList" />
+          <zeebe:input source="=applicantType" target="applicantType" />
+          <zeebe:output source="=contractant" target="contractant" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="backNavigation" value="false" />
+          <zeebe:header key="input" value="applicantList" />
+        </zeebe:taskHeaders>
+        <zeebe:properties>
+          <zeebe:property name="camundaModeler:exampleOutputJson" value="{&#34;applicantList&#34;:[{&#10;&#34; name&#34;:&#34;&#34;,&#10;&#34;relationId&#34;:&#34;&#34;&#10;}]}" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1fctwqr</bpmn:incoming>
+      <bpmn:outgoing>Flow_160f5dc</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Activity_160mnov" name="Get Applicant" zeebe:modelerTemplate="53475a95-30f0-479d-9e03-3aa7ebe519a1" zeebe:modelerTemplateVersion="1748515863002" zeebe:modelerTemplateIcon="data:image/svg+xml,%3Csvg xmlns=&#39;http://www.w3.org/2000/svg&#39; width=&#39;22&#39; height=&#39;22&#39; viewBox=&#39;0 0 22 22&#39; fill=&#39;none&#39;%3E%3Ccircle cx=&#39;11&#39; cy=&#39;11&#39; r=&#39;9&#39; fill=&#39;rgba(0,90,255,255)&#39;/%3E%3Ctext x=&#39;4&#39; y=&#39;13&#39; fill=&#39;white&#39; style=&#39;font-family: Arial; font-size: 5px;&#39;%3EDOSS%3C/text%3E%3C/svg%3E">
+      <bpmn:documentation>Filter the applicant type in the BFF based on</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="sales-configuration.order.get-applicant" retries="1" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderDetails" target="orderDetails" />
+          <zeebe:output source="=applicantList" target="applicantList" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1rjd64z</bpmn:incoming>
+      <bpmn:outgoing>Flow_18ogchx</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:scriptTask id="Activity_0ne97ro" name="Select one contractant">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:input source="=applicantList" target="applicantList" />
+          <zeebe:output source="=contractant" target="contractant" />
+        </zeebe:ioMapping>
+        <zeebe:script expression="=applicantList[1]" resultVariable="contractant" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_137a9xf</bpmn:incoming>
+      <bpmn:outgoing>Flow_0gdf35x</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="Flow_1rjd64z" sourceRef="Event_0lg53i2" targetRef="Activity_160mnov" />
+    <bpmn:sequenceFlow id="Flow_18ogchx" sourceRef="Activity_160mnov" targetRef="Gateway_0ww6lfl" />
+    <bpmn:sequenceFlow id="Flow_1fctwqr" name="More than one applicant" sourceRef="Gateway_0ww6lfl" targetRef="select-contractant">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=count(applicantList) &gt; 1</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_137a9xf" name="One applicant" sourceRef="Gateway_0ww6lfl" targetRef="Activity_0ne97ro">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=count(applicantList) = 1</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0gdf35x" sourceRef="Activity_0ne97ro" targetRef="Gateway_01yrju3" />
+    <bpmn:sequenceFlow id="Flow_160f5dc" sourceRef="select-contractant" targetRef="Gateway_01yrju3" />
+    <bpmn:sequenceFlow id="Flow_0bselmx" sourceRef="Gateway_01yrju3" targetRef="Event_1vagd75" />
+  </bpmn:process>
+  <bpmn:error id="Error_061ki8p" name="back-to-parent" errorCode="=&#34;&#34;" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="select-contractant-lb-call-activity">
+      <bpmndi:BPMNShape id="Event_0lg53i2_di" bpmnElement="Event_0lg53i2">
+        <dc:Bounds x="142" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0ww6lfl_di" bpmnElement="Gateway_0ww6lfl" isMarkerVisible="true">
+        <dc:Bounds x="425" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_01yrju3_di" bpmnElement="Gateway_01yrju3" isMarkerVisible="true">
+        <dc:Bounds x="725" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1vagd75_di" bpmnElement="Event_1vagd75">
+        <dc:Bounds x="842" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="833" y="285" width="57" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_080dsg3_di" bpmnElement="select-contractant">
+        <dc:Bounds x="560" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1c1jkwq_di" bpmnElement="Activity_160mnov">
+        <dc:Bounds x="250" y="220" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0911rs3_di" bpmnElement="Activity_0ne97ro">
+        <dc:Bounds x="560" y="220" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1rjd64z_di" bpmnElement="Flow_1rjd64z">
+        <di:waypoint x="178" y="260" />
+        <di:waypoint x="250" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18ogchx_di" bpmnElement="Flow_18ogchx">
+        <di:waypoint x="350" y="260" />
+        <di:waypoint x="425" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fctwqr_di" bpmnElement="Flow_1fctwqr">
+        <di:waypoint x="450" y="235" />
+        <di:waypoint x="450" y="120" />
+        <di:waypoint x="560" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="436" y="76" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_137a9xf_di" bpmnElement="Flow_137a9xf">
+        <di:waypoint x="475" y="260" />
+        <di:waypoint x="560" y="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="242" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gdf35x_di" bpmnElement="Flow_0gdf35x">
+        <di:waypoint x="660" y="260" />
+        <di:waypoint x="725" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_160f5dc_di" bpmnElement="Flow_160f5dc">
+        <di:waypoint x="660" y="120" />
+        <di:waypoint x="750" y="120" />
+        <di:waypoint x="750" y="235" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0bselmx_di" bpmnElement="Flow_0bselmx">
+        <di:waypoint x="775" y="260" />
+        <di:waypoint x="842" y="260" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -21,7 +21,8 @@ class StraightThroughTest {
   @Test
   void testStraighThrough() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/straight-through.bpmn", "external-task")
+        .registerAndSubscribeToExternalTaskIds("external-task")
+        .deployProcessDefinitionAndWait("/bpmn/straight-through.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ExternalTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())

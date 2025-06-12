@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +79,10 @@ public abstract class ExternalTaskInstanceProcessor<
       log.warn(
           "Topic for External task {} is not created, force rescanning topics and check again",
           externalTaskId);
-      processInstanceProcessingContext.getTopicStore().scanTopicsMeta();
+      processInstanceProcessingContext
+          .getTopicStore()
+          .scanAndProcessTopics(
+              Set.of(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId));
       // Now check again if the topic exists
       if (!topicExists(
           processInstanceProcessingContext.getTopicStore().getLatestTopicInfo(), externalTaskId)) {

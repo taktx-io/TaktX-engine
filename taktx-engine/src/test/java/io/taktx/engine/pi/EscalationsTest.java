@@ -22,7 +22,8 @@ class EscalationsTest {
   void testInterruptingEscalationTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -46,7 +47,8 @@ class EscalationsTest {
   void testInterruptingEscalation_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -68,7 +70,8 @@ class EscalationsTest {
   void testInterruptingEscalation_NoCode_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(null, null, VariablesDTO.of("var1", "value1"))
@@ -89,7 +92,8 @@ class EscalationsTest {
   void testNonInterruptingEscalationTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -113,8 +117,8 @@ class EscalationsTest {
   void testInterruptingEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait(
-            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -135,8 +139,8 @@ class EscalationsTest {
   void testNonInterruptingEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait(
-            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -161,8 +165,8 @@ class EscalationsTest {
   void testNoEscalationTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait(
-            "/bpmn/escalation-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))

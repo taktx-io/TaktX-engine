@@ -22,7 +22,8 @@ class ErrorsTest {
   void testInterruptingErrorTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
@@ -44,7 +45,8 @@ class ErrorsTest {
   void testInterruptingError_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
@@ -64,7 +66,8 @@ class ErrorsTest {
   void testInterruptingError_NoCode_CatchAllTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(false, null, null, VariablesDTO.of("var1", "value2"))
@@ -83,7 +86,8 @@ class ErrorsTest {
   void testInterruptingErrorTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithFailure(
@@ -102,7 +106,8 @@ class ErrorsTest {
   void testCatchAllErrorTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithFailure(
@@ -121,7 +126,8 @@ class ErrorsTest {
   void testNoErrorTriggeredInSubprocess() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))

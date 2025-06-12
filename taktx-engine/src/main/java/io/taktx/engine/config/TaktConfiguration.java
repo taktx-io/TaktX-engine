@@ -40,7 +40,7 @@ public class TaktConfiguration {
 
   public String getPrefixed(String name) {
     String prefixedName = tenant + "." + namespace + "." + name;
-    if (prefixedName.length() > 100) {
+    if (prefixedName.length() > 254) {
       throw new IllegalArgumentException("Topic name is too long: " + prefixedName);
     }
     return prefixedName;

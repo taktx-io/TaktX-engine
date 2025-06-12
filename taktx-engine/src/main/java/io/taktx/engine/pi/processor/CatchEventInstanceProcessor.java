@@ -207,7 +207,8 @@ public abstract class CatchEventInstanceProcessor<
           catchEventInstance,
           processInstance,
           boundaryEventVariableScope,
-          flowNodeInstanceProcessingContext);
+          flowNodeInstanceProcessingContext,
+          processInstanceProcessingContext);
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,
@@ -241,7 +242,8 @@ public abstract class CatchEventInstanceProcessor<
           catchEventInstance,
           processInstance,
           boundaryEventVariableScope,
-          flowNodeInstanceProcessingContext);
+          flowNodeInstanceProcessingContext,
+          processInstanceProcessingContext);
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
               processInstance,

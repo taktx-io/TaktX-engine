@@ -22,7 +22,8 @@ class VariablesTest {
   void testProcessServiceTaskSingle() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn", "service-task")
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var2", "value2"))

@@ -12,6 +12,7 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.dto.ProcessInstanceState;
 import io.taktx.engine.pd.model.FlowNode;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class FlowNodeInstances {
 
   private final Map<Long, FlowNodeInstance<?>> instances;
+  private Map<String, Long> gatewayInstances;
   private int activeCnt;
   private ProcessInstanceState state;
   private boolean stateChanged;
@@ -33,6 +35,7 @@ public class FlowNodeInstances {
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
+    this.gatewayInstances = new HashMap<>();
     this.state = ProcessInstanceState.START;
     this.stateChanged = false;
     this.activeCnt = 0;
@@ -40,7 +43,15 @@ public class FlowNodeInstances {
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
+    if (fLowNodeInstance instanceof GatewayInstance<?> gatewayInstance) {
+      gatewayInstances.put(
+          fLowNodeInstance.getFlowNode().getId(), gatewayInstance.getElementInstanceId());
+    }
     instances.put(fLowNodeInstance.getElementInstanceId(), fLowNodeInstance);
+  }
+
+  public Long getGatewayInstanceId(String flowNodeId) {
+    return gatewayInstances.get(flowNodeId);
   }
 
   public FlowNodeInstance<?> getInstanceWithInstanceId(long elementInstanceId) {

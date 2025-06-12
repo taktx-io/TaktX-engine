@@ -23,7 +23,8 @@ class EventSubprocessTest {
   void test_EventSubProcess_ErrorTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
@@ -42,7 +43,8 @@ class EventSubprocessTest {
   void test_EventSubProcess_ErrorTriggered_catchAll() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(false, "1234", "error message", VariablesDTO.empty())
@@ -60,7 +62,8 @@ class EventSubprocessTest {
   void test_EventSubProcess_EscalationTriggered_Catchall() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
@@ -79,7 +82,8 @@ class EventSubprocessTest {
   void test_EventSubProcess_EscalationTriggered_NonInterrupting() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation("1234", "error message", VariablesDTO.empty())
@@ -97,7 +101,8 @@ class EventSubprocessTest {
   @Test
   void test_EventSubProcess_TimerTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .moveTimeForward(Duration.ofSeconds(11))
@@ -111,7 +116,8 @@ class EventSubprocessTest {
   @Test
   void test_EventSubProcessInSubProcess_TimerTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
         .moveTimeForward(Duration.ofSeconds(11))
@@ -130,7 +136,8 @@ class EventSubprocessTest {
   @Test
   void test_EventSubProcessInSubProcess_MessageTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
         .andSendMessageWithCorrelationKey("message", "123", VariablesDTO.empty())
@@ -149,7 +156,8 @@ class EventSubprocessTest {
   @Test
   void test_EventSubProcess_MessageTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn", "ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubProcess_1/ServiceTask_1")
         .andSendMessageWithCorrelationKey("message", "123", VariablesDTO.empty())

@@ -16,12 +16,14 @@ import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pd.model.WithIoMapping;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceUpdate;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.StoredFlowNodeInstancesWrapper;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.FlowNodeInstances;
@@ -92,7 +94,8 @@ public abstract class FlowNodeInstanceProcessor<
         processInstance,
         (I) flownodeInstance,
         currentVariableScope,
-        flowNodeInstanceProcessingContext);
+        flowNodeInstanceProcessingContext,
+        processInstanceProcessingContext);
 
     processInstanceProcessingContext
         .getInstanceResult()
@@ -138,7 +141,8 @@ public abstract class FlowNodeInstanceProcessor<
         (I) flowNodeInstance,
         processInstance,
         currentVariableScope,
-        flowNodeInstanceProcessingContext);
+        flowNodeInstanceProcessingContext,
+        processInstanceProcessingContext);
 
     processInstanceProcessingContext
         .getInstanceResult()
@@ -195,14 +199,16 @@ public abstract class FlowNodeInstanceProcessor<
       ProcessInstance processInstance,
       I flownodeInstance,
       VariableScope processInstanceVariables,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext) {
     if (flownodeInstance.canSelectNextNodeStart()) {
 
       processNodeResultAndSelectNextInstance(
           processInstance,
           flownodeInstance,
           processInstanceVariables,
-          flowNodeInstanceProcessingContext);
+          flowNodeInstanceProcessingContext,
+          processInstanceProcessingContext);
     }
   }
 
@@ -210,14 +216,16 @@ public abstract class FlowNodeInstanceProcessor<
       I flownodeInstance,
       ProcessInstance processInstance,
       VariableScope currentVariableScope,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext) {
     if (flownodeInstance.canSelectNextNodeContinue()) {
 
       processNodeResultAndSelectNextInstance(
           processInstance,
           flownodeInstance,
           currentVariableScope,
-          flowNodeInstanceProcessingContext);
+          flowNodeInstanceProcessingContext,
+          processInstanceProcessingContext);
     }
   }
 
@@ -225,11 +233,19 @@ public abstract class FlowNodeInstanceProcessor<
       ProcessInstance processInstance,
       I flownodeInstance,
       VariableScope currentVariableScope,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      ProcessInstanceProcessingContext processInstanceProcessingContext) {
     FlowNode flowNode = flownodeInstance.getFlowNode();
     if (flowNode instanceof WithIoMapping withIoMapping) {
       ioMappingProcessor.processOutputMappings(withIoMapping, currentVariableScope);
     }
+
+    StoredFlowNodeInstancesWrapper wrapper =
+        new StoredFlowNodeInstancesWrapper(
+            processInstance.getProcessInstanceKey(),
+            flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+            processInstanceProcessingContext.getFlowNodeInstanceStore(),
+            flowNodeInstanceProcessingContext.getFlowElements());
 
     flownodeInstance.increasePassedCnt();
     FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
@@ -237,11 +253,23 @@ public abstract class FlowNodeInstanceProcessor<
             processInstance, flownodeInstance, flowNodeInstances, currentVariableScope)
         .forEach(
             sequenceFlow -> {
-              FlowNodeInstance<?> newFlowNodeInstance =
-                  sequenceFlow
-                      .getTargetNode()
-                      .createAndStoreNewInstance(
+              FlowNodeInstance<?> newFlowNodeInstance = null;
+              if (sequenceFlow.getTargetNode() instanceof Gateway gateway) {
+                Long gatewayInstanceId = flowNodeInstances.getGatewayInstanceId(gateway.getId());
+                if (gatewayInstanceId == null) {
+                  newFlowNodeInstance =
+                      gateway.createAndStoreNewInstance(
                           flownodeInstance.getParentInstance(), flowNodeInstances);
+                } else {
+                  newFlowNodeInstance = wrapper.getInstanceWithInstanceId(gatewayInstanceId);
+                }
+              } else {
+                newFlowNodeInstance =
+                    sequenceFlow
+                        .getTargetNode()
+                        .createAndStoreNewInstance(
+                            flownodeInstance.getParentInstance(), flowNodeInstances);
+              }
               flowNodeInstanceProcessingContext
                   .getDirectInstanceResult()
                   .addNewFlowNodeInstance(

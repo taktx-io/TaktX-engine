@@ -49,6 +49,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -272,14 +273,19 @@ public class BpmnTestEngine {
     return poll;
   }
 
-  public BpmnTestEngine deployProcessDefinition(String filename, String... externalTaskIds)
-      throws IOException {
+  public BpmnTestEngine deployProcessDefinition(String filename) throws IOException {
     LOG.info("Deploying process definition: " + filename);
-    registerTopics(externalTaskIds);
-    subscribeToExternalTaskTopics(externalTaskIds);
     definitionsBeingDeployed =
         taktClient.deployProcessDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
 
+    return this;
+  }
+
+  public BpmnTestEngine registerAndSubscribeToExternalTaskIds(String... externalTaskIds) {
+    LOG.info(
+        "Registering and subscribing to external task ids: " + String.join(", ", externalTaskIds));
+    registerTopics(externalTaskIds);
+    subscribeToExternalTaskTopics(externalTaskIds);
     return this;
   }
 
@@ -328,14 +334,13 @@ public class BpmnTestEngine {
     return elementIdIndex;
   }
 
-  public BpmnTestEngine deployProcessDefinitionAndWait(String filename, String... externalTaskIds)
-      throws IOException {
-    return deployProcessDefinitionAndWait(filename, Duration.ofMinutes(2), externalTaskIds);
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename) throws IOException {
+    return deployProcessDefinitionAndWait(filename, DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine deployProcessDefinitionAndWait(
-      String filename, Duration duration, String... externalTaskIds) throws IOException {
-    deployProcessDefinition(filename, externalTaskIds);
+  public BpmnTestEngine deployProcessDefinitionAndWait(String filename, Duration duration)
+      throws IOException {
+    deployProcessDefinition(filename);
     waitForProcessDeployment(duration);
     return this;
   }
@@ -391,6 +396,31 @@ public class BpmnTestEngine {
             });
     activeProcessInstanceKey = newProcessInstanceKey;
 
+    return this;
+  }
+
+  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
+      Map<String, BiConsumer<BpmnTestEngine, ExternalTaskTriggerDTO>> externalTaskTriggerQueueMap) {
+    Set<String> externalTaskIds = new HashSet<>(externalTaskTriggerQueueMap.keySet());
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .until(
+            this::pollExternalTask,
+            externalTaskTrigger -> {
+              FlowNodeInstanceKeyDTO flowNodeInstanceKeyDTO =
+                  new FlowNodeInstanceKeyDTO(
+                      activeProcessInstanceKey, externalTaskTrigger.getElementInstanceIdPath());
+              FlowNodeInstanceDTO flowNodeInstanceDTO =
+                  flowNodeInstanceMap.get(flowNodeInstanceKeyDTO);
+              String elementId = flowNodeInstanceDTO.getElementId();
+              BiConsumer<BpmnTestEngine, ExternalTaskTriggerDTO> bpmnTestEngineConsumer =
+                  externalTaskTriggerQueueMap.get(elementId);
+              if (bpmnTestEngineConsumer != null) {
+                bpmnTestEngineConsumer.accept(this, externalTaskTrigger);
+                externalTaskIds.remove(elementId);
+              }
+              return externalTaskIds.isEmpty();
+            });
     return this;
   }
 
@@ -462,20 +492,20 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilChildProcessIsCompleted() {
-    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.COMPLETED);
+  public BpmnTestEngine waitUntilChildProcessIsCompleted(String childProcessName) {
+    return waitUntilChildProcessesHaveState(childProcessName, ProcessInstanceState.COMPLETED);
   }
 
-  public BpmnTestEngine waitUntilChildProcessIsStarted() {
-    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.ACTIVE);
+  public BpmnTestEngine waitUntilChildProcessIsStarted(String childProcessName) {
+    return waitUntilChildProcessesHaveState(childProcessName, ProcessInstanceState.ACTIVE);
   }
 
-  public BpmnTestEngine waitUntilChildProcessIsTerminated() {
-    return waitUntilChildProcessesHaveState(1, ProcessInstanceState.TERMINATED);
+  public BpmnTestEngine waitUntilChildProcessIsTerminated(String childProcessName) {
+    return waitUntilChildProcessesHaveState(childProcessName, ProcessInstanceState.TERMINATED);
   }
 
   public BpmnTestEngine waitUntilChildProcessesHaveState(
-      int expectedCount, ProcessInstanceState processInstanceState) {
+      String childProcessName, ProcessInstanceState processInstanceState) {
     activeProcessInstanceKey =
         Awaitility.await()
             .atMost(DEFAULT_DURATION)
@@ -485,19 +515,25 @@ public class BpmnTestEngine {
                   if (childKeys == null) {
                     return null;
                   }
-                  if (childKeys.size() >= expectedCount) {
-                    UUID childProcessInstanceKey = childKeys.iterator().next();
-                    ProcessInstanceDTO childProcessInstance =
-                        processInstanceMap.get(childProcessInstanceKey);
-                    return childProcessInstance != null
-                            && childProcessInstance.getFlowNodeInstances().getState()
-                                == processInstanceState
-                        ? childProcessInstanceKey
-                        : null;
-                  }
-                  return null;
+                  return processInstanceMap.values().stream()
+                          .filter(
+                              pi ->
+                                  pi.getProcessDefinitionKey()
+                                          .getProcessDefinitionId()
+                                          .equals(childProcessName)
+                                      && pi.getFlowNodeInstances().getState()
+                                          == processInstanceState)
+                          .map(ProcessInstanceDTO::getProcessInstanceKey)
+                          .findFirst()
+                          .orElse(null);
                 },
-                Objects::nonNull);
+                    Objects::nonNull);
+    return this;
+  }
+
+  public BpmnTestEngine andRespondToExternalTaskWithSuccess(
+      ExternalTaskTriggerDTO externalTaskTrigger, VariablesDTO variables) {
+    taktClient.respondToExternalTask(externalTaskTrigger).respondSuccess(variables.getVariables());
     return this;
   }
 
@@ -793,6 +829,9 @@ public class BpmnTestEngine {
   }
 
   public void reset() {
+    this.processInstanceParentChildMap.clear();
+    this.processInstanceMap.clear();
+    this.flowNodeInstanceMap.clear();
     this.mutableClock.set(originalClock.instant());
   }
 }

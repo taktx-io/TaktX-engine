@@ -23,13 +23,13 @@ class PrivatePackagesSwitchTest {
   void testProcessServiceTaskSingle() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait(
-            "/bpmn/private-packages-switch.bpmn",
+        .registerAndSubscribeToExternalTaskIds(
             "sales-configuration.payment-account.retrieve-arrangements",
             "sales-configuration.payment-account.retrieve-type",
             "sales-configuration.payment-account.determine-contractants",
             "customer-interaction.actions.end-process-with-activity",
             "sales-configuration.order.cancel")
+        .deployProcessDefinitionAndWait("/bpmn/private-packages-switch.bpmn")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilUserTaskIsWaitingForResponse("aanvraag-stappen")
         .andCompleteUserTaskWithSuccess(VariablesDTO.of("var2", "value2"))

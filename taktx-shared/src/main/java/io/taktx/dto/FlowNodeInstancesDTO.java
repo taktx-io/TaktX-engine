@@ -3,6 +3,7 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -19,9 +20,16 @@ public class FlowNodeInstancesDTO {
 
   private long elementInstanceCnt;
 
-  public FlowNodeInstancesDTO(ProcessInstanceState state, int activeCnt, long elementInstanceCnt) {
+  private Map<String, Long> gatewayInstances;
+
+  public FlowNodeInstancesDTO(
+      ProcessInstanceState state,
+      int activeCnt,
+      long elementInstanceCnt,
+      Map<String, Long> gatewayInstances) {
     this.state = state;
     this.activeCnt = activeCnt;
     this.elementInstanceCnt = elementInstanceCnt;
+    this.gatewayInstances = gatewayInstances;
   }
 }

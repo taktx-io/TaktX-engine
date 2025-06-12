@@ -29,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.errors.StreamsNotStartedException;
@@ -58,12 +57,13 @@ public class TopicMonitor {
         });
   }
 
-  public void addTopicMeta(TopicMetaDTO topicMeta) {
-    topicInfo.put(topicMeta.getTopicName(), topicMeta);
-  }
-
   @Scheduled(every = "5S", delay = 5, delayUnit = TimeUnit.SECONDS)
   public void scanTopicsMeta() {
+
+    scanAndProcessTopics(null);
+  }
+
+  public void scanAndProcessTopics(Set<String> topicNamesTooScan) {
     if (topicMetaStore == null && state == KafkaStreams.State.RUNNING) {
       getTopicMetaStore();
     }
@@ -74,24 +74,30 @@ public class TopicMonitor {
         all.forEachRemaining(topic -> currentTopicMetas.put(topic.key, topic.value));
       }
 
+      if (topicNamesTooScan == null || topicNamesTooScan.isEmpty()) {
+        // If no specific topics to scan, use all topics in the store
+        topicNamesTooScan = currentTopicMetas.keySet();
+      }
+
       Map<String, String> topicsToScan =
-          currentTopicMetas.keySet().stream()
+          topicNamesTooScan.stream()
               .collect(Collectors.toMap(taktConfiguration::getPrefixed, name -> name));
       try {
         // Get a map of futures for each topic
-        Map<String, KafkaFuture<TopicDescription>> topicFutures =
-            adminClient.describeTopics(topicsToScan.keySet()).topicNameValues();
+
+        Map<String, TopicDescription> mapKafkaFuture =
+            adminClient.describeTopics(topicsToScan.keySet()).allTopicNames().get();
 
         // Create a set to track which topics still exist
         Set<String> existingTopicNames = new HashSet<>();
 
         // Process each future individually
-        for (Map.Entry<String, KafkaFuture<TopicDescription>> entry : topicFutures.entrySet()) {
+        for (Map.Entry<String, TopicDescription> entry : mapKafkaFuture.entrySet()) {
           String prefixedName = entry.getKey();
           String originalName = topicsToScan.get(prefixedName);
 
           // Try to get the topic description
-          TopicDescription topicDescription = entry.getValue().get();
+          TopicDescription topicDescription = entry.getValue();
 
           // Topic exists, process it
           existingTopicNames.add(originalName);

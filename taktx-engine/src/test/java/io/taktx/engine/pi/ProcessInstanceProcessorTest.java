@@ -89,7 +89,8 @@ class ProcessInstanceProcessorTest {
   @Test
   void testSubProcessServiceTaskSingle() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn", "servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
@@ -103,9 +104,11 @@ class ProcessInstanceProcessorTest {
   @Test
   void testSubProcessTaskNested() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn", "service-task")
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
+        .waitUntilExternalTaskIsWaitingForResponse(
+            "SubProcess_1/SubSubProcess_1.aaa/SubSubSubProcess_1/SubTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
@@ -122,7 +125,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/callactivity-single.bpmn")
         .startProcessInstance(
             VariablesDTO.of("startVariable", "valueStart", "calledActivity", "calledActivity"))
-        .waitUntilChildProcessIsCompleted()
+        .waitUntilChildProcessIsCompleted("calledActivity")
         .assertThatProcess()
         .hasInstantiatedElementWithId("calledActivity:StartEvent_CalledElement")
         .hasInstantiatedElementWithId("calledActivity:task_CalledElement")
@@ -133,8 +136,8 @@ class ProcessInstanceProcessorTest {
         .toProcessLevel()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("callactivity-id")
-        .hasInstantiatedElementWithId("EndEvent_1");
+        .hasInstantiatedElementWithId("task-callactivity:callactivity-id")
+        .hasInstantiatedElementWithId("task-callactivity:EndEvent_1");
   }
 
   @Test
@@ -200,10 +203,10 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/calledActivity_servicetask.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-callactivity.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilChildProcessIsStarted()
+        .waitUntilChildProcessIsStarted("calledActivityServiceTask")
         .parentProcess()
         .terminateProcessInstance()
-        .waitUntilChildProcessIsTerminated()
+        .waitUntilChildProcessIsTerminated("calledActivityServiceTask")
         .assertThatProcess()
         .isTerminated()
         .toProcessLevel()
