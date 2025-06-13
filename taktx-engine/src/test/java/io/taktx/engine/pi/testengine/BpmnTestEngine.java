@@ -516,18 +516,17 @@ public class BpmnTestEngine {
                     return null;
                   }
                   return processInstanceMap.values().stream()
-                          .filter(
-                              pi ->
-                                  pi.getProcessDefinitionKey()
-                                          .getProcessDefinitionId()
-                                          .equals(childProcessName)
-                                      && pi.getFlowNodeInstances().getState()
-                                          == processInstanceState)
-                          .map(ProcessInstanceDTO::getProcessInstanceKey)
-                          .findFirst()
-                          .orElse(null);
+                      .filter(
+                          pi ->
+                              pi.getProcessDefinitionKey()
+                                      .getProcessDefinitionId()
+                                      .equals(childProcessName)
+                                  && pi.getFlowNodeInstances().getState() == processInstanceState)
+                      .map(ProcessInstanceDTO::getProcessInstanceKey)
+                      .findFirst()
+                      .orElse(null);
                 },
-                    Objects::nonNull);
+                Objects::nonNull);
     return this;
   }
 

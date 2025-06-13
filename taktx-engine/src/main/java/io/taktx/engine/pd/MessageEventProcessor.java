@@ -93,7 +93,11 @@ public class MessageEventProcessor
     if (messageSubscriptions != null) {
       DefinitionMessageSubscriptions removed =
           messageSubscriptions.remove(cancelDefinitionMessageSubscription);
-      this.definitionMessageSubscriptionStore.put(key, removed);
+      if (removed.getDefinitions().isEmpty()) {
+        this.definitionMessageSubscriptionStore.put(key, null);
+      } else {
+        this.definitionMessageSubscriptionStore.put(key, removed);
+      }
     }
   }
 
@@ -105,7 +109,11 @@ public class MessageEventProcessor
     if (messageSubscriptions != null) {
       CorrelationMessageSubscriptions removed =
           messageSubscriptions.remove(cancelCorrelatingMessageSubscription.getCorrelationKey());
-      this.correlationMessageSubscriptionStore.put(messageEventKey, removed);
+      if (removed.getInstances().isEmpty()) {
+        this.correlationMessageSubscriptionStore.put(messageEventKey, null);
+      } else {
+        this.correlationMessageSubscriptionStore.put(messageEventKey, removed);
+      }
     }
   }
 

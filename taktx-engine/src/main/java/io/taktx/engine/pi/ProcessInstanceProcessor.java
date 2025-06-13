@@ -487,7 +487,8 @@ public class ProcessInstanceProcessor
         flowNodeInstances.getState(),
         flowNodeInstances.getActiveCnt(),
         flowNodeInstances.getElementInstanceCnt(),
-        flowNodeInstances.getGatewayInstances());
+        flowNodeInstances.getGatewayInstances(),
+        flowNodeInstances.getMessageSubscriptions());
   }
 
   private void storeFlowNodeInstances(

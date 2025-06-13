@@ -29,6 +29,7 @@ import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.SubProcessInstance;
+import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
@@ -99,12 +100,15 @@ public class FlowNodeInstancesProcessor {
                       parentVariableScope)
                   .asText();
 
+          String messageName = messageEventDefinition.getReferencedMessage().name();
           NewCorrelationSubscriptionMessageEventInfo messageSubscription =
               new NewCorrelationSubscriptionMessageEventInfo(
-                  messageEventDefinition.getReferencedMessage().name(),
+                  messageName,
                   correlationKey,
                   flowNodeInstances.getParentFlowNodeInstance(),
                   eventTriggeredSubProcess);
+
+          flowNodeInstances.addMessageSubscription(messageName, correlationKey);
 
           processInstanceProcessingContext
               .getInstanceResult()
@@ -143,8 +147,6 @@ public class FlowNodeInstancesProcessor {
           .getDirectInstanceResult()
           .setTerminateParentPath(instancePath);
     }
-
-    flowNodeInstances.determineImplicitCompletedState();
   }
 
   public void processStartFlowElement(
@@ -223,8 +225,6 @@ public class FlowNodeInstancesProcessor {
             processInstanceProcessingContext,
             flowNodeInstanceProcessingContext,
             parentVariableScope);
-
-        flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
       }
     }
   }
@@ -260,8 +260,6 @@ public class FlowNodeInstancesProcessor {
 
     continueNewInstances(
         processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariables);
-
-    flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
   }
 
   public void processTerminate(
@@ -311,10 +309,11 @@ public class FlowNodeInstancesProcessor {
             parentVariableScope);
       }
     }
-    flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
+    continueNewInstances(
+        processInstanceProcessingContext, flowNodeInstanceProcessingContext, parentVariableScope);
   }
 
-  protected void continueNewInstances(
+  private void continueNewInstances(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       VariableScope parentVariableScope) {
@@ -329,6 +328,32 @@ public class FlowNodeInstancesProcessor {
     while (eventSignal != null) {
       processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
+    }
+    flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
+
+    terminateEventSubprocessSubscriptions(
+        processInstanceProcessingContext, flowNodeInstanceProcessingContext);
+  }
+
+  private static void terminateEventSubprocessSubscriptions(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
+    if (flowNodeInstanceProcessingContext.getFlowNodeInstances().getState().isFinished()) {
+      flowNodeInstanceProcessingContext
+          .getFlowNodeInstances()
+          .getMessageSubscriptions()
+          .forEach(
+              (messageName, correlationKeys) -> {
+                correlationKeys.forEach(
+                    correlationKey -> {
+                      TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
+                          new TerminateCorrelationSubscriptionMessageEventInfo(
+                              messageName, correlationKey);
+                      processInstanceProcessingContext
+                          .getInstanceResult()
+                          .addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
+                    });
+              });
     }
   }
 }

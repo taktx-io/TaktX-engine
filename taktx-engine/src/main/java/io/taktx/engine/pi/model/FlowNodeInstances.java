@@ -13,9 +13,11 @@ package io.taktx.engine.pi.model;
 import io.taktx.dto.ProcessInstanceState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class FlowNodeInstances {
 
   private final Map<Long, FlowNodeInstance<?>> instances;
   private Map<String, Long> gatewayInstances;
+  private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
   private int activeCnt;
   private ProcessInstanceState state;
   private boolean stateChanged;
@@ -35,6 +38,7 @@ public class FlowNodeInstances {
 
   public FlowNodeInstances() {
     this.instances = new LinkedHashMap<>();
+    this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
     this.state = ProcessInstanceState.START;
     this.stateChanged = false;
@@ -64,6 +68,12 @@ public class FlowNodeInstances {
     if (state == ProcessInstanceState.ACTIVE && activeCnt == 0) {
       this.setState(ProcessInstanceState.COMPLETED);
     }
+  }
+
+  public void addMessageSubscription(String messageName, String correlationKey) {
+    Set<String> correlationKeys =
+        messageSubscriptions.computeIfAbsent(messageName, key -> new HashSet<>());
+    correlationKeys.add(correlationKey);
   }
 
   public Optional<FlowNodeInstance<?>> getInstanceWithFlowNode(FlowNode flowNode) {
