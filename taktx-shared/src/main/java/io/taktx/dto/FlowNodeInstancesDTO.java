@@ -25,16 +25,20 @@ public class FlowNodeInstancesDTO {
 
   private Map<String, Set<String>> messageSubscriptions;
 
+  private Set<InstanceScheduleKeyDTO> scheduleKeys;
+
   public FlowNodeInstancesDTO(
       ProcessInstanceState state,
       int activeCnt,
       long elementInstanceCnt,
       Map<String, Long> gatewayInstances,
-      Map<String, Set<String>> messageSubscriptions) {
+      Map<String, Set<String>> messageSubscriptions,
+      Set<InstanceScheduleKeyDTO> scheduleKeys) {
     this.state = state;
     this.activeCnt = activeCnt;
     this.elementInstanceCnt = elementInstanceCnt;
     this.gatewayInstances = gatewayInstances;
     this.messageSubscriptions = messageSubscriptions;
+    this.scheduleKeys = scheduleKeys;
   }
 }

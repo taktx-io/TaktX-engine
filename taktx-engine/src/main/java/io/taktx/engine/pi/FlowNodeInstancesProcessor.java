@@ -80,9 +80,7 @@ public class FlowNodeInstancesProcessor {
           TimerEventDefinition timerEventDefinition = optTimerEventDefinition.get();
           ScheduledStartInfo scheduledStartInfo =
               new ScheduledStartInfo(
-                  flowNodeInstances.getParentFlowNodeInstance(),
-                  eventTriggeredSubProcess,
-                  timerEventDefinition);
+                  flowNodeInstances, eventTriggeredSubProcess, timerEventDefinition);
           processInstanceProcessingContext
               .getInstanceResult()
               .addScheduledStart(scheduledStartInfo);
@@ -343,17 +341,22 @@ public class FlowNodeInstancesProcessor {
           .getFlowNodeInstances()
           .getMessageSubscriptions()
           .forEach(
-              (messageName, correlationKeys) -> {
-                correlationKeys.forEach(
-                    correlationKey -> {
-                      TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
-                          new TerminateCorrelationSubscriptionMessageEventInfo(
-                              messageName, correlationKey);
-                      processInstanceProcessingContext
-                          .getInstanceResult()
-                          .addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
-                    });
-              });
+              (messageName, correlationKeys) -> correlationKeys.forEach(
+                  correlationKey -> {
+                    TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
+                        new TerminateCorrelationSubscriptionMessageEventInfo(
+                            messageName, correlationKey);
+                    processInstanceProcessingContext
+                        .getInstanceResult()
+                        .addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
+                  }));
+
+      flowNodeInstanceProcessingContext
+          .getFlowNodeInstances()
+          .getScheduleKeys()
+          .forEach(
+              scheduleKey ->
+                  processInstanceProcessingContext.getInstanceResult().cancelSchedule(scheduleKey));
     }
   }
 }

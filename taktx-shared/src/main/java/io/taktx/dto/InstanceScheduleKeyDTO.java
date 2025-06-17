@@ -19,10 +19,16 @@ public class InstanceScheduleKeyDTO extends ScheduleKeyDTO {
 
   private List<Long> elementInstanceIdPath;
 
+  private String elementId;
+
   public InstanceScheduleKeyDTO(
-      UUID processInstanceKey, List<Long> elementInstanceIdPath, TimeBucket timeBucket) {
+      UUID processInstanceKey,
+      List<Long> elementInstanceIdPath,
+      String elementId,
+      TimeBucket timeBucket) {
     super(timeBucket);
     this.processInstanceKey = processInstanceKey;
     this.elementInstanceIdPath = elementInstanceIdPath;
+    this.elementId = elementId;
   }
 }

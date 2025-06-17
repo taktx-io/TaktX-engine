@@ -10,6 +10,7 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.dto.InstanceScheduleKeyDTO;
 import io.taktx.dto.ProcessInstanceState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashMap;
@@ -29,7 +30,8 @@ public class FlowNodeInstances {
 
   private final Map<Long, FlowNodeInstance<?>> instances;
   private Map<String, Long> gatewayInstances;
-  private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
+  private Map<String, Set<String>> messageSubscriptions;
+  private Set<InstanceScheduleKeyDTO> scheduleKeys;
   private int activeCnt;
   private ProcessInstanceState state;
   private boolean stateChanged;
@@ -40,6 +42,7 @@ public class FlowNodeInstances {
     this.instances = new LinkedHashMap<>();
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
+    this.scheduleKeys = new HashSet<>();
     this.state = ProcessInstanceState.START;
     this.stateChanged = false;
     this.activeCnt = 0;
@@ -72,7 +75,7 @@ public class FlowNodeInstances {
 
   public void addMessageSubscription(String messageName, String correlationKey) {
     Set<String> correlationKeys =
-        messageSubscriptions.computeIfAbsent(messageName, key -> new HashSet<>());
+        messageSubscriptions.computeIfAbsent(messageName, _ -> new HashSet<>());
     correlationKeys.add(correlationKey);
   }
 
@@ -124,5 +127,9 @@ public class FlowNodeInstances {
 
   public long nextElementInstanceId() {
     return ++elementInstanceCnt;
+  }
+
+  public void addScheduledKey(InstanceScheduleKeyDTO scheduledKey) {
+    this.scheduleKeys.add(scheduledKey);
   }
 }

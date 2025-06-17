@@ -351,7 +351,7 @@ public class ProcessInstanceProcessor
   private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
     return flowElementsCache.computeIfAbsent(
         processDefinitionKey,
-        key -> {
+            _ -> {
           ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
           if (processDefinitionDTO != null) {
             return definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
@@ -488,7 +488,8 @@ public class ProcessInstanceProcessor
         flowNodeInstances.getActiveCnt(),
         flowNodeInstances.getElementInstanceCnt(),
         flowNodeInstances.getGatewayInstances(),
-        flowNodeInstances.getMessageSubscriptions());
+        flowNodeInstances.getMessageSubscriptions(),
+        flowNodeInstances.getScheduleKeys());
   }
 
   private void storeFlowNodeInstances(

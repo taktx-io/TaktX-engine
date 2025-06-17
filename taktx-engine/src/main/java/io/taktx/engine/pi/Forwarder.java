@@ -115,11 +115,15 @@ public class Forwarder {
     Queue<ScheduledStartInfo> scheduledStartInfos = instanceResult.getScheduledStartInfos();
     while (!scheduledStartInfos.isEmpty()) {
       ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
+      List<Long> instancePath =
+          pathExtractor.getInstancePath(
+              scheduledStartInfo.flowNodeInstances().getParentFlowNodeInstance());
+      String elementId = scheduledStartInfo.flowNodeToStart().getId();
       StartFlowElementTriggerDTO startFlowElementTrigger =
           new StartFlowElementTriggerDTO(
               processInstance.getProcessInstanceKey(),
-              pathExtractor.getInstancePath(scheduledStartInfo.parentInstance()),
-              scheduledStartInfo.flowNodeToStart().getId(),
+              instancePath,
+              elementId,
               VariablesDTO.empty());
 
       long now = clock.millis();
@@ -133,7 +137,9 @@ public class Forwarder {
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
-          new InstanceScheduleKeyDTO(processInstance.getProcessInstanceKey(), List.of(), bucket);
+          new InstanceScheduleKeyDTO(
+              processInstance.getProcessInstanceKey(), instancePath, elementId, bucket);
+      scheduledStartInfo.flowNodeInstances().addScheduledKey(scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -168,6 +174,7 @@ public class Forwarder {
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceKey(),
               pathExtractor.getInstancePath(catchEventInstance),
+              catchEventInstance.getFlowNode().getId(),
               bucket);
 
       catchEventInstance.addScheduledKey(scheduledKey);
@@ -189,10 +196,11 @@ public class Forwarder {
       ExternalTaskResponseResultDTO externalTaskResponseResult =
           new ExternalTaskResponseResultDTO(
               ExternalTaskResponseType.TIMEOUT, false, null, null, 0L);
+      List<Long> instancePath = pathExtractor.getInstancePath(info.externalTaskInstance());
       ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
           new ExternalTaskResponseTriggerDTO(
               processInstance.getProcessInstanceKey(),
-              pathExtractor.getInstancePath(info.externalTaskInstance()),
+              instancePath,
               externalTaskResponseResult,
               VariablesDTO.empty());
 
@@ -209,7 +217,8 @@ public class Forwarder {
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceKey(),
-              pathExtractor.getInstancePath(externalTaskInstance),
+              instancePath,
+              externalTaskInstance.getFlowNode().getId(),
               bucket);
 
       externalTaskInstance.addScheduledKey(scheduleKey);
@@ -362,6 +371,7 @@ public class Forwarder {
             new InstanceScheduleKeyDTO(
                 processInstance.getProcessInstanceKey(),
                 pathExtractor.getInstancePath(externalTask.instance()),
+                externalTask.element().getId(),
                 bucket);
         log.info("Scheduling external task {} at {}", scheduledKey, oneTimeScheduler);
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, now));
