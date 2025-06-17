@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
-public class ScriptTask extends Activity {
+public class ScriptTask extends ExternalTask {
   private ScriptType scriptType;
 
   private List<String> scriptExpressions;

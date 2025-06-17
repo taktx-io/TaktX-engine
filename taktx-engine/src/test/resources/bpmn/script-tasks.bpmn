@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0t4s2kx" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.33.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
+  <bpmn:process id="Process_0q0z8xj" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_11a7l5f</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_11a7l5f" sourceRef="StartEvent_1" targetRef="FeelScriptTask_1" />
+    <bpmn:scriptTask id="FeelScriptTask_1" name="Feel">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=123" resultVariable="feelResult" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_11a7l5f</bpmn:incoming>
+      <bpmn:outgoing>Flow_1h5qehj</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="Flow_1h5qehj" sourceRef="FeelScriptTask_1" targetRef="JobWorkerScriptTask_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_17893rn</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_17893rn" sourceRef="JobWorkerScriptTask_1" targetRef="EndEvent_1" />
+    <bpmn:scriptTask id="JobWorkerScriptTask_1" name="JobWorker">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="script-jobworker" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1h5qehj</bpmn:incoming>
+      <bpmn:outgoing>Flow_17893rn</bpmn:outgoing>
+    </bpmn:scriptTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_0q0z8xj">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_15yl7id_di" bpmnElement="FeelScriptTask_1">
+        <dc:Bounds x="270" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ghoy6t_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="592" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1owolh0_di" bpmnElement="JobWorkerScriptTask_1">
+        <dc:Bounds x="430" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_11a7l5f_di" bpmnElement="Flow_11a7l5f">
+        <di:waypoint x="218" y="120" />
+        <di:waypoint x="270" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1h5qehj_di" bpmnElement="Flow_1h5qehj">
+        <di:waypoint x="370" y="120" />
+        <di:waypoint x="430" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17893rn_di" bpmnElement="Flow_17893rn">
+        <di:waypoint x="530" y="120" />
+        <di:waypoint x="592" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

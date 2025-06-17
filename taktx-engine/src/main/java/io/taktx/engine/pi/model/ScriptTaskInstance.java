@@ -14,7 +14,7 @@ import io.taktx.engine.pd.model.ScriptTask;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
-public class ScriptTaskInstance extends ActivityInstance<ScriptTask> {
+public class ScriptTaskInstance extends ExternalTaskInstance<ScriptTask> {
 
   public ScriptTaskInstance(
       FlowNodeInstance<?> parentInstance, ScriptTask flowNode, long elementInstanceId) {

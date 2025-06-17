@@ -1,6 +1,5 @@
 package io.taktx.dto;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
@@ -19,8 +18,6 @@ public abstract class ExternalTaskDTO extends TaskDTO {
   private String implementation;
 
   private Map<String, String> headers;
-
-  private List<ScheduleKeyDTO> scheduledKeys;
 
   protected ExternalTaskDTO(
       String id,

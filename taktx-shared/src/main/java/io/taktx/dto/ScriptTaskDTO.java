@@ -1,6 +1,7 @@
 package io.taktx.dto;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class ScriptTaskDTO extends TaskDTO {
+public class ScriptTaskDTO extends ExternalTaskDTO {
 
   private ScriptType scriptType;
   private List<String> scriptExpressions;
@@ -18,14 +19,27 @@ public class ScriptTaskDTO extends TaskDTO {
   public ScriptTaskDTO(
       String id,
       String parentId,
+      String workerDefinition,
+      String retries,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
+      Map<String, String> headers,
       InputOutputMappingDTO ioMapping,
       ScriptType scriptType,
       List<String> scriptExpressions,
       String resultVariableName) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(
+        id,
+        parentId,
+        incoming,
+        outgoing,
+        loopCharacteristics,
+        ioMapping,
+        workerDefinition,
+        retries,
+        scriptType.name(),
+        headers);
     this.scriptType = scriptType;
     this.scriptExpressions = scriptExpressions;
     this.resultVariableName = resultVariableName;

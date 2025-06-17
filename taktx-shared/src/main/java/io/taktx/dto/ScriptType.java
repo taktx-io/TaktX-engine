@@ -2,6 +2,7 @@ package io.taktx.dto;
 
 public enum ScriptType {
   FEEL,
+  JOBWORKER,
   JAVASCRIPT,
   GROOVY,
   PYTHON,
@@ -12,5 +13,6 @@ public enum ScriptType {
   PERL,
   PHP,
   SHELL,
-  JUEL
+  JUEL,
+  UNKNOWN
 }

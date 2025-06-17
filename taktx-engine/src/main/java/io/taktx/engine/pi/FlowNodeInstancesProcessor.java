@@ -341,15 +341,16 @@ public class FlowNodeInstancesProcessor {
           .getFlowNodeInstances()
           .getMessageSubscriptions()
           .forEach(
-              (messageName, correlationKeys) -> correlationKeys.forEach(
-                  correlationKey -> {
-                    TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
-                        new TerminateCorrelationSubscriptionMessageEventInfo(
-                            messageName, correlationKey);
-                    processInstanceProcessingContext
-                        .getInstanceResult()
-                        .addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
-                  }));
+              (messageName, correlationKeys) ->
+                  correlationKeys.forEach(
+                      correlationKey -> {
+                        TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
+                            new TerminateCorrelationSubscriptionMessageEventInfo(
+                                messageName, correlationKey);
+                        processInstanceProcessingContext
+                            .getInstanceResult()
+                            .addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
+                      }));
 
       flowNodeInstanceProcessingContext
           .getFlowNodeInstances()
