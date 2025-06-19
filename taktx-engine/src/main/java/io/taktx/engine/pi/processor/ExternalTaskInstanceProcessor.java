@@ -121,7 +121,10 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTaskResponseTriggerDTO trigger,
       VariableScope variables) {
 
-    log.info("Continuing external task instanceToContinue {}", trigger);
+    log.info(
+        "Continuing external task {} instanceToContinue {}",
+        externalTaskInstance.getFlowNode().getId(),
+        trigger);
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 

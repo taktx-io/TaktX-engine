@@ -407,17 +407,28 @@ public class BpmnTestEngine {
         .until(
             this::pollExternalTask,
             externalTaskTrigger -> {
-              FlowNodeInstanceKeyDTO flowNodeInstanceKeyDTO =
-                  new FlowNodeInstanceKeyDTO(
-                      activeProcessInstanceKey, externalTaskTrigger.getElementInstanceIdPath());
-              FlowNodeInstanceDTO flowNodeInstanceDTO =
-                  flowNodeInstanceMap.get(flowNodeInstanceKeyDTO);
-              String elementId = flowNodeInstanceDTO.getElementId();
+              String elementIdPath = "";
+              List<Long> triggerElementInstanceIdPath =
+                  externalTaskTrigger.getElementInstanceIdPath();
+              List<Long> elementInstanceIdPath = new ArrayList<>();
+              for (int i = 0; i < triggerElementInstanceIdPath.size(); i++) {
+                if (i > 0) {
+                  elementIdPath += "/";
+                }
+                elementInstanceIdPath.add(triggerElementInstanceIdPath.get(i));
+
+                FlowNodeInstanceKeyDTO flowNodeInstanceKeyDTO =
+                    new FlowNodeInstanceKeyDTO(activeProcessInstanceKey, elementInstanceIdPath);
+                FlowNodeInstanceDTO flowNodeInstanceDTO =
+                    flowNodeInstanceMap.get(flowNodeInstanceKeyDTO);
+                elementIdPath += flowNodeInstanceDTO.getElementId();
+              }
+
               BiConsumer<BpmnTestEngine, ExternalTaskTriggerDTO> bpmnTestEngineConsumer =
-                  externalTaskTriggerQueueMap.get(elementId);
+                  externalTaskTriggerQueueMap.get(elementIdPath);
               if (bpmnTestEngineConsumer != null) {
                 bpmnTestEngineConsumer.accept(this, externalTaskTrigger);
-                externalTaskIds.remove(elementId);
+                externalTaskIds.remove(elementIdPath);
               }
               return externalTaskIds.isEmpty();
             });

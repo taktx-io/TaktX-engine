@@ -75,7 +75,7 @@ public class FlowNodeInstances {
 
   public void addMessageSubscription(String messageName, String correlationKey) {
     Set<String> correlationKeys =
-        messageSubscriptions.computeIfAbsent(messageName, _ -> new HashSet<>());
+        messageSubscriptions.computeIfAbsent(messageName, ignored -> new HashSet<>());
     correlationKeys.add(correlationKey);
   }
 

@@ -351,7 +351,7 @@ public class ProcessInstanceProcessor
   private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
     return flowElementsCache.computeIfAbsent(
         processDefinitionKey,
-        _ -> {
+        ignored -> {
           ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
           if (processDefinitionDTO != null) {
             return definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());

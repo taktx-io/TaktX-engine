@@ -86,6 +86,9 @@ public abstract class GatewayInstanceProcessor<
       Set<SequenceFlow> flowsWithCondition =
           sequenceFlows.stream()
               .filter(sequenceFlow -> !FlowConditionDTO.NONE.equals(sequenceFlow.getCondition()))
+              .collect(Collectors.toSet());
+      Set<SequenceFlow> flowsWithMatchingCondition =
+          flowsWithCondition.stream()
               .filter(
                   sequenceFlow ->
                       feelExpressionHandler
@@ -94,13 +97,16 @@ public abstract class GatewayInstanceProcessor<
                           .asBoolean())
               .collect(Collectors.toSet());
 
-      outgoingFlows.addAll(flowsWithCondition);
+      outgoingFlows.addAll(flowsWithMatchingCondition);
       if (outgoingFlows.isEmpty() && gatewayNode.getDefaultFlow() != null) {
         outgoingFlows.add(gatewayNode.getDefaultSequenceFlow());
-      } else if (outgoingFlows.isEmpty() && !sequenceFlows.isEmpty()) {
-        // Last chance, if no condition is met and no default flow is set, take the outgoing flows
+      } else if (flowsWithCondition.isEmpty()) {
+        // No conditions were set on the outgoing flows, so we select all of them
         outgoingFlows.addAll(sequenceFlows);
+      } else {
+        // No matching condition found, and no default flow is set. Do not add any flows
       }
+
       if (outgoingFlows.isEmpty()) {
         throw new ProcessInstanceException(
             processInstance,

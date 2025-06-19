@@ -77,8 +77,8 @@ subprojects {
 // Set Java compatibility for all projects
 plugins.withType<JavaPlugin> {
     configure<JavaPluginExtension> {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_23
+        targetCompatibility = JavaVersion.VERSION_23
     }
 }
 

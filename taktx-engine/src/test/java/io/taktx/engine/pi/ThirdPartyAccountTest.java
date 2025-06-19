@@ -21,7 +21,7 @@ class ThirdPartyAccountTest {
   }
 
   @Test
-  void testFlow() throws IOException {
+  void testHappyFlowNew() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds(
@@ -70,7 +70,32 @@ class ThirdPartyAccountTest {
                     bpmnTestEngine.andRespondToExternalTaskWithSuccess(
                         externalTaskTrigger, VariablesDTO.empty())))
         .waitUntilUserTaskIsWaitingForResponse(
-            "special-business-accounts-configuration-call-activity:configure-account");
+            "special-business-accounts-configuration-call-activity:configure-account")
+        .andCompleteUserTaskWithSuccess(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse(
+            Map.of(
+                "Activity_0kzm2qd/Activity_1ga7ibb",
+                (bpmnTestEngine, externalTaskTrigger) ->
+                    bpmnTestEngine.andRespondToExternalTaskWithSuccess(
+                        externalTaskTrigger, VariablesDTO.empty()),
+                "Activity_0kzm2qd/Activity_1ko737q",
+                (bpmnTestEngine, externalTaskTrigger) ->
+                    bpmnTestEngine.andRespondToExternalTaskWithSuccess(
+                        externalTaskTrigger, VariablesDTO.empty()),
+                "Activity_0kzm2qd/Activity_16n9ati",
+                (bpmnTestEngine, externalTaskTrigger) ->
+                    bpmnTestEngine.andRespondToExternalTaskWithSuccess(
+                        externalTaskTrigger, VariablesDTO.empty())))
+        .parentProcess()
+        .waitUntilChildProcessIsStarted("summary-lb-call-activity")
+        .waitUntilUserTaskIsWaitingForResponse("summary-lb-call-activity:samenvatting")
+        .andCompleteUserTaskWithSuccess(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("Activity_0r2vlz7")
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("Activity_0547tg5")
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .parentProcess()
+        .waitUntilCompleted();
   }
 
   private static class ElegibilityCheckResult {
