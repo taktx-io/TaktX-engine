@@ -116,9 +116,11 @@ public class TopicMonitor {
         // Remove entries for topics that no longer exist
         topicInfo.keySet().removeIf(name -> !existingTopicNames.contains(name));
 
-      } catch (ExecutionException | InterruptedException e) {
+      } catch (ExecutionException e) {
         log.error("Failed to get topic information", e);
-        Thread.currentThread().interrupt(); // Restore interrupted status
+      } catch (InterruptedException e) {
+        log.error("Interrupted while getting topic information", e);
+        Thread.currentThread().interrupt();
       }
     }
   }

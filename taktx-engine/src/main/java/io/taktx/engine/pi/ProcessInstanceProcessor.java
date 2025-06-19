@@ -228,10 +228,11 @@ public class ProcessInstanceProcessor
     flowNodeInstance.terminate();
     ProcessInstance processInstance = e.getProcessInstance();
     log.warn(
-        "Takt exception occurred for processinstance {}, {}, {}",
+        "Takt exception occurred for processinstance {}, {}, {}: {}",
         processInstance.getProcessInstanceKey(),
         flowNodeInstance.getFlowNode().getId(),
-        flowNodeInstance.getElementInstanceId());
+        flowNodeInstance.getElementInstanceId(),
+        e.getMessage());
     handleTerminate(
         flowNodeInstanceStore,
         new TerminateTriggerDTO(processInstance.getProcessInstanceKey(), List.of()));
