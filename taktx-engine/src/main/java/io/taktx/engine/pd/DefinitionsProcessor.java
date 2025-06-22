@@ -18,7 +18,6 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.generic.Deployer;
 import io.taktx.xml.BpmnParser;
 import java.time.Clock;
 import java.util.HashMap;
@@ -44,17 +43,14 @@ public class DefinitionsProcessor
       processDefinitionStore;
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
-  private final Deployer deployer;
   private final Clock clock;
 
   public DefinitionsProcessor(
       TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
-      Deployer deployer,
       Clock clock) {
     this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
-    this.deployer = deployer;
     this.clock = clock;
   }
 

@@ -121,7 +121,6 @@ public class TopologyProducer {
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
-  private final Deployer deployer;
   private final KeyValueStoreSupplier keyValueStoreSupplier;
   private final DtoMapper dtoMapper;
   private final DefinitionMapper definitionMapper;
@@ -171,9 +170,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () ->
-                new DefinitionsProcessor(
-                    taktConfiguration, messageSchedulerFactory, deployer, clock),
+            () -> new DefinitionsProcessor(taktConfiguration, messageSchedulerFactory, clock),
             taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()

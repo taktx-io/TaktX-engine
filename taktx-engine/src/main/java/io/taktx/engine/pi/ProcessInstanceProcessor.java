@@ -126,11 +126,6 @@ public class ProcessInstanceProcessor
   }
 
   private void processStartCommandRecord(UUID processInstanceKey, StartCommandDTO startCommand) {
-    log.info(
-        "Start new process instanceToContinue: {} definition: {}",
-        processInstanceKey,
-        startCommand.getProcessDefinitionKey());
-
     processingStatistics.startTimerForProcessInstance(processInstanceKey);
     processingStatistics.increaseProcessInstancesStarted();
 
@@ -517,7 +512,6 @@ public class ProcessInstanceProcessor
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
-    log.info("Purging finished process instanceToContinue: {}", processInstanceKey);
     this.processingStatistics.stopTimerForProcessInstance(
         processInstanceKey, processInstance.getProcessDefinitionKey().getProcessDefinitionId());
 

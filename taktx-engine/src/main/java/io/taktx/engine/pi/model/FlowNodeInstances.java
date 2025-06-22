@@ -99,20 +99,11 @@ public class FlowNodeInstances {
   }
 
   public void updateActiveCountForInstances() {
-    log.info("Updating active count for instances, current active count: {}", activeCnt);
     for (FlowNodeInstance<?> instance : instances.values()) {
-      log.info("Processing instance: {}", instance.getFlowNode().getId());
       if (instance.wasNew()) {
-        log.info("increasing active count for new instance: {}", instance.getFlowNode().getId());
         activeCnt++;
       }
       if ((instance.wasNew() || instance.wasAwaiting()) && instance.isCompleted()) {
-        log.info(
-            "decreasing active count for new instance: {} wasNew: {} wasAwaiting: {} isCompleted: {}",
-            instance.getFlowNode().getId(),
-            instance.wasNew(),
-            instance.wasAwaiting(),
-            instance.isCompleted());
         activeCnt--;
       }
     }

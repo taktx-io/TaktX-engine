@@ -341,16 +341,11 @@ public class Forwarder {
     Queue<ExternalTaskInfo> externalTaskRequests = instanceResult.getExternalTaskRequests();
     while (!externalTaskRequests.isEmpty()) {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
-      log.info("Forwarding external task request {}", externalTask);
       ExternalTaskTriggerDTO newExternalTaskTrigger =
           toExternalTaskTrigger(
               externalTask, processInstance.getProcessInstanceKey(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
-        log.info(
-            "Scheduling external task, no backoff {} {}",
-            newExternalTaskTrigger.getProcessInstanceKey(),
-            newExternalTaskTrigger);
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceKey(),
@@ -373,7 +368,6 @@ public class Forwarder {
                 pathExtractor.getInstancePath(externalTask.instance()),
                 externalTask.element().getId(),
                 bucket);
-        log.info("Scheduling external task {} at {}", scheduledKey, oneTimeScheduler);
         context.forward(new Record<>(scheduledKey, oneTimeScheduler, now));
       }
     }

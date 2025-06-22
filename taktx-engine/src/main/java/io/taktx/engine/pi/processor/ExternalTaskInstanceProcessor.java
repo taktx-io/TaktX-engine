@@ -69,10 +69,31 @@ public abstract class ExternalTaskInstanceProcessor<
       I flownodeInstance,
       String inputFlowId,
       VariableScope variables) {
-    log.info("Starting external task instanceToContinue {}", flownodeInstance);
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
 
+    if (monitorTopicInfo(
+        processInstanceProcessingContext,
+        flowNodeInstanceProcessingContext,
+        flownodeInstance,
+        variables,
+        externalTaskId)) {
+      return;
+    }
+
+    retryDirectly(
+        getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),
+        processInstanceProcessingContext.getInstanceResult());
+    flownodeInstance.setState(ActtivityStateEnum.WAITING);
+    flownodeInstance.setAttempt(0);
+  }
+
+  private boolean monitorTopicInfo(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      I flownodeInstance,
+      VariableScope variables,
+      String externalTaskId) {
     if (!topicExists(
         processInstanceProcessingContext.getTopicStore().getLatestTopicInfo(), externalTaskId)) {
       // Force rescan of topics, we do not do it always as it is an expensive operation
@@ -102,15 +123,10 @@ public abstract class ExternalTaskInstanceProcessor<
                 "Topic not created",
                 "Topic not created",
                 -1L));
-        return;
+        return true;
       }
     }
-
-    retryDirectly(
-        getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),
-        processInstanceProcessingContext.getInstanceResult());
-    flownodeInstance.setState(ActtivityStateEnum.WAITING);
-    flownodeInstance.setAttempt(0);
+    return false;
   }
 
   @Override
@@ -121,10 +137,6 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTaskResponseTriggerDTO trigger,
       VariableScope variables) {
 
-    log.info(
-        "Continuing external task {} instanceToContinue {}",
-        externalTaskInstance.getFlowNode().getId(),
-        trigger);
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 

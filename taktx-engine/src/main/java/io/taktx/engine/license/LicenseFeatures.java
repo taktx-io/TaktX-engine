@@ -5,6 +5,6 @@ public class LicenseFeatures {
     // Prevent instantiation
   }
 
-  public static final String EXPIRY_DATE = "expiryDate";
-  public static final String PARTITION_LIMIT = "partitionLimit";
+  public static final String LICENSE_FEATURE_EXPIRY_DATE = "expiryDate";
+  public static final String LICENSE_FEATURE_PARTITION_LIMIT = "partitionLimit";
 }

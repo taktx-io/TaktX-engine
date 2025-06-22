@@ -75,7 +75,6 @@ public class BucketProcessor {
               if (processInstanceKey == null) {
                 processInstanceKey = UUID.randomUUID(); // Assign a new UUID if not set
               }
-              log.info("Processing schedule {} message {}", key, message);
               context.forward(new Record<>(processInstanceKey, message, key.getTime()));
               iterator.remove();
             } else {
@@ -97,11 +96,6 @@ public class BucketProcessor {
   }
 
   private void fillNextUpcomingSchedules(long timestamp, long until) {
-    log.info(
-        "Filling next schedules for time bucket {} between {} and {}",
-        timeBucket.getName(),
-        timestamp,
-        until);
     try (KeyValueIterator<ScheduleKeyDTO, MessageScheduleDTO> all = store.all()) {
       all.forEachRemaining(
           entry -> {
