@@ -88,7 +88,7 @@ taktx.engine.topic.partitions=3  # Free version limit
 
 ## Licensing
 
-TaktX Engine is available under the Business Source License 1.1:
+TaktX Engine is available under the Business Source License 1.0:
 
 - **Free Version**: Limited to 3 Kafka partitions
 - **Commercial License**: Unlimited partitions and enterprise support
@@ -125,4 +125,4 @@ cd TaktX-engine
 
 ## License
 
-TaktX Engine is licensed under the [TaktX Business Source License 1.1](LICENSE.md).
+TaktX Engine is licensed under the [TaktX Business Source License 1.0](LICENSE.md).

@@ -97,7 +97,7 @@ publishing {
                 
                 licenses {
                     license {
-                        name.set("TaktX Business Source License 1.1")
+                        name.set("TaktX Business Source License 1.0")
                         url.set("https://taktx.io/license")
                     }
                 }
@@ -272,7 +272,7 @@ ARG CHANGE_DATE=2029-04-04
 LABEL maintainer="TaktX B.V. <info@taktx.io>"
 LABEL version="${VERSION}"
 LABEL description="TaktX Engine - A high-performance BPMN engine"
-LABEL license="TaktX Business Source License 1.1"
+LABEL license="TaktX Business Source License 1.0"
 LABEL license.change_date="${CHANGE_DATE}"
 
 WORKDIR /app
