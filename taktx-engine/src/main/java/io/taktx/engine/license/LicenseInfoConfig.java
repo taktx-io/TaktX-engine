@@ -1,13 +1,9 @@
 /*
- *
- *  * TaktX - A high-performance BPMN engine
- *  * Copyright (c) 2025 TaktX B.V. All rights reserved.
- *  * This file is part of TaktX, licensed under the TaktX Business Source License v1.1.
- *  * Free non-production use is permitted with up to 3 Kafka partitions.
- *  * Production use is prohibited without a commercial license.
- *  * See LICENSE.md file for complete terms and conditions.
- *  * For commercial licensing, contact [info@taktx.io] or visit [https://www.taktx.io/contact].
- *
+ * TaktX - A high-performance BPMN engine
+ * Copyright (c) 2025 Eric Hendriks All rights reserved.
+ * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
+ * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
+ * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
 package io.taktx.engine.license;
