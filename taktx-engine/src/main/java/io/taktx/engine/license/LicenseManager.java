@@ -31,7 +31,7 @@ public class LicenseManager {
 
   private static final Logger LOG = Logger.getLogger(LicenseManager.class.getName());
 
-  private static final int DEFAULT_PARTITION_LIMIT = 3;
+  public static final int DEFAULT_PARTITION_LIMIT = 3;
   private static final Path LICENSE_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "license.lic");
 

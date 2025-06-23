@@ -383,7 +383,7 @@ public class BpmnTestEngine {
   private void registerTopics(String... externalTaskIds) {
     for (String externalTaskId : externalTaskIds) {
       taktClient.requestTopicState(
-          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 5, CleanupPolicy.COMPACT);
+          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 3, CleanupPolicy.COMPACT);
     }
   }
 

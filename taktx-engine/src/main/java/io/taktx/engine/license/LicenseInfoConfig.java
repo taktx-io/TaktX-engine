@@ -72,14 +72,19 @@ public class LicenseInfoConfig {
     System.out.println(separator);
     System.out.println(licenseInfo);
 
+    String invalidLicenseMessage =
+        "⚠️ No valid commercial license found. Running with limitations:"
+            + "\n  • Maximum "
+            + LicenseManager.DEFAULT_PARTITION_LIMIT
+            + " Kafka partitions"
+            + "\n  • Premium features disabled"
+            + "\nFor commercial use and to unlock premium features, contact us at [https://taktx.io/contact].";
+    ;
+
     if (licenseManager.isLicenseValid()) {
       System.out.println("✅ Valid commercial license found: " + licenseManager.getLicenseInfo());
     } else {
-      System.out.println("⚠️ No valid commercial license found. Running with limitations:");
-      System.out.println("  • Maximum 3 Kafka partitions");
-      System.out.println("  • Premium features disabled");
-      System.out.println(
-          "For commercial use and to unlock premium features, contact us at [https://taktx.io/contact].");
+      System.out.println(invalidLicenseMessage);
     }
     System.out.println(separator);
 
@@ -96,13 +101,7 @@ public class LicenseInfoConfig {
     if (licenseManager.isLicenseValid()) {
       log.info("Valid commercial license found: {}", licenseManager.getLicenseInfo());
     } else {
-      log.warn(
-          """
-              ⚠️ No valid commercial license found. Running with limitations:
-                • Maximum 3 Kafka partitions
-                • Premium features disabled
-              For commercial use and to unlock premium features, contact us at [https://taktx.io/contact].
-              """);
+      log.warn(invalidLicenseMessage);
     }
   }
 }
