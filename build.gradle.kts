@@ -82,21 +82,6 @@ plugins.withType<JavaPlugin> {
     }
 }
 
-// Maven Central publishing configuration
-nexusPublishing {
-    repositories {
-        sonatype {
-            // The default is 's01.oss.sonatype.org' which is the newer instance
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            
-            // These credentials will be used by the publishToSonatype task
-            username.set(System.getenv("MAVEN_USERNAME"))
-            password.set(System.getenv("MAVEN_PASSWORD"))
-        }
-    }
-}
-
 spotless {
     java {
         googleJavaFormat()
