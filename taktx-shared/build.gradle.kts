@@ -1,12 +1,10 @@
 plugins {
-    id("java")
+    id("java-library")
+    `maven-publish`
     alias(libs.plugins.xjc)
     alias(libs.plugins.spotless)
-    `maven-publish`
-    id("signing")
+    id("org.jreleaser")
 }
-
-// Group and version are inherited from the root project
 
 dependencies {
     implementation(libs.cronutils)
@@ -67,7 +65,7 @@ publishing {
             // Maven Central requires POM metadata
             pom {
                 name.set("TaktX Shared")
-                description.set("Shared library for TaktX BPM Engine with licensing controls for Kafka partition limits")
+                description.set("Shared library for TaktX BPM Engine.")
                 url.set("https://github.com/taktx-io/TaktX-engine")
 
                 licenses {
@@ -80,7 +78,7 @@ publishing {
                 developers {
                     developer {
                         id.set("taktx")
-                        name.set("TaktX Development Team")
+                        name.set("Eric Hendriks")
                         email.set("info@taktx.io")
                     }
                 }
@@ -93,19 +91,50 @@ publishing {
             }
         }
     }
-}
-
-// Maven Central requires signed artifacts
-// This uses environment variables to avoid storing credentials in the repo
-signing {
-    val signingKey = System.getenv("GPG_PRIVATE_KEY")
-    val signingPassword = System.getenv("GPG_PASSPHRASE")
-    
-    if (signingKey != null && signingPassword != null) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
-        sign(publishing.publications["mavenJava"])
+    repositories {
+        maven {
+            url = uri(layout.buildDirectory.dir("staging-deploy").get().asFile)
+        }
     }
 }
+
+jreleaser {
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                register("release-deploy") {
+                    active.set(org.jreleaser.model.Active.RELEASE)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("target/staging-deploy")
+                }
+            }
+            nexus2 {
+                register("snapshot-deploy") {
+                    active.set(org.jreleaser.model.Active.SNAPSHOT)
+                    url.set("https://s01.oss.sonatype.org/service/local/")
+                    snapshotUrl.set("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                    applyMavenCentralRules.set(true)
+                    snapshotSupported.set(true)
+                    closeRepository.set(true)
+                    releaseRepository.set(true)
+                    stagingRepository("target/staging-deploy")
+                }
+            }
+        }
+    }
+    release {
+        github {
+            name.set("TaktX-engine")
+            commitAuthor {
+                name.set("Eric Hendriks")
+                email.set("info@taktx.io")
+            }
+        }
+    }}
 
 spotless {
     java {

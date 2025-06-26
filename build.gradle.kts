@@ -2,14 +2,14 @@ plugins {
     id("java")
     alias(libs.plugins.jib)
     alias(libs.plugins.spotless)
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
     id("jacoco")
+    id("org.jreleaser") version "1.18.0"
 }
 
 allprojects {
     group = "io.taktx"
-    version = "0.0.1-alpha-1"
-    
+    version = "0.0.1-SNAPSHOT"
+
     repositories {
         mavenLocal()
         mavenCentral()
