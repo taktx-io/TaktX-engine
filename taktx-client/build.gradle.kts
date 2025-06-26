@@ -96,6 +96,7 @@ publishing {
 }
 
 jreleaser {
+    gitRootSearch.set(true)
     signing {
         active.set(org.jreleaser.model.Active.ALWAYS)
         armored.set(true)
@@ -106,7 +107,7 @@ jreleaser {
                 register("release-deploy") {
                     active.set(org.jreleaser.model.Active.RELEASE)
                     url.set("https://central.sonatype.com/api/v1/publisher")
-                    stagingRepository("target/staging-deploy")
+                    stagingRepository("build/staging-deploy")
                 }
             }
             nexus2 {
@@ -118,7 +119,7 @@ jreleaser {
                     snapshotSupported.set(true)
                     closeRepository.set(true)
                     releaseRepository.set(true)
-                    stagingRepository("target/staging-deploy")
+                    stagingRepository("build/staging-deploy")
                 }
             }
         }
