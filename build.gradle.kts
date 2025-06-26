@@ -8,7 +8,7 @@ plugins {
 
 allprojects {
     group = "io.taktx"
-    version = "0.0.1-SNAPSHOT"
+    version = "early-access"
 
     repositories {
         mavenLocal()
