@@ -46,7 +46,7 @@ dependencies {
 }
 
 group = "io.taktx"
-version = "early-access"
+version = "0.0.1"
 
 tasks.test {
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
