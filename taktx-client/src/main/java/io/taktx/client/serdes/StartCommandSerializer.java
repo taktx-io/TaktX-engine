@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.serdes.JsonSerializer;
 
 public class StartCommandSerializer extends JsonSerializer<StartCommandDTO> {
 

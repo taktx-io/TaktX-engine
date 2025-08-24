@@ -87,7 +87,9 @@ public class ExternalTaskTriggerTopicConsumer {
 
                       ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
                           externalTaskTriggerKafkaConsumer.poll(Duration.ofMillis(100));
-
+                      if (records.isEmpty()) {
+                        continue;
+                      }
                       for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
                           records) {
                         externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());

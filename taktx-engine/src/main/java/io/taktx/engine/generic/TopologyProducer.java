@@ -49,6 +49,7 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
+import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -113,8 +114,8 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
       new ObjectMapperSerde<>(VariableKeyDTO.class);
-  private static final Serde<String> EXTERNAL_TASK_ID_SERDE = new StringSerde();
-  private static final Serde<TopicMetaDTO> EXTERNAL_TASK_META_SERDE =
+  public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
+  public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
 
   private final MessageSchedulerFactory messageSchedulerFactory;
@@ -128,7 +129,7 @@ public class TopologyProducer {
   private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
   private final IoMappingProcessor ioMappingProcessor;
   private final ProcessingStatistics processingStatistics;
-  private final TopicMonitor topicMonitor;
+  private final DynamicTopicManager topicManager;
 
   @Produces
   public Topology buildTopology() {
@@ -221,10 +222,15 @@ public class TopologyProducer {
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
     builder.globalTable(
-        taktConfiguration.getPrefixed(Topics.TOPIC_META_TOPIC.getTopicName()),
-        Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META))
-            .withKeySerde(EXTERNAL_TASK_ID_SERDE)
-            .withValueSerde(EXTERNAL_TASK_META_SERDE));
+        taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+        Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META_REQUESTED))
+            .withKeySerde(TOPIC_META_KEY_SERDE)
+            .withValueSerde(TOPIC_META_SERDE));
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),
+        Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META_ACTUAL))
+            .withKeySerde(TOPIC_META_KEY_SERDE)
+            .withValueSerde(TOPIC_META_SERDE));
 
     builder.addStateStore(
         keyValueStoreBuilder(
@@ -255,7 +261,7 @@ public class TopologyProducer {
                     clock,
                     dtoMapper,
                     processingStatistics,
-                    topicMonitor),
+                    topicManager),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

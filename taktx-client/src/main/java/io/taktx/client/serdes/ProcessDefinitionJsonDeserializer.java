@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.serdes.JsonDeserializer;
 
 public class ProcessDefinitionJsonDeserializer extends JsonDeserializer<ProcessDefinitionDTO> {
 

@@ -13,9 +13,9 @@ import io.taktx.Topics;
 import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.TaktClient;
 import io.taktx.client.UserTaskTriggerConsumer;
+import io.taktx.client.serdes.TopicMetaJsonDeserializer;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.ActtivityStateEnum;
-import io.taktx.dto.Constants;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
@@ -36,6 +36,7 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.SubProcessDTO;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.generic.MutableClock;
@@ -61,6 +62,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -98,8 +100,10 @@ public class BpmnTestEngine {
   private UUID latestInstantiatedProcessInstanceKey;
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
+  private KafkaConsumerUtil<String, TopicMetaDTO> actualTopicMetaConsumer;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
+  private Map<String, TopicMetaDTO> topitMetaCache = new ConcurrentHashMap<>();
 
   public BpmnTestEngine(Clock clock) {
     this.originalClock = Clock.fixed(clock.instant(), clock.getZone());
@@ -123,6 +127,7 @@ public class BpmnTestEngine {
     taktClient.stop();
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
+    actualTopicMetaConsumer.stop();
   }
 
   public void init() {
@@ -138,10 +143,6 @@ public class BpmnTestEngine {
             .withNamespace("namespace")
             .withKafkaProperties(kakaProperties)
             .build();
-    taktClient.registerInitialFixedTopics();
-    taktClient.startTopicMatcher();
-    Topics.managedFixedTopics()
-        .forEach(t -> taktClient.requestTopicState(t.getTopicName(), 3, t.getCleanupPolicy()));
     taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
     taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);
     taktClient.start();
@@ -160,6 +161,13 @@ public class BpmnTestEngine {
             MessageEventKeyDeserializer.class.getName(),
             MessageEventDeserializer.class.getName(),
             this::consumeMessageEvent);
+    actualTopicMetaConsumer =
+        new KafkaConsumerUtil<>(
+            "test-group",
+            TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName(),
+            StringDeserializer.class.getName(),
+            TopicMetaJsonDeserializer.class.getName(),
+            this::consumeTopicMeta);
   }
 
   public void consumeProcessInstanceTrigger(
@@ -187,6 +195,13 @@ public class BpmnTestEngine {
         messageSubscriptionMap.computeIfAbsent(
             messageEvent.getMessageName(), k -> new ConcurrentLinkedQueue<>());
     messageEvents.add(messageEvent);
+  }
+
+  public void consumeTopicMeta(
+      ConsumerRecord<String, TopicMetaDTO> topicMetaRecord) {
+    TopicMetaDTO topicMetaDTO = topicMetaRecord.value();
+    topitMetaCache.put(topicMetaDTO.getTopicName(), topicMetaDTO);
+    LOG.info("Received topic meta event: {}" + topicMetaDTO);
   }
 
   public void consumeExternalTaskTrigger(ExternalTaskTriggerDTO externalTaskTrigger) {
@@ -292,7 +307,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine registerAndSubscribeToExternalTaskIds(String... externalTaskIds) {
     LOG.info(
         "Registering and subscribing to external task ids: " + String.join(", ", externalTaskIds));
-    registerTopics(externalTaskIds);
+    registerTopicsForExternalTasks(externalTaskIds);
     subscribeToExternalTaskTopics(externalTaskIds);
     return this;
   }
@@ -380,11 +395,19 @@ public class BpmnTestEngine {
     }
   }
 
-  private void registerTopics(String... externalTaskIds) {
+  private void registerTopicsForExternalTasks(String... externalTaskIds) {
+    List<String> topics = new ArrayList<>();
+
     for (String externalTaskId : externalTaskIds) {
-      taktClient.requestTopicState(
-          Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId, 3, CleanupPolicy.COMPACT);
+      topics.add(taktClient.requestExternalTaskTopic(
+          externalTaskId, 3, CleanupPolicy.COMPACT));
     }
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .until(() ->
+            topitMetaCache.keySet().containsAll(topics)
+        );
+
   }
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {

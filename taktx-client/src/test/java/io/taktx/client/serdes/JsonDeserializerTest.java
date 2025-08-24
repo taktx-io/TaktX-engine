@@ -10,6 +10,8 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.taktx.serdes.JsonDeserializer;
+import io.taktx.serdes.JsonSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

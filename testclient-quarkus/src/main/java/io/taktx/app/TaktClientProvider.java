@@ -10,11 +10,9 @@ package io.taktx.app;
 
 import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
-import io.taktx.Topics;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.TaktClient;
 import io.taktx.client.TaktClient.TaktClientBuilder;
-import io.taktx.dto.Constants;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
@@ -52,10 +50,6 @@ public class TaktClientProvider {
                 .withNamespace(properties.getProperty("taktx.engine.namespace"))
                 .withKafkaProperties(properties)
                 .build();
-        taktClient.registerInitialFixedTopics();
-        taktClient.startTopicMatcher();
-        Topics.managedFixedTopics()
-            .forEach(t -> taktClient.requestTopicState(t.getTopicName(), 3, t.getCleanupPolicy()));
         taktClient.start();
         taktClient.deployTaktDeploymentAnnotatedClasses();
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
@@ -66,13 +60,13 @@ public class TaktClientProvider {
             .getJobIds()
             .forEach(
                 jobId ->
-                    taktClient.requestTopicState(
-                        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + jobId,
+                    taktClient.requestExternalTaskTopic(
+                        jobId,
                         3,
                         CleanupPolicy.COMPACT));
 
-        taktClient.registerInstanceUpdateConsumer(
-            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
+//        taktClient.registerInstanceUpdateConsumer(
+//            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
       }
     }
   }

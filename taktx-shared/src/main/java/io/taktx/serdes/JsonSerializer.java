@@ -6,29 +6,29 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.client.serdes;
+package io.taktx.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.io.IOException;
 import lombok.Getter;
-import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serializer;
 
 @Getter
-public abstract class JsonDeserializer<T> implements Deserializer<T> {
+public abstract class JsonSerializer<T> implements Serializer<T> {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
   private final Class<T> clazz;
 
-  JsonDeserializer(Class<T> clazz) {
+  protected JsonSerializer(Class<T> clazz) {
     this.clazz = clazz;
   }
 
   @Override
-  public T deserialize(String s, byte[] bytes) {
+  public byte[] serialize(String topic, T data) {
     try {
-      return OBJECT_MAPPER.readValue(bytes, clazz);
+      return OBJECT_MAPPER.writeValueAsBytes(data);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }

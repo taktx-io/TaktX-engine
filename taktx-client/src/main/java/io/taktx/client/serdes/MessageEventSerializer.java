@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.MessageEventDTO;
+import io.taktx.serdes.JsonSerializer;
 
 public class MessageEventSerializer extends JsonSerializer<MessageEventDTO> {
 

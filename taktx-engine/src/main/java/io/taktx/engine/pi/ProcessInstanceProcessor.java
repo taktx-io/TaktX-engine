@@ -25,11 +25,9 @@ import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
-import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.generic.TopicMonitor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
@@ -39,6 +37,7 @@ import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithFlowNodeInstances;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
+import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
@@ -69,17 +68,17 @@ public class ProcessInstanceProcessor
   private final Clock clock;
   private final DtoMapper dtoMapper;
   private final ProcessingStatistics processingStatistics;
-  private final TopicMonitor topicMonitor;
+  private final DynamicTopicManager topicManager;
+
+  private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
+  private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitionsCache = new HashMap<>();
+
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       definitionsStore;
-  private ReadOnlyKeyValueStore<String, ValueAndTimestamp<TopicMetaDTO>> externalTaskMetaStore;
-
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
   private ProcessorContext<Object, Object> context;
-  private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitionsCache = new HashMap<>();
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -87,8 +86,6 @@ public class ProcessInstanceProcessor
     this.definitionsStore =
         context.getStateStore(
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
-    this.externalTaskMetaStore =
-        context.getStateStore(taktConfiguration.getPrefixed(Stores.TOPIC_META.getStorename()));
     this.variablesStore =
         context.getStateStore(taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()));
     this.processInstanceStore =
@@ -204,8 +201,7 @@ public class ProcessInstanceProcessor
         .processingStatistics(processingStatistics)
         .instanceResult(instanceResult)
         .flowNodeInstanceStore(flowNodeInstanceStore)
-        .externalTaskMetaStore(externalTaskMetaStore)
-        .topicStore(topicMonitor)
+        .topicManager(topicManager)
         .build();
   }
 
@@ -374,7 +370,7 @@ public class ProcessInstanceProcessor
                 .processInstance(processInstance)
                 .processingStatistics(processingStatistics)
                 .instanceResult(instanceResult)
-                .topicStore(topicMonitor)
+                .topicManager(topicManager)
                 .build();
 
         FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
@@ -509,6 +505,7 @@ public class ProcessInstanceProcessor
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
+    log.info("Purging process instance {}", processInstance.getProcessInstanceKey());
     UUID processInstanceKey = processInstance.getProcessInstanceKey();
     this.processingStatistics.stopTimerForProcessInstance(
         processInstanceKey, processInstance.getProcessDefinitionKey().getProcessDefinitionId());

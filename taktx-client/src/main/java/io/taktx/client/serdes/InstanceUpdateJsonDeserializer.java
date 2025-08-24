@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.InstanceUpdateDTO;
+import io.taktx.serdes.JsonDeserializer;
 
 public class InstanceUpdateJsonDeserializer extends JsonDeserializer<InstanceUpdateDTO> {
   public InstanceUpdateJsonDeserializer() {

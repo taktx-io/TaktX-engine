@@ -14,12 +14,14 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Getter;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
 
 @ApplicationScoped
-public class KafkaClients {
+@Getter
+public class KafkaClientsConfig {
 
   @Inject
   @Identifier("default-kafka-broker")

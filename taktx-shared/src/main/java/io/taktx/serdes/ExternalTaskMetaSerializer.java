@@ -6,14 +6,13 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.client.serdes;
+package io.taktx.serdes;
 
-import io.taktx.dto.ProcessInstanceTriggerDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.dto.TopicMetaDTO;
 
-public class ProcessInstanceTriggerSerializer extends JsonSerializer<ProcessInstanceTriggerDTO> {
+public class ExternalTaskMetaSerializer extends JsonSerializer<TopicMetaDTO> {
 
-  public ProcessInstanceTriggerSerializer() {
-    super(ProcessInstanceTriggerDTO.class);
+  public ExternalTaskMetaSerializer() {
+    super(TopicMetaDTO.class);
   }
 }

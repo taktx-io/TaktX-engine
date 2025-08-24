@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pd;
 
+import io.taktx.Topics;
 import lombok.Getter;
 
 @Getter
@@ -23,7 +24,8 @@ public enum Stores {
   DEFINITION_COUNT_BY_ID("definition-count-by-id"),
   XML_BY_HASH("xml-by-hash"),
   GLOBAL_PROCESS_DEFINITION("global-process-definition"),
-  TOPIC_META("topic-meta"),
+  TOPIC_META_REQUESTED(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+  TOPIC_META_ACTUAL(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),
   DEFINITION_MESSAGE_SUBSCRIPTION("definition-message-subscription"),
   CORRELATION_MESSAGE_SUBSCRIPTION("correlation-message-subscription"),
   VARIABLES("variables"),

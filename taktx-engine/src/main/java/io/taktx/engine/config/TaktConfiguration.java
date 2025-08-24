@@ -25,7 +25,7 @@ public class TaktConfiguration {
   String supplierType;
 
   @ConfigProperty(name = "taktx.engine.topic.replication-factor")
-  int replicationFactor;
+  short replicationFactor;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions")
   int partitions;
@@ -42,6 +42,9 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.port", defaultValue = "8080")
   int port;
 
+  @ConfigProperty(name = "taktx.engine.topicCreationEnabled", defaultValue = "true")
+  String topicCreationEnabled;
+
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }
@@ -52,5 +55,9 @@ public class TaktConfiguration {
       throw new IllegalArgumentException("Topic name is too long: " + prefixedName);
     }
     return prefixedName;
+  }
+
+  public boolean getTopicCreationEnabled() {
+    return Boolean.parseBoolean(topicCreationEnabled);
   }
 }

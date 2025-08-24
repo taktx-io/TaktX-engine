@@ -37,7 +37,6 @@ public class ClockProducer {
       return FIXED_CLOCK;
     } else {
       // Return a system clock for other profiles
-      log.info("Using system clock for prd");
       return SYSTEM_CLOCK;
     }
   }

@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.UserTaskTriggerDTO;
+import io.taktx.serdes.JsonDeserializer;
 
 public class UserTaskTriggerJsonDeserializer extends JsonDeserializer<UserTaskTriggerDTO> {
   public UserTaskTriggerJsonDeserializer() {

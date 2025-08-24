@@ -10,7 +10,6 @@ package io.taktx.client;
 
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.TaktDeployment;
-import io.taktx.client.topicmanagement.TopicMatcher;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
@@ -18,6 +17,7 @@ import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -47,12 +47,13 @@ public class TaktClient {
   private final MessageEventSender messageEventSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
-  private final TopicMatcher topicMatcher;
+  private final ExternalTaskTopicRequester externalTaskTopicRequester;
 
   private TaktClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ProcessInstanceResponder processInstanceResponder,
       TaktParameterResolverFactory parameterResolverFactory) {
+    this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
@@ -65,7 +66,6 @@ public class TaktClient {
         new ExternalTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
     this.userTaskTriggerTopicConsumer =
         new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
-    this.topicMatcher = new TopicMatcher(taktPropertiesHelper, executor);
   }
 
   /**
@@ -93,16 +93,8 @@ public class TaktClient {
     }
   }
 
-  public void registerInitialFixedTopics() {
-    this.topicMatcher.registerInitialFixedTopics();
-  }
-
-  public void startTopicMatcher() {
-    topicMatcher.start();
-  }
-
-  public void requestTopicState(String topicName, int partitions, CleanupPolicy cleanupPolicy) {
-    this.topicMatcher.requestTopicState(topicName, partitions, cleanupPolicy);
+  public String requestExternalTaskTopic(String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
+    return this.externalTaskTopicRequester.requestExternalTaskTopic(externalTaskId, partitions, cleanupPolicy);
   }
 
   /**

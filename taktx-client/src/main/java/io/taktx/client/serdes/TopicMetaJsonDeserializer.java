@@ -9,6 +9,7 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.serdes.JsonDeserializer;
 
 public class TopicMetaJsonDeserializer extends JsonDeserializer<TopicMetaDTO> {
   public TopicMetaJsonDeserializer() {

@@ -6,13 +6,13 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.client.serdes;
+package io.taktx.serdes;
 
 import io.taktx.dto.TopicMetaDTO;
 
-public class ExternalTaskMetaSerializer extends JsonSerializer<TopicMetaDTO> {
+public class ExternalTaskMetaDeserializer extends JsonDeserializer<TopicMetaDTO> {
 
-  public ExternalTaskMetaSerializer() {
+  public ExternalTaskMetaDeserializer() {
     super(TopicMetaDTO.class);
   }
 }
