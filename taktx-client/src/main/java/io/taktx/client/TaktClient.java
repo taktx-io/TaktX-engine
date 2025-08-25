@@ -93,8 +93,10 @@ public class TaktClient {
     }
   }
 
-  public String requestExternalTaskTopic(String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
-    return this.externalTaskTopicRequester.requestExternalTaskTopic(externalTaskId, partitions, cleanupPolicy);
+  public String requestExternalTaskTopic(
+      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
+    return this.externalTaskTopicRequester.requestExternalTaskTopic(
+        externalTaskId, partitions, cleanupPolicy);
   }
 
   /**

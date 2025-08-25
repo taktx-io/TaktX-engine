@@ -223,7 +223,8 @@ public class TopologyProducer {
   private void setupProcessInstanceStream(StreamsBuilder builder) {
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
-        Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META_REQUESTED))
+        Materialized.<String, TopicMetaDTO>as(
+                keyValueStoreSupplier.get(Stores.TOPIC_META_REQUESTED))
             .withKeySerde(TOPIC_META_KEY_SERDE)
             .withValueSerde(TOPIC_META_SERDE));
     builder.globalTable(

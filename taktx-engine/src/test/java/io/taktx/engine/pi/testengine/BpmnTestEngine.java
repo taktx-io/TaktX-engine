@@ -197,8 +197,7 @@ public class BpmnTestEngine {
     messageEvents.add(messageEvent);
   }
 
-  public void consumeTopicMeta(
-      ConsumerRecord<String, TopicMetaDTO> topicMetaRecord) {
+  public void consumeTopicMeta(ConsumerRecord<String, TopicMetaDTO> topicMetaRecord) {
     TopicMetaDTO topicMetaDTO = topicMetaRecord.value();
     topitMetaCache.put(topicMetaDTO.getTopicName(), topicMetaDTO);
     LOG.info("Received topic meta event: {}" + topicMetaDTO);
@@ -399,15 +398,11 @@ public class BpmnTestEngine {
     List<String> topics = new ArrayList<>();
 
     for (String externalTaskId : externalTaskIds) {
-      topics.add(taktClient.requestExternalTaskTopic(
-          externalTaskId, 3, CleanupPolicy.COMPACT));
+      topics.add(taktClient.requestExternalTaskTopic(externalTaskId, 3, CleanupPolicy.COMPACT));
     }
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
-        .until(() ->
-            topitMetaCache.keySet().containsAll(topics)
-        );
-
+        .until(() -> topitMetaCache.keySet().containsAll(topics));
   }
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {

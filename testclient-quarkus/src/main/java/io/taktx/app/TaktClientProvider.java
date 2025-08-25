@@ -58,12 +58,7 @@ public class TaktClientProvider {
         taktClient.registerExternalTaskConsumer(externalTaskTriggerConsumer);
         externalTaskTriggerConsumer
             .getJobIds()
-            .forEach(
-                jobId ->
-                    taktClient.requestExternalTaskTopic(
-                        jobId,
-                        3,
-                        CleanupPolicy.COMPACT));
+            .forEach(jobId -> taktClient.requestExternalTaskTopic(jobId, 3, CleanupPolicy.COMPACT));
 
         taktClient.registerInstanceUpdateConsumer(
             (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));

@@ -31,15 +31,19 @@ public class ExternalTaskTopicRequester {
                 StringSerializer.class, ExternalTaskMetaSerializer.class));
   }
 
-  public String requestExternalTaskTopic(String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
+  public String requestExternalTaskTopic(
+      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
     TopicMetaDTO topicMetaDTO = new TopicMetaDTO();
-    String topicName = taktPropertiesHelper.getPrefixedTopicName(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId);
+    String topicName =
+        taktPropertiesHelper.getPrefixedTopicName(
+            Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId);
     topicMetaDTO.setTopicName(topicName);
     topicMetaDTO.setNrPartitions(partitions);
     topicMetaDTO.setCleanupPolicy(cleanupPolicy);
     producer.send(
         new ProducerRecord<>(
-            taktPropertiesHelper.getPrefixedTopicName(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+            taktPropertiesHelper.getPrefixedTopicName(
+                Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
             topicName,
             topicMetaDTO));
     return topicName;

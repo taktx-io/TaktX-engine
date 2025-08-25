@@ -52,8 +52,10 @@ public class DynamicTopicManager {
   private final KafkaClientsConfig kafkaClientsConfig;
   private final ExecutorService executor = Executors.newCachedThreadPool();
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
-  private final ConcurrentHashMap<String, TopicMetaDTO> cachedRequestTopicMetaMap = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, TopicMetaDTO> cachedActualTopicMetaMap = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, TopicMetaDTO> cachedRequestTopicMetaMap =
+      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, TopicMetaDTO> cachedActualTopicMetaMap =
+      new ConcurrentHashMap<>();
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
 
   public void start(KafkaProducer<String, TopicMetaDTO> topicMetaProducer) {
@@ -66,69 +68,79 @@ public class DynamicTopicManager {
   }
 
   private void scanActual() {
-    executor.submit(() -> {
-      try (KafkaConsumer<String, TopicMetaDTO> actualConsumer = createConsumer()) {
-        String prefixedActualTopicName = taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
-        actualConsumer.subscribe(List.of(prefixedActualTopicName));
+    executor.submit(
+        () -> {
+          try (KafkaConsumer<String, TopicMetaDTO> actualConsumer = createConsumer()) {
+            String prefixedActualTopicName =
+                taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
+            actualConsumer.subscribe(List.of(prefixedActualTopicName));
 
-        while (true) {
-          var records = actualConsumer.poll(Duration.ofMillis(100));
-          records.forEach(topicRecord -> {
-            if (topicRecord.value() == null) {
-              cachedActualTopicMetaMap.remove(topicRecord.key());
-            } else {
-              cachedActualTopicMetaMap.put(topicRecord.key(), topicRecord.value());
+            while (true) {
+              var records = actualConsumer.poll(Duration.ofMillis(100));
+              records.forEach(
+                  topicRecord -> {
+                    if (topicRecord.value() == null) {
+                      cachedActualTopicMetaMap.remove(topicRecord.key());
+                    } else {
+                      cachedActualTopicMetaMap.put(topicRecord.key(), topicRecord.value());
+                    }
+                  });
             }
-          });
-        }
-      }
-    });
+          }
+        });
   }
 
   private void scanRequest() {
-    executor.submit(() -> {
-      try (KafkaConsumer<String, TopicMetaDTO> requestConsumer = createConsumer()) {
-        String prefixedActualTopicName = taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
-        requestConsumer.subscribe(List.of(prefixedActualTopicName),
-            getConsumerRebalanceListener(prefixedActualTopicName));
+    executor.submit(
+        () -> {
+          try (KafkaConsumer<String, TopicMetaDTO> requestConsumer = createConsumer()) {
+            String prefixedActualTopicName =
+                taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
+            requestConsumer.subscribe(
+                List.of(prefixedActualTopicName),
+                getConsumerRebalanceListener(prefixedActualTopicName));
 
-        Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
+            Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
 
-        while (true) {
-          var records = requestConsumer.poll(Duration.ofMillis(100));
-          if (records.isEmpty() && !collectedTopics.isEmpty()) {
-            for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
-              log.info("Processing topic meta request record {}", entry.getKey());
-              var topicMeta = entry.getValue();
-              cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+            while (true) {
+              var records = requestConsumer.poll(Duration.ofMillis(100));
+              if (records.isEmpty() && !collectedTopics.isEmpty()) {
+                for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
+                  log.info("Processing topic meta request record {}", entry.getKey());
+                  var topicMeta = entry.getValue();
+                  cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
 
-              if (createTopicIfNotExists(topicMeta.getTopicName(), topicMeta.getNrPartitions(),
-                  taktConfiguration.getReplicationFactor())) {
-                publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
+                  if (createTopicIfNotExists(
+                      topicMeta.getTopicName(),
+                      topicMeta.getNrPartitions(),
+                      taktConfiguration.getReplicationFactor())) {
+                    publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
+                  }
+                  cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+                }
+                collectedTopics.clear();
+                continue;
               }
-              cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+              records.forEach(
+                  topicRecord -> {
+                    if (topicRecord.value() == null) {
+                      collectedTopics.remove(topicRecord.key());
+                    } else {
+                      collectedTopics.put(topicRecord.key(), topicRecord.value());
+                    }
+                  });
             }
-            collectedTopics.clear();
-            continue;
           }
-          records.forEach(topicRecord -> {
-            if (topicRecord.value() == null) {
-              collectedTopics.remove(topicRecord.key());
-            } else {
-              collectedTopics.put(topicRecord.key(), topicRecord.value());
-            }
-          });
-        }
-      }
-    });
+        });
   }
 
   private ConsumerRebalanceListener getConsumerRebalanceListener(String prefixedActualTopicName) {
     return new ConsumerRebalanceListener() {
       @Override
       public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        boolean revokedPartitionZero = partitions.stream()
-            .anyMatch(tp -> tp.topic().equals(prefixedActualTopicName) && tp.partition() == 0);
+        boolean revokedPartitionZero =
+            partitions.stream()
+                .anyMatch(tp -> tp.topic().equals(prefixedActualTopicName) && tp.partition() == 0);
 
         if (revokedPartitionZero) {
           boolean wasLeader = isLeader.getAndSet(false);
@@ -140,8 +152,9 @@ public class DynamicTopicManager {
 
       @Override
       public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-        boolean assignedPartitionZero = partitions.stream()
-            .anyMatch(tp -> tp.topic().equals(prefixedActualTopicName) && tp.partition() == 0);
+        boolean assignedPartitionZero =
+            partitions.stream()
+                .anyMatch(tp -> tp.topic().equals(prefixedActualTopicName) && tp.partition() == 0);
 
         if (assignedPartitionZero) {
           boolean wasLeader = isLeader.getAndSet(true);
@@ -171,26 +184,31 @@ public class DynamicTopicManager {
 
       // Get descriptions for all topics we know about
       DescribeTopicsResult describeTopicsResult = adminClient.describeTopics(prefixedTopicNames);
-      Map<String, KafkaFuture<TopicDescription>> topicDescriptionFutures = describeTopicsResult.topicNameValues();
+      Map<String, KafkaFuture<TopicDescription>> topicDescriptionFutures =
+          describeTopicsResult.topicNameValues();
 
       // For each cached topic, check if it matches the actual topic
       for (Map.Entry<String, TopicMetaDTO> entry : cachedRequestTopicMetaMap.entrySet()) {
         String prefixedTopicName = entry.getKey();
         TopicMetaDTO cachedTopicMeta = entry.getValue();
 
-        compareAndPublishChanges(topicDescriptionFutures, prefixedTopicName, cachedTopicMeta, prefixedTopicNames);
+        compareAndPublishChanges(
+            topicDescriptionFutures, prefixedTopicName, cachedTopicMeta, prefixedTopicNames);
       }
     } catch (Exception e) {
       log.error("Failed to adapt to external changes", e);
     }
   }
 
-  private void compareAndPublishChanges(Map<String, KafkaFuture<TopicDescription>> topicDescriptionFutures,
+  private void compareAndPublishChanges(
+      Map<String, KafkaFuture<TopicDescription>> topicDescriptionFutures,
       String prefixedTopicName,
-      TopicMetaDTO cachedRequestTopicMeta, Set<String> prefixedTopicNames) {
+      TopicMetaDTO cachedRequestTopicMeta,
+      Set<String> prefixedTopicNames) {
     try {
       // Try to get the actual topic description
-      TopicDescription actualTopicDescription = topicDescriptionFutures.get(prefixedTopicName).get();
+      TopicDescription actualTopicDescription =
+          topicDescriptionFutures.get(prefixedTopicName).get();
 
       // Compare actual vs cached values
       TopicMetaDTO actualTopicMeta = new TopicMetaDTO();
@@ -200,9 +218,13 @@ public class DynamicTopicManager {
 
       TopicMetaDTO cachedActualTopicMeta = cachedActualTopicMetaMap.get(prefixedTopicName);
       // If we found differences, publish the actual topic info
-      if (!cachedRequestTopicMeta.equals(actualTopicMeta) && !actualTopicMeta.equals(cachedActualTopicMeta)) {
-        log.info("Found differences for topic {}: cached={}, actual={}",
-            prefixedTopicNames, cachedRequestTopicMeta, actualTopicMeta);
+      if (!cachedRequestTopicMeta.equals(actualTopicMeta)
+          && !actualTopicMeta.equals(cachedActualTopicMeta)) {
+        log.info(
+            "Found differences for topic {}: cached={}, actual={}",
+            prefixedTopicNames,
+            cachedRequestTopicMeta,
+            actualTopicMeta);
         publishTopicMetaActual(prefixedTopicName, actualTopicMeta);
       }
 
@@ -225,23 +247,24 @@ public class DynamicTopicManager {
 
   private void publishTopicMetaActual(String topicName, TopicMetaDTO topicMeta) {
     try {
-      String actualTopicName = taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
-      ProducerRecord<String, TopicMetaDTO> topicRecord = new ProducerRecord<>(
-          actualTopicName,
-          topicName,
-          topicMeta
-      );
-      topicMetaProducer.send(topicRecord, (metadata, exception) -> {
-        if (exception != null) {
-          log.error("Failed to send topic meta actual update for {}", topicName, exception);
-        }
-      });
+      String actualTopicName =
+          taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
+      ProducerRecord<String, TopicMetaDTO> topicRecord =
+          new ProducerRecord<>(actualTopicName, topicName, topicMeta);
+      topicMetaProducer.send(
+          topicRecord,
+          (metadata, exception) -> {
+            if (exception != null) {
+              log.error("Failed to send topic meta actual update for {}", topicName, exception);
+            }
+          });
     } catch (Exception e) {
       log.error("Error publishing topic meta actual for {}", topicName, e);
     }
   }
 
-  private boolean createTopicIfNotExists(String prefixedTopicName, int numPartitions, short replicationFactor) {
+  private boolean createTopicIfNotExists(
+      String prefixedTopicName, int numPartitions, short replicationFactor) {
     try {
       // First check if the topic exists
       boolean topicExists = adminClient.listTopics().names().get().contains(prefixedTopicName);
@@ -250,7 +273,8 @@ public class DynamicTopicManager {
         // Create new topic if it doesn't exist
         NewTopic newTopic = new NewTopic(prefixedTopicName, numPartitions, replicationFactor);
         adminClient.createTopics(List.of(newTopic)).all().get();
-        log.info("Topic {} created successfully with {} partitions", prefixedTopicName, numPartitions);
+        log.info(
+            "Topic {} created successfully with {} partitions", prefixedTopicName, numPartitions);
         return true;
       }
       return false;
@@ -272,7 +296,9 @@ public class DynamicTopicManager {
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-    return new KafkaConsumer<>(props, TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
+    return new KafkaConsumer<>(
+        props,
+        TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
         TopologyProducer.TOPIC_META_SERDE.deserializer());
   }
 

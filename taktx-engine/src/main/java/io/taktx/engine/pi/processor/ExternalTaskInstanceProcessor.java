@@ -42,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 @Slf4j
 public abstract class ExternalTaskInstanceProcessor<
-    E extends ExternalTask, I extends ExternalTaskInstance<E>>
+        E extends ExternalTask, I extends ExternalTaskInstance<E>>
     extends ActivityInstanceProcessor<E, I, ExternalTaskResponseTriggerDTO> {
 
   protected ExternalTaskInstanceProcessor(
@@ -85,8 +85,9 @@ public abstract class ExternalTaskInstanceProcessor<
       I flownodeInstance,
       VariableScope variables,
       String externalTaskId) {
-    if (!processInstanceProcessingContext.getTopicManager().topicExists(
-        Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)) {
+    if (!processInstanceProcessingContext
+        .getTopicManager()
+        .topicExists(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)) {
       log.warn(
           "Topic for External task {} is not created, failing external task instanceToContinue {}",
           externalTaskId,
@@ -232,10 +233,10 @@ public abstract class ExternalTaskInstanceProcessor<
   }
 
   private static <E extends ExternalTask, I extends ExternalTaskInstance<E>>
-  void handleNoMoreRetries(
-      DirectInstanceResult directInstanceResult,
-      I externalTaskInstance,
-      ExternalTaskResponseResultDTO responseResult) {
+      void handleNoMoreRetries(
+          DirectInstanceResult directInstanceResult,
+          I externalTaskInstance,
+          ExternalTaskResponseResultDTO responseResult) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
             externalTaskInstance, responseResult.getCode(), responseResult.getMessage()));
