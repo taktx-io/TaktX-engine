@@ -65,8 +65,8 @@ public class TaktClientProvider {
                         3,
                         CleanupPolicy.COMPACT));
 
-//        taktClient.registerInstanceUpdateConsumer(
-//            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
+        taktClient.registerInstanceUpdateConsumer(
+            (uuid, instanceUpdateDTO) -> log.info("InstanceUpdateDTO: {}", instanceUpdateDTO));
       }
     }
   }
