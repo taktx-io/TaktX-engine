@@ -10,6 +10,7 @@ TaktX Engine is a high-performance BPMN process automation engine built on moder
 Leveraging Apache Kafka and Quarkus, it provides a scalable, event-driven platform for running business 
 processes with high throughput and reliability.
 
+
 ### Key Features
 
 - **Event-Driven Architecture**: Built on Apache Kafka streams for maximum scalability
