@@ -79,6 +79,10 @@ public class DynamicTopicManager {
               var records = actualConsumer.poll(Duration.ofMillis(100));
               records.forEach(
                   topicRecord -> {
+                    log.info(
+                        "Processing topic meta actual record {} {}",
+                        topicRecord.key(),
+                        topicRecord.value());
                     if (topicRecord.value() == null) {
                       cachedActualTopicMetaMap.remove(topicRecord.key());
                     } else {
@@ -247,6 +251,7 @@ public class DynamicTopicManager {
 
   private void publishTopicMetaActual(String topicName, TopicMetaDTO topicMeta) {
     try {
+      log.info("Publishing topic meta to ACTUAL: " + topicMeta);
       String actualTopicName =
           taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
       ProducerRecord<String, TopicMetaDTO> topicRecord =

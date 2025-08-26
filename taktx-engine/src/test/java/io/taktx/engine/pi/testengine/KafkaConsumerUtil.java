@@ -44,7 +44,7 @@ public class KafkaConsumerUtil<K, V> {
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializerClass);
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializerClass);
     props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     props.put(ProducerConfig.CLIENT_ID_CONFIG, topic + "-test-consumer");
 
     kafkaConsumer = new KafkaConsumer<>(props);
@@ -64,6 +64,7 @@ public class KafkaConsumerUtil<K, V> {
                     .forEach(
                         record -> {
                           if (running) {
+                            LOG.info("Received record for topic: " + topic);
                             consumer.accept(record);
                           }
                         });

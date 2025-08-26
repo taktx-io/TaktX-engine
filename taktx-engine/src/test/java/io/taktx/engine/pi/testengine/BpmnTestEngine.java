@@ -46,6 +46,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -67,9 +68,7 @@ import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Assertions;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
@@ -103,7 +102,7 @@ public class BpmnTestEngine {
   private KafkaConsumerUtil<String, TopicMetaDTO> actualTopicMetaConsumer;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
-  private Map<String, TopicMetaDTO> topitMetaCache = new ConcurrentHashMap<>();
+  private Map<String, TopicMetaDTO> topicMetaCache = new ConcurrentHashMap<>();
 
   public BpmnTestEngine(Clock clock) {
     this.originalClock = Clock.fixed(clock.instant(), clock.getZone());
@@ -133,6 +132,9 @@ public class BpmnTestEngine {
   public void init() {
     String kafkaBootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+
+    // Wait for Kafka broker to be available before proceeding
+    waitForKafkaBroker(kafkaBootstrapServers);
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
@@ -198,9 +200,9 @@ public class BpmnTestEngine {
   }
 
   public void consumeTopicMeta(ConsumerRecord<String, TopicMetaDTO> topicMetaRecord) {
+    LOG.info("Received topic meta event: {}" + topicMetaRecord.value());
     TopicMetaDTO topicMetaDTO = topicMetaRecord.value();
-    topitMetaCache.put(topicMetaDTO.getTopicName(), topicMetaDTO);
-    LOG.info("Received topic meta event: {}" + topicMetaDTO);
+    topicMetaCache.put(topicMetaDTO.getTopicName(), topicMetaDTO);
   }
 
   public void consumeExternalTaskTrigger(ExternalTaskTriggerDTO externalTaskTrigger) {
@@ -402,7 +404,15 @@ public class BpmnTestEngine {
     }
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
-        .until(() -> topitMetaCache.keySet().containsAll(topics));
+        .pollInterval(Duration.ofMillis(100))
+        .until(
+            () -> {
+              log.info(
+                  "Waiting for external task topics {} to be available in cache {}",
+                  topics,
+                  topicMetaCache);
+              return topicMetaCache.keySet().containsAll(topics);
+            });
   }
 
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {
@@ -692,11 +702,6 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine doNotExpectNewProcessInstance() {
-    Assertions.assertThrows(ConditionTimeoutException.class, this::waitForNewProcessInstance);
-    return this;
-  }
-
   public BpmnTestEngine terminateProcessInstance() {
     taktClient.terminateElementInstance(activeProcessInstanceKey);
     return this;
@@ -869,5 +874,65 @@ public class BpmnTestEngine {
     this.processInstanceMap.clear();
     this.flowNodeInstanceMap.clear();
     this.mutableClock.set(originalClock.instant());
+  }
+
+  private void waitForKafkaBroker(String bootstrapServers) {
+    LOG.info("Waiting for Kafka broker to start on: " + bootstrapServers);
+
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .pollInterval(Duration.ofMillis(100))
+        .until(
+            () -> {
+              try {
+                Properties adminProps = new Properties();
+                adminProps.put("bootstrap.servers", bootstrapServers);
+                try (org.apache.kafka.clients.admin.AdminClient adminClient =
+                    org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
+                  // This will throw an exception if broker is not available
+                  Set<String> actualTopics = adminClient.listTopics().names().get();
+                  LOG.info("Kafka broker is now available");
+                  Set<String> requiredTopics =
+                      Arrays.stream(Topics.values())
+                          .map(topic -> TOPIC_TEST_PREFIX + topic.getTopicName())
+                          .collect(Collectors.toSet());
+                  boolean allTopicsAvailable = actualTopics.containsAll(requiredTopics);
+                  if (!allTopicsAvailable) {
+                    LOG.info("Not all topics available: " + actualTopics);
+                  } else {
+                    LOG.info("All required topics are available: " + actualTopics);
+                  }
+                  return allTopicsAvailable;
+                }
+              } catch (Exception e) {
+                LOG.info("Waiting for Kafka broker to start: " + e.getMessage());
+                return false;
+              }
+            });
+  }
+
+  /** Waits for Kafka broker and required topics to be available. */
+  private void waitForKafkaTopics() {
+    LOG.info("Waiting for Kafka broker and required topics to be available...");
+
+    final Set<String> requiredTopics =
+        Set.of(
+            TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
+            TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
+            TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
+
+    Awaitility.await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(1))
+        .until(
+            () -> {
+              boolean allTopicsAvailable = topicMetaCache.keySet().containsAll(requiredTopics);
+              if (!allTopicsAvailable) {
+                LOG.info("Still waiting for topics: " + topicMetaCache.keySet());
+              }
+              return allTopicsAvailable;
+            });
+
+    LOG.info("Kafka broker and all required topics are now available");
   }
 }
