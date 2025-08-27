@@ -79,7 +79,7 @@ public class ExternalTaskTriggerTopicConsumer {
           CompletableFuture.runAsync(
               () -> {
                 try {
-                  while (running) {
+                  do {
                     synchronized (consumerLock) {
                       if (!running || externalTaskTriggerKafkaConsumer == null) {
                         break;
@@ -103,20 +103,13 @@ public class ExternalTaskTriggerTopicConsumer {
                       Thread.currentThread().interrupt();
                       break;
                     }
-                  }
+                  } while (running);
                 } finally {
                   // Clean up the resources when the thread exits
                   synchronized (consumerLock) {
-                    if (externalTaskTriggerKafkaConsumer != null) {
-                      try {
-                        externalTaskTriggerKafkaConsumer.unsubscribe();
-                        externalTaskTriggerKafkaConsumer.close();
-                      } catch (Exception e) {
-                        log.error("Error closing Kafka consumer", e);
-                      } finally {
-                        externalTaskTriggerKafkaConsumer = null;
-                      }
-                    }
+                    log.info("Cleaning up resources");
+                    externalTaskTriggerKafkaConsumer.unsubscribe();
+                    externalTaskTriggerKafkaConsumer = null;
                   }
                 }
               },
