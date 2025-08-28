@@ -117,17 +117,16 @@ jobs:
       - name: Build uber jar with Gradle
         run: ./gradlew -Dquarkus.package.jar.type=uber-jar -x test
 
-      - name: Build jar for docker image
-        run: ./gradlew build -x test
-
       - name: Upload uber JAR to GitHub release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             taktx-engine/build/taktx-engine-${{ steps.extract_version.outputs.VERSION }}-runner.jar
-          tag_name: ${{ github.ref }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build jar for docker image
+        run: ./gradlew build -x test
 
       - name: Build Docker image
         run: |
