@@ -120,11 +120,7 @@ jobs:
       - name: Debug - List workspace contents
         run: |
           echo "Current directory structure:"
-          find . -name "*runner.jar" | sort
-          echo "Contents of taktx-engine/build:"
-          ls -la taktx-engine/build/
-          echo "Contents of quarkus-app directory if exists:"
-          ls -la taktx-engine/build/quarkus-app/ || echo "Directory not found"
+          find . -name "*" 
 
       - uses: AButler/upload-release-assets@v3.0
         with:
