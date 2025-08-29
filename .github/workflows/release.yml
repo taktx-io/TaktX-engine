@@ -117,9 +117,14 @@ jobs:
       - name: Build uber jar with Gradle
         run: ./gradlew quarkusBuild -Dquarkus.package.type=uber-jar -x test
 
+      - name: Debug - List workspace contents
+        run: |
+          echo "Current directory structure:"
+          find . -name "build/*-runner.jar" 
+
       - uses: AButler/upload-release-assets@v3.0
         with:
-          files: "taktx-engine/build/*.runner.jar"
+          files: "taktx-engine/build/*runner.jar"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
 #      - name: Build jar for docker image
