@@ -115,12 +115,7 @@ jobs:
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
 
       - name: Build uber jar with Gradle
-        run: ./gradlew -Dquarkus.package.jar.type=uber-jar -x test --info
-
-      - name: Debug - List workspace contents
-        run: |
-          echo "Current directory structure:"
-          find / -name "*" 
+        run: ./gradlew quarkusBuild -Dquarkus.package.type=uber-jar -x test
 
       - uses: AButler/upload-release-assets@v3.0
         with:
