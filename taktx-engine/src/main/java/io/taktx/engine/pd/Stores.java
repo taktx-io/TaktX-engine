@@ -22,7 +22,7 @@ public enum Stores {
   FLOW_NODE_INSTANCE("flownode-instance"),
   PROCESS_INSTANCE_DEFINITION("process-instance-definition"),
   DEFINITION_COUNT_BY_ID("definition-count-by-id"),
-  XML_BY_HASH("xml-by-hash"),
+  XML_BY_PROCESS_DEFINITION_ID("xml-by-process-definition-id"),
   GLOBAL_PROCESS_DEFINITION("global-process-definition"),
   TOPIC_META_REQUESTED(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
   TOPIC_META_ACTUAL(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),

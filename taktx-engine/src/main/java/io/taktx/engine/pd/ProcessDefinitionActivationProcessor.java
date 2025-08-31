@@ -29,7 +29,7 @@ import java.time.Clock;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 public class ProcessDefinitionActivationProcessor {
@@ -37,7 +37,7 @@ public class ProcessDefinitionActivationProcessor {
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
-  private final KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
+  private final ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       processDefinitionStore;
 
   public ProcessDefinitionActivationProcessor(

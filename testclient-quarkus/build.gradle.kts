@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.quarkus.resteasy.client)
     implementation("io.quarkus:quarkus-resteasy-jackson")
     implementation("io.quarkus:quarkus-jackson")
+    implementation("io.quarkus:quarkus-websockets")
     implementation(project(":taktx-client"))
     implementation(project(":taktx-shared"))
 

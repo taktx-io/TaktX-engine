@@ -11,7 +11,6 @@ package io.taktx.engine.api;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.pd.Stores;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
@@ -21,22 +20,19 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.StreamsMetadata;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 @Path("/process-definitions")
 public class ProcessDefinitionResource {
-  private ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> store;
+  private ReadOnlyKeyValueStore<ProcessDefinitionKey, ProcessDefinitionDTO> definitionStore;
+  private ReadOnlyKeyValueStore<ProcessDefinitionKey, String> xmlStore;
+
   @Inject KafkaStreams kafkaStreams;
   @Inject TaktConfiguration taktConfiguration;
 
@@ -48,23 +44,20 @@ public class ProcessDefinitionResource {
             StoreQueryParameters.fromNameAndType(
                 taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()),
                 QueryableStoreTypes.keyValueStore());
-    store = kafkaStreams.store(storeQueryParameters);
+    definitionStore = kafkaStreams.store(storeQueryParameters);
+    StoreQueryParameters<? extends ReadOnlyKeyValueStore<ProcessDefinitionKey, String>>
+        xmlStoreQueryParameters =
+            StoreQueryParameters.fromNameAndType(
+                taktConfiguration.getPrefixed(Stores.XML_BY_PROCESS_DEFINITION_ID.getStorename()),
+                QueryableStoreTypes.keyValueStore());
+    xmlStore = kafkaStreams.store(xmlStoreQueryParameters);
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public List<ProcessDefinitionKey> getProcessDefinitionKeys() {
     List<ProcessDefinitionKey> processDefinitionKeys = new ArrayList<>();
-
-    Collection<StreamsMetadata> streamsMetadata =
-        kafkaStreams.streamsMetadataForStore(
-            taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
-    streamsMetadata.forEach(
-        metadata -> {
-          System.out.println("Host: " + metadata.host());
-          System.out.println("Port: " + metadata.port());
-        });
-    try (KeyValueIterator<ProcessDefinitionKey, ProcessDefinitionDTO> all = store.all()) {
+    try (KeyValueIterator<ProcessDefinitionKey, ProcessDefinitionDTO> all = definitionStore.all()) {
       all.forEachRemaining(pdRecord -> processDefinitionKeys.add(pdRecord.key));
     }
     return processDefinitionKeys;
@@ -76,42 +69,37 @@ public class ProcessDefinitionResource {
   public Response getProcessDefinition(
       @PathParam("processDefinitionKey") String processDefinitionKeyString) {
 
-    String[] split = processDefinitionKeyString.split("\\.");
-    String processDefinitionName = split[0];
-    Integer processDefinitionVersion = Integer.parseInt(split[1]);
-    ProcessDefinitionKey processDefinitionKey =
-        new ProcessDefinitionKey(processDefinitionName, processDefinitionVersion);
-    KeyQueryMetadata metadata =
-        kafkaStreams.queryMetadataForKey(
-            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
-            processDefinitionKey,
-            TopologyProducer.PROCESS_DEFINITION_KEY_SERDE.serializer());
+    ProcessDefinitionKey processDefinitionKey = getProcessDefinitionKey(processDefinitionKeyString);
 
-    if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
+    ProcessDefinitionDTO processDefinition = definitionStore.get(processDefinitionKey);
+    if (processDefinition == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
-    } else if (metadata.activeHost().host().equals(taktConfiguration.getHost())
-        && metadata.activeHost().port() == taktConfiguration.getPort()) {
-      ProcessDefinitionDTO processDefinition = store.get(processDefinitionKey);
-      if (processDefinition == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      } else {
-        return Response.ok(processDefinition).build();
-      }
     } else {
-      URI uri =
-          getOtherUri(
-              metadata.activeHost().host(),
-              metadata.activeHost().port(),
-              processDefinitionKeyString);
-      return Response.temporaryRedirect(uri).build();
+      return Response.ok(processDefinition).build();
     }
   }
 
-  private URI getOtherUri(String host, int port, String id) {
-    try {
-      return new URI("http://" + host + ":" + port + "/process-definitions/" + id);
-    } catch (URISyntaxException e) {
-      throw new IllegalStateException(e);
+  @GET
+  @Path("/{processDefinitionKey}/xml")
+  @Produces(MediaType.APPLICATION_XML)
+  public Response getProcessDefinitionXml(
+      @PathParam("processDefinitionKey") String processDefinitionKeyString) {
+
+    ProcessDefinitionKey processDefinitionKey = getProcessDefinitionKey(processDefinitionKeyString);
+
+    String xml = xmlStore.get(processDefinitionKey);
+    if (xml == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    } else {
+      return Response.ok(xml).build();
     }
+  }
+
+  private static ProcessDefinitionKey getProcessDefinitionKey(String processDefinitionKeyString) {
+    String[] split = processDefinitionKeyString.split("\\.");
+    String processDefinitionName = split[0];
+    Integer processDefinitionVersion = split.length > 1 ? Integer.parseInt(split[1]) : -1;
+
+    return new ProcessDefinitionKey(processDefinitionName, processDefinitionVersion);
   }
 }

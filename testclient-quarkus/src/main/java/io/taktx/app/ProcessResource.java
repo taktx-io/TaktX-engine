@@ -29,7 +29,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 @Path("/processes")
 @Slf4j
-public class TestResource {
+public class ProcessResource {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Inject TaktClient taktClient;

@@ -17,7 +17,9 @@ import lombok.Getter;
 public enum Topics {
   TOPIC_META_REQUESTED_TOPIC("topic-meta-requested", true, CleanupPolicy.COMPACT),
   TOPIC_META_ACTUAL_TOPIC("topic-meta-actual", true, CleanupPolicy.COMPACT),
-  PROCESS_DEFINITION_ACTIVATION_TOPIC("process-definition-activation", false, CleanupPolicy.DELETE),
+  XML_BY_PROCESS_DEFINITION_ID("xml-by-process-definition-id", false, CleanupPolicy.COMPACT),
+  PROCESS_DEFINITION_ACTIVATION_TOPIC(
+      "process-definition-activation", false, CleanupPolicy.COMPACT),
   MESSAGE_EVENT_TOPIC("message-event", false, CleanupPolicy.DELETE),
   SCHEDULE_COMMANDS("schedule-commands", false, CleanupPolicy.DELETE),
   INSTANCE_UPDATE_TOPIC("instance-update", false, CleanupPolicy.DELETE),

@@ -50,6 +50,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -96,6 +97,7 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
+  public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
   public static final ObjectMapperSerde<JsonNode> VARIABLES_SERDE =
       new ObjectMapperSerde<>(JsonNode.class);
   public static final ObjectMapperSerde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
@@ -149,28 +151,29 @@ public class TopologyProducer {
   private void setupNewDefinitionStream(StreamsBuilder builder) {
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.XML_BY_HASH), Serdes.String(), Serdes.String()));
-    builder.addStateStore(
-        keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
             Serdes.String(),
             new ObjectMapperSerde<>(
                 (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
 
-    // Define the global table
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
         Materialized.<ProcessDefinitionKey, ProcessDefinitionDTO>as(
                 keyValueStoreSupplier.get(Stores.GLOBAL_PROCESS_DEFINITION))
             .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
             .withValueSerde(PROCESS_DEFINITION_SERDE));
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName()),
+        Materialized.<ProcessDefinitionKey, String>as(
+                keyValueStoreSupplier.get(Stores.XML_BY_PROCESS_DEFINITION_ID))
+            .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
+            .withValueSerde(ZIPPED_STRING_SERDE));
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
             () -> new DefinitionsProcessor(taktConfiguration, messageSchedulerFactory, clock),
-            taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()),
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
@@ -207,6 +210,17 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
+        .branch(
+            (key, value) -> key instanceof ProcessDefinitionKey && value instanceof String,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((ProcessDefinitionKey) key, (String) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName()),
+                            Produced.with(PROCESS_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))))
         .branch(
             (key, value) -> key instanceof MessageEventKeyDTO,
             Branched.withConsumer(

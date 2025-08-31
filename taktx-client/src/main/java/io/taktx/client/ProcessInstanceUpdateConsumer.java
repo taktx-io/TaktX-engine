@@ -44,7 +44,7 @@ public class ProcessInstanceUpdateConsumer {
     this.executor = executor;
   }
 
-  public void addInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
+  public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
       subscribeToTopic();
     }
@@ -74,6 +74,10 @@ public class ProcessInstanceUpdateConsumer {
           }
         },
         executor);
+  }
+
+  public void stop() {
+    running = false;
   }
 
   private void consumeRecords(KafkaConsumer<UUID, InstanceUpdateDTO> consumer) {

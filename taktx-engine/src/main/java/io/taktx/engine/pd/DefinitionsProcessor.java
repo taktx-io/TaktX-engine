@@ -35,7 +35,6 @@ public class DefinitionsProcessor
   private final TaktConfiguration taktConfiguration;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private ProcessorContext<Object, Object> context;
-  private KeyValueStore<String, String> hashToXmlStore;
   private KeyValueStore<String, Map<String, Integer>> hashVersionPairStore;
   private KeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       processDefinitionStore;
@@ -55,8 +54,6 @@ public class DefinitionsProcessor
   @Override
   public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
-    this.hashToXmlStore =
-        context.getStateStore(taktConfiguration.getPrefixed(Stores.XML_BY_HASH.getStorename()));
     this.hashVersionPairStore =
         context.getStateStore(taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()));
     this.processDefinitionStore =
@@ -102,8 +99,9 @@ public class DefinitionsProcessor
 
       hashVersionPairStore.put(processDefinitionId, hashVersionPairs);
       hashVersionPairCache.put(processDefinitionId, hashVersionPairs);
-
-      hashToXmlStore.put(hash, xmlDefinitions.getXml());
+      ProcessDefinitionKey processDefinitionKey =
+          new ProcessDefinitionKey(processDefinitionId, version);
+      context.forward(new Record<>(processDefinitionKey, xmlDefinitions.getXml(), clock.millis()));
 
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);

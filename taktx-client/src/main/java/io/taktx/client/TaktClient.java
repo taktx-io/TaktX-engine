@@ -15,6 +15,7 @@ import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
@@ -44,6 +45,7 @@ public class TaktClient {
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
+  private final XmlByProcessDefinitionIdConsumer xmlByProcessDefinitionIdConsumer;
   private final MessageEventSender messageEventSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
@@ -56,6 +58,8 @@ public class TaktClient {
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
+    this.xmlByProcessDefinitionIdConsumer =
+        new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
@@ -83,6 +87,7 @@ public class TaktClient {
    */
   public void start() {
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
+    this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
   }
 
   /** Stops the TaktClient, which unsubscribes from process definition records and process */
@@ -91,6 +96,8 @@ public class TaktClient {
     if (this.externalTaskTriggerTopicConsumer != null) {
       this.externalTaskTriggerTopicConsumer.stop();
     }
+    this.processInstanceUpdateConsumer.stop();
+    this.xmlByProcessDefinitionIdConsumer.stop();
   }
 
   public String requestExternalTaskTopic(
@@ -129,7 +136,12 @@ public class TaktClient {
 
   /** Registers a consumer for process instance updates. */
   public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
-    this.processInstanceUpdateConsumer.addInstanceUpdateConsumer(consumer);
+    this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(consumer);
+  }
+
+  public void registerProcessDefinitionUpdateConsumer(
+      BiConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> consumer) {
+    this.processDefinitionConsumer.registerProcessDefinitionUpdateConsumer(consumer);
   }
 
   /** Deploys process definitions from classes annotated with @TaktDeployment. */
@@ -183,6 +195,11 @@ public class TaktClient {
 
   public void registerUserTaskConsumer(UserTaskTriggerConsumer userTaskTriggerConsumer) {
     this.userTaskTriggerTopicConsumer.subscribeToUserTaskTriggerTopics(userTaskTriggerConsumer);
+  }
+
+  public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
+      throws IOException {
+    return this.xmlByProcessDefinitionIdConsumer.getProcessDefinitionXml(processDefinitionKey);
   }
 
   /**
