@@ -42,7 +42,7 @@ public class TypicalWorker {
             Thread.currentThread().interrupt();
           }
 
-          externalTaskInstanceResponder.respondSuccess(Map.of("result", "success"));
+          externalTaskInstanceResponder.respondSuccess(Map.of());
         });
   }
 

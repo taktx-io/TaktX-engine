@@ -36,7 +36,7 @@ class EventSubprocessTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            false, "errorCode", "error message", VariablesDTO.empty())
+            false, "errorCode", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasTerminatedElementWithId("ServiceTask_1")
@@ -55,7 +55,7 @@ class EventSubprocessTest {
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "1234", "error message", VariablesDTO.empty())
+        .andRespondToExternalTaskWithFailure(false, "1234", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasTerminatedElementWithId("ServiceTask_1")

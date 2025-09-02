@@ -37,6 +37,7 @@ class VariablesTest {
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var2", "value2"))
         .waitUntilCompleted()
         .assertThatProcess()
+        .hasVariableWithValue("var1", "value1")
         .hasVariableWithValue("StartEvent_Output_1", "outputValue1")
         .hasVariableWithValue("StartEvent_Output_2", "outputValue2")
         .hasVariableWithValue("MappedOutputVariable", "value1")

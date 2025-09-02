@@ -181,35 +181,6 @@ class ExternalTaskInstanceResponderTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  void respondErrorWithVariables() {
-    // Given
-    boolean allowRetry = false;
-    String code = "ERR-002";
-    String message = "error-message-2";
-    VariablesDTO variables = VariablesDTO.of("errorKey", "errorValue");
-
-    // When
-    responder.respondError(allowRetry, code, message, variables);
-
-    // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
-        ArgumentCaptor.forClass(ProducerRecord.class);
-    verify(mockProducer).send(captor.capture());
-
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
-        captor.getValue();
-    ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
-        assertRecordBasics(externalTaskResponseTriggerRecord);
-
-    assertTriggerBasics(externalTaskResponseTriggerDTO);
-
-    ExternalTaskResponseResultDTO resultDTO =
-        externalTaskResponseTriggerDTO.getExternalTaskResponseResult();
-    assertErrorResult(resultDTO, allowRetry, code, message);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
   void respondPromise() {
     // Given
     Duration duration = Duration.ofMinutes(5);

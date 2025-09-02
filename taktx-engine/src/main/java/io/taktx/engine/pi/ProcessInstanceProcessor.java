@@ -330,7 +330,7 @@ public class ProcessInstanceProcessor
     VariableScope targetScope = processInstanceVariables;
     if (elementInstanceIdPath != null) {
       // merge into the nearest parent scope
-      for (int i = 0; i < elementInstanceIdPath.size() - 2; i++) {
+      for (int i = 0; i < elementInstanceIdPath.size() - 1; i++) {
         Long elementInstanceId = elementInstanceIdPath.get(i);
         targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceId);
       }
@@ -413,11 +413,11 @@ public class ProcessInstanceProcessor
     processInstanceVariables.persist();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
-    if (flowNodeInstances.isStateChanged()) {
+    VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
+    if (flowNodeInstances.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
       if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
-      VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
 
       VariablesDTO variablesChangedAfterStart = currentVariablesDTO.diff(updatedVariablesAtStart);
 
