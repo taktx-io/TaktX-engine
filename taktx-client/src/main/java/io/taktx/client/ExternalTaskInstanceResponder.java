@@ -90,7 +90,7 @@ public class ExternalTaskInstanceResponder {
   }
 
   public void respondError(
-      boolean allowRetry, String code, String message, VariablesDTO variables) {
+      boolean allowRetry, String code, String message) {
 
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
@@ -98,14 +98,10 @@ public class ExternalTaskInstanceResponder {
             elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ERROR, allowRetry, code, message, 0L),
-            variables);
+            VariablesDTO.empty());
     responseEmitter.send(
         new ProducerRecord<>(
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
-  }
-
-  public void respondError(boolean allowRetry, String code, String message) {
-    respondError(allowRetry, code, message, VariablesDTO.empty());
   }
 
   public void respondPromise(Duration duration) {

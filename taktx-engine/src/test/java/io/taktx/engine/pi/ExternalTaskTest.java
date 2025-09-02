@@ -72,22 +72,22 @@ class ExternalTaskTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed1", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed2", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed3", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed4", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed5", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed5", "true"))
+            true, "fail", "failure")
         .waitUntilElementHasTerminated("ServiceTask_1")
         .waitUntilCompleted()
         .assertThatProcess()
@@ -106,13 +106,13 @@ class ExternalTaskTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed1", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed2", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed3", "true"))
+            true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
@@ -129,17 +129,17 @@ class ExternalTaskTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed1", "true"))
+            true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed2", "true"))
+            true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
         .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure", VariablesDTO.of("failed3", "true"))
+            true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
@@ -147,9 +147,6 @@ class ExternalTaskTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .isCompleted()
-        .hasVariableMatching("failed1", val -> assertThat(val).isEqualTo("true"))
-        .hasVariableMatching("failed2", val -> assertThat(val).isEqualTo("true"))
-        .hasVariableMatching("failed3", val -> assertThat(val).isEqualTo("true"))
         .hasVariableMatching("success", val -> assertThat(val).isEqualTo("true"));
   }
 

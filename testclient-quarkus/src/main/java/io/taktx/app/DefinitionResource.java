@@ -9,12 +9,19 @@
 package io.taktx.app;
 
 import io.taktx.client.TaktClient;
+import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Path("/processdefinitions")
@@ -22,6 +29,36 @@ import lombok.extern.slf4j.Slf4j;
 public class DefinitionResource {
 
   @Inject TaktClient taktClient;
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getAllProcessDefinitions(@QueryParam("id") String processDefinitionId) {
+    try {
+      Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitions;
+      if (processDefinitionId != null && !processDefinitionId.isEmpty()) {
+        definitions = taktClient.getProcessDefinitionConsumer()
+            .getDeployedProcessDefinitions(processDefinitionId);
+      } else {
+        definitions = taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
+      }
+      
+      // Group definitions by process definition ID
+      Map<String, Map<Integer, ProcessDefinitionDTO>> groupedDefinitions = 
+          definitions.entrySet().stream()
+              .collect(Collectors.groupingBy(
+                  entry -> entry.getKey().getProcessDefinitionId(),
+                  Collectors.toMap(
+                      entry -> entry.getKey().getVersion(),
+                      Map.Entry::getValue
+                  )
+              ));
+      
+      return Response.ok(groupedDefinitions).build();
+    } catch (Exception e) {
+      log.error("Error retrieving process definitions", e);
+      return Response.serverError().entity("Error retrieving process definitions").build();
+    }
+  }
 
   @GET
   @Path("/{processDefinitionId}")

@@ -35,7 +35,7 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            false, "456", "message", VariablesDTO.of("var1", "value1"))
+            false, "456", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -58,7 +58,7 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            false, "Error_1tlo99v", "message", VariablesDTO.of("var1", "value2"))
+            false, "Error_1tlo99v", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -78,7 +78,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, null, null, VariablesDTO.of("var1", "value2"))
+        .andRespondToExternalTaskWithFailure(false, null, null)
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -99,7 +99,7 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            false, "456", "error message", VariablesDTO.of("var1", "value1"))
+            false, "456", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -119,7 +119,7 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithFailure(
-            false, "Error_1tlo99v", "error message", VariablesDTO.of("var1", "value1"))
+            false, "Error_1tlo99v", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")

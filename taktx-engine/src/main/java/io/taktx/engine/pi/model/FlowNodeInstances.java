@@ -41,7 +41,7 @@ public class FlowNodeInstances {
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
     this.scheduleKeys = new HashSet<>();
-    this.state = ProcessInstanceState.START;
+    this.state = ProcessInstanceState.ACTIVE;
     this.stateChanged = false;
     this.activeCnt = 0;
     this.elementInstanceCnt = 0;
@@ -84,7 +84,11 @@ public class FlowNodeInstances {
   }
 
   public void setState(ProcessInstanceState state) {
-    this.stateChanged = this.state != null && this.state != state;
+    this.stateChanged = this.state != state;
+    this.state = state;
+  }
+
+  public void setStateNoChange(ProcessInstanceState state) {
     this.state = state;
   }
 
