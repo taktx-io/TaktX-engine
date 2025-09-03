@@ -245,12 +245,27 @@ function handleProcessInstanceMessage(message) {
             state.processInstances[definitionId] = [];
         }
         
-        // Add to beginning of array (newest first)
-        state.processInstances[definitionId].unshift(instanceUpdate);
+        // Get the instance ID to check, ensuring proper type comparison
+        const updateInstanceId = String(instanceUpdate.processInstanceId);
         
-        // Limit to 100 instances
-        if (state.processInstances[definitionId].length > 100) {
-            state.processInstances[definitionId] = state.processInstances[definitionId].slice(0, 100);
+        // Check if we already have an entry for this process instance ID
+        const existingIndex = state.processInstances[definitionId].findIndex(
+            instance => String(instance.processInstanceId) === updateInstanceId
+        );
+        
+        if (existingIndex !== -1) {
+            // Update existing entry
+            state.processInstances[definitionId][existingIndex] = instanceUpdate;
+            console.log('Updated existing process instance:', updateInstanceId);
+        } else {
+            // Add to beginning of array (newest first)
+            state.processInstances[definitionId].unshift(instanceUpdate);
+            console.log('Added new process instance:', updateInstanceId);
+            
+            // Limit to 100 instances
+            if (state.processInstances[definitionId].length > 100) {
+                state.processInstances[definitionId] = state.processInstances[definitionId].slice(0, 100);
+            }
         }
         
         renderProcessInstances(definitionId);
@@ -260,10 +275,22 @@ function handleProcessInstanceMessage(message) {
 // Handle flow node instance messages from WebSocket
 function handleFlowNodeInstanceMessage(message) {
     console.log('Received flow node instance message:', message);
-    
-    if (message.type === 'flow-node-update') {
-        // Update BPMN diagram based on flow node update
-        highlightFlowNode(message.elementId);
+
+    // Handle both connected and update messages
+    if (message.type === 'connected') {
+        // Request current state when connection is established
+        if (state.connections.flowNodes && state.connections.flowNodes.readyState === WebSocket.OPEN) {
+            state.connections.flowNodes.send(JSON.stringify({
+                action: "get_current_state"
+            }));
+        }
+    } else if (message.type === 'flow-node-update') {
+        // Your existing highlight code...
+        const flowNodeInstance = message.flowNodeInstance;
+        if (flowNodeInstance && flowNodeInstance.elementId) {
+            console.log('Highlighting flow node:', flowNodeInstance.elementId);
+            highlightFlowNode(flowNodeInstance.elementId);
+        }
     }
 }
 
@@ -385,19 +412,6 @@ function displayBpmnDiagram(definitionId, version) {
         });
 }
 
-// Highlight a flow node in the BPMN diagram
-function highlightFlowNode(elementId) {
-    if (!state.bpmnViewer) return;
-    
-    const canvas = state.bpmnViewer.get('canvas');
-    
-    // Clear any previous highlights
-    clearBpmnHighlights();
-    
-    // Highlight the active flow node
-    canvas.addMarker(elementId, 'highlight');
-}
-
 // Clear highlights from BPMN diagram
 function clearBpmnHighlights() {
     if (!state.bpmnViewer) return;
@@ -405,9 +419,32 @@ function clearBpmnHighlights() {
     const canvas = state.bpmnViewer.get('canvas');
     const registry = state.bpmnViewer.get('elementRegistry');
     
+    if (!registry || !canvas) return;
+    
     registry.forEach(element => {
-        canvas.removeMarker(element.id, 'highlight');
+        if (element && element.id) {
+            canvas.removeMarker(element.id, 'highlight');
+        }
     });
+}
+
+// Highlight a flow node in the BPMN diagram
+function highlightFlowNode(elementId) {
+    if (!state.bpmnViewer || !elementId) return;
+    
+    const canvas = state.bpmnViewer.get('canvas');
+    if (!canvas) return;
+    
+    // Attempt to find the element in the registry to verify it exists
+    const registry = state.bpmnViewer.get('elementRegistry');
+    const element = registry.get(elementId);
+    
+    if (element) {
+        // Highlight the active flow node
+        canvas.addMarker(elementId, 'highlight');
+    } else {
+        console.warn(`Element with ID ${elementId} not found in BPMN diagram`);
+    }
 }
 
 /**
@@ -447,12 +484,28 @@ function selectProcessInstance(instanceId) {
     // Update state
     state.currentInstanceId = instanceId;
     
+    // Clear any existing highlights from previous instance
+    clearBpmnHighlights();
+    
+    // Refresh the BPMN diagram for the current definition
+    // This ensures we have a clean canvas for the new instance
+    if (state.currentDefinitionId && state.currentDefinitionVersion) {
+        displayBpmnDiagram(state.currentDefinitionId, state.currentDefinitionVersion);
+    }
+    
     // Update UI
     renderProcessInstances(state.currentDefinitionId);
     document.getElementById('selectedInstanceLabel').textContent = `Instance: ${instanceId}`;
     
     // Connect to flow node websocket
     setupFlowNodeInstanceWebSocket(instanceId);
+
+    // Also send a message requesting current flow node state
+    if (state.connections.flowNodes && state.connections.flowNodes.readyState === WebSocket.OPEN) {
+        state.connections.flowNodes.send(JSON.stringify({
+            action: "get_current_state"
+        }));
+    }
 }
 
 // Add custom CSS for BPMN highlighting

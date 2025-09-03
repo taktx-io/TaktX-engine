@@ -89,8 +89,7 @@ public class ExternalTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
   }
 
-  public void respondError(
-      boolean allowRetry, String code, String message) {
+  public void respondError(boolean allowRetry, String code, String message) {
 
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(

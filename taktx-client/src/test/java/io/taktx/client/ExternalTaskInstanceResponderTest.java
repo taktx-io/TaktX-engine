@@ -16,7 +16,6 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
-import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;

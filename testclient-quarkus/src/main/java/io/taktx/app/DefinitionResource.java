@@ -36,23 +36,22 @@ public class DefinitionResource {
     try {
       Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitions;
       if (processDefinitionId != null && !processDefinitionId.isEmpty()) {
-        definitions = taktClient.getProcessDefinitionConsumer()
-            .getDeployedProcessDefinitions(processDefinitionId);
+        definitions =
+            taktClient
+                .getProcessDefinitionConsumer()
+                .getDeployedProcessDefinitions(processDefinitionId);
       } else {
         definitions = taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
       }
-      
+
       // Group definitions by process definition ID
-      Map<String, Map<Integer, ProcessDefinitionDTO>> groupedDefinitions = 
+      Map<String, Map<Integer, ProcessDefinitionDTO>> groupedDefinitions =
           definitions.entrySet().stream()
-              .collect(Collectors.groupingBy(
-                  entry -> entry.getKey().getProcessDefinitionId(),
-                  Collectors.toMap(
-                      entry -> entry.getKey().getVersion(),
-                      Map.Entry::getValue
-                  )
-              ));
-      
+              .collect(
+                  Collectors.groupingBy(
+                      entry -> entry.getKey().getProcessDefinitionId(),
+                      Collectors.toMap(entry -> entry.getKey().getVersion(), Map.Entry::getValue)));
+
       return Response.ok(groupedDefinitions).build();
     } catch (Exception e) {
       log.error("Error retrieving process definitions", e);

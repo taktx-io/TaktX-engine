@@ -225,8 +225,7 @@ class BoundaryEventsTest {
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            false, "errorCode", "error message")
+        .andRespondToExternalTaskWithFailure(false, "errorCode", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasTerminatedElementWithId("ServiceTask_1");

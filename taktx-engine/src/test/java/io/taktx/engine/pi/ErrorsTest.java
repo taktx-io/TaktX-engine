@@ -34,8 +34,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            false, "456", "message")
+        .andRespondToExternalTaskWithFailure(false, "456", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -57,8 +56,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            false, "Error_1tlo99v", "message")
+        .andRespondToExternalTaskWithFailure(false, "Error_1tlo99v", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -98,8 +96,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            false, "456", "error message")
+        .andRespondToExternalTaskWithFailure(false, "456", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -118,8 +115,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            false, "Error_1tlo99v", "error message")
+        .andRespondToExternalTaskWithFailure(false, "Error_1tlo99v", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
