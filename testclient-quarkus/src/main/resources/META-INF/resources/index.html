@@ -16,9 +16,13 @@
             overflow-y: auto;
         }
         .bpmn-canvas {
-            height: calc(100vh - 60px);
+            height: 50vh;
             border: 1px solid #ccc;
             overflow: hidden;
+        }
+        .instances-panel {
+            height: calc(50vh - 110px);
+            overflow-y: auto;
         }
         .process-definition {
             cursor: pointer;
@@ -65,7 +69,7 @@
         </div>
         
         <div class="row">
-            <!-- Left sidebar -->
+            <!-- Left sidebar - Process Definitions -->
             <div class="col-md-3">
                 <div class="card sidebar">
                     <div class="card-header">
@@ -80,32 +84,31 @@
                 </div>
             </div>
             
-            <!-- Middle section - Process Instances -->
-            <div class="col-md-3">
-                <div class="card sidebar">
-                    <div class="card-header">
-                        <h5>Process Instances</h5>
-                        <small id="selectedDefinitionLabel" class="text-muted">Select a process definition</small>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="processInstancesList" class="list-group list-group-flush">
-                            <!-- Process instances will be loaded here -->
-                            <div class="p-3 text-muted">Select a process definition</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- BPMN Diagram -->
-            <div class="col-md-6">
-                <div class="card">
+            <!-- Right section -->
+            <div class="col-md-9">
+                <!-- Top right - BPMN Diagram -->
+                <div class="card mb-3">
                     <div class="card-header">
                         <h5>BPMN Process Diagram</h5>
-                        <small id="selectedInstanceLabel" class="text-muted">Select a process instance</small>
+                        <small id="selectedDefinitionLabel" class="text-muted">Select a process definition</small>
                     </div>
                     <div class="card-body p-0">
                         <div id="bpmnCanvas" class="bpmn-canvas">
                             <!-- BPMN diagram will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom right - Process Instances -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Process Instances</h5>
+                        <small id="selectedInstanceLabel" class="text-muted">Select a process instance</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="processInstancesList" class="list-group list-group-flush instances-panel">
+                            <!-- Process instances will be loaded here -->
+                            <div class="p-3 text-muted">Select a process definition</div>
                         </div>
                     </div>
                 </div>

@@ -27,62 +27,63 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProcessDefinitionWebSocket {
 
-    private final Map<String, Session> sessions = new ConcurrentHashMap<>();
-    
-    @Inject
-    TaktClient taktClient;
-    
-    @OnOpen
-    public void onOpen(Session session) {
-        sessions.put(session.getId(), session);
-        log.info("WebSocket session opened: {}", session.getId());
-        
-        // Register consumer for process definition updates
-        if (sessions.size() == 1) {
-            log.info("First WebSocket client connected, registering process definition update consumer");
-            taktClient.registerProcessDefinitionUpdateConsumer(this::broadcastUpdate);
-        }
-        
-        // Send current process definitions to the new client
-        Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitions = 
-            taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
-        
-        // Format and send only to this session
-        String message = JsonUtils.toJsonString(Map.of(
-            "type", "initial",
-            "data", definitions
-        ));
-        
-        session.getAsyncRemote().sendText(message);
+  private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+
+  @Inject TaktClient taktClient;
+
+  @OnOpen
+  public void onOpen(Session session) {
+    sessions.put(session.getId(), session);
+    log.info("WebSocket session opened: {}", session.getId());
+
+    // Register consumer for process definition updates
+    if (sessions.size() == 1) {
+      log.info("First WebSocket client connected, registering process definition update consumer");
+      taktClient.registerProcessDefinitionUpdateConsumer(this::broadcastUpdate);
     }
-    
-    @OnClose
-    public void onClose(Session session) {
-        sessions.remove(session.getId());
-        log.info("WebSocket session closed: {}", session.getId());
+
+    // Send current process definitions to the new client
+    Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitions =
+        taktClient.getProcessDefinitionConsumer().getDeployedProcessDefinitions();
+
+    // Format and send only to this session
+    String message = JsonUtils.toJsonString(Map.of("type", "initial", "data", definitions));
+
+    session.getAsyncRemote().sendText(message);
+  }
+
+  @OnClose
+  public void onClose(Session session) {
+    sessions.remove(session.getId());
+    log.info("WebSocket session closed: {}", session.getId());
+  }
+
+  @OnError
+  public void onError(Session session, Throwable throwable) {
+    log.error(
+        "WebSocket error for session {}: {}", session.getId(), throwable.getMessage(), throwable);
+    sessions.remove(session.getId());
+  }
+
+  private void broadcastUpdate(ProcessDefinitionKey key, ProcessDefinitionDTO definition) {
+    if (sessions.isEmpty()) {
+      return;
     }
-    
-    @OnError
-    public void onError(Session session, Throwable throwable) {
-        log.error("WebSocket error for session {}: {}", session.getId(), throwable.getMessage(), throwable);
-        sessions.remove(session.getId());
-    }
-    
-    private void broadcastUpdate(ProcessDefinitionKey key, ProcessDefinitionDTO definition) {
-        if (sessions.isEmpty()) {
-            return;
-        }
-        
-        String message = JsonUtils.toJsonString(Map.of(
-            "type", "update",
-            "key", key,
-            "definition", definition
-        ));
-        
-        sessions.values().forEach(session -> {
-            session.getAsyncRemote().sendText(message);
-        });
-        
-        log.debug("Broadcasted process definition update to {} clients", sessions.size());
-    }
+
+    String message =
+        JsonUtils.toJsonString(
+            Map.of(
+                "type", "update",
+                "key", key,
+                "definition", definition));
+
+    sessions
+        .values()
+        .forEach(
+            session -> {
+              session.getAsyncRemote().sendText(message);
+            });
+
+    log.debug("Broadcasted process definition update to {} clients", sessions.size());
+  }
 }

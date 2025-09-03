@@ -71,23 +71,17 @@ class ExternalTaskTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilElementHasTerminated("ServiceTask_1")
         .waitUntilCompleted()
         .assertThatProcess()
@@ -105,14 +99,11 @@ class ExternalTaskTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("success", "true"))
         .waitUntilCompleted()
@@ -128,18 +119,15 @@ class ExternalTaskTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single-retry-backoff.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")
-        .andRespondToExternalTaskWithFailure(
-            true, "fail", "failure")
+        .andRespondToExternalTaskWithFailure(true, "fail", "failure")
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(3001))
         .waitUntilExternalTaskIsWaitingForResponse("service-task-id")

@@ -75,6 +75,9 @@ public class ProcessDefinitionConsumer {
                   "Received definition activation record {} to state {}",
                   activationRecord.key(),
                   activationRecord.value().getState());
+              if (activationRecord.key().getVersion() == -1) {
+                continue;
+              }
               final String storedHash = storedHashes.get(activationRecord.key());
               if (storedHash != null
                   && !storedHash.equals(
