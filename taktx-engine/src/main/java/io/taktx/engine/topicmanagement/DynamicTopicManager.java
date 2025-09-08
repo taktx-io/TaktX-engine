@@ -10,6 +10,7 @@ package io.taktx.engine.topicmanagement;
 
 import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
+import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.TaktConfiguration;
@@ -120,6 +121,7 @@ public class DynamicTopicManager {
                   if (createTopicIfNotExists(
                       topicMeta.getTopicName(),
                       topicMeta.getNrPartitions(),
+                      topicMeta.getCleanupPolicy(),
                       taktConfiguration.getReplicationFactor())) {
                     publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
                   }
@@ -272,7 +274,7 @@ public class DynamicTopicManager {
   }
 
   private boolean createTopicIfNotExists(
-      String prefixedTopicName, int numPartitions, short replicationFactor) {
+      String prefixedTopicName, int numPartitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
     try {
       // First check if the topic exists
       boolean topicExists = adminClient.listTopics().names().get().contains(prefixedTopicName);
@@ -280,6 +282,10 @@ public class DynamicTopicManager {
       if (!topicExists) {
         // Create new topic if it doesn't exist
         NewTopic newTopic = new NewTopic(prefixedTopicName, numPartitions, replicationFactor);
+        // Apply cleanup policy configuration
+        newTopic.configs(java.util.Map.of(
+            "cleanup.policy", cleanupPolicy.getKafkaPolicyValue()));
+
         adminClient.createTopics(List.of(newTopic)).all().get();
         log.info(
             "Topic {} created successfully with {} partitions", prefixedTopicName, numPartitions);

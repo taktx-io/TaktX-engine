@@ -56,9 +56,10 @@ public class TaktClientProvider {
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(), taktClient.getProcessInstanceResponder());
         taktClient.registerExternalTaskConsumer(externalTaskTriggerConsumer);
+        int partitions = Integer.parseInt(properties.getProperty("taktx.engine.topic.partitions"));
         externalTaskTriggerConsumer
             .getJobIds()
-            .forEach(jobId -> taktClient.requestExternalTaskTopic(jobId, 3, CleanupPolicy.COMPACT));
+            .forEach(jobId -> taktClient.requestExternalTaskTopic(jobId, partitions, CleanupPolicy.COMPACT));
       }
     }
   }

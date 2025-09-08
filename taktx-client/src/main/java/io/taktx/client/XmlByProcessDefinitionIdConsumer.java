@@ -45,7 +45,7 @@ public class XmlByProcessDefinitionIdConsumer {
 
   public void subscribeToTopic() {
     running = true;
-
+    log.info("Starting async process to consume XML by process definition id");
     CompletableFuture.runAsync(
         () -> {
           try (KafkaConsumer<ProcessDefinitionKey, String> consumer = createConsumer()) {
@@ -54,6 +54,7 @@ public class XmlByProcessDefinitionIdConsumer {
                 taktPropertiesHelper.getPrefixedTopicName(
                     Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName());
 
+            log.info("Subscribing to topic " + prefixedTopicName);
             consumer.subscribe(Collections.singletonList(prefixedTopicName));
 
             while (running) {
@@ -76,6 +77,7 @@ public class XmlByProcessDefinitionIdConsumer {
               ProcessDefinitionKey key = instanceUpdateRecord.key();
               String xml = instanceUpdateRecord.value();
               String filename = key.getProcessDefinitionId() + "." + key.getVersion() + ".bpmn";
+              log.info("Consume XML definition for {} and store to {}", key, filename);
               writeDefinition(
                   taktPropertiesHelper.getTenant(),
                   taktPropertiesHelper.getNamespace(),

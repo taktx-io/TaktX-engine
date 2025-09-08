@@ -57,11 +57,18 @@ public class TopicBootstrapper {
     List<NewTopic> newTopics =
         Topics.initialFixedTopics().stream()
             .map(
-                topic ->
-                    new NewTopic(
-                        taktConfiguration.getPrefixed(topic.getTopicName()),
-                        1,
-                        taktConfiguration.getReplicationFactor()))
+                topic -> {
+                  NewTopic newTopic = new NewTopic(
+                      taktConfiguration.getPrefixed(topic.getTopicName()),
+                      1,
+                      taktConfiguration.getReplicationFactor());
+                  
+                  // Apply cleanup policy configuration
+                  newTopic.configs(java.util.Map.of(
+                      "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
+                  
+                  return newTopic;
+                })
             .toList();
     try {
       // Make the createTopics call blocking by using get()
@@ -86,11 +93,18 @@ public class TopicBootstrapper {
     List<NewTopic> newTopics =
         Topics.managedFixedTopics().stream()
             .map(
-                topic ->
-                    new NewTopic(
-                        taktConfiguration.getPrefixed(topic.getTopicName()),
-                        taktConfiguration.getPartitions(),
-                        taktConfiguration.getReplicationFactor()))
+                topic -> {
+                  NewTopic newTopic = new NewTopic(
+                      taktConfiguration.getPrefixed(topic.getTopicName()),
+                      taktConfiguration.getPartitions(),
+                      taktConfiguration.getReplicationFactor());
+                  
+                  // Apply cleanup policy configuration
+                  newTopic.configs(java.util.Map.of(
+                      "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
+                  
+                  return newTopic;
+                })
             .toList();
 
     try {
