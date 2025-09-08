@@ -414,7 +414,7 @@ public class ProcessInstanceProcessor
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
     VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
-    if (flowNodeInstances.isStateChanged()) {
+    if (flowNodeInstances.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
       if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
