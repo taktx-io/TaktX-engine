@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,7 +71,8 @@ public class DynamicTopicManager {
   private void scanActual() {
     executor.submit(
         () -> {
-          try (KafkaConsumer<String, TopicMetaDTO> actualConsumer = createConsumer()) {
+          try (KafkaConsumer<String, TopicMetaDTO> actualConsumer =
+              createConsumer("taktx-topicmanager-actuel-consumer-" + UUID.randomUUID())) {
             String prefixedActualTopicName =
                 taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
             actualConsumer.subscribe(List.of(prefixedActualTopicName));
@@ -97,7 +99,8 @@ public class DynamicTopicManager {
   private void scanRequest() {
     executor.submit(
         () -> {
-          try (KafkaConsumer<String, TopicMetaDTO> requestConsumer = createConsumer()) {
+          try (KafkaConsumer<String, TopicMetaDTO> requestConsumer =
+              createConsumer("taktx-topicmanager-request-consumer")) {
             String prefixedActualTopicName =
                 taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
             requestConsumer.subscribe(
@@ -292,9 +295,7 @@ public class DynamicTopicManager {
     }
   }
 
-  private KafkaConsumer<String, TopicMetaDTO> createConsumer() {
-    String groupId = "taktx-topicmanager-consumer";
-
+  private KafkaConsumer<String, TopicMetaDTO> createConsumer(String groupId) {
     log.info("Creating consumer for group id {}", groupId);
     Properties props = new Properties();
     props.putAll(kafkaClientsConfig.getConfig());
