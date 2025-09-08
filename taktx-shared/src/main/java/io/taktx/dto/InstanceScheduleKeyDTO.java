@@ -23,19 +23,19 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class InstanceScheduleKeyDTO extends ScheduleKeyDTO {
 
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
   private List<Long> elementInstanceIdPath;
 
   private String elementId;
 
   public InstanceScheduleKeyDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       List<Long> elementInstanceIdPath,
       String elementId,
       TimeBucket timeBucket) {
     super(timeBucket);
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.elementId = elementId;
   }

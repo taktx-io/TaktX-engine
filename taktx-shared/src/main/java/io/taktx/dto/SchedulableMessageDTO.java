@@ -22,7 +22,7 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonTypeIdResolver(ProcessInstanceTriggerTypeIdResolver.class)
 public interface SchedulableMessageDTO {
-  UUID getProcessInstanceKey();
+  UUID getProcessInstanceId();
 
-  void setProcessInstanceKey(UUID processInstanceKey);
+  void setProcessInstanceId(UUID processInstanceId);
 }

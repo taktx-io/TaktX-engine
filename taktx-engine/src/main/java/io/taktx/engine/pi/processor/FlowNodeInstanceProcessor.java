@@ -240,7 +240,7 @@ public abstract class FlowNodeInstanceProcessor<
 
     StoredFlowNodeInstancesWrapper wrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstance.getProcessInstanceKey(),
+            processInstance.getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements());
@@ -315,7 +315,7 @@ public abstract class FlowNodeInstanceProcessor<
     String elementId = flowElements.getIndex().get(flowNodeInstanceDTO.getElementIndex());
     flowNodeInstanceDTO.setElementId(elementId);
     return new InstanceUpdate(
-        processInstance.getProcessInstanceKey(),
+        processInstance.getProcessInstanceId(),
         new FlowNodeInstanceUpdateDTO(
             elementInstanceIdPath, flowNodeInstanceDTO, processInstanceVariablesDTO, processTime));
   }

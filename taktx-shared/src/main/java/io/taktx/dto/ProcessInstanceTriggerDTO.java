@@ -33,12 +33,12 @@ import lombok.ToString;
 @NoArgsConstructor
 public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO {
 
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
   private VariablesDTO variables;
 
-  protected ProcessInstanceTriggerDTO(UUID processInstanceKey, VariablesDTO variables) {
-    this.processInstanceKey = processInstanceKey;
+  protected ProcessInstanceTriggerDTO(UUID processInstanceId, VariablesDTO variables) {
+    this.processInstanceId = processInstanceId;
     this.variables = variables;
   }
 }

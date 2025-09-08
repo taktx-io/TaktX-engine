@@ -31,7 +31,7 @@ import org.mockito.ArgumentCaptor;
 class ExternalTaskInstanceResponderTest {
   private KafkaProducer<UUID, ContinueFlowElementTriggerDTO> mockProducer;
   private ExternalTaskInstanceResponder responder;
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
   private List<Long> elementInstanceIdPath;
   private String topicName;
 
@@ -39,12 +39,12 @@ class ExternalTaskInstanceResponderTest {
   @BeforeEach
   void setUp() {
     mockProducer = mock(KafkaProducer.class);
-    processInstanceKey = UUID.randomUUID();
+    processInstanceId = UUID.randomUUID();
     elementInstanceIdPath = List.of(1001L, 1002L);
     topicName = "test-topic";
     responder =
         new ExternalTaskInstanceResponder(
-            mockProducer, topicName, processInstanceKey, elementInstanceIdPath);
+            mockProducer, topicName, processInstanceId, elementInstanceIdPath);
   }
 
   @SuppressWarnings("unchecked")
@@ -208,7 +208,7 @@ class ExternalTaskInstanceResponderTest {
   private ExternalTaskResponseTriggerDTO assertRecordBasics(
       ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord) {
     assertThat(externalTaskResponseTriggerRecord.topic()).isEqualTo(topicName);
-    assertThat(externalTaskResponseTriggerRecord.key()).isEqualTo(processInstanceKey);
+    assertThat(externalTaskResponseTriggerRecord.key()).isEqualTo(processInstanceId);
     assertThat(externalTaskResponseTriggerRecord.value())
         .isInstanceOf(ExternalTaskResponseTriggerDTO.class);
     return (ExternalTaskResponseTriggerDTO) externalTaskResponseTriggerRecord.value();
@@ -216,7 +216,7 @@ class ExternalTaskInstanceResponderTest {
 
   private ExternalTaskResponseTriggerDTO assertTriggerBasics(
       ContinueFlowElementTriggerDTO triggerDTO) {
-    assertThat(triggerDTO.getProcessInstanceKey()).isEqualTo(processInstanceKey);
+    assertThat(triggerDTO.getProcessInstanceId()).isEqualTo(processInstanceId);
     assertThat(triggerDTO.getElementInstanceIdPath()).isEqualTo(elementInstanceIdPath);
     assertThat(triggerDTO).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
     return (ExternalTaskResponseTriggerDTO) triggerDTO;

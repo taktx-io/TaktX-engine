@@ -6,18 +6,17 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.engine.pd.model;
+package io.taktx.client;
 
-import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.pi.model.FlowNodeInstance;
-import java.util.Set;
+import io.taktx.dto.InstanceUpdateDTO;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-public record NewStartCommand(
-    UUID processInstanceId,
-    FlowNode flowNode,
-    FlowNodeInstance<?> instance,
-    String calledElement,
-    VariablesDTO variables,
-    boolean propagateAllToParent,
-    Set<IoVariableMapping> outputMappings) {}
+@RequiredArgsConstructor
+@Getter
+public class InstanceUpdateRecord {
+  private final long timestamp;
+  private final UUID processInstanceId;
+  private final InstanceUpdateDTO update;
+}

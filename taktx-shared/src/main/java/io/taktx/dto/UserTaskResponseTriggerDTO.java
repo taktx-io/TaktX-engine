@@ -24,11 +24,11 @@ public class UserTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
   private UserTaskResponseResultDTO userTaskResponseResult;
 
   public UserTaskResponseTriggerDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       List<Long> elementInstanceIdPath,
       UserTaskResponseResultDTO userTaskResponseResult,
       VariablesDTO variables) {
-    super(processInstanceKey, elementInstanceIdPath, null, variables);
+    super(processInstanceId, elementInstanceIdPath, null, variables);
     this.userTaskResponseResult = userTaskResponseResult;
   }
 }

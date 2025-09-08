@@ -37,10 +37,10 @@ public class ProcessInstanceProducer {
   }
 
   public UUID startProcess(String processDefinitionId, VariablesDTO variables) {
-    UUID processInstanceKey = UUID.randomUUID();
+    UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
-            processInstanceKey,
+            processInstanceId,
             null,
             null,
             new ProcessDefinitionKey(processDefinitionId),
@@ -49,23 +49,23 @@ public class ProcessInstanceProducer {
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
-            processInstanceKey,
+            processInstanceId,
             startCommand));
-    return processInstanceKey;
+    return processInstanceId;
   }
 
-  public void terminateProcessInstance(UUID processInstanceKey) {
-    terminateElementInstance(processInstanceKey, List.of());
+  public void terminateProcessInstance(UUID processInstanceId) {
+    terminateElementInstance(processInstanceId, List.of());
   }
 
-  public void terminateElementInstance(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
+  public void terminateElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
     TerminateTriggerDTO terminateTrigger =
-        new TerminateTriggerDTO(processInstanceKey, elementInstanceIdPath);
+        new TerminateTriggerDTO(processInstanceId, elementInstanceIdPath);
     processInstanceTriggerEmitter.send(
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
-            processInstanceKey,
+            processInstanceId,
             terminateTrigger));
   }
 }

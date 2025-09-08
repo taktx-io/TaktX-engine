@@ -61,6 +61,17 @@ public class JsonUtils {
   }
 
   /**
+   * Converts an object to a JsonNode with full field names, ignoring any @JsonFormat annotations.
+   * This is useful when you need to embed the object as a nested JSON object rather than a string.
+   *
+   * @param object The object to convert
+   * @return JsonNode representation of the object with field names
+   */
+  public static com.fasterxml.jackson.databind.JsonNode toJsonNodeWithFieldNames(Object object) {
+    return objectMapperWithFieldNames.valueToTree(object);
+  }
+
+  /**
    * Converts a JSON string to an object of the specified type.
    *
    * @param <T> The type to convert to

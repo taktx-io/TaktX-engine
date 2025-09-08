@@ -30,17 +30,17 @@ public class VariableScope {
   private final Map<Long, VariableScope> childScopes = new HashMap<>();
   private final Set<String> dirtyVariables = new HashSet<>();
   protected final KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
-  private final UUID processInstanceKey;
+  private final UUID processInstanceId;
   private final Long elementInstanceKey;
   private final VariableScope parentScope;
 
   public VariableScope(
       KeyValueStore<VariableKeyDTO, JsonNode> variableStore,
-      UUID processInstanceKey,
+      UUID processInstanceId,
       Long elementInstanceKey,
       VariableScope parentScope) {
     this.variableStore = variableStore;
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.elementInstanceKey = elementInstanceKey;
     this.parentScope = parentScope;
   }
@@ -50,23 +50,23 @@ public class VariableScope {
   }
 
   private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathStart() {
-    return new FlowNodeInstanceKeyDTO(processInstanceKey, getScopePath());
+    return new FlowNodeInstanceKeyDTO(processInstanceId, getScopePath());
   }
 
   private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathEnd() {
     List<Long> scopePath = getScopePath();
 
     if (scopePath.isEmpty()) {
-      UUID processInstanceKeyPlusOne =
+      UUID processInstanceIdPlusOne =
           new UUID(
-              processInstanceKey.getMostSignificantBits(),
-              processInstanceKey.getLeastSignificantBits() + 1);
-      return new FlowNodeInstanceKeyDTO(processInstanceKeyPlusOne, scopePath);
+              processInstanceId.getMostSignificantBits(),
+              processInstanceId.getLeastSignificantBits() + 1);
+      return new FlowNodeInstanceKeyDTO(processInstanceIdPlusOne, scopePath);
     } else {
       Long last = scopePath.getLast();
       last++;
       scopePath.set(scopePath.size() - 1, last);
-      return new FlowNodeInstanceKeyDTO(processInstanceKey, scopePath);
+      return new FlowNodeInstanceKeyDTO(processInstanceId, scopePath);
     }
   }
 
@@ -88,7 +88,7 @@ public class VariableScope {
   public VariableScope selectFlowNodeInstancesScope(long flowNodeInstanceKey) {
     return this.childScopes.computeIfAbsent(
         flowNodeInstanceKey,
-        k -> new VariableScope(variableStore, processInstanceKey, flowNodeInstanceKey, this));
+        k -> new VariableScope(variableStore, processInstanceId, flowNodeInstanceKey, this));
   }
 
   public void put(String key, JsonNode value) {
@@ -150,7 +150,7 @@ public class VariableScope {
     dirtyVariables.forEach(
         key -> {
           FlowNodeInstanceKeyDTO flowNodeInstanceKey =
-              new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
+              new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
           VariableKeyDTO variableKey = new VariableKeyDTO(flowNodeInstanceKey, key);
           JsonNode value = variables.get(key);
           variableStore.put(variableKey, value);

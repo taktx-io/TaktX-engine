@@ -20,7 +20,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
-  private UUID parentProcessInstanceKey;
+  private UUID parentProcessInstanceId;
 
   private List<Long> parentElementInstancePath;
 
@@ -33,14 +33,14 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   private long processTime;
 
   public ProcessInstanceUpdateDTO(
-      UUID parentProcessInstanceKey,
+      UUID parentProcessInstanceId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       FlowNodeInstancesDTO flowNodeInstances,
       VariablesDTO variables,
       long processTime) {
 
-    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.flowNodeInstances = flowNodeInstances;
@@ -51,7 +51,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   public ProcessInstanceUpdateDTO(
       ProcessInstanceDTO processInstance, VariablesDTO variables, long processTime) {
     this(
-        processInstance.getParentProcessInstanceKey(),
+        processInstance.getParentProcessInstanceId(),
         processInstance.getParentElementInstancePath(),
         processInstance.getProcessDefinitionKey(),
         processInstance.getFlowNodeInstances(),

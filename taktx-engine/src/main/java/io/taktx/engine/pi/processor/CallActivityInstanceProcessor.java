@@ -52,8 +52,8 @@ public class CallActivityInstanceProcessor
       VariableScope variables) {
     callActivityInstance.setState(ActtivityStateEnum.WAITING);
 
-    UUID newProcessInstanceKey = UUID.randomUUID();
-    callActivityInstance.setChildProcessInstanceId(newProcessInstanceKey);
+    UUID newProcessInstanceId = UUID.randomUUID();
+    callActivityInstance.setChildProcessInstanceId(newProcessInstanceId);
     CallActivity flowNode = callActivityInstance.getFlowNode();
 
     JsonNode jsonNode =
@@ -70,7 +70,7 @@ public class CallActivityInstanceProcessor
           .getInstanceResult()
           .addNewStartCommand(
               new NewStartCommand(
-                  newProcessInstanceKey,
+                  newProcessInstanceId,
                   flowNode,
                   callActivityInstance,
                   jsonNode.asText(),

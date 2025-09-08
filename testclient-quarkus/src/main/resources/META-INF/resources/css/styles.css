@@ -1,0 +1,590 @@
+/* Global styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+
+/* Layout */
+.list-container {
+    max-height: calc(100vh - 160px);
+}
+
+/* Resizable panels */
+.resizable-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 33%; /* Default width for process definition panel */
+    z-index: 1;
+}
+
+#instances-container {
+    width: 100%;
+    position: relative;
+    min-height: 100px; /* Ensure minimum height */
+}
+
+#instances-panel {
+    height: 200px; /* Default height for process instances panel */
+    min-height: 100px; /* Ensure minimum height */
+    max-height: 80vh; /* Prevent it from going outside viewport */
+    overflow-y: auto; /* Add scrolling if content exceeds height */
+}
+
+.resize-handle {
+    position: absolute;
+    background-color: transparent;
+    transition: background-color 0.3s;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+.resize-handle-horizontal {
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+}
+
+.resize-handle-vertical {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: row-resize;
+    z-index: 20; /* Higher z-index to ensure it's clickable */
+}
+
+.resize-handle-vertical:hover {
+    background-color: rgba(13, 110, 253, 0.3); /* More visible blue highlight */
+}
+
+#content-panel {
+    position: absolute;
+    left: 33%; /* Default position matching process definition panel width */
+    top: 0;
+    bottom: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px; /* Ensure minimum width */
+}
+
+#bpmn-container {
+    flex: 1;
+    min-height: 200px; /* Ensure minimum height for BPMN container */
+    background-color: #f8f9fa;
+    overflow: auto;
+    position: relative;
+}
+
+/* Process definition list */
+.process-definition-item {
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: all 0.2s ease;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.process-definition-item:hover {
+    transform: translateX(2px);
+    background-color: #f8f9fa;
+}
+
+.process-definition-item.selected {
+    border-left-color: #0d6efd;
+    background-color: #e9ecef;
+}
+
+.process-definition-name {
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+.version-badge {
+    font-size: 0.8em;
+    background-color: #6c757d;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.counters {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.counter {
+    display: flex;
+    align-items: center;
+    font-size: 0.85em;
+}
+
+.counter-started {
+    color: #28a745;
+}
+
+.counter-completed {
+    color: #dc3545;
+}
+
+.counter-icon {
+    margin-right: 4px;
+    font-size: 1.1em;
+}
+
+/* BPMN diagram */
+.diagram-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+}
+
+.loading-text {
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Process instances section - NEW STRUCTURE */
+.process-instances {
+    width: 60%;
+    overflow-y: auto;
+}
+
+.process-instances-container {
+    max-height: calc(100% - 50px);
+    overflow-y: auto;
+}
+
+/* New simple row styling */
+.process-instance-row {
+    margin-bottom: 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+.process-instance-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    width: 100%;
+}
+
+.process-instance-info:hover {
+    background-color: #e9ecef;
+}
+
+.process-instance-info.selected {
+    border-left-color: #0d6efd;
+    background-color: #e9ecef;
+}
+
+.id-time {
+    overflow: hidden;
+    flex: 1;
+}
+
+.uuid {
+    font-family: monospace;
+    font-size: 0.85em;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+}
+
+.timestamp {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.status-badge {
+    font-size: 0.75em;
+    padding: 4px 8px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    min-width: 80px;
+    text-align: center;
+    margin-left: auto; /* push to right in flex layout */
+    flex-shrink: 0;
+    background-color: #0d6efd; /* default to visible background */
+}
+
+.status-active {
+    background-color: #28a745;
+}
+
+.status-completed {
+    background-color: #6c757d;
+}
+
+.status-terminated {
+    background-color: #dc3545;
+}
+
+.status-unknown {
+    background-color: #6c757d;
+}
+
+/* Table styling for process instances */
+.process-instances-container .table {
+    margin-bottom: 0;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.process-instances-container .table td {
+    vertical-align: middle;
+    padding: 8px 12px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.process-instance-item {
+    cursor: pointer;
+}
+
+.process-instance-item:hover {
+    background-color: #f8f9fa;
+}
+
+.process-instance-item.selected {
+    background-color: #e9ecef;
+}
+
+.process-instance-item .process-instance-id {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #212529;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Badge styling for status indicators */
+.badge {
+    font-size: 0.75em;
+    font-weight: normal;
+    padding: 0.35em 0.65em;
+    display: inline-block;
+}
+
+.state-active {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.state-completed {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+.state-terminated {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+/* Ensure the badge container has enough space */
+.process-instances-container td:last-child {
+    width: 80px;
+    min-width: 80px;
+    text-align: right;
+}
+
+/* BPMN Token highlighting */
+.djs-element.highlight-token .djs-visual > :nth-child(1) {
+    stroke: #007bff !important;
+    stroke-width: 3px !important;
+    fill: rgba(0, 123, 255, 0.1) !important;
+}
+
+.djs-element.highlight-token-pulse .djs-visual > :nth-child(1) {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        stroke-width: 3px;
+        stroke-opacity: 1;
+    }
+    50% {
+        stroke-width: 5px;
+        stroke-opacity: 0.8;
+    }
+    100% {
+        stroke-width: 3px;
+        stroke-opacity: 1;
+    }
+}
+
+/* Process instances section - NEW STRUCTURE */
+.process-instances {
+    overflow-y: auto;
+}
+
+.process-instances-container {
+    max-height: calc(100% - 50px);
+    overflow-y: auto;
+}
+
+/* Flow Node Instances styling */
+.flow-node-instances-container {
+    max-height: calc(100% - 50px);
+    overflow-y: auto;
+}
+
+.flow-node-instance-row {
+    margin-bottom: 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+.flow-node-instance-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    width: 100%;
+    font-size: 0.9em;
+}
+
+.flow-node-instance-info:hover {
+    background-color: #e9ecef;
+}
+
+.flow-node-instance-info.selected {
+    border-left-color: #28a745;
+    background-color: #e9ecef;
+}
+
+.flow-node-details {
+    overflow: hidden;
+    flex: 1;
+}
+
+.flow-node-id {
+    font-family: monospace;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    color: #495057;
+}
+
+.flow-node-element-id {
+    font-size: 0.75em;
+    color: #6c757d;
+    margin-top: 1px;
+}
+
+.flow-node-state-badge {
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    min-width: 60px;
+    text-align: center;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.flow-node-state-active {
+    background-color: #28a745;
+}
+
+.flow-node-state-completed {
+    background-color: #6c757d;
+}
+
+.flow-node-state-terminated {
+    background-color: #dc3545;
+}
+
+.flow-node-state-waiting {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.flow-node-state-failed {
+    background-color: #dc3545;
+}
+
+/* Flow Node Tree Structure */
+.flow-node-tree {
+    font-size: 0.9em;
+}
+
+.flow-node-item {
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.flow-node-item:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.flow-node-info {
+    padding: 8px 12px;
+}
+
+.flow-node-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.state-icon {
+    font-size: 1.1em;
+    font-weight: bold;
+    min-width: 16px;
+    text-align: center;
+}
+
+.state-icon.active {
+    color: #28a745;
+}
+
+.state-icon.completed {
+    color: #6c757d;
+}
+
+.state-icon.terminated {
+    color: #dc3545;
+}
+
+.state-icon.unknown {
+    color: #6c757d;
+}
+
+.element-id {
+    font-family: monospace;
+    font-weight: bold;
+    color: #495057;
+    flex: 1;
+}
+
+.instance-id {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #6c757d;
+    background-color: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.flow-node-details {
+    margin-bottom: 6px;
+}
+
+/* Tree indentation levels */
+.indent-0 {
+    margin-left: 0;
+}
+
+.indent-1 {
+    margin-left: 20px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 12px;
+}
+
+.indent-2 {
+    margin-left: 40px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 12px;
+}
+
+.indent-3 {
+    margin-left: 60px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 12px;
+}
+
+.indent-4 {
+    margin-left: 80px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 12px;
+}
+
+.indent-5 {
+    margin-left: 100px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 12px;
+}
+
+/* Variables section */
+.variables-section {
+    margin-top: 8px;
+    padding: 6px 8px;
+    background-color: #f1f3f4;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.variables-header {
+    margin-bottom: 4px;
+}
+
+.variables-list {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.variable-item {
+    margin-bottom: 2px;
+    padding: 2px 0;
+    word-break: break-word;
+}
+
+.variable-item code {
+    background-color: #e9ecef;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 0.85em;
+    color: #495057;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .flow-node-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .indent-1, .indent-2, .indent-3, .indent-4, .indent-5 {
+        margin-left: 10px;
+        padding-left: 8px;
+    }
+}

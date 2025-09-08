@@ -52,11 +52,11 @@ class ExternalTaskInstanceResponderParameterResolverTest {
   @Test
   void shouldCallResponderWithCorrectTrigger() {
     // Given
-    UUID processInstanceKey = UUID.randomUUID();
+    UUID processInstanceId = UUID.randomUUID();
     List<Long> elementInstanceIdPath = List.of(1001L, 1002L);
 
     ExternalTaskTriggerDTO realTriggerDTO = mock(ExternalTaskTriggerDTO.class);
-    when(realTriggerDTO.getProcessInstanceKey()).thenReturn(processInstanceKey);
+    when(realTriggerDTO.getProcessInstanceId()).thenReturn(processInstanceId);
     when(realTriggerDTO.getElementInstanceIdPath()).thenReturn(elementInstanceIdPath);
 
     // When

@@ -29,17 +29,17 @@ public class UserTaskInstanceResponder {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;
-  private final UUID processInstanceKey;
+  private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
 
   public UserTaskInstanceResponder(
       KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter,
       String topicName,
-      UUID processInstanceKey,
+      UUID processInstanceId,
       List<Long> elementInstanceIdPath) {
     this.responseEmitter = responseEmitter;
     this.topicName = topicName;
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 
@@ -62,13 +62,13 @@ public class UserTaskInstanceResponder {
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO processInstanceTrigger =
         new UserTaskResponseTriggerDTO(
-            processInstanceKey,
+            processInstanceId,
             elementInstanceIdPath,
             userTaskResponseResult,
             new VariablesDTO(variablesMap));
     responseEmitter.send(
         new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
+            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
   public void respondEscalation(String code, String message) {
@@ -78,26 +78,26 @@ public class UserTaskInstanceResponder {
   public void respondEscalation(String code, String message, VariablesDTO variables) {
     UserTaskResponseTriggerDTO processInstanceTrigger =
         new UserTaskResponseTriggerDTO(
-            processInstanceKey,
+            processInstanceId,
             elementInstanceIdPath,
             new UserTaskResponseResultDTO(UserTaskResponseType.ESCALATION, code, message),
             variables);
     responseEmitter.send(
         new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
+            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
   public void respondError(String code, String message, VariablesDTO variables) {
 
     UserTaskResponseTriggerDTO processInstanceTrigger =
         new UserTaskResponseTriggerDTO(
-            processInstanceKey,
+            processInstanceId,
             elementInstanceIdPath,
             new UserTaskResponseResultDTO(UserTaskResponseType.ERROR, code, message),
             variables);
     responseEmitter.send(
         new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceKey(), processInstanceTrigger));
+            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
   public void respondError(String code, String message) {

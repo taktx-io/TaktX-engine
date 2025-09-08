@@ -8,12 +8,13 @@
 
 package io.taktx.app.websocket;
 
-import io.taktx.client.TaktClient;
-import io.taktx.dto.InstanceUpdateDTO;
-import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.app.InstanceUpdateConsumer;
+import io.taktx.app.InstanceUpdateRegistry;
+import io.taktx.client.InstanceUpdateRecord;
+import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
@@ -21,79 +22,84 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@ServerEndpoint("/ws/process-instances/{processDefinitionId}")
+@ServerEndpoint("/ws/process-instance/{processInstanceId}")
 @ApplicationScoped
+@RequiredArgsConstructor
 @Slf4j
 public class ProcessInstanceWebSocket {
 
   private final Map<String, Session> sessions = new ConcurrentHashMap<>();
-  private final Map<String, String> sessionToProcessDefinitionId = new ConcurrentHashMap<>();
-  private final Map<String, CopyOnWriteArrayList<Map<String, Object>>> processInstanceUpdates =
-      new ConcurrentHashMap<>();
-  private static final int MAX_STORED_INSTANCES = 100;
+  private final Map<String, UUID> sessionToProcessInstanceId = new ConcurrentHashMap<>();
 
-  @Inject TaktClient taktClient;
+  private final InstanceUpdateRegistry instanceUpdateRegistry;
+
+  @PostConstruct
+  void init() {
+    instanceUpdateRegistry.registerInstanceUpdateConsumer(
+        new InstanceUpdateConsumer() {
+          @Override
+          public void processInstanceUpdate(
+              long timestamp, UUID processInstanceId, ProcessInstanceUpdateDTO update) {
+            sendProcessInstanceUpdate(timestamp, processInstanceId, update);
+          }
+
+          @Override
+          public void flowNodeInstanceUpdate(
+              long timestamp, UUID processInstanceId, FlowNodeInstanceUpdateDTO update) {
+            sendFlowNodeInstanceUpdate(timestamp, processInstanceId, update);
+          }
+        });
+  }
 
   @OnOpen
-  public void onOpen(
-      Session session, @PathParam("processDefinitionId") String processDefinitionId) {
+  public void onOpen(Session session, @PathParam("processInstanceId") String processInstanceId) {
     sessions.put(session.getId(), session);
-    sessionToProcessDefinitionId.put(session.getId(), processDefinitionId);
+    UUID processInstanceUuid = UUID.fromString(processInstanceId);
+    sessionToProcessInstanceId.put(session.getId(), processInstanceUuid);
     log.info(
-        "WebSocket session opened for process definition {}: {}",
-        processDefinitionId,
-        session.getId());
+        "WebSocket session opened for process instance {} {}", processInstanceId, session.getId());
 
-    // Register consumer for process instance updates if first client
-    if (sessions.size() == 1) {
-      log.info("First WebSocket client connected, registering process instance update consumer");
-      taktClient.registerInstanceUpdateConsumer(this::handleInstanceUpdate);
+    InstanceUpdateRecord processInstance =
+        instanceUpdateRegistry.getProcessInstance(processInstanceUuid);
+    sendProcessInstanceUpdate(
+        processInstance.getTimestamp(),
+        processInstanceUuid,
+        (ProcessInstanceUpdateDTO) processInstance.getUpdate());
+    List<InstanceUpdateRecord> instanceUpdateRecords =
+        instanceUpdateRegistry.getFlowNodeInstancesByProcessInstance(processInstanceUuid);
+    for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+      sendFlowNodeInstanceUpdate(
+          instanceUpdateRecord.getTimestamp(),
+          processInstanceUuid,
+          (FlowNodeInstanceUpdateDTO) instanceUpdateRecord.getUpdate());
     }
-
-    // Initialize storage for this process definition if not already done
-    processInstanceUpdates.putIfAbsent(processDefinitionId, new CopyOnWriteArrayList<>());
-
-    // Send current process instances to the new client
-    CopyOnWriteArrayList<Map<String, Object>> instances =
-        processInstanceUpdates.get(processDefinitionId);
-
-    // Format and send only to this session
-    String message =
-        JsonUtils.toJsonString(
-            Map.of(
-                "type", "initial",
-                "processDefinitionId", processDefinitionId,
-                "data", instances));
-
-    session.getAsyncRemote().sendText(message);
   }
 
   @OnClose
   public void onClose(Session session) {
-    String processDefinitionId = sessionToProcessDefinitionId.remove(session.getId());
+    UUID processInstanceId = sessionToProcessInstanceId.remove(session.getId());
     sessions.remove(session.getId());
     log.info(
-        "WebSocket session closed for process definition {}: {}",
-        processDefinitionId,
-        session.getId());
+        "WebSocket session closed for process instance {}: {}", processInstanceId, session.getId());
   }
 
   @OnError
   public void onError(Session session, Throwable throwable) {
-    String processDefinitionId = sessionToProcessDefinitionId.get(session.getId());
+    UUID processInstanceId = sessionToProcessInstanceId.get(session.getId());
     log.error(
-        "WebSocket error for session {} (process definition {}): {}",
+        "WebSocket error for session {} (process instance {}): {}",
         session.getId(),
-        processDefinitionId,
+        processInstanceId,
         throwable.getMessage(),
         throwable);
-    sessionToProcessDefinitionId.remove(session.getId());
+    sessionToProcessInstanceId.remove(session.getId());
     sessions.remove(session.getId());
   }
 
@@ -102,60 +108,53 @@ public class ProcessInstanceWebSocket {
     // Handle any client messages, if needed
   }
 
-  private void handleInstanceUpdate(UUID processInstanceKey, InstanceUpdateDTO update) {
-    if (sessions.isEmpty()) {
-      return;
-    }
-
-    if (!(update instanceof ProcessInstanceUpdateDTO processInstanceUpdateDTO)) {
-      return;
-    }
-
-    // Extract process definition ID from update
-    ProcessDefinitionKey processDefinitionKey = processInstanceUpdateDTO.getProcessDefinitionKey();
-    String processDefinitionId = processDefinitionKey.getProcessDefinitionId();
-
-    // Skip if no clients are subscribed to this process definition
-    if (!sessionToProcessDefinitionId.containsValue(processDefinitionId)) {
-      return;
-    }
-
-    // Create a simplified update object
-    Map<String, Object> instanceUpdate =
-        Map.of(
-            "processInstanceId", processInstanceKey,
-            "processDefinitionId", processDefinitionId,
-            "version", processDefinitionKey.getVersion(),
-            "processInstanceUpdate", processInstanceUpdateDTO,
-            "timestamp", System.currentTimeMillis());
-
-    // Store update in memory (limited to MAX_STORED_INSTANCES)
-    processInstanceUpdates.putIfAbsent(processDefinitionId, new CopyOnWriteArrayList<>());
-    CopyOnWriteArrayList<Map<String, Object>> instances =
-        processInstanceUpdates.get(processDefinitionId);
-
-    synchronized (instances) {
-      instances.add(0, instanceUpdate);
-      if (instances.size() > MAX_STORED_INSTANCES) {
-        instances.remove(instances.size() - 1);
-      }
-    }
-
-    // Format message
-    String jsonMessage =
-        JsonUtils.toJsonString(
-            Map.of(
-                "type", "update",
-                "processDefinitionId", processDefinitionId,
-                "data", instanceUpdate));
-
+  private void sendFlowNodeInstanceUpdate(
+      long timestamp, UUID processInstanceId, FlowNodeInstanceUpdateDTO update) {
     // Broadcast update to relevant sessions
     for (Map.Entry<String, Session> entry : sessions.entrySet()) {
-      String sessionId = entry.getKey();
-      String subscribedDefinitionId = sessionToProcessDefinitionId.get(sessionId);
+      Session session = entry.getValue();
+      UUID uuid = sessionToProcessInstanceId.get(entry.getKey());
 
-      if (processDefinitionId.equals(subscribedDefinitionId)) {
-        entry.getValue().getAsyncRemote().sendText(jsonMessage);
+      if (processInstanceId.equals(uuid)) {
+        // Format and send only to this session
+        String message =
+            JsonUtils.toJsonString(
+                Map.of(
+                    "type",
+                    "flowNodeInstanceUpdate",
+                    "timestamp",
+                    timestamp,
+                    "processInstanceId",
+                    processInstanceId,
+                    "update",
+                    JsonUtils.toJsonNodeWithFieldNames(update)));
+
+        session.getAsyncRemote().sendText(message);
+      }
+    }
+  }
+
+  private void sendProcessInstanceUpdate(
+      long timestamp, UUID processInstanceId, ProcessInstanceUpdateDTO update) {
+    // Broadcast update to relevant sessions
+    for (Map.Entry<String, Session> entry : sessions.entrySet()) {
+      Session session = entry.getValue();
+      UUID uuid = sessionToProcessInstanceId.get(entry.getKey());
+      if (processInstanceId.equals(uuid)) {
+        // Format and send only to this session
+        String message =
+            JsonUtils.toJsonString(
+                Map.of(
+                    "type",
+                    "processInstanceUpdate",
+                    "timestamp",
+                    timestamp,
+                    "processInstanceId",
+                    processInstanceId,
+                    "update",
+                    JsonUtils.toJsonNodeWithFieldNames(update)));
+
+        session.getAsyncRemote().sendText(message);
       }
     }
   }

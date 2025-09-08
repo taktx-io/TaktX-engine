@@ -11,4 +11,4 @@ package io.taktx.engine.pi;
 import io.taktx.dto.InstanceUpdateDTO;
 import java.util.UUID;
 
-public record InstanceUpdate(UUID processInstanceKey, InstanceUpdateDTO update) {}
+public record InstanceUpdate(UUID processInstanceId, InstanceUpdateDTO update) {}

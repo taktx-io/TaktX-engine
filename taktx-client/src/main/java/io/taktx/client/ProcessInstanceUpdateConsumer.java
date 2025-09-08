@@ -21,7 +21,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
@@ -35,8 +35,7 @@ public class ProcessInstanceUpdateConsumer {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private boolean running = false;
-  private final List<BiConsumer<UUID, InstanceUpdateDTO>> instanceUpdateConsumers =
-      new ArrayList<>();
+  private final List<Consumer<InstanceUpdateRecord>> instanceUpdateConsumers = new ArrayList<>();
 
   public ProcessInstanceUpdateConsumer(
       TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
@@ -44,7 +43,7 @@ public class ProcessInstanceUpdateConsumer {
     this.executor = executor;
   }
 
-  public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
+  public void registerInstanceUpdateConsumer(Consumer<InstanceUpdateRecord> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
       subscribeToTopic();
     }
@@ -84,11 +83,15 @@ public class ProcessInstanceUpdateConsumer {
     consumer
         .poll(java.time.Duration.ofMillis(100))
         .forEach(
-            instanceUpdateRecord ->
+            instanceUpdateConsumerRecord ->
                 instanceUpdateConsumers.forEach(
-                    instanceUpdateConsumer ->
-                        instanceUpdateConsumer.accept(
-                            instanceUpdateRecord.key(), instanceUpdateRecord.value())));
+                    instanceUpdateConsumer -> {
+                      instanceUpdateConsumer.accept(
+                          new InstanceUpdateRecord(
+                              instanceUpdateConsumerRecord.timestamp(),
+                              instanceUpdateConsumerRecord.key(),
+                              instanceUpdateConsumerRecord.value()));
+                    }));
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {

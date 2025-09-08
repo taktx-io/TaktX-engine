@@ -11,6 +11,7 @@ package io.taktx.engine.pi.testengine;
 import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.client.ExternalTaskTriggerConsumer;
+import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktClient;
 import io.taktx.client.UserTaskTriggerConsumer;
 import io.taktx.client.serdes.TopicMetaJsonDeserializer;
@@ -24,7 +25,6 @@ import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
@@ -90,13 +90,13 @@ public class BpmnTestEngine {
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
       new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
-  private UUID activeProcessInstanceKey;
+  private UUID activeProcessInstanceId;
   private ExternalTaskTriggerDTO activeExternalTaskTrigger;
   private UserTaskTriggerDTO activeUserTaskTrigger;
   private ParsedDefinitionsDTO definitionsBeingDeployed;
   private final Clock originalClock;
   private final MutableClock mutableClock;
-  private UUID latestInstantiatedProcessInstanceKey;
+  private UUID latestInstantiatedProcessInstanceId;
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
   private KafkaConsumerUtil<String, TopicMetaDTO> actualTopicMetaConsumer;
@@ -110,10 +110,10 @@ public class BpmnTestEngine {
   }
 
   private static @NotNull ProcessInstanceDTO getProcessInstanceDTO(
-      UUID processInstanceKey, ProcessInstanceUpdateDTO processInstanceUpdate) {
+      UUID processInstanceId, ProcessInstanceUpdateDTO processInstanceUpdate) {
     return new ProcessInstanceDTO(
-        processInstanceKey,
-        processInstanceUpdate.getParentProcessInstanceKey(),
+        processInstanceId,
+        processInstanceUpdate.getParentProcessInstanceId(),
         processInstanceUpdate.getFlowNodeInstances(),
         processInstanceUpdate.getParentElementInstancePath(),
         processInstanceUpdate.getProcessDefinitionKey(),
@@ -181,11 +181,11 @@ public class BpmnTestEngine {
             + " "
             + trigger.getClass().getName());
     if (trigger instanceof StartCommandDTO startCommand
-        && startCommand.getParentProcessInstanceKey() != null) {
+        && startCommand.getParentProcessInstanceId() != null) {
       Set<UUID> uuids1 =
           processInstanceParentChildMap.computeIfAbsent(
-              startCommand.getParentProcessInstanceKey(), k -> new ConcurrentSkipListSet<>());
-      uuids1.add(startCommand.getProcessInstanceKey());
+              startCommand.getParentProcessInstanceId(), k -> new ConcurrentSkipListSet<>());
+      uuids1.add(startCommand.getProcessInstanceId());
     }
   }
 
@@ -211,7 +211,7 @@ public class BpmnTestEngine {
 
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
         externalTaskTriggerQueueMap.computeIfAbsent(
-            externalTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
+            externalTaskTrigger.getProcessInstanceId(), k -> new ConcurrentLinkedQueue<>());
     externalTaskTriggers.add(externalTaskTrigger);
     LOG.info(
         "External task triggers: "
@@ -226,7 +226,7 @@ public class BpmnTestEngine {
 
     ConcurrentLinkedQueue<UserTaskTriggerDTO> uerTaskTriggers =
         userTaskTriggerQueueMap.computeIfAbsent(
-            userTaskTrigger.getProcessInstanceKey(), k -> new ConcurrentLinkedQueue<>());
+            userTaskTrigger.getProcessInstanceId(), k -> new ConcurrentLinkedQueue<>());
     uerTaskTriggers.add(userTaskTrigger);
     LOG.info(
         "User task triggers: "
@@ -235,48 +235,52 @@ public class BpmnTestEngine {
             + System.identityHashCode(userTaskTriggerQueueMap));
   }
 
-  public void consume(UUID processInstanceKey, InstanceUpdateDTO instanceUpdate) {
-    if (instanceUpdate instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
+  public void consume(InstanceUpdateRecord instanceUpdateRecord) {
+    if (instanceUpdateRecord.getUpdate()
+        instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
       LOG.info(
           "Received process instanceToContinue update: "
-              + processInstanceKey
+              + instanceUpdateRecord.getProcessInstanceId()
               + " "
-              + instanceUpdate);
+              + instanceUpdateRecord.getUpdate());
 
       ProcessInstanceDTO processInstanceDTO =
-          getProcessInstanceDTO(processInstanceKey, processInstanceUpdate);
+          getProcessInstanceDTO(instanceUpdateRecord.getProcessInstanceId(), processInstanceUpdate);
       log.info(
           "Adding to process instanceToContinue map {} {}",
           System.identityHashCode(processInstanceMap),
           processInstanceDTO);
       ProcessInstanceDTO previousProcessInstance =
-          processInstanceMap.put(processInstanceKey, processInstanceDTO);
+          processInstanceMap.put(instanceUpdateRecord.getProcessInstanceId(), processInstanceDTO);
       if (previousProcessInstance == null) {
-        latestInstantiatedProcessInstanceKey = processInstanceDTO.getProcessInstanceKey();
+        latestInstantiatedProcessInstanceId = processInstanceDTO.getProcessInstanceId();
       }
 
       VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(processInstanceKey, k -> VariablesDTO.empty());
+          variablesMap.computeIfAbsent(
+              instanceUpdateRecord.getProcessInstanceId(), k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
 
-    } else if (instanceUpdate instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
-      LOG.info("Received FlowNode instanceToContinue update: " + instanceUpdate);
+    } else if (instanceUpdateRecord.getUpdate()
+        instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
+      LOG.info("Received FlowNode instanceToContinue update: " + instanceUpdateRecord);
 
       FlowNodeInstanceKeyDTO key =
           new FlowNodeInstanceKeyDTO(
-              processInstanceKey, flowNodeInstanceUpdate.getFlowNodeInstancePath());
+              instanceUpdateRecord.getProcessInstanceId(),
+              flowNodeInstanceUpdate.getFlowNodeInstancePath());
       this.flowNodeInstanceMap.put(key, flowNodeInstanceUpdate.getFlowNodeInstance());
 
       VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(key.getProcessInstanceKey(), k -> VariablesDTO.empty());
+          variablesMap.computeIfAbsent(key.getProcessInstanceId(), k -> VariablesDTO.empty());
       existingVariables.getVariables().putAll(flowNodeInstanceUpdate.getVariables().getVariables());
     }
   }
 
   public UserTaskTriggerDTO pollUserTask() {
     ConcurrentLinkedQueue<UserTaskTriggerDTO> externalTaskTriggers =
-        userTaskTriggerQueueMap.get(activeProcessInstanceKey);
-    log.info("polled user task queue {} {}", activeProcessInstanceKey, externalTaskTriggers);
+        userTaskTriggerQueueMap.get(activeProcessInstanceId);
+    log.info("polled user task queue {} {}", activeProcessInstanceId, externalTaskTriggers);
     if (externalTaskTriggers == null) {
       return null;
     }
@@ -287,8 +291,8 @@ public class BpmnTestEngine {
 
   public ExternalTaskTriggerDTO pollExternalTask() {
     ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
-        externalTaskTriggerQueueMap.get(activeProcessInstanceKey);
-    log.info("polled external task queue {} {}", activeProcessInstanceKey, externalTaskTriggers);
+        externalTaskTriggerQueueMap.get(activeProcessInstanceId);
+    log.info("polled external task queue {} {}", activeProcessInstanceId, externalTaskTriggers);
     if (externalTaskTriggers == null) {
       return null;
     }
@@ -418,19 +422,19 @@ public class BpmnTestEngine {
   public BpmnTestEngine startProcessInstance(VariablesDTO variables) {
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(activeProcessDefintion);
 
-    UUID newProcessInstanceKey =
+    UUID newProcessInstanceId =
         taktClient.startProcess(processDefinitionKey.getProcessDefinitionId(), variables);
 
-    log.info("Starting process instanceToContinue {}", newProcessInstanceKey);
+    log.info("Starting process instanceToContinue {}", newProcessInstanceId);
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
         .until(
             () -> {
               log.info(
                   "Checking processInstanceMap {}", System.identityHashCode(processInstanceMap));
-              return processInstanceMap.containsKey(newProcessInstanceKey);
+              return processInstanceMap.containsKey(newProcessInstanceId);
             });
-    activeProcessInstanceKey = newProcessInstanceKey;
+    activeProcessInstanceId = newProcessInstanceId;
 
     return this;
   }
@@ -454,7 +458,7 @@ public class BpmnTestEngine {
                 elementInstanceIdPath.add(triggerElementInstanceIdPath.get(i));
 
                 FlowNodeInstanceKeyDTO flowNodeInstanceKeyDTO =
-                    new FlowNodeInstanceKeyDTO(activeProcessInstanceKey, elementInstanceIdPath);
+                    new FlowNodeInstanceKeyDTO(activeProcessInstanceId, elementInstanceIdPath);
                 FlowNodeInstanceDTO flowNodeInstanceDTO =
                     flowNodeInstanceMap.get(flowNodeInstanceKeyDTO);
                 elementIdPath += flowNodeInstanceDTO.getElementId();
@@ -482,7 +486,7 @@ public class BpmnTestEngine {
   public BpmnTestEngine waitUntilUserTaskIsWaitingForResponse(String elementId, Duration duration) {
     log.info(
         "waitUntilUserTaskIsWaitingForResponse {} {} {}",
-        activeProcessInstanceKey,
+        activeProcessInstanceId,
         externalTaskTriggerQueueMap,
         System.identityHashCode(externalTaskTriggerQueueMap));
     activeUserTaskTrigger =
@@ -492,8 +496,8 @@ public class BpmnTestEngine {
                 this::pollUserTask,
                 userTaskTrigger ->
                     userTaskTrigger != null
-                        && userTaskTrigger.getProcessInstanceKey().equals(activeProcessInstanceKey)
-                        && getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId)
+                        && userTaskTrigger.getProcessInstanceId().equals(activeProcessInstanceId)
+                        && getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId)
                             .stream()
                             .anyMatch(FlowNodeInstanceDTO::isWaiting));
 
@@ -504,7 +508,7 @@ public class BpmnTestEngine {
       String elementId, Duration duration) {
     log.info(
         "waitUntilExternalTaskIsWaitingForResponse {} {} {}",
-        activeProcessInstanceKey,
+        activeProcessInstanceId,
         externalTaskTriggerQueueMap,
         System.identityHashCode(externalTaskTriggerQueueMap));
     activeExternalTaskTrigger =
@@ -515,9 +519,9 @@ public class BpmnTestEngine {
                 externalTaskTrigger ->
                     externalTaskTrigger != null
                         && externalTaskTrigger
-                            .getProcessInstanceKey()
-                            .equals(activeProcessInstanceKey)
-                        && getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId)
+                            .getProcessInstanceId()
+                            .equals(activeProcessInstanceId)
+                        && getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId)
                             .stream()
                             .allMatch(FlowNodeInstanceDTO::isWaiting));
 
@@ -529,13 +533,13 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitForNewProcessInstance(Duration duration) {
-    UUID referenceProcessInstanceKey = latestInstantiatedProcessInstanceKey;
-    activeProcessInstanceKey =
+    UUID referenceProcessInstanceId = latestInstantiatedProcessInstanceId;
+    activeProcessInstanceId =
         Awaitility.await()
             .atMost(duration)
             .until(
-                () -> latestInstantiatedProcessInstanceKey,
-                instance -> !Objects.equals(referenceProcessInstanceKey, instance));
+                () -> latestInstantiatedProcessInstanceId,
+                instance -> !Objects.equals(referenceProcessInstanceId, instance));
     return this;
   }
 
@@ -553,12 +557,12 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine waitUntilChildProcessesHaveState(
       String childProcessName, ProcessInstanceState processInstanceState) {
-    activeProcessInstanceKey =
+    activeProcessInstanceId =
         Awaitility.await()
             .atMost(DEFAULT_DURATION)
             .until(
                 () -> {
-                  Set<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstanceKey);
+                  Set<UUID> childKeys = processInstanceParentChildMap.get(activeProcessInstanceId);
                   if (childKeys == null) {
                     return null;
                   }
@@ -569,7 +573,7 @@ public class BpmnTestEngine {
                                       .getProcessDefinitionId()
                                       .equals(childProcessName)
                                   && pi.getFlowNodeInstances().getState() == processInstanceState)
-                      .map(ProcessInstanceDTO::getProcessInstanceKey)
+                      .map(ProcessInstanceDTO::getProcessInstanceId)
                       .findFirst()
                       .orElse(null);
                 },
@@ -639,13 +643,13 @@ public class BpmnTestEngine {
         .atMost(duration)
         .until(
             () -> {
-              if (activeProcessInstanceKey != null
+              if (activeProcessInstanceId != null
                   && processInstanceMap
-                      .get(activeProcessInstanceKey)
+                      .get(activeProcessInstanceId)
                       .getFlowNodeInstances()
                       .getState()
                       .isFinished()) {
-                return activeProcessInstanceKey;
+                return activeProcessInstanceId;
               }
               return null;
             },
@@ -654,7 +658,7 @@ public class BpmnTestEngine {
   }
 
   public ProcessInstanceAssert assertThatProcess() {
-    return new ProcessInstanceAssert(activeProcessInstanceKey, this);
+    return new ProcessInstanceAssert(activeProcessInstanceId, this);
   }
 
   public UserTaskAssert assertThatUserTask() {
@@ -662,18 +666,18 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine parentProcess() {
-    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
+    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceId);
 
-    activeProcessInstanceKey = processInstanceDTO.getParentProcessInstanceKey();
+    activeProcessInstanceId = processInstanceDTO.getParentProcessInstanceId();
     return this;
   }
 
   public ProcessInstanceAssert assertThatParentProcess() {
-    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceKey);
+    ProcessInstanceDTO processInstanceDTO = processInstanceMap.get(activeProcessInstanceId);
     ProcessInstanceDTO parentProcessInstance =
-        processInstanceMap.get(processInstanceDTO.getParentProcessInstanceKey());
-    activeProcessInstanceKey = parentProcessInstance.getProcessInstanceKey();
-    return new ProcessInstanceAssert(parentProcessInstance.getProcessInstanceKey(), this);
+        processInstanceMap.get(processInstanceDTO.getParentProcessInstanceId());
+    activeProcessInstanceId = parentProcessInstance.getProcessInstanceId();
+    return new ProcessInstanceAssert(parentProcessInstance.getProcessInstanceId(), this);
   }
 
   public ProcessDefinitionDTO deployedProcessDefinition() {
@@ -703,7 +707,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine terminateProcessInstance() {
-    taktClient.terminateElementInstance(activeProcessInstanceKey);
+    taktClient.terminateElementInstance(activeProcessInstanceId);
     return this;
   }
 
@@ -715,13 +719,13 @@ public class BpmnTestEngine {
     Awaitility.await()
         .atMost(duration)
         .until(
-            () -> getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId),
+            () -> getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId),
             instances -> !instances.isEmpty() && instances.getFirst().getPassedCnt() == count);
     return this;
   }
 
   public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
-      UUID processInstanceKey, String elementPath) {
+      UUID processInstanceId, String elementPath) {
 
     String[] split = elementPath.split(":");
     String processDefinitionId;
@@ -736,7 +740,7 @@ public class BpmnTestEngine {
     List<String> elementPathList = Stream.of(elementPath.split("/")).toList();
     Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance =
         flowNodeInstanceMap.entrySet().stream()
-            .filter(e -> e.getKey().getProcessInstanceKey().equals(processInstanceKey))
+            .filter(e -> e.getKey().getProcessInstanceId().equals(processInstanceId))
             .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByElementIdOnIndex =
         filteredByProcessInstance;
@@ -822,8 +826,8 @@ public class BpmnTestEngine {
     return processInstanceMap.get(parentInstanceKey);
   }
 
-  public VariablesDTO getVariables(UUID processInstanceKey) {
-    return variablesMap.get(processInstanceKey);
+  public VariablesDTO getVariables(UUID processInstanceId) {
+    return variablesMap.get(processInstanceId);
   }
 
   public BpmnTestEngine waitUntilActivityHasState(
@@ -833,7 +837,7 @@ public class BpmnTestEngine {
         .until(
             () -> {
               List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId =
-                  getFlowNodeInstancesWithElementId(activeProcessInstanceKey, elementId);
+                  getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId);
               return flowNodeInstanceWithElementId.getFirst()
                       instanceof ActivityInstanceDTO activityInstance
                   && activityInstance.getState() == state;
@@ -865,7 +869,7 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine terminateElementInstance() {
     taktClient.terminateElementInstance(
-        activeProcessInstanceKey, List.of(selectedFlowNodeInstance.getElementInstanceId()));
+        activeProcessInstanceId, List.of(selectedFlowNodeInstance.getElementInstanceId()));
     return this;
   }
 

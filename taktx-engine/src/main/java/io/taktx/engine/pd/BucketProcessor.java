@@ -69,11 +69,11 @@ public class BucketProcessor {
             MessageScheduleDTO schedule = entry.getValue();
             if (key.getTime() < now) {
               SchedulableMessageDTO message = schedule.getMessage();
-              UUID processInstanceKey = message.getProcessInstanceKey();
-              if (processInstanceKey == null) {
-                processInstanceKey = UUID.randomUUID(); // Assign a new UUID if not set
+              UUID processInstanceId = message.getProcessInstanceId();
+              if (processInstanceId == null) {
+                processInstanceId = UUID.randomUUID(); // Assign a new UUID if not set
               }
-              context.forward(new Record<>(processInstanceKey, message, key.getTime()));
+              context.forward(new Record<>(processInstanceId, message, key.getTime()));
               iterator.remove();
             } else {
               break;

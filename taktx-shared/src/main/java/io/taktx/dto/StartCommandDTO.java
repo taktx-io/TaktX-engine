@@ -22,7 +22,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
-  private UUID parentProcessInstanceKey;
+  private UUID parentProcessInstanceId;
 
   private String elementId;
 
@@ -35,13 +35,13 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
   private Set<IoVariableMappingDTO> outputMappings;
 
   public StartCommandDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       String elementId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables) {
     this(
-        processInstanceKey,
+        processInstanceId,
         null,
         elementId,
         parentElementInstancePath,
@@ -52,16 +52,16 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
   }
 
   public StartCommandDTO(
-      UUID processInstanceKey,
-      UUID parentProcessInstanceKey,
+      UUID processInstanceId,
+      UUID parentProcessInstanceId,
       String elementId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       VariablesDTO variables,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {
-    super(processInstanceKey, variables);
-    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    super(processInstanceId, variables);
+    this.parentProcessInstanceId = parentProcessInstanceId;
     this.elementId = elementId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
