@@ -139,12 +139,6 @@ function clearFlowNodeInstancesList() {
     
     // Clear the flow node instances data
     flowNodeInstances.clear();
-
-    // Disable the refresh button
-    const refreshButton = document.getElementById('refresh-flownodes-btn');
-    if (refreshButton) {
-        refreshButton.disabled = true;
-    }
 }
 
 // Render the flow node instances list in a tree structure
@@ -197,12 +191,6 @@ function renderFlowNodeInstancesList() {
     
     html += '</div>';
     container.innerHTML = html;
-    
-    // Enable the refresh button
-    const refreshButton = document.getElementById('refresh-flownodes-btn');
-    if (refreshButton) {
-        refreshButton.disabled = false;
-    }
 }
 
 // Get CSS class for flow node state

@@ -46,28 +46,29 @@
                     <div class="resize-handle resize-handle-vertical"></div>
                     <div id="instances-panel" class="process-instances bg-light border-top resizable-panel-vertical">
                         <div class="p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4>Process Instances</h4>
-                                <button id="refresh-instances-btn" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                                </button>
-                            </div>
-                            <div class="row">
-                                <!-- Process Instances Column -->
-                                <div class="col-md-6">
-                                    <div id="process-instances-list" class="process-instances-container">
+                            <div class="row h-100">
+                                <!-- Process Instances Panel -->
+                                <div class="col-md-6 d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h4>Process Instances</h4>
+                                        <button id="refresh-instances-btn" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                                        </button>
+                                    </div>
+                                    <div id="process-instances-list" class="process-instances-container flex-grow-1">
                                         <p class="text-muted">Select a process definition to view instances</p>
                                     </div>
                                 </div>
-                                <!-- Flow Node Instances Column -->
-                                <div class="col-md-6 border-start">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h5>Flow Node Instances</h5>
+                                
+                                <!-- Vertical divider -->
+                                <div class="col-md-6 d-flex flex-column border-start">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h4>Flow Node Instances</h4>
                                         <button id="refresh-flownodes-btn" class="btn btn-sm btn-secondary" disabled>
                                             <i class="bi bi-arrow-clockwise"></i> Refresh
                                         </button>
                                     </div>
-                                    <div id="flow-node-instances-list" class="flow-node-instances-container">
+                                    <div id="flow-node-instances-list" class="flow-node-instances-container flex-grow-1">
                                         <p class="text-muted">Select a process instance to view flow nodes</p>
                                     </div>
                                 </div>
