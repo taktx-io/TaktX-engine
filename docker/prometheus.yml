@@ -4,4 +4,4 @@ scrape_configs:
   - job_name: 'quarkus-bpmn'
     metrics_path: '/q/metrics'
     static_configs:
-      - targets: ['host.docker.internal:8080'] # R
+      - targets: ['164.92.185.143:8080', '167.99.135.239:8080'] # R

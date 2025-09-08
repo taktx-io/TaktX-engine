@@ -18,17 +18,21 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
+import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ServerEndpoint("/ws/process-definitions")
 @ApplicationScoped
@@ -37,7 +41,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ProcessDefinitionCountsWebSocket {
 
   private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+  private final Map<String, Set<UUID>> sessionDisplayedInstances = new ConcurrentHashMap<>();
   private final InstanceUpdateRegistry instanceUpdateRegistry;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @PostConstruct
   void init() {
@@ -69,6 +75,7 @@ public class ProcessDefinitionCountsWebSocket {
   @OnClose
   public void onClose(Session session) {
     sessions.remove(session.getId());
+    sessionDisplayedInstances.remove(session.getId());
     log.info("WebSocket session closed: {}", session.getId());
   }
 
@@ -77,6 +84,7 @@ public class ProcessDefinitionCountsWebSocket {
     log.error(
         "WebSocket error for session {}: {}", session.getId(), throwable.getMessage(), throwable);
     sessions.remove(session.getId());
+    sessionDisplayedInstances.remove(session.getId());
   }
 
   @Scheduled(every = "1s")
@@ -113,6 +121,37 @@ public class ProcessDefinitionCountsWebSocket {
     session.getAsyncRemote().sendText(message);
   }
 
+  @OnMessage
+  public void onMessage(String message, Session session) {
+    try {
+      JsonNode messageNode = objectMapper.readTree(message);
+      String action = messageNode.get("action").asText();
+      
+      if ("updateDisplayedInstances".equals(action)) {
+        JsonNode instancesNode = messageNode.get("processInstanceIds");
+        Set<UUID> displayedInstances = new java.util.HashSet<>();
+        
+        if (instancesNode != null && instancesNode.isArray()) {
+          for (JsonNode instanceNode : instancesNode) {
+            try {
+              UUID instanceId = UUID.fromString(instanceNode.asText());
+              displayedInstances.add(instanceId);
+            } catch (IllegalArgumentException e) {
+              log.warn("Invalid UUID format in displayed instances: {}", instanceNode.asText());
+            }
+          }
+        }
+        
+        sessionDisplayedInstances.put(session.getId(), displayedInstances);
+        log.debug("Updated displayed instances for session {}: {} instances", 
+                 session.getId(), displayedInstances.size());
+      }
+    } catch (Exception e) {
+      log.error("Error processing WebSocket message from session {}: {}", 
+               session.getId(), e.getMessage(), e);
+    }
+  }
+
   private void broadcastProcessInstanceUpdate(
       long timestamp, UUID processInstanceId, ProcessInstanceUpdateDTO update) {
     if (sessions.isEmpty()) {
@@ -132,16 +171,27 @@ public class ProcessDefinitionCountsWebSocket {
                 "update",
                 JsonUtils.toJsonNodeWithFieldNames(update)));
 
-    // Broadcast to all connected sessions
+    // Only broadcast to sessions that are displaying this process instance
     for (Map.Entry<String, Session> entry : sessions.entrySet()) {
       Session session = entry.getValue();
-      try {
-        session.getAsyncRemote().sendText(message);
-      } catch (Exception e) {
-        log.warn(
-            "Failed to send process instance update to session {}: {}",
-            session.getId(),
-            e.getMessage());
+      String sessionId = session.getId();
+      
+      // Check if this session is displaying the process instance
+      Set<UUID> displayedInstances = sessionDisplayedInstances.get(sessionId);
+      if (displayedInstances != null && displayedInstances.contains(processInstanceId)) {
+        try {
+          session.getAsyncRemote().sendText(message);
+          log.debug("Sent process instance update for {} to session {}", 
+                   processInstanceId, sessionId);
+        } catch (Exception e) {
+          log.warn(
+              "Failed to send process instance update to session {}: {}",
+              sessionId,
+              e.getMessage());
+        }
+      } else {
+        log.debug("Skipping process instance update for {} - not displayed in session {}", 
+                 processInstanceId, sessionId);
       }
     }
   }

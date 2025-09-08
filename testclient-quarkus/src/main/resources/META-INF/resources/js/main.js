@@ -547,7 +547,7 @@ async function loadBpmnDiagram(processId, version) {
 }
 
 // Load process instances for a specific process definition
-async function loadProcessInstances(processId, version, limit = 100) {
+async function loadProcessInstances(processId, version, limit = 50) {
     try {
         const instancesContainer = document.getElementById('process-instances-list');
         instancesContainer.innerHTML = '<p class="loading-text">Loading process instances...</p>';
@@ -572,14 +572,20 @@ function renderProcessInstancesList(instances) {
     
     if (!instances || instances.length === 0) {
         container.innerHTML = '<p class="text-muted">No process instances found</p>';
+        // Notify WebSocket that no instances are displayed
+        notifyDisplayedInstances([]);
         return;
     }
     
     let html = '';
+    const displayedInstanceIds = [];
     
     instances.forEach(instance => {
         const isSelected = selectedProcessInstance && selectedProcessInstance.processInstanceId === instance.processInstanceId;
         const stateClass = getStateClass(instance.update.flowNodeInstances.state);
+        
+        // Collect instance IDs for WebSocket notification
+        displayedInstanceIds.push(instance.processInstanceId);
         
         html += `
             <div class="process-instance-row" data-instance-id="${instance.processInstanceId}" onclick="selectProcessInstance('${instance.processInstanceId}')">
@@ -604,6 +610,9 @@ function renderProcessInstancesList(instances) {
             timestamp: instance.timestamp
         });
     });
+    
+    // Notify WebSocket about which instances are currently displayed
+    notifyDisplayedInstances(displayedInstanceIds);
 }
 
 // Format UUID for display
@@ -834,6 +843,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize resizable panels
     initResizablePanels();
 });
+
+// Notify WebSocket about which process instances are currently displayed
+function notifyDisplayedInstances(instanceIds) {
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+        const message = {
+            action: 'updateDisplayedInstances',
+            processInstanceIds: instanceIds
+        };
+        
+        try {
+            websocket.send(JSON.stringify(message));
+            console.log('Notified WebSocket about displayed instances:', instanceIds.length, 'instances');
+        } catch (error) {
+            console.error('Failed to notify WebSocket about displayed instances:', error);
+        }
+    } else {
+        console.warn('WebSocket not connected, cannot notify about displayed instances');
+    }
+}
 
 // Clean up WebSocket connections when the page is unloaded
 window.addEventListener('beforeunload', function() {

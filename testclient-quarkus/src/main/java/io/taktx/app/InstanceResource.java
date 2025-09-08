@@ -41,7 +41,7 @@ public class InstanceResource {
 
       // Get process instance IDs for the given definition key
       List<InstanceUpdateRecord> instances =
-          instanceUpdateRegistry.getProcessInstancesByDefinition(key, limit != null ? limit : 100);
+          instanceUpdateRegistry.getProcessInstancesByDefinition(key, limit != null ? limit : 50);
 
       return Response.ok(JsonUtils.toJsonStringWithFieldNames(instances)).build();
     } catch (Exception e) {

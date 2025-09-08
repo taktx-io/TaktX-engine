@@ -90,9 +90,6 @@ public class InstanceUpdateRegistry {
       List<InstanceUpdateRecord> instances =
           this.flowNodeInstanceUpdates.computeIfAbsent(processInstanceId, k -> new ArrayList<>());
       instances.add(instanceUpdateRecord);
-      log.info(
-          "Stored {} flownode instances for processinstance : " + instances.size(),
-          processInstanceId);
       instanceUpdateConsumers.forEach(
           consumer ->
               consumer.flowNodeInstanceUpdate(
