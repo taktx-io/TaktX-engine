@@ -24,7 +24,7 @@ import lombok.ToString;
 @Builder
 public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
-  @Setter private UUID processInstanceKey;
+  @Setter private UUID processInstanceId;
 
   private ProcessDefinitionKey processDefinitionKey;
 
@@ -35,12 +35,12 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
   private VariablesDTO variables;
 
   public ExternalTaskTriggerDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey,
       String externalTaskId,
       List<Long> elementInstanceIdPath,
       VariablesDTO variables) {
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.processDefinitionKey = processDefinitionKey;
     this.externalTaskId = externalTaskId;
     this.elementInstanceIdPath = elementInstanceIdPath;

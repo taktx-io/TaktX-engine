@@ -36,14 +36,14 @@ import lombok.ToString;
 public class FlowNodeInstanceKeyDTO {
   @JsonSerialize(using = TaktUUIDSerializer.class)
   @JsonDeserialize(using = TaktUUIDDeserializer.class)
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
   @JsonSerialize(using = TaktLongListSerializer.class)
   @JsonDeserialize(using = TaktLongListDeserializer.class)
   private List<Long> flowNodeInstanceKeyPath;
 
-  public FlowNodeInstanceKeyDTO(UUID processInstanceKey, List<Long> flowNodeInstanceKeyPath) {
-    this.processInstanceKey = processInstanceKey;
+  public FlowNodeInstanceKeyDTO(UUID processInstanceId, List<Long> flowNodeInstanceKeyPath) {
+    this.processInstanceId = processInstanceId;
     this.flowNodeInstanceKeyPath = flowNodeInstanceKeyPath;
   }
 }

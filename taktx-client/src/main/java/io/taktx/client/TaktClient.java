@@ -11,7 +11,6 @@ package io.taktx.client;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.TaktDeployment;
 import io.taktx.dto.ExternalTaskTriggerDTO;
-import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
@@ -31,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -135,7 +135,7 @@ public class TaktClient {
   }
 
   /** Registers a consumer for process instance updates. */
-  public void registerInstanceUpdateConsumer(BiConsumer<UUID, InstanceUpdateDTO> consumer) {
+  public void registerInstanceUpdateConsumer(Consumer<InstanceUpdateRecord> consumer) {
     this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(consumer);
   }
 
@@ -176,15 +176,15 @@ public class TaktClient {
   }
 
   /** Terminates a process instance. */
-  public void terminateElementInstance(UUID processInstanceKey) {
-    processInstanceProducer.terminateProcessInstance(processInstanceKey);
+  public void terminateElementInstance(UUID processInstanceId) {
+    processInstanceProducer.terminateProcessInstance(processInstanceId);
   }
 
   /** Terminates an element instance within a process instance */
   public void terminateElementInstance(
-      UUID activeProcessInstanceKey, List<Long> elementInstanceIdPath) {
+      UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
     processInstanceProducer.terminateElementInstance(
-        activeProcessInstanceKey, elementInstanceIdPath);
+        activeProcessInstanceId, elementInstanceIdPath);
   }
 
   public void registerExternalTaskConsumer(

@@ -69,7 +69,7 @@ public class FlowInstanceRunner {
     while (terminateInstance != null) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements());
@@ -108,7 +108,7 @@ public class FlowInstanceRunner {
 
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements());
@@ -146,7 +146,7 @@ public class FlowInstanceRunner {
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
       StoredFlowNodeInstancesWrapper instancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements());

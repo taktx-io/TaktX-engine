@@ -38,7 +38,7 @@ public class ProcessInstanceResponder {
     return new ExternalTaskInstanceResponder(
         responseEmitter,
         topicName,
-        externalTaskTriggerDTO.getProcessInstanceKey(),
+        externalTaskTriggerDTO.getProcessInstanceId(),
         externalTaskTriggerDTO.getElementInstanceIdPath());
   }
 
@@ -47,7 +47,7 @@ public class ProcessInstanceResponder {
     return new UserTaskInstanceResponder(
         responseEmitter,
         topicName,
-        userTaskTriggerDTO.getProcessInstanceKey(),
+        userTaskTriggerDTO.getProcessInstanceId(),
         userTaskTriggerDTO.getElementInstanceIdPath());
   }
 }

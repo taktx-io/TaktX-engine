@@ -155,7 +155,7 @@ public class FlowNodeInstancesProcessor {
         < trigger.getParentElementInstanceIdPath().size()) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements());
@@ -233,7 +233,7 @@ public class FlowNodeInstancesProcessor {
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements());
@@ -266,7 +266,7 @@ public class FlowNodeInstancesProcessor {
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements());

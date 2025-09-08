@@ -26,11 +26,11 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 
   public ContinueFlowElementTriggerDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       List<Long> elementInstanceIdPath,
       String inputFlowId,
       VariablesDTO variables) {
-    super(processInstanceKey, variables);
+    super(processInstanceId, variables);
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.inputFlowId = inputFlowId;
   }

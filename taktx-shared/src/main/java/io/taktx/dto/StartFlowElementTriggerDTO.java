@@ -28,11 +28,11 @@ public class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
   private String elementId;
 
   public StartFlowElementTriggerDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       List<Long> parentElementInstanceIdPath,
       String elementId,
       VariablesDTO variables) {
-    super(processInstanceKey, variables);
+    super(processInstanceId, variables);
     this.parentElementInstanceIdPath = parentElementInstanceIdPath;
     this.elementId = elementId;
   }

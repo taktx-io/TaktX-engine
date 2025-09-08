@@ -23,7 +23,7 @@ import lombok.ToString;
 @Builder
 public class UserTaskTriggerDTO {
 
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
   private ProcessDefinitionKey processDefinitionKey;
 
@@ -40,7 +40,7 @@ public class UserTaskTriggerDTO {
   private VariablesDTO variables;
 
   public UserTaskTriggerDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey,
       String userTaskId,
       List<Long> elementInstanceIdPath,
@@ -48,7 +48,7 @@ public class UserTaskTriggerDTO {
       TaskScheduleDTO taskSchedule,
       PriorityDefinitionDTO priorityDefinition,
       VariablesDTO variables) {
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.processDefinitionKey = processDefinitionKey;
     this.userTaskId = userTaskId;
     this.elementInstanceIdPath = elementInstanceIdPath;

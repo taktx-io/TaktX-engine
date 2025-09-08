@@ -22,8 +22,8 @@ import lombok.ToString;
 public class TerminateTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 
-  public TerminateTriggerDTO(UUID processInstanceKey, List<Long> elementInstanceIdPath) {
-    super(processInstanceKey, VariablesDTO.empty());
+  public TerminateTriggerDTO(UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    super(processInstanceId, VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }

@@ -23,7 +23,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
 
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
   private String correlationKey;
 
@@ -32,13 +32,13 @@ public class CorrelationMessageSubscriptionDTO extends MessageEventDTO {
   private String elementId;
 
   public CorrelationMessageSubscriptionDTO(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       String correlationKey,
       List<Long> elementInstanceIdPath,
       String elementId,
       String messageName) {
     super(messageName);
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.correlationKey = correlationKey;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.elementId = elementId;

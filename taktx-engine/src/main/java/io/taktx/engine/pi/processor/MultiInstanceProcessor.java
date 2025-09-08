@@ -215,7 +215,7 @@ public class MultiInstanceProcessor
 
     StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
         new StoredFlowNodeInstancesWrapper(
-            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             multiInstanceInstance.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements());
@@ -269,7 +269,7 @@ public class MultiInstanceProcessor
     if (iterationInstance.getNextIterationId() >= 0) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstances,
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowElements);
@@ -293,7 +293,7 @@ public class MultiInstanceProcessor
 
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               multiInstanceInstance.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowElements);

@@ -28,9 +28,9 @@ import lombok.experimental.SuperBuilder;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProcessInstanceDTO {
-  private UUID processInstanceKey;
+  private UUID processInstanceId;
 
-  private UUID parentProcessInstanceKey;
+  private UUID parentProcessInstanceId;
 
   private FlowNodeInstancesDTO flowNodeInstances;
 
@@ -43,15 +43,15 @@ public class ProcessInstanceDTO {
   private Set<IoVariableMappingDTO> outputMappings;
 
   public ProcessInstanceDTO(
-      UUID processInstanceKey,
-      UUID parentProcessInstanceKey,
+      UUID processInstanceId,
+      UUID parentProcessInstanceId,
       FlowNodeInstancesDTO flowNodeInstances,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {
-    this.processInstanceKey = processInstanceKey;
-    this.parentProcessInstanceKey = parentProcessInstanceKey;
+    this.processInstanceId = processInstanceId;
+    this.parentProcessInstanceId = parentProcessInstanceId;
     this.flowNodeInstances = flowNodeInstances;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;

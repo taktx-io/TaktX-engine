@@ -92,7 +92,7 @@ public class Forwarder {
       InstanceUpdate instanceUpdate = processInstanceUpdates.poll();
       context.forward(
           new Record<>(
-              instanceUpdate.processInstanceKey(), instanceUpdate.update(), clock.millis()));
+              instanceUpdate.processInstanceId(), instanceUpdate.update(), clock.millis()));
     }
   }
 
@@ -119,7 +119,7 @@ public class Forwarder {
       String elementId = scheduledStartInfo.flowNodeToStart().getId();
       StartFlowElementTriggerDTO startFlowElementTrigger =
           new StartFlowElementTriggerDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               instancePath,
               elementId,
               VariablesDTO.empty());
@@ -136,7 +136,7 @@ public class Forwarder {
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(), instancePath, elementId, bucket);
+              processInstance.getProcessInstanceId(), instancePath, elementId, bucket);
       scheduledStartInfo.flowNodeInstances().addScheduledKey(scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
@@ -153,7 +153,7 @@ public class Forwarder {
       FlowNodeInstanceWithScheduleKeys catchEventInstance = info.catchEventInstance();
       ContinueFlowElementTriggerDTO continueFlowElementTrigger =
           new ContinueFlowElementTriggerDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               pathExtractor.getInstancePath(catchEventInstance),
               null,
               info.variables().scopeToDTO());
@@ -170,7 +170,7 @@ public class Forwarder {
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               pathExtractor.getInstancePath(catchEventInstance),
               catchEventInstance.getFlowNode().getId(),
               bucket);
@@ -197,7 +197,7 @@ public class Forwarder {
       List<Long> instancePath = pathExtractor.getInstancePath(info.externalTaskInstance());
       ExternalTaskResponseTriggerDTO externalTaskResponseResultDTO =
           new ExternalTaskResponseTriggerDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               instancePath,
               externalTaskResponseResult,
               VariablesDTO.empty());
@@ -214,7 +214,7 @@ public class Forwarder {
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduleKey =
           new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               instancePath,
               externalTaskInstance.getFlowNode().getId(),
               bucket);
@@ -236,7 +236,7 @@ public class Forwarder {
       FlowNodeInstance<?> instanceToContinue = messageEvent.elementInstance();
       CorrelationMessageSubscriptionDTO correlationMessageSubscriptionTrigger =
           new CorrelationMessageSubscriptionDTO(
-              processInstance.getProcessInstanceKey(),
+              processInstance.getProcessInstanceId(),
               messageEvent.correlationKey(),
               instanceToContinue != null ? pathExtractor.getInstancePath(instanceToContinue) : null,
               messageEvent.flowNodeToStart() != null
@@ -275,7 +275,7 @@ public class Forwarder {
     while (!newTerminateCommands.isEmpty()) {
       TerminateTriggerDTO terminateTrigger = newTerminateCommands.poll();
       context.forward(
-          new Record<>(terminateTrigger.getProcessInstanceKey(), terminateTrigger, clock.millis()));
+          new Record<>(terminateTrigger.getProcessInstanceId(), terminateTrigger, clock.millis()));
     }
   }
 
@@ -285,7 +285,7 @@ public class Forwarder {
     while (!continuations.isEmpty()) {
       ContinueFlowElementTriggerDTO continuation = continuations.poll();
       context.forward(
-          new Record<>(continuation.getProcessInstanceKey(), continuation, clock.millis()));
+          new Record<>(continuation.getProcessInstanceId(), continuation, clock.millis()));
     }
   }
 
@@ -300,8 +300,8 @@ public class Forwarder {
       Set<IoVariableMappingDTO> outputMappings = dtoMapper.toDto(newStartCommand.outputMappings());
       StartCommandDTO startCommand =
           new StartCommandDTO(
-              newStartCommand.processInstanceKey(),
-              processInstance.getProcessInstanceKey(),
+              newStartCommand.processInstanceId(),
+              processInstance.getProcessInstanceId(),
               null,
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),
@@ -310,7 +310,7 @@ public class Forwarder {
               outputMappings);
 
       context.forward(
-          new Record<>(newStartCommand.processInstanceKey(), startCommand, clock.millis()));
+          new Record<>(newStartCommand.processInstanceId(), startCommand, clock.millis()));
     }
   }
 
@@ -324,10 +324,9 @@ public class Forwarder {
       UserTaskInfo userTask = userTasks.poll();
       log.info("Forwarding user task {}", userTask);
       UserTaskTriggerDTO userTaskTriggerDTO =
-          toUserTaskTrigger(userTask, processInstance.getProcessInstanceKey(), definitionKey);
+          toUserTaskTrigger(userTask, processInstance.getProcessInstanceId(), definitionKey);
       context.forward(
-          new Record<>(
-              processInstance.getProcessInstanceKey(), userTaskTriggerDTO, clock.millis()));
+          new Record<>(processInstance.getProcessInstanceId(), userTaskTriggerDTO, clock.millis()));
     }
   }
 
@@ -341,12 +340,12 @@ public class Forwarder {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();
       ExternalTaskTriggerDTO newExternalTaskTrigger =
           toExternalTaskTrigger(
-              externalTask, processInstance.getProcessInstanceKey(), definitionKey);
+              externalTask, processInstance.getProcessInstanceId(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
         context.forward(
             new Record<>(
-                newExternalTaskTrigger.getProcessInstanceKey(),
+                newExternalTaskTrigger.getProcessInstanceId(),
                 newExternalTaskTrigger,
                 clock.millis()));
       } else {
@@ -362,7 +361,7 @@ public class Forwarder {
         TimeBucket bucket = TimeBucket.ofMillis(oneTimeScheduler.getNextExecutionTime(now) - now);
         ScheduleKeyDTO scheduledKey =
             new InstanceScheduleKeyDTO(
-                processInstance.getProcessInstanceKey(),
+                processInstance.getProcessInstanceId(),
                 pathExtractor.getInstancePath(externalTask.instance()),
                 externalTask.element().getId(),
                 bucket);
@@ -373,10 +372,10 @@ public class Forwarder {
 
   private ExternalTaskTriggerDTO toExternalTaskTrigger(
       ExternalTaskInfo externalTaskInfo,
-      UUID processInstanceKey,
+      UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey) {
     return new ExternalTaskTriggerDTO(
-        processInstanceKey,
+        processInstanceId,
         processDefinitionKey,
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
@@ -385,10 +384,10 @@ public class Forwarder {
 
   private UserTaskTriggerDTO toUserTaskTrigger(
       UserTaskInfo userTaskInfo,
-      UUID processInstanceKey,
+      UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey) {
     return new UserTaskTriggerDTO(
-        processInstanceKey,
+        processInstanceId,
         processDefinitionKey,
         userTaskInfo.instance().getFlowNode().getId(),
         pathExtractor.getInstancePath(userTaskInfo.instance()),

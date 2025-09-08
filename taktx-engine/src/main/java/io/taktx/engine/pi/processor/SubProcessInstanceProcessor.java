@@ -138,7 +138,7 @@ public class SubProcessInstanceProcessor
 
     TerminateTriggerDTO trigger =
         new TerminateTriggerDTO(
-            processInstanceProcessingContext.getProcessInstance().getProcessInstanceKey(),
+            processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             List.of());
     flowNodeInstancesProcessor.processTerminate(
         processInstanceProcessingContext,

@@ -24,18 +24,18 @@ import org.mapstruct.factory.Mappers;
 
 public class StoredFlowNodeInstancesWrapper {
 
-  private final UUID processInstanceKey;
+  private final UUID processInstanceId;
   private final FlowNodeInstances flowNodeInstances;
   private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private final FlowElements flowElements;
   private final ProcessInstanceMapper mapper;
 
   public StoredFlowNodeInstancesWrapper(
-      UUID processInstanceKey,
+      UUID processInstanceId,
       FlowNodeInstances flowNodeInstances,
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowElements flowElements) {
-    this.processInstanceKey = processInstanceKey;
+    this.processInstanceId = processInstanceId;
     this.flowNodeInstances = flowNodeInstances;
     this.flowNodeInstanceStore = flowNodeInstanceStore;
     this.flowElements = flowElements;
@@ -113,7 +113,7 @@ public class StoredFlowNodeInstancesWrapper {
       keyPath.addFirst(parentFlowNodeInstance.getElementInstanceId());
       parentFlowNodeInstance = parentFlowNodeInstance.getParentInstance();
     }
-    return new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
+    return new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
   }
 
   private FlowNodeInstanceKeyDTO generatedKeyPath(FlowNodeInstance<?> flowNodeInstance, Long id) {
@@ -123,6 +123,6 @@ public class StoredFlowNodeInstancesWrapper {
       keyPath.addFirst(flowNodeInstance.getElementInstanceId());
       flowNodeInstance = flowNodeInstance.getParentInstance();
     }
-    return new FlowNodeInstanceKeyDTO(processInstanceKey, keyPath);
+    return new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
   }
 }

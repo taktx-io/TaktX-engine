@@ -127,28 +127,28 @@ public class MessageEventProcessor
           .forEach(
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
-                  UUID processInstanceKey = subscription.getProcessInstanceKey();
+                  UUID processInstanceId = subscription.getProcessInstanceId();
                   if (subscription.getElementId() == null) {
                     ContinueFlowElementTriggerDTO flowElementTrigger =
                         new ContinueFlowElementTriggerDTO(
-                            processInstanceKey,
+                            processInstanceId,
                             subscription.getElementInstanceIdPath(),
                             null,
                             messageEvent.getVariables());
 
                     context.forward(
-                        new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
+                        new Record<>(processInstanceId, flowElementTrigger, clock.millis()));
                   } else {
                     StartFlowElementTriggerDTO flowElementTrigger =
                         new StartFlowElementTriggerDTO(
-                            processInstanceKey,
+                            processInstanceId,
                             subscription.getElementInstanceIdPath() == null
                                 ? List.of()
                                 : subscription.getElementInstanceIdPath(),
                             subscription.getElementId(),
                             messageEvent.getVariables());
                     context.forward(
-                        new Record<>(processInstanceKey, flowElementTrigger, clock.millis()));
+                        new Record<>(processInstanceId, flowElementTrigger, clock.millis()));
                   }
                 }
               });
@@ -167,16 +167,16 @@ public class MessageEventProcessor
               value -> {
                 if (value.getMessageName().equals(messageEvent.getMessageName())) {
                   ProcessDefinitionKey processDefinitionKey = value.getProcessDefinitionKey();
-                  UUID processInstanceKey = UUID.randomUUID();
+                  UUID processInstanceId = UUID.randomUUID();
                   StartCommandDTO startCommand =
                       new StartCommandDTO(
-                          processInstanceKey,
+                          processInstanceId,
                           value.getElementId(),
                           List.of(),
                           new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId()),
                           messageEvent.getVariables());
 
-                  context.forward(new Record<>(processInstanceKey, startCommand, clock.millis()));
+                  context.forward(new Record<>(processInstanceId, startCommand, clock.millis()));
                 }
               });
     }

@@ -41,13 +41,13 @@ public class ProcessingStatistics {
     flowNodesFinished = meterRegistry.counter("taktx.engine.flow_nodes_finished");
   }
 
-  public void startTimerForProcessInstance(UUID processInstanceKey) {
+  public void startTimerForProcessInstance(UUID processInstanceId) {
     Timer.Sample sample = Timer.start(meterRegistry);
-    processInstanceTimers.put(processInstanceKey, sample);
+    processInstanceTimers.put(processInstanceId, sample);
   }
 
-  public void stopTimerForProcessInstance(UUID processInstanceKey, String processDefinitionKey) {
-    Timer.Sample sample = processInstanceTimers.remove(processInstanceKey);
+  public void stopTimerForProcessInstance(UUID processInstanceId, String processDefinitionKey) {
+    Timer.Sample sample = processInstanceTimers.remove(processInstanceId);
     if (sample != null) {
       Timer timer =
           meterRegistry.timer(
