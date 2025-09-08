@@ -14,6 +14,7 @@ import io.taktx.app.InstanceUpdateRegistry;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -138,8 +138,10 @@ public class ProcessDefinitionCountsWebSocket {
       try {
         session.getAsyncRemote().sendText(message);
       } catch (Exception e) {
-        log.warn("Failed to send process instance update to session {}: {}", 
-                 session.getId(), e.getMessage());
+        log.warn(
+            "Failed to send process instance update to session {}: {}",
+            session.getId(),
+            e.getMessage());
       }
     }
   }
