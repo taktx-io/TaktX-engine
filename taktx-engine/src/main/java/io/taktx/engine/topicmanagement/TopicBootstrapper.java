@@ -58,15 +58,17 @@ public class TopicBootstrapper {
         Topics.initialFixedTopics().stream()
             .map(
                 topic -> {
-                  NewTopic newTopic = new NewTopic(
-                      taktConfiguration.getPrefixed(topic.getTopicName()),
-                      1,
-                      taktConfiguration.getReplicationFactor());
-                  
+                  NewTopic newTopic =
+                      new NewTopic(
+                          taktConfiguration.getPrefixed(topic.getTopicName()),
+                          1,
+                          taktConfiguration.getReplicationFactor());
+
                   // Apply cleanup policy configuration
-                  newTopic.configs(java.util.Map.of(
-                      "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
-                  
+                  newTopic.configs(
+                      java.util.Map.of(
+                          "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
+
                   return newTopic;
                 })
             .toList();
@@ -94,15 +96,17 @@ public class TopicBootstrapper {
         Topics.managedFixedTopics().stream()
             .map(
                 topic -> {
-                  NewTopic newTopic = new NewTopic(
-                      taktConfiguration.getPrefixed(topic.getTopicName()),
-                      taktConfiguration.getPartitions(),
-                      taktConfiguration.getReplicationFactor());
-                  
+                  NewTopic newTopic =
+                      new NewTopic(
+                          taktConfiguration.getPrefixed(topic.getTopicName()),
+                          taktConfiguration.getPartitions(),
+                          taktConfiguration.getReplicationFactor());
+
                   // Apply cleanup policy configuration
-                  newTopic.configs(java.util.Map.of(
-                      "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
-                  
+                  newTopic.configs(
+                      java.util.Map.of(
+                          "cleanup.policy", topic.getCleanupPolicy().getKafkaPolicyValue()));
+
                   return newTopic;
                 })
             .toList();

@@ -59,7 +59,9 @@ public class TaktClientProvider {
         int partitions = Integer.parseInt(properties.getProperty("taktx.engine.topic.partitions"));
         externalTaskTriggerConsumer
             .getJobIds()
-            .forEach(jobId -> taktClient.requestExternalTaskTopic(jobId, partitions, CleanupPolicy.COMPACT));
+            .forEach(
+                jobId ->
+                    taktClient.requestExternalTaskTopic(jobId, partitions, CleanupPolicy.COMPACT));
       }
     }
   }
