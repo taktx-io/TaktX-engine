@@ -1,8 +1,8 @@
 TaktX Engine
 =============
 
-Version:       0.0.4-alpha-1
-Release Date:  2025-08-29
+Version:       0.0.5-alpha-1
+Release Date:  2025-09-08
 Change Date:   2029-04-04 (when this version transitions to Apache License 2.0)
 
 This file contains the official version information for TaktX Engine.
