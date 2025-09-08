@@ -19,6 +19,9 @@ let lastCounterUpdateTime = null;
 // Flow node instances data structure - organized by flowNodeInstancePath
 let flowNodeInstances = new Map();
 
+// Process instances data structure - organized by processInstanceId for real-time updates
+let processInstances = new Map();
+
 // WebSocket connection management
 function connectWebSocket() {
     if (websocket) {
@@ -36,6 +39,8 @@ function connectWebSocket() {
         
         if (data.type === 'processDefinitionCounts') {
             updateProcessDefinitionCounts(data.data);
+        } else if (data.type === 'processInstanceUpdate') {
+            handleProcessInstanceUpdate(data);
         }
     };
     
@@ -79,6 +84,7 @@ function connectFlowNodeWebSocket(processInstanceId) {
             if (data.type === 'flowNodeInstanceUpdate') {
                 handleFlowNodeUpdate(data);
             }
+            // Note: processInstanceUpdate is now handled by the global websocket
         } catch (error) {
             console.error('Error parsing flow node WebSocket message:', error);
         }
@@ -101,6 +107,23 @@ function disconnectFlowNodeWebSocket() {
         console.log('Disconnecting from FlowNodeInstanceWebSocket');
         flowNodeWebSocket.close();
         flowNodeWebSocket = null;
+    }
+}
+
+// Handle real-time process instance updates
+function handleProcessInstanceUpdate(data) {
+    console.log('Processing process instance update:', data);
+    
+    if (data.update && data.processInstanceId) {
+        // Store the process instance update
+        processInstances.set(data.processInstanceId, {
+            processInstanceId: data.processInstanceId,
+            update: data.update,
+            timestamp: data.timestamp
+        });
+        
+        // Update the state pill in the process instance list
+        updateProcessInstanceStatePill(data.processInstanceId, data.update);
     }
 }
 
@@ -132,6 +155,30 @@ function handleFlowNodeUpdate(data) {
     }
 }
 
+// Update process instance state pill in real-time
+function updateProcessInstanceStatePill(processInstanceId, processInstanceUpdate) {
+    // Find the process instance row in the DOM
+    const processInstanceRows = document.querySelectorAll('.process-instance-row');
+    
+    processInstanceRows.forEach(row => {
+        const rowProcessInstanceId = row.getAttribute('data-instance-id');
+        if (rowProcessInstanceId === processInstanceId) {
+            // Find the status badge within this row
+            const statusBadge = row.querySelector('.status-badge');
+            if (statusBadge && processInstanceUpdate.flowNodeInstances) {
+                const newState = processInstanceUpdate.flowNodeInstances.state;
+                const stateClass = getStateClass(newState);
+                
+                // Update the badge classes and text
+                statusBadge.className = `status-badge status-${stateClass}`;
+                statusBadge.textContent = newState;
+                
+                console.log(`Updated process instance ${processInstanceId} state to ${newState}`);
+            }
+        }
+    });
+}
+
 // Clear flow node instances list and disable refresh button
 function clearFlowNodeInstancesList() {
     const container = document.getElementById('flow-node-instances-list');
@@ -150,14 +197,19 @@ function renderFlowNodeInstancesList() {
         return;
     }
     
-    // Convert Map to array and sort by path depth and timestamp
+    // Convert Map to array and sort by path sequence (which indicates execution order)
     const instances = Array.from(flowNodeInstances.values()).sort((a, b) => {
-        // First sort by path depth (shorter paths first)
-        if (a.path.length !== b.path.length) {
-            return a.path.length - b.path.length;
+        // Compare paths element by element - the numbers indicate execution sequence
+        const minLength = Math.min(a.path.length, b.path.length);
+        
+        for (let i = 0; i < minLength; i++) {
+            if (a.path[i] !== b.path[i]) {
+                return a.path[i] - b.path[i]; // Sort by sequence number
+            }
         }
-        // Then sort by timestamp (newer first)
-        return b.timestamp - a.timestamp;
+        
+        // If paths are identical up to this point, shorter path comes first (parent before child)
+        return a.path.length - b.path.length;
     });
     
     let html = '<div class="flow-node-tree">';
@@ -178,8 +230,7 @@ function renderFlowNodeInstancesList() {
                     </div>
                     <div class="flow-node-details">
                         <small class="text-muted">
-                            Path: [${instance.path.join(' → ')}] | 
-                            Process Time: ${formatProcessTime(instance.processTime)} | 
+                            Path: [${instance.path.join(' → ')}] |                              
                             Updated: ${formatTimestamp(instance.timestamp)}
                         </small>
                     </div>
@@ -531,7 +582,7 @@ function renderProcessInstancesList(instances) {
         const stateClass = getStateClass(instance.update.flowNodeInstances.state);
         
         html += `
-            <div class="process-instance-row" onclick="selectProcessInstance('${instance.processInstanceId}')">
+            <div class="process-instance-row" data-instance-id="${instance.processInstanceId}" onclick="selectProcessInstance('${instance.processInstanceId}')">
                 <div class="process-instance-info ${isSelected ? 'selected' : ''}">
                     <div class="id-time">
                         <div class="uuid">${formatUuid(instance.processInstanceId)}</div>
@@ -544,6 +595,15 @@ function renderProcessInstancesList(instances) {
     });
     
     container.innerHTML = html;
+    
+    // Store the rendered instances for potential real-time updates
+    instances.forEach(instance => {
+        processInstances.set(instance.processInstanceId, {
+            processInstanceId: instance.processInstanceId,
+            update: instance.update,
+            timestamp: instance.timestamp
+        });
+    });
 }
 
 // Format UUID for display
