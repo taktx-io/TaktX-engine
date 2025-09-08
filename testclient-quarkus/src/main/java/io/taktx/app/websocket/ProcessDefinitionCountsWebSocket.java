@@ -8,6 +8,8 @@
 
 package io.taktx.app.websocket;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.scheduler.Scheduled;
 import io.taktx.app.InstanceUpdateConsumer;
 import io.taktx.app.InstanceUpdateRegistry;
@@ -31,8 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ServerEndpoint("/ws/process-definitions")
 @ApplicationScoped
@@ -126,11 +126,11 @@ public class ProcessDefinitionCountsWebSocket {
     try {
       JsonNode messageNode = objectMapper.readTree(message);
       String action = messageNode.get("action").asText();
-      
+
       if ("updateDisplayedInstances".equals(action)) {
         JsonNode instancesNode = messageNode.get("processInstanceIds");
         Set<UUID> displayedInstances = new java.util.HashSet<>();
-        
+
         if (instancesNode != null && instancesNode.isArray()) {
           for (JsonNode instanceNode : instancesNode) {
             try {
@@ -141,14 +141,19 @@ public class ProcessDefinitionCountsWebSocket {
             }
           }
         }
-        
+
         sessionDisplayedInstances.put(session.getId(), displayedInstances);
-        log.debug("Updated displayed instances for session {}: {} instances", 
-                 session.getId(), displayedInstances.size());
+        log.debug(
+            "Updated displayed instances for session {}: {} instances",
+            session.getId(),
+            displayedInstances.size());
       }
     } catch (Exception e) {
-      log.error("Error processing WebSocket message from session {}: {}", 
-               session.getId(), e.getMessage(), e);
+      log.error(
+          "Error processing WebSocket message from session {}: {}",
+          session.getId(),
+          e.getMessage(),
+          e);
     }
   }
 
@@ -175,14 +180,14 @@ public class ProcessDefinitionCountsWebSocket {
     for (Map.Entry<String, Session> entry : sessions.entrySet()) {
       Session session = entry.getValue();
       String sessionId = session.getId();
-      
+
       // Check if this session is displaying the process instance
       Set<UUID> displayedInstances = sessionDisplayedInstances.get(sessionId);
       if (displayedInstances != null && displayedInstances.contains(processInstanceId)) {
         try {
           session.getAsyncRemote().sendText(message);
-          log.debug("Sent process instance update for {} to session {}", 
-                   processInstanceId, sessionId);
+          log.debug(
+              "Sent process instance update for {} to session {}", processInstanceId, sessionId);
         } catch (Exception e) {
           log.warn(
               "Failed to send process instance update to session {}: {}",
@@ -190,8 +195,10 @@ public class ProcessDefinitionCountsWebSocket {
               e.getMessage());
         }
       } else {
-        log.debug("Skipping process instance update for {} - not displayed in session {}", 
-                 processInstanceId, sessionId);
+        log.debug(
+            "Skipping process instance update for {} - not displayed in session {}",
+            processInstanceId,
+            sessionId);
       }
     }
   }
