@@ -3,11 +3,11 @@
 ## Building image
 
 ```
-docker build -t ghcr.io/qunit/bpmnmeister-client:1.0.0 .
-docker run -it -v ./config:/app/config -e TAKTX_PROPERTIES_FILE=/app/config/takt.properties -e tenant=tenant -e namespace=namespace -p 8081:8081  ghcr.io/qunit/test-client:1.0.0
-docker build --platform linux/amd64 -f Dockerfile.jvm -t ghcr.io/qunit/test-client:1.0.0 .
-docker push ghcr.io/qunit/test-client:1.0.0
-docker pull ghcr.io/qunit/test-client:1.0.0 
+docker build -f Dockerfile.jvm -t ghcr.io/taktx-io/test-client:1.0.0 .
+docker build --platform linux/amd64 -f Dockerfile.jvm -t ghcr.io/taktx-io/test-client:1.0.0 .
+docker run -it -v ./config:/app/config -e TAKTX_PROPERTIES_FILE=/app/config/takt.properties -e tenant=tenant -e namespace=namespace -p 8081:8081 ghcr.io/taktx-io/test-client:1.0.0
+docker push ghcr.io/taktx-io/test-client:1.0.0
+docker pull ghcr.io/taktx-io/test-client:1.0.0
 
 ```
 ## Typical payload 
