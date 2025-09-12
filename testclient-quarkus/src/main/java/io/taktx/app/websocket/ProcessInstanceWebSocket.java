@@ -128,7 +128,10 @@ public class ProcessInstanceWebSocket {
                     processInstanceId,
                     "update",
                     JsonUtils.toJsonNodeWithFieldNames(update)));
-
+        log.info(
+            "Broadcast flowNodeInstanceUpdate {} for pid {}",
+            processInstanceId,
+            update.getFlowNodeInstancePath());
         session.getAsyncRemote().sendText(message);
       }
     }
@@ -153,7 +156,7 @@ public class ProcessInstanceWebSocket {
                     processInstanceId,
                     "update",
                     JsonUtils.toJsonNodeWithFieldNames(update)));
-
+        log.info("Broadcast processInstanceUpdate for pid {}", processInstanceId);
         session.getAsyncRemote().sendText(message);
       }
     }

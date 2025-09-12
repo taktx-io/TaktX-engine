@@ -24,4 +24,5 @@ public class TopicMetaDTO {
   private String topicName; // The actual Kafka topic name
   private int nrPartitions;
   private CleanupPolicy cleanupPolicy;
+  private short replicationFactor;
 }

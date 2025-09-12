@@ -70,6 +70,7 @@ public class ScheduleProcessor
 
   @Override
   public void process(Record<ScheduleKeyDTO, MessageScheduleDTO> scheduleRecord) {
+    log.info("Processing schedule record {}", scheduleRecord.key());
     ScheduleKeyDTO scheduleKey = scheduleRecord.key();
     MessageScheduleDTO value = scheduleRecord.value();
 

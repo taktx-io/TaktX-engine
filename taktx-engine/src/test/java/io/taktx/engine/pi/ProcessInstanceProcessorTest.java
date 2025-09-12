@@ -153,6 +153,7 @@ class ProcessInstanceProcessorTest {
     // All executed timers fall within the same time bucket
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/schedule_start_r5.bpmn")
+        .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(2001))
         .waitForNewProcessInstance()
         .waitUntilCompleted()
@@ -175,6 +176,7 @@ class ProcessInstanceProcessorTest {
     // The last timer falls into the next time bucket
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/schedule_start_r60.bpmn")
+        .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(20001))
         .waitForNewProcessInstance()
         .waitUntilCompleted()

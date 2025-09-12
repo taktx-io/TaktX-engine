@@ -82,9 +82,6 @@ public class InstanceUpdateRegistry {
           consumer ->
               consumer.processInstanceUpdate(
                   instanceUpdateRecord.getTimestamp(), processInstanceId, processInstanceUpdate));
-      log.info(
-          "Stored {} process instances for definition : " + processInstanceIdList.size(),
-          processDefinitionKey);
     } else if (instanceUpdateRecord.getUpdate()
         instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
       List<InstanceUpdateRecord> instances =
@@ -125,11 +122,18 @@ public class InstanceUpdateRegistry {
   public List<InstanceUpdateRecord> getProcessInstancesByDefinition(
       ProcessDefinitionKey key, int limit) {
     List<UUID> uuids = processInstanceIdUpdates.getOrDefault(key, new ArrayList<>());
+
+    // Get only the last 50 entries from the uuids list
+    List<UUID> lastFiftyUuids =
+        uuids.size() > limit ? uuids.subList(uuids.size() - limit, uuids.size()) : uuids;
+
     List<InstanceUpdateRecord> instances = new ArrayList<>();
-    for (UUID uuid : uuids) {
+
+    for (UUID uuid : lastFiftyUuids.reversed()) {
       InstanceUpdateRecord instanceUpdateRecord = processInstanceUpdates.get(uuid);
       instances.add(instanceUpdateRecord);
     }
+
     return instances.reversed();
   }
 }

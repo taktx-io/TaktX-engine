@@ -656,7 +656,7 @@ function getStateClass(state) {
 // Select a process instance and highlight its tokens in the BPMN diagram
 async function selectProcessInstance(instanceId) {
     // Update selected state
-    console.log("selectProcessInstance")
+    console.log("selectProcessInstance " + instanceId )
     selectedProcessInstance = { processInstanceId: instanceId };
     selectedFlowNodeInstance = null;
     
@@ -874,7 +874,7 @@ document.addEventListener('visibilitychange', function() {
         disconnectFlowNodeWebSocket();
     } else if (selectedProcessInstance && !flowNodeWebSocket) {
         // Reconnect when tab becomes visible again
-        connectFlowNodeWebSocket(selectedProcessInstance.id);
+        connectFlowNodeWebSocket(selectedProcessInstance.processInstanceId);
     }
 });
 

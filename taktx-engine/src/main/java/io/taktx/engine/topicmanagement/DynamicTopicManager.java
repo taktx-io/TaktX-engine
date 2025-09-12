@@ -122,7 +122,7 @@ public class DynamicTopicManager {
                       topicMeta.getTopicName(),
                       topicMeta.getNrPartitions(),
                       topicMeta.getCleanupPolicy(),
-                      taktConfiguration.getReplicationFactor())) {
+                      topicMeta.getReplicationFactor())) {
                     publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
                   }
                   cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
@@ -218,9 +218,16 @@ public class DynamicTopicManager {
       // Try to get the actual topic description
       TopicDescription actualTopicDescription =
           topicDescriptionFutures.get(prefixedTopicName).get();
+      short actualReplicationFactor =
+          (short) actualTopicDescription.partitions().get(0).replicas().size();
 
       // Compare actual vs cached values
-      TopicMetaDTO actualTopicMeta = new TopicMetaDTO();
+      TopicMetaDTO actualTopicMeta =
+          new TopicMetaDTO(
+              prefixedTopicName,
+              actualTopicDescription.partitions().size(),
+              cachedRequestTopicMeta.getCleanupPolicy(),
+              actualReplicationFactor);
       actualTopicMeta.setTopicName(prefixedTopicName);
       actualTopicMeta.setCleanupPolicy(cachedRequestTopicMeta.getCleanupPolicy());
       actualTopicMeta.setNrPartitions(actualTopicDescription.partitions().size());

@@ -42,6 +42,7 @@ import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.ScheduleProcessor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.DefinitionMapper;
+import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.DtoMapper;
 import io.taktx.engine.pi.FlowNodeInstancesProcessor;
 import io.taktx.engine.pi.Forwarder;
@@ -132,6 +133,7 @@ public class TopologyProducer {
   private final IoMappingProcessor ioMappingProcessor;
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
+  private final DefinitionsCache definitionsCache;
 
   @Produces
   public Topology buildTopology() {
@@ -173,7 +175,9 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))
         .process(
-            () -> new DefinitionsProcessor(taktConfiguration, messageSchedulerFactory, clock),
+            () ->
+                new DefinitionsProcessor(
+                    taktConfiguration, messageSchedulerFactory, clock, definitionsCache),
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
@@ -267,6 +271,7 @@ public class TopologyProducer {
         .process(
             () ->
                 new ProcessInstanceProcessor(
+                    definitionsCache,
                     definitionMapper,
                     instanceMapper,
                     forwarder,

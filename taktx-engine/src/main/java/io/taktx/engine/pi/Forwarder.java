@@ -30,6 +30,7 @@ import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.CatchEventInstance;
@@ -61,10 +62,12 @@ import org.apache.kafka.streams.processor.api.Record;
 @RequiredArgsConstructor
 @Slf4j
 public class Forwarder {
+
   private final PathExtractor pathExtractor;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final DtoMapper dtoMapper;
   private final Clock clock;
+  private final TaktConfiguration taktConfiguration;
 
   public void forward(
       ProcessorContext<Object, Object> context,
@@ -86,13 +89,16 @@ public class Forwarder {
 
   private void forwardInstanceUpdates(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
-
-    Queue<InstanceUpdate> processInstanceUpdates = instanceResult.getInstanceUpdates();
-    while (!processInstanceUpdates.isEmpty()) {
-      InstanceUpdate instanceUpdate = processInstanceUpdates.poll();
-      context.forward(
-          new Record<>(
-              instanceUpdate.processInstanceId(), instanceUpdate.update(), clock.millis()));
+    Queue<InstanceUpdate> instanceUpdates = instanceResult.getInstanceUpdates();
+    if (Boolean.parseBoolean(taktConfiguration.getBroadcastInstanceUpdates())) {
+      while (!instanceUpdates.isEmpty()) {
+        InstanceUpdate instanceUpdate = instanceUpdates.poll();
+        context.forward(
+            new Record<>(
+                instanceUpdate.processInstanceId(), instanceUpdate.update(), clock.millis()));
+      }
+    } else {
+      instanceUpdates.clear();
     }
   }
 
@@ -138,6 +144,7 @@ public class Forwarder {
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceId(), instancePath, elementId, bucket);
       scheduledStartInfo.flowNodeInstances().addScheduledKey(scheduledKey);
+      log.info("Forwarding scheduled start {}", scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -176,6 +183,7 @@ public class Forwarder {
               bucket);
 
       catchEventInstance.addScheduledKey(scheduledKey);
+      log.info("Forwarding scheduled continuation {}", scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -245,9 +253,10 @@ public class Forwarder {
               messageEvent.messageName());
       MessageEventKeyDTO messageEventKey =
           correlationMessageSubscriptionTrigger.toMessageEventKey();
-      if (instanceToContinue instanceof CatchEventInstance<?> catchEventInstance)
+      if (instanceToContinue instanceof CatchEventInstance<?> catchEventInstance) {
         catchEventInstance.addMessageSubscriptionWithCorrelationKey(
             messageEventKey, messageEvent.correlationKey());
+      }
       context.forward(
           new Record<>(messageEventKey, correlationMessageSubscriptionTrigger, clock.millis()));
     }
@@ -343,6 +352,7 @@ public class Forwarder {
               externalTask, processInstance.getProcessInstanceId(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
+        log.info("Forwarding external task {}", externalTask);
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceId(),

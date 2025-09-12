@@ -24,6 +24,7 @@ import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -37,6 +38,7 @@ public class ProcessDefinitionActivationProcessor {
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
+  private final DefinitionsCache definitionsCache;
   private final ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       processDefinitionStore;
 
@@ -44,10 +46,12 @@ public class ProcessDefinitionActivationProcessor {
       TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
       ProcessorContext<Object, Object> context,
-      Clock clock) {
+      Clock clock,
+      DefinitionsCache definitionsCache) {
     this.messageSchedulerFactory = messageSchedulerFactory;
     this.context = context;
     this.clock = clock;
+    this.definitionsCache = definitionsCache;
     this.processDefinitionStore =
         context.getStateStore(
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
@@ -99,8 +103,12 @@ public class ProcessDefinitionActivationProcessor {
             });
 
     context.forward(new Record<>(processDefinitionKey, activatedDefinition, clock.millis()));
+    definitionsCache.put(processDefinitionKey, activatedDefinition);
+
     ProcessDefinitionKey latestKey =
         new ProcessDefinitionKey(processDefinitionKey.getProcessDefinitionId(), -1);
+    definitionsCache.put(latestKey, activatedDefinition);
+
     context.forward(new Record<>(latestKey, activatedDefinition, clock.millis()));
   }
 

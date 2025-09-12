@@ -45,6 +45,9 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.topicCreationEnabled", defaultValue = "true")
   String topicCreationEnabled;
 
+  @ConfigProperty(name = "taktx.engine.broadcastInstanceUpdates", defaultValue = "true")
+  String broadcastInstanceUpdates;
+
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }

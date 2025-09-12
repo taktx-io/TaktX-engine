@@ -57,11 +57,14 @@ public class TaktClientProvider {
                 taktClient.getParameterResolverFactory(), taktClient.getProcessInstanceResponder());
         taktClient.registerExternalTaskConsumer(externalTaskTriggerConsumer);
         int partitions = Integer.parseInt(properties.getProperty("taktx.engine.topic.partitions"));
+        short replicationFactor =
+            Short.parseShort(properties.getProperty("taktx.engine.topic.replication-factor"));
         externalTaskTriggerConsumer
             .getJobIds()
             .forEach(
                 jobId ->
-                    taktClient.requestExternalTaskTopic(jobId, partitions, CleanupPolicy.COMPACT));
+                    taktClient.requestExternalTaskTopic(
+                        jobId, partitions, CleanupPolicy.COMPACT, replicationFactor));
       }
     }
   }

@@ -130,7 +130,8 @@ public class TopicBootstrapper {
                   new TopicMetaDTO(
                       prefixedTopicName,
                       taktConfiguration.getPartitions(),
-                      topic.getCleanupPolicy());
+                      topic.getCleanupPolicy(),
+                      taktConfiguration.getReplicationFactor());
 
               topicMetaProducer.send(
                   new ProducerRecord<>(

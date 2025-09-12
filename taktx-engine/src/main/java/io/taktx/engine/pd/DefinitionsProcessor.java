@@ -16,6 +16,7 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.xml.BpmnParser;
 import java.time.Clock;
 import java.util.HashMap;
@@ -41,14 +42,17 @@ public class DefinitionsProcessor
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
   private final Clock clock;
+  private final DefinitionsCache definitionsCache;
 
   public DefinitionsProcessor(
       TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
-      Clock clock) {
+      Clock clock,
+      DefinitionsCache definitionsCache) {
     this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
     this.clock = clock;
+    this.definitionsCache = definitionsCache;
   }
 
   @Override
@@ -61,7 +65,7 @@ public class DefinitionsProcessor
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
-            taktConfiguration, messageSchedulerFactory, context, clock);
+            taktConfiguration, messageSchedulerFactory, context, clock, definitionsCache);
   }
 
   @Override
@@ -105,7 +109,6 @@ public class DefinitionsProcessor
 
       processDefinitionDTO =
           new ProcessDefinitionDTO(parsedDefinition, version, ProcessDefinitionStateEnum.ACTIVE);
-
       processDefinitionActivationProcessor.activate(processDefinitionDTO);
     } else {
       // Existing version, do not create a new ProcessDefinitionDTO but return the active version

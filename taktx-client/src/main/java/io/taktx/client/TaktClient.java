@@ -101,9 +101,9 @@ public class TaktClient {
   }
 
   public String requestExternalTaskTopic(
-      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
+      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
     return this.externalTaskTopicRequester.requestExternalTaskTopic(
-        externalTaskId, partitions, cleanupPolicy);
+        externalTaskId, partitions, cleanupPolicy, replicationFactor);
   }
 
   /**

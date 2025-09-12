@@ -58,7 +58,7 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @RequiredArgsConstructor
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerDTO, Object, Object> {
-
+  private final DefinitionsCache definitionsCache;
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
   private final Forwarder forwarder;
@@ -71,7 +71,6 @@ public class ProcessInstanceProcessor
   private final DynamicTopicManager topicManager;
 
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
-  private final Map<ProcessDefinitionKey, ProcessDefinitionDTO> definitionsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       definitionsStore;

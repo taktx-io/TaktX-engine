@@ -32,14 +32,13 @@ public class ExternalTaskTopicRequester {
   }
 
   public String requestExternalTaskTopic(
-      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy) {
-    TopicMetaDTO topicMetaDTO = new TopicMetaDTO();
+      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
     String topicName =
         taktPropertiesHelper.getPrefixedTopicName(
             Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId);
-    topicMetaDTO.setTopicName(topicName);
-    topicMetaDTO.setNrPartitions(partitions);
-    topicMetaDTO.setCleanupPolicy(cleanupPolicy);
+    TopicMetaDTO topicMetaDTO =
+        new TopicMetaDTO(topicName, partitions, cleanupPolicy, replicationFactor);
+
     producer.send(
         new ProducerRecord<>(
             taktPropertiesHelper.getPrefixedTopicName(

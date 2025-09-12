@@ -41,12 +41,12 @@ import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.generic.MutableClock;
 import io.taktx.engine.generic.TopologyProducer;
+import io.taktx.engine.pi.testengine.AdminClientHelper.ConsumerLagInfo;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +56,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -69,11 +70,12 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
+import scala.concurrent.duration.package$;
 
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
-  private static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  private static final String TOPIC_TEST_PREFIX = "tenant.namespace.";
+  public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
+  public static final String TOPIC_TEST_PREFIX = "tenant.namespace.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   private TaktClient taktClient;
@@ -103,6 +105,7 @@ public class BpmnTestEngine {
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
   private Map<String, TopicMetaDTO> topicMetaCache = new ConcurrentHashMap<>();
+  private AdminClientHelper adminClientHelper;
 
   public BpmnTestEngine(Clock clock) {
     this.originalClock = Clock.fixed(clock.instant(), clock.getZone());
@@ -133,8 +136,9 @@ public class BpmnTestEngine {
     String kafkaBootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
 
+    adminClientHelper = new AdminClientHelper(kafkaBootstrapServers);
     // Wait for Kafka broker to be available before proceeding
-    waitForKafkaBroker(kafkaBootstrapServers);
+    adminClientHelper.waitForKafkaBroker(kafkaBootstrapServers);
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
@@ -176,7 +180,7 @@ public class BpmnTestEngine {
       ConsumerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord) {
     ProcessInstanceTriggerDTO trigger = processInstanceTriggerRecord.value();
     LOG.info(
-        "Received process instanceToContinue trigger: "
+        "Received process ProcessInstanceTrigger trigger: "
             + trigger
             + " "
             + trigger.getClass().getName());
@@ -404,7 +408,8 @@ public class BpmnTestEngine {
     List<String> topics = new ArrayList<>();
 
     for (String externalTaskId : externalTaskIds) {
-      topics.add(taktClient.requestExternalTaskTopic(externalTaskId, 3, CleanupPolicy.COMPACT));
+      topics.add(
+          taktClient.requestExternalTaskTopic(externalTaskId, 3, CleanupPolicy.COMPACT, (short) 1));
     }
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
@@ -829,6 +834,68 @@ public class BpmnTestEngine {
   public VariablesDTO getVariables(UUID processInstanceId) {
     return variablesMap.get(processInstanceId);
   }
+  public BpmnTestEngine waitUntilActivityHasState(
+      String elementId, ActtivityStateEnum state) {
+    return waitUntilActivityHasState(elementId, state, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilIdle() {
+    return waitUntilIdle(DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilClientIdle() {
+    return waitUntilClientIdle(DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine waitUntilIdle(Duration duration) {
+    return waitUntilIdle(duration, adminClientHelper.listConsumerGroups()
+        .stream().filter(this::isEngineConsumerGroup)
+        .collect(Collectors.toSet()));
+  }
+
+  public BpmnTestEngine waitUntilClientIdle(Duration duration) {
+    return waitUntilIdle(duration, adminClientHelper.listConsumerGroups()
+        .stream().filter(consumerGroup -> !isEngineConsumerGroup(consumerGroup))
+        .collect(Collectors.toSet()));
+  }
+
+  public BpmnTestEngine waitUntilIdle(Duration duration, Set<String> consumerGroups) {
+    // Scan all topics from Topics class and wait until all consumer lags are 0
+    Awaitility.await()
+        .atMost(duration)
+        .until(new Callable<Boolean>() {
+          @Override
+          public Boolean call() throws Exception {
+            boolean allLagsZero = true;
+            for (String consumerGroup : consumerGroups) {
+              allLagsZero &= allLagsZeroForGroupId(consumerGroup);
+            }
+            return allLagsZero;
+          }
+
+          private boolean allLagsZeroForGroupId(String consumerGroup) {
+            List<Long> allConsumerLags = adminClientHelper.getAllConsumerLags(consumerGroup)
+                .values()
+                .stream()
+                .map(ConsumerLagInfo::getTotalLag)
+                .filter(lag -> lag > 0)
+                .toList();
+            if(!allConsumerLags.isEmpty()) {
+              log.info("lags not empty for consumerGroup {} {}", consumerGroup, allConsumerLags);
+            }
+            return allConsumerLags.isEmpty();
+          }
+        });
+    return this;
+  }
+
+  private boolean isEngineConsumerGroup(String consumerGroup) {
+    return consumerGroup.startsWith("xml-by-process-definition-id-consumer") ||
+        consumerGroup.equals("taktx-engine") ||
+        consumerGroup.equals("taktx-topicmanager-request-consumer") ||
+        consumerGroup.startsWith("taktx-topicmanager-actuel-consumer");
+
+  }
 
   public BpmnTestEngine waitUntilActivityHasState(
       String elementId, ActtivityStateEnum state, Duration duration) {
@@ -878,41 +945,6 @@ public class BpmnTestEngine {
     this.processInstanceMap.clear();
     this.flowNodeInstanceMap.clear();
     this.mutableClock.set(originalClock.instant());
-  }
-
-  private void waitForKafkaBroker(String bootstrapServers) {
-    LOG.info("Waiting for Kafka broker to start on: " + bootstrapServers);
-
-    Awaitility.await()
-        .atMost(DEFAULT_DURATION)
-        .pollInterval(Duration.ofMillis(100))
-        .until(
-            () -> {
-              try {
-                Properties adminProps = new Properties();
-                adminProps.put("bootstrap.servers", bootstrapServers);
-                try (org.apache.kafka.clients.admin.AdminClient adminClient =
-                    org.apache.kafka.clients.admin.AdminClient.create(adminProps)) {
-                  // This will throw an exception if broker is not available
-                  Set<String> actualTopics = adminClient.listTopics().names().get();
-                  LOG.info("Kafka broker is now available");
-                  Set<String> requiredTopics =
-                      Arrays.stream(Topics.values())
-                          .map(topic -> TOPIC_TEST_PREFIX + topic.getTopicName())
-                          .collect(Collectors.toSet());
-                  boolean allTopicsAvailable = actualTopics.containsAll(requiredTopics);
-                  if (!allTopicsAvailable) {
-                    LOG.info("Not all topics available: " + actualTopics);
-                  } else {
-                    LOG.info("All required topics are available: " + actualTopics);
-                  }
-                  return allTopicsAvailable;
-                }
-              } catch (Exception e) {
-                LOG.info("Waiting for Kafka broker to start: " + e.getMessage());
-                return false;
-              }
-            });
   }
 
   /** Waits for Kafka broker and required topics to be available. */
