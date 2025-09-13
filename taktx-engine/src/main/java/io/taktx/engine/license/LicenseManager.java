@@ -13,6 +13,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
@@ -29,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LicenseManager {
 
-  private static final Logger LOG = Logger.getLogger(LicenseManager.class.getName());
 
   public static final int DEFAULT_PARTITION_LIMIT = 3;
   private static final Path LICENSE_PATH =
@@ -343,9 +344,14 @@ public class LicenseManager {
   @PostConstruct
   public void init() {
     try {
+      int i = Runtime.getRuntime().availableProcessors();
+  // Monitor thread count
+      ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+      int threadCount = threadBean.getThreadCount();
+      log.info("Available processors {} threads {} ", i, threadCount);
       loadLicense();
     } catch (Exception e) {
-      LOG.warning("No valid license found. Running with restricted features: " + e.getMessage());
+      log.warn("No valid license found. Running with restricted features: " + e.getMessage());
       licenseValid = false;
     }
   }

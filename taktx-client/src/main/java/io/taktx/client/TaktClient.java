@@ -93,9 +93,7 @@ public class TaktClient {
   /** Stops the TaktClient, which unsubscribes from process definition records and process */
   public void stop() {
     this.processDefinitionConsumer.stop();
-    if (this.externalTaskTriggerTopicConsumer != null) {
-      this.externalTaskTriggerTopicConsumer.stop();
-    }
+    this.externalTaskTriggerTopicConsumer.stop();
     this.processInstanceUpdateConsumer.stop();
     this.xmlByProcessDefinitionIdConsumer.stop();
   }
@@ -188,9 +186,9 @@ public class TaktClient {
   }
 
   public void registerExternalTaskConsumer(
-      ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
+      ExternalTaskTriggerConsumer externalTaskTriggerConsumer, String gruopId) {
     this.externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(
-        externalTaskTriggerConsumer);
+        externalTaskTriggerConsumer, gruopId);
   }
 
   public void registerUserTaskConsumer(UserTaskTriggerConsumer userTaskTriggerConsumer) {

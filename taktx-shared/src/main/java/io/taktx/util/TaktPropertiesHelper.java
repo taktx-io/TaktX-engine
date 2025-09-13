@@ -62,10 +62,6 @@ public class TaktPropertiesHelper {
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
     props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetResetConfig);
-
-    // If you read from transactional producers, you may set:
-    // props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
-    props.putAll(taktProperties);
     return props;
   }
 
@@ -117,16 +113,20 @@ public class TaktPropertiesHelper {
 
   public int getExternalTaskConsumerThreads() {
     return Integer.parseInt(
-        taktProperties.getProperty("taktx.external.task.consumer.threads", "1"));
+        taktProperties.getOrDefault("taktx.external.task.consumer.threads", 1).toString());
   }
 
   public int getExternalTaskConsumerMaxPollRecords() {
     return Integer.parseInt(
-        taktProperties.getProperty("taktx.external.task.consumer.max.poll.records", "500"));
+        taktProperties
+            .getOrDefault("taktx.external.task.consumer.max.poll.records", 500)
+            .toString());
   }
 
   public int getExternalTaskConsumerPollTimeoutMs() {
     return Integer.parseInt(
-        taktProperties.getProperty("taktx.external.task.consumer.poll.timeout.ms", "100"));
+        taktProperties
+            .getOrDefault("taktx.external.task.consumer.poll.timeout.ms", 100)
+            .toString());
   }
 }

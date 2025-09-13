@@ -78,16 +78,12 @@ public class AdminClientHelper {
             });
   }
 
-  /**
-   * Get consumer lag for a specific consumer group and topic
-   */
+  /** Get consumer lag for a specific consumer group and topic */
   public ConsumerLagInfo getConsumerLag(String consumerGroupId, String topicName) {
     try {
       // Get consumer group description
-      Map<String, ConsumerGroupDescription> consumerGroups = adminClient
-          .describeConsumerGroups(Collections.singleton(consumerGroupId))
-          .all()
-          .get();
+      Map<String, ConsumerGroupDescription> consumerGroups =
+          adminClient.describeConsumerGroups(Collections.singleton(consumerGroupId)).all().get();
 
       ConsumerGroupDescription groupDescription = consumerGroups.get(consumerGroupId);
       if (groupDescription == null) {
@@ -96,10 +92,11 @@ public class AdminClientHelper {
       }
 
       // Get consumer group offsets
-      Map<TopicPartition, OffsetAndMetadata> consumerOffsets = adminClient
-          .listConsumerGroupOffsets(consumerGroupId)
-          .partitionsToOffsetAndMetadata()
-          .get();
+      Map<TopicPartition, OffsetAndMetadata> consumerOffsets =
+          adminClient
+              .listConsumerGroupOffsets(consumerGroupId)
+              .partitionsToOffsetAndMetadata()
+              .get();
 
       // Filter offsets for the specific topic
       Map<TopicPartition, OffsetAndMetadata> topicOffsets = new HashMap<>();
@@ -110,7 +107,8 @@ public class AdminClientHelper {
       }
 
       if (topicOffsets.isEmpty()) {
-        LOG.warn("No offsets found for topic: " + topicName + " in consumer group: " + consumerGroupId);
+        LOG.warn(
+            "No offsets found for topic: " + topicName + " in consumer group: " + consumerGroupId);
         return new ConsumerLagInfo(consumerGroupId, topicName, 0, groupDescription.state());
       }
 
@@ -141,36 +139,40 @@ public class AdminClientHelper {
         totalLag += lag;
         partitionLags.put(tp.partition(), lag);
 
-//        LOG.info(String.format("Partition %d: Consumer offset=%d, Latest offset=%d, Lag=%d",
-//            tp.partition(), consumerOffset, latestOffset, lag));
+        //        LOG.info(String.format("Partition %d: Consumer offset=%d, Latest offset=%d,
+        // Lag=%d",
+        //            tp.partition(), consumerOffset, latestOffset, lag));
       }
 
-      return new ConsumerLagInfo(consumerGroupId, topicName, totalLag, groupDescription.state(), partitionLags);
+      return new ConsumerLagInfo(
+          consumerGroupId, topicName, totalLag, groupDescription.state(), partitionLags);
 
     } catch (InterruptedException | ExecutionException e) {
-      LOG.error("Error getting consumer lag for group: " + consumerGroupId + ", topic: " + topicName, e);
+      LOG.error(
+          "Error getting consumer lag for group: " + consumerGroupId + ", topic: " + topicName, e);
       return new ConsumerLagInfo(consumerGroupId, topicName, -1, ConsumerGroupState.UNKNOWN);
     }
   }
 
-  /**
-   * Get consumer lag for all topics in a consumer group
-   */
+  /** Get consumer lag for all topics in a consumer group */
   public Map<String, ConsumerLagInfo> getAllConsumerLags(String consumerGroupId) {
     Map<String, ConsumerLagInfo> result = new HashMap<>();
 
     try {
       // Get consumer group offsets
-      Map<TopicPartition, OffsetAndMetadata> consumerOffsets = adminClient
-          .listConsumerGroupOffsets(consumerGroupId)
-          .partitionsToOffsetAndMetadata()
-          .get();
+      Map<TopicPartition, OffsetAndMetadata> consumerOffsets =
+          adminClient
+              .listConsumerGroupOffsets(consumerGroupId)
+              .partitionsToOffsetAndMetadata()
+              .get();
 
       // Group by topic
       Map<String, Map<TopicPartition, OffsetAndMetadata>> topicOffsets = new HashMap<>();
       for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : consumerOffsets.entrySet()) {
         String topic = entry.getKey().topic();
-        topicOffsets.computeIfAbsent(topic, k -> new HashMap<>()).put(entry.getKey(), entry.getValue());
+        topicOffsets
+            .computeIfAbsent(topic, k -> new HashMap<>())
+            .put(entry.getKey(), entry.getValue());
       }
 
       // Calculate lag for each topic
@@ -186,15 +188,15 @@ public class AdminClientHelper {
     return result;
   }
 
-  /**
-   * List all consumer groups
-   */
+  /** List all consumer groups */
   public Set<String> listConsumerGroups() {
     try {
       Collection<ConsumerGroupListing> consumerGroupListings =
           adminClient.listConsumerGroups().all().get();
 
-      return consumerGroupListings.stream().map(ConsumerGroupListing::groupId).collect(Collectors.toSet());
+      return consumerGroupListings.stream()
+          .map(ConsumerGroupListing::groupId)
+          .collect(Collectors.toSet());
     } catch (InterruptedException | ExecutionException e) {
       LOG.error("Error listing consumer groups", e);
       return Collections.emptySet();
@@ -207,9 +209,7 @@ public class AdminClientHelper {
     }
   }
 
-  /**
-   * Data class to hold consumer lag information
-   */
+  /** Data class to hold consumer lag information */
   public static class ConsumerLagInfo {
 
     private final String consumerGroupId;
@@ -218,12 +218,17 @@ public class AdminClientHelper {
     private final ConsumerGroupState state;
     private final Map<Integer, Long> partitionLags;
 
-    public ConsumerLagInfo(String consumerGroupId, String topicName, long totalLag, ConsumerGroupState state) {
+    public ConsumerLagInfo(
+        String consumerGroupId, String topicName, long totalLag, ConsumerGroupState state) {
       this(consumerGroupId, topicName, totalLag, state, new HashMap<>());
     }
 
-    public ConsumerLagInfo(String consumerGroupId, String topicName, long totalLag,
-        ConsumerGroupState state, Map<Integer, Long> partitionLags) {
+    public ConsumerLagInfo(
+        String consumerGroupId,
+        String topicName,
+        long totalLag,
+        ConsumerGroupState state,
+        Map<Integer, Long> partitionLags) {
       this.consumerGroupId = consumerGroupId;
       this.topicName = topicName;
       this.totalLag = totalLag;
@@ -253,7 +258,8 @@ public class AdminClientHelper {
 
     @Override
     public String toString() {
-      return String.format("ConsumerLagInfo{group='%s', topic='%s', totalLag=%d, state=%s, partitionLags=%s}",
+      return String.format(
+          "ConsumerLagInfo{group='%s', topic='%s', totalLag=%d, state=%s, partitionLags=%s}",
           consumerGroupId, topicName, totalLag, state, partitionLags);
     }
   }

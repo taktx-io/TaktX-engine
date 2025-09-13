@@ -55,10 +55,14 @@ public class TaktClientProvider {
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(), taktClient.getProcessInstanceResponder());
-        taktClient.registerExternalTaskConsumer(externalTaskTriggerConsumer);
-        int partitions = Integer.parseInt(properties.getProperty("taktx.engine.topic.partitions"));
+        taktClient.registerExternalTaskConsumer(
+            externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+        int partitions =
+            Integer.parseInt(
+                properties.getOrDefault("taktx.engine.topic.partitions", 3).toString());
         short replicationFactor =
-            Short.parseShort(properties.getProperty("taktx.engine.topic.replication-factor"));
+            Short.parseShort(
+                properties.getOrDefault("taktx.engine.topic.replication-factor", 1).toString());
         externalTaskTriggerConsumer
             .getJobIds()
             .forEach(

@@ -338,15 +338,15 @@ public class ProcessInstanceProcessor
   }
 
   private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
+    // First, get the ProcessDefinitionDTO outside of computeIfAbsent to avoid recursive cache calls
+    ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
+    if (processDefinitionDTO == null) {
+      return null;
+    }
+
     return flowElementsCache.computeIfAbsent(
         processDefinitionKey,
-        ignored -> {
-          ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
-          if (processDefinitionDTO != null) {
-            return definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions());
-          }
-          return null;
-        });
+        ignored -> definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions()));
   }
 
   private void handleTerminate(
@@ -504,7 +504,6 @@ public class ProcessInstanceProcessor
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {
-    log.info("Purging process instance {}", processInstance.getProcessInstanceId());
     UUID processInstanceId = processInstance.getProcessInstanceId();
     this.processingStatistics.stopTimerForProcessInstance(
         processInstanceId, processInstance.getProcessDefinitionKey().getProcessDefinitionId());

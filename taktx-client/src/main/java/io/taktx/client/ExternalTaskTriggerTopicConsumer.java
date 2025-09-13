@@ -20,9 +20,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -37,10 +34,9 @@ public class ExternalTaskTriggerTopicConsumer {
   private final int consumerThreads;
   private final int maxPollRecords;
   private final int pollTimeoutMs;
-  private KafkaConsumer<UUID, ExternalTaskTriggerDTO> externalTaskTriggerKafkaConsumer;
+  private List<KafkaConsumer<UUID, ExternalTaskTriggerDTO>> externalTaskTriggerKafkaConsumers;
   private final Object consumerLock = new Object(); // Lock for synchronization
-  private CompletableFuture<Void> consumerFuture;
-  private final ExecutorService messageProcessingExecutor;
+  private List<CompletableFuture<Void>> consumerFutures = new ArrayList<>();
   private volatile boolean running = false;
 
   ExternalTaskTriggerTopicConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
@@ -50,16 +46,6 @@ public class ExternalTaskTriggerTopicConsumer {
     this.maxPollRecords = taktPropertiesHelper.getExternalTaskConsumerMaxPollRecords();
     this.pollTimeoutMs = taktPropertiesHelper.getExternalTaskConsumerPollTimeoutMs();
 
-    // Create a dedicated thread pool for message processing
-    this.messageProcessingExecutor =
-        Executors.newFixedThreadPool(
-            consumerThreads,
-            r -> {
-              Thread t = new Thread(r, "external-task-processor-" + System.currentTimeMillis());
-              t.setDaemon(true);
-              return t;
-            });
-
     log.info(
         "ExternalTaskTriggerTopicConsumer configured with {} consumer threads, {} max poll records, {}ms poll timeout",
         consumerThreads,
@@ -68,7 +54,7 @@ public class ExternalTaskTriggerTopicConsumer {
   }
 
   public void subscribeToExternalTaskTriggerTopics(
-      ExternalTaskTriggerConsumer externalTaskTriggerConsumer) {
+      ExternalTaskTriggerConsumer externalTaskTriggerConsumer, String groupId) {
     log.info("Subscribing to job ids {}", externalTaskTriggerConsumer.getJobIds());
     List<String> topics =
         externalTaskTriggerConsumer.getJobIds().stream()
@@ -78,68 +64,50 @@ public class ExternalTaskTriggerTopicConsumer {
                         Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + jobId))
             .toList();
 
-    // Stop the previous consumer if it's running
+    // Stop the previous consumesr if it's running
     stop();
 
     // Wait for previous future to complete to avoid thread issues
-    if (consumerFuture != null) {
+    if (consumerFutures != null && !consumerFutures.isEmpty()) {
       try {
-        consumerFuture.join();
+        for (CompletableFuture<Void> consumerFuture : consumerFutures) {
+          consumerFuture.join();
+        }
       } catch (Exception e) {
         log.warn("Error while waiting for previous consumer to complete", e);
       }
     }
 
-    synchronized (consumerLock) {
-      // Create a new consumer if needed
-      if (externalTaskTriggerKafkaConsumer == null) {
-        externalTaskTriggerKafkaConsumer = createConsumer();
-      }
+    // Create a new consumer if needed
+    if (externalTaskTriggerKafkaConsumers == null) {
+      externalTaskTriggerKafkaConsumers = new ArrayList<>();
+    }
 
-      // Subscribe to the topics
-      externalTaskTriggerKafkaConsumer.subscribe(topics);
-
-      // Mark as running
-      running = true;
-
-      // Start the consumer in a new thread
-      consumerFuture =
+    // Mark as running
+    running = true;
+    for (int i = 0; i < consumerThreads; i++) {
+      CompletableFuture<Void> consumerFuture =
           CompletableFuture.runAsync(
               () -> {
+                KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = createConsumer(groupId);
                 try {
+                  externalTaskTriggerKafkaConsumers.add(consumer);
+                  consumer.subscribe(topics);
+
                   do {
-                    synchronized (consumerLock) {
-                      if (!running || externalTaskTriggerKafkaConsumer == null) {
-                        break;
-                      }
+                    if (!running || consumer == null) {
+                      break;
+                    }
 
-                      ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
-                          externalTaskTriggerKafkaConsumer.poll(Duration.ofMillis(pollTimeoutMs));
-                      if (records.isEmpty()) {
-                        continue;
-                      }
+                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
+                        consumer.poll(Duration.ofMillis(pollTimeoutMs));
+                    if (records.isEmpty()) {
+                      continue;
+                    }
 
-                      // Process records in parallel using the message processing executor
-                      List<CompletableFuture<Void>> processingFutures = new ArrayList<>();
-                      for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
-                          records) {
-                        CompletableFuture<Void> processingFuture =
-                            CompletableFuture.runAsync(
-                                () ->
-                                    externalTaskTriggerConsumer.accept(
-                                        externalTaskTriggerRecord.value()),
-                                messageProcessingExecutor);
-                        processingFutures.add(processingFuture);
-                      }
-
-                      // Wait for all messages in this batch to be processed before polling again
-                      // This ensures we don't overwhelm the system and maintain proper backpressure
-                      try {
-                        CompletableFuture.allOf(processingFutures.toArray(new CompletableFuture[0]))
-                            .get();
-                      } catch (Exception e) {
-                        log.error("Error processing external task trigger messages", e);
-                      }
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
+                        records) {
+                      externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
                     }
 
                     // Small sleep outside the lock to prevent tight loop
@@ -154,24 +122,44 @@ public class ExternalTaskTriggerTopicConsumer {
                   // Clean up the resources when the thread exits
                   synchronized (consumerLock) {
                     log.info("Cleaning up resources");
-                    if (externalTaskTriggerKafkaConsumer != null) {
-                      externalTaskTriggerKafkaConsumer.unsubscribe();
-                      externalTaskTriggerKafkaConsumer = null;
+                    if (consumer != null) {
+                      consumer.unsubscribe();
+                      consumer.close();
+                      externalTaskTriggerKafkaConsumers.remove(consumer);
+                      consumer = null;
                     }
                   }
                 }
               },
               executor);
+      consumerFutures.add(consumerFuture);
     }
   }
 
   public void stop() {
     running = false;
+
+    // Wait for all consumer futures to complete
+    if (consumerFutures != null && !consumerFutures.isEmpty()) {
+      try {
+        for (CompletableFuture<Void> future : consumerFutures) {
+          future.join();
+        }
+      } catch (Exception e) {
+        log.warn("Error waiting for consumers to stop", e);
+      }
+      consumerFutures.clear();
+    }
+
+    // Clear the consumers list
+    synchronized (consumerLock) {
+      if (externalTaskTriggerKafkaConsumers != null) {
+        externalTaskTriggerKafkaConsumers.clear();
+      }
+    }
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer() {
-    String groupId = "taktx-client-external-task-trigger-consumer";
-
+  private <K, V> KafkaConsumer<K, V> createConsumer(String groupId) {
     log.info("Creating consumer for group id {}", groupId);
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(

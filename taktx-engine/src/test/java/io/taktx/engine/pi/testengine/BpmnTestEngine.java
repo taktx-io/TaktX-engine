@@ -70,7 +70,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.duration.package$;
 
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
@@ -142,6 +141,7 @@ public class BpmnTestEngine {
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
+    kakaProperties.put("taktx.external.task.consumer.threads", 2);
 
     taktClient =
         TaktClient.newClientBuilder()
@@ -400,7 +400,8 @@ public class BpmnTestEngine {
             public void accept(ExternalTaskTriggerDTO value) {
               BpmnTestEngine.this.consumeExternalTaskTrigger(value);
             }
-          });
+          },
+          "bpmn-test-engine-external-task-trigger-consumer-" + UUID.randomUUID().toString());
     }
   }
 
@@ -834,8 +835,8 @@ public class BpmnTestEngine {
   public VariablesDTO getVariables(UUID processInstanceId) {
     return variablesMap.get(processInstanceId);
   }
-  public BpmnTestEngine waitUntilActivityHasState(
-      String elementId, ActtivityStateEnum state) {
+
+  public BpmnTestEngine waitUntilActivityHasState(String elementId, ActtivityStateEnum state) {
     return waitUntilActivityHasState(elementId, state, DEFAULT_DURATION);
   }
 
@@ -848,53 +849,57 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilIdle(Duration duration) {
-    return waitUntilIdle(duration, adminClientHelper.listConsumerGroups()
-        .stream().filter(this::isEngineConsumerGroup)
-        .collect(Collectors.toSet()));
+    return waitUntilIdle(
+        duration,
+        adminClientHelper.listConsumerGroups().stream()
+            .filter(this::isEngineConsumerGroup)
+            .collect(Collectors.toSet()));
   }
 
   public BpmnTestEngine waitUntilClientIdle(Duration duration) {
-    return waitUntilIdle(duration, adminClientHelper.listConsumerGroups()
-        .stream().filter(consumerGroup -> !isEngineConsumerGroup(consumerGroup))
-        .collect(Collectors.toSet()));
+    return waitUntilIdle(
+        duration,
+        adminClientHelper.listConsumerGroups().stream()
+            .filter(consumerGroup -> !isEngineConsumerGroup(consumerGroup))
+            .collect(Collectors.toSet()));
   }
 
   public BpmnTestEngine waitUntilIdle(Duration duration, Set<String> consumerGroups) {
     // Scan all topics from Topics class and wait until all consumer lags are 0
     Awaitility.await()
         .atMost(duration)
-        .until(new Callable<Boolean>() {
-          @Override
-          public Boolean call() throws Exception {
-            boolean allLagsZero = true;
-            for (String consumerGroup : consumerGroups) {
-              allLagsZero &= allLagsZeroForGroupId(consumerGroup);
-            }
-            return allLagsZero;
-          }
+        .until(
+            new Callable<Boolean>() {
+              @Override
+              public Boolean call() throws Exception {
+                boolean allLagsZero = true;
+                for (String consumerGroup : consumerGroups) {
+                  allLagsZero &= allLagsZeroForGroupId(consumerGroup);
+                }
+                return allLagsZero;
+              }
 
-          private boolean allLagsZeroForGroupId(String consumerGroup) {
-            List<Long> allConsumerLags = adminClientHelper.getAllConsumerLags(consumerGroup)
-                .values()
-                .stream()
-                .map(ConsumerLagInfo::getTotalLag)
-                .filter(lag -> lag > 0)
-                .toList();
-            if(!allConsumerLags.isEmpty()) {
-              log.info("lags not empty for consumerGroup {} {}", consumerGroup, allConsumerLags);
-            }
-            return allConsumerLags.isEmpty();
-          }
-        });
+              private boolean allLagsZeroForGroupId(String consumerGroup) {
+                List<Long> allConsumerLags =
+                    adminClientHelper.getAllConsumerLags(consumerGroup).values().stream()
+                        .map(ConsumerLagInfo::getTotalLag)
+                        .filter(lag -> lag > 0)
+                        .toList();
+                if (!allConsumerLags.isEmpty()) {
+                  log.info(
+                      "lags not empty for consumerGroup {} {}", consumerGroup, allConsumerLags);
+                }
+                return allConsumerLags.isEmpty();
+              }
+            });
     return this;
   }
 
   private boolean isEngineConsumerGroup(String consumerGroup) {
-    return consumerGroup.startsWith("xml-by-process-definition-id-consumer") ||
-        consumerGroup.equals("taktx-engine") ||
-        consumerGroup.equals("taktx-topicmanager-request-consumer") ||
-        consumerGroup.startsWith("taktx-topicmanager-actuel-consumer");
-
+    return consumerGroup.startsWith("xml-by-process-definition-id-consumer")
+        || consumerGroup.equals("taktx-engine")
+        || consumerGroup.equals("taktx-topicmanager-request-consumer")
+        || consumerGroup.startsWith("taktx-topicmanager-actuel-consumer");
   }
 
   public BpmnTestEngine waitUntilActivityHasState(

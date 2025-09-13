@@ -56,7 +56,7 @@ public class BucketProcessor {
     fillNextUpcomingSchedules(initialStartTime, currentWindowEnd);
 
     context.schedule(
-        Duration.ofMillis(testProfile ? 100 :500),
+        Duration.ofMillis(testProfile ? 100 : 500),
         PunctuationType.WALL_CLOCK_TIME,
         timestamp -> {
           long now = testProfile ? clock.millis() : timestamp;
