@@ -144,7 +144,6 @@ public class Forwarder {
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceId(), instancePath, elementId, bucket);
       scheduledStartInfo.flowNodeInstances().addScheduledKey(scheduledKey);
-      log.info("Forwarding scheduled start {}", scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -183,7 +182,6 @@ public class Forwarder {
               bucket);
 
       catchEventInstance.addScheduledKey(scheduledKey);
-      log.info("Forwarding scheduled continuation {}", scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -352,7 +350,6 @@ public class Forwarder {
               externalTask, processInstance.getProcessInstanceId(), definitionKey);
       if (externalTask.backoff() == null) {
         // No backoff, forward directly
-        log.info("Forwarding external task {}", externalTask);
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceId(),

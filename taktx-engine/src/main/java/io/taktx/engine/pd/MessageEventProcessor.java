@@ -21,6 +21,7 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pi.ProcessingStatistics;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
@@ -41,10 +42,13 @@ public class MessageEventProcessor
   private KeyValueStore<MessageEventKeyDTO, CorrelationMessageSubscriptions>
       correlationMessageSubscriptionStore;
   private final Clock clock;
+  private final ProcessingStatistics processingStatistics;
 
-  public MessageEventProcessor(TaktConfiguration taktConfiguration, Clock clock) {
+  public MessageEventProcessor(
+      TaktConfiguration taktConfiguration, Clock clock, ProcessingStatistics processingStatistics) {
     this.taktConfiguration = taktConfiguration;
     this.clock = clock;
+    this.processingStatistics = processingStatistics;
   }
 
   @Override
@@ -60,6 +64,10 @@ public class MessageEventProcessor
 
   @Override
   public void process(Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
+    // Record end-to-end latency using Kafka timestamp
+    processingStatistics.recordMessageEventLatency(
+        messageEventRecord.timestamp(), messageEventRecord.value().getClass().getSimpleName());
+
     switch (messageEventRecord.value()) {
       case DefinitionMessageSubscriptionDTO startEventMessageSubscription ->
           storeDefinitionMessageSubscription(

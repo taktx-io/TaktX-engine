@@ -41,7 +41,7 @@ public class TaktPropertiesHelper {
     props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
     props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000); // commit after processing
     props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1_048_576); // 1 MB
-    props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 25); // wait to coalesce fetch
+    props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 100); // wait to coalesce fetch
     props.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 16 * 1024 * 1024); // 16 MB
     props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 2_000);
     props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 10_000);
@@ -70,7 +70,6 @@ public class TaktPropertiesHelper {
       Class<? extends Serializer<?>> valueSerializer) {
     Properties props = new Properties();
 
-    // Sensible defaults for lots of tiny messages (safe & fast)
     props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
     props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "zstd"); // or "lz4"

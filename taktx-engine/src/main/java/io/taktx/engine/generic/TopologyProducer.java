@@ -378,7 +378,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
             Consumed.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))
         .process(
-            () -> new MessageEventProcessor(taktConfiguration, clock),
+            () -> new MessageEventProcessor(taktConfiguration, clock, processingStatistics),
             taktConfiguration.getPrefixed(Stores.DEFINITION_MESSAGE_SUBSCRIPTION.getStorename()),
             taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
@@ -449,7 +449,8 @@ public class TopologyProducer {
                     taktConfiguration.inTestMode(),
                     (context, name) ->
                         context.getStateStore(taktConfiguration.getPrefixed("schedules-" + name)),
-                    TimeBucket.values()),
+                    TimeBucket.values(),
+                    processingStatistics),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),

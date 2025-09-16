@@ -73,7 +73,7 @@ public class BucketProcessor {
               if (processInstanceId == null) {
                 processInstanceId = UUID.randomUUID(); // Assign a new UUID if not set
               }
-              context.forward(new Record<>(processInstanceId, message, key.getTime()));
+              context.forward(new Record<>(processInstanceId, message, now));
               iterator.remove();
             } else {
               break;

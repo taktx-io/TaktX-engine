@@ -18,7 +18,6 @@ import java.lang.management.ThreadMXBean;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
-import java.util.logging.Logger;
 import javax0.license3j.Feature;
 import javax0.license3j.License;
 import javax0.license3j.io.IOFormat;
@@ -30,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 @Startup
 @Slf4j
 public class LicenseManager {
-
 
   public static final int DEFAULT_PARTITION_LIMIT = 3;
   private static final Path LICENSE_PATH =
@@ -345,7 +343,7 @@ public class LicenseManager {
   public void init() {
     try {
       int i = Runtime.getRuntime().availableProcessors();
-  // Monitor thread count
+      // Monitor thread count
       ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
       int threadCount = threadBean.getThreadCount();
       log.info("Available processors {} threads {} ", i, threadCount);

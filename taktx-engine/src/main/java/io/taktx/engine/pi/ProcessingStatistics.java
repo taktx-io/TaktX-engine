@@ -14,33 +14,203 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Timer.Sample;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Singleton
 @Getter
 @RequiredArgsConstructor
+@Slf4j
 public class ProcessingStatistics {
   private final MeterRegistry meterRegistry;
+
+  // Process instance timing
   private final Map<UUID, Sample> processInstanceTimers = new ConcurrentHashMap<>();
+  private final Clock clock;
+
+  // Counters for basic metrics
   private Counter processInstancesStarted;
   private Counter processInstancesFinished;
   private Counter flowNodesStarted;
   private Counter flowNodesContinued;
   private Counter flowNodesFinished;
 
+  // Latency timers with histogram buckets (memory efficient)
+  private Timer processInstanceLatency;
+  private Timer externalTaskResponseLatency;
+  private Timer messageEventLatency;
+  private Timer scheduleLatency;
+
+  // Sampling configuration for optimal performance with statistical accuracy
+  private static final double SAMPLING_RATE = 0.20; // 20% sampling for all latencies
+  private static final long MAX_REASONABLE_LATENCY_MS = 300_000; // 5 minutes max
+
+  // Latency breakdown tracking for P99 investigation
+  private static final long P99_INVESTIGATION_THRESHOLD_MS =
+      200; // Log details for >200ms latencies
+
   @PostConstruct
   void init() {
-    processInstancesStarted = meterRegistry.counter("taktx.engine.process_instances_started");
-    processInstancesFinished = meterRegistry.counter("taktx.engine.process_instances_finished");
-    flowNodesStarted = meterRegistry.counter("taktx.engine.flow_nodes_started");
-    flowNodesContinued = meterRegistry.counter("taktx.engine.flow_nodes_continued");
-    flowNodesFinished = meterRegistry.counter("taktx.engine.flow_nodes_finished");
+    // Basic counters
+    processInstancesStarted = meterRegistry.counter("taktx.process.instances.started");
+    processInstancesFinished = meterRegistry.counter("taktx.process.instances.finished");
+    flowNodesStarted = meterRegistry.counter("taktx.flow.nodes.started");
+    flowNodesContinued = meterRegistry.counter("taktx.flow.nodes.continued");
+    flowNodesFinished = meterRegistry.counter("taktx.flow.nodes.finished");
+
+    // Latency timers with histogram buckets for efficient percentile calculation
+    // Histogram buckets are memory-efficient, so we can use simple uniform sampling
+    processInstanceLatency =
+        Timer.builder("taktx.process.instance.latency")
+            .description("End-to-end latency for process instance messages")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(30))
+            .distributionStatisticExpiry(Duration.ofMinutes(5)) // 5-minute sliding window
+            .distributionStatisticBufferLength(10) // Buffer for sliding window
+            .serviceLevelObjectives(
+                Duration.ofMillis(10), // Fast
+                Duration.ofMillis(50), // Good
+                Duration.ofMillis(100), // Acceptable
+                Duration.ofMillis(500), // Slow
+                Duration.ofSeconds(1), // Very slow
+                Duration.ofSeconds(5) // Critical
+                )
+            .register(meterRegistry);
+
+    externalTaskResponseLatency =
+        Timer.builder("taktx.process.externaltaskresponse.latency")
+            .description("End-to-end latency for external task response messages")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(30))
+            .distributionStatisticExpiry(Duration.ofMinutes(5)) // 5-minute sliding window
+            .distributionStatisticBufferLength(10) // Buffer for sliding window
+            .serviceLevelObjectives(
+                Duration.ofMillis(10), // Fast
+                Duration.ofMillis(50), // Good
+                Duration.ofMillis(100), // Acceptable
+                Duration.ofMillis(500), // Slow
+                Duration.ofSeconds(1), // Very slow
+                Duration.ofSeconds(5) // Critical
+                )
+            .register(meterRegistry);
+
+    messageEventLatency =
+        Timer.builder("taktx.message.event.latency")
+            .description("End-to-end latency for message event processing")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(30))
+            .distributionStatisticExpiry(Duration.ofMinutes(5)) // 5-minute sliding window
+            .distributionStatisticBufferLength(10) // Buffer for sliding window
+            .serviceLevelObjectives(
+                Duration.ofMillis(10),
+                Duration.ofMillis(50),
+                Duration.ofMillis(100),
+                Duration.ofMillis(500),
+                Duration.ofSeconds(1),
+                Duration.ofSeconds(5))
+            .register(meterRegistry);
+
+    scheduleLatency =
+        Timer.builder("taktx.schedule.latency")
+            .description("End-to-end latency for schedule processing")
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(1))
+            .maximumExpectedValue(Duration.ofSeconds(30))
+            .distributionStatisticExpiry(Duration.ofMinutes(5)) // 5-minute sliding window
+            .distributionStatisticBufferLength(10) // Buffer for sliding window
+            .serviceLevelObjectives(
+                Duration.ofMillis(10),
+                Duration.ofMillis(50),
+                Duration.ofMillis(100),
+                Duration.ofMillis(500),
+                Duration.ofSeconds(1),
+                Duration.ofSeconds(5))
+            .register(meterRegistry);
   }
 
+  /**
+   * Record process instance latency with uniform sampling: - Simple 5% sampling for optimal
+   * performance - Histogram buckets handle memory efficiency
+   */
+  public void recordProcessInstanceLatency(long kafkaTimestamp, String processDefinitionKey) {
+    recordLatencyWithSampling(
+        kafkaTimestamp, processInstanceLatency, "ProcessInstance", processDefinitionKey);
+  }
+
+  public void recordExternalTaskResponseLatency(long kafkaTimestamp, String jobId) {
+    recordLatencyWithSampling(
+        kafkaTimestamp, externalTaskResponseLatency, "ExternalTaskResponse", jobId);
+  }
+
+  /** Record message event latency with uniform sampling */
+  public void recordMessageEventLatency(long kafkaTimestamp, String messageType) {
+    recordLatencyWithSampling(kafkaTimestamp, messageEventLatency, "MessageEvent", messageType);
+  }
+
+  /** Record schedule latency with uniform sampling */
+  public void recordScheduleLatency(long kafkaTimestamp, String scheduleType) {
+    recordLatencyWithSampling(kafkaTimestamp, scheduleLatency, "Schedule", scheduleType);
+  }
+
+  private void recordLatencyWithSampling(
+      long kafkaTimestamp, Timer timer, String component, String type) {
+    if (kafkaTimestamp <= 0) {
+      return; // Invalid timestamp
+    }
+
+    long currentTime = clock.millis();
+    long latencyMs = currentTime - kafkaTimestamp;
+
+    // Skip invalid latencies (negative or extremely high)
+    if (latencyMs < 0 || latencyMs > MAX_REASONABLE_LATENCY_MS) {
+      if (latencyMs < 0) {
+        log.warn(
+            "Negative latency detected: {}ms for {} type {} - possible clock skew between nodes",
+            latencyMs,
+            component,
+            type);
+      }
+      return;
+    }
+
+    // Simple uniform sampling - histogram buckets handle memory efficiency
+    if (ThreadLocalRandom.current().nextDouble() < SAMPLING_RATE) {
+      timer.record(Duration.ofMillis(latencyMs));
+
+      // Detailed logging for P99 investigation - log high latencies with breakdown
+      if (latencyMs > P99_INVESTIGATION_THRESHOLD_MS) {
+        log.warn(
+            "HIGH LATENCY DETECTED: {}ms for {} type {} | KafkaTs: {} | ProcessTs: {} | TimeDiff: {}ms",
+            latencyMs,
+            component,
+            type,
+            kafkaTimestamp,
+            currentTime,
+            latencyMs);
+      }
+
+      // Critical latency logging
+      if (latencyMs > 5000) { // > 5 seconds
+        log.error(
+            "CRITICAL LATENCY: {}ms for {} type {} - investigate immediately",
+            latencyMs,
+            component,
+            type);
+      }
+    }
+  }
+
+  // Process instance timing methods (for internal duration measurement)
   public void startTimerForProcessInstance(UUID processInstanceId) {
     Timer.Sample sample = Timer.start(meterRegistry);
     processInstanceTimers.put(processInstanceId, sample);
@@ -51,13 +221,12 @@ public class ProcessingStatistics {
     if (sample != null) {
       Timer timer =
           meterRegistry.timer(
-              "taktx.engine.process_instance_duration",
-              "processDefinitionKey",
-              processDefinitionKey);
+              "taktx.process.instance.duration", "processDefinitionKey", processDefinitionKey);
       sample.stop(timer);
     }
   }
 
+  // Counter increment methods
   public void increaseProcessInstancesStarted() {
     processInstancesStarted.increment();
   }

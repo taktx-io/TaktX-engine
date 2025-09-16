@@ -99,23 +99,99 @@ public class ProcessInstanceProcessor
   public void process(Record<UUID, ProcessInstanceTriggerDTO> triggerRecord) {
     ProcessInstanceTriggerDTO trigger = triggerRecord.value();
 
+    // Start timing for P99 investigation
+    long processingStartTime = clock.millis();
+    long kafkaTimestamp = triggerRecord.timestamp();
+
     try {
       switch (trigger) {
-        case StartCommandDTO startCommand ->
-            processStartCommandRecord(triggerRecord.key(), startCommand);
-        case StartFlowElementTriggerDTO starteFlowElementTrigger ->
-            handleStartFlowElement(starteFlowElementTrigger);
-        case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 ->
-            handleContinue(continueFlowElementTrigger2);
-        case TerminateTriggerDTO terminateTrigger ->
-            handleTerminate(flowNodeInstanceStore, terminateTrigger);
+        case StartCommandDTO startCommand -> {
+          // Record end-to-end latency using Kafka timestamp
+          processingStatistics.recordProcessInstanceLatency(
+              kafkaTimestamp, trigger.getClass().getSimpleName());
+
+          long caseStartTime = clock.millis();
+          processStartCommandRecord(triggerRecord.key(), startCommand);
+          logProcessingStageIfHighLatency(
+              kafkaTimestamp,
+              caseStartTime,
+              "StartCommand",
+              startCommand.getProcessDefinitionKey().toString());
+        }
+        case StartFlowElementTriggerDTO starteFlowElementTrigger -> {
+          // Record end-to-end latency using Kafka timestamp
+          processingStatistics.recordProcessInstanceLatency(
+              kafkaTimestamp, trigger.getClass().getSimpleName());
+
+          long caseStartTime = clock.millis();
+          handleStartFlowElement(starteFlowElementTrigger);
+          logProcessingStageIfHighLatency(
+              kafkaTimestamp,
+              caseStartTime,
+              "StartFlowElement",
+              starteFlowElementTrigger.getElementId());
+        }
+        case ContinueFlowElementTriggerDTO continueFlowElementTrigger2 -> {
+          processingStatistics.recordExternalTaskResponseLatency(
+              kafkaTimestamp, continueFlowElementTrigger2.getClass().getSimpleName());
+          long caseStartTime = clock.millis();
+          handleContinue(continueFlowElementTrigger2);
+          logProcessingStageIfHighLatency(
+              kafkaTimestamp,
+              caseStartTime,
+              "ContinueFlowElement",
+              continueFlowElementTrigger2.getProcessInstanceId().toString());
+        }
+        case TerminateTriggerDTO terminateTrigger -> {
+          // Record end-to-end latency using Kafka timestamp
+          processingStatistics.recordProcessInstanceLatency(
+              kafkaTimestamp, trigger.getClass().getSimpleName());
+
+          long caseStartTime = clock.millis();
+          handleTerminate(flowNodeInstanceStore, terminateTrigger);
+          logProcessingStageIfHighLatency(
+              kafkaTimestamp,
+              caseStartTime,
+              "Terminate",
+              terminateTrigger.getProcessInstanceId().toString());
+        }
         default ->
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
+
+      long now = clock.millis();
+      // Log total processing time if high latency detected
+      long totalProcessingTime = now - processingStartTime;
+      long totalLatency = now - kafkaTimestamp;
+      if (totalLatency > 200) { // Log if >200ms total latency
+        log.warn(
+            "PROCESSING BREAKDOWN - Total: {}ms | Processing: {}ms | Queue: {}ms | Type: {}",
+            totalLatency,
+            totalProcessingTime,
+            (totalLatency - totalProcessingTime),
+            trigger.getClass().getSimpleName());
+      }
+
     } catch (ProcessInstanceException e) {
       handleExceptional(flowNodeInstanceStore, e);
     } catch (Throwable t) { // NOSONAR
       log.error("Internal error occurred for", t);
+    }
+  }
+
+  private void logProcessingStageIfHighLatency(
+      long kafkaTimestamp, long stageStartTime, String stageName, String identifier) {
+    long now = clock.millis();
+    long stageLatency = now - stageStartTime;
+    long totalLatency = now - kafkaTimestamp;
+
+    if (totalLatency > 200) { // Only log for high-latency events
+      log.warn(
+          "STAGE TIMING - {}: {}ms | Total: {}ms | ID: {}",
+          stageName,
+          stageLatency,
+          totalLatency,
+          identifier);
     }
   }
 
@@ -205,8 +281,38 @@ public class ProcessInstanceProcessor
   }
 
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
-    return definitionsCache.computeIfAbsent(
-        processDefinitionKey, key -> definitionsStore.get(key).value());
+    long cacheStartTime = clock.millis();
+
+    ProcessDefinitionDTO result =
+        definitionsCache.computeIfAbsent(
+            processDefinitionKey,
+            key -> {
+              long storeStartTime = clock.millis();
+              ProcessDefinitionDTO dto = definitionsStore.get(key).value();
+              long storeLatency = clock.millis() - storeStartTime;
+
+              // Log slow state store access
+              if (storeLatency > 50) {
+                log.warn(
+                    "SLOW STATE STORE ACCESS - ProcessDefinition fetch: {}ms for key: {}",
+                    storeLatency,
+                    processDefinitionKey);
+              }
+
+              return dto;
+            });
+
+    long cacheLatency = clock.millis() - cacheStartTime;
+
+    // Log slow cache operations
+    if (cacheLatency > 50) {
+      log.warn(
+          "SLOW CACHE ACCESS - ProcessDefinition cache: {}ms for key: {}",
+          cacheLatency,
+          processDefinitionKey);
+    }
+
+    return result;
   }
 
   private void handleExceptional(

@@ -109,14 +109,6 @@ public class ExternalTaskTriggerTopicConsumer {
                         records) {
                       externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
                     }
-
-                    // Small sleep outside the lock to prevent tight loop
-                    try {
-                      Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                      Thread.currentThread().interrupt();
-                      break;
-                    }
                   } while (running);
                 } finally {
                   // Clean up the resources when the thread exits

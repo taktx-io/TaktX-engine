@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @ApplicationScoped
 @RequiredArgsConstructor
 public class InstanceUpdateRegistry {
-  private static final int MAX_STORED_INSTANCES = 100000;
+  private static final int MAX_STORED_INSTANCES = 10000;
   private final Map<UUID, InstanceUpdateRecord> processInstanceUpdates = new ConcurrentHashMap<>();
   private final Map<UUID, List<InstanceUpdateRecord>> flowNodeInstanceUpdates =
       new ConcurrentHashMap<>();
@@ -75,7 +75,9 @@ public class InstanceUpdateRegistry {
         processInstanceCountsCompleted.get(processDefinitionKey).incrementAndGet();
       }
       if (processInstanceIdList.size() > MAX_STORED_INSTANCES) {
-        processInstanceIdList.removeFirst();
+        UUID removed = processInstanceIdList.removeFirst();
+        processInstanceUpdates.remove(removed);
+        flowNodeInstanceUpdates.remove(removed);
       }
       processInstanceUpdates.put(processInstanceId, instanceUpdateRecord);
       instanceUpdateConsumers.forEach(
