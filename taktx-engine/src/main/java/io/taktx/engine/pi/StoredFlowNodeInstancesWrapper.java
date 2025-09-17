@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.mapstruct.factory.Mappers;
 
 public class StoredFlowNodeInstancesWrapper {
 

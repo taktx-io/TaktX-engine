@@ -74,8 +74,7 @@ public class FlowInstanceRunner {
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
-              mapper
-              );
+              mapper);
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
 

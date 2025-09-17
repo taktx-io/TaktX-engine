@@ -11,12 +11,12 @@ package io.taktx.engine.config;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
- * Configuration to ensure MapStruct generated implementation classes
- * are available for reflection in GraalVM native image builds.
+ * Configuration to ensure MapStruct generated implementation classes are available for reflection
+ * in GraalVM native image builds.
  */
-@RegisterForReflection(targets = {
-    io.taktx.engine.pi.ProcessInstanceMapperImpl.class,
-    io.taktx.engine.pi.DtoMapperImpl.class
-})
-public class MapStructReflectionConfiguration {
-}
+@RegisterForReflection(
+    targets = {
+      io.taktx.engine.pi.ProcessInstanceMapperImpl.class,
+      io.taktx.engine.pi.DtoMapperImpl.class
+    })
+public class MapStructReflectionConfiguration {}

@@ -229,8 +229,7 @@ public class ProcessInstanceProcessor
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
     ProcessDefinitionDTO result =
         definitionsCache.computeIfAbsent(
-            processDefinitionKey,
-            key -> definitionsStore.get(key).value());
+            processDefinitionKey, key -> definitionsStore.get(key).value());
 
     return result;
   }
