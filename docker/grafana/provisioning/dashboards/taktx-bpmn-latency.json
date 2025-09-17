@@ -969,18 +969,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 30000
-              },
-              {
-                "color": "red",
-                "value": 120000
               }
             ]
           },
-          "unit": "ms"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -1010,8 +1002,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(taktx_process_instance_duration_seconds_sum[1m]) / rate(taktx_process_instance_duration_seconds_count[1m]) * 1000",
-          "legendFormat": "Average Process Instance Duration",
+          "expr": "rate(taktx_process_instance_duration_seconds_sum[1m]) / rate(taktx_process_instance_duration_seconds_count[1m])",
+          "legendFormat": "Average Process Instance Duration (seconds)",
           "range": true,
           "refId": "A"
         }
