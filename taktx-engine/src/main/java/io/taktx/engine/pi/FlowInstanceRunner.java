@@ -33,6 +33,7 @@ public class FlowInstanceRunner {
 
   private final FlowNodeInstanceProcessorProvider processInstanceProcessorProvider;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
+  private final ProcessInstanceMapper mapper;
 
   public void continueNewInstances(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
@@ -72,7 +73,9 @@ public class FlowInstanceRunner {
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowNodeInstanceProcessingContext.getFlowElements());
+              flowNodeInstanceProcessingContext.getFlowElements(),
+              mapper
+              );
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
 
@@ -111,7 +114,8 @@ public class FlowInstanceRunner {
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowNodeInstanceProcessingContext.getFlowElements());
+              flowNodeInstanceProcessingContext.getFlowElements(),
+              mapper);
 
       Map<Long, FlowNodeInstance<?>> allInstances =
           storedFlowNodeInstancesWrapper.getAllInstances();
@@ -149,7 +153,8 @@ public class FlowInstanceRunner {
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowNodeInstanceProcessingContext.getFlowElements());
+              flowNodeInstanceProcessingContext.getFlowElements(),
+              mapper);
       // First check for specific codes
       for (long boundaryEventId : activityInstance.getBoundaryEventIds()) {
         BoundaryEventInstance boundaryEventInstance =

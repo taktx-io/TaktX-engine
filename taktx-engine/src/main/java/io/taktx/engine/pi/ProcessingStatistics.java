@@ -49,7 +49,7 @@ public class ProcessingStatistics {
   private Timer scheduleLatency;
 
   // Sampling configuration for optimal performance with statistical accuracy
-  private static final double SAMPLING_RATE = 0.20; // 20% sampling for all latencies
+  private static final double SAMPLING_RATE = 0.10; // 20% sampling for all latencies
   private static final long MAX_REASONABLE_LATENCY_MS = 300_000; // 5 minutes max
 
   // Latency breakdown tracking for P99 investigation
@@ -186,27 +186,6 @@ public class ProcessingStatistics {
     // Simple uniform sampling - histogram buckets handle memory efficiency
     if (ThreadLocalRandom.current().nextDouble() < SAMPLING_RATE) {
       timer.record(Duration.ofMillis(latencyMs));
-
-      // Detailed logging for P99 investigation - log high latencies with breakdown
-      if (latencyMs > P99_INVESTIGATION_THRESHOLD_MS) {
-        log.warn(
-            "HIGH LATENCY DETECTED: {}ms for {} type {} | KafkaTs: {} | ProcessTs: {} | TimeDiff: {}ms",
-            latencyMs,
-            component,
-            type,
-            kafkaTimestamp,
-            currentTime,
-            latencyMs);
-      }
-
-      // Critical latency logging
-      if (latencyMs > 5000) { // > 5 seconds
-        log.error(
-            "CRITICAL LATENCY: {}ms for {} type {} - investigate immediately",
-            latencyMs,
-            component,
-            type);
-      }
     }
   }
 

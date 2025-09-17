@@ -34,12 +34,13 @@ public class StoredFlowNodeInstancesWrapper {
       UUID processInstanceId,
       FlowNodeInstances flowNodeInstances,
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      FlowElements flowElements) {
+      FlowElements flowElements,
+      ProcessInstanceMapper mapper) {
     this.processInstanceId = processInstanceId;
     this.flowNodeInstances = flowNodeInstances;
     this.flowNodeInstanceStore = flowNodeInstanceStore;
     this.flowElements = flowElements;
-    this.mapper = Mappers.getMapper(ProcessInstanceMapper.class);
+    this.mapper = mapper;
   }
 
   public FlowNodeInstance<?> getInstanceWithInstanceId(long id) {

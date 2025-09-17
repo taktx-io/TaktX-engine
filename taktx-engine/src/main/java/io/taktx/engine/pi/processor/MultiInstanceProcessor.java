@@ -218,7 +218,8 @@ public class MultiInstanceProcessor
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             multiInstanceInstance.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
-            flowNodeInstanceProcessingContext.getFlowElements());
+            flowNodeInstanceProcessingContext.getFlowElements(),
+            processInstanceMapper);
 
     ActivityInstance<?> iterationInstance =
         (ActivityInstance<?>) storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(instanceId);
@@ -272,7 +273,8 @@ public class MultiInstanceProcessor
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstances,
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowElements);
+              flowElements,
+              processInstanceMapper);
       return (ActivityInstance<?>)
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
               iterationInstance.getNextIterationId());
@@ -281,7 +283,7 @@ public class MultiInstanceProcessor
     }
   }
 
-  private static void handleCompleted(
+  private void handleCompleted(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowElements flowElements,
       MultiInstanceInstance multiInstanceInstance,
@@ -296,7 +298,8 @@ public class MultiInstanceProcessor
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               multiInstanceInstance.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowElements);
+              flowElements,
+              processInstanceMapper);
 
       Map<Long, FlowNodeInstance<?>> allInstances =
           storedFlowNodeInstancesWrapper.getAllInstances();

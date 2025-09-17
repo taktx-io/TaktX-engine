@@ -243,7 +243,8 @@ public abstract class FlowNodeInstanceProcessor<
             processInstance.getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
-            flowNodeInstanceProcessingContext.getFlowElements());
+            flowNodeInstanceProcessingContext.getFlowElements(),
+            processInstanceMapper);
 
     flownodeInstance.increasePassedCnt();
     FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();

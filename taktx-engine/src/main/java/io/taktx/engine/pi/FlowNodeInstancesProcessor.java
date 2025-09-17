@@ -42,16 +42,19 @@ public class FlowNodeInstancesProcessor {
   private final FlowInstanceRunner flowInstanceRunner;
   private final PathExtractor pathExtractor;
   private final FeelExpressionHandler feelExpressionHandler;
+  private final ProcessInstanceMapper mapper;
 
   public FlowNodeInstancesProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
       PathExtractor pathExtractor,
-      FeelExpressionHandler feelExpressionHandler) {
+      FeelExpressionHandler feelExpressionHandler,
+      ProcessInstanceMapper mapper) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.flowInstanceRunner = flowInstanceRunner;
     this.pathExtractor = pathExtractor;
     this.feelExpressionHandler = feelExpressionHandler;
+    this.mapper = mapper;
   }
 
   public void processStart(
@@ -158,7 +161,8 @@ public class FlowNodeInstancesProcessor {
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
               flowNodeInstanceProcessingContext.getFlowNodeInstances(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowNodeInstanceProcessingContext.getFlowElements());
+              flowNodeInstanceProcessingContext.getFlowElements(),
+              mapper);
 
       FlowNodeInstance<?> flowNodeInstance =
           storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
@@ -236,7 +240,8 @@ public class FlowNodeInstancesProcessor {
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
-            flowNodeInstanceProcessingContext.getFlowElements());
+            flowNodeInstanceProcessingContext.getFlowElements(),
+            mapper);
 
     FlowNodeInstance<?> flowNodeInstance =
         storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
@@ -269,7 +274,8 @@ public class FlowNodeInstancesProcessor {
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             flowNodeInstanceProcessingContext.getFlowNodeInstances(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
-            flowNodeInstanceProcessingContext.getFlowElements());
+            flowNodeInstanceProcessingContext.getFlowElements(),
+            mapper);
 
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instanceToContinue and the process instanceToContinue
