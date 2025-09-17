@@ -11,6 +11,12 @@ docker run -it -v ./config:/app/config -e quarkus.config.locations=file:/app/con
 keytool -import -alias testalias -file ca-certificate.crt -keypass keypass -keystore truststore.jks 
  ```
 
+
+## Build native executable on mac for mac
+QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" quarkus build --native --no-tests
+## Build native executable on mac for Linux
+QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" quarkus build --native --no-tests -Dquarkus.native.container-build=true
+
 ## Running container
 
 ```bash
