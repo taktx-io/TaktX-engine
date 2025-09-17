@@ -8,12 +8,14 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@RegisterForReflection
 public class IntermediateCatchEventDTO extends CatchEventDTO {
 
   public IntermediateCatchEventDTO(

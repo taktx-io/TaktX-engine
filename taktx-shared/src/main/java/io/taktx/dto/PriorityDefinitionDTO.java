@@ -11,6 +11,7 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@RegisterForReflection
 public class PriorityDefinitionDTO {
   private String priority;
 }

@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@RegisterForReflection
 public class ScriptTaskDTO extends ExternalTaskDTO {
 
   private ScriptType scriptType;

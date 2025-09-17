@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
@@ -28,6 +29,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @JsonFormat(shape = Shape.ARRAY)
+@RegisterForReflection
 public class VariablesDTO {
 
   public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());

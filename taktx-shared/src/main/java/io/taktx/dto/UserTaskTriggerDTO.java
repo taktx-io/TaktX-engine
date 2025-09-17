@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
@@ -21,6 +22,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @Builder
+@RegisterForReflection
 public class UserTaskTriggerDTO {
 
   private UUID processInstanceId;

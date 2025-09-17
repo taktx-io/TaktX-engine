@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@RegisterForReflection
 public class ProcessDefinitionActivationDTO extends DefinitionsTriggerDTO {
   private ProcessDefinitionKey processDefinitionKey;
 

@@ -8,12 +8,14 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@RegisterForReflection
 public class InclusiveGatewayDTO extends GatewayDTO {
 
   public InclusiveGatewayDTO(

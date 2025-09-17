@@ -73,7 +73,7 @@ import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
 
-@Mapper(componentModel = "jakarta", builder = @Builder())
+@Mapper(builder = @Builder())
 public interface DtoMapper {
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)

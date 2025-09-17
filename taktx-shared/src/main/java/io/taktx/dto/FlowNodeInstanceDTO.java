@@ -16,6 +16,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.FlowNodeInstanceTypeIdResolver;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,6 +31,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
+@RegisterForReflection
 public abstract class FlowNodeInstanceDTO {
   private long elementInstanceId;
 

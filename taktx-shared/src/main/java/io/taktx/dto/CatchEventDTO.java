@@ -9,6 +9,7 @@
 package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@RegisterForReflection
 public abstract class CatchEventDTO extends EventDTO {
   protected Set<EventDefinitionDTO> eventDefinitions;
 

@@ -47,14 +47,11 @@ public class ProcessingStatistics {
   private Timer externalTaskResponseLatency;
   private Timer messageEventLatency;
   private Timer scheduleLatency;
+  private Timer processInstanceDuration;
 
   // Sampling configuration for optimal performance with statistical accuracy
   private static final double SAMPLING_RATE = 0.10; // 20% sampling for all latencies
   private static final long MAX_REASONABLE_LATENCY_MS = 300_000; // 5 minutes max
-
-  // Latency breakdown tracking for P99 investigation
-  private static final long P99_INVESTIGATION_THRESHOLD_MS =
-      200; // Log details for >200ms latencies
 
   @PostConstruct
   void init() {
@@ -136,6 +133,12 @@ public class ProcessingStatistics {
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(5))
             .register(meterRegistry);
+
+    // Simple timer for process instance duration (average only, no histograms)
+    processInstanceDuration =
+        Timer.builder("taktx.process.instance.duration")
+            .description("Average duration of process instances from start to completion")
+            .register(meterRegistry);
   }
 
   /**
@@ -191,17 +194,16 @@ public class ProcessingStatistics {
 
   // Process instance timing methods (for internal duration measurement)
   public void startTimerForProcessInstance(UUID processInstanceId) {
-    Timer.Sample sample = Timer.start(meterRegistry);
-    processInstanceTimers.put(processInstanceId, sample);
+    if (ThreadLocalRandom.current().nextDouble() < SAMPLING_RATE) {
+      Timer.Sample sample = Timer.start(meterRegistry);
+      processInstanceTimers.put(processInstanceId, sample);
+    }
   }
 
   public void stopTimerForProcessInstance(UUID processInstanceId, String processDefinitionKey) {
     Timer.Sample sample = processInstanceTimers.remove(processInstanceId);
     if (sample != null) {
-      Timer timer =
-          meterRegistry.timer(
-              "taktx.process.instance.duration", "processDefinitionKey", processDefinitionKey);
-      sample.stop(timer);
+      sample.stop(processInstanceDuration);
     }
   }
 

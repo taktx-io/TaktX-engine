@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,6 +19,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@RegisterForReflection
 public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
   private List<Long> flowNodeInstancePath;
 

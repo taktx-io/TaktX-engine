@@ -10,6 +10,7 @@ package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
+@RegisterForReflection
 public class FlowElementsDTO {
 
   private Map<String, FlowElementDTO> elements;

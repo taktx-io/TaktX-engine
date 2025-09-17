@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.util.TaktLongListDeserializer;
 import io.taktx.util.TaktLongListSerializer;
 import io.taktx.util.TaktUUIDDeserializer;
@@ -33,6 +34,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
+@RegisterForReflection
 public class FlowNodeInstanceKeyDTO {
   @JsonSerialize(using = TaktUUIDSerializer.class)
   @JsonDeserialize(using = TaktUUIDDeserializer.class)

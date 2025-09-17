@@ -6,17 +6,17 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.dto;
+package io.taktx.engine.config;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
 
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@NoArgsConstructor
-@RegisterForReflection
-public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {}
+/**
+ * Configuration to ensure MapStruct generated implementation classes
+ * are available for reflection in GraalVM native image builds.
+ */
+@RegisterForReflection(targets = {
+    io.taktx.engine.pi.ProcessInstanceMapperImpl.class,
+    io.taktx.engine.pi.DtoMapperImpl.class
+})
+public class MapStructReflectionConfiguration {
+}

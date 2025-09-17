@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.MessageEventTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -29,6 +30,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 @ToString
+@RegisterForReflection
 public abstract class MessageEventDTO {
   private String messageName;
 

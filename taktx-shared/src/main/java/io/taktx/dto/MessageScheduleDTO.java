@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.MessageSchedulerTypeIdResolver;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +24,7 @@ import lombok.NoArgsConstructor;
 @JsonTypeIdResolver(MessageSchedulerTypeIdResolver.class)
 @NoArgsConstructor
 @Getter
+@RegisterForReflection
 public abstract class MessageScheduleDTO {
 
   protected SchedulableMessageDTO message;

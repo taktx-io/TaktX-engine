@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -19,6 +20,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@RegisterForReflection
 public class UserTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
 
   private UserTaskResponseResultDTO userTaskResponseResult;

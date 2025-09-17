@@ -8,11 +8,13 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@RegisterForReflection
 public class EventDefinitionDTO extends RootElementDTO {
   protected EventDefinitionDTO(String id, String parentId) {
     super(id, parentId);

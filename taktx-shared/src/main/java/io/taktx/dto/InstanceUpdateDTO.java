@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.InstanceUpdateTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -28,4 +29,5 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
+@RegisterForReflection
 public abstract class InstanceUpdateDTO {}

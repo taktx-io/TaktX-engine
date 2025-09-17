@@ -9,6 +9,7 @@
 package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode
 @NoArgsConstructor
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
+@RegisterForReflection
 public class LoopCharacteristicsDTO {
   public static final LoopCharacteristicsDTO NONE =
       new LoopCharacteristicsDTO(false, "", "", "", "");

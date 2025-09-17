@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -21,6 +22,7 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
+@RegisterForReflection
 public class StartFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
 
   private List<Long> parentElementInstanceIdPath;

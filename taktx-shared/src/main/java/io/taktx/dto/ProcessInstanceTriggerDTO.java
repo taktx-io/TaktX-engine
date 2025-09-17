@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.ProcessInstanceTriggerTypeIdResolver;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -31,6 +32,7 @@ import lombok.ToString;
 @Setter
 @EqualsAndHashCode
 @NoArgsConstructor
+@RegisterForReflection
 public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO {
 
   private UUID processInstanceId;

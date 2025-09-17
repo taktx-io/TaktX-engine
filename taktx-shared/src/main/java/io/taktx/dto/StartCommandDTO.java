@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +21,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @ToString(callSuper = true)
+@RegisterForReflection
 public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
   private UUID parentProcessInstanceId;

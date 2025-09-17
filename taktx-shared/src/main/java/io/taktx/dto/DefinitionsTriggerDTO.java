@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.DefinitionsTriggerTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -24,4 +25,5 @@ import lombok.NoArgsConstructor;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor
+@RegisterForReflection
 public abstract class DefinitionsTriggerDTO {}

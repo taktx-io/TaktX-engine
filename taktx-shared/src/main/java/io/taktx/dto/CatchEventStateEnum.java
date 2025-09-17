@@ -9,7 +9,9 @@
 package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 
+@RegisterForReflection
 public enum CatchEventStateEnum {
   INITIAL("I"),
   STARTED("R"),

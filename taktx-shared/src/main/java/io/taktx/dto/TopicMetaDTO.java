@@ -8,6 +8,7 @@
 
 package io.taktx.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.CleanupPolicy;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,7 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
+@RegisterForReflection
 public class TopicMetaDTO {
   private String topicName; // The actual Kafka topic name
   private int nrPartitions;

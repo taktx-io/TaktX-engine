@@ -11,6 +11,7 @@ package io.taktx.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -27,6 +28,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@RegisterForReflection
 public class ProcessInstanceDTO {
   private UUID processInstanceId;
 

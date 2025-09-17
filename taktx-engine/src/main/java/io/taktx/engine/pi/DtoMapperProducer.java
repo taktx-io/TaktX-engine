@@ -6,17 +6,18 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.dto;
+package io.taktx.engine.pi;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import org.mapstruct.factory.Mappers;
 
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@NoArgsConstructor
-@RegisterForReflection
-public class SendTaskInstanceDTO extends ExternalTaskInstanceDTO {}
+@ApplicationScoped
+public class DtoMapperProducer {
+
+  @Produces
+  @ApplicationScoped
+  public DtoMapper dtoMapper() {
+    return Mappers.getMapper(DtoMapper.class);
+  }
+}

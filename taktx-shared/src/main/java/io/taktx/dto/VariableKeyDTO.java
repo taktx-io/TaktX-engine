@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -27,6 +28,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(Include.NON_NULL)
+@RegisterForReflection
 public class VariableKeyDTO {
   private FlowNodeInstanceKeyDTO flowNodeInstanceKey;
 

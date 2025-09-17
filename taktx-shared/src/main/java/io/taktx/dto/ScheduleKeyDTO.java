@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.ScheduleKeyTypeIdResolver;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -30,6 +31,7 @@ import lombok.ToString;
 @Setter
 @NoArgsConstructor
 @ToString
+@RegisterForReflection
 public abstract class ScheduleKeyDTO {
 
   private TimeBucket timeBucket;

@@ -9,6 +9,7 @@
 package io.taktx.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,6 +20,7 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @ToString(callSuper = true)
+@RegisterForReflection
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   private ActtivityStateEnum state;
 

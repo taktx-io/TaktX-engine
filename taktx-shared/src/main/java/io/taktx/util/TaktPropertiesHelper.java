@@ -72,7 +72,9 @@ public class TaktPropertiesHelper {
 
     props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
-    props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "zstd"); // or "lz4"
+    props.put(
+        ProducerConfig.COMPRESSION_TYPE_CONFIG,
+        "none"); // No compression for already compact messages
     props.put(ProducerConfig.BATCH_SIZE_CONFIG, 262_144); // 256 KB
     props.put(ProducerConfig.LINGER_MS_CONFIG, 10); // 5–15 ms
     props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 536_870_912L); // 512 MB

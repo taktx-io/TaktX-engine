@@ -65,7 +65,7 @@ import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
 
-@Mapper(componentModel = "jakarta")
+@Mapper
 public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
