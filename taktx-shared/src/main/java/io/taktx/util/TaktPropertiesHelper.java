@@ -40,10 +40,10 @@ public class TaktPropertiesHelper {
     // Sensible defaults for high-rate tiny messages
     props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
     props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000); // commit after processing
-    props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1_048_576); // 1 MB
-    props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 100); // wait to coalesce fetch
-    props.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 16 * 1024 * 1024); // 16 MB
-    props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 2_000);
+    props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 262_144); // 1 MB
+    props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 50); // wait to coalesce fetch
+    props.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 2_097_152); // 16 MB
+    props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10_000);
     props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 10_000);
     props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 1_000);
     props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 900_000); // 15 min for slow handlers
@@ -75,8 +75,8 @@ public class TaktPropertiesHelper {
     props.put(
         ProducerConfig.COMPRESSION_TYPE_CONFIG,
         "none"); // No compression for already compact messages
-    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 262_144); // 256 KB
-    props.put(ProducerConfig.LINGER_MS_CONFIG, 10); // 5–15 ms
+    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 262_144);
+    props.put(ProducerConfig.LINGER_MS_CONFIG, 50); // 5–15 ms
     props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 536_870_912L); // 512 MB
     props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
     props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 120_000);

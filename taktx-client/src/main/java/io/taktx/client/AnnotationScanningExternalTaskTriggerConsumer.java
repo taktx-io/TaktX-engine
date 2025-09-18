@@ -62,21 +62,36 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   }
 
   @Override
-  public void accept(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
-    String taskId = externalTaskTriggerDTO.getExternalTaskId();
-    Method method = workerMethods.get(taskId);
-    Object beanInstance = workerInstances.get(taskId);
-    if (method == null || beanInstance == null) {
-      throw new IllegalStateException(
-          "No worker method or bean instance found for task ID: " + taskId);
-    }
+  public void acceptBatch(List<ExternalTaskTriggerDTO> batch) {
+    // group by task id
+    Map<String, List<ExternalTaskTriggerDTO>> groupedByTaskId =
+        batch.stream().collect(Collectors.groupingBy(ExternalTaskTriggerDTO::getExternalTaskId));
 
-    TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
-    boolean autoComplete = workerMethod.autoComplete();
+    groupedByTaskId.forEach(
+        (taskId, tasks) -> {
+          Method method = workerMethods.get(taskId);
+          Object beanInstance = workerInstances.get(taskId);
+          if (method == null || beanInstance == null) {
+            throw new IllegalStateException(
+                "No worker method or bean instance found for task ID: " + taskId);
+          }
+          TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
+          boolean autoComplete = workerMethod.autoComplete();
+          boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
 
+          for (ExternalTaskTriggerDTO task : tasks) {
+            processTask(task, method, autoComplete, beanInstance, methodIsVoid);
+          }
+        });
+  }
+
+  private void processTask(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO,
+      Method method,
+      boolean autoComplete,
+      Object beanInstance,
+      boolean methodIsVoid) {
     Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
-    boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
-
     if (autoComplete) {
       // Rely on result and exceptions to determine success or failure
 

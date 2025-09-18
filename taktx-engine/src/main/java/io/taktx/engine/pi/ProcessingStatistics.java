@@ -19,7 +19,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class ProcessingStatistics {
+  private static final AtomicLong sampleCounter = new AtomicLong();
+  private static final int SAMPLE_EVERY_N = 10; // 10% sampling
+
   private final MeterRegistry meterRegistry;
 
   // Process instance timing
@@ -50,7 +53,6 @@ public class ProcessingStatistics {
   private Timer processInstanceDuration;
 
   // Sampling configuration for optimal performance with statistical accuracy
-  private static final double SAMPLING_RATE = 0.10; // 20% sampling for all latencies
   private static final long MAX_REASONABLE_LATENCY_MS = 300_000; // 5 minutes max
 
   @PostConstruct
@@ -187,14 +189,16 @@ public class ProcessingStatistics {
     }
 
     // Simple uniform sampling - histogram buckets handle memory efficiency
-    if (ThreadLocalRandom.current().nextDouble() < SAMPLING_RATE) {
+
+    // In hot path:
+    if (sampleCounter.incrementAndGet() % SAMPLE_EVERY_N == 0) {
       timer.record(Duration.ofMillis(latencyMs));
     }
   }
 
   // Process instance timing methods (for internal duration measurement)
   public void startTimerForProcessInstance(UUID processInstanceId) {
-    if (ThreadLocalRandom.current().nextDouble() < SAMPLING_RATE) {
+    if (sampleCounter.incrementAndGet() % SAMPLE_EVERY_N == 0) {
       Timer.Sample sample = Timer.start(meterRegistry);
       processInstanceTimers.put(processInstanceId, sample);
     }

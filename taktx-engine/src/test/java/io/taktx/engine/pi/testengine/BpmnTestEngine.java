@@ -397,8 +397,10 @@ public class BpmnTestEngine {
             }
 
             @Override
-            public void accept(ExternalTaskTriggerDTO value) {
-              BpmnTestEngine.this.consumeExternalTaskTrigger(value);
+            public void acceptBatch(List<ExternalTaskTriggerDTO> batch) {
+              for (ExternalTaskTriggerDTO task : batch) {
+                BpmnTestEngine.this.consumeExternalTaskTrigger(task);
+              }
             }
           },
           "bpmn-test-engine-external-task-trigger-consumer-" + UUID.randomUUID().toString());

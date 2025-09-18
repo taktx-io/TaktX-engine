@@ -105,10 +105,11 @@ public class ExternalTaskTriggerTopicConsumer {
                       continue;
                     }
 
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskTriggerRecord :
-                        records) {
-                      externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
+                    List<ExternalTaskTriggerDTO> batch = new ArrayList<>(records.count());
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                      batch.add(record.value());
                     }
+                    externalTaskTriggerConsumer.acceptBatch(batch);
                   } while (running);
                 } finally {
                   // Clean up the resources when the thread exits
