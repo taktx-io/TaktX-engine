@@ -27,6 +27,7 @@ quarkus-kafka-client = { module = "io.quarkus:quarkus-kafka-client" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
 quarkus-junit5-mockito = { module = "io.quarkus:quarkus-junit5-mockito" }
 quarkus-jacoco = { module = "io.quarkus:quarkus-jacoco" }
+quarkus-core = { module = "io.quarkus:quarkus-core", version.ref = "quarkus" }
 
 # Jackson
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }

@@ -7,13 +7,12 @@ plugins {
 }
 
 dependencies {
-    implementation(enforcedPlatform(libs.quarkus.bom.get()))
     implementation(libs.cronutils)
     implementation(libs.jackson.annotations)
     implementation(libs.jackson.databind)
     implementation(libs.jackson.cbor)
     implementation(libs.kafka.clients)
-    compileOnly("io.quarkus:quarkus-core")
+    implementation(libs.quarkus.core)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.params)
