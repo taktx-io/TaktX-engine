@@ -102,6 +102,9 @@ public class DefinitionMapper {
                   }
                 });
       }
+      if (flowElement instanceof WIthChildElements withChildElements) {
+        setErrorReferences(withChildElements.getElements().getElements(), errors);
+      }
     }
   }
 
