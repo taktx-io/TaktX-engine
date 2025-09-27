@@ -16,10 +16,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @Setter
 @Getter
-public class SubProcessInstance extends ActivityInstance<SubProcess>
-    implements WithFlowNodeInstances {
+public class SubProcessInstance extends ActivityInstance<SubProcess> implements WithScope {
 
-  private FlowNodeInstances flowNodeInstances;
+  private Scope scope;
 
   public SubProcessInstance(
       FlowNodeInstance<?> parentInstance, SubProcess flowNode, long elementInstanceId) {

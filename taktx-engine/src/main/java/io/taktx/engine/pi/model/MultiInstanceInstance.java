@@ -18,9 +18,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class MultiInstanceInstance extends ActivityInstance<Activity>
-    implements WithFlowNodeInstances {
-  private FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
+public class MultiInstanceInstance extends ActivityInstance<Activity> implements WithScope {
+  private Scope scope = new Scope();
 
   public MultiInstanceInstance(
       Activity activity, FlowNodeInstance<?> parentInstance, long elementInstanceId) {
@@ -32,11 +31,11 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
   public void setState(FlowNodeStateEnum state) {
     super.setState(state);
     switch (state) {
-      case INITIAL -> flowNodeInstances.setState(ScopeState.INITIALIZED);
-      case ACTIVE -> flowNodeInstances.setState(ScopeState.ACTIVE);
-      case CANCELED -> flowNodeInstances.setState(ScopeState.CANCELED);
-      case ABORTED -> flowNodeInstances.setState(ScopeState.ABORTED);
-      case COMPLETED -> flowNodeInstances.setState(ScopeState.COMPLETED);
+      case INITIAL -> scope.setState(ScopeState.INITIALIZED);
+      case ACTIVE -> scope.setState(ScopeState.ACTIVE);
+      case CANCELED -> scope.setState(ScopeState.CANCELED);
+      case ABORTED -> scope.setState(ScopeState.ABORTED);
+      case COMPLETED -> scope.setState(ScopeState.COMPLETED);
     }
   }
 }

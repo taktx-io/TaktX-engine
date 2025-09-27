@@ -68,15 +68,15 @@ public class FlowInstanceRunner {
 
     Long terminateInstance = directInstanceResult.pollAbortInstance();
     while (terminateInstance != null) {
-      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-          new StoredFlowNodeInstancesWrapper(
+      StoredScopeWrapper storedScopeWrapper =
+          new StoredScopeWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              flowNodeInstanceProcessingContext.getScope(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
               mapper);
       FlowNodeInstance<?> flowNodeInstance =
-          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(terminateInstance);
+          storedScopeWrapper.getInstanceWithInstanceId(terminateInstance);
 
       FlowNode node = flowNodeInstance.getFlowNode();
 
@@ -92,15 +92,15 @@ public class FlowInstanceRunner {
 
     Long cancelInstance = directInstanceResult.pollCancelInstance();
     while (cancelInstance != null) {
-      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-          new StoredFlowNodeInstancesWrapper(
+      StoredScopeWrapper storedScopeWrapper =
+          new StoredScopeWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              flowNodeInstanceProcessingContext.getScope(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
               mapper);
       FlowNodeInstance<?> flowNodeInstance =
-          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(cancelInstance);
+          storedScopeWrapper.getInstanceWithInstanceId(cancelInstance);
 
       FlowNode node = flowNodeInstance.getFlowNode();
 
@@ -117,7 +117,7 @@ public class FlowInstanceRunner {
     FlowNodeInstanceInfo instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
     while (instanceInfo != null) {
       FlowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
-      flowNodeInstanceProcessingContext.getFlowNodeInstances().putInstance(fLowNodeInstance);
+      flowNodeInstanceProcessingContext.getScope().putInstance(fLowNodeInstance);
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
       processor.processStart(
@@ -132,16 +132,15 @@ public class FlowInstanceRunner {
     List<Long> terminateParentPath = directInstanceResult.getTerminateParentPath();
     if (currentContextIsParentOfPath(terminateParentPath, flowNodeInstanceProcessingContext)) {
 
-      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-          new StoredFlowNodeInstancesWrapper(
+      StoredScopeWrapper storedScopeWrapper =
+          new StoredScopeWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              flowNodeInstanceProcessingContext.getScope(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
               mapper);
 
-      Map<Long, FlowNodeInstance<?>> allInstances =
-          storedFlowNodeInstancesWrapper.getAllInstances();
+      Map<Long, FlowNodeInstance<?>> allInstances = storedScopeWrapper.getAllInstances();
 
       for (FlowNodeInstance<?> flowNodeInstance : allInstances.values()) {
         if (flowNodeInstance.isActive()
@@ -171,10 +170,10 @@ public class FlowInstanceRunner {
     boolean eventHandled = false;
 
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
-      StoredFlowNodeInstancesWrapper instancesWrapper =
-          new StoredFlowNodeInstancesWrapper(
+      StoredScopeWrapper instancesWrapper =
+          new StoredScopeWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              flowNodeInstanceProcessingContext.getScope(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
               mapper);
@@ -237,7 +236,7 @@ public class FlowInstanceRunner {
               FlowNodeInstance<?> eventSubProcessInstance =
                   eventSsubProcess.createAndStoreNewInstance(
                       fLowNodeInstance.getParentInstance(),
-                      flowNodeInstanceProcessingContext.getFlowNodeInstances());
+                      flowNodeInstanceProcessingContext.getScope());
               FlowNodeInstanceInfo flowNodeInstanceInfo =
                   new FlowNodeInstanceInfo(eventSubProcessInstance, null);
               directInstanceResult.addNewFlowNodeInstance(
@@ -260,7 +259,7 @@ public class FlowInstanceRunner {
                 FlowNodeInstance<?> eventSubProcessInstance =
                     eventSsubProcess.createAndStoreNewInstance(
                         fLowNodeInstance.getParentInstance(),
-                        flowNodeInstanceProcessingContext.getFlowNodeInstances());
+                        flowNodeInstanceProcessingContext.getScope());
                 FlowNodeInstanceInfo flowNodeInstanceInfo =
                     new FlowNodeInstanceInfo(eventSubProcessInstance, null);
                 directInstanceResult.addNewFlowNodeInstance(

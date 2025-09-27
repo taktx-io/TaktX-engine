@@ -66,11 +66,11 @@ public class InstanceUpdateRegistry {
       }
       if (!processInstanceIdList.contains(processInstanceId)) {
         processInstanceIdList.add(processInstanceId);
-        if (processInstanceUpdate.getFlowNodeInstances().getState() == ScopeState.ACTIVE) {
+        if (processInstanceUpdate.getScope().getState() == ScopeState.ACTIVE) {
           processInstanceCountsStarted.get(processDefinitionKey).incrementAndGet();
         }
       }
-      if (processInstanceUpdate.getFlowNodeInstances().getState().isDone()) {
+      if (processInstanceUpdate.getScope().getState().isDone()) {
         processInstanceCountsCompleted.get(processDefinitionKey).incrementAndGet();
       }
       if (processInstanceIdList.size() > MAX_STORED_INSTANCES) {
@@ -115,8 +115,7 @@ public class InstanceUpdateRegistry {
     return processInstanceUpdates.get(processInstanceId);
   }
 
-  public List<InstanceUpdateRecord> getFlowNodeInstancesByProcessInstance(
-      UUID processInstanceUuid) {
+  public List<InstanceUpdateRecord> getScopeByProcessInstance(UUID processInstanceUuid) {
     return this.flowNodeInstanceUpdates.get(processInstanceUuid);
   }
 

@@ -13,7 +13,6 @@ import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
-import io.taktx.dto.FlowNodeInstancesDTO;
 import io.taktx.dto.InclusiveGatewayInstanceDTO;
 import io.taktx.dto.IntermediateCatchEventInstanceDTO;
 import io.taktx.dto.IntermediateThrowEventInstanceDTO;
@@ -22,6 +21,7 @@ import io.taktx.dto.MultiInstanceInstanceDTO;
 import io.taktx.dto.ParallelGatewayInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ReceiveTaskInstanceDTO;
+import io.taktx.dto.ScopeDTO;
 import io.taktx.dto.ScriptTaskInstanceDTO;
 import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
@@ -38,7 +38,6 @@ import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.InclusiveGatewayInstance;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
@@ -46,6 +45,7 @@ import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ParallelGatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ReceiveTaskInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.ScriptTaskInstance;
 import io.taktx.engine.pi.model.SendTaskInstance;
 import io.taktx.engine.pi.model.ServiceTaskInstance;
@@ -428,10 +428,10 @@ public interface ProcessInstanceMapper {
   IoVariableMappingDTO map(IoVariableMapping value);
 
   @Mapping(target = "state", ignore = true)
-  FlowNodeInstances map(FlowNodeInstancesDTO source);
+  Scope map(ScopeDTO source);
 
   @AfterMapping
-  default void mapState(FlowNodeInstancesDTO source, @MappingTarget FlowNodeInstances target) {
+  default void mapState(ScopeDTO source, @MappingTarget Scope target) {
     target.setStateNoChange(source.getState());
   }
 

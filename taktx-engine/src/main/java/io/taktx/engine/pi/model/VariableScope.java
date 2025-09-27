@@ -85,7 +85,7 @@ public class VariableScope {
     }
   }
 
-  public VariableScope selectFlowNodeInstancesScope(long flowNodeInstanceKey) {
+  public VariableScope selectScopeScope(long flowNodeInstanceKey) {
     return this.childScopes.computeIfAbsent(
         flowNodeInstanceKey,
         k -> new VariableScope(variableStore, processInstanceId, flowNodeInstanceKey, this));

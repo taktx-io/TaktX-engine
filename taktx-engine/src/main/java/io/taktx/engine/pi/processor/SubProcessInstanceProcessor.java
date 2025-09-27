@@ -16,10 +16,10 @@ import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
-import io.taktx.engine.pi.FlowNodeInstancesProcessor;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.ScopeProcessor;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -35,17 +35,17 @@ public class SubProcessInstanceProcessor
     extends ActivityInstanceProcessor<
         SubProcess, SubProcessInstance, ContinueFlowElementTriggerDTO> {
 
-  private FlowNodeInstancesProcessor flowNodeInstancesProcessor;
+  private ScopeProcessor scopeProcessor;
 
   @Inject
   public SubProcessInstanceProcessor(
       FeelExpressionHandler feelExpressionHandler,
       IoMappingProcessor ioMappingProcessor,
-      FlowNodeInstancesProcessor flowNodeInstancesProcessor,
+      ScopeProcessor scopeProcessor,
       ProcessInstanceMapper processInstanceMapper,
       Clock clock) {
     super(feelExpressionHandler, ioMappingProcessor, processInstanceMapper, clock);
-    this.flowNodeInstancesProcessor = flowNodeInstancesProcessor;
+    this.scopeProcessor = scopeProcessor;
   }
 
   @Override
@@ -56,9 +56,9 @@ public class SubProcessInstanceProcessor
       String inputFlowId,
       VariableScope flowNodeInstanceVariables) {
 
-    FlowNodeInstances subFlowNodeInstances = new FlowNodeInstances();
-    subFlowNodeInstances.setParentFlowNodeInstance(subProcessInstance);
-    subProcessInstance.setFlowNodeInstances(subFlowNodeInstances);
+    Scope subScope = new Scope();
+    subScope.setParentFlowNodeInstance(subProcessInstance);
+    subProcessInstance.setScope(subScope);
     subProcessInstance.setState(FlowNodeStateEnum.ACTIVE);
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
@@ -67,10 +67,10 @@ public class SubProcessInstanceProcessor
         .addAll(flowNodeInstanceProcessingContext.getFlowElements().getIndex());
     FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
         new FlowNodeInstanceProcessingContext(
-            subFlowNodeInstances,
+            subScope,
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessElements);
-    flowNodeInstancesProcessor.processStart(
+    scopeProcessor.processStart(
         processInstanceProcessingContext,
         subFlowNodeInstanceProcessingContext,
         null,
@@ -82,7 +82,7 @@ public class SubProcessInstanceProcessor
             subFlowNodeInstanceProcessingContext
                 .getDirectInstanceResult()
                 .getTerminateParentPath());
-    if (subFlowNodeInstances.getState().isDone()) {
+    if (subScope.getState().isDone()) {
       subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
     }
   }
@@ -96,13 +96,13 @@ public class SubProcessInstanceProcessor
       VariableScope flowNodeInstanceVariables) {
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
-    subProcessInstance.getFlowNodeInstances().setParentFlowNodeInstance(subProcessInstance);
+    subProcessInstance.getScope().setParentFlowNodeInstance(subProcessInstance);
     FlowNodeInstanceProcessingContext subFlowNodeContext =
         new FlowNodeInstanceProcessingContext(
-            subProcessInstance.getFlowNodeInstances(),
+            subProcessInstance.getScope(),
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessElements);
-    flowNodeInstancesProcessor.processContinue(
+    scopeProcessor.processContinue(
         processInstanceProcessingContext, subFlowNodeContext, trigger, flowNodeInstanceVariables);
 
     Queue<EventSignal> bubbleUpEvents =
@@ -114,7 +114,7 @@ public class SubProcessInstanceProcessor
       eventSignal = bubbleUpEvents.poll();
     }
 
-    if (subProcessInstance.getFlowNodeInstances().getState().isDone()) {
+    if (subProcessInstance.getScope().getState().isDone()) {
       subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
     }
   }
@@ -126,13 +126,13 @@ public class SubProcessInstanceProcessor
       SubProcessInstance subProcessInstance,
       VariableScope flowNodeInstanceVariables) {
 
-    FlowNodeInstances flowNodeInstances = subProcessInstance.getFlowNodeInstances();
-    flowNodeInstances.setParentFlowNodeInstance(subProcessInstance);
+    Scope scope = subProcessInstance.getScope();
+    scope.setParentFlowNodeInstance(subProcessInstance);
 
     // Terminate all childelements
     FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
         new FlowNodeInstanceProcessingContext(
-            flowNodeInstances,
+            scope,
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessInstance.getFlowNode().getElements());
 
@@ -140,7 +140,7 @@ public class SubProcessInstanceProcessor
         new TerminateTriggerDTO(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             List.of());
-    flowNodeInstancesProcessor.processTerminate(
+    scopeProcessor.processTerminate(
         processInstanceProcessingContext,
         subFlowNodeInstanceProcessingContext,
         trigger,

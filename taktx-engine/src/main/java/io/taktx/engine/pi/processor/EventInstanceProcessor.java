@@ -15,8 +15,8 @@ import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Set;
@@ -60,10 +60,7 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance,
-      I flowNodeInstance,
-      FlowNodeInstances flowNodeInstances,
-      VariableScope variables) {
+      ProcessInstance processInstance, I flowNodeInstance, Scope scope, VariableScope variables) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 

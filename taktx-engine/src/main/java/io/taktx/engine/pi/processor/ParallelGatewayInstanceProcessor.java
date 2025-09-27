@@ -16,8 +16,8 @@ import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ParallelGatewayInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -40,8 +40,7 @@ public class ParallelGatewayInstanceProcessor
   }
 
   @Override
-  protected boolean canTriggerOutputFlows(
-      ParallelGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
+  protected boolean canTriggerOutputFlows(ParallelGatewayInstance gatewayInstance, Scope scope) {
     return gatewayInstance.getFlowNode().getIncoming().equals(gatewayInstance.getTriggeredFlows());
   }
 

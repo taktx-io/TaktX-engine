@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
+import io.taktx.engine.pi.model.Scope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,10 +21,8 @@ import lombok.experimental.SuperBuilder;
 public class IntermediateCatchEvent extends CatchEvent {
 
   @Override
-  public FlowNodeInstance<?> newInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new IntermediateCatchEventInstance(
-        parentInstance, this, flowNodeInstances.nextElementInstanceId());
+  public FlowNodeInstance<?> newInstance(FlowNodeInstance<?> parentInstance, Scope scope) {
+    return new IntermediateCatchEventInstance(parentInstance, this, scope.nextElementInstanceId());
   }
 
   public boolean hasLinkEventDefinition(String name) {

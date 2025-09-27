@@ -87,7 +87,7 @@ public abstract class ThrowEventInstanceProcessor<
                         new IntermediateCatchEventInstance(
                             flowNodeInstance.getParentInstance(),
                             event,
-                            processInstance.getFlowNodeInstances().nextElementInstanceId());
+                            processInstance.getScope().nextElementInstanceId());
                     catchEventInstance.setInitialState();
                     FlowNodeInstanceInfo flowNodeInstanceInfo =
                         new FlowNodeInstanceInfo(catchEventInstance, null);

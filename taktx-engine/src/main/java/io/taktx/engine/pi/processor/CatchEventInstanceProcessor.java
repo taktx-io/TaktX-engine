@@ -192,7 +192,7 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope parentVariableScope) {
     long now = clock.millis();
     VariableScope boundaryEventVariableScope =
-        parentVariableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
+        parentVariableScope.selectScopeScope(catchEventInstance.getElementInstanceId());
 
     InstanceResult newInstanceResult = processInstanceProcessingContext.getInstanceResult();
     if (catchEventInstance.matchesEvent(event)) {
@@ -229,7 +229,7 @@ public abstract class CatchEventInstanceProcessor<
     long now = clock.millis();
 
     VariableScope boundaryEventVariableScope =
-        variableScope.selectFlowNodeInstancesScope(catchEventInstance.getElementInstanceId());
+        variableScope.selectScopeScope(catchEventInstance.getElementInstanceId());
 
     if (catchEventInstance.matchesEventCatchAll(event)) {
       InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();

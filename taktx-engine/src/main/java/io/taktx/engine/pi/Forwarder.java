@@ -120,8 +120,7 @@ public class Forwarder {
     while (!scheduledStartInfos.isEmpty()) {
       ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
       List<Long> instancePath =
-          pathExtractor.getInstancePath(
-              scheduledStartInfo.flowNodeInstances().getParentFlowNodeInstance());
+          pathExtractor.getInstancePath(scheduledStartInfo.scope().getParentFlowNodeInstance());
       String elementId = scheduledStartInfo.flowNodeToStart().getId();
       StartFlowElementTriggerDTO startFlowElementTrigger =
           new StartFlowElementTriggerDTO(
@@ -143,7 +142,7 @@ public class Forwarder {
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceId(), instancePath, elementId, bucket);
-      scheduledStartInfo.flowNodeInstances().addScheduledKey(scheduledKey);
+      scheduledStartInfo.scope().addScheduledKey(scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }

@@ -17,7 +17,7 @@ let countersIntervalId = null;
 let lastCounterUpdateTime = null;
 
 // Flow node instances data structure - organized by flowNodeInstancePath
-let flowNodeInstances = new Map();
+let scope = new Map();
 
 // Process instances data structure - organized by processInstanceId for real-time updates
 let processInstances = new Map();
@@ -139,7 +139,7 @@ function handleFlowNodeUpdate(data) {
     if (data.update && data.update.flowNodeInstancePath) {
         // Store the flow node instance update using the path as key
         const pathKey = data.update.flowNodeInstancePath.join('.');
-        flowNodeInstances.set(pathKey, {
+        scope.set(pathKey, {
             path: data.update.flowNodeInstancePath,
             flowNodeInstance: data.update.flowNodeInstance,
             variables: data.update.variables,
@@ -165,8 +165,8 @@ function updateProcessInstanceStatePill(processInstanceId, processInstanceUpdate
         if (rowProcessInstanceId === processInstanceId) {
             // Find the status badge within this row
             const statusBadge = row.querySelector('.status-badge');
-            if (statusBadge && processInstanceUpdate.flowNodeInstances) {
-                const newState = processInstanceUpdate.flowNodeInstances.state;
+            if (statusBadge && processInstanceUpdate.scope) {
+                const newState = processInstanceUpdate.scope.state;
                 const stateClass = getStateClass(newState);
                 
                 // Update the badge classes and text
@@ -185,20 +185,20 @@ function clearFlowNodeInstancesList() {
     container.innerHTML = '<p class="text-muted">Select a process instance to view flow nodes</p>';
     
     // Clear the flow node instances data
-    flowNodeInstances.clear();
+    scope.clear();
 }
 
 // Render the flow node instances list in a tree structure
 function renderFlowNodeInstancesList() {
     const container = document.getElementById('flow-node-instances-list');
     
-    if (flowNodeInstances.size === 0) {
+    if (scope.size === 0) {
         container.innerHTML = '<p class="text-muted">No flow node instances found</p>';
         return;
     }
     
     // Convert Map to array and sort by path sequence (which indicates execution order)
-    const instances = Array.from(flowNodeInstances.values()).sort((a, b) => {
+    const instances = Array.from(scope.values()).sort((a, b) => {
         // Compare paths element by element - the numbers indicate execution sequence
         const minLength = Math.min(a.path.length, b.path.length);
         
@@ -354,7 +354,7 @@ function formatVariableValue(value) {
 
 // Update BPMN diagram highlighting based on current flow node instances
 function updateBpmnHighlighting() {
-    if (!bpmnViewer || flowNodeInstances.size === 0) {
+    if (!bpmnViewer || scope.size === 0) {
         return;
     }
     
@@ -364,7 +364,7 @@ function updateBpmnHighlighting() {
     // Get active flow node element IDs
     const activeElementIds = [];
     
-    flowNodeInstances.forEach(instance => {
+    scope.forEach(instance => {
         const stateClass = getFlowNodeStateClass(instance.flowNodeInstance);
         if (stateClass === 'active' && instance.flowNodeInstance.elementId) {
             activeElementIds.push(instance.flowNodeInstance.elementId);
@@ -582,7 +582,7 @@ function renderProcessInstancesList(instances) {
     
     instances.forEach(instance => {
         const isSelected = selectedProcessInstance && selectedProcessInstance.processInstanceId === instance.processInstanceId;
-        const stateClass = getStateClass(instance.update.flowNodeInstances.state);
+        const stateClass = getStateClass(instance.update.scope.state);
         
         // Collect instance IDs for WebSocket notification
         displayedInstanceIds.push(instance.processInstanceId);
@@ -594,7 +594,7 @@ function renderProcessInstancesList(instances) {
                         <div class="uuid">${formatUuid(instance.processInstanceId)}</div>
                         <div class="timestamp">${formatTimestamp(instance.timestamp)}</div>
                     </div>
-                    <div class="status-badge status-${stateClass}">${instance.update.flowNodeInstances.state}</div>
+                    <div class="status-badge status-${stateClass}">${instance.update.scope.state}</div>
                 </div>
             </div>
         `;
@@ -679,8 +679,8 @@ async function selectProcessInstance(instanceId) {
 }
 
 // Highlight tokens in the BPMN diagram for a process instance
-function highlightTokensForInstance(processInstance, flowNodeInstances) {
-    if (!bpmnViewer || !processInstance || !flowNodeInstances) {
+function highlightTokensForInstance(processInstance, scope) {
+    if (!bpmnViewer || !processInstance || !scope) {
         return;
     }
     
@@ -690,10 +690,10 @@ function highlightTokensForInstance(processInstance, flowNodeInstances) {
     // Get the active flow nodes
     const activeFlowNodeIds = [];
     
-    if (processInstance.flowNodeInstances && flowNodeInstances) {
+    if (processInstance.scope && scope) {
 
         // Extract active flow node IDs
-        Object.values(flowNodeInstances).forEach(node => {
+        Object.values(scope).forEach(node => {
             if (node.flowNodeInstance.state === 'WAITING') {
                 activeFlowNodeIds.push(node.flowNodeInstance.elementId);
             }

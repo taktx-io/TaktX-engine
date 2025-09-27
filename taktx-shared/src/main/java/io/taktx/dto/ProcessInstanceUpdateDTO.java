@@ -28,7 +28,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
 
   private ProcessDefinitionKey processDefinitionKey;
 
-  private FlowNodeInstancesDTO flowNodeInstances;
+  private ScopeDTO scope;
 
   private VariablesDTO variables;
 
@@ -38,14 +38,14 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
       UUID parentProcessInstanceId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
-      FlowNodeInstancesDTO flowNodeInstances,
+      ScopeDTO scope,
       VariablesDTO variables,
       long processTime) {
 
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
-    this.flowNodeInstances = flowNodeInstances;
+    this.scope = scope;
     this.variables = variables;
     this.processTime = processTime;
   }
@@ -56,7 +56,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
         processInstance.getParentProcessInstanceId(),
         processInstance.getParentElementInstancePath(),
         processInstance.getProcessDefinitionKey(),
-        processInstance.getFlowNodeInstances(),
+        processInstance.getScope(),
         variables,
         processTime);
   }

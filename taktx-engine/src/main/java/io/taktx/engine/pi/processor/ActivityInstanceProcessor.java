@@ -21,8 +21,8 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Set;
@@ -76,9 +76,7 @@ public abstract class ActivityInstanceProcessor<
                     new BoundaryEventInstance(
                         flownodeInstance.getParentInstance(),
                         boundaryEvent,
-                        flowNodeInstanceProcessingContext
-                            .getFlowNodeInstances()
-                            .nextElementInstanceId());
+                        flowNodeInstanceProcessingContext.getScope().nextElementInstanceId());
                 boundaryEventInstance.setState(FlowNodeStateEnum.INITIAL);
 
                 boundaryEventInstance.setAttachedInstanceId(
@@ -162,10 +160,7 @@ public abstract class ActivityInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance,
-      I flowNodeInstance,
-      FlowNodeInstances flowNodeInstances,
-      VariableScope variables) {
+      ProcessInstance processInstance, I flowNodeInstance, Scope scope, VariableScope variables) {
     if (flowNodeInstance.isIteration()) {
       return Set.of();
     }

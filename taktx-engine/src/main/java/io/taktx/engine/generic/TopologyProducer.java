@@ -44,11 +44,11 @@ import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.DtoMapper;
-import io.taktx.engine.pi.FlowNodeInstancesProcessor;
 import io.taktx.engine.pi.Forwarder;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
+import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.ZippedStringSerde;
@@ -129,7 +129,7 @@ public class TopologyProducer {
   private final ProcessInstanceMapper instanceMapper;
   private final Forwarder forwarder;
   private final TaktConfiguration taktConfiguration;
-  private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
+  private final ScopeProcessor scopeProcessor;
   private final IoMappingProcessor ioMappingProcessor;
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
@@ -277,7 +277,7 @@ public class TopologyProducer {
                     forwarder,
                     ioMappingProcessor,
                     taktConfiguration,
-                    flowNodeInstancesProcessor,
+                    scopeProcessor,
                     clock,
                     dtoMapper,
                     processingStatistics,

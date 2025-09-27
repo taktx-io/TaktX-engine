@@ -15,12 +15,12 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.FlowNodeInstancesDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
+import io.taktx.dto.ScopeDTO;
 import io.taktx.dto.ScopeState;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
@@ -32,10 +32,10 @@ import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
-import io.taktx.engine.pi.model.WithFlowNodeInstances;
+import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import java.time.Clock;
@@ -64,7 +64,7 @@ public class ProcessInstanceProcessor
   private final Forwarder forwarder;
   private final IoMappingProcessor ioMappingProcessor;
   private final TaktConfiguration taktConfiguration;
-  private final FlowNodeInstancesProcessor flowNodeInstancesProcessor;
+  private final ScopeProcessor scopeProcessor;
   private final Clock clock;
   private final DtoMapper dtoMapper;
   private final ProcessingStatistics processingStatistics;
@@ -164,7 +164,7 @@ public class ProcessInstanceProcessor
 
     String startEventId = startNode.getId();
 
-    FlowNodeInstances flowNodeInstances = new FlowNodeInstances();
+    Scope scope = new Scope();
 
     VariableScope processInstanceVariables =
         new VariableScope(variablesStore, processInstanceId, null, null);
@@ -181,7 +181,7 @@ public class ProcessInstanceProcessor
             startCommand.getParentProcessInstanceId(),
             startCommand.getParentElementInstancePath(),
             processDefinitionKey,
-            flowNodeInstances,
+            scope,
             startCommand.isPropagateAllToParent(),
             ioVariableMappings);
 
@@ -189,8 +189,7 @@ public class ProcessInstanceProcessor
 
     VariablesDTO updateVariablesAtStart = processInstanceVariables.scopeToDTO();
     instanceResult.addInstanceUpdate(
-        processInstanceToUpdate(
-            processInstance, flowNodeInstances, updateVariablesAtStart, clock.millis()));
+        processInstanceToUpdate(processInstance, scope, updateVariablesAtStart, clock.millis()));
 
     FlowElements flowElements = getFlowElements(processDefinitionKey);
 
@@ -198,8 +197,8 @@ public class ProcessInstanceProcessor
         createProcessInstanceProcessingContext(processInstance, instanceResult);
 
     FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
-        new FlowNodeInstanceProcessingContext(flowNodeInstances, 0, flowElements);
-    flowNodeInstancesProcessor.processStart(
+        new FlowNodeInstanceProcessingContext(scope, 0, flowElements);
+    scopeProcessor.processStart(
         processInstanceProcessingContext,
         flowNodeInstanceProcessingContext,
         startEventId,
@@ -209,7 +208,7 @@ public class ProcessInstanceProcessor
     processResultAndForward(
         processInstanceProcessingContext,
         processDefinitionKey,
-        flowNodeInstances,
+        scope,
         processInstanceVariables,
         flowElements,
         updateVariablesAtStart);
@@ -252,16 +251,11 @@ public class ProcessInstanceProcessor
   }
 
   private InstanceUpdate processInstanceToUpdate(
-      ProcessInstance processInstance,
-      FlowNodeInstances flowNodeInstances,
-      VariablesDTO variables,
-      long processTime) {
+      ProcessInstance processInstance, Scope scope, VariablesDTO variables, long processTime) {
 
-    FlowNodeInstancesDTO flowNodeInstancesDTO = flowNodeInstancesToDTO(flowNodeInstances);
+    ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance).toBuilder()
-            .flowNodeInstances(flowNodeInstancesDTO)
-            .build();
+        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
 
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
@@ -285,10 +279,9 @@ public class ProcessInstanceProcessor
           createProcessInstanceProcessingContext(processInstance, instanceResult);
 
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
-          new FlowNodeInstanceProcessingContext(
-              processInstance.getFlowNodeInstances(), 0, flowElements);
+          new FlowNodeInstanceProcessingContext(processInstance.getScope(), 0, flowElements);
 
-      flowNodeInstancesProcessor.processStartFlowElement(
+      scopeProcessor.processStartFlowElement(
           processInstanceProcessingContext,
           flowNodeInstanceProcessingContext,
           trigger,
@@ -297,7 +290,7 @@ public class ProcessInstanceProcessor
       processResultAndForward(
           processInstanceProcessingContext,
           processInstance.getProcessDefinitionKey(),
-          processInstance.getFlowNodeInstances(),
+          processInstance.getScope(),
           processInstanceVariables,
           flowElements,
           VariablesDTO.empty());
@@ -325,10 +318,9 @@ public class ProcessInstanceProcessor
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
         FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
-            new FlowNodeInstanceProcessingContext(
-                processInstance.getFlowNodeInstances(), 0, flowElements);
+            new FlowNodeInstanceProcessingContext(processInstance.getScope(), 0, flowElements);
 
-        flowNodeInstancesProcessor.processContinue(
+        scopeProcessor.processContinue(
             processInstanceProcessingContext,
             flowNodeInstanceProcessingContext,
             trigger,
@@ -337,7 +329,7 @@ public class ProcessInstanceProcessor
         processResultAndForward(
             processInstanceProcessingContext,
             processInstance.getProcessDefinitionKey(),
-            processInstance.getFlowNodeInstances(),
+            processInstance.getScope(),
             processInstanceVariables,
             flowElements,
             VariablesDTO.empty());
@@ -356,7 +348,7 @@ public class ProcessInstanceProcessor
       // merge into the nearest parent scope
       for (int i = 0; i < elementInstanceIdPath.size() - 1; i++) {
         Long elementInstanceId = elementInstanceIdPath.get(i);
-        targetScope = targetScope.selectFlowNodeInstancesScope(elementInstanceId);
+        targetScope = targetScope.selectScopeScope(elementInstanceId);
       }
     }
     targetScope.merge(variables);
@@ -398,10 +390,9 @@ public class ProcessInstanceProcessor
                 .build();
 
         FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext =
-            new FlowNodeInstanceProcessingContext(
-                processInstance.getFlowNodeInstances(), 0, flowElements);
+            new FlowNodeInstanceProcessingContext(processInstance.getScope(), 0, flowElements);
 
-        flowNodeInstancesProcessor.processTerminate(
+        scopeProcessor.processTerminate(
             processInstanceProcessingContext,
             flowNodeInstanceProcessingContext,
             trigger,
@@ -410,7 +401,7 @@ public class ProcessInstanceProcessor
         processResultAndForward(
             processInstanceProcessingContext,
             processInstance.getProcessDefinitionKey(),
-            processInstance.getFlowNodeInstances(),
+            processInstance.getScope(),
             processInstanceVariables,
             flowElements,
             VariablesDTO.empty());
@@ -421,25 +412,23 @@ public class ProcessInstanceProcessor
   private void processResultAndForward(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       ProcessDefinitionKey processDefinitionKey,
-      FlowNodeInstances flowNodeInstances,
+      Scope scope,
       VariableScope processInstanceVariables,
       FlowElements flowElements,
       VariablesDTO updatedVariablesAtStart) {
 
-    FlowNodeInstancesDTO flowNodeInstancesDTO = flowNodeInstancesToDTO(flowNodeInstances);
+    ScopeDTO scopeDTO = scopeToDTO(scope);
 
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance).toBuilder()
-            .flowNodeInstances(flowNodeInstancesDTO)
-            .build();
+        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
 
     processInstanceVariables.persist();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
     VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
-    if (flowNodeInstances.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
-      if (flowNodeInstances.getState() == ScopeState.COMPLETED) {
+    if (scope.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
+      if (scope.getState() == ScopeState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
 
@@ -447,23 +436,20 @@ public class ProcessInstanceProcessor
 
       instanceResult.addInstanceUpdate(
           processInstanceToUpdate(
-              processInstance, flowNodeInstances, variablesChangedAfterStart, clock.millis()));
+              processInstance, scope, variablesChangedAfterStart, clock.millis()));
     }
 
-    if (processInstance.getFlowNodeInstances().getState().isDone()) {
+    if (processInstance.getScope().getState().isDone()) {
       continueParentInstance(instanceResult, processInstance, processInstanceVariables);
     }
 
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
 
-    if (processInstance.getFlowNodeInstances().getState().isDone()) {
+    if (processInstance.getScope().getState().isDone()) {
       purgeProcessInstance(processInstanceDTO);
     } else {
       processInstanceStore.put(processInstance.getProcessInstanceId(), processInstanceDTO);
-      storeFlowNodeInstances(
-          processInstance.getProcessInstanceId(),
-          processInstance.getFlowNodeInstances(),
-          flowElements);
+      storeScope(processInstance.getProcessInstanceId(), processInstance.getScope(), flowElements);
     }
   }
 
@@ -496,19 +482,18 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private FlowNodeInstancesDTO flowNodeInstancesToDTO(FlowNodeInstances flowNodeInstances) {
-    return new FlowNodeInstancesDTO(
-        flowNodeInstances.getState(),
-        flowNodeInstances.getActiveCnt(),
-        flowNodeInstances.getElementInstanceCnt(),
-        flowNodeInstances.getGatewayInstances(),
-        flowNodeInstances.getMessageSubscriptions(),
-        flowNodeInstances.getScheduleKeys());
+  private ScopeDTO scopeToDTO(Scope scope) {
+    return new ScopeDTO(
+        scope.getState(),
+        scope.getActiveCnt(),
+        scope.getElementInstanceCnt(),
+        scope.getGatewayInstances(),
+        scope.getMessageSubscriptions(),
+        scope.getScheduleKeys());
   }
 
-  private void storeFlowNodeInstances(
-      UUID processInstanceId, FlowNodeInstances flowNodeInstances, FlowElements flowElements) {
-    for (FlowNodeInstance<?> fLowNodeInstance : flowNodeInstances.getInstances().values()) {
+  private void storeScope(UUID processInstanceId, Scope scope, FlowElements flowElements) {
+    for (FlowNodeInstance<?> fLowNodeInstance : scope.getInstances().values()) {
       storeFlowNodeInstance(processInstanceId, fLowNodeInstance, flowElements);
     }
   }
@@ -522,9 +507,8 @@ public class ProcessInstanceProcessor
       flowNodeInstanceStore.put(key, flowNodeInstanceDTO);
     }
 
-    if (fLowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
-      storeFlowNodeInstances(
-          processInstanceId, withFlowNodeInstances.getFlowNodeInstances(), flowElements);
+    if (fLowNodeInstance instanceof WithScope withScope) {
+      storeScope(processInstanceId, withScope.getScope(), flowElements);
     }
   }
 

@@ -73,7 +73,7 @@ public class ProcessInstanceWebSocket {
         processInstanceUuid,
         (ProcessInstanceUpdateDTO) processInstance.getUpdate());
     List<InstanceUpdateRecord> instanceUpdateRecords =
-        instanceUpdateRegistry.getFlowNodeInstancesByProcessInstance(processInstanceUuid);
+        instanceUpdateRegistry.getScopeByProcessInstance(processInstanceUuid);
     for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
       sendFlowNodeInstanceUpdate(
           instanceUpdateRecord.getTimestamp(),

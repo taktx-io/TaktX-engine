@@ -19,8 +19,8 @@ import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.InclusiveGatewayInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -67,8 +67,7 @@ public class InclusiveGatewayInstanceProcessor
   }
 
   @Override
-  protected boolean canTriggerOutputFlows(
-      InclusiveGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
+  protected boolean canTriggerOutputFlows(InclusiveGatewayInstance gatewayInstance, Scope scope) {
     // For each incoming flow check if the corresponding output flows have been triggered,
     // if any of them hasnt, we will not trigger the output flows
     // If there are no corresponding gateways, we assume we are a diverging and allow the flow to
@@ -76,7 +75,7 @@ public class InclusiveGatewayInstanceProcessor
 
     Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousTriggeredInstancePairs =
         findPreviousInclusiveGatewayInstances(
-            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), flowNodeInstances);
+            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), scope);
     Set<String> collect =
         previousTriggeredInstancePairs.keySet().stream()
             .map(SequenceFlow::getId)
@@ -89,13 +88,13 @@ public class InclusiveGatewayInstanceProcessor
   }
 
   private Map<SequenceFlow, Set<InclusiveGatewayInstance>> findPreviousInclusiveGatewayInstances(
-      Set<SequenceFlow> incomingSequenceFlows, FlowNodeInstances flowNodeInstances) {
+      Set<SequenceFlow> incomingSequenceFlows, Scope scope) {
     Map<SequenceFlow, Set<InclusiveGatewayInstance>> instanceMap = new HashMap<>();
     for (SequenceFlow incomingSequenceFlow : incomingSequenceFlows) {
       FlowNode sourceNode = incomingSequenceFlow.getSourceNode();
       if (sourceNode instanceof InclusiveGateway inclusiveGateway) {
         Optional<FlowNodeInstance<?>> instanceWithFlowNode =
-            flowNodeInstances.getInstanceWithFlowNode(inclusiveGateway);
+            scope.getInstanceWithFlowNode(inclusiveGateway);
         if (instanceWithFlowNode.isPresent()) {
           InclusiveGatewayInstance gatewayInstance =
               (InclusiveGatewayInstance) instanceWithFlowNode.get();
@@ -107,8 +106,7 @@ public class InclusiveGatewayInstanceProcessor
         }
       } else {
         Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousInclusiveGatewayInstances =
-            findPreviousInclusiveGatewayInstances(
-                sourceNode.getIncomingSequenceFlows(), flowNodeInstances);
+            findPreviousInclusiveGatewayInstances(sourceNode.getIncomingSequenceFlows(), scope);
         if (!previousInclusiveGatewayInstances.isEmpty()) {
           instanceMap
               .computeIfAbsent(incomingSequenceFlow, k -> new HashSet<>())

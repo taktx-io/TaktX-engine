@@ -8,6 +8,6 @@
 
 package io.taktx.engine.pi.model;
 
-public interface WithFlowNodeInstances {
-  FlowNodeInstances getFlowNodeInstances();
+public interface WithScope {
+  Scope getScope();
 }

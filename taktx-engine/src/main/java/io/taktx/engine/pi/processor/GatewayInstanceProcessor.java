@@ -19,9 +19,9 @@ import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.HashSet;
@@ -72,12 +72,9 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance,
-      I gatewayInstance,
-      FlowNodeInstances flowNodeInstances,
-      VariableScope variables) {
+      ProcessInstance processInstance, I gatewayInstance, Scope scope, VariableScope variables) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
-    if (canTriggerOutputFlows(gatewayInstance, flowNodeInstances)) {
+    if (canTriggerOutputFlows(gatewayInstance, scope)) {
       gatewayInstance.resetFlows();
       E gatewayNode = gatewayInstance.getFlowNode();
       Set<SequenceFlow> sequenceFlows = gatewayNode.getOutGoingSequenceFlows();
@@ -118,8 +115,7 @@ public abstract class GatewayInstanceProcessor<
     return outgoingFlows;
   }
 
-  protected abstract boolean canTriggerOutputFlows(
-      I gatewayInstance, FlowNodeInstances flowNodeInstances);
+  protected abstract boolean canTriggerOutputFlows(I gatewayInstance, Scope scope);
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(

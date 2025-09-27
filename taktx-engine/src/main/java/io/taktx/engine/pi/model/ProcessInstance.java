@@ -21,7 +21,7 @@ public class ProcessInstance {
   private final UUID parentProcessInstanceId;
   private final List<Long> parentElementInstancePath;
   private final ProcessDefinitionKey processDefinitionKey;
-  private final FlowNodeInstances flowNodeInstances;
+  private final Scope scope;
   private final boolean propagateAllToParent;
   private final Set<IoVariableMapping> outputMappings;
 
@@ -30,14 +30,14 @@ public class ProcessInstance {
       UUID parentProcessInstanceId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
-      FlowNodeInstances flowNodeInstances,
+      Scope scope,
       boolean propagateAllToParent,
       Set<IoVariableMapping> outputMappings) {
     this.processInstanceId = processInstanceId;
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
-    this.flowNodeInstances = flowNodeInstances;
+    this.scope = scope;
     this.propagateAllToParent = propagateAllToParent;
     this.outputMappings = outputMappings;
   }

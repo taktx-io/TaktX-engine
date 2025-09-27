@@ -116,7 +116,7 @@ public class BpmnTestEngine {
     return new ProcessInstanceDTO(
         processInstanceId,
         processInstanceUpdate.getParentProcessInstanceId(),
-        processInstanceUpdate.getFlowNodeInstances(),
+        processInstanceUpdate.getScope(),
         processInstanceUpdate.getParentElementInstancePath(),
         processInstanceUpdate.getProcessDefinitionKey(),
         false,
@@ -505,8 +505,7 @@ public class BpmnTestEngine {
                 userTaskTrigger ->
                     userTaskTrigger != null
                         && userTaskTrigger.getProcessInstanceId().equals(activeProcessInstanceId)
-                        && getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId)
-                            .stream()
+                        && getScopeWithElementId(activeProcessInstanceId, elementId).stream()
                             .anyMatch(FlowNodeInstanceDTO::isActive));
 
     return this;
@@ -529,8 +528,7 @@ public class BpmnTestEngine {
                         && externalTaskTrigger
                             .getProcessInstanceId()
                             .equals(activeProcessInstanceId)
-                        && getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId)
-                            .stream()
+                        && getScopeWithElementId(activeProcessInstanceId, elementId).stream()
                             .allMatch(FlowNodeInstanceDTO::isActive));
 
     return this;
@@ -580,7 +578,7 @@ public class BpmnTestEngine {
                               pi.getProcessDefinitionKey()
                                       .getProcessDefinitionId()
                                       .equals(childProcessName)
-                                  && pi.getFlowNodeInstances().getState() == processInstanceState)
+                                  && pi.getScope().getState() == processInstanceState)
                       .map(ProcessInstanceDTO::getProcessInstanceId)
                       .findFirst()
                       .orElse(null);
@@ -654,7 +652,7 @@ public class BpmnTestEngine {
               if (activeProcessInstanceId != null
                   && processInstanceMap
                       .get(activeProcessInstanceId)
-                      .getFlowNodeInstances()
+                      .getScope()
                       .getState()
                       .isDone()) {
                 return activeProcessInstanceId;
@@ -727,12 +725,12 @@ public class BpmnTestEngine {
     Awaitility.await()
         .atMost(duration)
         .until(
-            () -> getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId),
+            () -> getScopeWithElementId(activeProcessInstanceId, elementId),
             instances -> !instances.isEmpty() && instances.getFirst().getPassedCnt() == count);
     return this;
   }
 
-  public List<FlowNodeInstanceDTO> getFlowNodeInstancesWithElementId(
+  public List<FlowNodeInstanceDTO> getScopeWithElementId(
       UUID processInstanceId, String elementPath) {
 
     String[] split = elementPath.split(":");
@@ -911,7 +909,7 @@ public class BpmnTestEngine {
         .until(
             () -> {
               List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId =
-                  getFlowNodeInstancesWithElementId(activeProcessInstanceId, elementId);
+                  getScopeWithElementId(activeProcessInstanceId, elementId);
               return flowNodeInstanceWithElementId.getFirst()
                       instanceof ActivityInstanceDTO activityInstance
                   && activityInstance.getState() == state;

@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @RegisterForReflection
-public class FlowNodeInstancesDTO {
+public class ScopeDTO {
   private ScopeState state;
 
   private int activeCnt;
@@ -37,7 +37,7 @@ public class FlowNodeInstancesDTO {
 
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
 
-  public FlowNodeInstancesDTO(
+  public ScopeDTO(
       ScopeState state,
       int activeCnt,
       long elementInstanceCnt,

@@ -12,6 +12,4 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.TimerEventDefinition;
 
 public record ScheduledStartInfo(
-    FlowNodeInstances flowNodeInstances,
-    FlowNode flowNodeToStart,
-    TimerEventDefinition timerEventDefinition) {}
+    Scope scope, FlowNode flowNodeToStart, TimerEventDefinition timerEventDefinition) {}

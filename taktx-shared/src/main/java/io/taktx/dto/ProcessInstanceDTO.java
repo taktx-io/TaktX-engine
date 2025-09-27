@@ -34,7 +34,7 @@ public class ProcessInstanceDTO {
 
   private UUID parentProcessInstanceId;
 
-  private FlowNodeInstancesDTO flowNodeInstances;
+  private ScopeDTO scope;
 
   private List<Long> parentElementInstancePath;
 
@@ -47,14 +47,14 @@ public class ProcessInstanceDTO {
   public ProcessInstanceDTO(
       UUID processInstanceId,
       UUID parentProcessInstanceId,
-      FlowNodeInstancesDTO flowNodeInstances,
+      ScopeDTO scope,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {
     this.processInstanceId = processInstanceId;
     this.parentProcessInstanceId = parentProcessInstanceId;
-    this.flowNodeInstances = flowNodeInstances;
+    this.scope = scope;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
     this.propagateAllToParent = propagateAllToParent;

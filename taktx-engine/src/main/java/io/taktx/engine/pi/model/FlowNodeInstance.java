@@ -60,8 +60,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public boolean isDirty() {
     boolean result = dirty;
-    if (!dirty && this instanceof WithFlowNodeInstances withFlowNodeInstances) {
-      result |= withFlowNodeInstances.getFlowNodeInstances().isDirty();
+    if (!dirty && this instanceof WithScope withScope) {
+      result |= withScope.getScope().isDirty();
     }
     return result;
   }

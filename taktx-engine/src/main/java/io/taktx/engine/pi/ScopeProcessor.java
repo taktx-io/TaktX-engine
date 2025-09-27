@@ -23,9 +23,9 @@ import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
-public class FlowNodeInstancesProcessor {
+public class ScopeProcessor {
 
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FlowInstanceRunner flowInstanceRunner;
@@ -44,7 +44,7 @@ public class FlowNodeInstancesProcessor {
   private final FeelExpressionHandler feelExpressionHandler;
   private final ProcessInstanceMapper mapper;
 
-  public FlowNodeInstancesProcessor(
+  public ScopeProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FlowInstanceRunner flowInstanceRunner,
       PathExtractor pathExtractor,
@@ -64,9 +64,9 @@ public class FlowNodeInstancesProcessor {
       FlowNodeInstance<?> parentElementInstance,
       VariableScope parentVariableScope) {
 
-    FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
+    Scope scope = flowNodeInstanceProcessingContext.getScope();
 
-    flowNodeInstances.setState(ScopeState.ACTIVE);
+    scope.setState(ScopeState.ACTIVE);
 
     // first check if we need to start timer triggers for event subprocesses with corresponding
     // timer start events
@@ -80,8 +80,7 @@ public class FlowNodeInstancesProcessor {
         if (optTimerEventDefinition.isPresent()) {
           TimerEventDefinition timerEventDefinition = optTimerEventDefinition.get();
           ScheduledStartInfo scheduledStartInfo =
-              new ScheduledStartInfo(
-                  flowNodeInstances, eventTriggeredSubProcess, timerEventDefinition);
+              new ScheduledStartInfo(scope, eventTriggeredSubProcess, timerEventDefinition);
           processInstanceProcessingContext
               .getInstanceResult()
               .addScheduledStart(scheduledStartInfo);
@@ -104,10 +103,10 @@ public class FlowNodeInstancesProcessor {
               new NewCorrelationSubscriptionMessageEventInfo(
                   messageName,
                   correlationKey,
-                  flowNodeInstances.getParentFlowNodeInstance(),
+                  scope.getParentFlowNodeInstance(),
                   eventTriggeredSubProcess);
 
-          flowNodeInstances.addMessageSubscription(messageName, correlationKey);
+          scope.addMessageSubscription(messageName, correlationKey);
 
           processInstanceProcessingContext
               .getInstanceResult()
@@ -119,7 +118,7 @@ public class FlowNodeInstancesProcessor {
     FlowNode flowNode = flowElements.getStartNode(elementId);
 
     FlowNodeInstance<?> flowNodeInstance =
-        flowNode.createAndStoreNewInstance(parentElementInstance, flowNodeInstances);
+        flowNode.createAndStoreNewInstance(parentElementInstance, scope);
 
     FlowNodeInstanceProcessor<?, ?, ?> processor =
         flowNodeInstanceProcessorProvider.getProcessor(flowNode);
@@ -156,16 +155,16 @@ public class FlowNodeInstancesProcessor {
 
     if (flowNodeInstanceProcessingContext.getSubProcessLevel()
         < trigger.getParentElementInstanceIdPath().size()) {
-      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-          new StoredFlowNodeInstancesWrapper(
+      StoredScopeWrapper storedScopeWrapper =
+          new StoredScopeWrapper(
               processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              flowNodeInstanceProcessingContext.getScope(),
               processInstanceProcessingContext.getFlowNodeInstanceStore(),
               flowNodeInstanceProcessingContext.getFlowElements(),
               mapper);
 
       FlowNodeInstance<?> flowNodeInstance =
-          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
+          storedScopeWrapper.getInstanceWithInstanceId(
               trigger
                   .getParentElementInstanceIdPath()
                   .get(flowNodeInstanceProcessingContext.getSubProcessLevel()));
@@ -174,7 +173,7 @@ public class FlowNodeInstancesProcessor {
           && flowNodeInstance.getFlowNode() instanceof WIthChildElements wIthChildElements) {
         FlowNodeInstanceProcessingContext childFlowNodeInstanceProcessingContext =
             new FlowNodeInstanceProcessingContext(
-                subProcessInstance.getFlowNodeInstances(),
+                subProcessInstance.getScope(),
                 flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
                 wIthChildElements.getElements());
         processStartFlowElement(
@@ -188,28 +187,27 @@ public class FlowNodeInstancesProcessor {
             flowNodeInstanceProcessingContext,
             parentVariableScope);
 
-        if (subProcessInstance.getFlowNodeInstances().getState().isDone()) {
+        if (subProcessInstance.getScope().getState().isDone()) {
           subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
         }
 
-        flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
+        flowNodeInstanceProcessingContext.getScope().determineImplicitCompletedState();
       } else {
         throw new IllegalStateException(
-            "Parent element instanceToContinue is not a WithFlowNodeInstances or WIthChildElements type: "
+            "Parent element instanceToContinue is not a WithScope or WIthChildElements type: "
                 + flowNodeInstance.getClass().getName());
       }
 
     } else {
 
-      FlowNodeInstances flowNodeInstances =
-          flowNodeInstanceProcessingContext.getFlowNodeInstances();
+      Scope scope = flowNodeInstanceProcessingContext.getScope();
       FlowElements parentFlowElements = flowNodeInstanceProcessingContext.getFlowElements();
-      FlowNodeInstance<?> parentFlowNodeInstance = flowNodeInstances.getParentFlowNodeInstance();
+      FlowNodeInstance<?> parentFlowNodeInstance = scope.getParentFlowNodeInstance();
       Optional<FlowNode> optFlowNode = parentFlowElements.getFlowNode(trigger.getElementId());
       if (optFlowNode.isPresent()) {
         FlowNode flowNode = optFlowNode.get();
         FlowNodeInstance<?> flowNodeInstance =
-            flowNode.createAndStoreNewInstance(parentFlowNodeInstance, flowNodeInstances);
+            flowNode.createAndStoreNewInstance(parentFlowNodeInstance, scope);
 
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(flowNode);
@@ -235,16 +233,16 @@ public class FlowNodeInstancesProcessor {
       ContinueFlowElementTriggerDTO trigger,
       VariableScope parentVariables) {
 
-    StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-        new StoredFlowNodeInstancesWrapper(
+    StoredScopeWrapper storedScopeWrapper =
+        new StoredScopeWrapper(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-            flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+            flowNodeInstanceProcessingContext.getScope(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements(),
             mapper);
 
     FlowNodeInstance<?> flowNodeInstance =
-        storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
+        storedScopeWrapper.getInstanceWithInstanceId(
             trigger
                 .getElementInstanceIdPath()
                 .get(flowNodeInstanceProcessingContext.getSubProcessLevel()));
@@ -269,10 +267,10 @@ public class FlowNodeInstancesProcessor {
       TerminateTriggerDTO trigger,
       VariableScope parentVariableScope) {
 
-    StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
-        new StoredFlowNodeInstancesWrapper(
+    StoredScopeWrapper storedScopeWrapper =
+        new StoredScopeWrapper(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-            flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+            flowNodeInstanceProcessingContext.getScope(),
             processInstanceProcessingContext.getFlowNodeInstanceStore(),
             flowNodeInstanceProcessingContext.getFlowElements(),
             mapper);
@@ -280,7 +278,7 @@ public class FlowNodeInstancesProcessor {
     if (trigger.getElementInstanceIdPath().isEmpty()) {
       // Terminate all elements in the process instanceToContinue and the process instanceToContinue
       // itself
-      storedFlowNodeInstancesWrapper
+      storedScopeWrapper
           .getAllInstances()
           .values()
           .forEach(
@@ -293,11 +291,11 @@ public class FlowNodeInstancesProcessor {
                     instance,
                     parentVariableScope);
               });
-      flowNodeInstanceProcessingContext.getFlowNodeInstances().setState(ScopeState.CANCELED);
+      flowNodeInstanceProcessingContext.getScope().setState(ScopeState.CANCELED);
     } else {
       // Terminate the specific element instanceToContinue in the process instanceToContinue
       FlowNodeInstance<?> instance =
-          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(
+          storedScopeWrapper.getInstanceWithInstanceId(
               trigger.getElementInstanceIdPath().getFirst());
       if (instance != null) {
         FlowNodeInstanceProcessor<?, ?, ?> processor =
@@ -329,7 +327,7 @@ public class FlowNodeInstancesProcessor {
       processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
     }
-    flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
+    flowNodeInstanceProcessingContext.getScope().determineImplicitCompletedState();
 
     terminateEventSubprocessSubscriptions(
         processInstanceProcessingContext, flowNodeInstanceProcessingContext);
@@ -338,9 +336,9 @@ public class FlowNodeInstancesProcessor {
   private static void terminateEventSubprocessSubscriptions(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
-    if (flowNodeInstanceProcessingContext.getFlowNodeInstances().getState().isDone()) {
+    if (flowNodeInstanceProcessingContext.getScope().getState().isDone()) {
       flowNodeInstanceProcessingContext
-          .getFlowNodeInstances()
+          .getScope()
           .getMessageSubscriptions()
           .forEach(
               (messageName, correlationKeys) ->
@@ -355,7 +353,7 @@ public class FlowNodeInstancesProcessor {
                       }));
 
       flowNodeInstanceProcessingContext
-          .getFlowNodeInstances()
+          .getScope()
           .getScheduleKeys()
           .forEach(
               scheduleKey ->

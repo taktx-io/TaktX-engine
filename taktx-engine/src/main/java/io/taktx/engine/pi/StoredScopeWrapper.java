@@ -13,39 +13,39 @@ import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
-import io.taktx.engine.pi.model.WithFlowNodeInstances;
+import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.WithScope;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-public class StoredFlowNodeInstancesWrapper {
+public class StoredScopeWrapper {
 
   private final UUID processInstanceId;
-  private final FlowNodeInstances flowNodeInstances;
+  private final Scope scope;
   private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private final FlowElements flowElements;
   private final ProcessInstanceMapper mapper;
 
-  public StoredFlowNodeInstancesWrapper(
+  public StoredScopeWrapper(
       UUID processInstanceId,
-      FlowNodeInstances flowNodeInstances,
+      Scope scope,
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       FlowElements flowElements,
       ProcessInstanceMapper mapper) {
     this.processInstanceId = processInstanceId;
-    this.flowNodeInstances = flowNodeInstances;
+    this.scope = scope;
     this.flowNodeInstanceStore = flowNodeInstanceStore;
     this.flowElements = flowElements;
     this.mapper = mapper;
   }
 
   public FlowNodeInstance<?> getInstanceWithInstanceId(long id) {
-    FlowNodeInstance<?> instance = flowNodeInstances.getInstanceWithInstanceId(id);
+    FlowNodeInstance<?> instance = scope.getInstanceWithInstanceId(id);
     if (instance == null) {
-      FlowNodeInstanceKeyDTO key = generatedKeyPath(flowNodeInstances, id);
+      FlowNodeInstanceKeyDTO key = generatedKeyPath(scope, id);
       instance = getFlowNodeInstanceFromStore(key);
     }
     return instance;
@@ -53,22 +53,20 @@ public class StoredFlowNodeInstancesWrapper {
 
   public Map<Long, FlowNodeInstance<?>> getAlParentlInstances() {
     FlowNodeInstanceKeyDTO keyMin =
-        generatedKeyPath(
-            flowNodeInstances.getParentFlowNodeInstance().getParentInstance(), Constants.MIN_LONG);
+        generatedKeyPath(scope.getParentFlowNodeInstance().getParentInstance(), Constants.MIN_LONG);
     FlowNodeInstanceKeyDTO keyMax =
-        generatedKeyPath(
-            flowNodeInstances.getParentFlowNodeInstance().getParentInstance(), Constants.MAX_LONG);
+        generatedKeyPath(scope.getParentFlowNodeInstance().getParentInstance(), Constants.MAX_LONG);
 
     retrieveRangeFromStore(keyMin, keyMax);
-    return flowNodeInstances.getInstances();
+    return scope.getInstances();
   }
 
   public Map<Long, FlowNodeInstance<?>> getAllInstances() {
-    FlowNodeInstanceKeyDTO keyMin = generatedKeyPath(flowNodeInstances, Constants.MIN_LONG);
-    FlowNodeInstanceKeyDTO keyMax = generatedKeyPath(flowNodeInstances, Constants.MAX_LONG);
+    FlowNodeInstanceKeyDTO keyMin = generatedKeyPath(scope, Constants.MIN_LONG);
+    FlowNodeInstanceKeyDTO keyMax = generatedKeyPath(scope, Constants.MAX_LONG);
 
     retrieveRangeFromStore(keyMin, keyMax);
-    return flowNodeInstances.getInstances();
+    return scope.getInstances();
   }
 
   private void retrieveRangeFromStore(
@@ -79,8 +77,8 @@ public class StoredFlowNodeInstancesWrapper {
           entry -> {
             FlowNodeInstanceDTO value = entry.value;
             FlowNodeInstance<?> instance = mapper.map(value, flowElements);
-            instance.setParentInstance(flowNodeInstances.getParentFlowNodeInstance());
-            flowNodeInstances
+            instance.setParentInstance(scope.getParentFlowNodeInstance());
+            scope
                 .getInstances()
                 .putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
           });
@@ -93,22 +91,20 @@ public class StoredFlowNodeInstancesWrapper {
     if (storedFlowNodeInstanceDTO != null) {
       flowNodeInstance = mapper.map(storedFlowNodeInstanceDTO, flowElements);
       if (flowNodeInstance != null) {
-        flowNodeInstance.setParentInstance(flowNodeInstances.getParentFlowNodeInstance());
-        if (flowNodeInstance instanceof WithFlowNodeInstances withFlowNodeInstances) {
-          withFlowNodeInstances.getFlowNodeInstances().setParentFlowNodeInstance(flowNodeInstance);
+        flowNodeInstance.setParentInstance(scope.getParentFlowNodeInstance());
+        if (flowNodeInstance instanceof WithScope withScope) {
+          withScope.getScope().setParentFlowNodeInstance(flowNodeInstance);
         }
-        flowNodeInstances.putInstance(flowNodeInstance);
+        scope.putInstance(flowNodeInstance);
       }
     }
     return flowNodeInstance;
   }
 
-  private FlowNodeInstanceKeyDTO generatedKeyPath(
-      FlowNodeInstances parentFlowNodeInstances, long id) {
+  private FlowNodeInstanceKeyDTO generatedKeyPath(Scope parentScope, long id) {
     LinkedList<Long> keyPath = new LinkedList<>();
     keyPath.addFirst(id);
-    FlowNodeInstance<?> parentFlowNodeInstance =
-        parentFlowNodeInstances.getParentFlowNodeInstance();
+    FlowNodeInstance<?> parentFlowNodeInstance = parentScope.getParentFlowNodeInstance();
     while (parentFlowNodeInstance != null) {
       keyPath.addFirst(parentFlowNodeInstance.getElementInstanceId());
       parentFlowNodeInstance = parentFlowNodeInstance.getParentInstance();

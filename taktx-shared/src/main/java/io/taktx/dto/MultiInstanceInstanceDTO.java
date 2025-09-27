@@ -19,5 +19,5 @@ import lombok.NoArgsConstructor;
 @RegisterForReflection
 public class MultiInstanceInstanceDTO extends ActivityInstanceDTO
     implements WithFlowNodeInstancesDTO {
-  private FlowNodeInstancesDTO flowNodeInstances;
+  private ScopeDTO scope;
 }

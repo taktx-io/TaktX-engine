@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Setter
 @Slf4j
-public class FlowNodeInstances {
+public class Scope {
 
   private final Map<Long, FlowNodeInstance<?>> instances;
   private Map<String, Long> gatewayInstances;
@@ -36,7 +36,7 @@ public class FlowNodeInstances {
   private FlowNodeInstance<?> parentFlowNodeInstance;
   private long elementInstanceCnt;
 
-  public FlowNodeInstances() {
+  public Scope() {
     this.instances = new LinkedHashMap<>();
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
@@ -95,9 +95,9 @@ public class FlowNodeInstances {
   public boolean isStateChanged() {
     return stateChanged
         || instances.values().stream()
-            .filter(WithFlowNodeInstances.class::isInstance)
-            .map(WithFlowNodeInstances.class::cast)
-            .anyMatch(instance -> instance.getFlowNodeInstances().isStateChanged());
+            .filter(WithScope.class::isInstance)
+            .map(WithScope.class::cast)
+            .anyMatch(instance -> instance.getScope().isStateChanged());
   }
 
   public void updateActiveCountForInstances() {

@@ -9,7 +9,7 @@
 package io.taktx.engine.pi;
 
 import io.taktx.engine.pd.model.FlowElements;
-import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.Scope;
 import lombok.Getter;
 
 /**
@@ -18,22 +18,22 @@ import lombok.Getter;
  */
 @Getter
 public class FlowNodeInstanceProcessingContext {
-  private final FlowNodeInstances flowNodeInstances;
+  private final Scope scope;
   private final FlowElements flowElements;
   private final DirectInstanceResult directInstanceResult;
   private final int subProcessLevel;
 
   public FlowNodeInstanceProcessingContext(
-      FlowNodeInstances flowNodeInstances, int subProcessLevel, FlowElements flowElements) {
-    this(flowNodeInstances, flowElements, subProcessLevel, DirectInstanceResult.empty());
+      Scope scope, int subProcessLevel, FlowElements flowElements) {
+    this(scope, flowElements, subProcessLevel, DirectInstanceResult.empty());
   }
 
   public FlowNodeInstanceProcessingContext(
-      FlowNodeInstances flowNodeInstances,
+      Scope scope,
       FlowElements flowElements,
       int subProcessLevel,
       DirectInstanceResult directInstanceResult) {
-    this.flowNodeInstances = flowNodeInstances;
+    this.scope = scope;
     this.flowElements = flowElements;
     this.subProcessLevel = subProcessLevel;
     this.directInstanceResult = directInstanceResult;

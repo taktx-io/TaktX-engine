@@ -21,5 +21,5 @@ import lombok.ToString;
 @RegisterForReflection
 public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFlowNodeInstancesDTO {
 
-  private FlowNodeInstancesDTO flowNodeInstances;
+  private ScopeDTO scope;
 }

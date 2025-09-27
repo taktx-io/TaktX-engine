@@ -17,7 +17,7 @@ import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -40,8 +40,7 @@ public class ExclusiveGatewayInstanceProcessor
   }
 
   @Override
-  protected boolean canTriggerOutputFlows(
-      ExclusiveGatewayInstance gatewayInstance, FlowNodeInstances flowNodeInstances) {
+  protected boolean canTriggerOutputFlows(ExclusiveGatewayInstance gatewayInstance, Scope scope) {
     return true;
   }
 

@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
+import io.taktx.engine.pi.model.Scope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,9 +21,7 @@ import lombok.experimental.SuperBuilder;
 public class IntermediateThrowEvent extends ThrowEvent {
 
   @Override
-  public FlowNodeInstance<?> newInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new IntermediateThrowEventInstance(
-        parentInstance, this, flowNodeInstances.nextElementInstanceId());
+  public FlowNodeInstance<?> newInstance(FlowNodeInstance<?> parentInstance, Scope scope) {
+    return new IntermediateThrowEventInstance(parentInstance, this, scope.nextElementInstanceId());
   }
 }

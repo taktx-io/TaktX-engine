@@ -9,7 +9,7 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.Scope;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Builder;
@@ -28,13 +28,12 @@ public abstract class FlowNode extends FlowElement {
   private final Set<SequenceFlow> outGoingSequenceFlows = new HashSet<>();
 
   public FlowNodeInstance<?> createAndStoreNewInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    FlowNodeInstance<?> newInstance = newInstance(parentInstance, flowNodeInstances);
+      FlowNodeInstance<?> parentInstance, Scope scope) {
+    FlowNodeInstance<?> newInstance = newInstance(parentInstance, scope);
     newInstance.setInitialState();
-    flowNodeInstances.putInstance(newInstance);
+    scope.putInstance(newInstance);
     return newInstance;
   }
 
-  public abstract FlowNodeInstance<?> newInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances);
+  public abstract FlowNodeInstance<?> newInstance(FlowNodeInstance<?> parentInstance, Scope scope);
 }

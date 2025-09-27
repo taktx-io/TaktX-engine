@@ -11,8 +11,8 @@ package io.taktx.engine.pd.model;
 import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.MultiInstanceInstance;
+import io.taktx.engine.pi.model.Scope;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -30,14 +30,12 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   @Setter private List<BoundaryEvent> boundaryEvents;
 
   @Override
-  public final ActivityInstance<?> newInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
+  public final ActivityInstance<?> newInstance(FlowNodeInstance<?> parentInstance, Scope scope) {
     if (loopCharacteristics != null && !loopCharacteristics.equals(LoopCharacteristics.NONE)) {
-      return new MultiInstanceInstance(
-          this, parentInstance, flowNodeInstances.nextElementInstanceId());
+      return new MultiInstanceInstance(this, parentInstance, scope.nextElementInstanceId());
     } else {
       ActivityInstance<?> activityInstance =
-          newActivityInstance(parentInstance, flowNodeInstances.nextElementInstanceId());
+          newActivityInstance(parentInstance, scope.nextElementInstanceId());
       activityInstance.setState(FlowNodeStateEnum.INITIAL);
       return activityInstance;
     }

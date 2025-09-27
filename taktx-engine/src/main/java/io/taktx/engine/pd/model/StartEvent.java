@@ -9,7 +9,7 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstances;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartEventInstance;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,8 +21,7 @@ import lombok.experimental.SuperBuilder;
 public class StartEvent extends CatchEvent {
   private boolean interrupting;
 
-  public StartEventInstance newInstance(
-      FlowNodeInstance<?> parentInstance, FlowNodeInstances flowNodeInstances) {
-    return new StartEventInstance(parentInstance, this, flowNodeInstances.nextElementInstanceId());
+  public StartEventInstance newInstance(FlowNodeInstance<?> parentInstance, Scope scope) {
+    return new StartEventInstance(parentInstance, this, scope.nextElementInstanceId());
   }
 }
