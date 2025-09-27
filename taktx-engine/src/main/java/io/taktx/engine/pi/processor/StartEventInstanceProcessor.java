@@ -8,7 +8,7 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.CatchEventStateEnum;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -48,7 +48,7 @@ public class StartEventInstanceProcessor
       StartEventInstance startEventInstance,
       String inputFlowId,
       VariableScope variables) {
-    startEventInstance.setState(CatchEventStateEnum.FINISHED);
+    startEventInstance.setState(FlowNodeStateEnum.COMPLETED);
   }
 
   @Override

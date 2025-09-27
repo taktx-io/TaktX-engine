@@ -9,8 +9,8 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -50,7 +50,7 @@ public class CallActivityInstanceProcessor
       CallActivityInstance callActivityInstance,
       String inputFlowId,
       VariableScope variables) {
-    callActivityInstance.setState(ActtivityStateEnum.WAITING);
+    callActivityInstance.setState(FlowNodeStateEnum.ACTIVE);
 
     UUID newProcessInstanceId = UUID.randomUUID();
     callActivityInstance.setChildProcessInstanceId(newProcessInstanceId);
@@ -78,7 +78,7 @@ public class CallActivityInstanceProcessor
                   callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
                   callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
     } else {
-      callActivityInstance.setState(ActtivityStateEnum.FAILED);
+      callActivityInstance.setState(FlowNodeStateEnum.ABORTED);
     }
   }
 
@@ -89,7 +89,7 @@ public class CallActivityInstanceProcessor
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
-    instance.setState(ActtivityStateEnum.FINISHED);
+    instance.setState(FlowNodeStateEnum.COMPLETED);
   }
 
   @Override

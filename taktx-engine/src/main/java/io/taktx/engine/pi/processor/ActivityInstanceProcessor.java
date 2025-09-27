@@ -10,9 +10,8 @@ package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
-import io.taktx.dto.ActtivityStateEnum;
-import io.taktx.dto.CatchEventStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.SequenceFlow;
@@ -67,7 +66,7 @@ public abstract class ActivityInstanceProcessor<
         inputFlowId,
         variables);
 
-    if (flownodeInstance.getState() == ActtivityStateEnum.WAITING) {
+    if (flownodeInstance.getState() == FlowNodeStateEnum.ACTIVE) {
       E flowNode = flownodeInstance.getFlowNode();
       flowNode
           .getBoundaryEvents()
@@ -80,7 +79,7 @@ public abstract class ActivityInstanceProcessor<
                         flowNodeInstanceProcessingContext
                             .getFlowNodeInstances()
                             .nextElementInstanceId());
-                boundaryEventInstance.setState(CatchEventStateEnum.INITIAL);
+                boundaryEventInstance.setState(FlowNodeStateEnum.INITIAL);
 
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
@@ -111,14 +110,12 @@ public abstract class ActivityInstanceProcessor<
         trigger,
         variables);
 
-    if (flowNodeInstance.isCompleted()) {
+    if (flowNodeInstance.isDone()) {
       flowNodeInstance
           .getBoundaryEventIds()
           .forEach(
               id ->
-                  flowNodeInstanceProcessingContext
-                      .getDirectInstanceResult()
-                      .addTerminateInstance(id));
+                  flowNodeInstanceProcessingContext.getDirectInstanceResult().addAbortInstance(id));
     }
 
     handleFinishedIteration(flowNodeInstance, variables);
@@ -134,10 +131,7 @@ public abstract class ActivityInstanceProcessor<
     instance
         .getBoundaryEventIds()
         .forEach(
-            id ->
-                flowNodeInstanceProcessingContext
-                    .getDirectInstanceResult()
-                    .addTerminateInstance(id));
+            id -> flowNodeInstanceProcessingContext.getDirectInstanceResult().addAbortInstance(id));
 
     processTerminateSpecificActivityInstance(
         processInstanceProcessingContext,
@@ -179,7 +173,7 @@ public abstract class ActivityInstanceProcessor<
   }
 
   private void handleFinishedIteration(I flownodeInstance, VariableScope variables) {
-    if (flownodeInstance.getState() == ActtivityStateEnum.FINISHED
+    if (flownodeInstance.getState() == FlowNodeStateEnum.COMPLETED
         && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
       String outputElement = flowNode.getLoopCharacteristics().getOutputElement();

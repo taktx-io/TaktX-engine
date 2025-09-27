@@ -31,6 +31,6 @@ public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent> {
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return isCompleted() || !getFlowNode().isCancelActivity();
+    return isDone() || !getFlowNode().isCancelActivity();
   }
 }

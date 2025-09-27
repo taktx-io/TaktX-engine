@@ -147,7 +147,7 @@ class BoundaryEventsTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
-        .hasTerminatedElementWithId("Subprocess_1")
+        .hasCanceleddElementWithId("Subprocess_1")
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
@@ -218,7 +218,7 @@ class BoundaryEventsTest {
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
-        .hasTerminatedElementWithId("Subprocess_1")
+        .hasCanceleddElementWithId("Subprocess_1")
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
@@ -232,9 +232,9 @@ class BoundaryEventsTest {
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "errorCode", "error message")
+        .andRespondToExternalTaskWithError(false, "errorCode", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 }

@@ -34,7 +34,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "456", "message")
+        .andRespondToExternalTaskWithError(false, "456", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -45,7 +45,7 @@ class ErrorsTest {
         .hasInstantiatedElementWithId("EndEvent_Error_WithErrorReference")
         .hasNotPassedElementWithId("BoundaryEvent_NoReference")
         .hasNotPassedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -56,7 +56,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "Error_1tlo99v", "message")
+        .andRespondToExternalTaskWithError(false, "Error_1tlo99v", "message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -65,7 +65,7 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -76,16 +76,17 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, null, null)
+        .andRespondToExternalTaskWithError(false, null, null)
         .waitUntilCompleted()
         .assertThatProcess()
+        .isCompleted()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
         .hasNotPassedElementWithId("BoundaryEvent_WithErrorReference")
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -96,7 +97,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "456", "error message")
+        .andRespondToExternalTaskWithError(false, "456", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -115,7 +116,7 @@ class ErrorsTest {
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
-        .andRespondToExternalTaskWithFailure(false, "Error_1tlo99v", "error message")
+        .andRespondToExternalTaskWithError(false, "Error_1tlo99v", "error message")
         .waitUntilCompleted()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")

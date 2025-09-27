@@ -8,9 +8,9 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ScopeState;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -66,7 +66,7 @@ public class FlowNodeInstancesProcessor {
 
     FlowNodeInstances flowNodeInstances = flowNodeInstanceProcessingContext.getFlowNodeInstances();
 
-    flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
+    flowNodeInstances.setState(ScopeState.ACTIVE);
 
     // first check if we need to start timer triggers for event subprocesses with corresponding
     // timer start events
@@ -188,8 +188,8 @@ public class FlowNodeInstancesProcessor {
             flowNodeInstanceProcessingContext,
             parentVariableScope);
 
-        if (subProcessInstance.getFlowNodeInstances().getState().isFinished()) {
-          subProcessInstance.setState(ActtivityStateEnum.FINISHED);
+        if (subProcessInstance.getFlowNodeInstances().getState().isDone()) {
+          subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
         }
 
         flowNodeInstanceProcessingContext.getFlowNodeInstances().determineImplicitCompletedState();
@@ -287,15 +287,13 @@ public class FlowNodeInstancesProcessor {
               instance -> {
                 FlowNodeInstanceProcessor<?, ?, ?> processor =
                     flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-                processor.processTerminate(
+                processor.processAbort(
                     processInstanceProcessingContext,
                     flowNodeInstanceProcessingContext,
                     instance,
                     parentVariableScope);
               });
-      flowNodeInstanceProcessingContext
-          .getFlowNodeInstances()
-          .setState(ProcessInstanceState.TERMINATED);
+      flowNodeInstanceProcessingContext.getFlowNodeInstances().setState(ScopeState.CANCELED);
     } else {
       // Terminate the specific element instanceToContinue in the process instanceToContinue
       FlowNodeInstance<?> instance =
@@ -304,7 +302,7 @@ public class FlowNodeInstancesProcessor {
       if (instance != null) {
         FlowNodeInstanceProcessor<?, ?, ?> processor =
             flowNodeInstanceProcessorProvider.getProcessor(instance.getFlowNode());
-        processor.processTerminate(
+        processor.processAbort(
             processInstanceProcessingContext,
             flowNodeInstanceProcessingContext,
             instance,
@@ -340,7 +338,7 @@ public class FlowNodeInstancesProcessor {
   private static void terminateEventSubprocessSubscriptions(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext) {
-    if (flowNodeInstanceProcessingContext.getFlowNodeInstances().getState().isFinished()) {
+    if (flowNodeInstanceProcessingContext.getFlowNodeInstances().getState().isDone()) {
       flowNodeInstanceProcessingContext
           .getFlowNodeInstances()
           .getMessageSubscriptions()

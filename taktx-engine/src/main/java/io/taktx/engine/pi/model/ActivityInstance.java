@@ -9,7 +9,7 @@
 package io.taktx.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashSet;
 import java.util.Set;
@@ -21,10 +21,6 @@ import lombok.Setter;
 @Setter
 @Getter
 public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInstance<N> {
-  private ActtivityStateEnum state = null;
-  private boolean stateChanged = false;
-  private boolean wasWaiting = false;
-  private boolean wasNew = false;
   private boolean iteration = false;
   private long nextIterationId;
   private JsonNode inputElement;
@@ -61,88 +57,21 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   @Override
   public void setInitialState() {
-    setState(ActtivityStateEnum.INITIAL);
+    setState(FlowNodeStateEnum.INITIAL);
   }
 
   @Override
-  public void setStartedState() {
-    setState(ActtivityStateEnum.STARTED);
-  }
-
-  public void setState(ActtivityStateEnum state) {
-    if (this.state == null && state == ActtivityStateEnum.INITIAL) {
-      setDirty();
-    }
-    if (this.state != null && this.state != state) {
-      stateChanged = true;
-      setDirty();
-    }
-    if (this.state == ActtivityStateEnum.INITIAL && this.state != state) {
-      wasNew = true;
-    }
-    if (state == ActtivityStateEnum.WAITING) {
-      wasWaiting = true;
-    }
-    this.state = state;
-  }
-
-  @Override
-  public boolean wasNew() {
-    return wasNew;
-  }
-
-  @Override
-  public boolean wasAwaiting() {
-    return wasWaiting;
-  }
-
-  @Override
-  public boolean stateChanged() {
-    return stateChanged;
-  }
-
-  @Override
-  public boolean stateAllowsStart() {
-    return state == ActtivityStateEnum.INITIAL;
-  }
-
-  @Override
-  public boolean stateAllowsContinue() {
-    return state == ActtivityStateEnum.WAITING;
-  }
-
-  @Override
-  public boolean stateAllowsTerminate() {
-    return state == ActtivityStateEnum.INITIAL || state == ActtivityStateEnum.WAITING;
-  }
-
-  @Override
-  public boolean isNotAwaiting() {
-    return state == ActtivityStateEnum.FINISHED || state == ActtivityStateEnum.TERMINATED;
-  }
-
-  @Override
-  public boolean isAwaiting() {
-    return state == ActtivityStateEnum.WAITING;
-  }
-
-  @Override
-  public boolean isCompleted() {
-    return state == ActtivityStateEnum.FINISHED || state == ActtivityStateEnum.TERMINATED;
-  }
-
-  @Override
-  public void terminate() {
-    setState(ActtivityStateEnum.TERMINATED);
+  public void abort() {
+    setState(FlowNodeStateEnum.ABORTED);
   }
 
   @Override
   public boolean canSelectNextNodeStart() {
-    return isCompleted();
+    return isDone();
   }
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return state == ActtivityStateEnum.FINISHED;
+    return getState() == FlowNodeStateEnum.COMPLETED;
   }
 }

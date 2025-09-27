@@ -63,7 +63,7 @@ class UserTaskTest {
         .hasVariableWithValue("usertask", "1")
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("UserTask_1")
-        .hasTerminatedElementWithId("UserTask_1")
+        .hasAbortedElementWithId("UserTask_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("EndEvent_Error");
   }
@@ -81,7 +81,7 @@ class UserTaskTest {
         .hasVariableWithValue("usertask", "1")
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("UserTask_1")
-        .hasTerminatedElementWithId("UserTask_1")
+        .hasAbortedElementWithId("UserTask_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("EndEvent_Escalation");
   }

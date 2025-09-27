@@ -21,7 +21,8 @@ public class DirectInstanceResult {
   private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
   private List<Long> terminateParentPath;
-  private final Queue<Long> terminateInstances = new ArrayDeque<>();
+  private final Queue<Long> abortInstances = new ArrayDeque<>();
+  private final Queue<Long> cancelInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
@@ -60,21 +61,30 @@ public class DirectInstanceResult {
     return newFlowNodeInstanceInfos.poll();
   }
 
-  public Long pollTerminateInstance() {
-    return terminateInstances.poll();
+  public Long pollAbortInstance() {
+    return abortInstances.poll();
+  }
+
+  public Long pollCancelInstance() {
+    return cancelInstances.poll();
   }
 
   public EventSignal pollEvent() {
     return events.poll();
   }
 
-  public void addTerminateInstance(long terminateInstanceId) {
-    this.terminateInstances.add(terminateInstanceId);
+  public void addAbortInstance(long abortInstanceId) {
+    this.abortInstances.add(abortInstanceId);
+  }
+
+  public void addCancelInstance(long cancelInstanceId) {
+    this.cancelInstances.add(cancelInstanceId);
   }
 
   public boolean hasDirectTriggers() {
     return !newFlowNodeInstanceInfos.isEmpty()
-        || !terminateInstances.isEmpty()
+        || !abortInstances.isEmpty()
+        || !cancelInstances.isEmpty()
         || !events.isEmpty()
         || terminateParentPath != null;
   }

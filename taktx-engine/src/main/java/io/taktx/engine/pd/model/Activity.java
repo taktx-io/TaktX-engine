@@ -8,7 +8,7 @@
 
 package io.taktx.engine.pd.model;
 
-import io.taktx.dto.ActtivityStateEnum;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
@@ -38,7 +38,7 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
     } else {
       ActivityInstance<?> activityInstance =
           newActivityInstance(parentInstance, flowNodeInstances.nextElementInstanceId());
-      activityInstance.setState(ActtivityStateEnum.INITIAL);
+      activityInstance.setState(FlowNodeStateEnum.INITIAL);
       return activityInstance;
     }
   }

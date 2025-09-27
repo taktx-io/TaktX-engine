@@ -9,7 +9,7 @@
 package io.taktx.engine.pi.model;
 
 import io.taktx.dto.InstanceScheduleKeyDTO;
-import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.ScopeState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +31,7 @@ public class FlowNodeInstances {
   private Map<String, Set<String>> messageSubscriptions;
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
   private int activeCnt;
-  private ProcessInstanceState state;
+  private ScopeState state;
   private boolean stateChanged;
   private FlowNodeInstance<?> parentFlowNodeInstance;
   private long elementInstanceCnt;
@@ -41,7 +41,7 @@ public class FlowNodeInstances {
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
     this.scheduleKeys = new HashSet<>();
-    this.state = ProcessInstanceState.ACTIVE;
+    this.state = ScopeState.ACTIVE;
     this.stateChanged = false;
     this.activeCnt = 0;
     this.elementInstanceCnt = 0;
@@ -66,8 +66,8 @@ public class FlowNodeInstances {
   public void determineImplicitCompletedState() {
     updateActiveCountForInstances();
 
-    if (state == ProcessInstanceState.ACTIVE && activeCnt == 0) {
-      this.setState(ProcessInstanceState.COMPLETED);
+    if ((state == ScopeState.ACTIVE || state == ScopeState.INITIALIZED) && activeCnt == 0) {
+      this.setState(ScopeState.COMPLETED);
     }
   }
 
@@ -83,12 +83,12 @@ public class FlowNodeInstances {
         .findFirst();
   }
 
-  public void setState(ProcessInstanceState state) {
+  public void setState(ScopeState state) {
     this.stateChanged = this.state != state;
     this.state = state;
   }
 
-  public void setStateNoChange(ProcessInstanceState state) {
+  public void setStateNoChange(ScopeState state) {
     this.state = state;
   }
 
@@ -105,7 +105,7 @@ public class FlowNodeInstances {
       if (instance.wasNew()) {
         activeCnt++;
       }
-      if ((instance.wasNew() || instance.wasAwaiting()) && instance.isCompleted()) {
+      if ((instance.wasNew() || instance.wasAwaiting()) && instance.isDone()) {
         activeCnt--;
       }
     }

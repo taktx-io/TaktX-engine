@@ -11,8 +11,8 @@ package io.taktx.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.FlowElements;
@@ -74,7 +74,7 @@ public class MultiInstanceProcessor
             activity.getLoopCharacteristics().getInputCollection(), flowNodeInstanceVariables);
 
     if (inputCollection == null || inputCollection.isEmpty()) {
-      multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
+      multiInstanceInstance.setState(FlowNodeStateEnum.COMPLETED);
     } else {
       ActivityInstance<?> iterationInstance =
           prepareIterationInstances(
@@ -114,11 +114,11 @@ public class MultiInstanceProcessor
           multiInstanceInstance,
           inputFlowId,
           flowNodeInstancesVariables);
-      if (iterationInstance.isAwaiting()) {
-        multiInstanceInstance.setState(ActtivityStateEnum.WAITING);
+      if (iterationInstance.isActive()) {
+        multiInstanceInstance.setState(FlowNodeStateEnum.ACTIVE);
       }
       if (activity.getLoopCharacteristics().isSequential()) {
-        if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
+        if (iterationInstance.getState() == FlowNodeStateEnum.COMPLETED) {
           iterationInstance =
               getNextIterationInstance(
                   processInstanceProcessingContext,
@@ -150,7 +150,7 @@ public class MultiInstanceProcessor
       ActivityInstance<?> iterationInstance =
           activity.newActivityInstance(
               multiInstanceInstance, flowNodeInstances.nextElementInstanceId());
-      iterationInstance.setState(ActtivityStateEnum.INITIAL);
+      iterationInstance.setState(FlowNodeStateEnum.INITIAL);
       iterationInstance.setIteration(true);
       iterationInstance.setLoopCnt(i);
 
@@ -236,7 +236,7 @@ public class MultiInstanceProcessor
         iterationInstance,
         trigger,
         flowNodeInstanceVariables);
-    if (iterationInstance.getState() == ActtivityStateEnum.FINISHED) {
+    if (iterationInstance.getState() == FlowNodeStateEnum.COMPLETED) {
 
       iterationInstance =
           getNextIterationInstance(
@@ -289,8 +289,8 @@ public class MultiInstanceProcessor
       MultiInstanceInstance multiInstanceInstance,
       VariableScope flowNodeInstancesVariables) {
     multiInstanceInstance.getFlowNodeInstances().determineImplicitCompletedState();
-    if (multiInstanceInstance.getFlowNodeInstances().getState().isFinished()) {
-      multiInstanceInstance.setState(ActtivityStateEnum.FINISHED);
+    if (multiInstanceInstance.getFlowNodeInstances().getState().isDone()) {
+      multiInstanceInstance.setState(FlowNodeStateEnum.COMPLETED);
       ArrayNode arrayNode = new ObjectMapper().createArrayNode();
 
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
@@ -331,7 +331,7 @@ public class MultiInstanceProcessor
         .values()
         .forEach(
             iteration ->
-                processor.processTerminate(
+                processor.processAbort(
                     processInstanceProcessingContext,
                     flowNodeInstanceProcessingContext,
                     iteration,

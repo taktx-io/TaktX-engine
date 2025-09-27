@@ -22,7 +22,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @RegisterForReflection
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
-  private ActtivityStateEnum state;
 
   private Set<Long> boundaryEventIds;
 
@@ -35,19 +34,4 @@ public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
   private JsonNode outputElement;
 
   private int loopCnt;
-
-  @Override
-  public boolean isTerminated() {
-    return state == ActtivityStateEnum.TERMINATED;
-  }
-
-  @Override
-  public boolean isFailed() {
-    return state == ActtivityStateEnum.FAILED;
-  }
-
-  @Override
-  public boolean isWaiting() {
-    return state == ActtivityStateEnum.WAITING;
-  }
 }

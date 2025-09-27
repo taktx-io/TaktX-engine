@@ -37,7 +37,7 @@ public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstanc
   }
 
   @Override
-  public boolean stateAllowsTerminate() {
+  public boolean stateAllowsStopping() {
     return true;
   }
 
@@ -72,28 +72,28 @@ public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstanc
   }
 
   @Override
-  public boolean isAwaiting() {
+  public boolean isActive() {
     return false;
   }
 
   @Override
-  public boolean isCompleted() {
+  public boolean isDone() {
     return true;
   }
 
   @Override
-  public void terminate() {
+  public void abort() {
     // Do nothing
   }
 
   @Override
   public boolean canSelectNextNodeStart() {
-    return isCompleted();
+    return isDone();
   }
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return isCompleted();
+    return isDone();
   }
 
   public abstract void resetFlows();

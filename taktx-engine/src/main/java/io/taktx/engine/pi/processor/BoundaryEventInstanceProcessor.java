@@ -44,7 +44,7 @@ public class BoundaryEventInstanceProcessor
       DirectInstanceResult directInstanceResult,
       BoundaryEventInstance boundaryEventInstance) {
     if (shouldCancel(boundaryEventInstance)) {
-      directInstanceResult.addTerminateInstance(boundaryEventInstance.getAttachedInstanceId());
+      directInstanceResult.addCancelInstance(boundaryEventInstance.getAttachedInstanceId());
     }
   }
 

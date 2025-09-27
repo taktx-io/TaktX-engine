@@ -66,8 +66,6 @@ public abstract class FlowNodeInstanceProcessor<
       return;
     }
 
-    flownodeInstance.setStartedState();
-
     processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesStarted();
 
     long now = clock.instant().toEpochMilli();
@@ -83,7 +81,7 @@ public abstract class FlowNodeInstanceProcessor<
         inputFlowId,
         currentVariableScope);
 
-    if (flownodeInstance.isCompleted()) {
+    if (flownodeInstance.isDone()) {
       processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
     }
 
@@ -130,7 +128,7 @@ public abstract class FlowNodeInstanceProcessor<
         (C) trigger,
         currentVariableScope);
 
-    if (flowNodeInstance.isCompleted()) {
+    if (flowNodeInstance.isDone()) {
       processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
     }
 
@@ -153,13 +151,13 @@ public abstract class FlowNodeInstanceProcessor<
                 flowNodeInstanceProcessingContext.getFlowElements()));
   }
 
-  public void processTerminate(
+  public void processAbort(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
       FlowNodeInstance<?> instance,
       VariableScope parentVariablesScope) {
     // Only terminate if the instanceToContinue is ready or waiting
-    if (instance.stateAllowsTerminate()) {
+    if (instance.stateAllowsStopping()) {
       long now = clock.instant().toEpochMilli();
 
       VariableScope currentVariableScope =
@@ -171,7 +169,41 @@ public abstract class FlowNodeInstanceProcessor<
           (I) instance,
           currentVariableScope);
 
-      instance.terminate();
+      instance.abort();
+
+      processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
+
+      processInstanceProcessingContext
+          .getInstanceResult()
+          .addInstanceUpdate(
+              createFlowNodeInstanceUpdate(
+                  processInstance,
+                  instance,
+                  currentVariableScope,
+                  now,
+                  flowNodeInstanceProcessingContext.getFlowElements()));
+    }
+  }
+
+  public void processCancel(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      FlowNodeInstance<?> instance,
+      VariableScope parentVariablesScope) {
+    // Only terminate if the instanceToContinue is ready or waiting
+    if (instance.stateAllowsStopping()) {
+      long now = clock.instant().toEpochMilli();
+
+      VariableScope currentVariableScope =
+          parentVariablesScope.selectFlowNodeInstancesScope(instance.getElementInstanceId());
+      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
+      processTerminateSpecificFlowNodeInstance(
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
+          (I) instance,
+          currentVariableScope);
+
+      instance.cancel();
 
       processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
 

@@ -25,7 +25,7 @@ public class IntermediateThrowEventInstance extends ThrowEventInstance<Intermedi
   }
 
   @Override
-  public boolean stateAllowsTerminate() {
+  public boolean stateAllowsStopping() {
     return false;
   }
 
@@ -40,12 +40,12 @@ public class IntermediateThrowEventInstance extends ThrowEventInstance<Intermedi
   }
 
   @Override
-  public boolean isCompleted() {
+  public boolean isDone() {
     return true;
   }
 
   @Override
-  public void terminate() {
+  public void abort() {
     // Do nothing
   }
 }

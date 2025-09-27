@@ -66,7 +66,7 @@ public class FlowInstanceRunner {
       event = directInstanceResult.pollEvent();
     }
 
-    Long terminateInstance = directInstanceResult.pollTerminateInstance();
+    Long terminateInstance = directInstanceResult.pollAbortInstance();
     while (terminateInstance != null) {
       StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
           new StoredFlowNodeInstancesWrapper(
@@ -82,12 +82,36 @@ public class FlowInstanceRunner {
 
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           processInstanceProcessorProvider.getProcessor(node);
-      processor.processTerminate(
+      processor.processAbort(
           processInstanceProcessingContext,
           flowNodeInstanceProcessingContext,
           flowNodeInstance,
           parentVariableScope);
-      terminateInstance = directInstanceResult.pollTerminateInstance();
+      terminateInstance = directInstanceResult.pollAbortInstance();
+    }
+
+    Long cancelInstance = directInstanceResult.pollCancelInstance();
+    while (cancelInstance != null) {
+      StoredFlowNodeInstancesWrapper storedFlowNodeInstancesWrapper =
+          new StoredFlowNodeInstancesWrapper(
+              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
+              flowNodeInstanceProcessingContext.getFlowNodeInstances(),
+              processInstanceProcessingContext.getFlowNodeInstanceStore(),
+              flowNodeInstanceProcessingContext.getFlowElements(),
+              mapper);
+      FlowNodeInstance<?> flowNodeInstance =
+          storedFlowNodeInstancesWrapper.getInstanceWithInstanceId(cancelInstance);
+
+      FlowNode node = flowNodeInstance.getFlowNode();
+
+      FlowNodeInstanceProcessor<?, ?, ?> processor =
+          processInstanceProcessorProvider.getProcessor(node);
+      processor.processCancel(
+          processInstanceProcessingContext,
+          flowNodeInstanceProcessingContext,
+          flowNodeInstance,
+          parentVariableScope);
+      cancelInstance = directInstanceResult.pollCancelInstance();
     }
 
     FlowNodeInstanceInfo instanceInfo = directInstanceResult.pollNewFlowNodeInstance();
@@ -120,9 +144,9 @@ public class FlowInstanceRunner {
           storedFlowNodeInstancesWrapper.getAllInstances();
 
       for (FlowNodeInstance<?> flowNodeInstance : allInstances.values()) {
-        if (flowNodeInstance.isAwaiting()
+        if (flowNodeInstance.isActive()
             && flowNodeInstance.getElementInstanceId() != terminateParentPath.getLast()) {
-          directInstanceResult.addTerminateInstance(flowNodeInstance.getElementInstanceId());
+          directInstanceResult.addAbortInstance(flowNodeInstance.getElementInstanceId());
         }
       }
       directInstanceResult.setTerminateParentPath(null);
@@ -168,8 +192,7 @@ public class FlowInstanceRunner {
                 parentVariableScope);
         if (eventHandled) {
           if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
-            directInstanceResult.addTerminateInstance(
-                boundaryEventInstance.getAttachedInstanceId());
+            directInstanceResult.addAbortInstance(boundaryEventInstance.getAttachedInstanceId());
           }
           break;
         }
@@ -190,8 +213,7 @@ public class FlowInstanceRunner {
                   parentVariableScope);
           if (eventHandled) {
             if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
-              directInstanceResult.addTerminateInstance(
-                  boundaryEventInstance.getAttachedInstanceId());
+              directInstanceResult.addAbortInstance(boundaryEventInstance.getAttachedInstanceId());
             }
             break;
           }
@@ -254,8 +276,7 @@ public class FlowInstanceRunner {
         directInstanceResult.addBubbleUpEvent(event);
       } else if (!eventHandled) {
         // Still not handled and No more bubbling up possible
-        directInstanceResult.addTerminateInstance(
-            event.getCurrentInstance().getElementInstanceId());
+        directInstanceResult.addAbortInstance(event.getCurrentInstance().getElementInstanceId());
       }
     }
   }

@@ -9,8 +9,8 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.CatchEventStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EventSignal;
@@ -53,14 +53,14 @@ public abstract class CatchEventInstanceProcessor<
       String inputFlowId,
       VariableScope variables) {
 
-    catchEventInstance.setState(CatchEventStateEnum.FINISHED);
+    catchEventInstance.setState(FlowNodeStateEnum.COMPLETED);
 
     catchEventInstance
         .getFlowNode()
         .getEscalationEventDefinition()
         .ifPresent(
             escalationEventDefinition -> {
-              catchEventInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.setState(FlowNodeStateEnum.ACTIVE);
               catchEventInstance.addEscalationSubscription(escalationEventDefinition);
             });
 
@@ -69,7 +69,7 @@ public abstract class CatchEventInstanceProcessor<
         .getErrorEventDefinition()
         .ifPresent(
             errorEventDefinition -> {
-              catchEventInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.setState(FlowNodeStateEnum.ACTIVE);
               catchEventInstance.addErrorSubscription(errorEventDefinition);
             });
 
@@ -79,7 +79,7 @@ public abstract class CatchEventInstanceProcessor<
           .getTimerEventDefinition()
           .ifPresent(
               timerEventDefinition -> {
-                catchEventInstance.setState(CatchEventStateEnum.WAITING);
+                catchEventInstance.setState(FlowNodeStateEnum.ACTIVE);
                 processInstanceProcessingContext
                     .getInstanceResult()
                     .addNewScheduledContinuation(
@@ -92,7 +92,7 @@ public abstract class CatchEventInstanceProcessor<
         .getMessageventDefinition()
         .ifPresent(
             messageEventDefinition -> {
-              catchEventInstance.setState(CatchEventStateEnum.WAITING);
+              catchEventInstance.setState(FlowNodeStateEnum.ACTIVE);
               Message message = messageEventDefinition.getReferencedMessage();
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =
@@ -129,7 +129,7 @@ public abstract class CatchEventInstanceProcessor<
       I flowNodeInstance) {
 
     if (shouldCancel(flowNodeInstance)) {
-      flowNodeInstance.setState(CatchEventStateEnum.FINISHED);
+      flowNodeInstance.setState(FlowNodeStateEnum.COMPLETED);
       terminateSubscriptions(
           flowNodeInstance, processInstanceProcessingContext.getInstanceResult());
     }

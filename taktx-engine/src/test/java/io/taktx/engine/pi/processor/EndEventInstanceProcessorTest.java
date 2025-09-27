@@ -26,7 +26,7 @@ class EndEventInstanceProcessorTest {
   @InjectMocks EndEventInstanceProcessor endEventInstanceProcessor;
 
   @Test
-  void testProcessTerminateSpecificFlowNodeInstance() {
+  void testProcessAbortSpecificFlowNodeInstance() {
     assertDoesNotThrow(
         () ->
             endEventInstanceProcessor.processTerminateSpecificFlowNodeInstance(

@@ -20,30 +20,7 @@ public abstract class EventInstance<N extends Event> extends FlowNodeInstance<N>
 
   @Override
   public boolean canSelectNextNodeStart() {
-    return isCompleted();
-  }
-
-  @Override
-  public boolean isAwaiting() {
-    return false;
-  }
-
-  @Override
-  public void setStartedState() {
-    // Do nothing
-  }
-
-  @Override
-  public void setInitialState() {}
-
-  @Override
-  public boolean wasAwaiting() {
-    return false;
-  }
-
-  @Override
-  public boolean wasNew() {
-    return true;
+    return isDone();
   }
 
   @Override
@@ -53,6 +30,6 @@ public abstract class EventInstance<N extends Event> extends FlowNodeInstance<N>
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return isCompleted();
+    return isDone();
   }
 }

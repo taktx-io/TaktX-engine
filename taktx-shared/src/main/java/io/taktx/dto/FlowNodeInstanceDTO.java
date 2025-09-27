@@ -33,6 +33,8 @@ import lombok.ToString;
 @ToString
 @RegisterForReflection
 public abstract class FlowNodeInstanceDTO {
+  private FlowNodeStateEnum state;
+
   private long elementInstanceId;
 
   private long parentElementInstanceId;
@@ -44,17 +46,17 @@ public abstract class FlowNodeInstanceDTO {
   private int passedCnt;
 
   @JsonIgnore
-  public boolean isTerminated() {
-    return false;
+  public boolean isActive() {
+    return state == FlowNodeStateEnum.ACTIVE;
   }
 
   @JsonIgnore
-  public boolean isFailed() {
-    return false;
+  public boolean isAborted() {
+    return state == FlowNodeStateEnum.ABORTED;
   }
 
   @JsonIgnore
-  public boolean isWaiting() {
-    return false;
+  public boolean isCanceled() {
+    return state == FlowNodeStateEnum.CANCELED;
   }
 }

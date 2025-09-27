@@ -8,21 +8,21 @@
 
 package io.taktx.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
-public enum ActtivityStateEnum {
-  INITIAL("I"),
-  STARTED("S"),
-  WAITING("W"),
-  TERMINATED("T"),
-  FAILED("X"),
-  FINISHED("F");
+public enum ScopeState {
+  INITIALIZED("S"), // Scope is created but no child node has started yet.
+  ACTIVE("A"), // At least one child execution (flow node instance) is active.
+  COMPLETED("C"), // All required child executions finished normally.
+  CANCELED("T"), // Scope terminated by parent scope or by an interrupting boundary event.
+  ABORTED("F"); // A child threw an uncaught Error.
 
   private final String code;
 
-  ActtivityStateEnum(String code) {
+  ScopeState(String code) {
     this.code = code;
   }
 
@@ -31,7 +31,8 @@ public enum ActtivityStateEnum {
     return code;
   }
 
-  public boolean isFinished() {
-    return this == FAILED || this == FINISHED || this == TERMINATED;
+  @JsonIgnore
+  public boolean isDone() {
+    return this == COMPLETED || this == CANCELED || this == ABORTED;
   }
 }

@@ -8,7 +8,6 @@
 
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +22,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @RegisterForReflection
 public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
-  private CatchEventStateEnum state;
 
   private Set<ScheduleKeyDTO> scheduledKeys;
 
@@ -36,10 +34,4 @@ public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
   private boolean catchAllEscalations;
 
   private boolean catchAllErrors;
-
-  @JsonIgnore
-  @Override
-  public boolean isWaiting() {
-    return state == CatchEventStateEnum.WAITING;
-  }
 }

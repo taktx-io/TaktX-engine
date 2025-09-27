@@ -47,7 +47,7 @@ class EscalationsTest {
         .hasNotPassedElementWithId("EndEvent_NonInterrupting")
         .hasNotPassedElementWithId("BoundaryEvent_NoReference")
         .hasNotPassedElementWithId("EndEvent_NoReference")
-        .hasTerminatedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "value_interrupting");
   }
 
@@ -70,7 +70,7 @@ class EscalationsTest {
         .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_NonInterrupting")
-        .hasTerminatedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "CatchAll");
   }
 
@@ -92,7 +92,7 @@ class EscalationsTest {
         .hasNotPassedElementWithId("BoundaryEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_Interrupting")
         .hasNotPassedElementWithId("EndEvent_NonInterrupting")
-        .hasTerminatedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_1")
         .hasVariableWithValue("MappedOutputVariable", "CatchAll");
   }
 
@@ -140,7 +140,7 @@ class EscalationsTest {
         .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
         .hasNotPassedElementWithId("EndEvent_Noninterrupting")
-        .hasTerminatedElementWithId("Subprocess_1/SubServiceTask_1");
+        .hasAbortedElementWithId("Subprocess_1/SubServiceTask_1");
   }
 
   @Test

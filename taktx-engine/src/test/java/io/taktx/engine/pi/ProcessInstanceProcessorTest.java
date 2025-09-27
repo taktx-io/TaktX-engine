@@ -202,8 +202,8 @@ class ProcessInstanceProcessorTest {
         .terminateProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElementWithId("SubProcess_1")
-        .isTerminated();
+        .hasAbortedElementWithId("SubProcess_1")
+        .isCanceled();
   }
 
   @Test
@@ -218,13 +218,13 @@ class ProcessInstanceProcessorTest {
         .terminateProcessInstance()
         .waitUntilChildProcessIsTerminated("calledActivityServiceTask")
         .assertThatProcess()
-        .isTerminated()
+        .isCanceled()
         .toProcessLevel()
         .parentProcess()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElementWithId("SubProcess_1")
-        .isTerminated();
+        .hasAbortedElementWithId("SubProcess_1")
+        .isCanceled();
   }
 
   @Test
@@ -238,8 +238,8 @@ class ProcessInstanceProcessorTest {
         .terminateElementInstance()
         .waitUntilCompleted()
         .assertThatProcess()
-        .hasTerminatedElementWithId("SubProcess_1")
-        .isTerminated();
+        .hasAbortedElementWithId("SubProcess_1")
+        .isCanceled();
   }
 
   @Test

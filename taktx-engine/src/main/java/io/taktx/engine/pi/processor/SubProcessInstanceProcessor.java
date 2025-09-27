@@ -8,8 +8,8 @@
 
 package io.taktx.engine.pi.processor;
 
-import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
@@ -59,7 +59,7 @@ public class SubProcessInstanceProcessor
     FlowNodeInstances subFlowNodeInstances = new FlowNodeInstances();
     subFlowNodeInstances.setParentFlowNodeInstance(subProcessInstance);
     subProcessInstance.setFlowNodeInstances(subFlowNodeInstances);
-    subProcessInstance.setState(ActtivityStateEnum.WAITING);
+    subProcessInstance.setState(FlowNodeStateEnum.ACTIVE);
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
     subProcessElements
@@ -82,8 +82,8 @@ public class SubProcessInstanceProcessor
             subFlowNodeInstanceProcessingContext
                 .getDirectInstanceResult()
                 .getTerminateParentPath());
-    if (subFlowNodeInstances.getState().isFinished()) {
-      subProcessInstance.setState(ActtivityStateEnum.FINISHED);
+    if (subFlowNodeInstances.getState().isDone()) {
+      subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
     }
   }
 
@@ -114,8 +114,8 @@ public class SubProcessInstanceProcessor
       eventSignal = bubbleUpEvents.poll();
     }
 
-    if (subProcessInstance.getFlowNodeInstances().getState().isFinished()) {
-      subProcessInstance.setState(ActtivityStateEnum.FINISHED);
+    if (subProcessInstance.getFlowNodeInstances().getState().isDone()) {
+      subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
     }
   }
 

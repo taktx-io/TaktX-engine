@@ -19,9 +19,9 @@ import io.taktx.dto.FlowNodeInstancesDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
-import io.taktx.dto.ProcessInstanceState;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
+import io.taktx.dto.ScopeState;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TerminateTriggerDTO;
@@ -238,7 +238,7 @@ public class ProcessInstanceProcessor
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       ProcessInstanceException e) {
     FlowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
-    flowNodeInstance.terminate();
+    flowNodeInstance.abort();
     ProcessInstance processInstance = e.getProcessInstance();
     log.warn(
         "Takt exception occurred for processinstance {}, {}, {}: {}",
@@ -439,7 +439,7 @@ public class ProcessInstanceProcessor
 
     VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
     if (flowNodeInstances.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
-      if (flowNodeInstances.getState() == ProcessInstanceState.COMPLETED) {
+      if (flowNodeInstances.getState() == ScopeState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
 
@@ -450,13 +450,13 @@ public class ProcessInstanceProcessor
               processInstance, flowNodeInstances, variablesChangedAfterStart, clock.millis()));
     }
 
-    if (processInstance.getFlowNodeInstances().getState().isFinished()) {
+    if (processInstance.getFlowNodeInstances().getState().isDone()) {
       continueParentInstance(instanceResult, processInstance, processInstanceVariables);
     }
 
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
 
-    if (processInstance.getFlowNodeInstances().getState().isFinished()) {
+    if (processInstance.getFlowNodeInstances().getState().isDone()) {
       purgeProcessInstance(processInstanceDTO);
     } else {
       processInstanceStore.put(processInstance.getProcessInstanceId(), processInstanceDTO);

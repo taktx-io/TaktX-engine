@@ -11,11 +11,11 @@ package io.taktx.engine.pi.processor;
 import static com.cronutils.utils.StringUtils.isNumeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.ActtivityStateEnum;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
@@ -75,7 +75,7 @@ public abstract class ExternalTaskInstanceProcessor<
     retryDirectly(
         getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),
         processInstanceProcessingContext.getInstanceResult());
-    flownodeInstance.setState(ActtivityStateEnum.WAITING);
+    flownodeInstance.setState(FlowNodeStateEnum.ACTIVE);
     flownodeInstance.setAttempt(0);
   }
 
@@ -274,7 +274,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private void handleSuccess(InstanceResult instanceResult, I externalTaskInstance) {
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
-    externalTaskInstance.setState(ActtivityStateEnum.FINISHED);
+    externalTaskInstance.setState(FlowNodeStateEnum.COMPLETED);
   }
 
   private void cancelTimeoutScheduledTrigger(

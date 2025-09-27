@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,13 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeInstance {
+  private FlowNodeStateEnum state = null;
+
+  private boolean stateChanged = false;
+
+  private boolean wasWaiting = false;
+
+  private boolean wasNew = false;
 
   private long elementInstanceId;
 
@@ -58,17 +66,68 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
     return result;
   }
 
-  public abstract boolean stateAllowsStart();
+  public void setState(FlowNodeStateEnum state) {
+    if (this.state == null && state == FlowNodeStateEnum.INITIAL) {
+      setDirty();
+    }
+    if (this.state != null && this.state != state) {
+      stateChanged = true;
+      setDirty();
+    }
+    if (this.state == FlowNodeStateEnum.INITIAL && this.state != state) {
+      wasNew = true;
+    }
+    if (state == FlowNodeStateEnum.ACTIVE) {
+      wasWaiting = true;
+    }
+    this.state = state;
+  }
 
-  public abstract boolean stateAllowsTerminate();
+  public boolean wasNew() {
+    return wasNew;
+  }
 
-  public abstract boolean stateAllowsContinue();
+  public boolean wasAwaiting() {
+    return wasWaiting;
+  }
 
-  public abstract boolean isNotAwaiting();
+  public boolean stateChanged() {
+    return stateChanged;
+  }
 
-  public abstract boolean isCompleted();
+  public boolean stateAllowsStart() {
+    return state == FlowNodeStateEnum.INITIAL;
+  }
 
-  public abstract void terminate();
+  public boolean isDone() {
+    return state == FlowNodeStateEnum.COMPLETED
+        || state == FlowNodeStateEnum.ABORTED
+        || state == FlowNodeStateEnum.CANCELED;
+  }
+
+  public boolean stateAllowsStopping() {
+    return state == FlowNodeStateEnum.ACTIVE || state == FlowNodeStateEnum.INITIAL;
+  }
+
+  public boolean stateAllowsContinue() {
+    return state == FlowNodeStateEnum.ACTIVE;
+  }
+
+  public boolean isNotAwaiting() {
+    return state == FlowNodeStateEnum.COMPLETED || state == FlowNodeStateEnum.ABORTED;
+  }
+
+  public void abort() {
+    if (stateAllowsStopping()) {
+      setState(FlowNodeStateEnum.ABORTED);
+    }
+  }
+
+  public void cancel() {
+    if (stateAllowsStopping()) {
+      setState(FlowNodeStateEnum.CANCELED);
+    }
+  }
 
   public abstract boolean canSelectNextNodeStart();
 
@@ -78,15 +137,15 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
     dirty = true;
   }
 
-  public abstract void setStartedState();
+  public boolean isActive() {
+    return state == FlowNodeStateEnum.ACTIVE;
+  }
 
-  public abstract boolean wasNew();
+  public void setInitialState() {
+    setState(FlowNodeStateEnum.INITIAL);
+  }
 
-  public abstract boolean stateChanged();
-
-  public abstract boolean isAwaiting();
-
-  public abstract boolean wasAwaiting();
-
-  public abstract void setInitialState();
+  public void setStartedState() {
+    setState(FlowNodeStateEnum.ACTIVE);
+  }
 }

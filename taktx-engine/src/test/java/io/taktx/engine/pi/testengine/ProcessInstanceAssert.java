@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
-import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.ScopeState;
 import io.taktx.dto.VariablesDTO;
 import java.util.List;
 import java.util.UUID;
@@ -35,8 +35,7 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert isCompleted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
     assertThat(processInstance).isNotNull();
-    assertThat(processInstance.getFlowNodeInstances().getState())
-        .isEqualTo(ProcessInstanceState.COMPLETED);
+    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ScopeState.COMPLETED);
     return this;
   }
 
@@ -74,25 +73,25 @@ public class ProcessInstanceAssert {
     return hasInstantiatedElementWithId(elementId, 1);
   }
 
-  public ProcessInstanceAssert hasTerminatedElementWithId(String elementId) {
+  public ProcessInstanceAssert hasAbortedElementWithId(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceId, elementId);
     assertThat(bpmnElementState)
         .as("element with " + elementId + " not found in process instanceToContinue")
         .isNotEmpty();
-    assertThat(bpmnElementState.getFirst().isTerminated())
+    assertThat(bpmnElementState.getFirst().isAborted())
         .as("element " + elementId + " was not terminated")
         .isTrue();
     return this;
   }
 
-  public ProcessInstanceAssert hasFailedElement(String elementId) {
+  public ProcessInstanceAssert hasCanceleddElementWithId(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState =
         bpmnTestEngine.getFlowNodeInstancesWithElementId(processInstanceId, elementId);
     assertThat(bpmnElementState)
         .as("element with " + elementId + " not found in process instanceToContinue")
         .isNotEmpty();
-    assertThat(bpmnElementState.getFirst().isFailed())
+    assertThat(bpmnElementState.getFirst().isCanceled())
         .as("element " + elementId + " was not terminated")
         .isTrue();
     return this;
@@ -148,7 +147,7 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public void hasState(ProcessInstanceState processInstanceState) {
+  public void hasState(ScopeState processInstanceState) {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
 
     assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(processInstanceState);
@@ -156,22 +155,19 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasFailed() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getFlowNodeInstances().getState())
-        .isEqualTo(ProcessInstanceState.FAILED);
+    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ScopeState.ABORTED);
     return this;
   }
 
-  public ProcessInstanceAssert isTerminated() {
+  public ProcessInstanceAssert isCanceled() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getFlowNodeInstances().getState())
-        .isEqualTo(ProcessInstanceState.TERMINATED);
+    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ScopeState.CANCELED);
     return this;
   }
 
   public ProcessInstanceAssert isStillActive() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getFlowNodeInstances().getState())
-        .isEqualTo(ProcessInstanceState.ACTIVE);
+    assertThat(processInstance.getFlowNodeInstances().getState()).isEqualTo(ScopeState.ACTIVE);
     return this;
   }
 }

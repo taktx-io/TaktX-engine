@@ -8,8 +8,8 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.ActtivityStateEnum;
-import io.taktx.dto.ProcessInstanceState;
+import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ScopeState;
 import io.taktx.engine.pd.model.Activity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,19 +25,18 @@ public class MultiInstanceInstance extends ActivityInstance<Activity>
   public MultiInstanceInstance(
       Activity activity, FlowNodeInstance<?> parentInstance, long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
-    setState(ActtivityStateEnum.INITIAL);
+    setState(FlowNodeStateEnum.INITIAL);
   }
 
   @Override
-  public void setState(ActtivityStateEnum state) {
+  public void setState(FlowNodeStateEnum state) {
     super.setState(state);
     switch (state) {
-      case INITIAL -> flowNodeInstances.setState(ProcessInstanceState.START);
-      case STARTED -> flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
-      case WAITING -> flowNodeInstances.setState(ProcessInstanceState.ACTIVE);
-      case TERMINATED -> flowNodeInstances.setState(ProcessInstanceState.TERMINATED);
-      case FAILED -> flowNodeInstances.setState(ProcessInstanceState.FAILED);
-      case FINISHED -> flowNodeInstances.setState(ProcessInstanceState.COMPLETED);
+      case INITIAL -> flowNodeInstances.setState(ScopeState.INITIALIZED);
+      case ACTIVE -> flowNodeInstances.setState(ScopeState.ACTIVE);
+      case CANCELED -> flowNodeInstances.setState(ScopeState.CANCELED);
+      case ABORTED -> flowNodeInstances.setState(ScopeState.ABORTED);
+      case COMPLETED -> flowNodeInstances.setState(ScopeState.COMPLETED);
     }
   }
 }
