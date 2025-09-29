@@ -11,7 +11,7 @@ package io.taktx.engine.pi.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.SequenceFlow;
@@ -66,7 +66,7 @@ public abstract class ActivityInstanceProcessor<
         inputFlowId,
         variables);
 
-    if (flownodeInstance.getState() == FlowNodeStateEnum.ACTIVE) {
+    if (flownodeInstance.getState() == ExecutionState.ACTIVE) {
       E flowNode = flownodeInstance.getFlowNode();
       flowNode
           .getBoundaryEvents()
@@ -77,7 +77,7 @@ public abstract class ActivityInstanceProcessor<
                         flownodeInstance.getParentInstance(),
                         boundaryEvent,
                         flowNodeInstanceProcessingContext.getScope().nextElementInstanceId());
-                boundaryEventInstance.setState(FlowNodeStateEnum.INITIAL);
+                boundaryEventInstance.setState(ExecutionState.INITIALIZED);
 
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
@@ -168,8 +168,7 @@ public abstract class ActivityInstanceProcessor<
   }
 
   private void handleFinishedIteration(I flownodeInstance, VariableScope variables) {
-    if (flownodeInstance.getState() == FlowNodeStateEnum.COMPLETED
-        && flownodeInstance.isIteration()) {
+    if (flownodeInstance.getState() == ExecutionState.COMPLETED && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
       String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
       JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variables);

@@ -8,7 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeInstance {
-  private FlowNodeStateEnum state = null;
+  private ExecutionState state = ExecutionState.INITIALIZED;
 
   private boolean stateChanged = false;
 
@@ -66,18 +66,22 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
     return result;
   }
 
-  public void setState(FlowNodeStateEnum state) {
-    if (this.state == null && state == FlowNodeStateEnum.INITIAL) {
-      setDirty();
+  public void setStateNoChange(ExecutionState state) {
+    this.state = state;
+    if (state == ExecutionState.ACTIVE) {
+      wasWaiting = true;
     }
-    if (this.state != null && this.state != state) {
+  }
+
+  public void setState(ExecutionState state) {
+    if (this.state != state) {
       stateChanged = true;
       setDirty();
     }
-    if (this.state == FlowNodeStateEnum.INITIAL && this.state != state) {
+    if (this.state == ExecutionState.INITIALIZED && this.state != state) {
       wasNew = true;
     }
-    if (state == FlowNodeStateEnum.ACTIVE) {
+    if (state == ExecutionState.ACTIVE) {
       wasWaiting = true;
     }
     this.state = state;
@@ -96,36 +100,36 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean stateAllowsStart() {
-    return state == FlowNodeStateEnum.INITIAL;
+    return state == ExecutionState.INITIALIZED;
   }
 
   public boolean isDone() {
-    return state == FlowNodeStateEnum.COMPLETED
-        || state == FlowNodeStateEnum.ABORTED
-        || state == FlowNodeStateEnum.CANCELED;
+    return state == ExecutionState.COMPLETED
+        || state == ExecutionState.ABORTED
+        || state == ExecutionState.CANCELED;
   }
 
   public boolean stateAllowsStopping() {
-    return state == FlowNodeStateEnum.ACTIVE || state == FlowNodeStateEnum.INITIAL;
+    return state == ExecutionState.ACTIVE || state == ExecutionState.INITIALIZED;
   }
 
   public boolean stateAllowsContinue() {
-    return state == FlowNodeStateEnum.ACTIVE;
+    return state == ExecutionState.ACTIVE;
   }
 
   public boolean isNotAwaiting() {
-    return state == FlowNodeStateEnum.COMPLETED || state == FlowNodeStateEnum.ABORTED;
+    return state == ExecutionState.COMPLETED || state == ExecutionState.ABORTED;
   }
 
   public void abort() {
     if (stateAllowsStopping()) {
-      setState(FlowNodeStateEnum.ABORTED);
+      setState(ExecutionState.ABORTED);
     }
   }
 
   public void cancel() {
     if (stateAllowsStopping()) {
-      setState(FlowNodeStateEnum.CANCELED);
+      setState(ExecutionState.CANCELED);
     }
   }
 
@@ -138,14 +142,10 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean isActive() {
-    return state == FlowNodeStateEnum.ACTIVE;
-  }
-
-  public void setInitialState() {
-    setState(FlowNodeStateEnum.INITIAL);
+    return state == ExecutionState.ACTIVE;
   }
 
   public void setStartedState() {
-    setState(FlowNodeStateEnum.ACTIVE);
+    setState(ExecutionState.ACTIVE);
   }
 }

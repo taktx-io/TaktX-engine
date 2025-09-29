@@ -8,9 +8,9 @@
 
 package io.taktx.engine.pi;
 
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ScheduleKeyDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
@@ -31,7 +31,7 @@ public class InstanceResult {
   private final Queue<InstanceUpdate> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
-  private final Queue<TerminateTriggerDTO> newTerminateCommands = new ArrayDeque<>();
+  private final Queue<AbortTriggerDTO> newTerminateCommands = new ArrayDeque<>();
   private final Queue<UserTaskInfo> userTasks = new ArrayDeque<>();
   private final Queue<ContinueFlowElementTriggerDTO> continuations = new ArrayDeque<>();
   private final Queue<NewCorrelationSubscriptionMessageEventInfo>
@@ -68,7 +68,7 @@ public class InstanceResult {
     continuations.add(continueFlowElementTrigger);
   }
 
-  public void addTerminateCommand(TerminateTriggerDTO terminateTrigger) {
+  public void addTerminateCommand(AbortTriggerDTO terminateTrigger) {
     newTerminateCommands.add(terminateTrigger);
   }
 

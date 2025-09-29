@@ -11,7 +11,9 @@ package io.taktx.engine.pi;
 import static io.taktx.dto.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -21,10 +23,8 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.ScopeDTO;
-import io.taktx.dto.ScopeState;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
@@ -124,7 +124,7 @@ public class ProcessInstanceProcessor
               kafkaTimestamp, continueFlowElementTrigger2.getClass().getSimpleName());
           handleContinue(continueFlowElementTrigger2);
         }
-        case TerminateTriggerDTO terminateTrigger -> {
+        case AbortTriggerDTO terminateTrigger -> {
           // Record end-to-end latency using Kafka timestamp
           processingStatistics.recordProcessInstanceLatency(
               kafkaTimestamp, trigger.getClass().getSimpleName());
@@ -247,7 +247,7 @@ public class ProcessInstanceProcessor
         e.getMessage());
     handleTerminate(
         flowNodeInstanceStore,
-        new TerminateTriggerDTO(processInstance.getProcessInstanceId(), List.of()));
+        new AbortTriggerDTO(processInstance.getProcessInstanceId(), List.of()));
   }
 
   private InstanceUpdate processInstanceToUpdate(
@@ -368,7 +368,7 @@ public class ProcessInstanceProcessor
 
   private void handleTerminate(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      TerminateTriggerDTO trigger) {
+      AbortTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
     ProcessInstanceDTO processInstanceDTO =
         processInstanceStore.get(trigger.getProcessInstanceId());
@@ -428,7 +428,7 @@ public class ProcessInstanceProcessor
 
     VariablesDTO currentVariablesDTO = processInstanceVariables.scopeToDTO();
     if (scope.isStateChanged() || !currentVariablesDTO.getVariables().isEmpty()) {
-      if (scope.getState() == ScopeState.COMPLETED) {
+      if (scope.getState() == ExecutionState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
 

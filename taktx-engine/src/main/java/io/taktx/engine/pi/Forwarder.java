@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi;
 
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
@@ -25,7 +26,6 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
@@ -277,9 +277,9 @@ public class Forwarder {
 
   private void forwardTerminateCommands(
       ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
-    Queue<TerminateTriggerDTO> newTerminateCommands = instanceResult.getNewTerminateCommands();
+    Queue<AbortTriggerDTO> newTerminateCommands = instanceResult.getNewTerminateCommands();
     while (!newTerminateCommands.isEmpty()) {
-      TerminateTriggerDTO terminateTrigger = newTerminateCommands.poll();
+      AbortTriggerDTO terminateTrigger = newTerminateCommands.poll();
       context.forward(
           new Record<>(terminateTrigger.getProcessInstanceId(), terminateTrigger, clock.millis()));
     }

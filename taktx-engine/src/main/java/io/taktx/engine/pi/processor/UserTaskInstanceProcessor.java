@@ -12,7 +12,7 @@ import io.taktx.bpmn.AssignmentDefinition;
 import io.taktx.bpmn.PriorityDefinition;
 import io.taktx.bpmn.TaskSchedule;
 import io.taktx.dto.AssignmentDefinitionDTO;
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.PriorityDefinitionDTO;
 import io.taktx.dto.TaskScheduleDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
@@ -57,7 +57,7 @@ public class UserTaskInstanceProcessor
       UserTaskInstance userTaskInstance,
       String inputFlowId,
       VariableScope flowNodeInstanceVariables) {
-    userTaskInstance.setState(FlowNodeStateEnum.ACTIVE);
+    userTaskInstance.setState(ExecutionState.ACTIVE);
     UserTask userTaskNode = userTaskInstance.getFlowNode();
     AssignmentDefinitionDTO assignmentDefinition =
         getProcessedAssignmentDefinition(
@@ -142,7 +142,7 @@ public class UserTaskInstanceProcessor
     UserTaskResponseResultDTO responseResult = trigger.getUserTaskResponseResult();
 
     if (UserTaskResponseType.COMPLETED == responseResult.getResponseType()) {
-      userTaskInstance.setState(FlowNodeStateEnum.COMPLETED);
+      userTaskInstance.setState(ExecutionState.COMPLETED);
     } else if (UserTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleError(
           flowNodeInstanceProcessingContext.getDirectInstanceResult(),

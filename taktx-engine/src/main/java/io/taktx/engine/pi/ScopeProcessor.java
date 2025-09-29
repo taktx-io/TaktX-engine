@@ -8,11 +8,10 @@
 
 package io.taktx.engine.pi;
 
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
-import io.taktx.dto.ScopeState;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.StartFlowElementTriggerDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
@@ -65,8 +64,6 @@ public class ScopeProcessor {
       VariableScope parentVariableScope) {
 
     Scope scope = flowNodeInstanceProcessingContext.getScope();
-
-    scope.setState(ScopeState.ACTIVE);
 
     // first check if we need to start timer triggers for event subprocesses with corresponding
     // timer start events
@@ -188,10 +185,10 @@ public class ScopeProcessor {
             parentVariableScope);
 
         if (subProcessInstance.getScope().getState().isDone()) {
-          subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
+          subProcessInstance.setState(ExecutionState.COMPLETED);
         }
 
-        flowNodeInstanceProcessingContext.getScope().determineImplicitCompletedState();
+        flowNodeInstanceProcessingContext.getScope().updateActiveCountForInstances();
       } else {
         throw new IllegalStateException(
             "Parent element instanceToContinue is not a WithScope or WIthChildElements type: "
@@ -264,7 +261,7 @@ public class ScopeProcessor {
   public void processTerminate(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      TerminateTriggerDTO trigger,
+      AbortTriggerDTO trigger,
       VariableScope parentVariableScope) {
 
     StoredScopeWrapper storedScopeWrapper =
@@ -291,7 +288,7 @@ public class ScopeProcessor {
                     instance,
                     parentVariableScope);
               });
-      flowNodeInstanceProcessingContext.getScope().setState(ScopeState.CANCELED);
+      flowNodeInstanceProcessingContext.getScope().setState(ExecutionState.ABORTED);
     } else {
       // Terminate the specific element instanceToContinue in the process instanceToContinue
       FlowNodeInstance<?> instance =
@@ -327,7 +324,7 @@ public class ScopeProcessor {
       processInstanceProcessingContext.getInstanceResult().addBubbleUpEvent(eventSignal);
       eventSignal = directInstanceResult.pollBubbleUpEvent();
     }
-    flowNodeInstanceProcessingContext.getScope().determineImplicitCompletedState();
+    flowNodeInstanceProcessingContext.getScope().updateActiveCountForInstances();
 
     terminateEventSubprocessSubscriptions(
         processInstanceProcessingContext, flowNodeInstanceProcessingContext);

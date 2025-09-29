@@ -9,9 +9,9 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
-import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
@@ -50,7 +50,7 @@ public class CallActivityInstanceProcessor
       CallActivityInstance callActivityInstance,
       String inputFlowId,
       VariableScope variables) {
-    callActivityInstance.setState(FlowNodeStateEnum.ACTIVE);
+    callActivityInstance.setState(ExecutionState.ACTIVE);
 
     UUID newProcessInstanceId = UUID.randomUUID();
     callActivityInstance.setChildProcessInstanceId(newProcessInstanceId);
@@ -78,7 +78,7 @@ public class CallActivityInstanceProcessor
                   callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
                   callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
     } else {
-      callActivityInstance.setState(FlowNodeStateEnum.ABORTED);
+      callActivityInstance.setState(ExecutionState.ABORTED);
     }
   }
 
@@ -89,7 +89,7 @@ public class CallActivityInstanceProcessor
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
-    instance.setState(FlowNodeStateEnum.COMPLETED);
+    instance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
@@ -100,7 +100,6 @@ public class CallActivityInstanceProcessor
       VariableScope processInstanceVariables) {
     processInstanceProcessingContext
         .getInstanceResult()
-        .addTerminateCommand(
-            new TerminateTriggerDTO(instance.getChildProcessInstanceId(), List.of()));
+        .addTerminateCommand(new AbortTriggerDTO(instance.getChildProcessInstanceId(), List.of()));
   }
 }

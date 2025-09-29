@@ -10,10 +10,10 @@ package io.taktx.app;
 
 import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktClient;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
-import io.taktx.dto.ScopeState;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public class InstanceUpdateRegistry {
       }
       if (!processInstanceIdList.contains(processInstanceId)) {
         processInstanceIdList.add(processInstanceId);
-        if (processInstanceUpdate.getScope().getState() == ScopeState.ACTIVE) {
+        if (processInstanceUpdate.getScope().getState() == ExecutionState.ACTIVE) {
           processInstanceCountsStarted.get(processDefinitionKey).incrementAndGet();
         }
       }

@@ -199,7 +199,7 @@ class ProcessInstanceProcessorTest {
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsActive("SubTask_1")
-        .terminateProcessInstance()
+        .abortProcessInstance()
         .waitUntilCompleted()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
@@ -215,16 +215,16 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilChildProcessIsStarted("calledActivityServiceTask")
         .parentProcess()
-        .terminateProcessInstance()
+        .abortProcessInstance()
         .waitUntilChildProcessIsTerminated("calledActivityServiceTask")
         .assertThatProcess()
-        .isCanceled()
+        .isAborted()
         .toProcessLevel()
         .parentProcess()
         .waitUntilCompleted()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
-        .isCanceled();
+        .isAborted();
   }
 
   @Test

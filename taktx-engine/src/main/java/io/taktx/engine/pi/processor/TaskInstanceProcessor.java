@@ -9,7 +9,7 @@
 package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
@@ -53,7 +53,7 @@ public class TaskInstanceProcessor
       TaskInstance flowNodeInstance,
       String inputFlowId,
       VariableScope variables) {
-    flowNodeInstance.setState(FlowNodeStateEnum.COMPLETED);
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 
   @Override

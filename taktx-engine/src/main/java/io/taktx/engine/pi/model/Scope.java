@@ -8,8 +8,8 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.InstanceScheduleKeyDTO;
-import io.taktx.dto.ScopeState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +31,9 @@ public class Scope {
   private Map<String, Set<String>> messageSubscriptions;
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
   private int activeCnt;
-  private ScopeState state;
+
+  private ExecutionState initialState;
+  private ExecutionState state;
   private boolean stateChanged;
   private FlowNodeInstance<?> parentFlowNodeInstance;
   private long elementInstanceCnt;
@@ -41,7 +43,7 @@ public class Scope {
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
     this.scheduleKeys = new HashSet<>();
-    this.state = ScopeState.ACTIVE;
+    this.state = ExecutionState.INITIALIZED;
     this.stateChanged = false;
     this.activeCnt = 0;
     this.elementInstanceCnt = 0;
@@ -63,14 +65,6 @@ public class Scope {
     return instances.get(elementInstanceId);
   }
 
-  public void determineImplicitCompletedState() {
-    updateActiveCountForInstances();
-
-    if ((state == ScopeState.ACTIVE || state == ScopeState.INITIALIZED) && activeCnt == 0) {
-      this.setState(ScopeState.COMPLETED);
-    }
-  }
-
   public void addMessageSubscription(String messageName, String correlationKey) {
     Set<String> correlationKeys =
         messageSubscriptions.computeIfAbsent(messageName, ignored -> new HashSet<>());
@@ -83,17 +77,24 @@ public class Scope {
         .findFirst();
   }
 
-  public void setState(ScopeState state) {
+  public void setState(ExecutionState state) {
     this.stateChanged = this.state != state;
     this.state = state;
   }
 
-  public void setStateNoChange(ScopeState state) {
+  public void setActiveCnt(int activeCnt) {
+    this.activeCnt = activeCnt;
+    this.initialState = getState();
+  }
+
+  public void setStateNoChange(ExecutionState state) {
     this.state = state;
+    this.initialState = getState();
   }
 
   public boolean isStateChanged() {
     return stateChanged
+        || initialState != getState()
         || instances.values().stream()
             .filter(WithScope.class::isInstance)
             .map(WithScope.class::cast)
@@ -111,6 +112,20 @@ public class Scope {
     }
     if (activeCnt < 0) {
       throw new IllegalStateException("Active count cannot be negative");
+    }
+  }
+
+  public ExecutionState getState() {
+    if (state == ExecutionState.INITIALIZED) {
+      if (activeCnt == 0) {
+        return ExecutionState.COMPLETED;
+      } else if (activeCnt > 0) {
+        return ExecutionState.ACTIVE;
+      } else {
+        throw new IllegalStateException("Active count cannot be negative");
+      }
+    } else {
+      return state;
     }
   }
 

@@ -12,6 +12,7 @@ import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.InclusiveGatewayInstanceDTO;
 import io.taktx.dto.IntermediateCatchEventInstanceDTO;
@@ -73,6 +74,7 @@ public interface ProcessInstanceMapper {
           "java((io.taktx.engine.pd.model.ParallelGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   ParallelGatewayInstance map(
       ParallelGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -82,6 +84,7 @@ public interface ProcessInstanceMapper {
           "java((io.taktx.engine.pd.model.InclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   InclusiveGatewayInstance map(
       InclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -91,6 +94,7 @@ public interface ProcessInstanceMapper {
           "java((io.taktx.engine.pd.model.ExclusiveGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   ExclusiveGatewayInstance map(
       ExclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
 
@@ -103,6 +107,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   BoundaryEventInstance map(BoundaryEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -114,6 +119,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   StartEventInstance map(StartEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -125,6 +131,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   IntermediateCatchEventInstance map(
       IntermediateCatchEventInstanceDTO source, @Context FlowElements flowElements);
 
@@ -134,6 +141,7 @@ public interface ProcessInstanceMapper {
           "java((io.taktx.engine.pd.model.EndEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   EndEventInstance map(EndEventInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -142,6 +150,7 @@ public interface ProcessInstanceMapper {
           "java((io.taktx.engine.pd.model.IntermediateThrowEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   IntermediateThrowEventInstance map(
       IntermediateThrowEventInstanceDTO source, @Context FlowElements flowElements);
 
@@ -154,6 +163,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   ServiceTaskInstance map(ServiceTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -165,6 +175,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   SendTaskInstance map(SendTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -176,6 +187,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   ScriptTaskInstance map(ScriptTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -187,6 +199,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   UserTaskInstance map(UserTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -198,6 +211,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   ReceiveTaskInstance map(ReceiveTaskInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -209,6 +223,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   SubProcessInstance map(SubProcessInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -220,6 +235,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   CallActivityInstance map(CallActivityInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -230,6 +246,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "wasWaiting", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   MultiInstanceInstance map(MultiInstanceInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -241,6 +258,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateChanged", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
   TaskInstance map(TaskInstanceDTO source, @Context FlowElements flowElements);
 
   default FlowElements getChildElements(SubProcessInstanceDTO source, FlowElements flowElements) {
@@ -281,6 +299,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "flowNode", ignore = true)
   @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
   FlowNodeInstance<?> map(FlowNodeInstanceDTO source, @Context FlowElements flowElements);
 
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
@@ -432,6 +451,15 @@ public interface ProcessInstanceMapper {
 
   @AfterMapping
   default void mapState(ScopeDTO source, @MappingTarget Scope target) {
+    if (source.getState().isDone()) {
+      target.setStateNoChange(source.getState());
+    } else {
+      target.setStateNoChange(ExecutionState.INITIALIZED);
+    }
+  }
+
+  @AfterMapping
+  default void mapState(FlowNodeInstanceDTO source, @MappingTarget FlowNodeInstance target) {
     target.setStateNoChange(source.getState());
   }
 

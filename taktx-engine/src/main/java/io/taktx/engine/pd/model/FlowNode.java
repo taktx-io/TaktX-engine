@@ -30,7 +30,6 @@ public abstract class FlowNode extends FlowElement {
   public FlowNodeInstance<?> createAndStoreNewInstance(
       FlowNodeInstance<?> parentInstance, Scope scope) {
     FlowNodeInstance<?> newInstance = newInstance(parentInstance, scope);
-    newInstance.setInitialState();
     scope.putInstance(newInstance);
     return newInstance;
   }

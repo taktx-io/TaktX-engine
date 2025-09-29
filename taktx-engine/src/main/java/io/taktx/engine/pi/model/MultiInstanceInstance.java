@@ -8,8 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.FlowNodeStateEnum;
-import io.taktx.dto.ScopeState;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.Activity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,18 +23,11 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
   public MultiInstanceInstance(
       Activity activity, FlowNodeInstance<?> parentInstance, long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
-    setState(FlowNodeStateEnum.INITIAL);
   }
 
   @Override
-  public void setState(FlowNodeStateEnum state) {
+  public void setState(ExecutionState state) {
     super.setState(state);
-    switch (state) {
-      case INITIAL -> scope.setState(ScopeState.INITIALIZED);
-      case ACTIVE -> scope.setState(ScopeState.ACTIVE);
-      case CANCELED -> scope.setState(ScopeState.CANCELED);
-      case ABORTED -> scope.setState(ScopeState.ABORTED);
-      case COMPLETED -> scope.setState(ScopeState.COMPLETED);
-    }
+    scope.setState(state);
   }
 }

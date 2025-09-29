@@ -8,9 +8,9 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
-import io.taktx.dto.TerminateTriggerDTO;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
@@ -59,7 +59,7 @@ public class SubProcessInstanceProcessor
     Scope subScope = new Scope();
     subScope.setParentFlowNodeInstance(subProcessInstance);
     subProcessInstance.setScope(subScope);
-    subProcessInstance.setState(FlowNodeStateEnum.ACTIVE);
+    subProcessInstance.setState(ExecutionState.ACTIVE);
 
     FlowElements subProcessElements = subProcessInstance.getFlowNode().getElements();
     subProcessElements
@@ -70,21 +70,22 @@ public class SubProcessInstanceProcessor
             subScope,
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessElements);
+
     scopeProcessor.processStart(
         processInstanceProcessingContext,
         subFlowNodeInstanceProcessingContext,
         null,
         subProcessInstance,
         flowNodeInstanceVariables);
+
     flowNodeInstanceProcessingContext
         .getDirectInstanceResult()
         .setTerminateParentPath(
             subFlowNodeInstanceProcessingContext
                 .getDirectInstanceResult()
                 .getTerminateParentPath());
-    if (subScope.getState().isDone()) {
-      subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
-    }
+
+    subProcessInstance.setState(subScope.getState());
   }
 
   @Override
@@ -102,6 +103,7 @@ public class SubProcessInstanceProcessor
             subProcessInstance.getScope(),
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessElements);
+
     scopeProcessor.processContinue(
         processInstanceProcessingContext, subFlowNodeContext, trigger, flowNodeInstanceVariables);
 
@@ -114,9 +116,7 @@ public class SubProcessInstanceProcessor
       eventSignal = bubbleUpEvents.poll();
     }
 
-    if (subProcessInstance.getScope().getState().isDone()) {
-      subProcessInstance.setState(FlowNodeStateEnum.COMPLETED);
-    }
+    subProcessInstance.setState(subProcessInstance.getScope().getState());
   }
 
   @Override
@@ -136,8 +136,8 @@ public class SubProcessInstanceProcessor
             flowNodeInstanceProcessingContext.getSubProcessLevel() + 1,
             subProcessInstance.getFlowNode().getElements());
 
-    TerminateTriggerDTO trigger =
-        new TerminateTriggerDTO(
+    AbortTriggerDTO trigger =
+        new AbortTriggerDTO(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             List.of());
     scopeProcessor.processTerminate(

@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @RegisterForReflection
 public class ScopeDTO {
-  private ScopeState state;
+  private ExecutionState state;
 
   private int activeCnt;
 
@@ -38,7 +38,7 @@ public class ScopeDTO {
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
 
   public ScopeDTO(
-      ScopeState state,
+      ExecutionState state,
       int activeCnt,
       long elementInstanceCnt,
       Map<String, Long> gatewayInstances,

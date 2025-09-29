@@ -9,7 +9,7 @@
 package io.taktx.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.FlowNode;
 import java.util.HashSet;
 import java.util.Set;
@@ -56,13 +56,8 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
   }
 
   @Override
-  public void setInitialState() {
-    setState(FlowNodeStateEnum.INITIAL);
-  }
-
-  @Override
   public void abort() {
-    setState(FlowNodeStateEnum.ABORTED);
+    setState(ExecutionState.ABORTED);
   }
 
   @Override
@@ -72,6 +67,6 @@ public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInsta
 
   @Override
   public boolean canSelectNextNodeContinue() {
-    return getState() == FlowNodeStateEnum.COMPLETED;
+    return getState() == ExecutionState.COMPLETED;
   }
 }

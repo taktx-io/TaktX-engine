@@ -174,15 +174,13 @@ public class TaktClient {
   }
 
   /** Terminates a process instance. */
-  public void terminateElementInstance(UUID processInstanceId) {
-    processInstanceProducer.terminateProcessInstance(processInstanceId);
+  public void abortElementInstance(UUID processInstanceId) {
+    processInstanceProducer.abortProcessInstance(processInstanceId);
   }
 
   /** Terminates an element instance within a process instance */
-  public void terminateElementInstance(
-      UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
-    processInstanceProducer.terminateElementInstance(
-        activeProcessInstanceId, elementInstanceIdPath);
+  public void abortElementInstance(UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
+    processInstanceProducer.abortElementInstance(activeProcessInstanceId, elementInstanceIdPath);
   }
 
   public void registerExternalTaskConsumer(

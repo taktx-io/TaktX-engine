@@ -10,7 +10,7 @@ package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.FlowNodeStateEnum;
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ReceiveTask;
 import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
@@ -48,7 +48,7 @@ public class ReceiveTaskInstanceProcessor
       ReceiveTaskInstance receiveTaskInstance,
       String inputFlowId,
       VariableScope variables) {
-    receiveTaskInstance.setState(FlowNodeStateEnum.ACTIVE);
+    receiveTaskInstance.setState(ExecutionState.ACTIVE);
 
     ReceiveTask receiveTask = receiveTaskInstance.getFlowNode();
     String correlationKeyExpression = receiveTask.getReferencedMessage().correlationKey();
@@ -71,7 +71,7 @@ public class ReceiveTaskInstanceProcessor
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger,
       VariableScope processInstanceVariables) {
-    receiveTaskInstance.setState(FlowNodeStateEnum.COMPLETED);
+    receiveTaskInstance.setState(ExecutionState.COMPLETED);
     terminatingSubscriptionInstanceResult(
         processInstanceProcessingContext.getInstanceResult(), receiveTaskInstance);
   }

@@ -13,16 +13,27 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
-public enum ScopeState {
-  INITIALIZED("S"), // Scope is created but no child node has started yet.
-  ACTIVE("A"), // At least one child execution (flow node instance) is active.
-  COMPLETED("C"), // All required child executions finished normally.
-  CANCELED("T"), // Scope terminated by parent scope or by an interrupting boundary event.
-  ABORTED("F"); // A child threw an uncaught Error.
+public enum ExecutionState {
+  // For scope: Scope is created but no child node has started yet.
+  // For flow node: Node instance is created, but not yet started.
+  INITIALIZED("S"),
+  // For scope: At least one child execution (flow node instance) is active.
+  // For flow node: Node is “doing its job”:
+  ACTIVE("A"),
+  // For scope:  All required child executions finished normally.
+  // For flow node: Node finished normally.
+  COMPLETED("C"),
+  // For scope: terminated by parent scope or by an interrupting boundary event.
+  // For flow node: Node was terminated early by an interrupting boundary event or by its parent
+  // scope
+  CANCELED("T"),
+  // For scope: A child threw an uncaught Error.
+  // For flow node: A child threw an uncaught Error.
+  ABORTED("F"); //
 
   private final String code;
 
-  ScopeState(String code) {
+  ExecutionState(String code) {
     this.code = code;
   }
 

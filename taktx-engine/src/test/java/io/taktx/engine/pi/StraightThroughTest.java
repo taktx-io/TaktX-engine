@@ -36,7 +36,7 @@ class StraightThroughTest {
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
         .waitUntilCompleted()
         .assertThatProcess()
-        .isCanceled()
+        .isAborted()
         .hasAbortedElementWithId("ExternalTask_1")
         .hasNotPassedElementWithId("Activity_0cxnpbx")
         .hasNotPassedElementWithId("Activity_1ohwsp7")

@@ -12,12 +12,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 
 public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
@@ -27,7 +27,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
     return switch (value) {
       case ExternalTaskTriggerDTO ignored -> "E";
       case StartFlowElementTriggerDTO ignored -> "S";
-      case TerminateTriggerDTO ignored -> "T";
+      case AbortTriggerDTO ignored -> "T";
       case ExternalTaskResponseTriggerDTO ignored -> "R";
       case UserTaskResponseTriggerDTO ignored -> "U";
       case ContinueFlowElementTriggerDTO ignored -> "C";
@@ -51,7 +51,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
     return switch (id) {
       case "E" -> context.constructType(ExternalTaskTriggerDTO.class);
       case "S" -> context.constructType(StartFlowElementTriggerDTO.class);
-      case "T" -> context.constructType(TerminateTriggerDTO.class);
+      case "T" -> context.constructType(AbortTriggerDTO.class);
       case "R" -> context.constructType(ExternalTaskResponseTriggerDTO.class);
       case "U" -> context.constructType(UserTaskResponseTriggerDTO.class);
       case "C" -> context.constructType(ContinueFlowElementTriggerDTO.class);

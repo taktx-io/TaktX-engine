@@ -33,7 +33,7 @@ import lombok.ToString;
 @ToString
 @RegisterForReflection
 public abstract class FlowNodeInstanceDTO {
-  private FlowNodeStateEnum state;
+  private ExecutionState state;
 
   private long elementInstanceId;
 
@@ -47,16 +47,16 @@ public abstract class FlowNodeInstanceDTO {
 
   @JsonIgnore
   public boolean isActive() {
-    return state == FlowNodeStateEnum.ACTIVE;
+    return state == ExecutionState.ACTIVE;
   }
 
   @JsonIgnore
   public boolean isAborted() {
-    return state == FlowNodeStateEnum.ABORTED;
+    return state == ExecutionState.ABORTED;
   }
 
   @JsonIgnore
   public boolean isCanceled() {
-    return state == FlowNodeStateEnum.CANCELED;
+    return state == ExecutionState.CANCELED;
   }
 }

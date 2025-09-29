@@ -14,9 +14,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
-import io.taktx.dto.ScopeState;
 import io.taktx.dto.VariablesDTO;
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +35,7 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert isCompleted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
     assertThat(processInstance).isNotNull();
-    assertThat(processInstance.getScope().getState()).isEqualTo(ScopeState.COMPLETED);
+    assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.COMPLETED);
     return this;
   }
 
@@ -147,27 +147,27 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public void hasState(ScopeState processInstanceState) {
+  public void hasState(ExecutionState processInstanceState) {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
 
     assertThat(processInstance.getScope().getState()).isEqualTo(processInstanceState);
   }
 
-  public ProcessInstanceAssert hasFailed() {
+  public ProcessInstanceAssert isAborted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getScope().getState()).isEqualTo(ScopeState.ABORTED);
+    assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.ABORTED);
     return this;
   }
 
   public ProcessInstanceAssert isCanceled() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getScope().getState()).isEqualTo(ScopeState.CANCELED);
+    assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.CANCELED);
     return this;
   }
 
   public ProcessInstanceAssert isStillActive() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getScope().getState()).isEqualTo(ScopeState.ACTIVE);
+    assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.ACTIVE);
     return this;
   }
 }

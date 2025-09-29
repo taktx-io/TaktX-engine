@@ -10,10 +10,10 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.TerminateTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
@@ -54,13 +54,13 @@ public class ProcessInstanceProducer {
     return processInstanceId;
   }
 
-  public void terminateProcessInstance(UUID processInstanceId) {
-    terminateElementInstance(processInstanceId, List.of());
+  public void abortProcessInstance(UUID processInstanceId) {
+    abortElementInstance(processInstanceId, List.of());
   }
 
-  public void terminateElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
-    TerminateTriggerDTO terminateTrigger =
-        new TerminateTriggerDTO(processInstanceId, elementInstanceIdPath);
+  public void abortElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    AbortTriggerDTO terminateTrigger =
+        new AbortTriggerDTO(processInstanceId, elementInstanceIdPath);
     processInstanceTriggerEmitter.send(
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(

@@ -19,12 +19,12 @@ import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
+import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.FlowNodeStateEnum;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
@@ -33,7 +33,6 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
-import io.taktx.dto.ScopeState;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TopicMetaDTO;
@@ -550,19 +549,19 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilChildProcessIsCompleted(String childProcessName) {
-    return waitUntilChildProcessesHaveState(childProcessName, ScopeState.COMPLETED);
+    return waitUntilChildProcessesHaveState(childProcessName, ExecutionState.COMPLETED);
   }
 
   public BpmnTestEngine waitUntilChildProcessIsStarted(String childProcessName) {
-    return waitUntilChildProcessesHaveState(childProcessName, ScopeState.ACTIVE);
+    return waitUntilChildProcessesHaveState(childProcessName, ExecutionState.ACTIVE);
   }
 
   public BpmnTestEngine waitUntilChildProcessIsTerminated(String childProcessName) {
-    return waitUntilChildProcessesHaveState(childProcessName, ScopeState.CANCELED);
+    return waitUntilChildProcessesHaveState(childProcessName, ExecutionState.ABORTED);
   }
 
   public BpmnTestEngine waitUntilChildProcessesHaveState(
-      String childProcessName, ScopeState processInstanceState) {
+      String childProcessName, ExecutionState processInstanceState) {
     activeProcessInstanceId =
         Awaitility.await()
             .atMost(DEFAULT_DURATION)
@@ -712,8 +711,8 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine terminateProcessInstance() {
-    taktClient.terminateElementInstance(activeProcessInstanceId);
+  public BpmnTestEngine abortProcessInstance() {
+    taktClient.abortElementInstance(activeProcessInstanceId);
     return this;
   }
 
@@ -836,7 +835,7 @@ public class BpmnTestEngine {
     return variablesMap.get(processInstanceId);
   }
 
-  public BpmnTestEngine waitUntilActivityHasState(String elementId, FlowNodeStateEnum state) {
+  public BpmnTestEngine waitUntilActivityHasState(String elementId, ExecutionState state) {
     return waitUntilActivityHasState(elementId, state, DEFAULT_DURATION);
   }
 
@@ -903,7 +902,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilActivityHasState(
-      String elementId, FlowNodeStateEnum state, Duration duration) {
+      String elementId, ExecutionState state, Duration duration) {
     Awaitility.await()
         .atMost(duration)
         .until(
@@ -920,7 +919,7 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilElementIsActive(String elementId, Duration duration) {
-    return waitUntilActivityHasState(elementId, FlowNodeStateEnum.ACTIVE, duration);
+    return waitUntilActivityHasState(elementId, ExecutionState.ACTIVE, duration);
   }
 
   public BpmnTestEngine waitUntilElementIsActive(String elementId) {
@@ -928,19 +927,19 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
-    return waitUntilActivityHasState(elementId, FlowNodeStateEnum.ABORTED, DEFAULT_DURATION);
+    return waitUntilActivityHasState(elementId, ExecutionState.ABORTED, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilElementHasTerminated(String elementId) {
-    return waitUntilActivityHasState(elementId, FlowNodeStateEnum.CANCELED, DEFAULT_DURATION);
+    return waitUntilActivityHasState(elementId, ExecutionState.CANCELED, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilElementIsWaiting(String elementId) {
-    return waitUntilActivityHasState(elementId, FlowNodeStateEnum.ACTIVE, DEFAULT_DURATION);
+    return waitUntilActivityHasState(elementId, ExecutionState.ACTIVE, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine terminateElementInstance() {
-    taktClient.terminateElementInstance(
+    taktClient.abortElementInstance(
         activeProcessInstanceId, List.of(selectedFlowNodeInstance.getElementInstanceId()));
     return this;
   }

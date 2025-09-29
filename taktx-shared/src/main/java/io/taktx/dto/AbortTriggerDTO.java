@@ -21,10 +21,10 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RegisterForReflection
-public class TerminateTriggerDTO extends ProcessInstanceTriggerDTO {
+public class AbortTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 
-  public TerminateTriggerDTO(UUID processInstanceId, List<Long> elementInstanceIdPath) {
+  public AbortTriggerDTO(UUID processInstanceId, List<Long> elementInstanceIdPath) {
     super(processInstanceId, VariablesDTO.empty());
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
