@@ -36,7 +36,7 @@ class EscalationsTest {
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
             "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -61,7 +61,7 @@ class EscalationsTest {
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
             "non-matching", "escalation message", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -83,7 +83,7 @@ class EscalationsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation(null, null, VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -109,7 +109,7 @@ class EscalationsTest {
         .andRespondToExternalTaskWithEscalation(
             "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("EndEvent_Normal")
@@ -131,7 +131,7 @@ class EscalationsTest {
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithEscalation(
             "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -157,7 +157,7 @@ class EscalationsTest {
             "noninterrupting", "escalation message", VariablesDTO.of("var1", "value1"))
         .andRespondToExternalTaskWithEscalation(
             "interrupting", "escalation message", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -178,7 +178,7 @@ class EscalationsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("Subprocess_1")

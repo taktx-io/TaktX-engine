@@ -77,8 +77,6 @@ public abstract class ActivityInstanceProcessor<
                         flownodeInstance.getParentInstance(),
                         boundaryEvent,
                         flowNodeInstanceProcessingContext.getScope().nextElementInstanceId());
-                boundaryEventInstance.setState(ExecutionState.INITIALIZED);
-
                 boundaryEventInstance.setAttachedInstanceId(
                     flownodeInstance.getElementInstanceId());
                 flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());

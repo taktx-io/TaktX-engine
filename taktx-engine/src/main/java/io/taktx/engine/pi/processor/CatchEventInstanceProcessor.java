@@ -127,8 +127,8 @@ public abstract class CatchEventInstanceProcessor<
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       DirectInstanceResult directInstanceResult,
       I flowNodeInstance) {
-
     if (shouldCancel(flowNodeInstance)) {
+      // Complete the catch event instance
       flowNodeInstance.setState(ExecutionState.COMPLETED);
       terminateSubscriptions(
           flowNodeInstance, processInstanceProcessingContext.getInstanceResult());

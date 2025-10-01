@@ -639,11 +639,11 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilCompleted() {
-    return waitUntilCompleted(DEFAULT_DURATION);
+  public BpmnTestEngine waitUntilDone() {
+    return waitUntilDone(DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine waitUntilCompleted(Duration duration) {
+  public BpmnTestEngine waitUntilDone(Duration duration) {
     Awaitility.await()
         .atMost(duration)
         .until(

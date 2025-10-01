@@ -34,7 +34,7 @@ class ScriptTaskTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("JobWorkerScriptTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("jobWorkerResult", 456))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)
         .hasPassedElementWithId("FeelScriptTask_1", 1)

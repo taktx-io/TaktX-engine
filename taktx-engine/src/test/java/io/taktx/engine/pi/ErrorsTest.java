@@ -15,6 +15,7 @@ import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -28,14 +29,13 @@ class ErrorsTest {
 
   @Test
   void testInterruptingErrorTriggered() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithError(false, "456", "message")
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -43,21 +43,20 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasInstantiatedElementWithId("BoundaryEvent_WithErrorReference")
         .hasInstantiatedElementWithId("EndEvent_Error_WithErrorReference")
-        .hasNotPassedElementWithId("BoundaryEvent_NoReference")
-        .hasNotPassedElementWithId("EndEvent_NoReference")
-        .hasAbortedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("BoundaryEvent_NoErrorReference")
+        .isCompleted();
   }
 
   @Test
   void testInterruptingError_CatchAllTriggered() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithError(false, "Error_1tlo99v", "message")
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
@@ -65,19 +64,20 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasAbortedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("BoundaryEvent_WithErrorReference");
   }
+
 
   @Test
   void testInterruptingError_NoCode_CatchAllTriggered() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithError(false, null, null)
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .isCompleted()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -86,68 +86,111 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasAbortedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("BoundaryEvent_WithErrorReference");
+  }
+
+  @Test
+  void testInterruptingError_noCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .andRespondToExternalTaskWithError(false, "456", null)
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasNotPassedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasNotPassedElementWithId("EndEvent_1")
+        .isAborted();
   }
 
   @Test
   void testInterruptingErrorTriggeredInSubprocess() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithError(false, "456", "error message")
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
         .hasNotPassedElementWithId("BoundaryEvent_NoReference")
         .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasInstantiatedElementWithId("BoundaryEvent_Reference")
-        .hasInstantiatedElementWithId("EndEvent_Reference");
+        .hasInstantiatedElementWithId("EndEvent_Reference")
+        .hasPassedElementWithId("Subprocess_1/SubStartEvent")
+        .hasAbortedElementWithId("Subprocess_1/SubServiceTask_1")
+        .hasNotPassedElementWithId("Subprocess_1/SubEndEvent")
+        .hasCanceleddElementWithId("Subprocess_1")
+        .isCompleted();
   }
 
   @Test
   void testCatchAllErrorTriggeredInSubprocess() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithError(false, "Error_1tlo99v", "error message")
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_Normal")
-        .hasInstantiatedElementWithId("BoundaryEvent_NoReference")
-        .hasInstantiatedElementWithId("EndEvent_NoReference")
+        .hasPassedElementWithId("BoundaryEvent_NoReference")
+        .hasPassedElementWithId("EndEvent_NoReference")
         .hasNotPassedElementWithId("BoundaryEvent_Reference")
-        .hasNotPassedElementWithId("EndEvent_Reference");
+        .hasNotPassedElementWithId("EndEvent_Reference")
+        .hasPassedElementWithId("Subprocess_1/SubStartEvent")
+        .hasAbortedElementWithId("Subprocess_1/SubServiceTask_1")
+        .hasNotPassedElementWithId("Subprocess_1/SubEndEvent")
+        .hasCanceleddElementWithId("Subprocess_1")
+        .isCompleted();
   }
 
   @Test
   void testNoErrorTriggeredInSubprocess() throws IOException {
-
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/error-throw-catch_subprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("Subprocess_1")
-        .hasInstantiatedElementWithId("Subprocess_1/SubStartEvent")
-        .hasInstantiatedElementWithId("Subprocess_1/SubServiceTask_1")
-        .hasInstantiatedElementWithId("Subprocess_1/SubEndEvent")
-        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("Subprocess_1")
+        .hasPassedElementWithId("Subprocess_1/SubStartEvent")
+        .hasPassedElementWithId("Subprocess_1/SubServiceTask_1")
+        .hasPassedElementWithId("Subprocess_1/SubEndEvent")
+        .hasPassedElementWithId("EndEvent_1")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasCompletedElementWithId("Subprocess_1")
+        .hasCompletedElementWithId("Subprocess_1/SubServiceTask_1")
         .hasNotPassedElementWithId("BoundaryEvent_NoReference")
         .hasNotPassedElementWithId("EndEvent_NoReference")
         .hasNotPassedElementWithId("BoundaryEvent_Reference")
         .hasNotPassedElementWithId("EndEvent_Reference")
-        .hasVariableWithValue("var1", "value1");
+        .hasVariableWithValue("var1", "value1")
+        .isCompleted();
+  }
+
+
+  @Test
+  void testInterruptingErrorInSubprocess_noCatch() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
+        .andRespondToExternalTaskWithError(false, "456", null)
+        .waitUntilDone()
+        .assertThatProcess()
+        .isAborted();
   }
 }

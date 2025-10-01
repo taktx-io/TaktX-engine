@@ -35,7 +35,7 @@ class VariablesTest {
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var2", "value2"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
         .hasVariableWithValue("StartEvent_Output_1", "outputValue1")

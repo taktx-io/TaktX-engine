@@ -59,4 +59,9 @@ public abstract class FlowNodeInstanceDTO {
   public boolean isCanceled() {
     return state == ExecutionState.CANCELED;
   }
+
+  @JsonIgnore
+  public boolean isCompleted() {
+    return state == ExecutionState.COMPLETED;
+  }
 }

@@ -21,6 +21,7 @@ import io.taktx.dto.VariablesDTO;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import org.jetbrains.annotations.NotNull;
 
 public class ProcessInstanceAssert {
 
@@ -37,6 +38,10 @@ public class ProcessInstanceAssert {
     assertThat(processInstance).isNotNull();
     assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.COMPLETED);
     return this;
+  }
+
+  public ProcessInstanceAssert hasPassedElementWithId(String elementIdPath) {
+    return hasPassedElementWithId(elementIdPath, 1);
   }
 
   public ProcessInstanceAssert hasPassedElementWithId(String elementIdPath, int count) {
@@ -74,11 +79,7 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasAbortedElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState =
-        bpmnTestEngine.getScopeWithElementId(processInstanceId, elementId);
-    assertThat(bpmnElementState)
-        .as("element with " + elementId + " not found in process instanceToContinue")
-        .isNotEmpty();
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
     assertThat(bpmnElementState.getFirst().isAborted())
         .as("element " + elementId + " was not terminated")
         .isTrue();
@@ -86,12 +87,16 @@ public class ProcessInstanceAssert {
   }
 
   public ProcessInstanceAssert hasCanceleddElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState =
-        bpmnTestEngine.getScopeWithElementId(processInstanceId, elementId);
-    assertThat(bpmnElementState)
-        .as("element with " + elementId + " not found in process instanceToContinue")
-        .isNotEmpty();
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
     assertThat(bpmnElementState.getFirst().isCanceled())
+        .as("element " + elementId + " was not terminated")
+        .isTrue();
+    return this;
+  }
+
+  public ProcessInstanceAssert hasCompletedElementWithId(String elementId) {
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
+    assertThat(bpmnElementState.getFirst().isCompleted())
         .as("element " + elementId + " was not terminated")
         .isTrue();
     return this;
@@ -102,6 +107,15 @@ public class ProcessInstanceAssert {
     JsonNode jsonNode = variables.get(var1);
     assertThat(jsonNode).isNull();
     return this;
+  }
+
+  private @NotNull List<FlowNodeInstanceDTO> getFlowNodeInstanceDTOS(String elementId) {
+    List<FlowNodeInstanceDTO> bpmnElementState =
+        bpmnTestEngine.getScopeWithElementId(processInstanceId, elementId);
+    assertThat(bpmnElementState)
+        .as("element with " + elementId + " not found in process instanceToContinue")
+        .isNotEmpty();
+    return bpmnElementState;
   }
 
   public ProcessInstanceAssert hasVariableWithValue(String var1, Object value1) {

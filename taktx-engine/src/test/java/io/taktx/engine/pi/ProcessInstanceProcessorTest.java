@@ -74,7 +74,7 @@ class ProcessInstanceProcessorTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn")
         .startProcessInstance(VariablesDTO.of("key1", "value1"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableWithValue("key1", "value1")
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -87,7 +87,7 @@ class ProcessInstanceProcessorTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/subprocess-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("SubProcess_1")
@@ -102,7 +102,7 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("SubProcess_1")
@@ -118,7 +118,7 @@ class ProcessInstanceProcessorTest {
         .waitUntilExternalTaskIsWaitingForResponse(
             "SubProcess_1/SubSubProcess_1.aaa/SubSubSubProcess_1/SubTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("SubProcess_1")
@@ -142,7 +142,7 @@ class ProcessInstanceProcessorTest {
         .assertThatParentProcess()
         .hasInstantiatedElementWithId("task-callactivity:StartEvent_1")
         .toProcessLevel()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("task-callactivity:callactivity-id")
         .hasInstantiatedElementWithId("task-callactivity:EndEvent_1");
@@ -156,19 +156,19 @@ class ProcessInstanceProcessorTest {
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(2001))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(2000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(2000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(2000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(2000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted();
+        .waitUntilDone();
   }
 
   @Test
@@ -179,16 +179,16 @@ class ProcessInstanceProcessorTest {
         .waitFor(Duration.ofSeconds(1))
         .moveTimeForward(Duration.ofMillis(20001))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(20000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(20000))
         .waitForNewProcessInstance(Duration.ofMillis(60000))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .moveTimeForward(Duration.ofMillis(20000))
         .waitForNewProcessInstance()
-        .waitUntilCompleted();
+        .waitUntilDone();
   }
 
   @Test
@@ -200,7 +200,7 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsActive("SubTask_1")
         .abortProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
         .isCanceled();
@@ -221,7 +221,7 @@ class ProcessInstanceProcessorTest {
         .isAborted()
         .toProcessLevel()
         .parentProcess()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
         .isAborted();
@@ -236,7 +236,7 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsWaiting("SubTask_1")
         .terminateElementInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
         .isCanceled();
@@ -249,7 +249,7 @@ class ProcessInstanceProcessorTest {
         .waitForMessageSubscription("StartMessage2")
         .sendMessage("StartMessage2", VariablesDTO.of("var1", "value1"))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("EndEvent_1")
@@ -257,7 +257,7 @@ class ProcessInstanceProcessorTest {
         .toProcessLevel()
         .sendMessage("StartMessage2", VariablesDTO.of("var2", "value2"))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("EndEvent_1")
@@ -267,7 +267,7 @@ class ProcessInstanceProcessorTest {
         .waitForMessageSubscription("StartMessage3")
         .sendMessage("StartMessage3", VariablesDTO.of("var3", "value3"))
         .waitForNewProcessInstance()
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_2")
         .hasInstantiatedElementWithId("EndEvent_2")
@@ -284,6 +284,6 @@ class ProcessInstanceProcessorTest {
         .waitForMessageSubscription("ReceiveTaskMessage", Set.of("key1"))
         .andSendMessageWithCorrelationKey(
             "ReceiveTaskMessage", "key1", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted();
+        .waitUntilDone();
   }
 }

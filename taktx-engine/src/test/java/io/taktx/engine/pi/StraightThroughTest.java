@@ -34,7 +34,7 @@ class StraightThroughTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ExternalTask_1")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .isAborted()
         .hasAbortedElementWithId("ExternalTask_1")

@@ -52,7 +52,7 @@ class PrivatePackagesSwitchTest {
         .andRespondToExternalTaskWithSuccess(VariablesDTO.of("accountType", "student2"))
         .waitUntilExternalTaskIsWaitingForResponse("Activity_1lmrbre/Activity_0k9vm1m")
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_switch_retail_packages", 1)
         .hasPassedElementWithId("Gateway_0lkrm2u", 1)

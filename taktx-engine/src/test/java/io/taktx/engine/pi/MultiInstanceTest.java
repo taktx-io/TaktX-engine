@@ -42,7 +42,7 @@ class MultiInstanceTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableMatching(
             "outputCollection",
@@ -64,7 +64,7 @@ class MultiInstanceTest {
         .startProcessInstance(
             VariablesDTO.of(
                 "inputCollection", IntStream.range(0, 1000).mapToObj(Integer::toString).toList()))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableMatching(
             "outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
@@ -82,7 +82,7 @@ class MultiInstanceTest {
         .startProcessInstance(
             VariablesDTO.of(
                 "inputCollection", IntStream.range(0, 1000).mapToObj(Integer::toString).toList()))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableMatching(
             "outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
@@ -98,7 +98,7 @@ class MultiInstanceTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/subtask-multiinstance-sequential.bpmn")
         .startProcessInstance(VariablesDTO.of("inputCollection", List.of("a", "b", "c")))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasVariableMatching(
             "outputCollection",
@@ -118,7 +118,7 @@ class MultiInstanceTest {
         .startProcessInstance(
             VariablesDTO.of(
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasCollectioneMatching(
             "outputCollection", oc -> assertThat(oc).containsExactly("axxx0", "bxxx1", "cxxx2"))
@@ -143,7 +143,7 @@ class MultiInstanceTest {
         .startProcessInstance(
             VariablesDTO.of(
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
-        .waitUntilCompleted()
+        .waitUntilDone()
         .assertThatProcess()
         .hasCollectioneMatching(
             "outputCollection",
@@ -166,7 +166,7 @@ class MultiInstanceTest {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-expression-parallel.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilCompleted();
+        .waitUntilDone();
   }
 
   @Test
@@ -186,6 +186,6 @@ class MultiInstanceTest {
             "ReceiveTaskMessage", "2", VariablesDTO.of("var1", "value1"))
         .andSendMessageWithCorrelationKey(
             "ReceiveTaskMessage", "4", VariablesDTO.of("var1", "value1"))
-        .waitUntilCompleted();
+        .waitUntilDone();
   }
 }
