@@ -17,10 +17,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent> {
-  private long attachedInstanceId;
 
   public BoundaryEventInstance(
-      FlowNodeInstance<?> parentInstance, BoundaryEvent flowNode, long elementInstanceId) {
+      WithScope parentInstance, BoundaryEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

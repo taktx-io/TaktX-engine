@@ -14,8 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserTaskInstance extends ActivityInstance<UserTask> {
 
-  public UserTaskInstance(
-      FlowNodeInstance<?> parentInstance, UserTask flowNode, long elementInstanceId) {
+  public UserTaskInstance(WithScope parentInstance, UserTask flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

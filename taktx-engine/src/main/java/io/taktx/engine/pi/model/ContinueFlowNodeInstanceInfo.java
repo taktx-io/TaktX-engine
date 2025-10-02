@@ -8,12 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.engine.pd.model.Task;
-import lombok.NoArgsConstructor;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 
-@NoArgsConstructor
-public class TaskInstance extends ActivityInstance<Task> {
-  public TaskInstance(WithScope parentInstance, Task flowNode, long elementInstanceId) {
-    super(parentInstance, flowNode, elementInstanceId);
-  }
-}
+public record ContinueFlowNodeInstanceInfo(
+    FlowNodeInstance<?> flowNodeInstance, ContinueFlowElementTriggerDTO trigger) {}

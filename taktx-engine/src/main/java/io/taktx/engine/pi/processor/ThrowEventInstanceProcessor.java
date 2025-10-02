@@ -11,17 +11,16 @@ package io.taktx.engine.pi.processor;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
-import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -41,10 +40,9 @@ public abstract class ThrowEventInstanceProcessor<
   @Override
   protected void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
 
     flowNodeInstance
         .getFlowNode()
@@ -54,7 +52,7 @@ public abstract class ThrowEventInstanceProcessor<
               EventSignal errorEvent =
                   new ErrorEventSignal(
                       flowNodeInstance, errorEventDefinition.getReferencedError().code(), "");
-              flowNodeInstanceProcessingContext.getDirectInstanceResult().addEvent(errorEvent);
+              scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
     flowNodeInstance
@@ -67,7 +65,7 @@ public abstract class ThrowEventInstanceProcessor<
                       flowNodeInstance,
                       errorEventDefinition.getReferencedEscalation().escalationCode(),
                       "");
-              flowNodeInstanceProcessingContext.getDirectInstanceResult().addEvent(errorEvent);
+              scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
     flowNodeInstance
@@ -76,7 +74,7 @@ public abstract class ThrowEventInstanceProcessor<
         .ifPresent(
             linkEventDefinition -> {
               Optional<IntermediateCatchEvent> intermediateCatchEvent =
-                  flowNodeInstanceProcessingContext
+                  scope
                       .getFlowElements()
                       .getIntermediateCatchEventWithName(linkEventDefinition.getName());
               intermediateCatchEvent.ifPresent(
@@ -88,24 +86,20 @@ public abstract class ThrowEventInstanceProcessor<
                             flowNodeInstance.getParentInstance(),
                             event,
                             processInstance.getScope().nextElementInstanceId());
-                    FlowNodeInstanceInfo flowNodeInstanceInfo =
-                        new FlowNodeInstanceInfo(catchEventInstance, null);
-                    flowNodeInstanceProcessingContext
+                    StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
+                        new StartFlowNodeInstanceInfo(catchEventInstance, null);
+                    scope
                         .getDirectInstanceResult()
-                        .addNewFlowNodeInstance(processInstance, flowNodeInstanceInfo);
+                        .addNewFlowNodeInstance(processInstance, startFlowNodeInstanceInfo);
                   });
             });
 
     processStartSpecificThrowEventInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        flowNodeInstance,
-        variables);
+        processInstanceProcessingContext, scope, flowNodeInstance);
   }
 
   protected abstract void processStartSpecificThrowEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      I flowNodeInstance,
-      VariableScope variables);
+      Scope scope,
+      I flowNodeInstance);
 }

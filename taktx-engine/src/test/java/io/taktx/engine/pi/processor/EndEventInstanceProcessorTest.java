@@ -10,10 +10,9 @@ package io.taktx.engine.pi.processor;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EndEventInstance;
-import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.engine.pi.model.Scope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,9 +30,8 @@ class EndEventInstanceProcessorTest {
         () ->
             endEventInstanceProcessor.processTerminateSpecificFlowNodeInstance(
                 Mockito.mock(ProcessInstanceProcessingContext.class),
-                Mockito.mock(FlowNodeInstanceProcessingContext.class),
-                Mockito.mock(EndEventInstance.class),
-                Mockito.mock(VariableScope.class)));
+                Mockito.mock(Scope.class),
+                Mockito.mock(EndEventInstance.class)));
   }
 
   @Test
@@ -42,8 +40,7 @@ class EndEventInstanceProcessorTest {
         () ->
             endEventInstanceProcessor.processStartSpecificThrowEventInstance(
                 Mockito.mock(ProcessInstanceProcessingContext.class),
-                Mockito.mock(FlowNodeInstanceProcessingContext.class),
-                Mockito.mock(EndEventInstance.class),
-                Mockito.mock(VariableScope.class)));
+                Mockito.mock(Scope.class),
+                Mockito.mock(EndEventInstance.class)));
   }
 }

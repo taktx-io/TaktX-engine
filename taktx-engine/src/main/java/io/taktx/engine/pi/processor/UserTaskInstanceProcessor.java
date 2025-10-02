@@ -21,11 +21,11 @@ import io.taktx.dto.UserTaskResponseType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
@@ -53,25 +53,23 @@ public class UserTaskInstanceProcessor
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       UserTaskInstance userTaskInstance,
-      String inputFlowId,
-      VariableScope flowNodeInstanceVariables) {
+      String inputFlowId) {
     userTaskInstance.setState(ExecutionState.ACTIVE);
     UserTask userTaskNode = userTaskInstance.getFlowNode();
+    VariableScope variableScope = scope.getVariableScope();
     AssignmentDefinitionDTO assignmentDefinition =
-        getProcessedAssignmentDefinition(
-            flowNodeInstanceVariables, userTaskNode.getAssignmentDefinition());
+        getProcessedAssignmentDefinition(variableScope, userTaskNode.getAssignmentDefinition());
     TaskScheduleDTO taskSchedule =
-        getProcessedTaskSchedule(flowNodeInstanceVariables, userTaskNode.getTaskSchedule());
+        getProcessedTaskSchedule(variableScope, userTaskNode.getTaskSchedule());
     PriorityDefinitionDTO priorityDefinition =
-        getProcessedPriorityDefinition(
-            flowNodeInstanceVariables, userTaskNode.getPriorityDefinition());
+        getProcessedPriorityDefinition(variableScope, userTaskNode.getPriorityDefinition());
     UserTaskInfo userTaskInfo =
         new UserTaskInfo(
             userTaskInstance.getFlowNode(),
             userTaskInstance,
-            flowNodeInstanceVariables,
+            variableScope,
             assignmentDefinition,
             taskSchedule,
             priorityDefinition);
@@ -134,25 +132,18 @@ public class UserTaskInstanceProcessor
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       UserTaskInstance userTaskInstance,
-      UserTaskResponseTriggerDTO trigger,
-      VariableScope variableScope) {
+      UserTaskResponseTriggerDTO trigger) {
 
     UserTaskResponseResultDTO responseResult = trigger.getUserTaskResponseResult();
 
     if (UserTaskResponseType.COMPLETED == responseResult.getResponseType()) {
       userTaskInstance.setState(ExecutionState.COMPLETED);
     } else if (UserTaskResponseType.ERROR == responseResult.getResponseType()) {
-      handleError(
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
-          userTaskInstance,
-          responseResult);
+      handleError(scope.getDirectInstanceResult(), userTaskInstance, responseResult);
     } else if (UserTaskResponseType.ESCALATION == responseResult.getResponseType()) {
-      handleEscalation(
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
-          userTaskInstance,
-          responseResult);
+      handleEscalation(scope.getDirectInstanceResult(), userTaskInstance, responseResult);
     }
   }
 
@@ -177,9 +168,8 @@ public class UserTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      UserTaskInstance instance,
-      VariableScope variables) {
+      Scope scope,
+      UserTaskInstance instance) {
     // no specific termination logic for user tasks
   }
 }

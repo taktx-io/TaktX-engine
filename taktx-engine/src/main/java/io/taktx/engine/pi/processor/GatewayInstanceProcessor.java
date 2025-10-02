@@ -14,7 +14,6 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
@@ -22,7 +21,6 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,31 +46,25 @@ public abstract class GatewayInstanceProcessor<
   @Override
   protected final void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I gatewayInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     processStartSpecificGatewayInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        gatewayInstance,
-        inputFlowId,
-        variables);
+        processInstanceProcessingContext, scope, gatewayInstance, inputFlowId);
   }
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      C trigger,
-      VariableScope processInstanceVariables) {
-    // Should never happen
+      C trigger) {
+    throw new IllegalStateException("We should never continue a gateway instance");
   }
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I gatewayInstance, Scope scope, VariableScope variables) {
+      ProcessInstance processInstance, I gatewayInstance, Scope scope) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
     if (canTriggerOutputFlows(gatewayInstance, scope)) {
       gatewayInstance.resetFlows();
@@ -88,7 +80,7 @@ public abstract class GatewayInstanceProcessor<
                   sequenceFlow ->
                       feelExpressionHandler
                           .processFeelExpression(
-                              sequenceFlow.getCondition().getExpression(), variables)
+                              sequenceFlow.getCondition().getExpression(), scope.getVariableScope())
                           .asBoolean())
               .collect(Collectors.toSet());
 
@@ -119,22 +111,18 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      I instance,
-      VariableScope currentVariableScope) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
     processTerminateSpecificGatewayInstance(
         processInstanceProcessingContext.getInstanceResult(),
-        flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+        scope.getDirectInstanceResult(),
         instance);
   }
 
   protected abstract void processStartSpecificGatewayInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flownodeInstance,
-      String inputFlowId,
-      VariableScope variables);
+      String inputFlowId);
 
   protected abstract void processTerminateSpecificGatewayInstance(
       InstanceResult instanceResult, DirectInstanceResult directInstanceResult, I instance);

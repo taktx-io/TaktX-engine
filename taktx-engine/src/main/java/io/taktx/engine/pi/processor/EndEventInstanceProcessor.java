@@ -9,11 +9,10 @@
 package io.taktx.engine.pi.processor;
 
 import io.taktx.engine.pd.model.EndEvent;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EndEventInstance;
-import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.engine.pi.model.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -36,18 +35,16 @@ public class EndEventInstanceProcessor
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      EndEventInstance instance,
-      VariableScope currentVariableScope) {
+      Scope scope,
+      EndEventInstance instance) {
     // nothing to do
   }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      EndEventInstance flowNodeInstance,
-      VariableScope variables) {
+      Scope scope,
+      EndEventInstance flowNodeInstance) {
     // nothing to do
   }
 }

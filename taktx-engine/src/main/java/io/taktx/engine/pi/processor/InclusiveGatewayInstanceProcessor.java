@@ -14,14 +14,12 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.InclusiveGateway;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.InclusiveGatewayInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -51,10 +49,9 @@ public class InclusiveGatewayInstanceProcessor
   @Override
   protected void processStartSpecificGatewayInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       InclusiveGatewayInstance gatewayInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     gatewayInstance.addTriggeredInputFlow(inputFlowId);
   }
 
@@ -94,7 +91,7 @@ public class InclusiveGatewayInstanceProcessor
       FlowNode sourceNode = incomingSequenceFlow.getSourceNode();
       if (sourceNode instanceof InclusiveGateway inclusiveGateway) {
         Optional<FlowNodeInstance<?>> instanceWithFlowNode =
-            scope.getInstanceWithFlowNode(inclusiveGateway);
+            scope.getFlowNodeInstanceScope().getInstanceWithFlowNode(inclusiveGateway);
         if (instanceWithFlowNode.isPresent()) {
           InclusiveGatewayInstance gatewayInstance =
               (InclusiveGatewayInstance) instanceWithFlowNode.get();

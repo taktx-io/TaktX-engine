@@ -15,12 +15,9 @@ import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ActivityInstance;
-import io.taktx.engine.pi.model.BoundaryEventInstance;
-import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
@@ -47,11 +44,11 @@ public abstract class ActivityInstanceProcessor<
   @Override
   protected final void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flownodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
 
+    VariableScope variables = scope.getVariableScope();
     if (flownodeInstance.isIteration()) {
       variables.put("loopCnt", new IntNode(flownodeInstance.getLoopCnt()));
       variables.put(
@@ -60,119 +57,62 @@ public abstract class ActivityInstanceProcessor<
     }
 
     processStartSpecificActivityInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        flownodeInstance,
-        inputFlowId,
-        variables);
+        processInstanceProcessingContext, scope, flownodeInstance, inputFlowId);
 
-    if (flownodeInstance.getState() == ExecutionState.ACTIVE) {
-      E flowNode = flownodeInstance.getFlowNode();
-      flowNode
-          .getBoundaryEvents()
-          .forEach(
-              boundaryEvent -> {
-                BoundaryEventInstance boundaryEventInstance =
-                    new BoundaryEventInstance(
-                        flownodeInstance.getParentInstance(),
-                        boundaryEvent,
-                        flowNodeInstanceProcessingContext.getScope().nextElementInstanceId());
-                boundaryEventInstance.setAttachedInstanceId(
-                    flownodeInstance.getElementInstanceId());
-                flownodeInstance.addBoundaryEventId(boundaryEventInstance.getElementInstanceId());
-                flowNodeInstanceProcessingContext
-                    .getDirectInstanceResult()
-                    .addNewFlowNodeInstance(
-                        processInstanceProcessingContext.getProcessInstance(),
-                        new FlowNodeInstanceInfo(boundaryEventInstance, null));
-              });
-    }
-
-    handleFinishedIteration(flownodeInstance, variables);
+    handleFinishedIteration(flownodeInstance, scope);
   }
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      C trigger,
-      VariableScope variables) {
+      C trigger) {
 
     processContinueSpecificActivityInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        flowNodeInstance,
-        trigger,
-        variables);
+        processInstanceProcessingContext, scope, flowNodeInstance, trigger);
 
-    if (flowNodeInstance.isDone()) {
-      flowNodeInstance
-          .getBoundaryEventIds()
-          .forEach(
-              id ->
-                  flowNodeInstanceProcessingContext.getDirectInstanceResult().addAbortInstance(id));
-    }
-
-    handleFinishedIteration(flowNodeInstance, variables);
+    handleFinishedIteration(flowNodeInstance, scope);
   }
 
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      I instance,
-      VariableScope currentVariableScope) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
 
-    instance
-        .getBoundaryEventIds()
-        .forEach(
-            id -> flowNodeInstanceProcessingContext.getDirectInstanceResult().addAbortInstance(id));
-
-    processTerminateSpecificActivityInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        instance,
-        currentVariableScope);
+    processTerminateSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
   }
 
   protected abstract void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flownodeInstance,
-      String inputFlowId,
-      VariableScope flowNodeInstanceVariables);
+      String inputFlowId);
 
   protected abstract void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I externalTaskInstance,
-      C trigger,
-      VariableScope flowNodeInstanceVariables);
+      C trigger);
 
   protected abstract void processTerminateSpecificActivityInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      I instance,
-      VariableScope variables);
+      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance);
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I flowNodeInstance, Scope scope, VariableScope variables) {
+      ProcessInstance processInstance, I flowNodeInstance, Scope scope) {
     if (flowNodeInstance.isIteration()) {
       return Set.of();
     }
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-  private void handleFinishedIteration(I flownodeInstance, VariableScope variables) {
+  private void handleFinishedIteration(I flownodeInstance, Scope scope) {
+    VariableScope variableScope = scope.getVariableScope();
     if (flownodeInstance.getState() == ExecutionState.COMPLETED && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
       String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
-      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variables);
+      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variableScope);
       flownodeInstance.setOutputElement(jsonNode);
     }
-    variables.remove("loopCnt");
-    variables.remove(flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement());
   }
 }

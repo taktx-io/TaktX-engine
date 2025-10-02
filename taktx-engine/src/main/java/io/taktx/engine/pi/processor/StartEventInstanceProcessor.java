@@ -11,12 +11,10 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.StartEvent;
-import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartEventInstance;
-import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -44,17 +42,16 @@ public class StartEventInstanceProcessor
   @Override
   protected void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       StartEventInstance startEventInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     startEventInstance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
   protected void processContinueSpecificCatchEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      Scope scope,
       StartEventInstance flowNodeInstance) {
     // No specific processing for continue
   }

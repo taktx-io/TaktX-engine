@@ -9,6 +9,7 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
+import io.taktx.engine.pi.model.WithScope;
 import java.util.LinkedList;
 import lombok.Getter;
 
@@ -21,9 +22,9 @@ public abstract class EventSignal {
   }
 
   public void bubbleUp() {
-    FlowNodeInstance<?> parentInstance = pathToSource.getLast().getParentInstance();
+    WithScope parentInstance = pathToSource.getLast().getParentInstance();
     if (parentInstance != null) {
-      pathToSource.addFirst(parentInstance);
+      pathToSource.addFirst((FlowNodeInstance<?>) parentInstance);
     }
   }
 

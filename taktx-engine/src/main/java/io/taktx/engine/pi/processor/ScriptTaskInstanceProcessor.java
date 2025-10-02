@@ -14,9 +14,9 @@ import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ScriptType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ScriptTask;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.ScriptTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -43,41 +43,32 @@ public class ScriptTaskInstanceProcessor
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       ScriptTaskInstance flownodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     ScriptType scriptType = flownodeInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.FEEL) {
       String expression = flownodeInstance.getFlowNode().getScriptExpressions().getFirst();
-      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(expression, variables);
-      variables.put(flownodeInstance.getFlowNode().getResultVariableName(), jsonNode);
+      VariableScope variableScope = scope.getVariableScope();
+      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(expression, variableScope);
+      variableScope.put(flownodeInstance.getFlowNode().getResultVariableName(), jsonNode);
       flownodeInstance.setState(ExecutionState.COMPLETED);
     } else if (scriptType == ScriptType.JOBWORKER) {
       super.processStartSpecificActivityInstance(
-          processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext,
-          flownodeInstance,
-          inputFlowId,
-          variables);
+          processInstanceProcessingContext, scope, flownodeInstance, inputFlowId);
     }
   }
 
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       ScriptTaskInstance externalTaskInstance,
-      ExternalTaskResponseTriggerDTO trigger,
-      VariableScope flowNodeInstanceVariables) {
+      ExternalTaskResponseTriggerDTO trigger) {
     ScriptType scriptType = externalTaskInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.JOBWORKER) {
       super.processContinueSpecificActivityInstance(
-          processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext,
-          externalTaskInstance,
-          trigger,
-          flowNodeInstanceVariables);
+          processInstanceProcessingContext, scope, externalTaskInstance, trigger);
     } else if (scriptType == ScriptType.FEEL) {
       // For FEEL scripts, we do not continue the instance, as it is already finished
       log.warn(
@@ -89,13 +80,12 @@ public class ScriptTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      ScriptTaskInstance instance,
-      VariableScope variables) {
+      Scope scope,
+      ScriptTaskInstance instance) {
     ScriptType scriptType = instance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.JOBWORKER) {
       super.processTerminateSpecificActivityInstance(
-          processInstanceProcessingContext, flowNodeInstanceProcessingContext, instance, variables);
+          processInstanceProcessingContext, scope, instance);
     } else if (scriptType == ScriptType.FEEL) {
       // For FEEL scripts, we do not continue the instance, as it is already finished
       log.warn(

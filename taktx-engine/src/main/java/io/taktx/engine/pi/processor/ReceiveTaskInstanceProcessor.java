@@ -13,14 +13,13 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.ReceiveTask;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ReceiveTaskInstance;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
-import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -44,16 +43,16 @@ public class ReceiveTaskInstanceProcessor
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       ReceiveTaskInstance receiveTaskInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     receiveTaskInstance.setState(ExecutionState.ACTIVE);
 
     ReceiveTask receiveTask = receiveTaskInstance.getFlowNode();
     String correlationKeyExpression = receiveTask.getReferencedMessage().correlationKey();
     JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(correlationKeyExpression, variables);
+        feelExpressionHandler.processFeelExpression(
+            correlationKeyExpression, scope.getVariableScope());
     String correlationKey = jsonNode.asText();
     String messageName = receiveTask.getReferencedMessage().name();
     receiveTaskInstance.setCorrelationKey(correlationKey);
@@ -67,10 +66,9 @@ public class ReceiveTaskInstanceProcessor
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       ReceiveTaskInstance receiveTaskInstance,
-      ContinueFlowElementTriggerDTO trigger,
-      VariableScope processInstanceVariables) {
+      ContinueFlowElementTriggerDTO trigger) {
     receiveTaskInstance.setState(ExecutionState.COMPLETED);
     terminatingSubscriptionInstanceResult(
         processInstanceProcessingContext.getInstanceResult(), receiveTaskInstance);
@@ -79,9 +77,8 @@ public class ReceiveTaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      ReceiveTaskInstance instance,
-      VariableScope processInstanceVariables) {
+      Scope scope,
+      ReceiveTaskInstance instance) {
     terminatingSubscriptionInstanceResult(
         processInstanceProcessingContext.getInstanceResult(), instance);
   }

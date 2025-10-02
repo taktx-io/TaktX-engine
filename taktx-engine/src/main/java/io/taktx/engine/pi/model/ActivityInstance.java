@@ -10,9 +10,7 @@ package io.taktx.engine.pi.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExecutionState;
-import io.taktx.engine.pd.model.FlowNode;
-import java.util.HashSet;
-import java.util.Set;
+import io.taktx.engine.pd.model.Activity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,29 +18,15 @@ import lombok.Setter;
 @NoArgsConstructor
 @Setter
 @Getter
-public abstract class ActivityInstance<N extends FlowNode> extends FlowNodeInstance<N> {
+public abstract class ActivityInstance<N extends Activity> extends FlowNodeInstance<N> {
   private boolean iteration = false;
   private long nextIterationId;
   private JsonNode inputElement;
   private JsonNode outputElement;
   private int loopCnt;
 
-  private Set<Long> boundaryEventIds = new HashSet<>();
-
-  protected ActivityInstance(
-      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected ActivityInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
-  }
-
-  public void addBoundaryEventId(long boundaryEventId) {
-    getBoundaryEventIds().add(boundaryEventId);
-  }
-
-  public Set<Long> getBoundaryEventIds() {
-    if (boundaryEventIds == null) {
-      boundaryEventIds = new HashSet<>();
-    }
-    return boundaryEventIds;
   }
 
   public void setOutputElement(JsonNode outputElement) {

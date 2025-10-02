@@ -10,36 +10,54 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.InstanceScheduleKeyDTO;
-import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.FlowElements;
+import io.taktx.engine.pi.DirectInstanceResult;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Getter
 @Setter
 @Slf4j
+@NoArgsConstructor
 public class Scope {
-
-  private final Map<Long, FlowNodeInstance<?>> instances;
+  private Scope parentScope;
+  private int subProcessLevel;
+  private UUID processInstanceId;
+  private FlowElements flowElements;
+  private VariableScope variableScope;
+  private FlowNodeInstanceScope flowNodeInstanceScope;
   private Map<String, Long> gatewayInstances;
   private Map<String, Set<String>> messageSubscriptions;
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
   private int activeCnt;
-
+  private DirectInstanceResult directInstanceResult;
   private ExecutionState initialState;
   private ExecutionState state;
   private boolean stateChanged;
-  private FlowNodeInstance<?> parentFlowNodeInstance;
+  private WithScope parentFlowNodeInstance;
   private long elementInstanceCnt;
 
-  public Scope() {
-    this.instances = new LinkedHashMap<>();
+  public Scope(
+      Scope parentScope,
+      UUID processInstanceId,
+      WithScope parentFlowNodeInstance,
+      FlowElements flowElements,
+      VariableScope variableScope,
+      FlowNodeInstanceScope flowNodeInstanceScope) {
+    this.parentScope = parentScope;
+    this.subProcessLevel = parentScope != null ? parentScope.getSubProcessLevel() + 1 : 0;
+    this.processInstanceId = processInstanceId;
+    this.parentFlowNodeInstance = parentFlowNodeInstance;
+    this.flowElements = flowElements;
+    this.variableScope = variableScope;
+    this.flowNodeInstanceScope = flowNodeInstanceScope;
     this.messageSubscriptions = new HashMap<>();
     this.gatewayInstances = new HashMap<>();
     this.scheduleKeys = new HashSet<>();
@@ -47,6 +65,7 @@ public class Scope {
     this.stateChanged = false;
     this.activeCnt = 0;
     this.elementInstanceCnt = 0;
+    this.directInstanceResult = DirectInstanceResult.empty();
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
@@ -54,27 +73,17 @@ public class Scope {
       gatewayInstances.put(
           fLowNodeInstance.getFlowNode().getId(), gatewayInstance.getElementInstanceId());
     }
-    instances.put(fLowNodeInstance.getElementInstanceId(), fLowNodeInstance);
+    flowNodeInstanceScope.putInstance(fLowNodeInstance);
   }
 
   public Long getGatewayInstanceId(String flowNodeId) {
     return gatewayInstances.get(flowNodeId);
   }
 
-  public FlowNodeInstance<?> getInstanceWithInstanceId(long elementInstanceId) {
-    return instances.get(elementInstanceId);
-  }
-
   public void addMessageSubscription(String messageName, String correlationKey) {
     Set<String> correlationKeys =
         messageSubscriptions.computeIfAbsent(messageName, ignored -> new HashSet<>());
     correlationKeys.add(correlationKey);
-  }
-
-  public Optional<FlowNodeInstance<?>> getInstanceWithFlowNode(FlowNode flowNode) {
-    return instances.values().stream()
-        .filter(flowNodeInstance -> flowNodeInstance.getFlowNode().equals(flowNode))
-        .findFirst();
   }
 
   public void setState(ExecutionState state) {
@@ -95,14 +104,14 @@ public class Scope {
   public boolean isStateChanged() {
     return stateChanged
         || initialState != getState()
-        || instances.values().stream()
+        || flowNodeInstanceScope.getInstances().values().stream()
             .filter(WithScope.class::isInstance)
             .map(WithScope.class::cast)
             .anyMatch(instance -> instance.getScope().isStateChanged());
   }
 
   public void updateActiveCountForInstances() {
-    for (FlowNodeInstance<?> instance : instances.values()) {
+    for (FlowNodeInstance<?> instance : flowNodeInstanceScope.getInstances().values()) {
       if (instance.wasNew()) {
         activeCnt++;
       }
@@ -130,7 +139,9 @@ public class Scope {
   }
 
   public boolean isDirty() {
-    return stateChanged || instances.values().stream().anyMatch(FlowNodeInstance::isDirty);
+    return stateChanged
+        || flowNodeInstanceScope.getInstances().values().stream()
+            .anyMatch(FlowNodeInstance::isDirty);
   }
 
   public long nextElementInstanceId() {
@@ -139,5 +150,15 @@ public class Scope {
 
   public void addScheduledKey(InstanceScheduleKeyDTO scheduledKey) {
     this.scheduleKeys.add(scheduledKey);
+  }
+
+  public Scope selectChildScope(WithScope withScope) {
+    return new Scope(
+        this,
+        processInstanceId,
+        withScope,
+        withScope.getFlowElements(),
+        variableScope.selectChildScope(withScope.getElementInstanceId()),
+        flowNodeInstanceScope.selectChildScope(withScope));
   }
 }

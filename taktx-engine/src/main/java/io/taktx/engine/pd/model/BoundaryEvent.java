@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.BoundaryEventInstance;
-import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
@@ -24,7 +24,7 @@ public class BoundaryEvent extends CatchEvent {
   private boolean cancelActivity;
 
   @Override
-  public BoundaryEventInstance newInstance(FlowNodeInstance<?> parentInstance, Scope scope) {
+  public BoundaryEventInstance newInstance(WithScope parentInstance, Scope scope) {
     return new BoundaryEventInstance(parentInstance, this, scope.nextElementInstanceId());
   }
 }

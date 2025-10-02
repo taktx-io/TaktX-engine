@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class ExclusiveGatewayInstance extends GatewayInstance<ExclusiveGateway> {
 
   public ExclusiveGatewayInstance(
-      FlowNodeInstance<?> parentInstance, ExclusiveGateway flowNode, long elementInstanceId) {
+      WithScope parentInstance, ExclusiveGateway flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

@@ -9,11 +9,10 @@
 package io.taktx.engine.pi.processor;
 
 import io.taktx.engine.pd.model.IntermediateThrowEvent;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
-import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.engine.pi.model.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -35,18 +34,16 @@ public class IntermediateThrowEventInstanceProcessor
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      IntermediateThrowEventInstance instance,
-      VariableScope currentVariableScope) {
+      Scope scope,
+      IntermediateThrowEventInstance instance) {
     // nothing to do
   }
 
   @Override
   protected void processStartSpecificThrowEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      IntermediateThrowEventInstance flowNodeInstance,
-      VariableScope variables) {
+      Scope scope,
+      IntermediateThrowEventInstance flowNodeInstance) {
     // nothing to do
   }
 }

@@ -20,7 +20,6 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
 import io.taktx.engine.pi.DirectInstanceResult;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -29,6 +28,7 @@ import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.ExternalTaskInstance;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.time.Duration;
@@ -56,24 +56,21 @@ public abstract class ExternalTaskInstanceProcessor<
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flownodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
-    String externalTaskId = getExternalTaskId(flowNode.getWorkerDefinition(), variables);
+    String externalTaskId =
+        getExternalTaskId(flowNode.getWorkerDefinition(), scope.getVariableScope());
 
     if (failIfTopicDoesNotExist(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        flownodeInstance,
-        variables,
-        externalTaskId)) {
+        processInstanceProcessingContext, scope, flownodeInstance, externalTaskId)) {
       return;
     }
 
     retryDirectly(
-        getExternalTaskInfo(externalTaskId, flowNode, flownodeInstance, variables, null),
+        getExternalTaskInfo(
+            externalTaskId, flowNode, flownodeInstance, scope.getVariableScope(), null),
         processInstanceProcessingContext.getInstanceResult());
     flownodeInstance.setState(ExecutionState.ACTIVE);
     flownodeInstance.setAttempt(0);
@@ -81,9 +78,8 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private boolean failIfTopicDoesNotExist(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flownodeInstance,
-      VariableScope variables,
       String externalTaskId) {
     if (!processInstanceProcessingContext
         .getTopicManager()
@@ -95,9 +91,9 @@ public abstract class ExternalTaskInstanceProcessor<
       InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
       handleErrorOrTimeout(
           instanceResult,
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+          scope.getDirectInstanceResult(),
           flownodeInstance,
-          variables,
+          scope.getVariableScope(),
           new ExternalTaskResponseResultDTO(
               ExternalTaskResponseType.ERROR,
               false,
@@ -112,10 +108,9 @@ public abstract class ExternalTaskInstanceProcessor<
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I externalTaskInstance,
-      ExternalTaskResponseTriggerDTO trigger,
-      VariableScope variables) {
+      ExternalTaskResponseTriggerDTO trigger) {
 
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
@@ -126,17 +121,14 @@ public abstract class ExternalTaskInstanceProcessor<
       handlePromise(instanceResult, externalTaskInstance, trigger);
     } else if (ExternalTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
-          instanceResult,
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
-          externalTaskInstance,
-          responseResult);
+          instanceResult, scope.getDirectInstanceResult(), externalTaskInstance, responseResult);
     } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
         || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleErrorOrTimeout(
           instanceResult,
-          flowNodeInstanceProcessingContext.getDirectInstanceResult(),
+          scope.getDirectInstanceResult(),
           externalTaskInstance,
-          variables,
+          scope.getVariableScope(),
           responseResult);
     }
   }
@@ -285,10 +277,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processTerminateSpecificActivityInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      I instance,
-      VariableScope variables) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
     // Nothing to do here
   }
 

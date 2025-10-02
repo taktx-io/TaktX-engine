@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class IntermediateThrowEventInstance extends ThrowEventInstance<IntermediateThrowEvent> {
 
   public IntermediateThrowEventInstance(
-      FlowNodeInstance<?> parentInstance, IntermediateThrowEvent flowNode, long elementInstanceId) {
+      WithScope parentInstance, IntermediateThrowEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

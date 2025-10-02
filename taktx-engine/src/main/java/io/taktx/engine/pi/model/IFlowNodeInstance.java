@@ -15,7 +15,7 @@ public interface IFlowNodeInstance {
 
   long getElementInstanceId();
 
-  FlowNodeInstance<?> getParentInstance();
+  WithScope getParentInstance();
 
   FlowNode getFlowNode();
 

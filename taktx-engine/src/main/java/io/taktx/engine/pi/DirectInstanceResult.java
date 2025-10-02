@@ -9,8 +9,9 @@
 package io.taktx.engine.pi;
 
 import io.taktx.engine.pd.model.EventSignal;
-import io.taktx.engine.pi.model.FlowNodeInstanceInfo;
+import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,9 +19,9 @@ import java.util.Queue;
 
 public class DirectInstanceResult {
 
-  private final Queue<FlowNodeInstanceInfo> newFlowNodeInstanceInfos = new ArrayDeque<>();
   private final List<String> sequenceFlows = new ArrayList<>();
-  private List<Long> terminateParentPath;
+  private final Queue<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
+  private final Queue<ContinueFlowNodeInstanceInfo> continueInstances = new ArrayDeque<>();
   private final Queue<Long> abortInstances = new ArrayDeque<>();
   private final Queue<Long> cancelInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
@@ -28,37 +29,37 @@ public class DirectInstanceResult {
 
   private DirectInstanceResult() {}
 
-  public void setTerminateParentPath(List<Long> instancePath) {
-    this.terminateParentPath = instancePath != null ? new ArrayList<>(instancePath) : null;
-  }
-
-  public List<Long> getTerminateParentPath() {
-    return terminateParentPath;
-  }
-
   public static DirectInstanceResult empty() {
     return new DirectInstanceResult();
   }
 
   public void addNewFlowNodeInstance(
-      ProcessInstance processInstance, FlowNodeInstanceInfo flowNodeInstanceInfo) {
-    if (flowNodeInstanceInfo.inputSequenceFlowId() != null) {
-      if (sequenceFlows.contains(flowNodeInstanceInfo.inputSequenceFlowId())) {
+      ProcessInstance processInstance, StartFlowNodeInstanceInfo startFlowNodeInstanceInfo) {
+    if (startFlowNodeInstanceInfo.inputSequenceFlowId() != null) {
+      if (sequenceFlows.contains(startFlowNodeInstanceInfo.inputSequenceFlowId())) {
         throw new ProcessInstanceException(
             processInstance,
-            flowNodeInstanceInfo.flowNodeInstance(),
+            startFlowNodeInstanceInfo.flowNodeInstance(),
             "Straight through processing loop detected for sequenceflow "
-                + flowNodeInstanceInfo.inputSequenceFlowId()
+                + startFlowNodeInstanceInfo.inputSequenceFlowId()
                 + " in: "
                 + sequenceFlows);
       }
-      sequenceFlows.add(flowNodeInstanceInfo.inputSequenceFlowId());
+      sequenceFlows.add(startFlowNodeInstanceInfo.inputSequenceFlowId());
     }
-    newFlowNodeInstanceInfos.add(flowNodeInstanceInfo);
+    newFlowNodeInstances.add(startFlowNodeInstanceInfo);
   }
 
-  public FlowNodeInstanceInfo pollNewFlowNodeInstance() {
-    return newFlowNodeInstanceInfos.poll();
+  public StartFlowNodeInstanceInfo pollNewFlowNodeInstance() {
+    return newFlowNodeInstances.poll();
+  }
+
+  public ContinueFlowNodeInstanceInfo pollContinueInstance() {
+    return continueInstances.poll();
+  }
+
+  public void addContinueInstance(ContinueFlowNodeInstanceInfo continueInstanceInfo) {
+    this.continueInstances.add(continueInstanceInfo);
   }
 
   public Long pollAbortInstance() {
@@ -82,11 +83,11 @@ public class DirectInstanceResult {
   }
 
   public boolean hasDirectTriggers() {
-    return !newFlowNodeInstanceInfos.isEmpty()
+    return !newFlowNodeInstances.isEmpty()
+        || !continueInstances.isEmpty()
         || !abortInstances.isEmpty()
         || !cancelInstances.isEmpty()
-        || !events.isEmpty()
-        || terminateParentPath != null;
+        || !events.isEmpty();
   }
 
   public void addBubbleUpEvent(EventSignal event) {

@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.ActivityInstance;
-import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.SubProcessInstance;
+import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -23,8 +23,7 @@ public class SubProcess extends Activity implements WIthChildElements {
   private boolean triggeredByEvent;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(
-      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(WithScope parentInstance, long elementInstanceId) {
     return new SubProcessInstance(parentInstance, this, elementInstanceId);
   }
 }

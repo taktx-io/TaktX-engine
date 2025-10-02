@@ -11,13 +11,11 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.engine.pd.model.Event;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
@@ -36,38 +34,31 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   @Override
   protected void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     processStartSpecificEventInstance(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext,
-        flowNodeInstance,
-        inputFlowId,
-        variables);
+        processInstanceProcessingContext, scope, flowNodeInstance, inputFlowId);
   }
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      ContinueFlowElementTriggerDTO trigger,
-      VariableScope variables) {
-    // Should not occur
+      ContinueFlowElementTriggerDTO trigger) {
+    throw new IllegalStateException("We should never continue an event instance");
   }
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I flowNodeInstance, Scope scope, VariableScope variables) {
+      ProcessInstance processInstance, I flowNodeInstance, Scope scope) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
   protected abstract void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       I flowNodeInstance,
-      String inputFlowId,
-      VariableScope variables);
+      String inputFlowId);
 }

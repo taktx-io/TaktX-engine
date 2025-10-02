@@ -21,8 +21,7 @@ import lombok.Setter;
 public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstance<N> {
   private Set<String> selectedOutputFlows = new HashSet<>();
 
-  protected GatewayInstance(
-      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected GatewayInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 
@@ -49,11 +48,6 @@ public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstanc
   @Override
   public boolean wasAwaiting() {
     return false;
-  }
-
-  @Override
-  public void setStartedState() {
-    // Do nothing
   }
 
   @Override

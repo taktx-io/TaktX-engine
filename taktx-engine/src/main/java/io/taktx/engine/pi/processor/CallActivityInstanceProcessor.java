@@ -16,11 +16,10 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.NewStartCommand;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
-import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.engine.pi.model.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -46,10 +45,9 @@ public class CallActivityInstanceProcessor
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       CallActivityInstance callActivityInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     callActivityInstance.setState(ExecutionState.ACTIVE);
 
     UUID newProcessInstanceId = UUID.randomUUID();
@@ -57,13 +55,14 @@ public class CallActivityInstanceProcessor
     CallActivity flowNode = callActivityInstance.getFlowNode();
 
     JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(flowNode.getCalledElement(), variables);
+        feelExpressionHandler.processFeelExpression(
+            flowNode.getCalledElement(), scope.getVariableScope());
     if (jsonNode != null) {
       VariablesDTO commandVariables;
       if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
-        commandVariables = variables.scopeAndParentsToDto();
+        commandVariables = scope.getVariableScope().scopeAndParentsToDto();
       } else {
-        commandVariables = variables.scopeToDTO();
+        commandVariables = scope.getVariableScope().scopeToDTO();
       }
 
       processInstanceProcessingContext
@@ -85,19 +84,17 @@ public class CallActivityInstanceProcessor
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       CallActivityInstance instance,
-      ContinueFlowElementTriggerDTO trigger,
-      VariableScope processInstanceVariables) {
+      ContinueFlowElementTriggerDTO trigger) {
     instance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      CallActivityInstance instance,
-      VariableScope processInstanceVariables) {
+      Scope scope,
+      CallActivityInstance instance) {
     processInstanceProcessingContext
         .getInstanceResult()
         .addTerminateCommand(new AbortTriggerDTO(instance.getChildProcessInstanceId(), List.of()));

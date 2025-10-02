@@ -12,11 +12,10 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Task;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TaskInstance;
-import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -40,29 +39,26 @@ public class TaskInstanceProcessor
   @Override
   protected void processTerminateSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      TaskInstance instance,
-      VariableScope processInstanceVariables) {
+      Scope scope,
+      TaskInstance instance) {
     // Nothing to do here
   }
 
   @Override
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       TaskInstance flowNodeInstance,
-      String inputFlowId,
-      VariableScope variables) {
+      String inputFlowId) {
     flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       TaskInstance externalTaskInstance,
-      ContinueFlowElementTriggerDTO trigger,
-      VariableScope processInstanceVariables) {
+      ContinueFlowElementTriggerDTO trigger) {
     // Nothing to do here
   }
 }

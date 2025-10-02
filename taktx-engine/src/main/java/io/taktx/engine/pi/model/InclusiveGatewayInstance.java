@@ -22,7 +22,7 @@ public class InclusiveGatewayInstance extends GatewayInstance<InclusiveGateway> 
   private Set<String> triggeredInputFlows = new HashSet<>();
 
   public InclusiveGatewayInstance(
-      FlowNodeInstance<?> parentInstance, InclusiveGateway flowNode, long elementInstanceId) {
+      WithScope parentInstance, InclusiveGateway flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

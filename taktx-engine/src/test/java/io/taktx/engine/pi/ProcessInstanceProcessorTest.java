@@ -89,9 +89,12 @@ class ProcessInstanceProcessorTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("SubProcess_1")
-        .hasInstantiatedElementWithId("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("SubProcess_1")
+        .hasPassedElementWithId("SubProcess_1/SubStartEvent_1")
+        .hasPassedElementWithId("SubProcess_1/SubTask_1")
+        .hasPassedElementWithId("SubProcess_1/SubEndEvent_1")
+        .hasPassedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -104,9 +107,12 @@ class ProcessInstanceProcessorTest {
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("SubProcess_1")
-        .hasInstantiatedElementWithId("EndEvent_1");
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("SubProcess_1")
+        .hasPassedElementWithId("EndEvent_1")
+        .hasPassedElementWithId("SubProcess_1/SubStartEvent_1")
+        .hasPassedElementWithId("SubProcess_1/SubTask_1")
+        .hasPassedElementWithId("SubProcess_1/SubEndEvent_1");
   }
 
   @Test

@@ -15,18 +15,14 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
-import io.taktx.engine.pi.FlowNodeInstanceProcessingContext;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.StoredScopeWrapper;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Comparator;
 import java.util.Map;
@@ -52,26 +48,22 @@ public class MultiInstanceProcessor
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance,
-      MultiInstanceInstance flowNodeInstance,
-      Scope scope,
-      VariableScope variables) {
+      ProcessInstance processInstance, MultiInstanceInstance flowNodeInstance, Scope scope) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
   @Override
   protected void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       MultiInstanceInstance multiInstanceInstance,
-      String inputFlowId,
-      VariableScope flowNodeInstanceVariables) {
+      String inputFlowId) {
 
     Activity activity = multiInstanceInstance.getFlowNode();
 
     JsonNode inputCollection =
         feelExpressionHandler.processFeelExpression(
-            activity.getLoopCharacteristics().getInputCollection(), flowNodeInstanceVariables);
+            activity.getLoopCharacteristics().getInputCollection(), scope.getVariableScope());
 
     if (inputCollection == null || inputCollection.isEmpty()) {
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
@@ -81,57 +73,42 @@ public class MultiInstanceProcessor
               activity, multiInstanceInstance, inputCollection, multiInstanceInstance.getScope());
       loopStartIterations(
           processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext,
+          scope,
           multiInstanceInstance,
           inputFlowId,
           iterationInstance,
-          flowNodeInstanceVariables,
           activity);
-      handleCompleted(
-          processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext.getFlowElements(),
-          multiInstanceInstance,
-          flowNodeInstanceVariables);
+      handleCompleted(scope, multiInstanceInstance);
     }
   }
 
   private void loopStartIterations(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
       ActivityInstance<?> iterationInstance,
-      VariableScope scopeVariables,
       Activity activity) {
     while (iterationInstance != null) {
       startIteration(
           processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext,
+          scope,
           iterationInstance,
           multiInstanceInstance,
-          inputFlowId,
-          scopeVariables);
+          inputFlowId);
       if (iterationInstance.isActive()) {
         multiInstanceInstance.setState(ExecutionState.ACTIVE);
       }
       if (activity.getLoopCharacteristics().isSequential()) {
         if (iterationInstance.getState() == ExecutionState.COMPLETED) {
           iterationInstance =
-              getNextIterationInstance(
-                  processInstanceProcessingContext,
-                  multiInstanceInstance.getScope(),
-                  iterationInstance,
-                  flowNodeInstanceProcessingContext.getFlowElements());
+              getNextIterationInstance(multiInstanceInstance.getScope(), iterationInstance);
         } else {
           iterationInstance = null;
         }
       } else {
         iterationInstance =
-            getNextIterationInstance(
-                processInstanceProcessingContext,
-                multiInstanceInstance.getScope(),
-                iterationInstance,
-                flowNodeInstanceProcessingContext.getFlowElements());
+            getNextIterationInstance(multiInstanceInstance.getScope(), iterationInstance);
       }
     }
   }
@@ -169,134 +146,47 @@ public class MultiInstanceProcessor
 
   private void startIteration(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       ActivityInstance<?> iterationInstance,
       MultiInstanceInstance multiInstanceInstance,
-      String inputFlowId,
-      VariableScope scopeVariables) {
+      String inputFlowId) {
 
-    FlowNodeInstanceProcessingContext iterationFlowNodeInstanceProcessingContext =
-        new FlowNodeInstanceProcessingContext(
-            multiInstanceInstance.getScope(),
-            flowNodeInstanceProcessingContext.getFlowElements(),
-            flowNodeInstanceProcessingContext.getSubProcessLevel(),
-            flowNodeInstanceProcessingContext.getDirectInstanceResult());
+    Scope iterationScope = scope.selectChildScope(multiInstanceInstance);
+
     processor.processStart(
-        processInstanceProcessingContext,
-        iterationFlowNodeInstanceProcessingContext,
-        iterationInstance,
-        inputFlowId,
-        scopeVariables);
+        processInstanceProcessingContext, iterationScope, iterationInstance, inputFlowId);
   }
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
+      Scope scope,
       MultiInstanceInstance multiInstanceInstance,
-      ContinueFlowElementTriggerDTO trigger,
-      VariableScope flowNodeInstanceVariables) {
-
-    FlowElements subFlowElements = new FlowElements();
-    subFlowElements
-        .getIndex()
-        .addAll(flowNodeInstanceProcessingContext.getFlowElements().getIndex());
-    Activity activity = multiInstanceInstance.getFlowNode();
-    subFlowElements.addFlowElement(activity);
-
-    long instanceId =
-        trigger
-            .getElementInstanceIdPath()
-            .get(flowNodeInstanceProcessingContext.getSubProcessLevel() + 1);
-
-    StoredScopeWrapper storedScopeWrapper =
-        new StoredScopeWrapper(
-            processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-            multiInstanceInstance.getScope(),
-            processInstanceProcessingContext.getFlowNodeInstanceStore(),
-            flowNodeInstanceProcessingContext.getFlowElements(),
-            processInstanceMapper);
-
-    ActivityInstance<?> iterationInstance =
-        (ActivityInstance<?>) storedScopeWrapper.getInstanceWithInstanceId(instanceId);
-
-    FlowNodeInstanceProcessingContext subFlowNodeInstanceProcessingContext =
-        new FlowNodeInstanceProcessingContext(
-            multiInstanceInstance.getScope(),
-            subFlowElements,
-            flowNodeInstanceProcessingContext.getSubProcessLevel(),
-            flowNodeInstanceProcessingContext.getDirectInstanceResult());
-    processor.processContinue(
-        processInstanceProcessingContext,
-        subFlowNodeInstanceProcessingContext,
-        iterationInstance,
-        trigger,
-        flowNodeInstanceVariables);
-    if (iterationInstance.getState() == ExecutionState.COMPLETED) {
-
-      iterationInstance =
-          getNextIterationInstance(
-              processInstanceProcessingContext,
-              multiInstanceInstance.getScope(),
-              iterationInstance,
-              flowNodeInstanceProcessingContext.getFlowElements());
-
-      loopStartIterations(
-          processInstanceProcessingContext,
-          flowNodeInstanceProcessingContext,
-          multiInstanceInstance,
-          trigger.getInputFlowId(),
-          iterationInstance,
-          flowNodeInstanceVariables,
-          activity);
-    }
-
-    handleCompleted(
-        processInstanceProcessingContext,
-        flowNodeInstanceProcessingContext.getFlowElements(),
-        multiInstanceInstance,
-        flowNodeInstanceVariables);
+      ContinueFlowElementTriggerDTO trigger) {
+    throw new IllegalStateException("We should never continue a multi-instance directly");
   }
 
   private ActivityInstance<?> getNextIterationInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      ActivityInstance<?> iterationInstance,
-      FlowElements flowElements) {
+      Scope scope, ActivityInstance<?> iterationInstance) {
     if (iterationInstance.getNextIterationId() >= 0) {
-      StoredScopeWrapper storedScopeWrapper =
-          new StoredScopeWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              scope,
-              processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowElements,
-              processInstanceMapper);
       return (ActivityInstance<?>)
-          storedScopeWrapper.getInstanceWithInstanceId(iterationInstance.getNextIterationId());
+          scope
+              .getFlowNodeInstanceScope()
+              .getInstanceWithInstanceId(iterationInstance.getNextIterationId());
     } else {
       return null;
     }
   }
 
-  private void handleCompleted(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowElements flowElements,
-      MultiInstanceInstance multiInstanceInstance,
-      VariableScope scopeVariables) {
+  private void handleCompleted(Scope scope, MultiInstanceInstance multiInstanceInstance) {
     multiInstanceInstance.getScope().updateActiveCountForInstances();
     if (multiInstanceInstance.getScope().getState().isDone()) {
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
       ArrayNode arrayNode = new ObjectMapper().createArrayNode();
 
-      StoredScopeWrapper storedScopeWrapper =
-          new StoredScopeWrapper(
-              processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-              multiInstanceInstance.getScope(),
-              processInstanceProcessingContext.getFlowNodeInstanceStore(),
-              flowElements,
-              processInstanceMapper);
-
-      Map<Long, FlowNodeInstance<?>> allInstances = storedScopeWrapper.getAllInstances();
+      Map<Long, FlowNodeInstance<?>> allInstances =
+          scope.getFlowNodeInstanceScope().getAllInstances();
+      ;
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)
           .map(flowNodeInstance -> (ActivityInstance<?>) flowNodeInstance)
@@ -308,7 +198,7 @@ public class MultiInstanceProcessor
       String outputCollection =
           multiInstanceInstance.getFlowNode().getLoopCharacteristics().getOutputCollection();
       if (outputCollection != null) {
-        scopeVariables.put(outputCollection, arrayNode);
+        scope.getVariableScope().put(outputCollection, arrayNode);
       }
     }
   }
@@ -316,19 +206,14 @@ public class MultiInstanceProcessor
   @Override
   protected void processTerminateSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      FlowNodeInstanceProcessingContext flowNodeInstanceProcessingContext,
-      MultiInstanceInstance instance,
-      VariableScope currentVariableScope) {
-    Scope scope = instance.getScope();
+      Scope scope,
+      MultiInstanceInstance instance) {
     scope
-        .getInstances()
+        .getFlowNodeInstanceScope()
+        .getAllInstances()
         .values()
         .forEach(
             iteration ->
-                processor.processAbort(
-                    processInstanceProcessingContext,
-                    flowNodeInstanceProcessingContext,
-                    iteration,
-                    currentVariableScope));
+                processor.processAbort(processInstanceProcessingContext, scope, iteration));
   }
 }

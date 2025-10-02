@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class EventInstance<N extends Event> extends FlowNodeInstance<N> {
 
-  protected EventInstance(FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected EventInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

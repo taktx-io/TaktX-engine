@@ -12,8 +12,8 @@ import io.taktx.bpmn.AssignmentDefinition;
 import io.taktx.bpmn.PriorityDefinition;
 import io.taktx.bpmn.TaskSchedule;
 import io.taktx.engine.pi.model.ActivityInstance;
-import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.UserTaskInstance;
+import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -27,8 +27,7 @@ public class UserTask extends Activity {
   private PriorityDefinition priorityDefinition;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(
-      FlowNodeInstance<?> parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(WithScope parentInstance, long elementInstanceId) {
     return new UserTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

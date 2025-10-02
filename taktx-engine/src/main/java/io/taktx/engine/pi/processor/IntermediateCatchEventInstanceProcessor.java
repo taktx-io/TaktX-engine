@@ -10,10 +10,10 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
-import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
+import io.taktx.engine.pi.model.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -41,7 +41,7 @@ public class IntermediateCatchEventInstanceProcessor
   @Override
   protected void processContinueSpecificCatchEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      DirectInstanceResult directInstanceResult,
+      Scope scope,
       IntermediateCatchEventInstance flowNodeInstance) {
     // nothing to do
   }

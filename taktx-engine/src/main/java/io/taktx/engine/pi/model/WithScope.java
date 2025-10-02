@@ -8,6 +8,10 @@
 
 package io.taktx.engine.pi.model;
 
-public interface WithScope {
+import io.taktx.engine.pd.model.FlowElements;
+
+public interface WithScope extends IFlowNodeInstance {
+  FlowElements getFlowElements();
+
   Scope getScope();
 }

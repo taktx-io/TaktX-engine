@@ -15,7 +15,6 @@ import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -67,7 +66,6 @@ class ErrorsTest {
         .hasAbortedElementWithId("ServiceTask_1")
         .hasAbortedElementWithId("BoundaryEvent_WithErrorReference");
   }
-
 
   @Test
   void testInterruptingError_NoCode_CatchAllTriggered() throws IOException {
@@ -179,7 +177,6 @@ class ErrorsTest {
         .hasVariableWithValue("var1", "value1")
         .isCompleted();
   }
-
 
   @Test
   void testInterruptingErrorInSubprocess_noCatch() throws IOException {

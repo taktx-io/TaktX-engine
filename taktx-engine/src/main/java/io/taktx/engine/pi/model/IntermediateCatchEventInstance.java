@@ -19,7 +19,7 @@ import lombok.Setter;
 public class IntermediateCatchEventInstance extends CatchEventInstance<IntermediateCatchEvent> {
 
   public IntermediateCatchEventInstance(
-      FlowNodeInstance<?> parentInstance, IntermediateCatchEvent flowNode, long elementInstanceId) {
+      WithScope parentInstance, IntermediateCatchEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

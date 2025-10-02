@@ -8,6 +8,8 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.dto.ExecutionState;
+import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SubProcess;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,8 +22,17 @@ public class SubProcessInstance extends ActivityInstance<SubProcess> implements 
 
   private Scope scope;
 
-  public SubProcessInstance(
-      FlowNodeInstance<?> parentInstance, SubProcess flowNode, long elementInstanceId) {
+  public SubProcessInstance(WithScope parentInstance, SubProcess flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
+  }
+
+  @Override
+  public ExecutionState getState() {
+    return scope.getState();
+  }
+
+  @Override
+  public FlowElements getFlowElements() {
+    return getFlowNode().getElements();
   }
 }

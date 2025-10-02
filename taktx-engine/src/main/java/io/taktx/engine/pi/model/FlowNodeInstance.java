@@ -34,12 +34,11 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   private N flowNode;
 
-  private FlowNodeInstance<?> parentInstance;
+  private WithScope parentInstance;
 
   private boolean dirty = false;
 
-  protected FlowNodeInstance(
-      FlowNodeInstance<?> parentInstance, N flowNode, long elementInstanceId) {
+  protected FlowNodeInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     this.parentInstance = parentInstance;
     this.elementInstanceId = elementInstanceId;
     this.flowNode = flowNode;
@@ -143,9 +142,5 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public boolean isActive() {
     return state == ExecutionState.ACTIVE;
-  }
-
-  public void setStartedState() {
-    setState(ExecutionState.ACTIVE);
   }
 }

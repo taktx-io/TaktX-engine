@@ -90,7 +90,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
           @Override
           public Iterable<String> keys() {
             log.error("THe keys method is called although not all variables might be available");
-            return CollectionConverters.SetHasAsScala(variables.keySet()).asScala();
+            return CollectionConverters.SetHasAsScala(variables.getVariables().keySet()).asScala();
           }
         };
       }

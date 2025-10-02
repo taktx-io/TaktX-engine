@@ -36,14 +36,12 @@ public class IoMappingProcessor {
   }
 
   public void addVariables(VariableScope variables, Set<IoVariableMapping> mappings) {
-    if (mappings.isEmpty()) {
-      variables.mergeAllToParent();
-    } else {
+    if (!mappings.isEmpty()) {
       for (IoVariableMapping mapping : mappings) {
         String varName = mapping.getTarget();
         JsonNode jsonNode =
             feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-        variables.getParentScope().put(varName, jsonNode);
+        variables.put(varName, jsonNode);
       }
     }
   }
