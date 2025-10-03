@@ -276,7 +276,7 @@ public abstract class ExternalTaskInstanceProcessor<
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
     // Nothing to do here
   }

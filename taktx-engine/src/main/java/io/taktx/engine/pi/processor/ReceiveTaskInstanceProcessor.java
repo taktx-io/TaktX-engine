@@ -75,7 +75,7 @@ public class ReceiveTaskInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       ReceiveTaskInstance instance) {

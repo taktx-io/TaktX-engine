@@ -122,8 +122,7 @@ public abstract class FlowNodeInstanceProcessor<
       long now = clock.instant().toEpochMilli();
 
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      processTerminateSpecificFlowNodeInstance(
-          processInstanceProcessingContext, scope, (I) instance);
+      processAbortSpecificFlowNodeInstance(processInstanceProcessingContext, scope, (I) instance);
 
       instance.abort();
 
@@ -144,8 +143,7 @@ public abstract class FlowNodeInstanceProcessor<
       long now = clock.instant().toEpochMilli();
 
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      processTerminateSpecificFlowNodeInstance(
-          processInstanceProcessingContext, scope, (I) instance);
+      processAbortSpecificFlowNodeInstance(processInstanceProcessingContext, scope, (I) instance);
 
       instance.cancel();
 
@@ -199,7 +197,7 @@ public abstract class FlowNodeInstanceProcessor<
                           flownodeInstance.getParentInstance(), scope);
                 } else {
                   newFlowNodeInstance =
-                      scope.getFlowNodeInstanceScope().getInstanceWithInstanceId(gatewayInstanceId);
+                      scope.getFlowNodeInstances().getInstanceWithInstanceId(gatewayInstanceId);
                 }
               } else {
                 newFlowNodeInstance =
@@ -230,7 +228,7 @@ public abstract class FlowNodeInstanceProcessor<
       I flowNodeInstance,
       C trigger);
 
-  protected abstract void processTerminateSpecificFlowNodeInstance(
+  protected abstract void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance);
 
   protected InstanceUpdate createFlowNodeInstanceUpdate(

@@ -91,7 +91,7 @@ public class InclusiveGatewayInstanceProcessor
       FlowNode sourceNode = incomingSequenceFlow.getSourceNode();
       if (sourceNode instanceof InclusiveGateway inclusiveGateway) {
         Optional<FlowNodeInstance<?>> instanceWithFlowNode =
-            scope.getFlowNodeInstanceScope().getInstanceWithFlowNode(inclusiveGateway);
+            scope.getFlowNodeInstances().getInstanceWithFlowNode(inclusiveGateway);
         if (instanceWithFlowNode.isPresent()) {
           InclusiveGatewayInstance gatewayInstance =
               (InclusiveGatewayInstance) instanceWithFlowNode.get();

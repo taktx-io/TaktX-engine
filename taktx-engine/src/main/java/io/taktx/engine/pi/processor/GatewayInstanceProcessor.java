@@ -110,7 +110,7 @@ public abstract class GatewayInstanceProcessor<
   protected abstract boolean canTriggerOutputFlows(I gatewayInstance, Scope scope);
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
     processTerminateSpecificGatewayInstance(
         processInstanceProcessingContext.getInstanceResult(),

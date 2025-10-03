@@ -8,10 +8,15 @@
 
 package io.taktx.engine.pi.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExecutionState;
+import io.taktx.dto.FlowNodeInstanceDTO;
+import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.InstanceScheduleKeyDTO;
+import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pi.DirectInstanceResult;
+import io.taktx.engine.pi.ProcessInstanceMapper;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,6 +26,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.streams.state.KeyValueStore;
 
 @Getter
 @Setter
@@ -30,42 +36,44 @@ public class Scope {
   private Scope parentScope;
   private int subProcessLevel;
   private UUID processInstanceId;
-  private FlowElements flowElements;
   private VariableScope variableScope;
-  private FlowNodeInstanceScope flowNodeInstanceScope;
-  private Map<String, Long> gatewayInstances;
-  private Map<String, Set<String>> messageSubscriptions;
-  private Set<InstanceScheduleKeyDTO> scheduleKeys;
-  private int activeCnt;
-  private DirectInstanceResult directInstanceResult;
+  private FlowNodeInstances flowNodeInstances;
+  private Map<String, Long> gatewayInstances = new HashMap<>();
+  private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
+  private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
+  private int activeCnt = 0;
+  private DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
   private ExecutionState initialState;
-  private ExecutionState state;
-  private boolean stateChanged;
+  private ExecutionState state = ExecutionState.INITIALIZED;
+  private boolean stateChanged = false;
   private WithScope parentFlowNodeInstance;
-  private long elementInstanceCnt;
+  private long elementInstanceCnt = 0;
 
   public Scope(
       Scope parentScope,
       UUID processInstanceId,
       WithScope parentFlowNodeInstance,
       FlowElements flowElements,
-      VariableScope variableScope,
-      FlowNodeInstanceScope flowNodeInstanceScope) {
+      ProcessInstanceMapper processInstanceMapper,
+      KeyValueStore<VariableKeyDTO, JsonNode> variableStore,
+      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore) {
     this.parentScope = parentScope;
     this.subProcessLevel = parentScope != null ? parentScope.getSubProcessLevel() + 1 : 0;
     this.processInstanceId = processInstanceId;
     this.parentFlowNodeInstance = parentFlowNodeInstance;
-    this.flowElements = flowElements;
-    this.variableScope = variableScope;
-    this.flowNodeInstanceScope = flowNodeInstanceScope;
-    this.messageSubscriptions = new HashMap<>();
-    this.gatewayInstances = new HashMap<>();
-    this.scheduleKeys = new HashSet<>();
-    this.state = ExecutionState.INITIALIZED;
-    this.stateChanged = false;
-    this.activeCnt = 0;
-    this.elementInstanceCnt = 0;
-    this.directInstanceResult = DirectInstanceResult.empty();
+    this.variableScope = new VariableScope(null, processInstanceId, null, variableStore);
+    this.flowNodeInstances =
+        new FlowNodeInstances(
+            processInstanceId,
+            parentFlowNodeInstance,
+            flowElements,
+            processInstanceMapper,
+            flowNodeInstanceStore,
+            variableStore);
+  }
+
+  public FlowElements getFlowElemeents() {
+    return flowNodeInstances.getFlowElements();
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
@@ -73,7 +81,7 @@ public class Scope {
       gatewayInstances.put(
           fLowNodeInstance.getFlowNode().getId(), gatewayInstance.getElementInstanceId());
     }
-    flowNodeInstanceScope.putInstance(fLowNodeInstance);
+    flowNodeInstances.putInstance(fLowNodeInstance);
   }
 
   public Long getGatewayInstanceId(String flowNodeId) {
@@ -104,14 +112,14 @@ public class Scope {
   public boolean isStateChanged() {
     return stateChanged
         || initialState != getState()
-        || flowNodeInstanceScope.getInstances().values().stream()
+        || flowNodeInstances.getInstances().values().stream()
             .filter(WithScope.class::isInstance)
             .map(WithScope.class::cast)
             .anyMatch(instance -> instance.getScope().isStateChanged());
   }
 
   public void updateActiveCountForInstances() {
-    for (FlowNodeInstance<?> instance : flowNodeInstanceScope.getInstances().values()) {
+    for (FlowNodeInstance<?> instance : flowNodeInstances.getInstances().values()) {
       if (instance.wasNew()) {
         activeCnt++;
       }
@@ -140,8 +148,11 @@ public class Scope {
 
   public boolean isDirty() {
     return stateChanged
-        || flowNodeInstanceScope.getInstances().values().stream()
-            .anyMatch(FlowNodeInstance::isDirty);
+        || flowNodeInstances.getInstances().values().stream().anyMatch(FlowNodeInstance::isDirty);
+  }
+
+  public FlowElements getFlowElements() {
+    return flowNodeInstances.getFlowElements();
   }
 
   public long nextElementInstanceId() {
@@ -152,13 +163,14 @@ public class Scope {
     this.scheduleKeys.add(scheduledKey);
   }
 
-  public Scope selectChildScope(WithScope withScope) {
+  public Scope selectChildScope(WithScope parentFlowNodeInstance) {
     return new Scope(
         this,
         processInstanceId,
-        withScope,
-        withScope.getFlowElements(),
-        variableScope.selectChildScope(withScope.getElementInstanceId()),
-        flowNodeInstanceScope.selectChildScope(withScope));
+        parentFlowNodeInstance,
+        parentFlowNodeInstance.getFlowElements(),
+        flowNodeInstances.getProcessInstanceMapper(),
+        variableScope.getVariableStore(),
+        flowNodeInstances.getFlowNodeInstanceStore());
   }
 }

@@ -170,7 +170,7 @@ public abstract class CatchEventInstanceProcessor<
   protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
     terminateSubscriptions(instance, processInstanceProcessingContext.getInstanceResult());
   }

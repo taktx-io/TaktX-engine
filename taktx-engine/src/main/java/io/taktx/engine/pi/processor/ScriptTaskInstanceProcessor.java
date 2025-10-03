@@ -78,14 +78,13 @@ public class ScriptTaskInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       ScriptTaskInstance instance) {
     ScriptType scriptType = instance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.JOBWORKER) {
-      super.processTerminateSpecificActivityInstance(
-          processInstanceProcessingContext, scope, instance);
+      super.processAbortSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
     } else if (scriptType == ScriptType.FEEL) {
       // For FEEL scripts, we do not continue the instance, as it is already finished
       log.warn(

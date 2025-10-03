@@ -166,7 +166,7 @@ public class UserTaskInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       UserTaskInstance instance) {

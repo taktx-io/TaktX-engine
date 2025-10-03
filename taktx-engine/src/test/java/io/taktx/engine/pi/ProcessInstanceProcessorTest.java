@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -198,10 +197,10 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  @Disabled
   void testTerminateSingleElementInstances() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task-id")
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsActive("SubTask_1")
@@ -209,13 +208,15 @@ class ProcessInstanceProcessorTest {
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
-        .isCanceled();
+        .hasAbortedElementWithId("SubProcess_1/SubTask_1")
+        .isAborted();
   }
 
   @Test
   void testTerminateChildSingleCallActivityInstances() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/calledActivity_servicetask.bpmn")
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-callactivity.bpmn")
         .startProcessInstance(VariablesDTO.empty())
@@ -234,10 +235,10 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  @Disabled
   void testTerminateSpecificSingleElementInstances() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task-id")
         .deployProcessDefinitionAndWait("/bpmn/terminate-single-child-elements.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilElementIsWaiting("SubTask_1")
@@ -245,7 +246,8 @@ class ProcessInstanceProcessorTest {
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
-        .isCanceled();
+        .hasAbortedElementWithId("SubProcess_1/SubTask_1")
+        .isCompleted();
   }
 
   @Test

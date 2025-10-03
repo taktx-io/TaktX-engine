@@ -91,7 +91,7 @@ public class CallActivityInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       CallActivityInstance instance) {

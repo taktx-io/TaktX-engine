@@ -28,7 +28,7 @@ class EndEventInstanceProcessorTest {
   void testProcessAbortSpecificFlowNodeInstance() {
     assertDoesNotThrow(
         () ->
-            endEventInstanceProcessor.processTerminateSpecificFlowNodeInstance(
+            endEventInstanceProcessor.processAbortSpecificFlowNodeInstance(
                 Mockito.mock(ProcessInstanceProcessingContext.class),
                 Mockito.mock(Scope.class),
                 Mockito.mock(EndEventInstance.class)));

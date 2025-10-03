@@ -37,7 +37,7 @@ public class TaskInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       TaskInstance instance) {

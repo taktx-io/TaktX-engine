@@ -33,7 +33,7 @@ public class EndEventInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       EndEventInstance instance) {

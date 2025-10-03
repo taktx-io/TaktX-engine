@@ -171,7 +171,7 @@ public class MultiInstanceProcessor
     if (iterationInstance.getNextIterationId() >= 0) {
       return (ActivityInstance<?>)
           scope
-              .getFlowNodeInstanceScope()
+              .getFlowNodeInstances()
               .getInstanceWithInstanceId(iterationInstance.getNextIterationId());
     } else {
       return null;
@@ -184,8 +184,7 @@ public class MultiInstanceProcessor
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
       ArrayNode arrayNode = new ObjectMapper().createArrayNode();
 
-      Map<Long, FlowNodeInstance<?>> allInstances =
-          scope.getFlowNodeInstanceScope().getAllInstances();
+      Map<Long, FlowNodeInstance<?>> allInstances = scope.getFlowNodeInstances().getAllInstances();
       ;
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)
@@ -204,12 +203,12 @@ public class MultiInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       MultiInstanceInstance instance) {
     scope
-        .getFlowNodeInstanceScope()
+        .getFlowNodeInstances()
         .getAllInstances()
         .values()
         .forEach(

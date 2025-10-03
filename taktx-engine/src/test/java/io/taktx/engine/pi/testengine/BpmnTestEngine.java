@@ -903,17 +903,20 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine waitUntilActivityHasState(
       String elementId, ExecutionState state, Duration duration) {
-    Awaitility.await()
-        .atMost(duration)
-        .until(
-            () -> {
-              List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId =
-                  getScopeWithElementId(activeProcessInstanceId, elementId);
-              return flowNodeInstanceWithElementId.getFirst()
-                      instanceof ActivityInstanceDTO activityInstance
-                  && activityInstance.getState() == state;
-            },
-            Objects::nonNull);
+    selectedFlowNodeInstance =
+        Awaitility.await()
+            .atMost(duration)
+            .until(
+                () -> {
+                  List<FlowNodeInstanceDTO> flowNodeInstanceWithElementId =
+                      getScopeWithElementId(activeProcessInstanceId, elementId);
+                  return flowNodeInstanceWithElementId.getFirst()
+                              instanceof ActivityInstanceDTO activityInstance
+                          && activityInstance.getState() == state
+                      ? activityInstance
+                      : null;
+                },
+                Objects::nonNull);
 
     return this;
   }

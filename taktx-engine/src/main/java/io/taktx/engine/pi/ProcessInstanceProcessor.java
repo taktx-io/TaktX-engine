@@ -32,7 +32,7 @@ import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstanceScope;
+import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
@@ -165,17 +165,18 @@ public class ProcessInstanceProcessor
 
     String startEventId = startNode.getId();
 
-    VariableScope variableScope = new VariableScope(processInstanceId, variablesStore);
-    variableScope.merge(startCommand.getVariables());
-
     ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(processDefinition);
     FlowElements flowElements = getFlowElements(processDefinitionKey);
-    FlowNodeInstanceScope flowNodeInstanceScope =
-        new FlowNodeInstanceScope(
-            flowNodeInstanceStore, processInstanceId, null, flowElements, instanceMapper);
     Scope scope =
         new Scope(
-            null, processInstanceId, null, flowElements, variableScope, flowNodeInstanceScope);
+            null,
+            processInstanceId,
+            null,
+            flowElements,
+            instanceMapper,
+            variablesStore,
+            flowNodeInstanceStore);
+    scope.getVariableScope().merge(startCommand.getVariables());
 
     Set<IoVariableMapping> ioVariableMappings = dtoMapper.map(startCommand.getOutputMappings());
 
@@ -255,14 +256,8 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      VariableScope variableScope = new VariableScope(processInstanceId, variablesStore);
-      FlowNodeInstanceScope flowNodeInstanceScope =
-          new FlowNodeInstanceScope(
-              flowNodeInstanceStore, processInstanceId, null, flowElements, instanceMapper);
-
-      Scope scope =
-          new Scope(
-              null, processInstanceId, null, flowElements, variableScope, flowNodeInstanceScope);
+      Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
+      scope.getVariableScope().merge(trigger.getVariables());
 
       ProcessInstanceProcessingContext processInstanceProcessingContext =
           createProcessInstanceProcessingContext(processInstance, instanceResult);
@@ -289,26 +284,11 @@ public class ProcessInstanceProcessor
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       if (flowElements != null) {
 
-        VariableScope processInstanceVariables =
-            new VariableScope(processInstanceId, variablesStore);
-
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+        Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
-
-        FlowNodeInstanceScope flowNodeInstanceScope =
-            new FlowNodeInstanceScope(
-                flowNodeInstanceStore, processInstanceId, null, flowElements, instanceMapper);
-
-        Scope scope =
-            new Scope(
-                null,
-                processInstanceId,
-                null,
-                flowElements,
-                processInstanceVariables,
-                flowNodeInstanceScope);
 
         scopeProcessor.processContinue(
             processInstanceProcessingContext, scope, trigger, trigger.getElementInstanceIdPath());
@@ -323,56 +303,23 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
-    // First, get the ProcessDefinitionDTO outside of computeIfAbsent to avoid recursive cache calls
-    ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
-    if (processDefinitionDTO == null) {
-      return null;
-    }
-
-    return flowElementsCache.computeIfAbsent(
-        processDefinitionKey,
-        ignored -> definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions()));
-  }
-
   private void handleTerminate(
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
       AbortTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
-    ProcessInstanceDTO processInstanceDTO =
-        processInstanceStore.get(trigger.getProcessInstanceId());
+    UUID processInstanceId1 = trigger.getProcessInstanceId();
+    ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId1);
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       if (flowElements != null) {
         UUID processInstanceId = processInstanceDTO.getProcessInstanceId();
-        VariableScope processInstanceVariables =
-            new VariableScope(processInstanceId, variablesStore);
-
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+        Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
-            ProcessInstanceProcessingContext.builder()
-                .flowNodeInstanceStore(flowNodeInstanceStore)
-                .processInstance(processInstance)
-                .processingStatistics(processingStatistics)
-                .instanceResult(instanceResult)
-                .topicManager(topicManager)
-                .build();
+            createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-        FlowNodeInstanceScope flowNodeInstanceScope =
-            new FlowNodeInstanceScope(
-                flowNodeInstanceStore, processInstanceId, null, flowElements, instanceMapper);
-
-        Scope scope =
-            new Scope(
-                null,
-                processInstanceId,
-                null,
-                flowElements,
-                processInstanceVariables,
-                flowNodeInstanceScope);
-
-        scopeProcessor.processTerminate(processInstanceProcessingContext, scope, trigger);
+        scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
 
         processResultAndForward(
             processInstanceProcessingContext,
@@ -419,9 +366,21 @@ public class ProcessInstanceProcessor
     }
   }
 
+  private FlowElements getFlowElements(ProcessDefinitionKey processDefinitionKey) {
+    // First, get the ProcessDefinitionDTO outside of computeIfAbsent to avoid recursive cache calls
+    ProcessDefinitionDTO processDefinitionDTO = getProcessDefinitionDTO(processDefinitionKey);
+    if (processDefinitionDTO == null) {
+      return null;
+    }
+
+    return flowElementsCache.computeIfAbsent(
+        processDefinitionKey,
+        ignored -> definitionMapper.getFlowElements(processDefinitionDTO.getDefinitions()));
+  }
+
   private void storeScope(UUID processInstanceId, Scope scope) {
     for (FlowNodeInstance<?> fLowNodeInstance :
-        scope.getFlowNodeInstanceScope().getInstances().values()) {
+        scope.getFlowNodeInstances().getInstances().values()) {
       storeFlowNodeInstance(processInstanceId, fLowNodeInstance, scope);
     }
   }
@@ -452,9 +411,7 @@ public class ProcessInstanceProcessor
         variables = VariablesDTO.of(processInstanceVariables.retrieveAndFlattenAll());
       } else {
         VariableScope outputVariables =
-            new VariableScope(
-                processInstance.getProcessInstanceId(),
-                processInstanceVariables.getVariableStore());
+            new VariableScope(null, processInstance.getProcessInstanceId(), null, variablesStore);
         ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
         variables = VariablesDTO.of(outputVariables.getVariables());
       }
@@ -468,10 +425,32 @@ public class ProcessInstanceProcessor
     }
   }
 
+  private Scope enrichScope(
+      ProcessInstance processInstance, UUID processInstanceId, FlowElements flowElements) {
+    Scope scope = processInstance.getScope();
+    scope.setParentScope(null);
+    scope.setProcessInstanceId(processInstanceId);
+    VariableScope parentVariableScope = null;
+    VariableScope variableScope =
+        new VariableScope(parentVariableScope, processInstanceId, null, variablesStore);
+    scope.setVariableScope(variableScope);
+    scope.setFlowNodeInstances(
+        new FlowNodeInstances(
+            processInstanceId,
+            null,
+            flowElements,
+            instanceMapper,
+            flowNodeInstanceStore,
+            variablesStore));
+    scope.setParentFlowNodeInstance(null);
+    return scope;
+  }
+
   private ScopeDTO scopeToDTO(Scope scope) {
     return new ScopeDTO(
         scope.getState(),
         scope.getActiveCnt(),
+        scope.getSubProcessLevel(),
         scope.getElementInstanceCnt(),
         scope.getGatewayInstances(),
         scope.getMessageSubscriptions(),

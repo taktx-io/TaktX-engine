@@ -1,10 +1,13 @@
 package io.taktx.engine.pi.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.Constants;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
+import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -17,15 +20,17 @@ import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @RequiredArgsConstructor
-public class FlowNodeInstanceScope {
+@Getter
+public class FlowNodeInstances {
 
-  private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private final UUID processInstanceId;
   private final WithScope parentFlowNodeInstance;
   private final FlowElements flowElements;
   private final ProcessInstanceMapper processInstanceMapper;
+  private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
+  private final KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
 
-  @Getter private Map<Long, FlowNodeInstance<?>> instances = new LinkedHashMap<>();
+  private final Map<Long, FlowNodeInstance<?>> instances = new LinkedHashMap<>();
 
   public FlowNodeInstance<?> getInstanceWithInstanceId(long id) {
     FlowNodeInstance<?> instance = instances.get(id);
@@ -57,26 +62,53 @@ public class FlowNodeInstanceScope {
       range.forEachRemaining(
           entry -> {
             FlowNodeInstanceDTO value = entry.value;
-            FlowNodeInstance<?> instance = processInstanceMapper.map(value, flowElements);
-            instance.setParentInstance(parentFlowNodeInstance);
+            FlowNodeInstance<?> instance = mapToFlowNodeInstance(value);
             instances.putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
           });
     }
+  }
+
+  private FlowNodeInstance<?> mapToFlowNodeInstance(FlowNodeInstanceDTO value) {
+    FlowNodeInstance<?> instance = processInstanceMapper.map(value, flowElements);
+    instance.setParentInstance(parentFlowNodeInstance);
+    if (instance instanceof WithScope withScope
+        && instance.getFlowNode() instanceof WIthChildElements wIthChildElements) {
+      Scope scope = withScope.getScope();
+      scope.setParentScope(
+          parentFlowNodeInstance != null ? parentFlowNodeInstance.getScope() : null);
+      scope.setProcessInstanceId(processInstanceId);
+      VariableScope parentVariableScope =
+          parentFlowNodeInstance != null
+              ? parentFlowNodeInstance.getScope().getVariableScope()
+              : null;
+      VariableScope variableScope =
+          new VariableScope(
+              parentVariableScope,
+              processInstanceId,
+              instance.getElementInstanceId(),
+              variableStore);
+      scope.setVariableScope(variableScope);
+      scope.setFlowNodeInstances(
+          new FlowNodeInstances(
+              processInstanceId,
+              withScope,
+              wIthChildElements.getElements(),
+              processInstanceMapper,
+              flowNodeInstanceStore,
+              variableStore));
+      scope.setParentFlowNodeInstance(withScope);
+    }
+    return instance;
   }
 
   private FlowNodeInstance<?> getFlowNodeInstanceFromStore(FlowNodeInstanceKeyDTO keyPath) {
     FlowNodeInstanceDTO storedFlowNodeInstanceDTO = flowNodeInstanceStore.get(keyPath);
     FlowNodeInstance<?> flowNodeInstance = null;
     if (storedFlowNodeInstanceDTO != null) {
-      flowNodeInstance = processInstanceMapper.map(storedFlowNodeInstanceDTO, flowElements);
-      if (flowNodeInstance != null) {
-        flowNodeInstance.setParentInstance(parentFlowNodeInstance);
-        if (flowNodeInstance instanceof WithScope withScope) {
-          withScope.getScope().setParentFlowNodeInstance(withScope);
-        }
-        putInstance(flowNodeInstance);
-      }
+      flowNodeInstance = mapToFlowNodeInstance(storedFlowNodeInstanceDTO);
+      putInstance(flowNodeInstance);
     }
+
     return flowNodeInstance;
   }
 
@@ -93,14 +125,5 @@ public class FlowNodeInstanceScope {
       parentInstance = parentInstance.getParentInstance();
     }
     return new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
-  }
-
-  public FlowNodeInstanceScope selectChildScope(WithScope withScope) {
-    return new FlowNodeInstanceScope(
-        flowNodeInstanceStore,
-        processInstanceId,
-        withScope,
-        withScope.getFlowElements(),
-        processInstanceMapper);
   }
 }

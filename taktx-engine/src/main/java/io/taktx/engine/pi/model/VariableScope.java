@@ -32,21 +32,16 @@ public class VariableScope {
   private final Set<String> dirtyVariables = new HashSet<>();
   protected final KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
   private final UUID processInstanceId;
-  private final Long elementInstanceKey;
-
-  public VariableScope(
-      UUID processInstanceId, KeyValueStore<VariableKeyDTO, JsonNode> variableStore) {
-    this(null, processInstanceId, null, variableStore);
-  }
+  private final Long elementInstanceId;
 
   public VariableScope(
       VariableScope parentVariableScope,
       UUID processInstanceId,
-      Long elementInstanceKey,
+      Long elementInstanceId,
       KeyValueStore<VariableKeyDTO, JsonNode> variableStore) {
     this.parentVariableScope = parentVariableScope;
     this.processInstanceId = processInstanceId;
-    this.elementInstanceKey = elementInstanceKey;
+    this.elementInstanceId = elementInstanceId;
     this.variableStore = variableStore;
   }
 
@@ -82,16 +77,12 @@ public class VariableScope {
   }
 
   private void addScopeToPath(LinkedList<Long> path) {
-    if (elementInstanceKey != null) {
-      path.addFirst(elementInstanceKey);
+    if (elementInstanceId != null) {
+      path.addFirst(elementInstanceId);
     }
     if (parentVariableScope != null) {
       parentVariableScope.addScopeToPath(path);
     }
-  }
-
-  public VariableScope selectChildScope(long flowNodeInstanceKey) {
-    return new VariableScope(this, processInstanceId, flowNodeInstanceKey, variableStore);
   }
 
   public void put(String key, JsonNode value) {

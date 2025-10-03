@@ -74,11 +74,11 @@ public class SubProcessInstanceProcessor
       Scope scope,
       SubProcessInstance subProcessInstance,
       ContinueFlowElementTriggerDTO trigger) {
-    throw new IllegalStateException("We should never continue a subprocess");
+    subProcessInstance.setState(subProcessInstance.getScope().getState());
   }
 
   @Override
-  protected void processTerminateSpecificActivityInstance(
+  protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       SubProcessInstance subProcessInstance) {
@@ -89,6 +89,6 @@ public class SubProcessInstanceProcessor
         new AbortTriggerDTO(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             List.of());
-    scopeProcessor.processTerminate(processInstanceProcessingContext, childScope, trigger);
+    scopeProcessor.processAbort(processInstanceProcessingContext, childScope, trigger);
   }
 }

@@ -38,6 +38,6 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
 
   @Override
   public FlowElements getFlowElements() {
-    return getScope().getFlowElements();
+    return scope.getFlowElements();
   }
 }

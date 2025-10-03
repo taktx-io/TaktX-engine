@@ -32,7 +32,7 @@ public class IntermediateThrowEventInstanceProcessor
   }
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       IntermediateThrowEventInstance instance) {

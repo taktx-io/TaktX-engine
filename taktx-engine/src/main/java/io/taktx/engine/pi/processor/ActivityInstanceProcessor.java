@@ -76,10 +76,10 @@ public abstract class ActivityInstanceProcessor<
   }
 
   @Override
-  protected void processTerminateSpecificFlowNodeInstance(
+  protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
 
-    processTerminateSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
+    processAbortSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
   }
 
   protected abstract void processStartSpecificActivityInstance(
@@ -94,7 +94,7 @@ public abstract class ActivityInstanceProcessor<
       I externalTaskInstance,
       C trigger);
 
-  protected abstract void processTerminateSpecificActivityInstance(
+  protected abstract void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance);
 
   @Override

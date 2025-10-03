@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
+import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import java.util.ArrayDeque;
@@ -22,7 +23,7 @@ public class DirectInstanceResult {
   private final List<String> sequenceFlows = new ArrayList<>();
   private final Queue<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
   private final Queue<ContinueFlowNodeInstanceInfo> continueInstances = new ArrayDeque<>();
-  private final Queue<Long> abortInstances = new ArrayDeque<>();
+  private final Queue<FlowNodeInstance<?>> abortInstances = new ArrayDeque<>();
   private final Queue<Long> cancelInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
@@ -62,7 +63,7 @@ public class DirectInstanceResult {
     this.continueInstances.add(continueInstanceInfo);
   }
 
-  public Long pollAbortInstance() {
+  public FlowNodeInstance<?> pollAbortInstance() {
     return abortInstances.poll();
   }
 
@@ -74,8 +75,8 @@ public class DirectInstanceResult {
     return events.poll();
   }
 
-  public void addAbortInstance(long abortInstanceId) {
-    this.abortInstances.add(abortInstanceId);
+  public void addAbortInstance(FlowNodeInstance<?> abortInstance) {
+    this.abortInstances.add(abortInstance);
   }
 
   public void addCancelInstance(long cancelInstanceId) {
