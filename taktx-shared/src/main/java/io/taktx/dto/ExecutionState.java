@@ -23,10 +23,6 @@ public enum ExecutionState {
   // For scope:  All required child executions finished normally.
   // For flow node: Node finished normally.
   COMPLETED("C"),
-  // For scope: terminated by parent scope or by an interrupting boundary event.
-  // For flow node: Node was terminated early by an interrupting boundary event or by its parent
-  // scope
-  CANCELED("T"),
   // For scope: A child threw an uncaught Error.
   // For flow node: A child threw an uncaught Error.
   ABORTED("F"); //
@@ -44,6 +40,6 @@ public enum ExecutionState {
 
   @JsonIgnore
   public boolean isDone() {
-    return this == COMPLETED || this == CANCELED || this == ABORTED;
+    return this == COMPLETED || this == ABORTED;
   }
 }

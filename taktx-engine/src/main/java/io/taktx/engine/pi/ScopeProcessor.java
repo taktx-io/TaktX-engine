@@ -36,6 +36,8 @@ import io.taktx.engine.pi.processor.BoundaryEventInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,9 +49,6 @@ public class ScopeProcessor {
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FeelExpressionHandler feelExpressionHandler;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
-
-  private final Map<Long, Set<Long>> activityToBoundaryEvents = new java.util.WeakHashMap<>();
-  private final Map<Long, Long> boundaryEventToActivity = new java.util.WeakHashMap<>();
 
   public ScopeProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
@@ -63,6 +62,7 @@ public class ScopeProcessor {
   public void processStart(
       List<Long> parentElementInstanceIdPath,
       String elementId,
+      VariablesDTO variables,
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope) {
 
@@ -93,8 +93,11 @@ public class ScopeProcessor {
         processStart(
             parentElementInstanceIdPath,
             elementId,
+            variables,
             processInstanceProcessingContext,
             withScope.getScope());
+
+          bubbleUpEvents(scope, withScope);
 
         ContinueFlowElementTriggerDTO trigger =
             new ContinueFlowElementTriggerDTO(
@@ -112,7 +115,12 @@ public class ScopeProcessor {
                 + " is not a scope");
       }
     } else if (subProcessLevel == parentElementInstanceIdPath.size()) {
-      startSubscriptionsForEventSubprocesses(processInstanceProcessingContext, scope);
+
+      if (scope.getActiveCnt() == 0) {
+          startSubscriptionsForEventSubprocesses(processInstanceProcessingContext, scope);
+      }
+
+      scope.getVariableScope().merge(variables);
 
       createNewInstanceAndAddToDirectInstanceResult(
           processInstanceProcessingContext, scope, elementId);
@@ -151,7 +159,9 @@ public class ScopeProcessor {
         processContinue(
             processInstanceProcessingContext, withScope.getScope(), trigger, elementInstanceIdPath);
 
-        scope
+          bubbleUpEvents(scope, withScope);
+
+          scope
             .getDirectInstanceResult()
             .addContinueInstance(new ContinueFlowNodeInstanceInfo(instanceWithInstanceId, trigger));
 
@@ -173,13 +183,15 @@ public class ScopeProcessor {
       ContinueFlowNodeInstanceInfo continueInstance =
           new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger);
 
+      scope.getVariableScope().merge(trigger.getVariables());
+
       scope.getDirectInstanceResult().addContinueInstance(continueInstance);
 
       doBusiness(processInstanceProcessingContext, scope);
     }
   }
 
-  public void processAbort(
+    public void processAbort(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       AbortTriggerDTO trigger) {
@@ -200,6 +212,8 @@ public class ScopeProcessor {
         }
 
         processAbort(processInstanceProcessingContext, withScope.getScope(), trigger);
+
+          bubbleUpEvents(scope, withScope);
 
         ContinueFlowElementTriggerDTO continueTrigger =
             new ContinueFlowElementTriggerDTO(
@@ -242,15 +256,24 @@ public class ScopeProcessor {
 
     DirectInstanceResult directInstanceResult = scope.getDirectInstanceResult();
     while (directInstanceResult.hasDirectTriggers()) {
+      processEvents(processInstanceProcessingContext, scope);
       processNewInstances(processInstanceProcessingContext, scope);
       processContinueInstances(processInstanceProcessingContext, scope);
       processAbortInstances(processInstanceProcessingContext, scope);
-      processEvents(processInstanceProcessingContext, scope);
     }
     scope.updateActiveCountForInstances();
 
     terminateEventSubprocessSubscriptionsIfDone(processInstanceProcessingContext, scope);
   }
+
+    private static void bubbleUpEvents(Scope scope, WithScope withScope) {
+        EventSignal bubbleUpEventSignal = withScope.getScope().getDirectInstanceResult().pollBubbleUpEvent();
+        while (bubbleUpEventSignal != null) {
+            bubbleUpEventSignal.bubbleUp();
+            scope.getDirectInstanceResult().addEvent(bubbleUpEventSignal);
+            bubbleUpEventSignal = withScope.getScope().getDirectInstanceResult().pollBubbleUpEvent();
+        }
+    }
 
   private void processEvents(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope) {
@@ -271,8 +294,6 @@ public class ScopeProcessor {
     while (instanceInfo != null) {
       FlowNodeInstance<?> fLowNodeInstance = instanceInfo.flowNodeInstance();
 
-      startAttachedBoundaryEvents(processInstanceProcessingContext, scope, fLowNodeInstance);
-
       FlowNodeInstanceProcessor<?, ?, ?> processor =
           flowNodeInstanceProcessorProvider.getProcessor(fLowNodeInstance.getFlowNode());
       processor.processStart(
@@ -280,53 +301,12 @@ public class ScopeProcessor {
           scope,
           fLowNodeInstance,
           instanceInfo.inputSequenceFlowId());
+
+      if (fLowNodeInstance.isActive()) {
+        startAttachedBoundaryEvents(processInstanceProcessingContext, scope, fLowNodeInstance);
+      }
+
       instanceInfo = scope.getDirectInstanceResult().pollNewFlowNodeInstance();
-    }
-  }
-
-  private void processAbortInstances(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope) {
-
-    FlowNodeInstance<?> abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
-    while (abortInstance != null) {
-
-      FlowNodeInstanceProcessor<?, ?, ?> processor =
-          flowNodeInstanceProcessorProvider.getProcessor(abortInstance.getFlowNode());
-      processor.processAbort(processInstanceProcessingContext, scope, abortInstance);
-      abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
-    }
-  }
-
-  private void startAttachedBoundaryEvents(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      FlowNodeInstance<?> fLowNodeInstance) {
-    if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
-      Activity activity = activityInstance.getFlowNode();
-      activity
-          .getBoundaryEvents()
-          .forEach(
-              boundaryEvent -> {
-                BoundaryEventInstance boundaryEventInstance =
-                    new BoundaryEventInstance(
-                        fLowNodeInstance.getParentInstance(),
-                        boundaryEvent,
-                        scope.nextElementInstanceId());
-
-                activityToBoundaryEvents
-                    .computeIfAbsent(
-                        activityInstance.getElementInstanceId(), k -> new java.util.HashSet<>())
-                    .add(boundaryEventInstance.getElementInstanceId());
-                boundaryEventToActivity.put(
-                    boundaryEventInstance.getElementInstanceId(),
-                    activityInstance.getElementInstanceId());
-
-                scope
-                    .getDirectInstanceResult()
-                    .addNewFlowNodeInstance(
-                        processInstanceProcessingContext.getProcessInstance(),
-                        new StartFlowNodeInstanceInfo(boundaryEventInstance, null));
-              });
     }
   }
 
@@ -341,9 +321,12 @@ public class ScopeProcessor {
       if (flowNodeInstance instanceof BoundaryEventInstance boundaryEventInstance) {
         if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
           Long activityInstanceId =
-              boundaryEventToActivity.get(boundaryEventInstance.getElementInstanceId());
-          if (activityInstanceId != null) {
-            scope.getDirectInstanceResult().addCancelInstance(activityInstanceId);
+              scope.getBoundaryEventToActivity().get(boundaryEventInstance.getElementInstanceId());
+            if (activityInstanceId != null) {
+              FlowNodeInstance<?> activityInstanceToAbort = scope.getFlowNodeInstances().getInstanceWithInstanceId(activityInstanceId);
+              if (activityInstanceToAbort != null && activityInstanceToAbort.isActive()) {
+                  scope.getDirectInstanceResult().addAbortInstance(activityInstanceToAbort);
+              }
           }
         }
       }
@@ -353,7 +336,75 @@ public class ScopeProcessor {
 
       processor.processContinue(
           processInstanceProcessingContext, scope, flowNodeInstance, continueInstance.trigger());
+
+      if (flowNodeInstance.isCmpleted()) {
+        abortBoundaryEvents(processInstanceProcessingContext, scope, flowNodeInstance);
+      }
+
       continueInstance = scope.getDirectInstanceResult().pollContinueInstance();
+    }
+  }
+
+  private void processAbortInstances(
+      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope) {
+
+    FlowNodeInstance<?> abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
+    while (abortInstance != null) {
+
+      FlowNodeInstanceProcessor<?, ?, ?> processor =
+          flowNodeInstanceProcessorProvider.getProcessor(abortInstance.getFlowNode());
+      processor.processAbort(processInstanceProcessingContext, scope, abortInstance);
+
+      abortBoundaryEvents(processInstanceProcessingContext, scope, abortInstance);
+
+      abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
+    }
+  }
+
+  private void abortBoundaryEvents(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      FlowNodeInstance<?> abortInstance) {
+      Set<Long> boundaryEvents = scope.getActivityToBoundaryEvents().getOrDefault(abortInstance.getElementInstanceId(), Collections.emptySet());
+
+      boundaryEvents
+        .forEach(
+            boundaryEventId -> {
+              FlowNodeInstance<?> boundaryEventInstance =
+                  scope.getFlowNodeInstances().getInstanceWithInstanceId(boundaryEventId);
+              boundaryEventProcessor.processAbort(
+                  processInstanceProcessingContext, scope, boundaryEventInstance);
+            });
+  }
+
+  private void startAttachedBoundaryEvents(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      FlowNodeInstance<?> fLowNodeInstance) {
+    if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
+      Activity activity = activityInstance.getFlowNode();
+      activity
+          .getBoundaryEvents()
+          .forEach(
+              boundaryEvent -> {
+                FlowNodeInstance<?> boundaryEventInstance =
+                    boundaryEvent.createAndStoreNewInstance(
+                        fLowNodeInstance.getParentInstance(), scope);
+
+                scope.getActivityToBoundaryEvents()
+                    .computeIfAbsent(
+                        activityInstance.getElementInstanceId(), k -> new java.util.HashSet<>())
+                    .add(boundaryEventInstance.getElementInstanceId());
+                scope.getBoundaryEventToActivity().put(
+                    boundaryEventInstance.getElementInstanceId(),
+                    activityInstance.getElementInstanceId());
+
+                scope
+                    .getDirectInstanceResult()
+                    .addNewFlowNodeInstance(
+                        processInstanceProcessingContext.getProcessInstance(),
+                        new StartFlowNodeInstanceInfo(boundaryEventInstance, null));
+              });
     }
   }
 
@@ -381,10 +432,10 @@ public class ScopeProcessor {
       EventSignal event,
       FlowNodeInstance<?> fLowNodeInstance) {
     boolean eventHandled = false;
-
+    Long boundaryEventThatHandledEvent = null;
     long elementInstanceId = event.getCurrentInstance().getElementInstanceId();
     Set<Long> boundaryEventIdsForInstance =
-        activityToBoundaryEvents.getOrDefault(elementInstanceId, java.util.Collections.emptySet());
+        scope.getActivityToBoundaryEvents().getOrDefault(elementInstanceId, java.util.Collections.emptySet());
     DirectInstanceResult directInstanceResult = scope.getDirectInstanceResult();
     for (Long boundaryEventId : boundaryEventIdsForInstance) {
       BoundaryEventInstance boundaryEventInstance =
@@ -395,12 +446,14 @@ public class ScopeProcessor {
           boundaryEventProcessor.processEvent(
               processInstanceProcessingContext, scope, boundaryEventInstance, event);
       if (eventHandled) {
+        boundaryEventThatHandledEvent = boundaryEventInstance.getElementInstanceId();
         if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
-          directInstanceResult.addCancelInstance(elementInstanceId);
+          directInstanceResult.addAbortInstance(event.getCurrentInstance());
         }
         break;
       }
     }
+
     if (!eventHandled) {
       // If not handled by specific codes, check for catch all
       for (Long boundaryEventId : boundaryEventIdsForInstance) {
@@ -411,12 +464,29 @@ public class ScopeProcessor {
             boundaryEventProcessor.processEventCatchAll(
                 processInstanceProcessingContext, scope, boundaryEventInstance, event);
         if (eventHandled) {
+          boundaryEventThatHandledEvent = boundaryEventInstance.getElementInstanceId();
           if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
-            directInstanceResult.addCancelInstance(elementInstanceId);
+            directInstanceResult.addAbortInstance(event.getCurrentInstance());
           }
           break;
         }
       }
+    }
+
+    if (eventHandled) {
+        BoundaryEventInstance boundaryEventInstanceThatHandledEvent =
+                (BoundaryEventInstance)
+                        scope.getFlowNodeInstances().getInstanceWithInstanceId(boundaryEventThatHandledEvent);
+        if (boundaryEventInstanceThatHandledEvent.getFlowNode().isCancelActivity()) {
+            Set<Long> boundaryEventsForInstance =
+                    scope.getActivityToBoundaryEvents().get(event.getCurrentInstance().getElementInstanceId());
+            for (Long boundaryEventId : boundaryEventsForInstance) {
+                if (!boundaryEventId.equals(boundaryEventThatHandledEvent)) {
+                    boundaryEventProcessor.processAbort(
+                            processInstanceProcessingContext, scope, boundaryEventInstanceThatHandledEvent);
+                }
+            }
+        }
     }
 
     // Still not handled
@@ -440,8 +510,18 @@ public class ScopeProcessor {
                   new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
               directInstanceResult.addNewFlowNodeInstance(
                   processInstanceProcessingContext.getProcessInstance(), startFlowNodeInstanceInfo);
+
+              if (startEvent.isInterrupting()) {
+                directInstanceResult.addAbortInstance(event.getCurrentInstance());
+              }
               eventHandled = true;
             }
+            if (eventHandled) {
+              break;
+            }
+          }
+          if (eventHandled) {
+            break;
           }
         }
       }
@@ -463,18 +543,24 @@ public class ScopeProcessor {
                 directInstanceResult.addNewFlowNodeInstance(
                     processInstanceProcessingContext.getProcessInstance(),
                     startFlowNodeInstanceInfo);
+                if (startEvent.isInterrupting()) {
+                  directInstanceResult.addAbortInstance(event.getCurrentInstance());
+                }
                 eventHandled = true;
               }
+              if (eventHandled) {
+                break;
+              }
+            }
+            if (eventHandled) {
+              break;
             }
           }
         }
       }
 
-      if (!eventHandled && fLowNodeInstance.getParentInstance() != null) {
+      if (!eventHandled) {
         directInstanceResult.addBubbleUpEvent(event);
-      } else if (!eventHandled) {
-        // Still not handled and No more bubbling up possible
-        directInstanceResult.addAbortInstance(event.getCurrentInstance());
       }
     }
   }

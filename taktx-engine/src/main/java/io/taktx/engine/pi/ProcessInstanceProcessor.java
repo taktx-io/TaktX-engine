@@ -29,8 +29,10 @@ import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
+import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
+import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -176,7 +178,6 @@ public class ProcessInstanceProcessor
             instanceMapper,
             variablesStore,
             flowNodeInstanceStore);
-    scope.getVariableScope().merge(startCommand.getVariables());
 
     Set<IoVariableMapping> ioVariableMappings = dtoMapper.map(startCommand.getOutputMappings());
 
@@ -199,7 +200,11 @@ public class ProcessInstanceProcessor
         createProcessInstanceProcessingContext(processInstance, instanceResult);
 
     scopeProcessor.processStart(
-        Collections.emptyList(), startEventId, processInstanceProcessingContext, scope);
+        Collections.emptyList(),
+        startEventId,
+        startCommand.getVariables(),
+        processInstanceProcessingContext,
+        scope);
 
     processResultAndForward(processInstanceProcessingContext, processDefinitionKey, scope);
   }
@@ -256,8 +261,7 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
-      scope.getVariableScope().merge(trigger.getVariables());
+      enrichScope(processInstance, processInstanceId, flowElements);
 
       ProcessInstanceProcessingContext processInstanceProcessingContext =
           createProcessInstanceProcessingContext(processInstance, instanceResult);
@@ -265,8 +269,9 @@ public class ProcessInstanceProcessor
       scopeProcessor.processStart(
           trigger.getParentElementInstanceIdPath(),
           trigger.getElementId(),
+          trigger.getVariables(),
           processInstanceProcessingContext,
-          scope);
+          processInstance.getScope());
 
       processResultAndForward(
           processInstanceProcessingContext,
@@ -285,13 +290,13 @@ public class ProcessInstanceProcessor
       if (flowElements != null) {
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
+        enrichScope(processInstance, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
         scopeProcessor.processContinue(
-            processInstanceProcessingContext, scope, trigger, trigger.getElementInstanceIdPath());
+            processInstanceProcessingContext, processInstance.getScope(), trigger, trigger.getElementInstanceIdPath());
 
         processResultAndForward(
             processInstanceProcessingContext,
@@ -314,12 +319,12 @@ public class ProcessInstanceProcessor
       if (flowElements != null) {
         UUID processInstanceId = processInstanceDTO.getProcessInstanceId();
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        Scope scope = enrichScope(processInstance, processInstanceId, flowElements);
+        enrichScope(processInstance, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-        scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
+        scopeProcessor.processAbort(processInstanceProcessingContext, processInstance.getScope(), trigger);
 
         processResultAndForward(
             processInstanceProcessingContext,
@@ -334,13 +339,24 @@ public class ProcessInstanceProcessor
       ProcessDefinitionKey processDefinitionKey,
       Scope scope) {
 
-    ScopeDTO scopeDTO = scopeToDTO(scope);
+      EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+      while(eventSignal != null) {
+            if (eventSignal instanceof ErrorEventSignal ) {
+                AbortTriggerDTO trigger = new AbortTriggerDTO(processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(), Collections.emptyList());
+                scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
+                break;
+            }
+          eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+      }
+
+      ScopeDTO scopeDTO = scopeToDTO(scope);
 
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
 
     scope.getVariableScope().persist();
+
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
     if (scope.isStateChanged()) {
@@ -425,7 +441,7 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private Scope enrichScope(
+  private void enrichScope(
       ProcessInstance processInstance, UUID processInstanceId, FlowElements flowElements) {
     Scope scope = processInstance.getScope();
     scope.setParentScope(null);
@@ -443,7 +459,6 @@ public class ProcessInstanceProcessor
             flowNodeInstanceStore,
             variablesStore));
     scope.setParentFlowNodeInstance(null);
-    return scope;
   }
 
   private ScopeDTO scopeToDTO(Scope scope) {
@@ -454,7 +469,8 @@ public class ProcessInstanceProcessor
         scope.getElementInstanceCnt(),
         scope.getGatewayInstances(),
         scope.getMessageSubscriptions(),
-        scope.getScheduleKeys());
+        scope.getScheduleKeys(),
+        scope.getActivityToBoundaryEvents());
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {

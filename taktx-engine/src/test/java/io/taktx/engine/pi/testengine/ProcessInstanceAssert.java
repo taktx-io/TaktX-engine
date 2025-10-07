@@ -86,14 +86,6 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasCanceleddElementWithId(String elementId) {
-    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
-    assertThat(bpmnElementState.getFirst().isCanceled())
-        .as("element " + elementId + " was not terminated")
-        .isTrue();
-    return this;
-  }
-
   public ProcessInstanceAssert hasCompletedElementWithId(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
     assertThat(bpmnElementState.getFirst().isCompleted())
@@ -170,12 +162,6 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert isAborted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
     assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.ABORTED);
-    return this;
-  }
-
-  public ProcessInstanceAssert isCanceled() {
-    ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
-    assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.CANCELED);
     return this;
   }
 

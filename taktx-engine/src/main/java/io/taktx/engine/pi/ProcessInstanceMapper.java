@@ -56,6 +56,7 @@ import io.taktx.engine.pi.model.TaskInstance;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
@@ -451,6 +452,12 @@ public interface ProcessInstanceMapper {
 
   @AfterMapping
   default void mapState(ScopeDTO source, @MappingTarget Scope target) {
+      for  (Map.Entry<Long, Set<Long>> entry : source.getActivityToBoundaryEvents().entrySet()) {
+        for(Long boundaryEvent : entry.getValue()) {
+            target.getBoundaryEventToActivity().put(boundaryEvent, entry.getKey());
+        }
+      }
+
     if (source.getState().isDone()) {
       target.setStateNoChange(source.getState());
     } else {

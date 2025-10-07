@@ -49,7 +49,11 @@ public class Scope {
   private WithScope parentFlowNodeInstance;
   private long elementInstanceCnt = 0;
 
-  public Scope(
+  private final Map<Long, Set<Long>> activityToBoundaryEvents = new java.util.WeakHashMap<>();
+  private final Map<Long, Long> boundaryEventToActivity = new java.util.WeakHashMap<>();
+
+
+    public Scope(
       Scope parentScope,
       UUID processInstanceId,
       WithScope parentFlowNodeInstance,
@@ -70,10 +74,6 @@ public class Scope {
             processInstanceMapper,
             flowNodeInstanceStore,
             variableStore);
-  }
-
-  public FlowElements getFlowElemeents() {
-    return flowNodeInstances.getFlowElements();
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {

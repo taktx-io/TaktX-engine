@@ -147,7 +147,7 @@ class BoundaryEventsTest {
         .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
-        .hasCanceleddElementWithId("Subprocess_1")
+        .hasAbortedElementWithId("Subprocess_1")
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");
@@ -218,7 +218,7 @@ class BoundaryEventsTest {
         .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
-        .hasCanceleddElementWithId("Subprocess_1")
+        .hasAbortedElementWithId("Subprocess_1")
         .hasInstantiatedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Boundary_Timer_1")
         .hasNotPassedElementWithId("OkTask");

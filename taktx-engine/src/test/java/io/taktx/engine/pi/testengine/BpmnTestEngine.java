@@ -929,12 +929,8 @@ public class BpmnTestEngine {
     return waitUntilElementIsActive(elementId, DEFAULT_DURATION);
   }
 
-  public BpmnTestEngine waitUntilElementHasFailed(String elementId) {
+  public BpmnTestEngine waitUntilElementHasAborted(String elementId) {
     return waitUntilActivityHasState(elementId, ExecutionState.ABORTED, DEFAULT_DURATION);
-  }
-
-  public BpmnTestEngine waitUntilElementHasTerminated(String elementId) {
-    return waitUntilActivityHasState(elementId, ExecutionState.CANCELED, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilElementIsWaiting(String elementId) {

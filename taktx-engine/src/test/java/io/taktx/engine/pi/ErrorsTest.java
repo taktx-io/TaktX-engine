@@ -124,7 +124,7 @@ class ErrorsTest {
         .hasPassedElementWithId("Subprocess_1/SubStartEvent")
         .hasAbortedElementWithId("Subprocess_1/SubServiceTask_1")
         .hasNotPassedElementWithId("Subprocess_1/SubEndEvent")
-        .hasCanceleddElementWithId("Subprocess_1")
+        .hasAbortedElementWithId("Subprocess_1")
         .isCompleted();
   }
 
@@ -147,7 +147,7 @@ class ErrorsTest {
         .hasPassedElementWithId("Subprocess_1/SubStartEvent")
         .hasAbortedElementWithId("Subprocess_1/SubServiceTask_1")
         .hasNotPassedElementWithId("Subprocess_1/SubEndEvent")
-        .hasCanceleddElementWithId("Subprocess_1")
+        .hasAbortedElementWithId("Subprocess_1")
         .isCompleted();
   }
 

@@ -82,7 +82,7 @@ class ExternalTaskTest {
         .andRespondToExternalTaskWithError(true, "fail", "failure")
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithError(true, "fail", "failure")
-        .waitUntilElementHasTerminated("ServiceTask_1")
+        .waitUntilElementHasAborted("ServiceTask_1")
         .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")

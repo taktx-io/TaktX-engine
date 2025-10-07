@@ -134,27 +134,6 @@ public abstract class FlowNodeInstanceProcessor<
     }
   }
 
-  public void processCancel(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      FlowNodeInstance<?> instance) {
-    // Only terminate if the instanceToContinue is ready or waiting
-    if (instance.stateAllowsStopping()) {
-      long now = clock.instant().toEpochMilli();
-
-      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      processAbortSpecificFlowNodeInstance(processInstanceProcessingContext, scope, (I) instance);
-
-      instance.cancel();
-
-      processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
-
-      processInstanceProcessingContext
-          .getInstanceResult()
-          .addInstanceUpdate(createFlowNodeInstanceUpdate(processInstance, instance, scope, now));
-    }
-  }
-
   protected void addInputVariablesToScope(E flowNode, VariableScope flowNodeInstanceVariables) {
     if (flowNode instanceof WithIoMapping withIoMapping) {
       ioMappingProcessor.addInputVariables(withIoMapping, flowNodeInstanceVariables);

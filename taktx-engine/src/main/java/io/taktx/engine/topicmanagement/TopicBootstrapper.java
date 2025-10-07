@@ -83,7 +83,7 @@ public class TopicBootstrapper {
     } catch (Exception ex) {
       if (ex.getCause() instanceof TopicExistsException) {
         log.warn("Bootstrap topics already exist");
-        return false;
+        return true;
       } else {
         throw new IllegalStateException("Failed to bootstrap topics", ex);
       }

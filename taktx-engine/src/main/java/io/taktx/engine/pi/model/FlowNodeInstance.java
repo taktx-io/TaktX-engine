@@ -104,8 +104,7 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public boolean isDone() {
     return state == ExecutionState.COMPLETED
-        || state == ExecutionState.ABORTED
-        || state == ExecutionState.CANCELED;
+        || state == ExecutionState.ABORTED;
   }
 
   public boolean stateAllowsStopping() {
@@ -126,12 +125,6 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
     }
   }
 
-  public void cancel() {
-    if (stateAllowsStopping()) {
-      setState(ExecutionState.CANCELED);
-    }
-  }
-
   public abstract boolean canSelectNextNodeStart();
 
   public abstract boolean canSelectNextNodeContinue();
@@ -142,5 +135,9 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public boolean isActive() {
     return state == ExecutionState.ACTIVE;
+  }
+
+  public boolean isCmpleted() {
+    return state == ExecutionState.COMPLETED;
   }
 }

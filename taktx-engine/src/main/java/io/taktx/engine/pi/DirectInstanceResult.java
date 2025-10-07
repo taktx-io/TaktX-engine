@@ -24,7 +24,6 @@ public class DirectInstanceResult {
   private final Queue<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
   private final Queue<ContinueFlowNodeInstanceInfo> continueInstances = new ArrayDeque<>();
   private final Queue<FlowNodeInstance<?>> abortInstances = new ArrayDeque<>();
-  private final Queue<Long> cancelInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
 
@@ -67,10 +66,6 @@ public class DirectInstanceResult {
     return abortInstances.poll();
   }
 
-  public Long pollCancelInstance() {
-    return cancelInstances.poll();
-  }
-
   public EventSignal pollEvent() {
     return events.poll();
   }
@@ -79,15 +74,10 @@ public class DirectInstanceResult {
     this.abortInstances.add(abortInstance);
   }
 
-  public void addCancelInstance(long cancelInstanceId) {
-    this.cancelInstances.add(cancelInstanceId);
-  }
-
   public boolean hasDirectTriggers() {
     return !newFlowNodeInstances.isEmpty()
         || !continueInstances.isEmpty()
         || !abortInstances.isEmpty()
-        || !cancelInstances.isEmpty()
         || !events.isEmpty();
   }
 
