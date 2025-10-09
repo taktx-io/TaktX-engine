@@ -15,6 +15,7 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
+import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -23,6 +24,8 @@ import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import lombok.Getter;
+
 import java.time.Clock;
 import java.util.Comparator;
 import java.util.Map;
@@ -34,6 +37,7 @@ public class MultiInstanceProcessor
         Activity, MultiInstanceInstance, ContinueFlowElementTriggerDTO> {
 
   private final FeelExpressionHandler feelExpressionHandler;
+  @Getter
   private final ActivityInstanceProcessor<?, ?, ?> processor;
 
   public MultiInstanceProcessor(
@@ -59,6 +63,10 @@ public class MultiInstanceProcessor
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId) {
 
+      Scope subScope = scope.selectChildScope(multiInstanceInstance, scope.getFlowElements());
+      multiInstanceInstance.setScope(subScope);
+      multiInstanceInstance.setState(ExecutionState.ACTIVE);
+
     Activity activity = multiInstanceInstance.getFlowNode();
 
     JsonNode inputCollection =
@@ -73,33 +81,28 @@ public class MultiInstanceProcessor
               activity, multiInstanceInstance, inputCollection, multiInstanceInstance.getScope());
       loopStartIterations(
           processInstanceProcessingContext,
-          scope,
-          multiInstanceInstance,
+              multiInstanceInstance,
           inputFlowId,
-          iterationInstance,
-          activity);
+          iterationInstance);
       handleCompleted(scope, multiInstanceInstance);
     }
   }
 
   private void loopStartIterations(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId,
-      ActivityInstance<?> iterationInstance,
-      Activity activity) {
+      ActivityInstance<?> iterationInstance) {
     while (iterationInstance != null) {
       startIteration(
           processInstanceProcessingContext,
-          scope,
-          iterationInstance,
+              iterationInstance,
           multiInstanceInstance,
           inputFlowId);
       if (iterationInstance.isActive()) {
         multiInstanceInstance.setState(ExecutionState.ACTIVE);
       }
-      if (activity.getLoopCharacteristics().isSequential()) {
+      if (iterationInstance.getFlowNode().getLoopCharacteristics().isSequential()) {
         if (iterationInstance.getState() == ExecutionState.COMPLETED) {
           iterationInstance =
               getNextIterationInstance(multiInstanceInstance.getScope(), iterationInstance);
@@ -146,15 +149,12 @@ public class MultiInstanceProcessor
 
   private void startIteration(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
       ActivityInstance<?> iterationInstance,
       MultiInstanceInstance multiInstanceInstance,
       String inputFlowId) {
 
-    Scope iterationScope = scope.selectChildScope(multiInstanceInstance);
-
     processor.processStart(
-        processInstanceProcessingContext, iterationScope, iterationInstance, inputFlowId);
+        processInstanceProcessingContext, multiInstanceInstance.getScope(), iterationInstance, inputFlowId);
   }
 
   @Override
@@ -163,7 +163,28 @@ public class MultiInstanceProcessor
       Scope scope,
       MultiInstanceInstance multiInstanceInstance,
       ContinueFlowElementTriggerDTO trigger) {
-    throw new IllegalStateException("We should never continue a multi-instance directly");
+
+      long instanceId = trigger.getElementInstanceIdPath().get(scope.getSubProcessLevel() + 1);
+
+      ActivityInstance<?> iterationInstance =
+              (ActivityInstance<?>) scope.getFlowNodeInstances().getInstanceWithInstanceId(instanceId);
+
+      if (iterationInstance.getState() == ExecutionState.COMPLETED) {
+
+          iterationInstance =
+                  getNextIterationInstance(
+                          multiInstanceInstance.getScope(),
+                          iterationInstance);
+
+          loopStartIterations(
+                  processInstanceProcessingContext,
+                  multiInstanceInstance,
+                  trigger.getInputFlowId(),
+                  iterationInstance);
+      }
+
+      handleCompleted(
+              scope, multiInstanceInstance);
   }
 
   private ActivityInstance<?> getNextIterationInstance(
@@ -184,7 +205,7 @@ public class MultiInstanceProcessor
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
       ArrayNode arrayNode = new ObjectMapper().createArrayNode();
 
-      Map<Long, FlowNodeInstance<?>> allInstances = scope.getFlowNodeInstances().getAllInstances();
+      Map<Long, FlowNodeInstance<?>> allInstances = multiInstanceInstance.getScope().getFlowNodeInstances().getAllInstances();
       ;
       allInstances.values().stream()
           .filter(flowNodeInstance -> flowNodeInstance instanceof ActivityInstance<?>)

@@ -31,14 +31,16 @@ class EventSubprocessTest {
   void test_EventSubProcess_ErrorTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
         .andRespondToExternalTaskWithError(false, "errorCode", "error message")
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Activity_02s4c8o")
         .hasPassedElementWithId("Activity_02s4c8o/Event_1krfnik", 1)
@@ -50,14 +52,16 @@ class EventSubprocessTest {
   void test_EventSubProcess_ErrorTriggered_catchAll() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+            .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+            .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
         .andRespondToExternalTaskWithError(false, "1234", "error message")
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Activity_0ulltxs")
         .hasPassedElementWithId("Activity_0ulltxs/Event_0gfl68s", 1)
@@ -69,15 +73,17 @@ class EventSubprocessTest {
   void test_EventSubProcess_EscalationTriggered_Catchall() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+            .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
         .andRespondToExternalTaskWithEscalation(
             "escalationCode", "escalation message", VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasInstantiatedElementWithId("Activity_0w3didi")
         .hasPassedElementWithId("Activity_0w3didi/Event_1x06bbg", 1)
@@ -89,15 +95,18 @@ class EventSubprocessTest {
   void test_EventSubProcess_EscalationTriggered_NonInterrupting() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+            .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .andRespondToExternalTaskWithEscalation("1234", "error message", VariablesDTO.empty())
         .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("ServiceTask_1", 1)
+        .hasPassedElementWithId("ServiceTask_2", 1)
         .hasPassedElementWithId("EndEvent_1", 1)
         .hasInstantiatedElementWithId("Activity_1jz01tr")
         .hasPassedElementWithId("Activity_1jz01tr/Event_0utmfy5", 1)
@@ -106,19 +115,32 @@ class EventSubprocessTest {
   }
 
   @Test
-  void test_EventSubProcess_TimerTriggered() throws IOException {
+  void test_EventSubProcess_NonInterrupting_TimerTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+            .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
         .waitUntilIdle()
-        .moveTimeForward(Duration.ofSeconds(11))
-        .waitUntilDone()
+        .moveTimeForward(Duration.ofSeconds(6))
+            .waitFor(Duration.ofSeconds(1))
+            .waitUntilIdle()
+            .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+            .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+            .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
+            .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+            .waitUntilDone()
         .assertThatProcess()
-        .hasInstantiatedElementWithId("StartEvent_1", 1)
-        .hasNotPassedElementWithId("ServiceTask_1")
-        .hasPassedElementWithId("Timer_Event_Subprocess", 1);
+        .hasPassedElementWithId("StartEvent_1", 1)
+        .hasPassedElementWithId("Gateway_1gbltwl", 1)
+        .hasPassedElementWithId("ServiceTask_1", 1)
+        .hasPassedElementWithId("ServiceTask_2", 1)
+        .hasPassedElementWithId("Gateway_0ajyjjj", 2)
+        .hasPassedElementWithId("EndEvent_1", 1)
+        .hasPassedElementWithId("Non_Interrupting_Timer_Event_Subprocess")
+        .hasPassedElementWithId("Non_Interrupting_Timer_Event_Subprocess/Event_0u13lv6")
+        .hasPassedElementWithId("Non_Interrupting_Timer_Event_Subprocess/Activity_128spz7")
+        .hasPassedElementWithId("Non_Interrupting_Timer_Event_Subprocess/Event_1g37qo8")
+            .isCompleted();
   }
 
   @Test
@@ -134,12 +156,14 @@ class EventSubprocessTest {
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)
         .hasInstantiatedElementWithId("SubProcess_1")
+            .hasAbortedElementWithId("SubProcess_1/ServiceTask_1")
         .hasPassedElementWithId("SubProcess_1/SubStartEvent_1", 1)
         .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess", 1)
         .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Event_0tcrh3f", 1)
         .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Activity_0g36m0j", 1)
         .hasPassedElementWithId("SubProcess_1/Timer_Event_Subprocess/Event_0w329ku", 1)
-        .hasNotPassedElementWithId("SubProcess_1/EndEvent_1");
+        .hasNotPassedElementWithId("SubProcess_1/EndEvent_1")
+            .isCompleted();
   }
 
   @Test

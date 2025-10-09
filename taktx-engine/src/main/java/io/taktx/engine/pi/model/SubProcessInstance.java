@@ -31,7 +31,6 @@ public class SubProcessInstance extends ActivityInstance<SubProcess> implements 
     return scope.getState();
   }
 
-  @Override
   public FlowElements getFlowElements() {
     return getFlowNode().getElements();
   }

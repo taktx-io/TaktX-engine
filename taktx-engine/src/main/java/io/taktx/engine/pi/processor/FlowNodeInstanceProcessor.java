@@ -70,7 +70,7 @@ public abstract class FlowNodeInstanceProcessor<
     this.processStartSpecificFlowNodeInstance(
         processInstanceProcessingContext, scope, (I) flownodeInstance, inputFlowId);
 
-    if (flownodeInstance.isDone()) {
+    if (flownodeInstance.getState().isDone()) {
       processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
     }
 

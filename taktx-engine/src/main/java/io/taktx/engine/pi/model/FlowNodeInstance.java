@@ -103,8 +103,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean isDone() {
-    return state == ExecutionState.COMPLETED
-        || state == ExecutionState.ABORTED;
+    return getState() == ExecutionState.COMPLETED
+        || getState() == ExecutionState.ABORTED;
   }
 
   public boolean stateAllowsStopping() {

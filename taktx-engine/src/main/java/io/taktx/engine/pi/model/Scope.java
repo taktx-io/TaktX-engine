@@ -163,12 +163,12 @@ public class Scope {
     this.scheduleKeys.add(scheduledKey);
   }
 
-  public Scope selectChildScope(WithScope parentFlowNodeInstance) {
+  public Scope selectChildScope(WithScope parentFlowNodeInstance, FlowElements flowElements) {
     return new Scope(
         this,
         processInstanceId,
         parentFlowNodeInstance,
-        parentFlowNodeInstance.getFlowElements(),
+        flowElements,
         flowNodeInstances.getProcessInstanceMapper(),
         variableScope.getVariableStore(),
         flowNodeInstances.getFlowNodeInstanceStore());

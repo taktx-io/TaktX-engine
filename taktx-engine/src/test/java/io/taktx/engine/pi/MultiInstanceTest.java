@@ -50,10 +50,10 @@ class MultiInstanceTest {
                 assertThat(val)
                     .asInstanceOf(LIST)
                     .containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
-        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("task-id")
         .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 3)
-        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-        .hasInstantiatedElementWithId("EndEvent_1");
+        .hasPassedElementWithId("EndEvent_1");
   }
 
   @Test

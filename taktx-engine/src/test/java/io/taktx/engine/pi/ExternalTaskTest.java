@@ -88,7 +88,7 @@ class ExternalTaskTest {
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("ServiceTask_1")
-        .isCompleted();
+        .isAborted();
   }
 
   @Test

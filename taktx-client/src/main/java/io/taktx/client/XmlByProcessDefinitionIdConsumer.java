@@ -100,8 +100,8 @@ public class XmlByProcessDefinitionIdConsumer {
 
       // Check if the file already exists
       if (java.nio.file.Files.exists(filePath)) {
-        log.debug("Process definition file already exists, skipping: {}", filePath);
-        return;
+        log.debug("Process definition file already exists, overwriting: {}", filePath);
+          java.nio.file.Files.delete(filePath);
       }
 
       // Write the XML to the file

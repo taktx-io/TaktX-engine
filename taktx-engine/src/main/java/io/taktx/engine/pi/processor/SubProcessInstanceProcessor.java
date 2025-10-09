@@ -56,7 +56,7 @@ public class SubProcessInstanceProcessor
       SubProcessInstance subProcessInstance,
       String inputFlowId) {
 
-    Scope subScope = scope.selectChildScope(subProcessInstance);
+    Scope subScope = scope.selectChildScope(subProcessInstance, subProcessInstance.getFlowElements());
     subProcessInstance.setScope(subScope);
     subProcessInstance.setState(ExecutionState.ACTIVE);
 

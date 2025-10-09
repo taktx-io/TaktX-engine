@@ -71,8 +71,7 @@ public class FlowNodeInstances {
   private FlowNodeInstance<?> mapToFlowNodeInstance(FlowNodeInstanceDTO value) {
     FlowNodeInstance<?> instance = processInstanceMapper.map(value, flowElements);
     instance.setParentInstance(parentFlowNodeInstance);
-    if (instance instanceof WithScope withScope
-        && instance.getFlowNode() instanceof WIthChildElements wIthChildElements) {
+    if (instance instanceof WithScope withScope) {
       Scope scope = withScope.getScope();
       scope.setParentScope(
           parentFlowNodeInstance != null ? parentFlowNodeInstance.getScope() : null);
@@ -88,11 +87,15 @@ public class FlowNodeInstances {
               instance.getElementInstanceId(),
               variableStore);
       scope.setVariableScope(variableScope);
-      scope.setFlowNodeInstances(
+        FlowElements elements =
+            instance.getFlowNode() instanceof WIthChildElements withChildElements
+                ? withChildElements.getElements()
+                : flowElements;
+        scope.setFlowNodeInstances(
           new FlowNodeInstances(
               processInstanceId,
               withScope,
-              wIthChildElements.getElements(),
+              elements,
               processInstanceMapper,
               flowNodeInstanceStore,
               variableStore));

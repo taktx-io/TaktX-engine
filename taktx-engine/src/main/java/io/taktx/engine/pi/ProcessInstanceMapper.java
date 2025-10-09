@@ -452,10 +452,12 @@ public interface ProcessInstanceMapper {
 
   @AfterMapping
   default void mapState(ScopeDTO source, @MappingTarget Scope target) {
-      for  (Map.Entry<Long, Set<Long>> entry : source.getActivityToBoundaryEvents().entrySet()) {
-        for(Long boundaryEvent : entry.getValue()) {
-            target.getBoundaryEventToActivity().put(boundaryEvent, entry.getKey());
-        }
+      if (source.getActivityToBoundaryEvents() != null) {
+          for (Map.Entry<Long, Set<Long>> entry : source.getActivityToBoundaryEvents().entrySet()) {
+              for (Long boundaryEvent : entry.getValue()) {
+                  target.getBoundaryEventToActivity().put(boundaryEvent, entry.getKey());
+              }
+          }
       }
 
     if (source.getState().isDone()) {

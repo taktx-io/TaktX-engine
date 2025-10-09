@@ -22,7 +22,9 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
   private Scope scope;
 
   public MultiInstanceInstance(
-      Activity activity, WithScope parentInstance, long elementInstanceId) {
+      Activity activity,
+      WithScope parentInstance,
+      long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
   }
 
@@ -31,13 +33,4 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
     return scope.getState();
   }
 
-  @Override
-  public void setState(ExecutionState state) {
-    scope.setState(state);
-  }
-
-  @Override
-  public FlowElements getFlowElements() {
-    return scope.getFlowElements();
-  }
 }

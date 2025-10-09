@@ -228,13 +228,15 @@ class BoundaryEventsTest {
   void test_EventSubProcess_ErrorTriggered() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("ServiceTask_1")
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
         .deployProcessDefinitionAndWait("/bpmn/eventsubprocess.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_1")
+        .waitUntilExternalTaskIsWaitingForResponse("ServiceTask_2")
         .andRespondToExternalTaskWithError(false, "errorCode", "error message")
         .waitUntilDone()
         .assertThatProcess()
-        .hasAbortedElementWithId("ServiceTask_1");
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2");
   }
 }
