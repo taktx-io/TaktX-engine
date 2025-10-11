@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,8 @@ class FeelExpressionHandlerImplTest {
   void testNoFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("test", VariableScope.empty());
+    Scope scope = new Scope();
+    JsonNode jsonNode = expressionHandler.processFeelExpression("test", VariableScope.empty(scope));
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
@@ -31,7 +33,9 @@ class FeelExpressionHandlerImplTest {
   void testSimpleFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    JsonNode jsonNode = expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty());
+    Scope scope = new Scope();
+    JsonNode jsonNode =
+        expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty(scope));
     assertThat(jsonNode.asText()).isEqualTo("test");
   }
 
@@ -39,7 +43,8 @@ class FeelExpressionHandlerImplTest {
   void testReferToVariableFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    VariableScope vars = VariableScope.empty();
+    Scope scope = new Scope();
+    VariableScope vars = VariableScope.empty(scope);
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var", vars);
     assertThat(jsonNode.asText()).isEqualTo("test");
@@ -49,7 +54,8 @@ class FeelExpressionHandlerImplTest {
   void testReferToVariableNotExisting() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    VariableScope vars = VariableScope.empty();
+    Scope scope = new Scope();
+    VariableScope vars = VariableScope.empty(scope);
     vars.put("var", new TextNode("test"));
     JsonNode jsonNode = expressionHandler.processFeelExpression("=var2", vars);
     assertThat(jsonNode.asText()).isEqualTo("null");
@@ -59,7 +65,8 @@ class FeelExpressionHandlerImplTest {
   void testCreateRange() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    VariableScope vars = VariableScope.empty();
+    Scope scope = new Scope();
+    VariableScope vars = VariableScope.empty(scope);
 
     JsonNode jsonNode = expressionHandler.processFeelExpression("=for i in 1..100 return i", vars);
     assertThat(jsonNode.isArray()).isTrue();
@@ -70,7 +77,8 @@ class FeelExpressionHandlerImplTest {
   void testReferToElementInArray() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider(), new ObjectMapper());
-    VariableScope vars = VariableScope.empty();
+    Scope scope = new Scope();
+    VariableScope vars = VariableScope.empty(scope);
     ArrayNode arrayNode = new ObjectMapper().createArrayNode();
     arrayNode.add("test1");
     arrayNode.add("test2");

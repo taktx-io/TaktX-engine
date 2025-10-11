@@ -53,4 +53,9 @@ public abstract class ActivityInstance<N extends Activity> extends FlowNodeInsta
   public boolean canSelectNextNodeContinue() {
     return getState() == ExecutionState.COMPLETED;
   }
+
+  @Override
+  public boolean isIteration() {
+    return iteration;
+  }
 }

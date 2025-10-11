@@ -43,4 +43,36 @@ class VariablesTest {
         .hasVariableWithValue("MappedOutputVariable", "value1")
         .hasVariableWithValue("var2", "value2");
   }
+
+  @Test
+  void testProcessServiceTaskInSubProcess() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
+        .startProcessInstance(VariablesDTO.of("var1", "Value1"))
+        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
+        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("var2", "Value2"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "Value1")
+        .hasVariableWithValue("var2", "Value2")
+        .hasVariableWithValue("inputMappedVar1", "mappedValue1")
+        .hasVariableWithValue("outputMappedVar2", "mappedValue1 Value2");
+  }
+
+  @Test
+  void testProcessCallActivity_NoInputPropagation_WithOutputPropagation() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity_scripttask.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.bpmn")
+        .startProcessInstance(VariablesDTO.of("var1", "Value1", "calledActivity", "calledActivity"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "Value1")
+        .hasVariableWithValue("InputVariable", "123")
+        .hasVariableWithValue("resultVar1", 123)
+        .hasVariableWithValue("resultVar2", "Value1 output");
+  }
 }

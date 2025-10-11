@@ -28,6 +28,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   private boolean wasNew = false;
 
+  private boolean counted = false;
+
   private long elementInstanceId;
 
   private int passedCnt;
@@ -103,8 +105,7 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean isDone() {
-    return getState() == ExecutionState.COMPLETED
-        || getState() == ExecutionState.ABORTED;
+    return getState() == ExecutionState.COMPLETED || getState() == ExecutionState.ABORTED;
   }
 
   public boolean stateAllowsStopping() {
@@ -139,5 +140,9 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   public boolean isCmpleted() {
     return state == ExecutionState.COMPLETED;
+  }
+
+  public boolean isIteration() {
+    return false;
   }
 }

@@ -10,7 +10,6 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.Activity;
-import io.taktx.engine.pd.model.FlowElements;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,9 +21,7 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
   private Scope scope;
 
   public MultiInstanceInstance(
-      Activity activity,
-      WithScope parentInstance,
-      long elementInstanceId) {
+      Activity activity, WithScope parentInstance, long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
   }
 
@@ -32,5 +29,4 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
   public ExecutionState getState() {
     return scope.getState();
   }
-
 }

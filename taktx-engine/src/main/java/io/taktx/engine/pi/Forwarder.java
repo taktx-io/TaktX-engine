@@ -42,6 +42,7 @@ import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
+import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
@@ -73,16 +74,17 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstanceDTO processInstanceDTO) {
+      ProcessInstanceDTO processInstanceDTO,
+      Scope scope) {
     forwardInstanceUpdates(context, instanceResult);
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstanceDTO);
     forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstanceDTO);
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
     forwardCancelSchedules(context, instanceResult);
-    forwardScheduledStarts(context, instanceResult, processInstanceDTO);
+    forwardScheduledStarts(context, instanceResult, processInstanceDTO, scope);
     forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
-    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
+    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO, scope);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
   }
@@ -115,7 +117,8 @@ public class Forwarder {
   private void forwardScheduledStarts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstanceDTO processInstance,
+      Scope scope) {
     Queue<ScheduledStartInfo> scheduledStartInfos = instanceResult.getScheduledStartInfos();
     while (!scheduledStartInfos.isEmpty()) {
       ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
@@ -136,7 +139,7 @@ public class Forwarder {
               dtoMapper.map(scheduledStartInfo.timerEventDefinition()),
               now,
               startFlowElementTrigger,
-              VariableScope.empty());
+              VariableScope.empty(scope));
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
@@ -188,7 +191,8 @@ public class Forwarder {
   private void forwardScheduledExternalTaskTriggerTimeouts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstanceDTO processInstance,
+      Scope scope) {
     Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
         instanceResult.getScheduledExternalTaskTriggerTimeouts();
     while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {
@@ -214,7 +218,7 @@ public class Forwarder {
       long now = clock.millis();
       MessageScheduleDTO schedule =
           messageSchedulerFactory.schedule(
-              timerEventDefinition, now, externalTaskResponseResultDTO, VariableScope.empty());
+              timerEventDefinition, now, externalTaskResponseResultDTO, VariableScope.empty(scope));
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduleKey =

@@ -132,7 +132,7 @@ public class ProcessInstanceProcessor
           processingStatistics.recordProcessInstanceLatency(
               kafkaTimestamp, trigger.getClass().getSimpleName());
 
-          handleTerminate(flowNodeInstanceStore, terminateTrigger);
+          handleTerminate(terminateTrigger);
         }
         default ->
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
@@ -237,9 +237,7 @@ public class ProcessInstanceProcessor
         flowNodeInstance.getFlowNode().getId(),
         flowNodeInstance.getElementInstanceId(),
         e.getMessage());
-    handleTerminate(
-        flowNodeInstanceStore,
-        new AbortTriggerDTO(processInstance.getProcessInstanceId(), List.of()));
+    handleTerminate(new AbortTriggerDTO(processInstance.getProcessInstanceId(), List.of()));
   }
 
   private InstanceUpdate processInstanceToUpdate(
@@ -261,7 +259,7 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      enrichScope(processInstance, processInstanceId, flowElements);
+      enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
 
       ProcessInstanceProcessingContext processInstanceProcessingContext =
           createProcessInstanceProcessingContext(processInstance, instanceResult);
@@ -290,13 +288,16 @@ public class ProcessInstanceProcessor
       if (flowElements != null) {
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        enrichScope(processInstance, processInstanceId, flowElements);
+        enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
         scopeProcessor.processContinue(
-            processInstanceProcessingContext, processInstance.getScope(), trigger, trigger.getElementInstanceIdPath());
+            processInstanceProcessingContext,
+            processInstance.getScope(),
+            trigger,
+            trigger.getElementInstanceIdPath());
 
         processResultAndForward(
             processInstanceProcessingContext,
@@ -308,9 +309,7 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void handleTerminate(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      AbortTriggerDTO trigger) {
+  private void handleTerminate(AbortTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
     UUID processInstanceId1 = trigger.getProcessInstanceId();
     ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId1);
@@ -319,12 +318,13 @@ public class ProcessInstanceProcessor
       if (flowElements != null) {
         UUID processInstanceId = processInstanceDTO.getProcessInstanceId();
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        enrichScope(processInstance, processInstanceId, flowElements);
+        enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-        scopeProcessor.processAbort(processInstanceProcessingContext, processInstance.getScope(), trigger);
+        scopeProcessor.processAbort(
+            processInstanceProcessingContext, processInstance.getScope(), trigger);
 
         processResultAndForward(
             processInstanceProcessingContext,
@@ -339,23 +339,26 @@ public class ProcessInstanceProcessor
       ProcessDefinitionKey processDefinitionKey,
       Scope scope) {
 
-      EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
-      while(eventSignal != null) {
-            if (eventSignal instanceof ErrorEventSignal ) {
-                AbortTriggerDTO trigger = new AbortTriggerDTO(processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(), Collections.emptyList());
-                scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
-                break;
-            }
-          eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+    EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+    while (eventSignal != null) {
+      if (eventSignal instanceof ErrorEventSignal) {
+        AbortTriggerDTO trigger =
+            new AbortTriggerDTO(
+                processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
+                Collections.emptyList());
+        scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
+        break;
       }
+      eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+    }
 
-      ScopeDTO scopeDTO = scopeToDTO(scope);
+    ScopeDTO scopeDTO = scopeToDTO(scope);
 
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
 
-    scope.getVariableScope().persist();
+    scope.persistVariables();
 
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
@@ -369,10 +372,10 @@ public class ProcessInstanceProcessor
     }
 
     if (processInstance.getScope().getState().isDone()) {
-      continueParentInstance(instanceResult, processInstance, scope.getVariableScope());
+      continueParentInstance(instanceResult, processInstance, scope);
     }
 
-    forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO);
+    forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO, scope);
 
     if (processInstance.getScope().getState().isDone()) {
       purgeProcessInstance(processInstanceDTO);
@@ -417,17 +420,14 @@ public class ProcessInstanceProcessor
   }
 
   private void continueParentInstance(
-      InstanceResult instanceResult,
-      ProcessInstance processInstance,
-      VariableScope processInstanceVariables) {
+      InstanceResult instanceResult, ProcessInstance processInstance, Scope scope) {
     if (processInstance.getParentProcessInstanceId() != null) {
       VariablesDTO variables;
 
       if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.of(processInstanceVariables.retrieveAndFlattenAll());
+        variables = VariablesDTO.of(scope.retrieveAndFlattenAllVariables());
       } else {
-        VariableScope outputVariables =
-            new VariableScope(null, processInstance.getProcessInstanceId(), null, variablesStore);
+        VariableScope outputVariables = new VariableScope(scope, variablesStore);
         ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
         variables = VariablesDTO.of(outputVariables.getVariables());
       }
@@ -442,22 +442,16 @@ public class ProcessInstanceProcessor
   }
 
   private void enrichScope(
-      ProcessInstance processInstance, UUID processInstanceId, FlowElements flowElements) {
-    Scope scope = processInstance.getScope();
-    scope.setParentScope(null);
+      Scope scope, Scope parentScope, UUID processInstanceId, FlowElements flowElements) {
+    scope.setParentScope(parentScope);
     scope.setProcessInstanceId(processInstanceId);
-    VariableScope parentVariableScope = null;
-    VariableScope variableScope =
-        new VariableScope(parentVariableScope, processInstanceId, null, variablesStore);
+    VariableScope variableScope = new VariableScope(scope, variablesStore);
     scope.setVariableScope(variableScope);
-    scope.setFlowNodeInstances(
-        new FlowNodeInstances(
-            processInstanceId,
-            null,
-            flowElements,
-            instanceMapper,
-            flowNodeInstanceStore,
-            variablesStore));
+    scope.setProcessInstanceMapper(instanceMapper);
+    scope.setVariableStore(variablesStore);
+    scope.setFlowNodeInstanceStore(flowNodeInstanceStore);
+    scope.setFlowElements(flowElements);
+    scope.setFlowNodeInstances(new FlowNodeInstances(scope, flowNodeInstanceStore));
     scope.setParentFlowNodeInstance(null);
   }
 

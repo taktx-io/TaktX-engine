@@ -205,7 +205,7 @@ public class ProcessDefinitionActivationProcessor {
                       timerEventDefinition,
                       now,
                       getStartCommand(processDefinitionKey.getProcessDefinitionId(), startEvent),
-                      new VariableScope(null, null, null, null));
+                      new VariableScope(null, null));
               TimeBucket timeBucket =
                   TimeBucket.ofMillis(
                       schedule.getNextExecutionTime(schedule.getInstantiationTime())

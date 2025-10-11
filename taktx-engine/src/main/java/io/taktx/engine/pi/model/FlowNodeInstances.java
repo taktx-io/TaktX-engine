@@ -1,19 +1,13 @@
 package io.taktx.engine.pi.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.Constants;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.VariableKeyDTO;
-import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
-import io.taktx.engine.pd.model.WIthChildElements;
-import io.taktx.engine.pi.ProcessInstanceMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.streams.state.KeyValueIterator;
@@ -21,15 +15,11 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @RequiredArgsConstructor
 @Getter
+@SuppressWarnings("java:S1452")
 public class FlowNodeInstances {
 
-  private final UUID processInstanceId;
-  private final WithScope parentFlowNodeInstance;
-  private final FlowElements flowElements;
-  private final ProcessInstanceMapper processInstanceMapper;
+  private final Scope scope;
   private final KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
-  private final KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
-
   private final Map<Long, FlowNodeInstance<?>> instances = new LinkedHashMap<>();
 
   public FlowNodeInstance<?> getInstanceWithInstanceId(long id) {
@@ -62,53 +52,17 @@ public class FlowNodeInstances {
       range.forEachRemaining(
           entry -> {
             FlowNodeInstanceDTO value = entry.value;
-            FlowNodeInstance<?> instance = mapToFlowNodeInstance(value);
+            FlowNodeInstance<?> instance = scope.mapToFlowNodeInstance(value);
             instances.putIfAbsent(entry.key.getFlowNodeInstanceKeyPath().getLast(), instance);
           });
     }
-  }
-
-  private FlowNodeInstance<?> mapToFlowNodeInstance(FlowNodeInstanceDTO value) {
-    FlowNodeInstance<?> instance = processInstanceMapper.map(value, flowElements);
-    instance.setParentInstance(parentFlowNodeInstance);
-    if (instance instanceof WithScope withScope) {
-      Scope scope = withScope.getScope();
-      scope.setParentScope(
-          parentFlowNodeInstance != null ? parentFlowNodeInstance.getScope() : null);
-      scope.setProcessInstanceId(processInstanceId);
-      VariableScope parentVariableScope =
-          parentFlowNodeInstance != null
-              ? parentFlowNodeInstance.getScope().getVariableScope()
-              : null;
-      VariableScope variableScope =
-          new VariableScope(
-              parentVariableScope,
-              processInstanceId,
-              instance.getElementInstanceId(),
-              variableStore);
-      scope.setVariableScope(variableScope);
-        FlowElements elements =
-            instance.getFlowNode() instanceof WIthChildElements withChildElements
-                ? withChildElements.getElements()
-                : flowElements;
-        scope.setFlowNodeInstances(
-          new FlowNodeInstances(
-              processInstanceId,
-              withScope,
-              elements,
-              processInstanceMapper,
-              flowNodeInstanceStore,
-              variableStore));
-      scope.setParentFlowNodeInstance(withScope);
-    }
-    return instance;
   }
 
   private FlowNodeInstance<?> getFlowNodeInstanceFromStore(FlowNodeInstanceKeyDTO keyPath) {
     FlowNodeInstanceDTO storedFlowNodeInstanceDTO = flowNodeInstanceStore.get(keyPath);
     FlowNodeInstance<?> flowNodeInstance = null;
     if (storedFlowNodeInstanceDTO != null) {
-      flowNodeInstance = mapToFlowNodeInstance(storedFlowNodeInstanceDTO);
+      flowNodeInstance = scope.mapToFlowNodeInstance(storedFlowNodeInstanceDTO);
       putInstance(flowNodeInstance);
     }
 
@@ -122,11 +76,14 @@ public class FlowNodeInstances {
   private FlowNodeInstanceKeyDTO generatedKeyPath(long id) {
     LinkedList<Long> keyPath = new LinkedList<>();
     keyPath.addFirst(id);
-    WithScope parentInstance = this.parentFlowNodeInstance;
-    while (parentInstance != null) {
-      keyPath.addFirst(parentInstance.getElementInstanceId());
-      parentInstance = parentInstance.getParentInstance();
+    if (scope.getParentFlowNodeInstance() != null) {
+      keyPath.addFirst(scope.getParentFlowNodeInstance().getElementInstanceId());
     }
-    return new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
+    Scope parentScope = scope.getParentScope();
+    while (parentScope != null && parentScope.getParentFlowNodeInstance() != null) {
+      keyPath.addFirst(parentScope.getParentFlowNodeInstance().getElementInstanceId());
+      parentScope = parentScope.getParentScope();
+    }
+    return new FlowNodeInstanceKeyDTO(scope.getProcessInstanceId(), keyPath);
   }
 }

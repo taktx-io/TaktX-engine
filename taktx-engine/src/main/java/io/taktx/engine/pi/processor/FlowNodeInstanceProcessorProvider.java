@@ -32,11 +32,13 @@ import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.ProcessInstanceMapper;
+import io.taktx.engine.pi.ScopeProcessor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
 
 @ApplicationScoped
+@SuppressWarnings({"java:S6813", "java:S1452"})
 public class FlowNodeInstanceProcessorProvider {
 
   @Inject StartEventInstanceProcessor startEventProcessor;
@@ -58,8 +60,9 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject ProcessInstanceMapper processInstanceMapper;
   @Inject Clock clock;
   @Inject @UserTaskProcessor UserTaskInstanceProcessor userTaskProcessor;
+  @Inject ScopeProcessor scopeProcessor;
 
-  public FlowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element) {
+  public FlowNodeInstanceProcessor<?, ?, ?> getProcessor(BaseElement element, boolean isIteration) {
     if (element instanceof ThrowEvent throwEvent) {
       return getProcessorForThrowEvent(throwEvent);
     } else if (element instanceof CatchEvent catchEvent) {
@@ -67,7 +70,7 @@ public class FlowNodeInstanceProcessorProvider {
     } else if (element instanceof Gateway gateway) {
       return getProcessorForGateway(gateway);
     } else if (element instanceof Activity activity) {
-      return getStateProcessorForActivity(activity);
+      return getStateProcessorForActivity(activity, isIteration);
     }
 
     throw new IllegalStateException("Unknown element type: " + element.getClass());
@@ -105,7 +108,8 @@ public class FlowNodeInstanceProcessorProvider {
     throw new IllegalStateException("Unknown catch event element type: " + element.getClass());
   }
 
-  private FlowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(Activity element) {
+  private FlowNodeInstanceProcessor<?, ?, ?> getStateProcessorForActivity(
+      Activity element, boolean isIteration) {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
@@ -127,10 +131,10 @@ public class FlowNodeInstanceProcessorProvider {
     } else {
       throw new IllegalStateException("Unknown activity event element type: " + element.getClass());
     }
-    if (!element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
+    if (!isIteration && !element.getLoopCharacteristics().equals(LoopCharacteristics.NONE)) {
       // Wrap in MultiInstance processor when the element has loop characteristics
       return new MultiInstanceProcessor(
-          feelExpressionHandler, processor, processInstanceMapper, clock);
+          feelExpressionHandler, processor, processInstanceMapper, scopeProcessor, clock);
     }
     return processor;
   }

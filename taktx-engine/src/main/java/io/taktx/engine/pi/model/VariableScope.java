@@ -12,10 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,62 +24,38 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 @Getter
 public class VariableScope {
-  private final VariableScope parentVariableScope;
-  private final Map<Long, VariableScope> childScopes = new HashMap<>();
   private final HashMap<String, JsonNode> variables = new HashMap<>();
   private final Set<String> dirtyVariables = new HashSet<>();
+  private final Scope scope;
   protected final KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
-  private final UUID processInstanceId;
-  private final Long elementInstanceId;
 
-  public VariableScope(
-      VariableScope parentVariableScope,
-      UUID processInstanceId,
-      Long elementInstanceId,
-      KeyValueStore<VariableKeyDTO, JsonNode> variableStore) {
-    this.parentVariableScope = parentVariableScope;
-    this.processInstanceId = processInstanceId;
-    this.elementInstanceId = elementInstanceId;
+  public VariableScope(Scope scope, KeyValueStore<VariableKeyDTO, JsonNode> variableStore) {
+    this.scope = scope;
     this.variableStore = variableStore;
   }
 
-  public static VariableScope empty() {
-    return new VariableScope(null, null, null, null);
+  public static VariableScope empty(Scope scope) {
+    return new VariableScope(scope, null);
   }
 
   private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathStart() {
-    return new FlowNodeInstanceKeyDTO(processInstanceId, getScopePath());
+    return new FlowNodeInstanceKeyDTO(scope.getProcessInstanceId(), scope.getScopePath());
   }
 
   private FlowNodeInstanceKeyDTO getFlowNodeInstanceKeyForScopePathEnd() {
-    List<Long> scopePath = getScopePath();
+    List<Long> scopePath = scope.getScopePath();
 
     if (scopePath.isEmpty()) {
       UUID processInstanceIdPlusOne =
           new UUID(
-              processInstanceId.getMostSignificantBits(),
-              processInstanceId.getLeastSignificantBits() + 1);
+              scope.getProcessInstanceId().getMostSignificantBits(),
+              scope.getProcessInstanceId().getLeastSignificantBits() + 1);
       return new FlowNodeInstanceKeyDTO(processInstanceIdPlusOne, scopePath);
     } else {
       Long last = scopePath.getLast();
       last++;
       scopePath.set(scopePath.size() - 1, last);
-      return new FlowNodeInstanceKeyDTO(processInstanceId, scopePath);
-    }
-  }
-
-  private List<Long> getScopePath() {
-    LinkedList<Long> path = new LinkedList<>();
-    addScopeToPath(path);
-    return path;
-  }
-
-  private void addScopeToPath(LinkedList<Long> path) {
-    if (elementInstanceId != null) {
-      path.addFirst(elementInstanceId);
-    }
-    if (parentVariableScope != null) {
-      parentVariableScope.addScopeToPath(path);
+      return new FlowNodeInstanceKeyDTO(scope.getProcessInstanceId(), scopePath);
     }
   }
 
@@ -103,8 +77,9 @@ public class VariableScope {
 
   public VariablesDTO scopeAndParentsToDto() {
     VariablesDTO dto = VariablesDTO.of(retrieveAllInScope());
-    if (parentVariableScope != null) {
-      VariablesDTO parentVariablesDTO = parentVariableScope.scopeAndParentsToDto();
+    if (scope.getParentScope() != null) {
+      VariablesDTO parentVariablesDTO =
+          scope.getParentScope().getVariableScope().scopeAndParentsToDto();
       parentVariablesDTO
           .getVariables()
           .forEach(
@@ -118,31 +93,24 @@ public class VariableScope {
   }
 
   public Map<String, JsonNode> retrieveAllInScope() {
-    if (variableStore != null) {
 
-      FlowNodeInstanceKeyDTO startflowNodeInstanceKeyForScopePath =
-          getFlowNodeInstanceKeyForScopePathStart();
-      FlowNodeInstanceKeyDTO endflowNodeInstanceKeyForScopePath =
-          getFlowNodeInstanceKeyForScopePathEnd();
-      VariableKeyDTO start = new VariableKeyDTO(startflowNodeInstanceKeyForScopePath, "");
+    FlowNodeInstanceKeyDTO startflowNodeInstanceKeyForScopePath =
+        getFlowNodeInstanceKeyForScopePathStart();
+    FlowNodeInstanceKeyDTO endflowNodeInstanceKeyForScopePath =
+        getFlowNodeInstanceKeyForScopePathEnd();
+    VariableKeyDTO start = new VariableKeyDTO(startflowNodeInstanceKeyForScopePath, "");
 
-      VariableKeyDTO end = new VariableKeyDTO(endflowNodeInstanceKeyForScopePath, "");
+    VariableKeyDTO end = new VariableKeyDTO(endflowNodeInstanceKeyForScopePath, "");
 
-      try (KeyValueIterator<VariableKeyDTO, JsonNode> range = variableStore.range(start, end)) {
-        range.forEachRemaining(
-            kv -> {
-              if (!variables.containsKey(kv.key.getVariableName())) {
-                variables.put(kv.key.getVariableName(), kv.value);
-              }
-            });
-      }
+    try (KeyValueIterator<VariableKeyDTO, JsonNode> range = variableStore.range(start, end)) {
+      range.forEachRemaining(
+          kv -> {
+            if (!variables.containsKey(kv.key.getVariableName())) {
+              variables.put(kv.key.getVariableName(), kv.value);
+            }
+          });
     }
     return variables;
-  }
-
-  public void remove(String key) {
-    variables.remove(key);
-    dirtyVariables.add(key);
   }
 
   public JsonNode get(String name) {
@@ -154,8 +122,8 @@ public class VariableScope {
       VariableKeyDTO k = new VariableKeyDTO(getFlowNodeInstanceKeyForScopePathStart(), name);
       result = variableStore.get(k);
     }
-    if (result == null && parentVariableScope != null) {
-      result = parentVariableScope.get(name);
+    if (result == null && scope.getParentScope() != null) {
+      result = scope.getParentScope().getVariableScope().get(name);
     }
     return result;
   }
@@ -168,16 +136,10 @@ public class VariableScope {
     dirtyVariables.forEach(
         key -> {
           FlowNodeInstanceKeyDTO flowNodeInstanceKey =
-              new FlowNodeInstanceKeyDTO(processInstanceId, keyPath);
+              new FlowNodeInstanceKeyDTO(scope.getProcessInstanceId(), keyPath);
           VariableKeyDTO variableKey = new VariableKeyDTO(flowNodeInstanceKey, key);
           JsonNode value = variables.get(key);
           variableStore.put(variableKey, value);
-        });
-    childScopes.forEach(
-        (k, v) -> {
-          List<Long> newPath = new ArrayList<>(keyPath);
-          newPath.add(k);
-          v.persistScope(newPath);
         });
   }
 

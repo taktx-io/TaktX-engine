@@ -25,22 +25,17 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @RegisterForReflection
 public class ScopeDTO {
-  private ExecutionState state;
-
-  private int activeCnt;
 
   private int subProcessLevel;
-
+  private int activeCnt;
+  private ExecutionState state;
   private long elementInstanceCnt;
-
   private Map<String, Long> gatewayInstances;
-
   private Map<String, Set<String>> messageSubscriptions;
-
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
-    private Map<Long, Set<Long>> activityToBoundaryEvents;
+  private Map<Long, Set<Long>> activityToBoundaryEvents;
 
-    public ScopeDTO(
+  public ScopeDTO(
       ExecutionState state,
       int activeCnt,
       int subProcessLevel,
@@ -57,5 +52,5 @@ public class ScopeDTO {
     this.messageSubscriptions = messageSubscriptions;
     this.scheduleKeys = scheduleKeys;
     this.activityToBoundaryEvents = activityToBoundaryEvents;
-    }
+  }
 }

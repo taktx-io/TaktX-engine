@@ -15,10 +15,13 @@ import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.InstanceScheduleKeyDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
+import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,26 +37,31 @@ import org.apache.kafka.streams.state.KeyValueStore;
 @NoArgsConstructor
 public class Scope {
   private Scope parentScope;
-  private int subProcessLevel;
   private UUID processInstanceId;
   private VariableScope variableScope;
+  private KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
   private FlowNodeInstances flowNodeInstances;
+  private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
+  private ExecutionState initialState;
+  private boolean stateChanged = false;
+  private WithScope parentFlowNodeInstance;
+
+  private final DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
+  private final Map<Long, Long> boundaryEventToActivity = new java.util.WeakHashMap<>();
+
+  private int subProcessLevel;
+  private int activeCnt = 0;
+  private ExecutionState state = ExecutionState.INITIALIZED;
+  private long elementInstanceCnt = 0;
   private Map<String, Long> gatewayInstances = new HashMap<>();
   private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
   private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
-  private int activeCnt = 0;
-  private DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-  private ExecutionState initialState;
-  private ExecutionState state = ExecutionState.INITIALIZED;
-  private boolean stateChanged = false;
-  private WithScope parentFlowNodeInstance;
-  private long elementInstanceCnt = 0;
 
   private final Map<Long, Set<Long>> activityToBoundaryEvents = new java.util.WeakHashMap<>();
-  private final Map<Long, Long> boundaryEventToActivity = new java.util.WeakHashMap<>();
+  private ProcessInstanceMapper processInstanceMapper;
+  private FlowElements flowElements;
 
-
-    public Scope(
+  public Scope(
       Scope parentScope,
       UUID processInstanceId,
       WithScope parentFlowNodeInstance,
@@ -65,15 +73,12 @@ public class Scope {
     this.subProcessLevel = parentScope != null ? parentScope.getSubProcessLevel() + 1 : 0;
     this.processInstanceId = processInstanceId;
     this.parentFlowNodeInstance = parentFlowNodeInstance;
-    this.variableScope = new VariableScope(null, processInstanceId, null, variableStore);
-    this.flowNodeInstances =
-        new FlowNodeInstances(
-            processInstanceId,
-            parentFlowNodeInstance,
-            flowElements,
-            processInstanceMapper,
-            flowNodeInstanceStore,
-            variableStore);
+    this.processInstanceMapper = processInstanceMapper;
+    this.flowElements = flowElements;
+    this.variableScope = new VariableScope(this, variableStore);
+    this.variableStore = variableStore;
+    this.flowNodeInstances = new FlowNodeInstances(this, flowNodeInstanceStore);
+    this.flowNodeInstanceStore = flowNodeInstanceStore;
   }
 
   public void putInstance(FlowNodeInstance<?> fLowNodeInstance) {
@@ -82,6 +87,21 @@ public class Scope {
           fLowNodeInstance.getFlowNode().getId(), gatewayInstance.getElementInstanceId());
     }
     flowNodeInstances.putInstance(fLowNodeInstance);
+  }
+
+  public List<Long> getScopePath() {
+    LinkedList<Long> path = new LinkedList<>();
+    addScopeToPath(path);
+    return path;
+  }
+
+  public void addScopeToPath(LinkedList<Long> path) {
+    if (parentFlowNodeInstance != null) {
+      path.addFirst(parentFlowNodeInstance.getElementInstanceId());
+    }
+    if (parentScope != null) {
+      parentScope.addScopeToPath(path);
+    }
   }
 
   public Long getGatewayInstanceId(String flowNodeId) {
@@ -120,6 +140,10 @@ public class Scope {
 
   public void updateActiveCountForInstances() {
     for (FlowNodeInstance<?> instance : flowNodeInstances.getInstances().values()) {
+      if (instance.isCounted()) {
+        continue;
+      }
+      instance.setCounted(true);
       if (instance.wasNew()) {
         activeCnt++;
       }
@@ -151,10 +175,6 @@ public class Scope {
         || flowNodeInstances.getInstances().values().stream().anyMatch(FlowNodeInstance::isDirty);
   }
 
-  public FlowElements getFlowElements() {
-    return flowNodeInstances.getFlowElements();
-  }
-
   public long nextElementInstanceId() {
     return ++elementInstanceCnt;
   }
@@ -169,8 +189,59 @@ public class Scope {
         processInstanceId,
         parentFlowNodeInstance,
         flowElements,
-        flowNodeInstances.getProcessInstanceMapper(),
+        processInstanceMapper,
         variableScope.getVariableStore(),
         flowNodeInstances.getFlowNodeInstanceStore());
+  }
+
+  public FlowNodeInstance<?> mapToFlowNodeInstance(FlowNodeInstanceDTO value) {
+    FlowNodeInstance<?> instance = processInstanceMapper.map(value, getFlowElements());
+    instance.setParentInstance(parentFlowNodeInstance);
+    if (instance instanceof WithScope withScope) {
+      Scope childScope = withScope.getScope();
+      childScope.setParentScope(this);
+      childScope.setFlowNodeInstanceStore(this.getFlowNodeInstanceStore());
+      childScope.setVariableStore(this.getVariableStore());
+      childScope.setParentFlowNodeInstance(withScope);
+      childScope.setProcessInstanceMapper(processInstanceMapper);
+      childScope.setProcessInstanceId(processInstanceId);
+      VariableScope childVariableScope = new VariableScope(childScope, variableStore);
+      childScope.setVariableScope(childVariableScope);
+      FlowElements elements =
+          instance.getFlowNode() instanceof WIthChildElements withChildElements
+              ? withChildElements.getElements()
+              : flowElements;
+      childScope.setFlowElements(elements);
+      childScope.setFlowNodeInstances(new FlowNodeInstances(childScope, flowNodeInstanceStore));
+      childScope.setParentFlowNodeInstance(withScope);
+    }
+    return instance;
+  }
+
+  public void persistVariables() {
+    variableScope.persist();
+    flowNodeInstances
+        .getInstances()
+        .values()
+        .forEach(
+            instance -> {
+              if (instance instanceof WithScope withScope) {
+                withScope.getScope().persistVariables();
+              }
+            });
+  }
+
+  public Map<String, JsonNode> retrieveAndFlattenAllVariables() {
+    Map<String, JsonNode> variables = new HashMap<>(variableScope.retrieveAllInScope());
+    flowNodeInstances
+        .getAllInstances()
+        .values()
+        .forEach(
+            instance -> {
+              if (instance instanceof WithScope withScope) {
+                variables.putAll(withScope.getScope().retrieveAndFlattenAllVariables());
+              }
+            });
+    return variables;
   }
 }

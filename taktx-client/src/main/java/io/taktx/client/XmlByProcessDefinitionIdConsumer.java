@@ -101,7 +101,7 @@ public class XmlByProcessDefinitionIdConsumer {
       // Check if the file already exists
       if (java.nio.file.Files.exists(filePath)) {
         log.debug("Process definition file already exists, overwriting: {}", filePath);
-          java.nio.file.Files.delete(filePath);
+        java.nio.file.Files.delete(filePath);
       }
 
       // Write the XML to the file
@@ -112,7 +112,7 @@ public class XmlByProcessDefinitionIdConsumer {
     }
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {
+  private <K, V> KafkaConsumer<K, V> createConsumer() {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             "xml-by-process-definition-id-consumer-" + UUID.randomUUID(),

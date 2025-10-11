@@ -113,9 +113,21 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert hasVariableWithValue(String var1, Object value1) {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceId);
     JsonNode jsonNode = variables.get(var1);
-    assertThat(jsonNode).isNotNull();
+    assertThat(jsonNode)
+        .as(
+            "variable "
+                + var1
+                + " not found in process instanceToContinue, available variables:"
+                + variables)
+        .isNotNull();
     JsonNode expectedNode = new ObjectMapper(new CBORFactory()).valueToTree(value1);
-    assertThat(jsonNode).isEqualTo(expectedNode);
+    assertThat(jsonNode)
+        .as(
+            "variable "
+                + var1
+                + " not found in process instanceToContinue, available variables:"
+                + variables)
+        .isEqualTo(expectedNode);
     return this;
   }
 
