@@ -22,11 +22,20 @@ import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+/**
+ * A producer for process instance triggers, responsible for producing and sending
+ * ProcessInstanceTriggerDTO objects to a Kafka topic.
+ */
 public class ProcessInstanceProducer {
 
   private final TaktPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
 
+  /**
+   * Constructor for ProcessInstanceProducer.
+   *
+   * @param kafkaPropertiesHelper the TaktPropertiesHelper to use for configuration
+   */
   public ProcessInstanceProducer(TaktPropertiesHelper kafkaPropertiesHelper) {
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
 
@@ -36,6 +45,13 @@ public class ProcessInstanceProducer {
                 TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
   }
 
+  /**
+   * Starts a new process instance by sending a StartCommandDTO to the configured Kafka topic.
+   *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param variables the initial variables for the process instance
+   * @return the UUID of the started process instance
+   */
   public UUID startProcess(String processDefinitionId, VariablesDTO variables) {
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
@@ -54,10 +70,23 @@ public class ProcessInstanceProducer {
     return processInstanceId;
   }
 
+  /**
+   * Aborts a process instance by sending an AbortTriggerDTO to the configured Kafka topic.
+   *
+   * @param processInstanceId the UUID of the process instance to abort
+   */
   public void abortProcessInstance(UUID processInstanceId) {
     abortElementInstance(processInstanceId, List.of());
   }
 
+  /**
+   * Aborts a specific element instance within a process instance by sending an AbortTriggerDTO to
+   * the configured Kafka topic.
+   *
+   * @param processInstanceId the UUID of the process instance containing the element instance
+   * @param elementInstanceIdPath the path of element instance IDs leading to the target element
+   *     instance to abort
+   */
   public void abortElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
     AbortTriggerDTO terminateTrigger =
         new AbortTriggerDTO(processInstanceId, elementInstanceIdPath);

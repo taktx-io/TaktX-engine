@@ -13,6 +13,10 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * A record representing an update to a process instance scope or flow node instance, including the
+ * timestamp of the update,the ID of the process instance, and the details of the update.
+ */
 @RequiredArgsConstructor
 @Getter
 public class InstanceUpdateRecord {

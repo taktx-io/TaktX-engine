@@ -24,6 +24,10 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
+/**
+ * This class is responsible for consuming user task trigger events from a Kafka topic and passing
+ * them to a provided consumer.
+ */
 @Slf4j
 public class UserTaskTriggerTopicConsumer {
 
@@ -34,11 +38,23 @@ public class UserTaskTriggerTopicConsumer {
   private CompletableFuture<Void> consumerFuture;
   private volatile boolean running = false;
 
+  /**
+   * Constructor for UserTaskTriggerTopicConsumer.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param executor the Executor to use for asynchronous processing
+   */
   UserTaskTriggerTopicConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
   }
 
+  /**
+   * Subscribes to the user task trigger topic and starts consuming messages, passing them to the
+   * provided consumer.
+   *
+   * @param externalTaskTriggerConsumer the consumer to handle incoming UserTaskTriggerDTO messages
+   */
   public void subscribeToUserTaskTriggerTopics(
       UserTaskTriggerConsumer externalTaskTriggerConsumer) {
     log.info("Subscribing to user task trigger topic");
@@ -90,14 +106,6 @@ public class UserTaskTriggerTopicConsumer {
                         externalTaskTriggerConsumer.accept(externalTaskTriggerRecord.value());
                       }
                     }
-
-                    // Small sleep outside the lock to prevent tight loop
-                    try {
-                      Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                      Thread.currentThread().interrupt();
-                      break;
-                    }
                   }
                 } finally {
                   // Clean up the resources when the thread exits
@@ -119,10 +127,16 @@ public class UserTaskTriggerTopicConsumer {
     }
   }
 
+  /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
   }
 
+  /**
+   * Creates a new KafkaConsumer with the appropriate configuration.
+   *
+   * @return a new KafkaConsumer instance
+   */
   private <K, V> KafkaConsumer<K, V> createConsumer() {
     String groupId = "taktx-client-user-task-trigger-consumer";
 

@@ -11,7 +11,9 @@ package io.taktx.client.serdes;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for UserTaskTriggerDTO objects. */
 public class UserTaskTriggerJsonDeserializer extends JsonDeserializer<UserTaskTriggerDTO> {
+  /** Constructor for UserTaskTriggerJsonDeserializer. */
   public UserTaskTriggerJsonDeserializer() {
     super(UserTaskTriggerDTO.class);
   }

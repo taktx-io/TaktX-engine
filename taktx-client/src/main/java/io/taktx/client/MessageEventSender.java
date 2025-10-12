@@ -17,11 +17,20 @@ import io.taktx.util.TaktPropertiesHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+/**
+ * A sender for message events, responsible for producing and sending MessageEventDTO objects to a
+ * Kafka topic.
+ */
 public class MessageEventSender {
 
   private final KafkaProducer<MessageEventKeyDTO, MessageEventDTO> messageEventEmitter;
   private final TaktPropertiesHelper taktPropertiesHelper;
 
+  /**
+   * Constructor for MessageEventSender.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   */
   public MessageEventSender(TaktPropertiesHelper taktPropertiesHelper) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.messageEventEmitter =
@@ -30,6 +39,11 @@ public class MessageEventSender {
                 MessageEventKeySerializer.class, MessageEventSerializer.class));
   }
 
+  /**
+   * Sends a message event to the configured Kafka topic.
+   *
+   * @param messageEventDTO the MessageEventDTO to send
+   */
   public void sendMessage(MessageEventDTO messageEventDTO) {
     messageEventEmitter.send(
         new ProducerRecord<>(

@@ -33,6 +33,10 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
+/**
+ * A consumer that subscribes to process definition activation records from a Kafka topic, maintains
+ * a map of deployed process definitions, and notifies registered consumers of updates.
+ */
 @Slf4j
 public class ProcessDefinitionConsumer {
 
@@ -47,11 +51,23 @@ public class ProcessDefinitionConsumer {
 
   private volatile boolean running = false;
 
+  /**
+   * Constructor for ProcessDefinitionConsumer.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param executor the Executor to use for asynchronous processing
+   */
   ProcessDefinitionConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
   }
 
+  /**
+   * Subscribes to the process definition activation topic and starts processing records. This
+   * method creates a Kafka consumer, subscribes to the appropriate topic, and processes incoming
+   * records asynchronously. It updates the internal map of deployed process definitions and
+   * notifies registered consumers of any updates.
+   */
   public void subscribeToDefinitionRecords() {
     definitionActivationConsumer = createConsumer();
 
@@ -108,14 +124,31 @@ public class ProcessDefinitionConsumer {
         executor);
   }
 
+  /**
+   * Stops the consumer from processing further records. This method sets the running flag to false,
+   * which will cause the processing loop to exit and the consumer to unsubscribe and close.
+   */
   public void stop() {
     running = false;
   }
 
+  /**
+   * Retrieves the map of deployed process definitions.
+   *
+   * @return a map of ProcessDefinitionKey to ProcessDefinitionDTO representing the deployed process
+   *     definitions
+   */
   public Map<ProcessDefinitionKey, ProcessDefinitionDTO> getDeployedProcessDefinitions() {
     return definitionMap;
   }
 
+  /**
+   * Retrieves the deployed process definitions for a specific process definition ID.
+   *
+   * @param processDefinitionId the process definition ID to filter by
+   * @return a map of ProcessDefinitionKey to ProcessDefinitionDTO for the specified process
+   *     definition ID
+   */
   public Map<ProcessDefinitionKey, ProcessDefinitionDTO> getDeployedProcessDefinitions(
       String processDefinitionId) {
     return definitionMap.entrySet().stream()
@@ -123,6 +156,13 @@ public class ProcessDefinitionConsumer {
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
+  /**
+   * Retrieves a deployed process definition by its process definition ID and hash.
+   *
+   * @param processDefinitionId the process definition ID to filter by
+   * @param hash the hash to filter by
+   * @return an Optional containing the ProcessDefinitionDTO if found, or empty if not found
+   */
   public Optional<ProcessDefinitionDTO> getDeployedProcessDefinitionbyHash(
       String processDefinitionId, String hash) {
     return definitionMap.entrySet().stream()
@@ -134,15 +174,30 @@ public class ProcessDefinitionConsumer {
         .findFirst();
   }
 
+  /**
+   * Registers a consumer to be notified of process definition updates.
+   *
+   * @param consumer a BiConsumer that accepts a ProcessDefinitionKey and ProcessDefinitionDTO to be
+   *     notified of updates
+   */
   public void registerProcessDefinitionUpdateConsumer(
       BiConsumer<ProcessDefinitionKey, ProcessDefinitionDTO> consumer) {
     processDefinitionUpdateConsumers.add(consumer);
   }
 
+  /**
+   * Unsubscribes from the process definition activation topic. This method causes the consumer to
+   * unsubscribe from the topic and stop receiving records.
+   */
   private void subscribe(String prefixedTopicName) {
     definitionActivationConsumer.subscribe(Collections.singletonList(prefixedTopicName));
   }
 
+  /**
+   * Creates a Kafka consumer for process definition activation records.
+   *
+   * @return a KafkaConsumer configured for ProcessDefinitionKey and ProcessDefinitionDTO
+   */
   private <K, V> KafkaConsumer<K, V> createConsumer() {
     String groupId = "client-definition-activation-consumer-" + UUID.randomUUID();
 

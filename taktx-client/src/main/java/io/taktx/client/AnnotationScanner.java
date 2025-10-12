@@ -14,12 +14,23 @@ import io.taktx.client.annotation.TaktDeployment;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for scanning classes and methods annotated with specific annotations using
+ * ClassGraph.
+ */
 public class AnnotationScanner {
 
+  /** Private constructor to prevent instantiation */
   private AnnotationScanner() {
     // Static helper class
   }
 
+  /**
+   * Finds all classes that have at least one method annotated with the specified annotation.
+   *
+   * @param annotation The annotation class to search for on methods
+   * @return A set of classes containing methods annotated with the specified annotation
+   */
   public static Set<Class<?>> findClassesWithAnnotatedMethods(Class<?> annotation) {
     try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
       return scanResult.getClassesWithMethodAnnotation(annotation.getName()).loadClasses().stream()
@@ -28,6 +39,11 @@ public class AnnotationScanner {
     }
   }
 
+  /**
+   * Finds all classes annotated with the @TaktDeployment annotation, excluding proxy classes.
+   *
+   * @return A set of TaktDeployment annotations found on classes
+   */
   public static Set<TaktDeployment> findTaktDeployments() {
     try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
       return scanResult

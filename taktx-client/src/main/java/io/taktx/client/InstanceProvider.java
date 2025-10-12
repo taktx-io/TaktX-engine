@@ -11,8 +11,16 @@ package io.taktx.client;
 import jakarta.enterprise.inject.spi.CDI;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A utility class to provide instances of classes based on the runtime environment (Quarkus,
+ * Spring, or plain Java).
+ */
 @Slf4j
 public class InstanceProvider {
+
+  private InstanceProvider() {
+    // Private constructor to prevent instantiation
+  }
 
   private static Environment environment;
 
@@ -21,16 +29,23 @@ public class InstanceProvider {
     try {
       Class.forName("io.quarkus.runtime.Quarkus");
       environment = Environment.QUARKUS;
-    } catch (ClassNotFoundException e1) {
+    } catch (ClassNotFoundException _) {
       try {
         Class.forName("org.springframework.context.ApplicationContext");
         environment = Environment.SPRING;
-      } catch (ClassNotFoundException e2) {
+      } catch (ClassNotFoundException _) {
         environment = Environment.PLAIN_JAVA;
       }
     }
   }
 
+  /**
+   * Get an instance of the specified class based on the runtime environment.
+   *
+   * @param clazz the class to get an instance of
+   * @param <T> the type of the class
+   * @return an instance of the specified class
+   */
   public static <T> T getInstance(Class<T> clazz) {
     return switch (environment) {
       case QUARKUS -> getQuarkusBean(clazz);
@@ -79,8 +94,8 @@ public class InstanceProvider {
     }
   }
 
-  // Enum to identify the environment
-  public enum Environment {
+  /** Enum representing the runtime environment. */
+  private enum Environment {
     QUARKUS,
     SPRING,
     PLAIN_JAVA

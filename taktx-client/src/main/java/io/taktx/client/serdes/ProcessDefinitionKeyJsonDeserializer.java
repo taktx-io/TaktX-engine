@@ -11,8 +11,10 @@ package io.taktx.client.serdes;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for ProcessDefinitionKey objects. */
 public class ProcessDefinitionKeyJsonDeserializer extends JsonDeserializer<ProcessDefinitionKey> {
 
+  /** Constructor for ProcessDefinitionKeyJsonDeserializer. */
   public ProcessDefinitionKeyJsonDeserializer() {
     super(ProcessDefinitionKey.class);
   }

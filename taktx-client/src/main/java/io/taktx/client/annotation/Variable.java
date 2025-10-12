@@ -14,9 +14,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Annotation to mark a method parameter as a variable to be injected. The value can specify the
+ * name of the variable; if empty, the parameter name is used.
+ */
 @Qualifier
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface Variable {
+  /**
+   * The name of the variable to inject. If empty, the parameter name is used.
+   *
+   * @return The name of the variable.
+   */
   String value() default "";
 }

@@ -10,6 +10,7 @@ package io.taktx.client;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
 
+/** A parameter resolver that directly provides the ExternalTaskTriggerDTO. */
 public class ExternalTaskTriggerDTOParameterResolver implements TaktParameterResolver {
 
   @Override

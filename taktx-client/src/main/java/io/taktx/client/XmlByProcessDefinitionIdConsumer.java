@@ -37,12 +37,22 @@ public class XmlByProcessDefinitionIdConsumer {
   private static final Path DEFINITION_XML_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "definitions");
 
+  /**
+   * Constructor for XmlByProcessDefinitionIdConsumer.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param executor the Executor to use for asynchronous processing
+   */
   public XmlByProcessDefinitionIdConsumer(
       TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
   }
 
+  /**
+   * Subscribes to the topic for XML by process definition ID and starts consuming messages
+   * asynchronously.
+   */
   public void subscribeToTopic() {
     running = true;
     log.info("Starting async process to consume XML by process definition id");
@@ -62,8 +72,6 @@ public class XmlByProcessDefinitionIdConsumer {
             }
 
             consumer.unsubscribe();
-          } catch (IOException e) {
-            throw new IllegalStateException(e);
           }
         },
         executor);
@@ -122,6 +130,13 @@ public class XmlByProcessDefinitionIdConsumer {
     return new KafkaConsumer<>(props);
   }
 
+  /**
+   * Retrieves the process definition XML for the given process definition key.
+   *
+   * @param processDefinitionKey the key of the process definition
+   * @return the XML content as a String, or null if not found
+   * @throws IOException if an I/O error occurs reading from the file
+   */
   public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
       throws IOException {
     Path tenantNamespacePath =
@@ -141,6 +156,7 @@ public class XmlByProcessDefinitionIdConsumer {
     return java.nio.file.Files.readString(filePath);
   }
 
+  /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
   }

@@ -13,10 +13,16 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.HashMap;
 import java.util.Map;
 
+/** A parameter resolver that converts the variables of an ExternalTaskTriggerDTO into a Map. */
 public class MapParameterResolver implements TaktParameterResolver {
 
   private final ObjectMapper mapper;
 
+  /**
+   * Constructor for MapParameterResolver.
+   *
+   * @param mapper The ObjectMapper used for converting variable values.
+   */
   public MapParameterResolver(ObjectMapper mapper) {
     this.mapper = mapper;
   }

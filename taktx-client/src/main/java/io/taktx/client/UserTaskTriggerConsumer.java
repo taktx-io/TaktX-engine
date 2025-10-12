@@ -10,7 +10,13 @@ package io.taktx.client;
 
 import io.taktx.dto.UserTaskTriggerDTO;
 
+/** A consumer interface for handling UserTaskTriggerDTO objects. */
 public interface UserTaskTriggerConsumer {
 
+  /**
+   * Accepts a UserTaskTriggerDTO object for processing.
+   *
+   * @param value the UserTaskTriggerDTO object to be processed
+   */
   void accept(UserTaskTriggerDTO value);
 }

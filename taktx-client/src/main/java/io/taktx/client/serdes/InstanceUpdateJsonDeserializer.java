@@ -11,7 +11,9 @@ package io.taktx.client.serdes;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for InstanceUpdateDTO objects. */
 public class InstanceUpdateJsonDeserializer extends JsonDeserializer<InstanceUpdateDTO> {
+  /** Constructor for InstanceUpdateJsonDeserializer. */
   public InstanceUpdateJsonDeserializer() {
     super(InstanceUpdateDTO.class);
   }

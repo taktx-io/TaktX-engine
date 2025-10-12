@@ -221,7 +221,7 @@ public class ScopeProcessor {
         doBusiness(processInstanceProcessingContext, scope);
       }
     } else {
-      if (trigger.getElementInstanceIdPath().size() > 0) {
+      if (!trigger.getElementInstanceIdPath().isEmpty()) {
         FlowNodeInstance<?> flowNodeInstance =
             scope
                 .getFlowNodeInstances()
@@ -312,16 +312,15 @@ public class ScopeProcessor {
     while (continueInstance != null) {
       FlowNodeInstance<?> flowNodeInstance = continueInstance.flowNodeInstance();
 
-      if (flowNodeInstance instanceof BoundaryEventInstance boundaryEventInstance) {
-        if (boundaryEventInstance.getFlowNode().isCancelActivity()) {
-          Long activityInstanceId =
-              scope.getBoundaryEventToActivity().get(boundaryEventInstance.getElementInstanceId());
-          if (activityInstanceId != null) {
-            FlowNodeInstance<?> activityInstanceToAbort =
-                scope.getFlowNodeInstances().getInstanceWithInstanceId(activityInstanceId);
-            if (activityInstanceToAbort != null && activityInstanceToAbort.isActive()) {
-              scope.getDirectInstanceResult().addAbortInstance(activityInstanceToAbort);
-            }
+      if (flowNodeInstance instanceof BoundaryEventInstance boundaryEventInstance
+          && boundaryEventInstance.getFlowNode().isCancelActivity()) {
+        Long activityInstanceId =
+            scope.getBoundaryEventToActivity().get(boundaryEventInstance.getElementInstanceId());
+        if (activityInstanceId != null) {
+          FlowNodeInstance<?> activityInstanceToAbort =
+              scope.getFlowNodeInstances().getInstanceWithInstanceId(activityInstanceId);
+          if (activityInstanceToAbort != null && activityInstanceToAbort.isActive()) {
+            scope.getDirectInstanceResult().addAbortInstance(activityInstanceToAbort);
           }
         }
       }
@@ -394,7 +393,7 @@ public class ScopeProcessor {
                 scope
                     .getActivityToBoundaryEvents()
                     .computeIfAbsent(
-                        activityInstance.getElementInstanceId(), k -> new java.util.HashSet<>())
+                        activityInstance.getElementInstanceId(), _ -> new java.util.HashSet<>())
                     .add(boundaryEventInstance.getElementInstanceId());
                 scope
                     .getBoundaryEventToActivity()
@@ -435,20 +434,136 @@ public class ScopeProcessor {
       Scope scope,
       EventSignal event,
       FlowNodeInstance<?> fLowNodeInstance) {
-    boolean eventHandled = false;
-    Long boundaryEventThatHandledEvent = null;
     long elementInstanceId = event.getCurrentInstance().getElementInstanceId();
+
+    boolean eventHandled =
+        processEventsByBoundaryEvents(
+            processInstanceProcessingContext, scope, event, elementInstanceId);
+
+    if (!eventHandled) {
+      // Not handled by boundary event, check event subprocesses
+      eventHandled =
+          processEventByEventSubprocesses(
+              processInstanceProcessingContext, scope, event, fLowNodeInstance, eventHandled);
+    }
+
+    if (!eventHandled) {
+      scope.getDirectInstanceResult().addBubbleUpEvent(event);
+    }
+  }
+
+  private static boolean processEventByEventSubprocesses(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      EventSignal event,
+      FlowNodeInstance<?> fLowNodeInstance,
+      boolean eventHandled) {
+    // First check any event subprocesses which are able to handle this event
+    // First do a round for specific event codes
+    List<SubProcess> eventTriggeredSubProcesses =
+        scope.getFlowElements().getEventTriggeredSubProcesses();
+    for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
+      List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
+      for (StartEvent startEvent : startEvents) {
+        Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
+        for (EventDefinition eventDefinition : eventDefinitions) {
+          if (eventDefinition.handlesEvent(event)) {
+            // First terminate any active elements
+            if (startEvent.isInterrupting()) {
+              Map<Long, FlowNodeInstance<?>> allInstances =
+                  scope.getFlowNodeInstances().getAllInstances();
+              for (FlowNodeInstance<?> instance : allInstances.values()) {
+                if (instance.isActive()) {
+                  scope.getDirectInstanceResult().addAbortInstance(instance);
+                }
+              }
+            }
+            // Create a new instanceToContinue for the event subprocess
+            FlowNodeInstance<?> eventSubProcessInstance =
+                eventSsubProcess.createAndStoreNewInstance(
+                    fLowNodeInstance.getParentInstance(), scope);
+            StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
+                new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
+            scope
+                .getDirectInstanceResult()
+                .addNewFlowNodeInstance(
+                    processInstanceProcessingContext.getProcessInstance(),
+                    startFlowNodeInstanceInfo);
+
+            if (startEvent.isInterrupting()) {
+              scope.getDirectInstanceResult().addAbortInstance(event.getCurrentInstance());
+            }
+            eventHandled = true;
+          }
+          if (eventHandled) {
+            break;
+          }
+        }
+        if (eventHandled) {
+          break;
+        }
+      }
+    }
+
+    // Now for catch all events
+    if (!eventHandled) {
+      for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
+        List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
+        for (StartEvent startEvent : startEvents) {
+          Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
+          for (EventDefinition eventDefinition : eventDefinitions) {
+            if (eventDefinition.handlesEventCatchAll(event)) {
+              // First terminate any active elements
+              if (startEvent.isInterrupting()) {
+                Map<Long, FlowNodeInstance<?>> allInstances =
+                    scope.getFlowNodeInstances().getAllInstances();
+                for (FlowNodeInstance<?> instance : allInstances.values()) {
+                  if (instance.isActive()) {
+                    scope.getDirectInstanceResult().addAbortInstance(instance);
+                  }
+                }
+              }
+              // Create a new instanceToContinue for the event subprocess
+              FlowNodeInstance<?> eventSubProcessInstance =
+                  eventSsubProcess.createAndStoreNewInstance(
+                      fLowNodeInstance.getParentInstance(), scope);
+              StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
+                  new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
+              scope
+                  .getDirectInstanceResult()
+                  .addNewFlowNodeInstance(
+                      processInstanceProcessingContext.getProcessInstance(),
+                      startFlowNodeInstanceInfo);
+              eventHandled = true;
+            }
+            if (eventHandled) {
+              break;
+            }
+          }
+          if (eventHandled) {
+            break;
+          }
+        }
+      }
+    }
+    return eventHandled;
+  }
+
+  private boolean processEventsByBoundaryEvents(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      EventSignal event,
+      long elementInstanceId) {
+    Long boundaryEventThatHandledEvent = null;
     Set<Long> boundaryEventIdsForInstance =
-        scope
-            .getActivityToBoundaryEvents()
-            .getOrDefault(elementInstanceId, java.util.Collections.emptySet());
+        scope.getActivityToBoundaryEvents().getOrDefault(elementInstanceId, Collections.emptySet());
     DirectInstanceResult directInstanceResult = scope.getDirectInstanceResult();
     for (Long boundaryEventId : boundaryEventIdsForInstance) {
       BoundaryEventInstance boundaryEventInstance =
           (BoundaryEventInstance)
               scope.getFlowNodeInstances().getInstanceWithInstanceId(boundaryEventId);
 
-      eventHandled =
+      boolean eventHandled =
           boundaryEventProcessor.processEvent(
               processInstanceProcessingContext, scope, boundaryEventInstance, event);
       if (eventHandled) {
@@ -460,13 +575,13 @@ public class ScopeProcessor {
       }
     }
 
-    if (!eventHandled) {
+    if (boundaryEventThatHandledEvent == null) {
       // If not handled by specific codes, check for catch all
       for (Long boundaryEventId : boundaryEventIdsForInstance) {
         BoundaryEventInstance boundaryEventInstance =
             (BoundaryEventInstance)
                 scope.getFlowNodeInstances().getInstanceWithInstanceId(boundaryEventId);
-        eventHandled =
+        boolean eventHandled =
             boundaryEventProcessor.processEventCatchAll(
                 processInstanceProcessingContext, scope, boundaryEventInstance, event);
         if (eventHandled) {
@@ -479,7 +594,7 @@ public class ScopeProcessor {
       }
     }
 
-    if (eventHandled) {
+    if (boundaryEventThatHandledEvent != null) {
       BoundaryEventInstance boundaryEventInstanceThatHandledEvent =
           (BoundaryEventInstance)
               scope.getFlowNodeInstances().getInstanceWithInstanceId(boundaryEventThatHandledEvent);
@@ -496,98 +611,7 @@ public class ScopeProcessor {
         }
       }
     }
-
-    // Still not handled
-    if (!eventHandled) {
-      // First check any event subprocesses which are able to handle this event
-
-      // First do a round for specific event codes
-      List<SubProcess> eventTriggeredSubProcesses =
-          scope.getFlowElements().getEventTriggeredSubProcesses();
-      for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
-        List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
-        for (StartEvent startEvent : startEvents) {
-          Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
-          for (EventDefinition eventDefinition : eventDefinitions) {
-            if (eventDefinition.handlesEvent(event)) {
-              // First terminate any active elements
-              if (startEvent.isInterrupting()) {
-                Map<Long, FlowNodeInstance<?>> allInstances =
-                    scope.getFlowNodeInstances().getAllInstances();
-                for (FlowNodeInstance<?> instance : allInstances.values()) {
-                  if (instance.isActive()) {
-                    directInstanceResult.addAbortInstance(instance);
-                  }
-                }
-              }
-              // Create a new instanceToContinue for the event subprocess
-              FlowNodeInstance<?> eventSubProcessInstance =
-                  eventSsubProcess.createAndStoreNewInstance(
-                      fLowNodeInstance.getParentInstance(), scope);
-              StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
-                  new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
-              directInstanceResult.addNewFlowNodeInstance(
-                  processInstanceProcessingContext.getProcessInstance(), startFlowNodeInstanceInfo);
-
-              if (startEvent.isInterrupting()) {
-                directInstanceResult.addAbortInstance(event.getCurrentInstance());
-              }
-              eventHandled = true;
-            }
-            if (eventHandled) {
-              break;
-            }
-          }
-          if (eventHandled) {
-            break;
-          }
-        }
-      }
-
-      // Now for catch all events
-      if (!eventHandled) {
-        for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
-          List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
-          for (StartEvent startEvent : startEvents) {
-            Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
-            for (EventDefinition eventDefinition : eventDefinitions) {
-              if (eventDefinition.handlesEventCatchAll(event)) {
-                // First terminate any active elements
-                if (startEvent.isInterrupting()) {
-                  Map<Long, FlowNodeInstance<?>> allInstances =
-                      scope.getFlowNodeInstances().getAllInstances();
-                  for (FlowNodeInstance<?> instance : allInstances.values()) {
-                    if (instance.isActive()) {
-                      directInstanceResult.addAbortInstance(instance);
-                    }
-                  }
-                }
-                // Create a new instanceToContinue for the event subprocess
-                FlowNodeInstance<?> eventSubProcessInstance =
-                    eventSsubProcess.createAndStoreNewInstance(
-                        fLowNodeInstance.getParentInstance(), scope);
-                StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
-                    new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
-                directInstanceResult.addNewFlowNodeInstance(
-                    processInstanceProcessingContext.getProcessInstance(),
-                    startFlowNodeInstanceInfo);
-                eventHandled = true;
-              }
-              if (eventHandled) {
-                break;
-              }
-            }
-            if (eventHandled) {
-              break;
-            }
-          }
-        }
-      }
-
-      if (!eventHandled) {
-        directInstanceResult.addBubbleUpEvent(event);
-      }
-    }
+    return boundaryEventThatHandledEvent != null;
   }
 
   private void startSubscriptionsForEventSubprocesses(

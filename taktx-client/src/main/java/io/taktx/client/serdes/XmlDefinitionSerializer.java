@@ -11,8 +11,10 @@ package io.taktx.client.serdes;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.serdes.JsonSerializer;
 
+/** A JSON serializer for XmlDefinitionsDTO objects. */
 public class XmlDefinitionSerializer extends JsonSerializer<XmlDefinitionsDTO> {
 
+  /** Constructor for XmlDefinitionSerializer. */
   public XmlDefinitionSerializer() {
     super(XmlDefinitionsDTO.class);
   }

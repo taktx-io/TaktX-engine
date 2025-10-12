@@ -12,10 +12,24 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+/**
+ * Annotation to mark a method as a TaktX worker method with a specified task ID and auto-completion
+ * option.
+ */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface TaktWorkerMethod {
+  /**
+   * The task ID associated with the worker method.
+   *
+   * @return The task ID associated with the worker method.
+   */
   String taskId();
 
+  /**
+   * Whether the task should be auto-completed after execution. Default is true.
+   *
+   * @return True if the task should be auto-completed, false otherwise.
+   */
   boolean autoComplete() default true;
 }

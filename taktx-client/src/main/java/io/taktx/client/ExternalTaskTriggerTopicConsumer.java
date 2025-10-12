@@ -26,6 +26,10 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
+/**
+ * A Kafka consumer that subscribes to external task trigger topics and processes incoming messages
+ * using the provided ExternalTaskTriggerConsumer.
+ */
 @Slf4j
 public class ExternalTaskTriggerTopicConsumer {
 
@@ -36,9 +40,15 @@ public class ExternalTaskTriggerTopicConsumer {
   private final int pollTimeoutMs;
   private List<KafkaConsumer<UUID, ExternalTaskTriggerDTO>> externalTaskTriggerKafkaConsumers;
   private final Object consumerLock = new Object(); // Lock for synchronization
-  private List<CompletableFuture<Void>> consumerFutures = new ArrayList<>();
+  private final List<CompletableFuture<Void>> consumerFutures = new ArrayList<>();
   private volatile boolean running = false;
 
+  /**
+   * Constructor for ExternalTaskTriggerTopicConsumer.
+   *
+   * @param taktPropertiesHelper The TaktPropertiesHelper for configuration.
+   * @param executor The executor for running consumer threads.
+   */
   ExternalTaskTriggerTopicConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
@@ -53,6 +63,13 @@ public class ExternalTaskTriggerTopicConsumer {
         pollTimeoutMs);
   }
 
+  /**
+   * Subscribe to external task trigger topics based on job IDs from the provided consumer.
+   *
+   * @param externalTaskTriggerConsumer the consumer to handle incoming ExternalTaskTriggerDTO
+   *     messages
+   * @param groupId the Kafka consumer group ID to use for this subscription
+   */
   public void subscribeToExternalTaskTriggerTopics(
       ExternalTaskTriggerConsumer externalTaskTriggerConsumer, String groupId) {
     log.info("Subscribing to job ids {}", externalTaskTriggerConsumer.getJobIds());
@@ -106,8 +123,9 @@ public class ExternalTaskTriggerTopicConsumer {
                     }
 
                     List<ExternalTaskTriggerDTO> batch = new ArrayList<>(records.count());
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
-                      batch.add(record.value());
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskRecord :
+                        records) {
+                      batch.add(externalTaskRecord.value());
                     }
                     externalTaskTriggerConsumer.acceptBatch(batch);
                   } while (running);
@@ -129,6 +147,7 @@ public class ExternalTaskTriggerTopicConsumer {
     }
   }
 
+  /** Stops all running consumers and waits for them to finish processing. */
   public void stop() {
     running = false;
 

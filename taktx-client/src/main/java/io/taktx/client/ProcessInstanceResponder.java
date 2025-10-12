@@ -18,11 +18,20 @@ import io.taktx.util.TaktUUIDSerializer;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
+/**
+ * A responder for process instance triggers, responsible for creating responders for different
+ * types of flow element triggers.
+ */
 public class ProcessInstanceResponder {
 
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;
 
+  /**
+   * Constructor for ProcessInstanceResponder.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   */
   public ProcessInstanceResponder(TaktPropertiesHelper taktPropertiesHelper) {
     this.topicName =
         taktPropertiesHelper.getPrefixedTopicName(
@@ -33,6 +42,12 @@ public class ProcessInstanceResponder {
                 TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
   }
 
+  /**
+   * Creates an ExternalTaskInstanceResponder for the given ExternalTaskTriggerDTO.
+   *
+   * @param externalTaskTriggerDTO the ExternalTaskTriggerDTO to create the responder for
+   * @return the created ExternalTaskInstanceResponder
+   */
   public ExternalTaskInstanceResponder responderForExternalTaskTrigger(
       ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return new ExternalTaskInstanceResponder(
@@ -42,6 +57,12 @@ public class ProcessInstanceResponder {
         externalTaskTriggerDTO.getElementInstanceIdPath());
   }
 
+  /**
+   * Creates a UserTaskInstanceResponder for the given UserTaskTriggerDTO.
+   *
+   * @param userTaskTriggerDTO the UserTaskTriggerDTO to create the responder for
+   * @return the created UserTaskInstanceResponder
+   */
   public UserTaskInstanceResponder responderForUserTaskTrigger(
       UserTaskTriggerDTO userTaskTriggerDTO) {
     return new UserTaskInstanceResponder(

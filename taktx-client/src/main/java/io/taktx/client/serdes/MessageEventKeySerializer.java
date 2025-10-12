@@ -11,8 +11,10 @@ package io.taktx.client.serdes;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.serdes.JsonSerializer;
 
+/** A JSON serializer for MessageEventKeyDTO objects. */
 public class MessageEventKeySerializer extends JsonSerializer<MessageEventKeyDTO> {
 
+  /** Constructor for MessageEventKeySerializer. */
   public MessageEventKeySerializer() {
     super(MessageEventKeyDTO.class);
   }

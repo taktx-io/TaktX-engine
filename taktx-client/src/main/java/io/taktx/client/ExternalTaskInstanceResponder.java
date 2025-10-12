@@ -26,6 +26,10 @@ import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+/**
+ * A responder for handling external task instances, allowing to send success, error, escalation, or
+ * promise responses back to the process engine via Kafka.
+ */
 public class ExternalTaskInstanceResponder {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
@@ -33,6 +37,14 @@ public class ExternalTaskInstanceResponder {
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
 
+  /**
+   * Constructs an ExternalTaskInstanceResponder.
+   *
+   * @param responseEmitter The Kafka producer to send responses.
+   * @param topicName The Kafka topic name to send responses to.
+   * @param processInstanceId The ID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs.
+   */
   public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter,
       String topicName,
@@ -44,11 +56,18 @@ public class ExternalTaskInstanceResponder {
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 
+  /** Responds with a success message without any variables. */
   public void respondSuccess() {
     Map<String, JsonNode> variablesMap = new HashMap<>();
     respondSuccess(variablesMap);
   }
 
+  /**
+   * Responds with a success message including the provided variables.
+   *
+   * @param variable The variables to include in the response. It is directly serialized to a JSON
+   *     map
+   */
   public void respondSuccess(Object variable) {
     Map<String, JsonNode> variablesMap =
         variable == null
@@ -58,6 +77,11 @@ public class ExternalTaskInstanceResponder {
     respondSuccess(variablesMap);
   }
 
+  /**
+   * Responds with a success message including the provided variables map.
+   *
+   * @param variablesMap The map of variable names to their JSON values.
+   */
   public void respondSuccess(Map<String, JsonNode> variablesMap) {
     ExternalTaskResponseResultDTO externalTaskResponseResult =
         new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L);
@@ -79,10 +103,23 @@ public class ExternalTaskInstanceResponder {
             processInstanceTrigger));
   }
 
+  /**
+   * Responds with an escalation message without any variables.
+   *
+   * @param code The escalation code.
+   * @param message The escalation message.
+   */
   public void respondEscalation(String code, String message) {
     respondEscalation(code, message, VariablesDTO.empty());
   }
 
+  /**
+   * Responds with an escalation message including the provided variables.
+   *
+   * @param code The escalation code.
+   * @param message The escalation message.
+   * @param variables The variables to include in the response.
+   */
   public void respondEscalation(String code, String message, VariablesDTO variables) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
@@ -103,6 +140,13 @@ public class ExternalTaskInstanceResponder {
             processInstanceTrigger));
   }
 
+  /**
+   * Responds with an error message.
+   *
+   * @param allowRetry Whether to allow retrying the task.
+   * @param code The error code.
+   * @param message The error message.
+   */
   public void respondError(boolean allowRetry, String code, String message) {
 
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
@@ -124,6 +168,12 @@ public class ExternalTaskInstanceResponder {
             processInstanceTrigger));
   }
 
+  /**
+   * Responds with a promise message indicating the task will be completed after the specified
+   * duration.
+   *
+   * @param duration The duration to wait before completing the task.
+   */
   public void respondPromise(Duration duration) {
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(

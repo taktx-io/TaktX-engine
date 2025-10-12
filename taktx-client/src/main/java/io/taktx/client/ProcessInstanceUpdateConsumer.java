@@ -13,7 +13,6 @@ import io.taktx.client.serdes.InstanceUpdateJsonDeserializer;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,17 +36,33 @@ public class ProcessInstanceUpdateConsumer {
   private boolean running = false;
   private final List<Consumer<InstanceUpdateRecord>> instanceUpdateConsumers = new ArrayList<>();
 
+  /**
+   * Constructor for ProcessInstanceUpdateConsumer.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param executor the Executor to use for asynchronous processing
+   */
   public ProcessInstanceUpdateConsumer(
       TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
   }
 
+  /**
+   * Registers a consumer that will be notified of instance update records.
+   *
+   * @param consumer the consumer to register
+   */
   public void registerInstanceUpdateConsumer(Consumer<InstanceUpdateRecord> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
       subscribeToTopic();
     }
     instanceUpdateConsumers.add(consumer);
+  }
+
+  /** Stops the consumer from processing further records. */
+  public void stop() {
+    running = false;
   }
 
   private void subscribeToTopic() {
@@ -68,15 +83,9 @@ public class ProcessInstanceUpdateConsumer {
             }
 
             consumer.unsubscribe();
-          } catch (IOException e) {
-            throw new IllegalStateException(e);
           }
         },
         executor);
-  }
-
-  public void stop() {
-    running = false;
   }
 
   private void consumeRecords(KafkaConsumer<UUID, InstanceUpdateDTO> consumer) {
@@ -85,16 +94,15 @@ public class ProcessInstanceUpdateConsumer {
         .forEach(
             instanceUpdateConsumerRecord ->
                 instanceUpdateConsumers.forEach(
-                    instanceUpdateConsumer -> {
-                      instanceUpdateConsumer.accept(
-                          new InstanceUpdateRecord(
-                              instanceUpdateConsumerRecord.timestamp(),
-                              instanceUpdateConsumerRecord.key(),
-                              instanceUpdateConsumerRecord.value()));
-                    }));
+                    instanceUpdateConsumer ->
+                        instanceUpdateConsumer.accept(
+                            new InstanceUpdateRecord(
+                                instanceUpdateConsumerRecord.timestamp(),
+                                instanceUpdateConsumerRecord.key(),
+                                instanceUpdateConsumerRecord.value()))));
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer() throws IOException {
+  private <K, V> KafkaConsumer<K, V> createConsumer() {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             "instance-update-consumer",

@@ -19,12 +19,21 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+/**
+ * A deployer for process definitions, responsible for parsing BPMN XML and sending the parsed
+ * definitions to a Kafka topic.
+ */
 @Slf4j
 public class ProcessDefinitionDeployer {
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter;
 
+  /**
+   * Constructor for ProcessDefinitionDeployer.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   */
   ProcessDefinitionDeployer(TaktPropertiesHelper taktPropertiesHelper) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.xmlEmitter =
@@ -33,6 +42,12 @@ public class ProcessDefinitionDeployer {
                 StringSerializer.class, XmlDefinitionSerializer.class));
   }
 
+  /**
+   * Deploys a BPMN XML string by parsing it and sending the parsed definitions to a Kafka topic.
+   *
+   * @param xml the BPMN XML string to deploy
+   * @return the ParsedDefinitionsDTO containing the parsed definitions
+   */
   public ParsedDefinitionsDTO deploy(String xml) {
     log.info("Deploying XML {}", xml);
     ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);

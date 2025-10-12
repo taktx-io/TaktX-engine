@@ -11,8 +11,10 @@ package io.taktx.client.serdes;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.serdes.JsonSerializer;
 
+/** A JSON serializer for ProcessInstanceTriggerDTO objects. */
 public class ProcessInstanceTriggerSerializer extends JsonSerializer<ProcessInstanceTriggerDTO> {
 
+  /** Constructor for ProcessInstanceTriggerSerializer. */
   public ProcessInstanceTriggerSerializer() {
     super(ProcessInstanceTriggerDTO.class);
   }

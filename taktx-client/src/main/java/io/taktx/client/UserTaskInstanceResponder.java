@@ -25,6 +25,10 @@ import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+/**
+ * A responder for user task instances that allows sending success, escalation, or error responses
+ * back to the process instance via Kafka.
+ */
 public class UserTaskInstanceResponder {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
@@ -32,6 +36,14 @@ public class UserTaskInstanceResponder {
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
 
+  /**
+   * Constructs a UserTaskInstanceResponder.
+   *
+   * @param responseEmitter the Kafka producer used to send responses
+   * @param topicName the name of the Kafka topic to send responses to
+   * @param processInstanceId the ID of the process instance associated with the user task
+   * @param elementInstanceIdPath the path of element instance IDs leading to the user task
+   */
   public UserTaskInstanceResponder(
       KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter,
       String topicName,
@@ -43,11 +55,17 @@ public class UserTaskInstanceResponder {
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 
+  /** Sends a success response with no variables. */
   public void respondSuccess() {
     Map<String, JsonNode> variablesMap = new HashMap<>();
     respondSuccess(variablesMap);
   }
 
+  /**
+   * Sends a success response with the provided variables.
+   *
+   * @param variable the variables to include in the response, can be null
+   */
   public void respondSuccess(Object variable) {
     Map<String, JsonNode> variablesMap =
         variable == null
@@ -57,6 +75,11 @@ public class UserTaskInstanceResponder {
     respondSuccess(variablesMap);
   }
 
+  /**
+   * Sends a success response with the provided variables map.
+   *
+   * @param variablesMap the map of variable names to JsonNode values
+   */
   public void respondSuccess(Map<String, JsonNode> variablesMap) {
     UserTaskResponseResultDTO userTaskResponseResult =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
@@ -71,10 +94,23 @@ public class UserTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
+  /**
+   * Sends an escalation response with the provided code and message, and no variables.
+   *
+   * @param code the escalation code
+   * @param message the escalation message
+   */
   public void respondEscalation(String code, String message) {
     respondEscalation(code, message, VariablesDTO.empty());
   }
 
+  /**
+   * Sends an escalation response with the provided code, message, and variables.
+   *
+   * @param code the escalation code
+   * @param message the escalation message
+   * @param variables the variables to include in the response
+   */
   public void respondEscalation(String code, String message, VariablesDTO variables) {
     UserTaskResponseTriggerDTO processInstanceTrigger =
         new UserTaskResponseTriggerDTO(
@@ -87,6 +123,13 @@ public class UserTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
+  /**
+   * Sends an error response with the provided code and message, and optional variables.
+   *
+   * @param code the error code
+   * @param message the error message
+   * @param variables the variables to include in the response
+   */
   public void respondError(String code, String message, VariablesDTO variables) {
 
     UserTaskResponseTriggerDTO processInstanceTrigger =
@@ -100,6 +143,12 @@ public class UserTaskInstanceResponder {
             topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
   }
 
+  /**
+   * Sends an error response with the provided code and message, and no variables.
+   *
+   * @param code the error code
+   * @param message the error message
+   */
   public void respondError(String code, String message) {
     respondError(code, message, VariablesDTO.empty());
   }

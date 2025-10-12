@@ -15,11 +15,20 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
+/**
+ * Default implementation of TaktParameterResolverFactory that creates parameter resolvers based on
+ * parameter types and annotations.
+ */
 public class DefaultTaktParameterResolverFactory implements TaktParameterResolverFactory {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
   private final ProcessInstanceResponder externalTaskResponder;
 
+  /**
+   * Constructor for DefaultTaktParameterResolverFactory.
+   *
+   * @param externalTaskResponder The responder to handle external task instances.
+   */
   public DefaultTaktParameterResolverFactory(ProcessInstanceResponder externalTaskResponder) {
     this.externalTaskResponder = externalTaskResponder;
   }

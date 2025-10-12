@@ -22,6 +22,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * An ExternalTaskTriggerConsumer that scans for methods annotated with @TaktWorkerMethod and
+ * invokes them when an external task is received.
+ */
 @Slf4j
 public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTaskTriggerConsumer {
 
@@ -30,6 +34,12 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final TaktParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder externalTaskResponder;
 
+  /**
+   * Constructor
+   *
+   * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param externalTaskResponder Responder to handle external task instances
+   */
   public AnnotationScanningExternalTaskTriggerConsumer(
       TaktParameterResolverFactory parameterResolverFactory,
       ProcessInstanceResponder externalTaskResponder) {

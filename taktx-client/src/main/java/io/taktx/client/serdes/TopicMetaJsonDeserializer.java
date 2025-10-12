@@ -11,7 +11,9 @@ package io.taktx.client.serdes;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for TopicMetaDTO objects. */
 public class TopicMetaJsonDeserializer extends JsonDeserializer<TopicMetaDTO> {
+  /** Constructor for TopicMetaJsonDeserializer. */
   public TopicMetaJsonDeserializer() {
     super(TopicMetaDTO.class);
   }

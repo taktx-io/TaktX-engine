@@ -11,8 +11,10 @@ package io.taktx.client.serdes;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for ProcessDefinitionDTO objects. */
 public class ProcessDefinitionJsonDeserializer extends JsonDeserializer<ProcessDefinitionDTO> {
 
+  /** Constructor for ProcessDefinitionJsonDeserializer. */
   public ProcessDefinitionJsonDeserializer() {
     super(ProcessDefinitionDTO.class);
   }

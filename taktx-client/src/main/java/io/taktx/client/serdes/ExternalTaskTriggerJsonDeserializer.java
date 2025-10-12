@@ -11,7 +11,9 @@ package io.taktx.client.serdes;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.serdes.JsonDeserializer;
 
+/** A JSON deserializer for ExternalTaskTriggerDTO objects. */
 public class ExternalTaskTriggerJsonDeserializer extends JsonDeserializer<ExternalTaskTriggerDTO> {
+  /** Constructor for ExternalTaskTriggerJsonDeserializer. */
   public ExternalTaskTriggerJsonDeserializer() {
     super(ExternalTaskTriggerDTO.class);
   }
