@@ -59,7 +59,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -79,8 +78,6 @@ public class BpmnTestEngine {
   private TaktClient taktClient;
 
   private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new ConcurrentHashMap<>();
-  private final Map<UUID, ConcurrentLinkedQueue<ExternalTaskTriggerDTO>>
-      externalTaskTriggerQueueMap = new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<UserTaskTriggerDTO>> userTaskTriggerQueueMap =
       new ConcurrentHashMap<>();
   private final Map<UUID, ProcessInstanceDTO> processInstanceMap = new ConcurrentHashMap<>();
@@ -91,7 +88,8 @@ public class BpmnTestEngine {
       new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceId;
-  private ExternalTaskTriggerDTO activeExternalTaskTrigger;
+  private final Map<UUID, Map<String, ExternalTaskTriggerDTO>> activeExternalTaskTriggers =
+      new ConcurrentHashMap<>();
   private UserTaskTriggerDTO activeUserTaskTrigger;
   private ParsedDefinitionsDTO definitionsBeingDeployed;
   private final Clock originalClock;
@@ -212,15 +210,16 @@ public class BpmnTestEngine {
 
     LOG.info("Received external task trigger: " + externalTaskTrigger);
 
-    ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
-        externalTaskTriggerQueueMap.computeIfAbsent(
-            externalTaskTrigger.getProcessInstanceId(), k -> new ConcurrentLinkedQueue<>());
-    externalTaskTriggers.add(externalTaskTrigger);
+    Map<String, ExternalTaskTriggerDTO> externalTaskTriggers =
+        activeExternalTaskTriggers.computeIfAbsent(
+            externalTaskTrigger.getProcessInstanceId(), k -> new ConcurrentHashMap<>());
+    externalTaskTriggers.put(externalTaskTrigger.getExternalTaskId(), externalTaskTrigger);
+
     LOG.info(
-        "External task triggers: "
-            + externalTaskTriggerQueueMap
-            + " "
-            + System.identityHashCode(externalTaskTriggerQueueMap));
+        "Addewd external task trigger "
+            + externalTaskTrigger.getExternalTaskId()
+            + " for process id "
+            + externalTaskTrigger.getProcessInstanceId());
   }
 
   public void consumeUserTaskTrigger(UserTaskTriggerDTO userTaskTrigger) {
@@ -289,18 +288,6 @@ public class BpmnTestEngine {
     }
     UserTaskTriggerDTO poll = externalTaskTriggers.poll();
     log.info("polled user task queue {} {}", externalTaskTriggers, poll);
-    return poll;
-  }
-
-  public ExternalTaskTriggerDTO pollExternalTask() {
-    ConcurrentLinkedQueue<ExternalTaskTriggerDTO> externalTaskTriggers =
-        externalTaskTriggerQueueMap.get(activeProcessInstanceId);
-    log.info("polled external task queue {} {}", activeProcessInstanceId, externalTaskTriggers);
-    if (externalTaskTriggers == null) {
-      return null;
-    }
-    ExternalTaskTriggerDTO poll = externalTaskTriggers.poll();
-    log.info("polled external task queue {} {}", externalTaskTriggers, poll);
     return poll;
   }
 
@@ -446,44 +433,8 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
-      Map<String, BiConsumer<BpmnTestEngine, ExternalTaskTriggerDTO>> externalTaskTriggerQueueMap) {
-    Set<String> externalTaskIds = new HashSet<>(externalTaskTriggerQueueMap.keySet());
-    Awaitility.await()
-        .atMost(DEFAULT_DURATION)
-        .until(
-            this::pollExternalTask,
-            externalTaskTrigger -> {
-              String elementIdPath = "";
-              List<Long> triggerElementInstanceIdPath =
-                  externalTaskTrigger.getElementInstanceIdPath();
-              List<Long> elementInstanceIdPath = new ArrayList<>();
-              for (int i = 0; i < triggerElementInstanceIdPath.size(); i++) {
-                if (i > 0) {
-                  elementIdPath += "/";
-                }
-                elementInstanceIdPath.add(triggerElementInstanceIdPath.get(i));
-
-                FlowNodeInstanceKeyDTO flowNodeInstanceKeyDTO =
-                    new FlowNodeInstanceKeyDTO(activeProcessInstanceId, elementInstanceIdPath);
-                FlowNodeInstanceDTO flowNodeInstanceDTO =
-                    flowNodeInstanceMap.get(flowNodeInstanceKeyDTO);
-                elementIdPath += flowNodeInstanceDTO.getElementId();
-              }
-
-              BiConsumer<BpmnTestEngine, ExternalTaskTriggerDTO> bpmnTestEngineConsumer =
-                  externalTaskTriggerQueueMap.get(elementIdPath);
-              if (bpmnTestEngineConsumer != null) {
-                bpmnTestEngineConsumer.accept(this, externalTaskTrigger);
-                externalTaskIds.remove(elementIdPath);
-              }
-              return externalTaskIds.isEmpty();
-            });
-    return this;
-  }
-
-  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(String elementId) {
-    return waitUntilExternalTaskIsWaitingForResponse(elementId, DEFAULT_DURATION);
+  public BpmnTestEngine waitForExternalTaskTrigger(String taskId) {
+    return waitForExternalTaskTrigger(taskId, DEFAULT_DURATION);
   }
 
   public BpmnTestEngine waitUntilUserTaskIsWaitingForResponse(String elementId) {
@@ -494,8 +445,8 @@ public class BpmnTestEngine {
     log.info(
         "waitUntilUserTaskIsWaitingForResponse {} {} {}",
         activeProcessInstanceId,
-        externalTaskTriggerQueueMap,
-        System.identityHashCode(externalTaskTriggerQueueMap));
+        userTaskTriggerQueueMap,
+        System.identityHashCode(userTaskTriggerQueueMap));
     activeUserTaskTrigger =
         Awaitility.await()
             .atMost(duration)
@@ -510,25 +461,17 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine waitUntilExternalTaskIsWaitingForResponse(
-      String elementId, Duration duration) {
+  public BpmnTestEngine waitForExternalTaskTrigger(String taskId, Duration duration) {
     log.info(
-        "waitUntilExternalTaskIsWaitingForResponse {} {} {}",
-        activeProcessInstanceId,
-        externalTaskTriggerQueueMap,
-        System.identityHashCode(externalTaskTriggerQueueMap));
-    activeExternalTaskTrigger =
-        Awaitility.await()
-            .atMost(duration)
-            .until(
-                this::pollExternalTask,
-                externalTaskTrigger ->
-                    externalTaskTrigger != null
-                        && externalTaskTrigger
-                            .getProcessInstanceId()
-                            .equals(activeProcessInstanceId)
-                        && getScopeWithElementId(activeProcessInstanceId, elementId).stream()
-                            .allMatch(FlowNodeInstanceDTO::isActive));
+        "waitForExternalTaskTrigger {} {}", activeProcessInstanceId, activeExternalTaskTriggers);
+    Awaitility.await()
+        .atMost(duration)
+        .until(
+            () ->
+                activeExternalTaskTriggers
+                    .getOrDefault(activeProcessInstanceId, Map.of())
+                    .get(taskId),
+            Objects::nonNull);
 
     return this;
   }
@@ -592,9 +535,11 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine andRespondToExternalTaskWithSuccess(VariablesDTO variables) {
+  public BpmnTestEngine andRespondToExternalTaskWithSuccess(String taskId, VariablesDTO variables) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO =
+        activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
     taktClient
-        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondToExternalTask(externalTaskTriggerDTO)
         .respondSuccess(variables.getVariables());
     return this;
   }
@@ -616,30 +561,37 @@ public class BpmnTestEngine {
     return this;
   }
 
-  public BpmnTestEngine andRespondToExternalTaskWithPromise(String newTimeout) {
+  public BpmnTestEngine andRespondToExternalTaskWithPromise(String taskId, String newTimeout) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO =
+        activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
     taktClient
-        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondToExternalTask(externalTaskTriggerDTO)
         .respondPromise(Duration.parse(newTimeout));
     return this;
   }
 
   public BpmnTestEngine andRespondToExternalTaskWithError(
-      boolean allowRetry, String code, String message, VariablesDTO variables) {
+      String taskId, boolean allowRetry, String code, String message, VariablesDTO variables) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO =
+        activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
     taktClient
-        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondToExternalTask(externalTaskTriggerDTO)
         .respondError(allowRetry, code, message, variables);
     return this;
   }
 
   public BpmnTestEngine andRespondToExternalTaskWithError(
-      boolean allowRetry, String code, String message) {
-    return andRespondToExternalTaskWithError(allowRetry, code, message, VariablesDTO.empty());
+      String taskId, boolean allowRetry, String code, String message) {
+    return andRespondToExternalTaskWithError(
+        taskId, allowRetry, code, message, VariablesDTO.empty());
   }
 
   public BpmnTestEngine andRespondToExternalTaskWithEscalation(
-      String code, String message, VariablesDTO variables) {
+      String taskId, String code, String message, VariablesDTO variables) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO =
+        activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
     taktClient
-        .respondToExternalTask(activeExternalTaskTrigger)
+        .respondToExternalTask(externalTaskTriggerDTO)
         .respondEscalation(code, message, variables);
     return this;
   }

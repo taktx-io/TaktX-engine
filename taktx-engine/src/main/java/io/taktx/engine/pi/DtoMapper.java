@@ -37,6 +37,7 @@ import io.taktx.dto.ServiceTaskDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
+import io.taktx.dto.TerminateEventDefinitionDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskDTO;
 import io.taktx.engine.pd.model.BaseElement;
@@ -66,6 +67,7 @@ import io.taktx.engine.pd.model.ServiceTask;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.Task;
+import io.taktx.engine.pd.model.TerminateEventDefinition;
 import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.model.ErrorEventSignal;
@@ -182,6 +184,9 @@ public interface DtoMapper {
       source = EscalationEventDefinitionDTO.class,
       target = EscalationEventDefinition.class)
   @SubclassMapping(source = ErrorEventDefinitionDTO.class, target = ErrorEventDefinition.class)
+  @SubclassMapping(
+      source = TerminateEventDefinitionDTO.class,
+      target = TerminateEventDefinition.class)
   EventDefinition map(EventDefinitionDTO eventDefinition);
 
   @Mapping(target = "parentId", ignore = true)

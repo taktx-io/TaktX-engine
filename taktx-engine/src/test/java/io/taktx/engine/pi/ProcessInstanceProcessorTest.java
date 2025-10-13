@@ -102,8 +102,8 @@ class ProcessInstanceProcessorTest {
         .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse("SubTask_1")
-        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("servicetask")
+        .andRespondToExternalTaskWithSuccess("servicetask", VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
@@ -120,9 +120,8 @@ class ProcessInstanceProcessorTest {
         .registerAndSubscribeToExternalTaskIds("service-task")
         .deployProcessDefinitionAndWait("/bpmn/subprocess-servicetask-nested.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse(
-            "SubProcess_1/SubSubProcess_1.aaa/SubSubSubProcess_1/SubTask_1")
-        .andRespondToExternalTaskWithSuccess(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("service-task")
+        .andRespondToExternalTaskWithSuccess("service-task", VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
@@ -232,6 +231,46 @@ class ProcessInstanceProcessorTest {
         .assertThatProcess()
         .hasAbortedElementWithId("SubProcess_1")
         .isAborted();
+  }
+
+  @Test
+  void testTerminateEndEvent() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask_a", "servicetask_b")
+        .deployProcessDefinitionAndWait("/bpmn/terminate_end_event.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("servicetask_a")
+        .waitForExternalTaskTrigger("servicetask_b")
+        .andRespondToExternalTaskWithSuccess("servicetask_b", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasAbortedElementWithId("activity_a")
+        .hasPassedElementWithId("activity_b")
+        .hasPassedElementWithId("Terminate_End_Event")
+        .hasNotPassedElementWithId("EndEvent_1")
+        .isAborted();
+  }
+
+  @Test
+  void testTerminateEndEvent_Subprocess() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask_a", "servicetask_b")
+        .deployProcessDefinitionAndWait("/bpmn/terminate_end_event_subprocess.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("servicetask_a")
+        .waitForExternalTaskTrigger("servicetask_b")
+        .andRespondToExternalTaskWithSuccess("servicetask_b", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("Event_0tscatf")
+        .hasAbortedElementWithId("Activity_0xvkaul")
+        .hasAbortedElementWithId("Activity_0xvkaul/activity_a")
+        .hasPassedElementWithId("Activity_0xvkaul/activity_b")
+        .hasPassedElementWithId("Activity_0xvkaul/Terminate_End_Event")
+        .hasNotPassedElementWithId("Event_0ycspwm")
+        .isCompleted();
   }
 
   @Test

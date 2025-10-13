@@ -17,6 +17,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import lombok.Getter;
 
 public class DirectInstanceResult {
 
@@ -26,6 +27,7 @@ public class DirectInstanceResult {
   private final Queue<FlowNodeInstance<?>> abortInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
   private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
+  @Getter private boolean abortScope = false;
 
   private DirectInstanceResult() {}
 
@@ -78,7 +80,16 @@ public class DirectInstanceResult {
     return !newFlowNodeInstances.isEmpty()
         || !continueInstances.isEmpty()
         || !abortInstances.isEmpty()
-        || !events.isEmpty();
+        || !events.isEmpty()
+        || abortScope;
+  }
+
+  public void setAbortScope() {
+    this.abortScope = true;
+  }
+
+  public void resetAbortScope() {
+    abortScope = false;
   }
 
   public void addBubbleUpEvent(EventSignal event) {

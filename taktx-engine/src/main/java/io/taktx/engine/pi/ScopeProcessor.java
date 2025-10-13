@@ -43,8 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 @ApplicationScoped
+@Slf4j
 public class ScopeProcessor {
 
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
@@ -261,6 +263,11 @@ public class ScopeProcessor {
 
     DirectInstanceResult directInstanceResult = scope.getDirectInstanceResult();
     while (directInstanceResult.hasDirectTriggers()) {
+      if (directInstanceResult.isAbortScope()) {
+        log.info("Aborting scope {}", scope.getParentFlowNodeInstance());
+        abortScope(scope);
+        directInstanceResult.resetAbortScope();
+      }
       processEvents(processInstanceProcessingContext, scope);
       processAbortInstances(processInstanceProcessingContext, scope);
       processNewInstances(processInstanceProcessingContext, scope);
@@ -269,6 +276,20 @@ public class ScopeProcessor {
     scope.updateActiveCountForInstances();
 
     terminateEventSubprocessSubscriptionsIfDone(processInstanceProcessingContext, scope);
+  }
+
+  private void abortScope(Scope scope) {
+    scope
+        .getFlowNodeInstances()
+        .getAllInstances()
+        .values()
+        .forEach(
+            instance -> {
+              if (instance.isActive()) {
+                scope.getDirectInstanceResult().addAbortInstance(instance);
+              }
+            });
+    scope.setState(ExecutionState.ABORTED);
   }
 
   private static void bubbleUpEvents(Scope scope, WithScope withScope) {

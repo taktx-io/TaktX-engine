@@ -24,8 +24,10 @@ import io.taktx.engine.pi.model.ThrowEventInstance;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @NoArgsConstructor
+@Slf4j
 public abstract class ThrowEventInstanceProcessor<
         E extends ThrowEvent, I extends ThrowEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
@@ -43,6 +45,15 @@ public abstract class ThrowEventInstanceProcessor<
       Scope scope,
       I flowNodeInstance,
       String inputFlowId) {
+
+    flowNodeInstance
+        .getFlowNode()
+        .getTerminateEventDefinition()
+        .ifPresent(
+            terminateEventDefinition -> {
+              log.info("Terminate event encountered, aborting process instance");
+              scope.getDirectInstanceResult().setAbortScope();
+            });
 
     flowNodeInstance
         .getFlowNode()

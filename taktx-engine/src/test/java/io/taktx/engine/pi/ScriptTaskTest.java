@@ -32,8 +32,9 @@ class ScriptTaskTest {
         .registerAndSubscribeToExternalTaskIds("script-jobworker")
         .deployProcessDefinitionAndWait("/bpmn/script-tasks.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitUntilExternalTaskIsWaitingForResponse("JobWorkerScriptTask_1")
-        .andRespondToExternalTaskWithSuccess(VariablesDTO.of("jobWorkerResult", 456))
+        .waitForExternalTaskTrigger("script-jobworker")
+        .andRespondToExternalTaskWithSuccess(
+            "script-jobworker", VariablesDTO.of("jobWorkerResult", 456))
         .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1", 1)

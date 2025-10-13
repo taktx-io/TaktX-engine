@@ -115,6 +115,10 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
+    log.info(
+        "Processing external task response: {} for flowNode {}",
+        responseResult,
+        externalTaskInstance.getFlowNode().getId());
     if (ExternalTaskResponseType.SUCCESS == responseResult.getResponseType()) {
       handleSuccess(instanceResult, externalTaskInstance);
     } else if (ExternalTaskResponseType.PROMISE == responseResult.getResponseType()) {
