@@ -6,22 +6,18 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.engine.pi.model;
+package io.taktx.dto;
 
-import io.taktx.engine.pd.model.EventSignal;
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class ErrorEventSignal extends EventSignal {
-
+@AllArgsConstructor
+@RegisterForReflection
+public class ErrorEventSignalDTO extends EventSignalDTO {
   private String code;
   private String message;
-
-  public ErrorEventSignal(FlowNodeInstance<?> fLowNodeInstance, String code, String message) {
-    super(fLowNodeInstance);
-    this.code = code;
-    this.message = message;
-  }
 }

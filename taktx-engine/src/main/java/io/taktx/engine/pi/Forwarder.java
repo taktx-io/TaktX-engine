@@ -12,6 +12,7 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
@@ -87,6 +88,19 @@ public class Forwarder {
     forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO, scope);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
+    forwardEventSignalTriggers(context, instanceResult);
+  }
+
+  private void forwardEventSignalTriggers(
+      ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
+    Queue<EventSignalTriggerDTO> eventSignalTriggerList =
+        instanceResult.getEventSignalTriggerList();
+    while (!eventSignalTriggerList.isEmpty()) {
+      EventSignalTriggerDTO eventSignalTriggerDTO = eventSignalTriggerList.poll();
+      context.forward(
+          new Record<>(
+              eventSignalTriggerDTO.getProcessInstanceId(), eventSignalTriggerDTO, clock.millis()));
+    }
   }
 
   private void forwardInstanceUpdates(

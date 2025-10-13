@@ -12,16 +12,16 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.ProcessInstanceUpdateDTO;
+import io.taktx.dto.ErrorEventSignalDTO;
+import io.taktx.dto.EscalationEventSignalDTO;
 
-public class InstanceUpdateTypeIdResolver extends TypeIdResolverBase {
+public class EventSignalTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case FlowNodeInstanceUpdateDTO _ -> "F";
-      case ProcessInstanceUpdateDTO _ -> "P";
+      case ErrorEventSignalDTO _ -> "R";
+      case EscalationEventSignalDTO _ -> "S";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -39,8 +39,8 @@ public class InstanceUpdateTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "F" -> context.constructType(FlowNodeInstanceUpdateDTO.class);
-      case "P" -> context.constructType(ProcessInstanceUpdateDTO.class);
+      case "R" -> context.constructType(ErrorEventSignalDTO.class);
+      case "S" -> context.constructType(EscalationEventSignalDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

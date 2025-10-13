@@ -10,6 +10,8 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -48,14 +50,17 @@ public class ScopeProcessor {
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FeelExpressionHandler feelExpressionHandler;
   private final BoundaryEventInstanceProcessor boundaryEventProcessor;
+  private final DtoMapper dtoMapper;
 
   public ScopeProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
       FeelExpressionHandler feelExpressionHandler,
-      BoundaryEventInstanceProcessor boundaryEventProcessor) {
+      BoundaryEventInstanceProcessor boundaryEventProcessor,
+      DtoMapper dtoMapper) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.feelExpressionHandler = feelExpressionHandler;
     this.boundaryEventProcessor = boundaryEventProcessor;
+    this.dtoMapper = dtoMapper;
   }
 
   public void processStart(
@@ -180,13 +185,21 @@ public class ScopeProcessor {
               .getInstanceWithInstanceId(
                   trigger.getElementInstanceIdPath().get(scope.getSubProcessLevel()));
 
-      ContinueFlowNodeInstanceInfo continueInstance =
-          new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger);
-
       scope.getVariableScope().merge(trigger.getVariables());
 
-      scope.getDirectInstanceResult().addContinueInstance(continueInstance);
+      if (trigger instanceof EventSignalTriggerDTO eventSignalTriggerDTO) {
+        for (EventSignalDTO eventSignalDTO : eventSignalTriggerDTO.getEventSignalList()) {
+          EventSignal eventSignal = dtoMapper.map(eventSignalDTO);
+          eventSignal.getPathToSource().addFirst(flowNodeInstance);
+          scope.getDirectInstanceResult().addEvent(eventSignal);
+        }
 
+      } else {
+        ContinueFlowNodeInstanceInfo continueInstance =
+            new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger);
+
+        scope.getDirectInstanceResult().addContinueInstance(continueInstance);
+      }
       doBusiness(processInstanceProcessingContext, scope);
     }
   }

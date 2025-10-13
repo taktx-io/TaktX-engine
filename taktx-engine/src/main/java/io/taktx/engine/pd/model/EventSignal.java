@@ -11,9 +11,11 @@ package io.taktx.engine.pd.model;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.WithScope;
 import java.util.LinkedList;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
+@Data
+@NoArgsConstructor
 public abstract class EventSignal {
   private final LinkedList<FlowNodeInstance<?>> pathToSource = new LinkedList<>();
 

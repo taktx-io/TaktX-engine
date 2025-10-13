@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
@@ -25,13 +26,14 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case ExternalTaskTriggerDTO ignored -> "E";
-      case StartFlowElementTriggerDTO ignored -> "S";
-      case AbortTriggerDTO ignored -> "T";
-      case ExternalTaskResponseTriggerDTO ignored -> "R";
-      case UserTaskResponseTriggerDTO ignored -> "U";
-      case ContinueFlowElementTriggerDTO ignored -> "C";
-      case StartCommandDTO ignored -> "A";
+      case EventSignalTriggerDTO _ -> "V";
+      case ExternalTaskTriggerDTO _ -> "E";
+      case StartFlowElementTriggerDTO _ -> "S";
+      case AbortTriggerDTO _ -> "T";
+      case ExternalTaskResponseTriggerDTO _ -> "R";
+      case UserTaskResponseTriggerDTO _ -> "U";
+      case ContinueFlowElementTriggerDTO _ -> "C";
+      case StartCommandDTO _ -> "A";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -49,6 +51,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
+      case "V" -> context.constructType(EventSignalTriggerDTO.class);
       case "E" -> context.constructType(ExternalTaskTriggerDTO.class);
       case "S" -> context.constructType(StartFlowElementTriggerDTO.class);
       case "T" -> context.constructType(AbortTriggerDTO.class);

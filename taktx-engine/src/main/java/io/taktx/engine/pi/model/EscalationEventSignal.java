@@ -9,13 +9,15 @@
 package io.taktx.engine.pi.model;
 
 import io.taktx.engine.pd.model.EventSignal;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
+@Data
+@NoArgsConstructor
 public class EscalationEventSignal extends EventSignal {
 
-  private final String code;
-  private final String message;
+  private String code;
+  private String message;
 
   public EscalationEventSignal(FlowNodeInstance<?> fLowNodeInstance, String code, String message) {
     super(fLowNodeInstance);

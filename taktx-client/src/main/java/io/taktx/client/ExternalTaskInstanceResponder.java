@@ -148,6 +148,19 @@ public class ExternalTaskInstanceResponder {
    * @param message The error message.
    */
   public void respondError(boolean allowRetry, String code, String message) {
+    respondError(allowRetry, code, message, VariablesDTO.empty());
+  }
+
+  /**
+   * Responds with an error message.
+   *
+   * @param allowRetry Whether to allow retrying the task.
+   * @param code The error code.
+   * @param message The error message.
+   * @param variables The variables to include in the response.
+   */
+  public void respondError(
+      boolean allowRetry, String code, String message, VariablesDTO variables) {
 
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
@@ -155,7 +168,7 @@ public class ExternalTaskInstanceResponder {
             elementInstanceIdPath,
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ERROR, allowRetry, code, message, 0L),
-            VariablesDTO.empty());
+            variables);
 
     // Set explicit timestamp for accurate latency measurement
     long currentTimestamp = System.currentTimeMillis();

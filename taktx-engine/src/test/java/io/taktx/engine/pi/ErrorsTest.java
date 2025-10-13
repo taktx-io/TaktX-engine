@@ -48,6 +48,51 @@ class ErrorsTest {
   }
 
   @Test
+  void testInterruptingErrorTriggered_CallActivity() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity_servicetask.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.bpmn")
+        .startProcessInstance(
+            VariablesDTO.of(
+                "startVariable", "valueStart", "calledActivity", "calledActivityServiceTask"))
+        .waitUntilChildProcessIsStarted("calledActivityServiceTask")
+        .waitUntilExternalTaskIsWaitingForResponse("servicetask")
+        .andRespondToExternalTaskWithError(
+            false, "123", "message", VariablesDTO.of("err", "errtest"))
+        .parentProcess()
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1")
+        .hasAbortedElementWithId("callactivity-id")
+        .hasPassedElementWithId("EndErrorEvent_123")
+        .hasVariableWithValue("err", "errtest");
+  }
+
+  @Test
+  void testInterruptingEscalationTriggered_CallActivity() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/calledActivity_servicetask.bpmn")
+        .deployProcessDefinitionAndWait("/bpmn/callactivity-single.bpmn")
+        .startProcessInstance(
+            VariablesDTO.of(
+                "startVariable", "valueStart", "calledActivity", "calledActivityServiceTask"))
+        .waitUntilChildProcessIsStarted("calledActivityServiceTask")
+        .waitUntilExternalTaskIsWaitingForResponse("servicetask")
+        .andRespondToExternalTaskWithEscalation("abc", "message", VariablesDTO.of("esc", "esctest"))
+        .parentProcess()
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1")
+        .hasAbortedElementWithId("callactivity-id")
+        .hasPassedElementWithId("EndEscalationEvent_ABC")
+        .hasVariableWithValue("esc", "esctest");
+  }
+
+  @Test
   void testInterruptingError_CatchAllTriggered() throws IOException {
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")

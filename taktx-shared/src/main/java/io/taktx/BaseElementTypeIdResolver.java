@@ -42,30 +42,30 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case BoundaryEventDTO ignored -> "B";
-      case StartEventDTO ignored -> "S";
-      case IntermediateCatchEventDTO ignored -> "IC";
-      case IntermediateThrowEventDTO ignored -> "IT";
-      case EndEventDTO ignored -> "E";
-      case InclusiveGatewayDTO ignored -> "IG";
-      case ParallelGatewayDTO ignored -> "PG";
-      case ExclusiveGatewayDTO ignored -> "EG";
-      case SubProcessDTO ignored -> "SP";
-      case CallActivityDTO ignored -> "CA";
-      case ReceiveTaskDTO ignored -> "RT";
-      case SendTaskDTO ignored -> "ST";
-      case ServiceTaskDTO ignored -> "SV";
-      case ScriptTaskDTO ignored -> "SC";
-      case UserTaskDTO ignored -> "UT";
-      case TaskDTO ignored -> "T";
-      case SequenceFlowDTO ignored -> "Q";
-      case ProcessDTO ignored -> "P";
-      case LinkEventDefinitionDTO ignored -> "LE";
-      case TerminateEventDefinitionDTO ignored -> "TE";
-      case EscalationEventDefinitionDTO ignored -> "ES";
-      case TimerEventDefinitionDTO ignored -> "TM";
-      case ErrorEventDefinitionDTO ignored -> "ER";
-      case MessageEventDefinitionDTO ignored -> "ME";
+      case BoundaryEventDTO _ -> "B";
+      case StartEventDTO _ -> "S";
+      case IntermediateCatchEventDTO _ -> "IC";
+      case IntermediateThrowEventDTO _ -> "IT";
+      case EndEventDTO _ -> "E";
+      case InclusiveGatewayDTO _ -> "IG";
+      case ParallelGatewayDTO _ -> "PG";
+      case ExclusiveGatewayDTO _ -> "EG";
+      case SubProcessDTO _ -> "SP";
+      case CallActivityDTO _ -> "CA";
+      case ReceiveTaskDTO _ -> "RT";
+      case SendTaskDTO _ -> "ST";
+      case ServiceTaskDTO _ -> "SV";
+      case ScriptTaskDTO _ -> "SC";
+      case UserTaskDTO _ -> "UT";
+      case TaskDTO _ -> "T";
+      case SequenceFlowDTO _ -> "Q";
+      case ProcessDTO _ -> "P";
+      case LinkEventDefinitionDTO _ -> "LE";
+      case TerminateEventDefinitionDTO _ -> "TE";
+      case EscalationEventDefinitionDTO _ -> "ES";
+      case TimerEventDefinitionDTO _ -> "TM";
+      case ErrorEventDefinitionDTO _ -> "ER";
+      case MessageEventDefinitionDTO _ -> "ME";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

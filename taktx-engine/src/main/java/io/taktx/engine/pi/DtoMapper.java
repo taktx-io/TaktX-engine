@@ -13,8 +13,11 @@ import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CallActivityDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
+import io.taktx.dto.ErrorEventSignalDTO;
 import io.taktx.dto.EscalationEventDefinitionDTO;
+import io.taktx.dto.EscalationEventSignalDTO;
 import io.taktx.dto.EventDefinitionDTO;
+import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.ExclusiveGatewayDTO;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowElementsDTO;
@@ -43,6 +46,7 @@ import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pd.model.ErrorEventDefinition;
 import io.taktx.engine.pd.model.EscalationEventDefinition;
 import io.taktx.engine.pd.model.EventDefinition;
+import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.ExclusiveGateway;
 import io.taktx.engine.pd.model.FlowElement;
 import io.taktx.engine.pd.model.FlowElements;
@@ -64,6 +68,8 @@ import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pd.model.UserTask;
+import io.taktx.engine.pi.model.ErrorEventSignal;
+import io.taktx.engine.pi.model.EscalationEventSignal;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 import org.mapstruct.Builder;
@@ -180,6 +186,26 @@ public interface DtoMapper {
 
   @Mapping(target = "parentId", ignore = true)
   TimerEventDefinitionDTO map(TimerEventDefinition eventDefinition);
+
+  @SubclassMapping(source = ErrorEventSignal.class, target = ErrorEventSignalDTO.class)
+  @SubclassMapping(source = EscalationEventSignal.class, target = EscalationEventSignalDTO.class)
+  EventSignalDTO map(EventSignal source);
+
+  @SubclassMapping(source = ErrorEventSignalDTO.class, target = ErrorEventSignal.class)
+  @SubclassMapping(source = EscalationEventSignalDTO.class, target = EscalationEventSignal.class)
+  EventSignal map(EventSignalDTO source);
+
+  @ObjectFactory
+  default <T extends EventSignalDTO> T resolveEventSignal(
+      EventSignal source, @TargetType Class<T> type) {
+    return getNewInstance(type);
+  }
+
+  @ObjectFactory
+  default <T extends EventSignal> T resolveEventSignalDto(
+      EventSignalDTO source, @TargetType Class<T> type) {
+    return getNewInstance(type);
+  }
 
   @ObjectFactory
   default <T extends BaseElement> T resolveEquipment(

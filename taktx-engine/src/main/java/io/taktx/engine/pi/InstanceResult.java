@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -39,6 +40,7 @@ public class InstanceResult {
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<ScheduledStartInfo> scheduledStartInfos = new ArrayDeque<>();
+  private final Queue<EventSignalTriggerDTO> eventSignalTriggerList = new ArrayDeque<>();
   private final Queue<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayDeque<>();
   private final Queue<ScheduleKeyDTO> cancelSchedules = new ArrayDeque<>();
   private final Queue<ScheduledExternalTaskTriggerTimeoutInfo>
@@ -101,5 +103,9 @@ public class InstanceResult {
 
   public void addScheduledStart(ScheduledStartInfo scheduledStartInfo) {
     scheduledStartInfos.add(scheduledStartInfo);
+  }
+
+  public void addEventSignals(EventSignalTriggerDTO eventSignalList) {
+    this.eventSignalTriggerList.add(eventSignalList);
   }
 }

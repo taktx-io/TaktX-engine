@@ -21,9 +21,9 @@ public class MessageSchedulerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case RecurringMessageScheduleDTO ignored -> "R";
-      case FixedRateMessageScheduleDTO ignored -> "F";
-      case OneTimeScheduleDTO ignored -> "O";
+      case RecurringMessageScheduleDTO _ -> "R";
+      case FixedRateMessageScheduleDTO _ -> "F";
+      case OneTimeScheduleDTO _ -> "O";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

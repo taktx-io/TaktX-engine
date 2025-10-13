@@ -13,6 +13,8 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
@@ -42,6 +44,7 @@ import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -340,6 +343,7 @@ public class ProcessInstanceProcessor
       Scope scope) {
 
     EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
+    List<EventSignalDTO> eventSignalList = new ArrayList<>();
     while (eventSignal != null) {
       if (eventSignal instanceof ErrorEventSignal) {
         AbortTriggerDTO trigger =
@@ -347,8 +351,8 @@ public class ProcessInstanceProcessor
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 Collections.emptyList());
         scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
-        break;
       }
+      eventSignalList.add(dtoMapper.map(eventSignal));
       eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
     }
 
@@ -371,8 +375,10 @@ public class ProcessInstanceProcessor
           processInstanceToUpdate(processInstance, scope, clock.millis()));
     }
 
-    if (processInstance.getScope().getState().isDone()) {
+    if (processInstance.getScope().getState().isDone() && eventSignalList.isEmpty()) {
       continueParentInstance(instanceResult, processInstance, scope);
+    } else if (!eventSignalList.isEmpty()) {
+      throwEventToParentInstance(instanceResult, processInstance, scope, eventSignalList);
     }
 
     forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO, scope);
@@ -438,6 +444,30 @@ public class ProcessInstanceProcessor
               processInstance.getParentElementInstancePath(),
               null,
               variables));
+    }
+  }
+
+  private void throwEventToParentInstance(
+      InstanceResult instanceResult,
+      ProcessInstance processInstance,
+      Scope scope,
+      List<EventSignalDTO> eventSignalList) {
+    if (processInstance.getParentProcessInstanceId() != null) {
+      VariablesDTO variables;
+
+      if (processInstance.isPropagateAllToParent()) {
+        variables = VariablesDTO.of(scope.retrieveAndFlattenAllVariables());
+      } else {
+        VariableScope outputVariables = new VariableScope(scope, variablesStore);
+        ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
+        variables = VariablesDTO.of(outputVariables.getVariables());
+      }
+      instanceResult.addEventSignals(
+          new EventSignalTriggerDTO(
+              processInstance.getParentProcessInstanceId(),
+              processInstance.getParentElementInstancePath(),
+              variables,
+              eventSignalList));
     }
   }
 

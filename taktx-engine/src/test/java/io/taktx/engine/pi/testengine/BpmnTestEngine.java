@@ -624,11 +624,16 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine andRespondToExternalTaskWithError(
-      boolean allowRetry, String code, String message) {
+      boolean allowRetry, String code, String message, VariablesDTO variables) {
     taktClient
         .respondToExternalTask(activeExternalTaskTrigger)
-        .respondError(allowRetry, code, message);
+        .respondError(allowRetry, code, message, variables);
     return this;
+  }
+
+  public BpmnTestEngine andRespondToExternalTaskWithError(
+      boolean allowRetry, String code, String message) {
+    return andRespondToExternalTaskWithError(allowRetry, code, message, VariablesDTO.empty());
   }
 
   public BpmnTestEngine andRespondToExternalTaskWithEscalation(
