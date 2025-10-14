@@ -101,15 +101,23 @@ public class GenericFlowElementMapper implements FlowElementMapper {
             eventDefinitions);
       }
     } else if (throwEvent instanceof TIntermediateThrowEvent intermediateThrowEvent) {
-      InputOutputMappingDTO ioMapping =
-          bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
-      return new IntermediateThrowEventDTO(
-          intermediateThrowEvent.getId(),
-          parentId,
-          mapQNameList(intermediateThrowEvent.getIncoming()),
-          mapQNameList(intermediateThrowEvent.getOutgoing()),
-          ioMapping,
-          eventDefinitions);
+      if (hasMessageEventDefinition(eventDefinitions)) {
+        InputOutputMappingDTO ioMapping =
+            bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
+        return bpmnMapperFactory
+            .createMessageIntermediateThrowEventMapper()
+            .map(intermediateThrowEvent, parentId, ioMapping);
+      } else {
+        InputOutputMappingDTO ioMapping =
+            bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
+        return new IntermediateThrowEventDTO(
+            intermediateThrowEvent.getId(),
+            parentId,
+            mapQNameList(intermediateThrowEvent.getIncoming()),
+            mapQNameList(intermediateThrowEvent.getOutgoing()),
+            ioMapping,
+            eventDefinitions);
+      }
     }
 
     throw new IllegalStateException(

@@ -24,6 +24,7 @@ import io.taktx.dto.IntermediateThrowEventDTO;
 import io.taktx.dto.LinkEventDefinitionDTO;
 import io.taktx.dto.MessageEndEventDTO;
 import io.taktx.dto.MessageEventDefinitionDTO;
+import io.taktx.dto.MessageIntermediateThrowEventDTO;
 import io.taktx.dto.ParallelGatewayDTO;
 import io.taktx.dto.ProcessDTO;
 import io.taktx.dto.ReceiveTaskDTO;
@@ -57,6 +58,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case SendTaskDTO _ -> "ST";
       case ServiceTaskDTO _ -> "SV";
       case MessageEndEventDTO _ -> "MS";
+      case MessageIntermediateThrowEventDTO _ -> "MI";
       case ScriptTaskDTO _ -> "SC";
       case UserTaskDTO _ -> "UT";
       case TaskDTO _ -> "T";
@@ -98,6 +100,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "RT" -> context.constructType(ReceiveTaskDTO.class);
       case "ST" -> context.constructType(SendTaskDTO.class);
       case "MS" -> context.constructType(MessageEndEventDTO.class);
+      case "MI" -> context.constructType(MessageIntermediateThrowEventDTO.class);
       case "SC" -> context.constructType(ScriptTaskDTO.class);
       case "SV" -> context.constructType(ServiceTaskDTO.class);
       case "UT" -> context.constructType(UserTaskDTO.class);

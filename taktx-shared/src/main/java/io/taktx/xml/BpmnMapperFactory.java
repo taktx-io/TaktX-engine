@@ -118,4 +118,12 @@ public class BpmnMapperFactory {
       return new GenericMessageEndEventMapper();
     }
   }
+
+  public MessageIntermediateThrowEventMapper createMessageIntermediateThrowEventMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeMessageIntermediateThrowEventMapper();
+    } else {
+      return new GenericMessageIntermediateThrowEventMapper();
+    }
+  }
 }

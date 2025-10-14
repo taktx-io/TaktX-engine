@@ -165,8 +165,25 @@ class ExternalTaskTest {
         .waitUntilDone()
         .assertThatProcess()
         .hasVariableWithValue("var1", "value1")
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("EndEvent_1")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("EndEvent_1")
+        .isCompleted();
+  }
+
+  @Test
+  void testMessageIntermediateThrowEvent_Single() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("message-end")
+        .deployProcessDefinitionAndWait("/bpmn/message_intermediate_throw.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("message-end")
+        .andRespondToExternalTaskWithSuccess("message-end", VariablesDTO.of("var1", "value1"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "value1")
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("MessageIntermediateThrowEvent")
+        .hasPassedElementWithId("EndEvent_1")
         .isCompleted();
   }
 

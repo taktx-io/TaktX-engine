@@ -19,6 +19,7 @@ import io.taktx.dto.IntermediateCatchEventInstanceDTO;
 import io.taktx.dto.IntermediateThrowEventInstanceDTO;
 import io.taktx.dto.IoVariableMappingDTO;
 import io.taktx.dto.MessageEndEventInstanceDTO;
+import io.taktx.dto.MessageIntermediateThrowEventInstanceDTO;
 import io.taktx.dto.MultiInstanceInstanceDTO;
 import io.taktx.dto.ParallelGatewayInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
@@ -44,6 +45,7 @@ import io.taktx.engine.pi.model.InclusiveGatewayInstance;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
 import io.taktx.engine.pi.model.MessageEndEventInstance;
+import io.taktx.engine.pi.model.MessageIntermediateThrowEventInstance;
 import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ParallelGatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -197,6 +199,19 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
+          "java((io.taktx.engine.pd.model.MessageIntermediateThrowEvent)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
+  @Mapping(target = "wasWaiting", ignore = true)
+  @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "state", ignore = true)
+  MessageIntermediateThrowEventInstance map(
+      MessageIntermediateThrowEventInstanceDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
           "java((io.taktx.engine.pd.model.ScriptTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
@@ -298,6 +313,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(
       target = MessageEndEventInstance.class,
       source = MessageEndEventInstanceDTO.class)
+  @SubclassMapping(
+      target = MessageIntermediateThrowEventInstance.class,
+      source = MessageIntermediateThrowEventInstanceDTO.class)
   @SubclassMapping(target = UserTaskInstance.class, source = UserTaskInstanceDTO.class)
   @SubclassMapping(target = ReceiveTaskInstance.class, source = ReceiveTaskInstanceDTO.class)
   @SubclassMapping(target = ScriptTaskInstance.class, source = ScriptTaskInstanceDTO.class)
@@ -384,6 +402,13 @@ public interface ProcessInstanceMapper {
       target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
+  MessageIntermediateThrowEventInstanceDTO map(
+      MessageIntermediateThrowEventInstance source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "elementIndex",
+      expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ScriptTaskInstanceDTO map(ScriptTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -451,6 +476,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(
       source = MessageEndEventInstance.class,
       target = MessageEndEventInstanceDTO.class)
+  @SubclassMapping(
+      source = MessageIntermediateThrowEventInstance.class,
+      target = MessageIntermediateThrowEventInstanceDTO.class)
   @SubclassMapping(source = UserTaskInstance.class, target = UserTaskInstanceDTO.class)
   @SubclassMapping(source = ReceiveTaskInstance.class, target = ReceiveTaskInstanceDTO.class)
   @SubclassMapping(source = ScriptTaskInstance.class, target = ScriptTaskInstanceDTO.class)
