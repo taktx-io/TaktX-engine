@@ -155,6 +155,22 @@ class ExternalTaskTest {
   }
 
   @Test
+  void testMessageEndEvent_Single() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("message-end")
+        .deployProcessDefinitionAndWait("/bpmn/message_end.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("message-end")
+        .andRespondToExternalTaskWithSuccess("message-end", VariablesDTO.of("var1", "value1"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasVariableWithValue("var1", "value1")
+        .hasInstantiatedElementWithId("StartEvent_1")
+        .hasInstantiatedElementWithId("EndEvent_1")
+        .isCompleted();
+  }
+
+  @Test
   void testProcessServiceTaskPromise() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()

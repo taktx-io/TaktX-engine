@@ -19,6 +19,7 @@ import io.taktx.dto.ExclusiveGatewayInstanceDTO;
 import io.taktx.dto.InclusiveGatewayInstanceDTO;
 import io.taktx.dto.IntermediateCatchEventInstanceDTO;
 import io.taktx.dto.IntermediateThrowEventInstanceDTO;
+import io.taktx.dto.MessageEndEventInstanceDTO;
 import io.taktx.dto.MultiInstanceInstanceDTO;
 import io.taktx.dto.ParallelGatewayInstanceDTO;
 import io.taktx.dto.ReceiveTaskInstanceDTO;
@@ -41,6 +42,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case SendTaskInstanceDTO _ -> "D";
       case EndEventInstanceDTO _ -> "E";
       case ScriptTaskInstanceDTO _ -> "F";
+      case MessageEndEventInstanceDTO _ -> "G";
       case IntermediateCatchEventInstanceDTO _ -> "I";
       case MultiInstanceInstanceDTO _ -> "M";
       case InclusiveGatewayInstanceDTO _ -> "N";
@@ -75,6 +77,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case "D" -> context.constructType(SendTaskInstanceDTO.class);
       case "E" -> context.constructType(EndEventInstanceDTO.class);
       case "F" -> context.constructType(ScriptTaskInstanceDTO.class);
+      case "G" -> context.constructType(MessageEndEventInstanceDTO.class);
       case "I" -> context.constructType(IntermediateCatchEventInstanceDTO.class);
       case "M" -> context.constructType(MultiInstanceInstanceDTO.class);
       case "N" -> context.constructType(InclusiveGatewayInstanceDTO.class);

@@ -45,12 +45,12 @@ import io.taktx.dto.InputOutputMappingDTO;
 import io.taktx.dto.IntermediateCatchEventDTO;
 import io.taktx.dto.IntermediateThrowEventDTO;
 import io.taktx.dto.LoopCharacteristicsDTO;
+import io.taktx.dto.MessageEventDefinitionDTO;
 import io.taktx.dto.ParallelGatewayDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
-import io.taktx.dto.ThrowEventDTO;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -81,7 +81,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         "Unknown flow element type: " + tFlowElement.getClass().getName());
   }
 
-  private ThrowEventDTO mapThrowEvent(String parentId, TThrowEvent throwEvent) {
+  private FlowElementDTO mapThrowEvent(String parentId, TThrowEvent throwEvent) {
     Set<EventDefinitionDTO> eventDefinitions =
         bpmnMapperFactory
             .createEventDefinitionMapper()
@@ -89,13 +89,17 @@ public class GenericFlowElementMapper implements FlowElementMapper {
 
     if (throwEvent instanceof TEndEvent endEvent) {
       InputOutputMappingDTO ioMapping = bpmnMapperFactory.getIoMappingMapper().map(endEvent);
-      return new EndEventDTO(
-          endEvent.getId(),
-          parentId,
-          mapQNameList(endEvent.getIncoming()),
-          mapQNameList(endEvent.getOutgoing()),
-          ioMapping,
-          eventDefinitions);
+      if (hasMessageEventDefinition(eventDefinitions)) {
+        return bpmnMapperFactory.createMessageEndEventMapper().map(endEvent, parentId, ioMapping);
+      } else {
+        return new EndEventDTO(
+            endEvent.getId(),
+            parentId,
+            mapQNameList(endEvent.getIncoming()),
+            mapQNameList(endEvent.getOutgoing()),
+            ioMapping,
+            eventDefinitions);
+      }
     } else if (throwEvent instanceof TIntermediateThrowEvent intermediateThrowEvent) {
       InputOutputMappingDTO ioMapping =
           bpmnMapperFactory.getIoMappingMapper().map(intermediateThrowEvent);
@@ -110,6 +114,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
 
     throw new IllegalStateException(
         "Unknown flow element type: " + throwEvent.getClass().getName());
+  }
+
+  private boolean hasMessageEventDefinition(Set<EventDefinitionDTO> eventDefinitions) {
+    return eventDefinitions.stream()
+        .anyMatch(eventDefinitionDTO -> eventDefinitionDTO instanceof MessageEventDefinitionDTO);
   }
 
   private GatewayDTO mapGateway(TGateway gateway, String parentId) {

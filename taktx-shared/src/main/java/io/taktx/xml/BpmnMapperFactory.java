@@ -110,4 +110,12 @@ public class BpmnMapperFactory {
   public ErrorMapper createErrorMapper() {
     return new GenericErrorMapper();
   }
+
+  public MessageEndEventMapper createMessageEndEventMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeMessageEndEventMapper();
+    } else {
+      return new GenericMessageEndEventMapper();
+    }
+  }
 }
