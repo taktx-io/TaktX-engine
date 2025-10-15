@@ -65,8 +65,11 @@ public class SubProcessInstanceProcessor
     subProcessElements.getIndex().addAll(scope.getFlowElements().getIndex());
 
     List<Long> instancePath = pathExtractor.getInstancePath(subProcessInstance);
+
     scopeProcessor.processStart(
         instancePath, null, VariablesDTO.empty(), processInstanceProcessingContext, subScope);
+
+    scopeProcessor.bubbleUpEvents(scope, subProcessInstance);
 
     subProcessInstance.setState(subScope.getState());
   }

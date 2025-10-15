@@ -487,7 +487,7 @@
           <dc:Bounds x="220" y="155" width="62" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0vll3ti_di" bpmnElement="Event_00wb87x">
+      <bpmndi:BPMNShape id="Event_0vll3ti_di" bpmnElement="Event_00wb87x" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="402" y="112" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="390" y="155" width="62" height="40" />
@@ -595,7 +595,7 @@
           <dc:Bounds x="288" y="525" width="85" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_07wzh8d_di" bpmnElement="Event_1ixq9ff">
+      <bpmndi:BPMNShape id="Event_07wzh8d_di" bpmnElement="Event_1ixq9ff" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="402" y="482" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="386" y="525" width="68" height="14" />

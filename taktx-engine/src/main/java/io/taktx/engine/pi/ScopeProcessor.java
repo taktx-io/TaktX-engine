@@ -126,6 +126,7 @@ public class ScopeProcessor {
           createNewInstanceAndAddToDirectInstanceResult(
               processInstanceProcessingContext, scope, elementId);
 
+      // If the new instance is an event triggered subprocess with an interrupting start event,
       if (newInstance instanceof SubProcessInstance subProcessInstance
           && subProcessInstance.getFlowNode().isTriggeredByEvent()) {
         FlowNode startNode = subProcessInstance.getFlowElements().getStartNode(null);
@@ -140,6 +141,7 @@ public class ScopeProcessor {
           }
         }
       }
+
       doBusiness(processInstanceProcessingContext, scope);
     } else {
       throw new IllegalArgumentException(
@@ -292,7 +294,7 @@ public class ScopeProcessor {
     scope.setState(ExecutionState.ABORTED);
   }
 
-  private static void bubbleUpEvents(Scope scope, WithScope withScope) {
+  public static void bubbleUpEvents(Scope scope, WithScope withScope) {
     EventSignal bubbleUpEventSignal =
         withScope.getScope().getDirectInstanceResult().pollBubbleUpEvent();
     while (bubbleUpEventSignal != null) {

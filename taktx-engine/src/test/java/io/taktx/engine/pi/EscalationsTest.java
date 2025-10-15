@@ -204,4 +204,24 @@ class EscalationsTest {
         .hasNotPassedElementWithId("EscalationBoundaryEvent_Noninterrupting")
         .hasVariableWithValue("var1", "value1");
   }
+
+  @Test
+  void testEscalationIntermediateThrowEvent() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+            .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/escalation_intermediate_throw.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("StartEvent_1")
+        .hasPassedElementWithId("SubProcess_1/SubStartEvent_1")
+        .hasPassedElementWithId("SubProcess_1/Gateway_0f2lj1i")
+        .hasAbortedElementWithId("SubProcess_1/Activity_0epjhoj")
+        .hasPassedElementWithId("SubProcess_1/Gateway_03xfoo0")
+        .hasNotPassedElementWithId("SubProcess_1/SubEndEvent_1")
+        .hasPassedElementWithId("Event_0wuhkzs")
+        .hasPassedElementWithId("EndEvent_Boundary_1")
+            .isCompleted();
+  }
 }
