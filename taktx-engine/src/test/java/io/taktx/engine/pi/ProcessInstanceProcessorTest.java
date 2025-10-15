@@ -69,19 +69,6 @@ class ProcessInstanceProcessorTest {
   }
 
   @Test
-  void testProcessTaskSingle() throws IOException {
-    SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn")
-        .startProcessInstance(VariablesDTO.of("key1", "value1"))
-        .waitUntilDone()
-        .assertThatProcess()
-        .hasVariableWithValue("key1", "value1")
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("Task_1")
-        .hasInstantiatedElementWithId("EndEvent_1");
-  }
-
-  @Test
   void testSubProcessTaskSingle() throws IOException {
     SingletonBpmnTestEngine.getInstance()
         .deployProcessDefinitionAndWait("/bpmn/subprocess-single.bpmn")

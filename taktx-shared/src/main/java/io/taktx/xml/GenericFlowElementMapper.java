@@ -20,6 +20,7 @@ import io.taktx.bpmn.TGateway;
 import io.taktx.bpmn.TInclusiveGateway;
 import io.taktx.bpmn.TIntermediateCatchEvent;
 import io.taktx.bpmn.TIntermediateThrowEvent;
+import io.taktx.bpmn.TManualTask;
 import io.taktx.bpmn.TParallelGateway;
 import io.taktx.bpmn.TReceiveTask;
 import io.taktx.bpmn.TScriptTask;
@@ -231,6 +232,15 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               bpmnMapperFactory
                   .createSendTaskMapper()
                   .map(sendTask, parentId, loopCharacteristics, ioMapping);
+      case TManualTask manualTask ->
+          activityFlowElement =
+              new TaskDTO(
+                  manualTask.getId(),
+                  parentId,
+                  mapQNameList(manualTask.getIncoming()),
+                  mapQNameList(manualTask.getOutgoing()),
+                  loopCharacteristics,
+                  ioMapping);
       case TReceiveTask receiveTask ->
           activityFlowElement =
               bpmnMapperFactory
