@@ -481,7 +481,7 @@
         <dc:Bounds x="190" y="960" width="1140" height="230" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0oyahcf_di" bpmnElement="Event_0oyahcf">
+      <bpmndi:BPMNShape id="Event_0oyahcf_di" bpmnElement="Event_0oyahcf" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="232" y="112" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="220" y="155" width="62" height="27" />
@@ -499,7 +499,7 @@
           <dc:Bounds x="299" y="155" width="63" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_00cttgf_di" bpmnElement="Event_0pejm4x">
+      <bpmndi:BPMNShape id="Event_00cttgf_di" bpmnElement="Event_0pejm4x" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="482" y="112" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="470" y="155" width="62" height="40" />
@@ -517,7 +517,7 @@
           <dc:Bounds x="639" y="155" width="85" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_1iulo9w_di" bpmnElement="Event_1iulo9w">
+      <bpmndi:BPMNShape id="Event_1iulo9w_di" bpmnElement="Event_1iulo9w" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="232" y="242" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="220" y="285" width="62" height="27" />
