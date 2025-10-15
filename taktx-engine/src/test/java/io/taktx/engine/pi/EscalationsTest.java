@@ -209,7 +209,7 @@ class EscalationsTest {
   void testEscalationIntermediateThrowEvent() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
-            .registerAndSubscribeToExternalTaskIds("servicetask")
+        .registerAndSubscribeToExternalTaskIds("servicetask")
         .deployProcessDefinitionAndWait("/bpmn/escalation_intermediate_throw.bpmn")
         .startProcessInstance(VariablesDTO.empty())
         .waitUntilDone()
@@ -222,6 +222,6 @@ class EscalationsTest {
         .hasNotPassedElementWithId("SubProcess_1/SubEndEvent_1")
         .hasPassedElementWithId("Event_0wuhkzs")
         .hasPassedElementWithId("EndEvent_Boundary_1")
-            .isCompleted();
+        .isCompleted();
   }
 }
