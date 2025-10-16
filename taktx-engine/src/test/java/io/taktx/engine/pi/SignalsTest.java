@@ -65,4 +65,43 @@ class SignalsTest {
         .assertThatProcess()
         .isCompleted();
   }
+
+  @Test
+  void testSignalBoundary_Interrupting() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/signal_boundary.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("servicetask")
+        .sendSignal("xyz")
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasPassedElementWithId("Boundary_Interrupting_1")
+        .hasPassedElementWithId("EndEvent_Signal_Interrupting")
+        .hasAbortedElementWithId("Boundary_NonInterrupting_1")
+        .isCompleted();
+  }
+
+  @Test
+  void testSignalBoundary_NonInterrupting() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .deployProcessDefinitionAndWait("/bpmn/signal_boundary.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("servicetask")
+        .sendSignal("abc")
+        .waitUntilIdle()
+        .assertThatProcess()
+        .hasPassedElementWithId("EndEvent_Signal_NonInterrupting")
+        .hasPassedElementWithId("Boundary_NonInterrupting_1")
+        .isStillActive()
+        .toProcessLevel()
+        .andRespondToExternalTaskWithSuccess("servicetask", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("ServiceTask_1")
+        .hasPassedElementWithId("EndEvent_1")
+        .isCompleted();
+  }
 }
