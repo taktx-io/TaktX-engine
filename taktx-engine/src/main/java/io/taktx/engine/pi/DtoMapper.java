@@ -36,6 +36,7 @@ import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.ServiceTaskDTO;
+import io.taktx.dto.SignalEventDefinitionDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
@@ -68,6 +69,7 @@ import io.taktx.engine.pd.model.ScriptTask;
 import io.taktx.engine.pd.model.SendTask;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pd.model.ServiceTask;
+import io.taktx.engine.pd.model.SignalEventDefinition;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.Task;
@@ -171,6 +173,9 @@ public interface DtoMapper {
   @Mapping(target = "referencedMessage", ignore = true)
   MessageEventDefinition map(MessageEventDefinitionDTO messageEventDefinition);
 
+  @Mapping(target = "referencedSignal", ignore = true)
+  SignalEventDefinition map(SignalEventDefinitionDTO signalEventDefinition);
+
   @Mapping(target = "sourceNode", ignore = true)
   @Mapping(target = "targetNode", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
@@ -193,6 +198,7 @@ public interface DtoMapper {
   @Mapping(target = "parentElement", ignore = true)
   InclusiveGateway map(InclusiveGatewayDTO gateway);
 
+  @SubclassMapping(source = SignalEventDefinitionDTO.class, target = SignalEventDefinition.class)
   @SubclassMapping(source = MessageEventDefinitionDTO.class, target = MessageEventDefinition.class)
   @SubclassMapping(source = TimerEventDefinitionDTO.class, target = TimerEventDefinition.class)
   @SubclassMapping(source = LinkEventDefinitionDTO.class, target = LinkEventDefinition.class)

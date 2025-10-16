@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
+import io.taktx.dto.CancelInstanceSignalSubscriptionDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
@@ -21,10 +22,12 @@ import io.taktx.dto.InstanceScheduleKeyDTO;
 import io.taktx.dto.IoVariableMappingDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ScheduleKeyDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TimeBucket;
@@ -34,12 +37,14 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
+import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.ExternalTaskInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
@@ -89,6 +94,47 @@ public class Forwarder {
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
     forwardEventSignalTriggers(context, instanceResult);
+    forwardSignals(context, instanceResult);
+    forwardSignalSubscriptions(context, instanceResult, processInstanceDTO);
+  }
+
+  private void forwardSignalSubscriptions(
+      ProcessorContext<Object, Object> context,
+      InstanceResult instanceResult,
+      ProcessInstanceDTO processInstanceDTO) {
+    Queue<NewInstanceSignalSubscriptionInfo> newInstanceSignalSubscriptions =
+        instanceResult.getNewInstanceSignalSubscriptions();
+    while (!newInstanceSignalSubscriptions.isEmpty()) {
+      NewInstanceSignalSubscriptionInfo subscriptionInfo = newInstanceSignalSubscriptions.poll();
+      NewInstanceSignalSubscriptionDTO subscriptionDTO =
+          new NewInstanceSignalSubscriptionDTO(
+              processInstanceDTO.getProcessInstanceId(),
+              pathExtractor.getInstancePath(subscriptionInfo.elementInstance()),
+              subscriptionInfo.name());
+      context.forward(new Record<>(subscriptionInfo.name(), subscriptionDTO, clock.millis()));
+    }
+
+    Queue<CancelInstanceSignalSubscriptionInfo> cancelInstanceSignalSubscriptions =
+        instanceResult.getCancelInstanceSignalSubscriptions();
+    while (!cancelInstanceSignalSubscriptions.isEmpty()) {
+      CancelInstanceSignalSubscriptionInfo cancelInfo = cancelInstanceSignalSubscriptions.poll();
+      CancelInstanceSignalSubscriptionDTO cancelSubscriptionDTO =
+          new CancelInstanceSignalSubscriptionDTO(
+              processInstanceDTO.getProcessInstanceId(),
+              pathExtractor.getInstancePath(cancelInfo.flowNodeInstance()),
+              cancelInfo.name());
+      context.forward(new Record<>(cancelInfo.name(), cancelSubscriptionDTO, clock.millis()));
+    }
+  }
+
+  private void forwardSignals(
+      ProcessorContext<Object, Object> context, InstanceResult instanceResult) {
+    Queue<String> eventSignalTriggerList = instanceResult.getSignals();
+    while (!eventSignalTriggerList.isEmpty()) {
+      String signalName = eventSignalTriggerList.poll();
+      SignalDTO signalDTO = new SignalDTO(signalName);
+      context.forward(new Record<>(signalDTO.getSignalName(), signalDTO, clock.millis()));
+    }
   }
 
   private void forwardEventSignalTriggers(

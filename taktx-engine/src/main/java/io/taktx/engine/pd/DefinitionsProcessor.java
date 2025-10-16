@@ -16,6 +16,7 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.xml.BpmnParser;
 import java.time.Clock;
@@ -42,16 +43,19 @@ public class DefinitionsProcessor
   private final Map<String, Map<String, Integer>> hashVersionPairCache = new HashMap<>();
   private ProcessDefinitionActivationProcessor processDefinitionActivationProcessor;
   private final Clock clock;
+  private final FeelExpressionHandler feelExpressionHandler;
   private final DefinitionsCache definitionsCache;
 
   public DefinitionsProcessor(
       TaktConfiguration taktConfiguration,
       MessageSchedulerFactory messageSchedulerFactory,
       Clock clock,
+      FeelExpressionHandler feelExpressionHandler,
       DefinitionsCache definitionsCache) {
     this.taktConfiguration = taktConfiguration;
     this.messageSchedulerFactory = messageSchedulerFactory;
     this.clock = clock;
+    this.feelExpressionHandler = feelExpressionHandler;
     this.definitionsCache = definitionsCache;
   }
 
@@ -65,7 +69,12 @@ public class DefinitionsProcessor
             taktConfiguration.getPrefixed(Stores.GLOBAL_PROCESS_DEFINITION.getStorename()));
     processDefinitionActivationProcessor =
         new ProcessDefinitionActivationProcessor(
-            taktConfiguration, messageSchedulerFactory, context, clock, definitionsCache);
+            taktConfiguration,
+            messageSchedulerFactory,
+            context,
+            clock,
+            feelExpressionHandler,
+            definitionsCache);
   }
 
   @Override

@@ -15,6 +15,7 @@ import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
@@ -52,6 +53,7 @@ public class TaktClient {
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final XmlByProcessDefinitionIdConsumer xmlByProcessDefinitionIdConsumer;
   private final MessageEventSender messageEventSender;
+  private final SignalSender signalSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
   private final ExternalTaskTopicRequester externalTaskTopicRequester;
@@ -70,6 +72,7 @@ public class TaktClient {
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
+    this.signalSender = new SignalSender(taktPropertiesHelper);
     this.processInstanceUpdateConsumer =
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
     this.processInstanceResponder = processInstanceResponder;
@@ -274,6 +277,10 @@ public class TaktClient {
   public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
       throws IOException {
     return this.xmlByProcessDefinitionIdConsumer.getProcessDefinitionXml(processDefinitionKey);
+  }
+
+  public void sendSignal(String signalName) {
+    this.signalSender.sendMSignal(new SignalDTO(signalName));
   }
 
   /**

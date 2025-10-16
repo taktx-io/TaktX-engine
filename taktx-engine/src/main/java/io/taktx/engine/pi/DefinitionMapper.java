@@ -13,6 +13,7 @@ import io.taktx.dto.EscalationDTO;
 import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.MessageDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.SigDTO;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.CatchEvent;
@@ -24,11 +25,13 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.SequenceFlow;
+import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pd.model.WithErrorEventDefinitions;
 import io.taktx.engine.pd.model.WithEscalationEventDefinitions;
 import io.taktx.engine.pd.model.WithMessageReference;
+import io.taktx.engine.pd.model.WithSignalEventDefinitions;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map;
 
@@ -49,6 +52,7 @@ public class DefinitionMapper {
     setMessageReferences(flowElements1.getElements(), definitionsDTO.getMessages());
     setEscalationReferences(flowElements1.getElements(), definitionsDTO.getEscalations());
     setErrorReferences(flowElements1.getElements(), definitionsDTO.getErrors());
+    setSignalReferences(flowElements1.getElements(), definitionsDTO.getSignals());
     setSequenceFlowReferences(flowElements1);
     return flowElements1;
   }
@@ -104,6 +108,25 @@ public class DefinitionMapper {
       }
       if (flowElement instanceof WIthChildElements withChildElements) {
         setErrorReferences(withChildElements.getElements().getElements(), errors);
+      }
+    }
+  }
+
+  private void setSignalReferences(Map<String, FlowElement> elements, Map<String, SigDTO> signals) {
+    for (FlowElement flowElement : elements.values()) {
+      if (flowElement instanceof WithSignalEventDefinitions withSignalEventDefinitions) {
+        withSignalEventDefinitions.getSignalEventDefinition().stream()
+            .forEach(
+                signalEventDefinition -> {
+                  SigDTO sigDTO = signals.get(signalEventDefinition.getSignalRef());
+                  if (sigDTO != null) {
+                    signalEventDefinition.setReferencedSignal(
+                        new SignalEvent(sigDTO.getId(), sigDTO.getName()));
+                  }
+                });
+      }
+      if (flowElement instanceof WIthChildElements withChildElements) {
+        setSignalReferences(withChildElements.getElements().getElements(), signals);
       }
     }
   }

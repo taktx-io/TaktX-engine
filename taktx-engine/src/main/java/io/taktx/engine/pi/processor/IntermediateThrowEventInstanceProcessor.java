@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IntermediateThrowEvent;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -27,8 +28,9 @@ public class IntermediateThrowEventInstanceProcessor
   public IntermediateThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
+      FeelExpressionHandler feelExpressionHandler,
       Clock clock) {
-    super(ioMappingProcessor, processInstanceMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, feelExpressionHandler, clock);
   }
 
   @Override

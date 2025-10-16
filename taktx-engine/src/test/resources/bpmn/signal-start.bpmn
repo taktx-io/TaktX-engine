@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0c56mfr" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.38.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.7.0">
+  <bpmn:process id="Process_0o0hgzg" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_083f1do</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalEventDefinition_1512eyb" signalRef="Signal_13osao6" />
+    </bpmn:startEvent>
+    <bpmn:endEvent id="Event_1jeez1n">
+      <bpmn:incoming>Flow_083f1do</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_083f1do" sourceRef="StartEvent_1" targetRef="Event_1jeez1n" />
+  </bpmn:process>
+  <bpmn:signal id="Signal_13osao6" name="=&#34;fgh&#34;" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_0o0hgzg">
+      <bpmndi:BPMNShape id="Event_1to3ion_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1jeez1n_di" bpmnElement="Event_1jeez1n">
+        <dc:Bounds x="432" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_083f1do_di" bpmnElement="Flow_083f1do">
+        <di:waypoint x="218" y="100" />
+        <di:waypoint x="432" y="100" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

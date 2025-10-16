@@ -118,7 +118,11 @@ public class TopicBootstrapper {
       Thread.currentThread().interrupt(); // Restore the interrupted status
       throw new IllegalStateException("Topic bootstrap interrupted", e);
     } catch (Exception ex) {
-      throw new IllegalStateException("Failed to bootstrap topics", ex);
+      if (ex.getCause() instanceof TopicExistsException) {
+        log.warn("Bootstrap managed topics already exist");
+      } else {
+        throw new IllegalStateException("Failed to bootstrap topics", ex);
+      }
     }
 
     Topics.managedFixedTopics()

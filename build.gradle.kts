@@ -14,7 +14,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
     }
-    
+
     // Apply dependency constraints to all modules
     configurations.all {
         resolutionStrategy {
@@ -32,24 +32,24 @@ subprojects {
     plugins.withId("java") {
         // Apply the JaCoCo plugin to each subproject with the java plugin
         apply(plugin = "jacoco")
-        
+
         // Configure JaCoCo for all subprojects
         configure<JacocoPluginExtension> {
             toolVersion = "0.8.11" // Use a version compatible with Java 21
         }
-        
+
         // Configure test task to generate coverage data
         tasks.withType<Test> {
             finalizedBy(tasks.named("jacocoTestReport"))
         }
-        
+
         // Configure the JaCoCo report task
         tasks.withType<JacocoReport> {
             reports {
                 xml.required.set(true)
                 html.required.set(true)
             }
-            
+
             // Exclude specified packages from all modules
             classDirectories.setFrom(
                 files(classDirectories.files.map {
@@ -57,7 +57,7 @@ subprojects {
                         // User-specified exclusions
                         exclude("io/taktx/dto/**")
                         exclude("io/taktx/bpmn/**")
-                        
+
                         // JDK and runtime libraries that cause issues with JaCoCo
                         exclude("sun/util/resources/**")
                         exclude("jdk/internal/**")

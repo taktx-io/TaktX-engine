@@ -15,16 +15,20 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.Message;
+import io.taktx.engine.pd.model.SignalEventDefinition;
 import io.taktx.engine.pi.InstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import java.time.Clock;
+import java.util.Optional;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
@@ -51,6 +55,25 @@ public abstract class CatchEventInstanceProcessor<
       String inputFlowId) {
 
     catchEventInstance.setState(ExecutionState.COMPLETED);
+
+    catchEventInstance
+        .getFlowNode()
+        .getSignalEventDefinition()
+        .ifPresent(
+            signalEventDefinition -> {
+              catchEventInstance.setState(ExecutionState.ACTIVE);
+              String name =
+                  feelExpressionHandler
+                      .processFeelExpression(
+                          signalEventDefinition.getReferencedSignal().name(),
+                          scope.getVariableScope())
+                      .asText();
+              NewInstanceSignalSubscriptionInfo subscriptionInfo =
+                  new NewInstanceSignalSubscriptionInfo(name, catchEventInstance);
+              processInstanceProcessingContext
+                  .getInstanceResult()
+                  .addNewInstanceSignalSubscription(subscriptionInfo);
+            });
 
     catchEventInstance
         .getFlowNode()
@@ -84,6 +107,7 @@ public abstract class CatchEventInstanceProcessor<
                             catchEventInstance, timerEventDefinition, scope.getVariableScope()));
               });
     }
+
     catchEventInstance
         .getFlowNode()
         .getMessageventDefinition()
@@ -125,16 +149,33 @@ public abstract class CatchEventInstanceProcessor<
       // Complete the catch event instance
       flowNodeInstance.setState(ExecutionState.COMPLETED);
       terminateSubscriptions(
-          flowNodeInstance, processInstanceProcessingContext.getInstanceResult());
+          flowNodeInstance, processInstanceProcessingContext.getInstanceResult(), scope);
     }
     processContinueSpecificCatchEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
   }
 
-  private void terminateSubscriptions(I flowNodeInstance, InstanceResult result) {
+  private void terminateSubscriptions(I flowNodeInstance, InstanceResult result, Scope scope) {
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
     terminateEscalationAndErrorSubscriptions(flowNodeInstance);
+    terminateSignelSubscription(flowNodeInstance, result, scope);
+  }
+
+  private void terminateSignelSubscription(I flowNodeInstance, InstanceResult result, Scope scope) {
+    Optional<SignalEventDefinition> signalEventDefinition =
+        flowNodeInstance.getFlowNode().getSignalEventDefinition();
+    if (signalEventDefinition.isPresent()) {
+      String name =
+          feelExpressionHandler
+              .processFeelExpression(
+                  signalEventDefinition.get().getReferencedSignal().name(),
+                  scope.getVariableScope())
+              .asText();
+
+      result.addCancelInstanceSignalSubscription(
+          new CancelInstanceSignalSubscriptionInfo(name, flowNodeInstance));
+    }
   }
 
   private void terminateEscalationAndErrorSubscriptions(I flowNodeInstance) {
@@ -172,7 +213,7 @@ public abstract class CatchEventInstanceProcessor<
   @Override
   protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
-    terminateSubscriptions(instance, processInstanceProcessingContext.getInstanceResult());
+    terminateSubscriptions(instance, processInstanceProcessingContext.getInstanceResult(), scope);
   }
 
   public boolean processEvent(

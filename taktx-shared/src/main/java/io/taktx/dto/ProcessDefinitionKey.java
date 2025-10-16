@@ -22,7 +22,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @JsonFormat(shape = Shape.ARRAY)
 @RegisterForReflection
-public class ProcessDefinitionKey {
+public class ProcessDefinitionKey implements Comparable<ProcessDefinitionKey> {
   private String processDefinitionId;
 
   private Integer version;
@@ -40,5 +40,12 @@ public class ProcessDefinitionKey {
     return new ProcessDefinitionKey(
         processDefinition.getDefinitions().getDefinitionsKey().getProcessDefinitionId(),
         processDefinition.getVersion());
+  }
+
+  @Override
+  public int compareTo(ProcessDefinitionKey other) {
+    int cmp = this.processDefinitionId.compareTo(other.processDefinitionId);
+    if (cmp != 0) return cmp;
+    return Integer.compare(this.version, other.version);
   }
 }

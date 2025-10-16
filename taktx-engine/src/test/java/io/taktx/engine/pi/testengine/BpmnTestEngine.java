@@ -27,12 +27,14 @@ import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TopicMetaDTO;
@@ -86,6 +88,7 @@ public class BpmnTestEngine {
   private final Map<UUID, VariablesDTO> variablesMap = new ConcurrentHashMap<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
       new ConcurrentHashMap<>();
+  private final Map<String, ConcurrentLinkedQueue<SignalDTO>> signalMap = new ConcurrentHashMap<>();
   private ProcessDefinitionDTO activeProcessDefintion;
   private UUID activeProcessInstanceId;
   private final Map<UUID, Map<String, ExternalTaskTriggerDTO>> activeExternalTaskTriggers =
@@ -97,6 +100,7 @@ public class BpmnTestEngine {
   private UUID latestInstantiatedProcessInstanceId;
   private KafkaConsumerUtil<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerConsumer;
   private KafkaConsumerUtil<MessageEventKeyDTO, MessageEventDTO> messageEventConsumer;
+  private KafkaConsumerUtil<String, SignalDTO> signalConsumer;
   private KafkaConsumerUtil<String, TopicMetaDTO> actualTopicMetaConsumer;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
@@ -125,6 +129,7 @@ public class BpmnTestEngine {
     taktClient.stop();
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
+    signalConsumer.stop();
     actualTopicMetaConsumer.stop();
   }
 
@@ -164,6 +169,13 @@ public class BpmnTestEngine {
             MessageEventKeyDeserializer.class.getName(),
             MessageEventDeserializer.class.getName(),
             this::consumeMessageEvent);
+    signalConsumer =
+        new KafkaConsumerUtil<>(
+            "test-group",
+            TOPIC_TEST_PREFIX + Topics.SIGNAL_TOPIC.getTopicName(),
+            StringDeserializer.class.getName(),
+            SignalDeserializer.class.getName(),
+            this::consumeSignal);
     actualTopicMetaConsumer =
         new KafkaConsumerUtil<>(
             "test-group",
@@ -198,6 +210,14 @@ public class BpmnTestEngine {
         messageSubscriptionMap.computeIfAbsent(
             messageEvent.getMessageName(), k -> new ConcurrentLinkedQueue<>());
     messageEvents.add(messageEvent);
+  }
+
+  public void consumeSignal(ConsumerRecord<String, SignalDTO> signalRecord) {
+    SignalDTO signal = signalRecord.value();
+    LOG.info("Received signal: {}" + signal);
+    ConcurrentLinkedQueue<SignalDTO> signals =
+        signalMap.computeIfAbsent(signal.getSignalName(), k -> new ConcurrentLinkedQueue<>());
+    signals.add(signal);
   }
 
   public void consumeTopicMeta(ConsumerRecord<String, TopicMetaDTO> topicMetaRecord) {
@@ -930,5 +950,40 @@ public class BpmnTestEngine {
             });
 
     LOG.info("Kafka broker and all required topics are now available");
+  }
+
+  public BpmnTestEngine waitForSignalSubscription(String name) {
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .until(
+            () -> {
+              ConcurrentLinkedQueue<SignalDTO> signalDTOS = signalMap.get(name);
+              if (signalDTOS != null && !signalDTOS.isEmpty()) {
+                return signalDTOS.stream()
+                    .anyMatch(NewInstanceSignalSubscriptionDTO.class::isInstance);
+              }
+              return false;
+            });
+    return this;
+  }
+
+  public BpmnTestEngine waitForSignal(String name) {
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .until(
+            () -> {
+              ConcurrentLinkedQueue<SignalDTO> signalDTOS = signalMap.get(name);
+              if (signalDTOS != null && !signalDTOS.isEmpty()) {
+                return signalDTOS.stream()
+                    .anyMatch(signalDTO -> signalDTO.getClass() == SignalDTO.class);
+              }
+              return false;
+            });
+    return this;
+  }
+
+  public BpmnTestEngine sendSignal(String signalName) {
+    taktClient.sendSignal(signalName);
+    return this;
   }
 }

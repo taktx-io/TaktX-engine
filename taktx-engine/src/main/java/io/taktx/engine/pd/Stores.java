@@ -29,7 +29,9 @@ public enum Stores {
   DEFINITION_MESSAGE_SUBSCRIPTION("definition-message-subscription"),
   CORRELATION_MESSAGE_SUBSCRIPTION("correlation-message-subscription"),
   VARIABLES("variables"),
-  VERSION_BY_HASH("version-by-hash");
+  VERSION_BY_HASH("version-by-hash"),
+  INSTANCE_SIGNAL_SUBSCRIPTIONS("instance-signal-subscriptions"),
+  DEFINITION_SIGNAL_SUBSCRIPTIONS("definition-signal-subscriptions");
 
   private final String storename;
 

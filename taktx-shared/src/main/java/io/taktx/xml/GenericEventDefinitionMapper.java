@@ -13,6 +13,7 @@ import io.taktx.bpmn.TEscalationEventDefinition;
 import io.taktx.bpmn.TEventDefinition;
 import io.taktx.bpmn.TLinkEventDefinition;
 import io.taktx.bpmn.TMessageEventDefinition;
+import io.taktx.bpmn.TSignalEventDefinition;
 import io.taktx.bpmn.TTerminateEventDefinition;
 import io.taktx.bpmn.TTimerEventDefinition;
 import io.taktx.dto.ErrorEventDefinitionDTO;
@@ -20,6 +21,7 @@ import io.taktx.dto.EscalationEventDefinitionDTO;
 import io.taktx.dto.EventDefinitionDTO;
 import io.taktx.dto.LinkEventDefinitionDTO;
 import io.taktx.dto.MessageEventDefinitionDTO;
+import io.taktx.dto.SignalEventDefinitionDTO;
 import io.taktx.dto.TerminateEventDefinitionDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import jakarta.xml.bind.JAXBElement;
@@ -50,6 +52,8 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
       return mapEscalationEventDefinition(escalationEventDefinition);
     } else if (ed instanceof TErrorEventDefinition errorEventDefinition) {
       return mapErrorEventDefinition(errorEventDefinition);
+    } else if (ed instanceof TSignalEventDefinition signalEventDefinition) {
+      return mapSignalEventDefinition(signalEventDefinition);
     }
     throw new IllegalStateException("Unknown event definition: " + ed.getClass().getName());
   }
@@ -59,6 +63,15 @@ public class GenericEventDefinitionMapper implements EventDefinitionMapper {
         errorEventDefinition.getId(),
         errorEventDefinition.getErrorRef() != null
             ? errorEventDefinition.getErrorRef().getLocalPart()
+            : null);
+  }
+
+  private EventDefinitionDTO mapSignalEventDefinition(
+      TSignalEventDefinition signalEventDefinition) {
+    return new SignalEventDefinitionDTO(
+        signalEventDefinition.getId(),
+        signalEventDefinition.getSignalRef() != null
+            ? signalEventDefinition.getSignalRef().getLocalPart()
             : null);
   }
 

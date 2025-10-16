@@ -14,8 +14,10 @@ import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.NewStartCommand;
+import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
@@ -33,8 +35,13 @@ public class InstanceResult {
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
   private final Queue<AbortTriggerDTO> newTerminateCommands = new ArrayDeque<>();
+  private final Queue<String> signals = new ArrayDeque<>();
   private final Queue<UserTaskInfo> userTasks = new ArrayDeque<>();
   private final Queue<ContinueFlowElementTriggerDTO> continuations = new ArrayDeque<>();
+  private final Queue<NewInstanceSignalSubscriptionInfo> newInstanceSignalSubscriptions =
+      new ArrayDeque<>();
+  private final Queue<CancelInstanceSignalSubscriptionInfo> cancelInstanceSignalSubscriptions =
+      new ArrayDeque<>();
   private final Queue<NewCorrelationSubscriptionMessageEventInfo>
       newCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
@@ -107,5 +114,19 @@ public class InstanceResult {
 
   public void addEventSignals(EventSignalTriggerDTO eventSignalList) {
     this.eventSignalTriggerList.add(eventSignalList);
+  }
+
+  public void addSignal(String signalName) {
+    signals.add(signalName);
+  }
+
+  public void addNewInstanceSignalSubscription(
+      NewInstanceSignalSubscriptionInfo newInstanceSignalSubscription) {
+    newInstanceSignalSubscriptions.add(newInstanceSignalSubscription);
+  }
+
+  public void addCancelInstanceSignalSubscription(
+      CancelInstanceSignalSubscriptionInfo cancelInstanceSignalSubscription) {
+    cancelInstanceSignalSubscriptions.add(cancelInstanceSignalSubscription);
   }
 }

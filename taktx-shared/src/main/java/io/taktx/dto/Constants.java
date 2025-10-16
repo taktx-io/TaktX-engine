@@ -16,8 +16,9 @@ public class Constants {
   }
 
   public static final String EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX = "external-task-trigger-";
-  public static final Long MIN_LONG = 0x00000000L;
-  public static final Long MAX_LONG = 0xffffffffL;
+  public static final Long MIN_LONG = 0x0000000000000000L;
+  public static final Long MAX_LONG = 0xFFFFFFFFFFFFFFFFL;
+  public static final Integer MAX_INT = 0xFFFFFFFF;
   public static final UUID MIN_UUID = new UUID(0, 0);
-  public static final UUID MAX_UUID = new UUID(0xFFFFFFFFL, 0xFFFFFFFFFFFFFFFFL);
+  public static final UUID MAX_UUID = new UUID(0xFFFFFFFFFFFFFFFFL, 0xFFFFFFFFFFFFFFFFL);
 }

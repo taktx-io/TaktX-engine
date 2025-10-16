@@ -126,4 +126,8 @@ public class BpmnMapperFactory {
       return new GenericMessageIntermediateThrowEventMapper();
     }
   }
+
+  public SignalMapper createSignalMapper() {
+    return new GenericSignalMapper();
+  }
 }

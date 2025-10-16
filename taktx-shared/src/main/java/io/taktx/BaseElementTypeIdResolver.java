@@ -32,6 +32,7 @@ import io.taktx.dto.ScriptTaskDTO;
 import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.ServiceTaskDTO;
+import io.taktx.dto.SignalEventDefinitionDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
@@ -70,6 +71,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case TimerEventDefinitionDTO _ -> "TM";
       case ErrorEventDefinitionDTO _ -> "ER";
       case MessageEventDefinitionDTO _ -> "ME";
+      case SignalEventDefinitionDTO _ -> "SE";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -113,6 +115,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "TM" -> context.constructType(TimerEventDefinitionDTO.class);
       case "ER" -> context.constructType(ErrorEventDefinitionDTO.class);
       case "ME" -> context.constructType(MessageEventDefinitionDTO.class);
+      case "SE" -> context.constructType(SignalEventDefinitionDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

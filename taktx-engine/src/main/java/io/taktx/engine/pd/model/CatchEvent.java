@@ -18,7 +18,10 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class CatchEvent extends Event
-    implements WithIoMapping, WithEscalationEventDefinitions, WithErrorEventDefinitions {
+    implements WithIoMapping,
+        WithEscalationEventDefinitions,
+        WithErrorEventDefinitions,
+        WithSignalEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Optional<TimerEventDefinition> getTimerEventDefinition() {
@@ -43,6 +46,10 @@ public abstract class CatchEvent extends Event
 
   public Optional<ErrorEventDefinition> getErrorEventDefinition() {
     return getDefinition(ErrorEventDefinition.class);
+  }
+
+  public Optional<SignalEventDefinition> getSignalEventDefinition() {
+    return getDefinition(SignalEventDefinition.class);
   }
 
   private <T> Optional<T> getDefinition(Class<T> clazz) {

@@ -49,4 +49,12 @@ public abstract class CatchEventDTO extends EventDTO {
         .map(MessageEventDefinitionDTO.class::cast)
         .collect(Collectors.toSet());
   }
+
+  @JsonIgnore
+  public Set<SignalEventDefinitionDTO> getSignalDefinitions() {
+    return eventDefinitions.stream()
+        .filter(SignalEventDefinitionDTO.class::isInstance)
+        .map(SignalEventDefinitionDTO.class::cast)
+        .collect(Collectors.toSet());
+  }
 }

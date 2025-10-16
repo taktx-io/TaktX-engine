@@ -28,18 +28,21 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.ScheduleKeyDTO;
+import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.ScheduleProcessor;
+import io.taktx.engine.pd.SignalProcessor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
@@ -77,6 +80,14 @@ public class TopologyProducer {
 
   public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
       new ObjectMapperSerde<>(MessageEventDTO.class);
+  public static final Serde<SignalInstanceSubscriptionKeyDTO>
+      SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE =
+          new ObjectMapperSerde<>(SignalInstanceSubscriptionKeyDTO.class);
+  public static final Serde<SignalDefinitionSubscriptionKeyDTO>
+      SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE =
+          new ObjectMapperSerde<>(SignalDefinitionSubscriptionKeyDTO.class);
+  public static final ObjectMapperSerde<SignalDTO> SIGNAL_SERDE =
+      new ObjectMapperSerde<>(SignalDTO.class);
   public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
       DEFINITION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
@@ -120,7 +131,6 @@ public class TopologyProducer {
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
-
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
   private final KeyValueStoreSupplier keyValueStoreSupplier;
@@ -132,6 +142,7 @@ public class TopologyProducer {
   private final ScopeProcessor scopeProcessor;
   private final IoMappingProcessor ioMappingProcessor;
   private final ProcessingStatistics processingStatistics;
+  private final FeelExpressionHandler feelExpressionHandler;
   private final DynamicTopicManager topicManager;
   private final DefinitionsCache definitionsCache;
 
@@ -147,7 +158,42 @@ public class TopologyProducer {
 
     setupProcessInstanceStream(builder);
 
+    setupSignalStream(builder);
     return builder.build();
+  }
+
+  private void setupSignalStream(StreamsBuilder builder) {
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS),
+            SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE,
+            Serdes.String()));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS),
+            SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE,
+            Serdes.String()));
+
+    builder.stream(
+            taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
+            Consumed.with(Serdes.String(), SIGNAL_SERDE))
+        .process(
+            () -> new SignalProcessor(taktConfiguration, clock),
+            taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()),
+            taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
+        .split()
+        .branch(
+            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((UUID) key, (ProcessInstanceTriggerDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
@@ -177,7 +223,11 @@ public class TopologyProducer {
         .process(
             () ->
                 new DefinitionsProcessor(
-                    taktConfiguration, messageSchedulerFactory, clock, definitionsCache),
+                    taktConfiguration,
+                    messageSchedulerFactory,
+                    clock,
+                    feelExpressionHandler,
+                    definitionsCache),
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
@@ -235,7 +285,15 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
-                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
+                            Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))))
+        .branch(
+            (key, value) -> value instanceof SignalDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((String) key, (SignalDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
+                            Produced.with(Serdes.String(), SIGNAL_SERDE))));
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -286,6 +344,14 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
+        .branch(
+            (key, value) -> value instanceof SignalDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((String) key, (SignalDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
+                            Produced.with(Serdes.String(), SIGNAL_SERDE))))
         .branch(
             (key, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(

@@ -25,6 +25,7 @@ public enum Topics {
   INSTANCE_UPDATE_TOPIC("instance-update", false, CleanupPolicy.DELETE),
   PROCESS_INSTANCE_TRIGGER_TOPIC("process-instance", false, CleanupPolicy.DELETE),
   PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions", false, CleanupPolicy.DELETE),
+  SIGNAL_TOPIC("signals", false, CleanupPolicy.COMPACT),
   USER_TASK_TRIGGER_TOPIC("usertasks", false, CleanupPolicy.COMPACT),
   USER_TASK_RESPONSE_TOPIC("usertasks-response", false, CleanupPolicy.DELETE);
 

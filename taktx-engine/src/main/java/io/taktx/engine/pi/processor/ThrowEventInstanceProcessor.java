@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
@@ -32,11 +33,15 @@ public abstract class ThrowEventInstanceProcessor<
         E extends ThrowEvent, I extends ThrowEventInstance<?>>
     extends EventInstanceProcessor<E, I> {
 
+  private FeelExpressionHandler feelExpressionHandler;
+
   protected ThrowEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
+      FeelExpressionHandler feelExpressionHandler,
       Clock clock) {
     super(ioMappingProcessor, processInstanceMapper, clock);
+    this.feelExpressionHandler = feelExpressionHandler;
   }
 
   @Override
@@ -53,6 +58,21 @@ public abstract class ThrowEventInstanceProcessor<
             terminateEventDefinition -> {
               log.info("Terminate event encountered, aborting process instance");
               scope.getDirectInstanceResult().setAbortScope();
+            });
+
+    flowNodeInstance
+        .getFlowNode()
+        .getSignalEventDefinition()
+        .ifPresent(
+            signalEventDefinition -> {
+              String name =
+                  feelExpressionHandler
+                      .processFeelExpression(
+                          signalEventDefinition.getReferencedSignal().name(),
+                          scope.getVariableScope())
+                      .asText();
+
+              processInstanceProcessingContext.getInstanceResult().addSignal(name);
             });
 
     flowNodeInstance

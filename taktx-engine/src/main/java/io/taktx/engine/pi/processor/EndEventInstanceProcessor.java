@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
@@ -27,9 +28,10 @@ public class EndEventInstanceProcessor
   public EndEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
       ProcessInstanceMapper processInstanceMapper,
+      FeelExpressionHandler feelExpressionHandler,
       Clock clock) {
 
-    super(ioMappingProcessor, processInstanceMapper, clock);
+    super(ioMappingProcessor, processInstanceMapper, feelExpressionHandler, clock);
   }
 
   @Override

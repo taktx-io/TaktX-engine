@@ -18,7 +18,9 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class ThrowEvent extends Event
-    implements WithEscalationEventDefinitions, WithErrorEventDefinitions {
+    implements WithEscalationEventDefinitions,
+        WithErrorEventDefinitions,
+        WithSignalEventDefinitions {
   private Set<EventDefinition> eventDefinitions;
 
   public Optional<LinkEventDefinition> getLinkventDefinition() {
@@ -39,6 +41,13 @@ public abstract class ThrowEvent extends Event
     return eventDefinitions.stream()
         .filter(ErrorEventDefinition.class::isInstance)
         .map(ErrorEventDefinition.class::cast)
+        .findFirst();
+  }
+
+  public Optional<SignalEventDefinition> getSignalEventDefinition() {
+    return eventDefinitions.stream()
+        .filter(SignalEventDefinition.class::isInstance)
+        .map(SignalEventDefinition.class::cast)
         .findFirst();
   }
 

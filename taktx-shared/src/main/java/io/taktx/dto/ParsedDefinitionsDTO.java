@@ -34,4 +34,6 @@ public class ParsedDefinitionsDTO extends DefinitionsTriggerDTO {
   private Map<String, EscalationDTO> escalations;
 
   private Map<String, ErrorDTO> errors;
+
+  private Map<String, SigDTO> signals;
 }

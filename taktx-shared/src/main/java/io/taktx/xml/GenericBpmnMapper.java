@@ -14,12 +14,14 @@ import io.taktx.bpmn.TEscalation;
 import io.taktx.bpmn.TMessage;
 import io.taktx.bpmn.TProcess;
 import io.taktx.bpmn.TRootElement;
+import io.taktx.bpmn.TSignal;
 import io.taktx.dto.DefinitionsKey;
 import io.taktx.dto.ErrorDTO;
 import io.taktx.dto.EscalationDTO;
 import io.taktx.dto.MessageDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDTO;
+import io.taktx.dto.SigDTO;
 import jakarta.xml.bind.JAXBElement;
 import java.util.HashMap;
 
@@ -37,9 +39,12 @@ public class GenericBpmnMapper implements BpmnMapper {
     HashMap<String, MessageDTO> messages = new HashMap<>();
     HashMap<String, EscalationDTO> escalations = new HashMap<>();
     HashMap<String, ErrorDTO> errors = new HashMap<>();
+    HashMap<String, SigDTO> signals = new HashMap<>();
     builder.messages(messages);
     builder.escalations(escalations);
     builder.errors(errors);
+    builder.signals(signals);
+
     for (JAXBElement<? extends TRootElement> jaxbElement : definitions.getRootElement()) {
       TRootElement tRootElement = jaxbElement.getValue();
       if (tRootElement instanceof TProcess tProcess) {
@@ -55,6 +60,9 @@ public class GenericBpmnMapper implements BpmnMapper {
       } else if (tRootElement instanceof TError tError) {
         ErrorMapper errorMapper = bpmnMapperFactory.createErrorMapper();
         errors.put(tError.getId(), errorMapper.map(tError));
+      } else if (tRootElement instanceof TSignal tSignal) {
+        SignalMapper signalMapper = bpmnMapperFactory.createSignalMapper();
+        signals.put(tSignal.getId(), signalMapper.map(tSignal));
       }
     }
 

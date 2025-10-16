@@ -9,11 +9,13 @@
 package io.taktx.engine.pd;
 
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
+import io.taktx.dto.CancelDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.MessageDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.ProcessDefinitionActivationDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -24,6 +26,7 @@ import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
@@ -38,6 +41,7 @@ public class ProcessDefinitionActivationProcessor {
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final ProcessorContext<Object, Object> context;
   private final Clock clock;
+  private final FeelExpressionHandler feelExpressionHandler;
   private final DefinitionsCache definitionsCache;
   private final ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
       processDefinitionStore;
@@ -47,10 +51,12 @@ public class ProcessDefinitionActivationProcessor {
       MessageSchedulerFactory messageSchedulerFactory,
       ProcessorContext<Object, Object> context,
       Clock clock,
+      FeelExpressionHandler feelExpressionHandler,
       DefinitionsCache definitionsCache) {
     this.messageSchedulerFactory = messageSchedulerFactory;
     this.context = context;
     this.clock = clock;
+    this.feelExpressionHandler = feelExpressionHandler;
     this.definitionsCache = definitionsCache;
     this.processDefinitionStore =
         context.getStateStore(
@@ -99,7 +105,8 @@ public class ProcessDefinitionActivationProcessor {
         .forEach(
             startEvent -> {
               scheduleStartCommands(processDefinitionKey, startEvent);
-              subscribetoStartMessageEvents(processDefinitionKey, startEvent, processDefinition);
+              subscribetoStartMessageEventsAndSignals(
+                  processDefinitionKey, startEvent, processDefinition);
             });
 
     context.forward(new Record<>(processDefinitionKey, activatedDefinition, clock.millis()));
@@ -132,14 +139,15 @@ public class ProcessDefinitionActivationProcessor {
         .forEach(
             startEvent -> {
               cancelScheduledStartCommands(processDefinitionKey, startEvent);
-              unsubscribeFromStartMessageEvents(startEvent, deactivatedProcessDefinition);
+              unsubscribeFromStartMessageEventsAndSignals(
+                  processDefinitionKey, startEvent, deactivatedProcessDefinition);
             });
 
     context.forward(
         new Record<>(processDefinitionKey, deactivatedProcessDefinition, clock.millis()));
   }
 
-  private void subscribetoStartMessageEvents(
+  private void subscribetoStartMessageEventsAndSignals(
       ProcessDefinitionKey processDefinitionKey,
       StartEventDTO startEvent,
       ProcessDefinitionDTO processDefinition) {
@@ -160,10 +168,30 @@ public class ProcessDefinitionActivationProcessor {
                       messageSubscription,
                       clock.millis()));
             });
+
+    startEvent
+        .getSignalDefinitions()
+        .forEach(
+            signalStartEventDefinition -> {
+              String signalRef = signalStartEventDefinition.getSignalRef();
+              String signalName =
+                  feelExpressionHandler
+                      .processFeelExpression(
+                          processDefinition.getDefinitions().getSignals().get(signalRef).getName(),
+                          VariableScope.empty(null))
+                      .asText();
+              NewDefinitionSignalSubscriptionDTO signalSubscription =
+                  new NewDefinitionSignalSubscriptionDTO(
+                      processDefinitionKey, startEvent.getId(), signalName);
+
+              context.forward(new Record<>(signalName, signalSubscription, clock.millis()));
+            });
   }
 
-  private void unsubscribeFromStartMessageEvents(
-      StartEventDTO startEvent, ProcessDefinitionDTO processDefinition) {
+  private void unsubscribeFromStartMessageEventsAndSignals(
+      ProcessDefinitionKey processDefinitionKey,
+      StartEventDTO startEvent,
+      ProcessDefinitionDTO processDefinition) {
     startEvent
         .getMessageventDefinitions()
         .forEach(
@@ -176,6 +204,18 @@ public class ProcessDefinitionActivationProcessor {
               context.forward(
                   new Record<>(
                       cancelSubscription.toMessageEventKey(), cancelSubscription, clock.millis()));
+            });
+    startEvent
+        .getSignalDefinitions()
+        .forEach(
+            signelEventDefinition -> {
+              String signalRef = signelEventDefinition.getSignalRef();
+              String signalName =
+                  processDefinition.getDefinitions().getSignals().get(signalRef).getName();
+              CancelDefinitionSignalSubscriptionDTO cancelSignalSubscription =
+                  new CancelDefinitionSignalSubscriptionDTO(
+                      processDefinitionKey, startEvent.getId(), signalName);
+              context.forward(new Record<>(signalName, cancelSignalSubscription, clock.millis()));
             });
   }
 

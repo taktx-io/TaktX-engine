@@ -505,7 +505,7 @@
           <dc:Bounds x="470" y="155" width="62" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_03kg3nv_di" bpmnElement="Event_0rrnlul">
+      <bpmndi:BPMNShape id="Event_03kg3nv_di" bpmnElement="Event_0rrnlul" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="572" y="112" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="560" y="155" width="62" height="40" />
@@ -529,7 +529,7 @@
           <dc:Bounds x="389" y="285" width="62" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_17y8qy5_di" bpmnElement="Event_0kv5yqo">
+      <bpmndi:BPMNShape id="Event_17y8qy5_di" bpmnElement="Event_0kv5yqo" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="572" y="242" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="560" y="285" width="62" height="40" />
@@ -607,7 +607,7 @@
           <dc:Bounds x="464" y="525" width="74" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_03rel8v_di" bpmnElement="Event_1a6holr">
+      <bpmndi:BPMNShape id="Event_03rel8v_di" bpmnElement="Event_1a6holr" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="572" y="482" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="564" y="525" width="54" height="14" />
@@ -683,7 +683,7 @@
         <dc:Bounds x="880" y="710" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_19my4fc_di" bpmnElement="Activity_0mpx76i">
+      <bpmndi:BPMNShape id="Activity_19my4fc_di" bpmnElement="Activity_0mpx76i" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="990" y="710" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
