@@ -14,6 +14,7 @@ import io.taktx.bpmn.TBoundaryEvent;
 import io.taktx.bpmn.TCallActivity;
 import io.taktx.bpmn.TCatchEvent;
 import io.taktx.bpmn.TEndEvent;
+import io.taktx.bpmn.TEventBasedGateway;
 import io.taktx.bpmn.TExclusiveGateway;
 import io.taktx.bpmn.TFlowElement;
 import io.taktx.bpmn.TGateway;
@@ -35,6 +36,7 @@ import io.taktx.bpmn.TUserTask;
 import io.taktx.dto.BoundaryEventDTO;
 import io.taktx.dto.CatchEventDTO;
 import io.taktx.dto.EndEventDTO;
+import io.taktx.dto.EventBasedGatewayDTO;
 import io.taktx.dto.EventDefinitionDTO;
 import io.taktx.dto.ExclusiveGatewayDTO;
 import io.taktx.dto.FlowConditionDTO;
@@ -155,6 +157,13 @@ public class GenericFlowElementMapper implements FlowElementMapper {
           (inclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
               ? sequenceFlow.getId()
               : null);
+    } else if (gateway instanceof TEventBasedGateway eventBasedGateway) {
+      return new EventBasedGatewayDTO(
+          eventBasedGateway.getId(),
+          parentId,
+          mapQNameList(eventBasedGateway.getIncoming()),
+          mapQNameList(eventBasedGateway.getOutgoing()),
+          null);
     }
 
     throw new IllegalStateException("Unknown flow element type: " + gateway.getClass().getName());

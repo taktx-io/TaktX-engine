@@ -14,6 +14,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -133,6 +134,57 @@ class GatewayTest {
         .hasInstantiatedElementWithId("Task_2")
         .hasNotPassedElementWithId("Task_1")
         .hasInstantiatedElementWithId("EndEvent_1");
+  }
+
+  @Test
+  void testEventBasedGatewy_TimerTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/event-gateway.bpmn")
+        .startProcessInstance(VariablesDTO.of("inputVariable", 1))
+        .waitUntilIdle()
+        .moveTimeForward(Duration.ofMillis(5001))
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasPassedElementWithId("Gateway_0wn8ufc")
+        .hasPassedElementWithId("Timer_Event")
+        .hasPassedElementWithId("Timer_End_Event")
+        .hasAbortedElementWithId("Signal_Event")
+        .hasAbortedElementWithId("Message_Event");
+  }
+
+  @Test
+  void testEventBasedGatewy_SignalTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/event-gateway.bpmn")
+        .startProcessInstance(VariablesDTO.of("inputVariable", 1))
+        .waitUntilIdle()
+        .sendSignal("fgh")
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasPassedElementWithId("Gateway_0wn8ufc")
+        .hasPassedElementWithId("Signal_Event")
+        .hasPassedElementWithId("Signal_End_Event")
+        .hasAbortedElementWithId("Timer_Event")
+        .hasAbortedElementWithId("Message_Event");
+  }
+
+  @Test
+  void testEventBasedGatewy_MessageTriggered() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployProcessDefinitionAndWait("/bpmn/event-gateway.bpmn")
+        .startProcessInstance(VariablesDTO.of("inputVariable", "1"))
+        .waitUntilIdle()
+        .andSendMessageWithCorrelationKey("Msg", "1", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .isCompleted()
+        .hasPassedElementWithId("Gateway_0wn8ufc")
+        .hasPassedElementWithId("Message_Event")
+        .hasPassedElementWithId("Message_End_Event")
+        .hasAbortedElementWithId("Timer_Event")
+        .hasAbortedElementWithId("Signal_Event");
   }
 
   private static class DummyObject {

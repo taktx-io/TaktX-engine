@@ -17,6 +17,7 @@ import io.taktx.dto.CallActivityDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
 import io.taktx.dto.EscalationEventDefinitionDTO;
+import io.taktx.dto.EventBasedGatewayDTO;
 import io.taktx.dto.ExclusiveGatewayDTO;
 import io.taktx.dto.InclusiveGatewayDTO;
 import io.taktx.dto.IntermediateCatchEventDTO;
@@ -51,6 +52,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case IntermediateThrowEventDTO _ -> "IT";
       case EndEventDTO _ -> "E";
       case InclusiveGatewayDTO _ -> "IG";
+      case EventBasedGatewayDTO _ -> "VG";
       case ParallelGatewayDTO _ -> "PG";
       case ExclusiveGatewayDTO _ -> "EG";
       case SubProcessDTO _ -> "SP";
@@ -95,6 +97,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "IT" -> context.constructType(IntermediateThrowEventDTO.class);
       case "E" -> context.constructType(EndEventDTO.class);
       case "IG" -> context.constructType(InclusiveGatewayDTO.class);
+      case "VG" -> context.constructType(EventBasedGatewayDTO.class);
       case "PG" -> context.constructType(ParallelGatewayDTO.class);
       case "EG" -> context.constructType(ExclusiveGatewayDTO.class);
       case "SP" -> context.constructType(SubProcessDTO.class);

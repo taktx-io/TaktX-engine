@@ -11,6 +11,7 @@ package io.taktx.engine.pi;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
+import io.taktx.dto.EventBasedGatewayInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
@@ -39,6 +40,7 @@ import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.EndEventInstance;
+import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.InclusiveGatewayInstance;
@@ -92,6 +94,16 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "state", ignore = true)
   InclusiveGatewayInstance map(
       InclusiveGatewayInstanceDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
+          "java((io.taktx.engine.pd.model.EventBasedGateway)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
+  EventBasedGatewayInstance map(
+      EventBasedGatewayInstanceDTO source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "flowNode",
@@ -331,6 +343,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(
       target = ParallelGatewayInstance.class,
       source = ParallelGatewayInstanceDTO.class)
+  @SubclassMapping(
+      target = EventBasedGatewayInstance.class,
+      source = EventBasedGatewayInstanceDTO.class)
   // Task state should come last
   @SubclassMapping(target = TaskInstance.class, source = TaskInstanceDTO.class)
   @Mapping(target = "parentInstance", ignore = true)
@@ -459,6 +474,13 @@ public interface ProcessInstanceMapper {
       target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
+  EventBasedGatewayInstanceDTO map(
+      EventBasedGatewayInstance source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "elementIndex",
+      expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
   ParallelGatewayInstanceDTO map(
       ParallelGatewayInstance source, @Context FlowElements flowElements);
 
@@ -491,6 +513,9 @@ public interface ProcessInstanceMapper {
   @SubclassMapping(
       source = InclusiveGatewayInstance.class,
       target = InclusiveGatewayInstanceDTO.class)
+  @SubclassMapping(
+      source = EventBasedGatewayInstance.class,
+      target = EventBasedGatewayInstanceDTO.class)
   @SubclassMapping(
       source = ParallelGatewayInstance.class,
       target = ParallelGatewayInstanceDTO.class)

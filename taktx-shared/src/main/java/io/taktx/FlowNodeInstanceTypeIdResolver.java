@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
+import io.taktx.dto.EventBasedGatewayInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
 import io.taktx.dto.InclusiveGatewayInstanceDTO;
 import io.taktx.dto.IntermediateCatchEventInstanceDTO;
@@ -46,6 +47,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case MessageEndEventInstanceDTO _ -> "G";
       case MessageIntermediateThrowEventInstanceDTO _ -> "H";
       case IntermediateCatchEventInstanceDTO _ -> "I";
+      case EventBasedGatewayInstanceDTO _ -> "J";
       case MultiInstanceInstanceDTO _ -> "M";
       case InclusiveGatewayInstanceDTO _ -> "N";
       case ParallelGatewayInstanceDTO _ -> "P";
@@ -82,6 +84,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
       case "G" -> context.constructType(MessageEndEventInstanceDTO.class);
       case "H" -> context.constructType(MessageIntermediateThrowEventInstanceDTO.class);
       case "I" -> context.constructType(IntermediateCatchEventInstanceDTO.class);
+      case "J" -> context.constructType(EventBasedGatewayInstanceDTO.class);
       case "M" -> context.constructType(MultiInstanceInstanceDTO.class);
       case "N" -> context.constructType(InclusiveGatewayInstanceDTO.class);
       case "P" -> context.constructType(ParallelGatewayInstanceDTO.class);

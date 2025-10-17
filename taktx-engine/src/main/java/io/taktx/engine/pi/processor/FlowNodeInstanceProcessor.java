@@ -25,6 +25,7 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import lombok.Getter;
@@ -143,7 +144,6 @@ public abstract class FlowNodeInstanceProcessor<
   protected void selectNextNodeIfAllowedStart(
       ProcessInstance processInstance, I flownodeInstance, Scope scope) {
     if (flownodeInstance.canSelectNextNodeStart()) {
-
       processNodeResultAndSelectNextInstance(processInstance, flownodeInstance, scope);
     }
   }
@@ -151,12 +151,11 @@ public abstract class FlowNodeInstanceProcessor<
   protected void selectNextNodeIfAllowedContinue(
       I flownodeInstance, ProcessInstance processInstance, Scope scope) {
     if (flownodeInstance.canSelectNextNodeContinue()) {
-
       processNodeResultAndSelectNextInstance(processInstance, flownodeInstance, scope);
     }
   }
 
-  protected void processNodeResultAndSelectNextInstance(
+  protected List<FlowNodeInstance<?>> processNodeResultAndSelectNextInstance(
       ProcessInstance processInstance, I flownodeInstance, Scope scope) {
     FlowNode flowNode = flownodeInstance.getFlowNode();
     if (flowNode instanceof WithIoMapping withIoMapping) {
@@ -164,6 +163,7 @@ public abstract class FlowNodeInstanceProcessor<
     }
 
     flownodeInstance.increasePassedCnt();
+    List<FlowNodeInstance<?>> newFlowNodeInstances = new ArrayList<>();
     getSelectedSequenceFlows(processInstance, flownodeInstance, scope)
         .forEach(
             sequenceFlow -> {
@@ -184,12 +184,14 @@ public abstract class FlowNodeInstanceProcessor<
                         .getTargetNode()
                         .createAndStoreNewInstance(flownodeInstance.getParentInstance(), scope);
               }
+              newFlowNodeInstances.add(newFlowNodeInstance);
               scope
                   .getDirectInstanceResult()
                   .addNewFlowNodeInstance(
                       processInstance,
                       new StartFlowNodeInstanceInfo(newFlowNodeInstance, sequenceFlow.getId()));
             });
+    return newFlowNodeInstances;
   }
 
   protected abstract Set<SequenceFlow> getSelectedSequenceFlows(

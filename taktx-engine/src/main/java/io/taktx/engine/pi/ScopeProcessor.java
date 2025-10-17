@@ -16,6 +16,7 @@ import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
+import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.EventDefinition;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowNode;
@@ -26,7 +27,9 @@ import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
+import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
+import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.Scope;
@@ -347,6 +350,34 @@ public class ScopeProcessor {
         scope.getDirectInstanceResult().pollContinueInstance();
     while (continueInstance != null) {
       FlowNodeInstance<?> flowNodeInstance = continueInstance.flowNodeInstance();
+
+      if (flowNodeInstance instanceof IntermediateCatchEventInstance intermediateCatchEventInstance
+          && intermediateCatchEventInstance.isActive()) {
+        Optional<EventBasedGateway> eventBasedGateway =
+            flowNodeInstance.getFlowNode().getIncomingSequenceFlows().stream()
+                .filter(flow -> flow.getSourceNode() instanceof EventBasedGateway)
+                .map(flow -> (EventBasedGateway) flow.getSourceNode())
+                .findFirst();
+        if (eventBasedGateway.isPresent()) {
+          Long gatewayInstanceId = scope.getGatewayInstanceId(eventBasedGateway.get().getId());
+          if (gatewayInstanceId != null) {
+            EventBasedGatewayInstance gatewayInstance =
+                (EventBasedGatewayInstance)
+                    scope.getFlowNodeInstances().getInstanceWithInstanceId(gatewayInstanceId);
+            if (gatewayInstance != null) {
+              for (Long connectedInstanceId : gatewayInstance.getConnectedFlowNodeInstanceIds()) {
+                if (connectedInstanceId != flowNodeInstance.getElementInstanceId()) {
+                  FlowNodeInstance<?> connectedInstance =
+                      scope.getFlowNodeInstances().getInstanceWithInstanceId(connectedInstanceId);
+                  if (connectedInstance != null && connectedInstance.isActive()) {
+                    scope.getDirectInstanceResult().addAbortInstance(connectedInstance);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
 
       if (flowNodeInstance instanceof BoundaryEventInstance boundaryEventInstance
           && boundaryEventInstance.getFlowNode().isCancelActivity()) {

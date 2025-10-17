@@ -16,6 +16,7 @@ import io.taktx.dto.ErrorEventDefinitionDTO;
 import io.taktx.dto.ErrorEventSignalDTO;
 import io.taktx.dto.EscalationEventDefinitionDTO;
 import io.taktx.dto.EscalationEventSignalDTO;
+import io.taktx.dto.EventBasedGatewayDTO;
 import io.taktx.dto.EventDefinitionDTO;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.ExclusiveGatewayDTO;
@@ -49,6 +50,7 @@ import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pd.model.ErrorEventDefinition;
 import io.taktx.engine.pd.model.EscalationEventDefinition;
+import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.EventDefinition;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.ExclusiveGateway;
@@ -98,6 +100,7 @@ public interface DtoMapper {
   @SubclassMapping(source = ExclusiveGatewayDTO.class, target = ExclusiveGateway.class)
   @SubclassMapping(source = ParallelGatewayDTO.class, target = ParallelGateway.class)
   @SubclassMapping(source = InclusiveGatewayDTO.class, target = InclusiveGateway.class)
+  @SubclassMapping(source = EventBasedGatewayDTO.class, target = EventBasedGateway.class)
   @SubclassMapping(source = StartEventDTO.class, target = StartEvent.class)
   @SubclassMapping(source = EndEventDTO.class, target = EndEvent.class)
   @SubclassMapping(source = UserTaskDTO.class, target = UserTask.class)
@@ -197,6 +200,10 @@ public interface DtoMapper {
   @Mapping(target = "defaultSequenceFlow", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
   InclusiveGateway map(InclusiveGatewayDTO gateway);
+
+  @Mapping(target = "defaultSequenceFlow", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  EventBasedGateway map(EventBasedGatewayDTO gateway);
 
   @SubclassMapping(source = SignalEventDefinitionDTO.class, target = SignalEventDefinition.class)
   @SubclassMapping(source = MessageEventDefinitionDTO.class, target = MessageEventDefinition.class)

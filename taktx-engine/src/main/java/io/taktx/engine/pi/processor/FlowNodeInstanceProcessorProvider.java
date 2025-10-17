@@ -15,6 +15,7 @@ import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EndEvent;
+import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.ExclusiveGateway;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.InclusiveGateway;
@@ -49,6 +50,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject EndEventInstanceProcessor endEventProcessor;
   @Inject ExclusiveGatewayInstanceProcessor exclusiveGatewayProcessor;
   @Inject ParallelGatewayInstanceProcessor parallelGatewayProcessor;
+  @Inject EventBasedGatewayInstanceProcessor eventBasedGatewayProcessor;
   @Inject InclusiveGatewayInstanceProcessor inclusiveGatewayProcessor;
   @Inject ServiceTaskInstanceProcessor serviceTaskProcessor;
   @Inject BoundaryEventInstanceProcessor boundaryEventProcessor;
@@ -91,6 +93,8 @@ public class FlowNodeInstanceProcessorProvider {
       return inclusiveGatewayProcessor;
     } else if (gateway instanceof ParallelGateway) {
       return parallelGatewayProcessor;
+    } else if (gateway instanceof EventBasedGateway) {
+      return eventBasedGatewayProcessor;
     }
     throw new IllegalStateException("Unknown gateway element type: " + gateway.getClass());
   }
