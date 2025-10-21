@@ -13,6 +13,15 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 /** A parameter resolver that directly provides the ExternalTaskTriggerDTO. */
 public class ExternalTaskTriggerDTOParameterResolver implements TaktParameterResolver {
 
+  /**
+   * Constructs a new ExternalTaskTriggerDTOParameterResolver. This explicit no-argument constructor
+   * is documented to satisfy static analysis rules that require constructors to have comments
+   * instead of relying on the implicit default constructor.
+   */
+  public ExternalTaskTriggerDTOParameterResolver() {
+    // intentionally empty
+  }
+
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return externalTaskTriggerDTO;

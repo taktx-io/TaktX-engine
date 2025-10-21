@@ -10,9 +10,11 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.engine.pd.model.EventSignal;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ErrorEventSignal extends EventSignal {
 

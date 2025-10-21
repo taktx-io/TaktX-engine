@@ -95,6 +95,7 @@ public interface DtoMapper {
   @Mapping(target = "flowNodes", ignore = true)
   @Mapping(target = "sequenceFlows", ignore = true)
   @Mapping(target = "index", ignore = true)
+  @Mapping(target = "eventTriggeredSubProcesses", ignore = true)
   FlowElements getFlowElements(FlowElementsDTO flowElements);
 
   @SubclassMapping(source = ExclusiveGatewayDTO.class, target = ExclusiveGateway.class)
@@ -227,6 +228,7 @@ public interface DtoMapper {
 
   @SubclassMapping(source = ErrorEventSignalDTO.class, target = ErrorEventSignal.class)
   @SubclassMapping(source = EscalationEventSignalDTO.class, target = EscalationEventSignal.class)
+  @Mapping(target = "pathToSource", ignore = true)
   EventSignal map(EventSignalDTO source);
 
   @ObjectFactory

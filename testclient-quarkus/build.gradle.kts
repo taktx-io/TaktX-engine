@@ -4,6 +4,30 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+}
+
+tasks {
+    withType<JavaCompile>().configureEach {
+        options.release = 23
+    }
+
+    withType<Javadoc>().configureEach {
+        with(options as StandardJavadocDocletOptions) {
+            addStringOption("-release", "23")
+        }
+    }
+
+    withType<Test>().configureEach {
+        javaLauncher.set(project.javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(23)
+        })
+    }
+}
+
 dependencies {
     implementation(enforcedPlatform(libs.quarkus.camel.bom.get()))
     implementation(enforcedPlatform(libs.quarkus.bom.get()))

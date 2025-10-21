@@ -24,7 +24,7 @@ processes with high throughput and reliability.
 
 ### Prerequisites
 
-- Java 22+
+- Java 23+
 - Apache Kafka
 - Docker (optional)
 

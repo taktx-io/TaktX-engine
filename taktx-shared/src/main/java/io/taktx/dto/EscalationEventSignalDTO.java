@@ -11,12 +11,14 @@ package io.taktx.dto;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @RegisterForReflection
+@EqualsAndHashCode(callSuper = true)
 public class EscalationEventSignalDTO extends EventSignalDTO {
   private String code;
   private String message;

@@ -279,6 +279,11 @@ public class TaktClient {
     return this.xmlByProcessDefinitionIdConsumer.getProcessDefinitionXml(processDefinitionKey);
   }
 
+  /**
+   * Sends a signal event to the engine.
+   *
+   * @param signalName The name of the signal to send.
+   */
   public void sendSignal(String signalName) {
     this.signalSender.sendMSignal(new SignalDTO(signalName));
   }

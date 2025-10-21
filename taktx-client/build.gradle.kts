@@ -5,6 +5,30 @@ plugins {
     id("org.jreleaser")
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+}
+
+tasks {
+    withType<JavaCompile>().configureEach {
+        options.release = 23
+    }
+
+    withType<Javadoc>().configureEach {
+        with(options as StandardJavadocDocletOptions) {
+            addStringOption("-release", "23")
+        }
+    }
+
+    withType<Test>().configureEach {
+        javaLauncher.set(project.javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(23)
+        })
+    }
+}
+
 // Group and version are inherited from the root project
 
 repositories {
@@ -14,16 +38,16 @@ repositories {
 
 dependencies {
     implementation(project(":taktx-shared"))
-    implementation("org.slf4j:slf4j-api:2.0.16")
-    implementation("org.slf4j:slf4j-simple:2.0.16")
+    implementation(libs.slf4j.api)
+    implementation(libs.slf4j.simple)
     implementation(libs.kafka.clients)
-    implementation("io.github.classgraph:classgraph:4.8.179")
+    implementation(libs.classgraph)
     implementation(libs.jackson.annotations)
     implementation(libs.jackson.databind)
     implementation(libs.jackson.cbor)
     implementation(libs.awaitility)
 
-    compileOnly("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
+    compileOnly(libs.jakarta.cdi.api)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

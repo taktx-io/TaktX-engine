@@ -35,7 +35,7 @@ subprojects {
 
         // Configure JaCoCo for all subprojects
         configure<JacocoPluginExtension> {
-            toolVersion = "0.8.11" // Use a version compatible with Java 21
+            toolVersion = "0.8.14" // Use a version compatible with Java 23
         }
 
         // Configure test task to generate coverage data
@@ -71,14 +71,6 @@ subprojects {
                 })
             )
         }
-    }
-}
-
-// Set Java compatibility for all projects
-plugins.withType<JavaPlugin> {
-    configure<JavaPluginExtension> {
-        sourceCompatibility = JavaVersion.VERSION_23
-        targetCompatibility = JavaVersion.VERSION_23
     }
 }
 

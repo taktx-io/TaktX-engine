@@ -5,6 +5,30 @@ plugins {
     alias(libs.plugins.jib)
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+}
+
+tasks {
+    withType<JavaCompile>().configureEach {
+        options.release = 23
+    }
+
+    withType<Javadoc>().configureEach {
+        with(options as StandardJavadocDocletOptions) {
+            addStringOption("-release", "23")
+        }
+    }
+
+    withType<Test>().configureEach {
+        javaLauncher.set(project.javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(23)
+        })
+    }
+}
+
 dependencies {
     implementation(project(":taktx-shared"))
     implementation(enforcedPlatform(libs.quarkus.camel.bom.get()))
@@ -14,20 +38,20 @@ dependencies {
     implementation(libs.quarkus.resteasy.client)
     implementation(libs.jackson.cbor)
     implementation(libs.license3j)
-    implementation("io.quarkus:quarkus-core")
-    implementation("io.quarkus:quarkus-scheduler")
-    implementation("io.quarkus:quarkus-smallrye-openapi")
-    implementation("io.quarkus:quarkus-swagger-ui")
-    implementation("io.quarkus:quarkus-resteasy-jackson")
-    implementation("io.quarkus:quarkus-jackson")
-
-    // Micrometer
+    implementation(libs.quarkus.core)
+    implementation(libs.quarkus.scheduler)
+    implementation(libs.quarkus.smallrye.openapi)
+    implementation(libs.quarkus.swagger.ui)
+    implementation(libs.quarkus.resteasy.jackson)
+    implementation(libs.quarkus.jackson)
     implementation(libs.quarkus.micrometer)
     implementation(libs.quarkus.micrometer.registry.prometheus)
     implementation(libs.quarkus.kafka.client)
-
     implementation(libs.camunda.feel)
     implementation(libs.cronutils)
+    implementation(libs.mapstruct)
+
+    compileOnly(libs.lombok)
 
     testImplementation(project(":taktx-client"))
     testImplementation(libs.quarkus.jaxb)
@@ -39,10 +63,7 @@ dependencies {
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.awaitility)
 
-    compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
-
-    implementation(libs.mapstruct)
     annotationProcessor(libs.mapstruct.processor)
 }
 
@@ -66,7 +87,7 @@ dependencyLocking {
 
 tasks.withType<JacocoReport> {
     executionData.setFrom(files(
-        "${buildDir}/jacoco/test.exec",
-        "${buildDir}/jacoco-quarkus.exec"
+        "${layout.buildDirectory}/jacoco/test.exec",
+        "${layout.buildDirectory}/jacoco-quarkus.exec"
     ))
 }

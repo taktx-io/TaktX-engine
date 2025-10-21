@@ -6,6 +6,30 @@ plugins {
     id("org.jreleaser")
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+}
+
+tasks {
+    withType<JavaCompile>().configureEach {
+        options.release = 23
+    }
+
+    withType<Javadoc>().configureEach {
+        with(options as StandardJavadocDocletOptions) {
+            addStringOption("-release", "23")
+        }
+    }
+
+    withType<Test>().configureEach {
+        javaLauncher.set(project.javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(23)
+        })
+    }
+}
+
 dependencies {
     implementation(libs.cronutils)
     implementation(libs.jackson.annotations)
@@ -36,8 +60,6 @@ tasks.javadoc {
         this as StandardJavadocDocletOptions
         addStringOption("Xdoclint:none", "-quiet")
         addBooleanOption("html5", true)
-        // Use Java 21 compatibility for modern language features
-        addStringOption("source", "21")
     }
     isFailOnError = false
 }

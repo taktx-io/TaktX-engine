@@ -11,16 +11,27 @@ package io.taktx.client;
 import io.taktx.dto.InstanceUpdateDTO;
 import java.util.UUID;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 /**
  * A record representing an update to a process instance scope or flow node instance, including the
  * timestamp of the update,the ID of the process instance, and the details of the update.
  */
-@RequiredArgsConstructor
 @Getter
 public class InstanceUpdateRecord {
   private final long timestamp;
   private final UUID processInstanceId;
   private final InstanceUpdateDTO update;
+
+  /**
+   * Create a new InstanceUpdateRecord.
+   *
+   * @param timestamp the epoch millis timestamp when the update occurred
+   * @param processInstanceId the id of the process instance affected
+   * @param update the details of the update
+   */
+  public InstanceUpdateRecord(long timestamp, UUID processInstanceId, InstanceUpdateDTO update) {
+    this.timestamp = timestamp;
+    this.processInstanceId = processInstanceId;
+    this.update = update;
+  }
 }
