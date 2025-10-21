@@ -22,6 +22,12 @@ public class LicenseInfoConfig {
   private final LicenseManager licenseManager;
 
   void onStart(@Observes @Priority(Integer.MIN_VALUE) StartupEvent ev) {
+    // resolve version from JAR manifest; fallback to "dev"
+    String version = getClass().getPackage().getImplementationVersion();
+    if (version == null || version.isBlank()) {
+      version = "dev";
+    }
+
     // TaktX ASCII Art Banner
     String taktxBanner =
         """
@@ -52,18 +58,20 @@ public class LicenseInfoConfig {
     String separator = "=".repeat(80);
 
     String licenseInfo =
-        """
-        TaktX Engine vX.X.X - Copyright (c) 2025 TaktX B.V. All rights reserved.
-        Licensed under TaktX Business Source License v1.1.
+        String.format(
+            """
+        TaktX Engine v%s - Copyright (c) 2025 TaktX B.V. All rights reserved.
+        Alpha version - NOT for production use
 
         TERMS SUMMARY:
-        - Free use (including production) limited to 3 Kafka partitions per topic used by the engine
-        - This version will be available under Apache License 2.0 in four years
+        - Free use for testing and evaluation purposes
+        - NO production use
         - No warranty or liability (provided "AS IS")
 
         Full license terms at [https://taktx.io/license]
         For commercial licensing, contact us at [https://taktx.io/contact]
-        """;
+        """,
+            version);
 
     // Print to console with clear formatting
     System.out.println(taktxBanner);
@@ -73,16 +81,10 @@ public class LicenseInfoConfig {
     System.out.println(licenseInfo);
 
     String invalidLicenseMessage =
-        "⚠️ No valid commercial license found. Running with limitations:"
-            + "\n  • Maximum "
-            + LicenseManager.DEFAULT_PARTITION_LIMIT
-            + " Kafka partitions"
-            + "\n  • Premium features disabled"
-            + "\nFor commercial use and to unlock premium features, contact us at [https://taktx.io/contact].";
-    ;
+        "⚠️ This alpha-release requires a valid license file. Contact us at [https://taktx.io/contact].";
 
     if (licenseManager.isLicenseValid()) {
-      System.out.println("✅ Valid commercial license found: " + licenseManager.getLicenseInfo());
+      System.out.println("✅ Valid license found: " + licenseManager.getLicenseInfo());
     } else {
       System.out.println(invalidLicenseMessage);
     }
@@ -99,9 +101,11 @@ public class LicenseInfoConfig {
             + "\n"
             + licenseInfo);
     if (licenseManager.isLicenseValid()) {
-      log.info("Valid commercial license found: {}", licenseManager.getLicenseInfo());
+      log.info("Valid license found: {}", licenseManager.getLicenseInfo());
     } else {
       log.warn(invalidLicenseMessage);
+      // Exit the application
+      //      Runtime.getRuntime().halt(1);
     }
   }
 }

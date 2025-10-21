@@ -48,6 +48,9 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.broadcastInstanceUpdates", defaultValue = "true")
   String broadcastInstanceUpdates;
 
+  @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "./license.txt")
+  String licenseFileLocation;
+
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }

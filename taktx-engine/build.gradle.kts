@@ -85,6 +85,19 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
+// Ensure the produced JARs include useful manifest attributes (Implementation-Version etc.)
+tasks.withType<Jar>().configureEach {
+    manifest {
+        attributes(mapOf(
+            "Implementation-Title" to project.name,
+            "Implementation-Version" to project.version.toString(),
+            "Implementation-Vendor" to project.group.toString(),
+            "Built-By" to System.getProperty("user.name"),
+            "Built-Date" to System.currentTimeMillis().toString()
+        ))
+    }
+}
+
 tasks.withType<JacocoReport> {
     executionData.setFrom(files(
         "${layout.buildDirectory}/jacoco/test.exec",

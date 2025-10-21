@@ -9,6 +9,7 @@
 package io.taktx.engine.license;
 
 import io.quarkus.runtime.Startup;
+import io.taktx.engine.config.TaktConfiguration;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.io.File;
@@ -16,23 +17,22 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Date;
 import javax0.license3j.Feature;
 import javax0.license3j.License;
 import javax0.license3j.io.IOFormat;
 import javax0.license3j.io.LicenseReader;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @ApplicationScoped
 @Startup
 @Slf4j
+@RequiredArgsConstructor
 public class LicenseManager {
 
   public static final int DEFAULT_PARTITION_LIMIT = 3;
-  private static final Path LICENSE_PATH =
-      Paths.get(System.getProperty("user.home"), ".taktx", "license.lic");
 
   private static final byte[] PUBLIC_KEY_BYTES = {
     (byte) 0x52,
@@ -336,6 +336,7 @@ public class LicenseManager {
   };
 
   private License license;
+  private final TaktConfiguration taktConfiguration;
 
   @Getter private boolean licenseValid = false;
 
@@ -349,14 +350,14 @@ public class LicenseManager {
       log.info("Available processors {} threads {} ", i, threadCount);
       loadLicense();
     } catch (Exception e) {
-      log.warn("No valid license found. Running with restricted features: " + e.getMessage());
+      log.warn("No valid license found." + e.getMessage());
       licenseValid = false;
     }
   }
 
   private void loadLicense() throws LicenseException {
-    log.info("Checking for license file at " + LICENSE_PATH.toFile().getAbsolutePath());
-    File licenseFile = LICENSE_PATH.toFile();
+    File licenseFile = Path.of(taktConfiguration.getLicenseFileLocation()).toFile();
+    log.info("Checking for license file at " + licenseFile.getAbsolutePath());
     if (!licenseFile.exists()) {
       // Exit the application
       throw new LicenseException("License file not found");
