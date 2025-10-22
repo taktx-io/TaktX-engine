@@ -8,9 +8,20 @@
 
 package io.taktx.engine.license;
 
-public interface LicenseManager {
+import io.quarkus.arc.profile.IfBuildProfile;
+import jakarta.enterprise.context.ApplicationScoped;
 
-  boolean isLicenseValid();
+@IfBuildProfile("test")
+@ApplicationScoped
+public class TestLicenseManager implements LicenseManager {
 
-  String getLicenseInfo();
+  @Override
+  public boolean isLicenseValid() {
+    return true;
+  }
+
+  @Override
+  public String getLicenseInfo() {
+    return "Test License";
+  }
 }

@@ -104,7 +104,7 @@ public class LicenseInfoConfig {
       log.info("Valid license found: {}", licenseManager.getLicenseInfo());
     } else {
       log.warn(invalidLicenseMessage);
-      // Exit the application
+      // Exit the application if we don't have a valid license
       Runtime.getRuntime().halt(1);
     }
   }
