@@ -105,7 +105,7 @@ public class LicenseInfoConfig {
     } else {
       log.warn(invalidLicenseMessage);
       // Exit the application
-      //      Runtime.getRuntime().halt(1);
+      Runtime.getRuntime().halt(1);
     }
   }
 }

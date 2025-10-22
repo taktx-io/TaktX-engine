@@ -356,7 +356,8 @@ public class LicenseManager {
   }
 
   private void loadLicense() throws LicenseException {
-    File licenseFile = Path.of(taktConfiguration.getLicenseFileLocation()).toFile();
+    Path licenseFilePath = taktConfiguration.getLicenseFilePath();
+    File licenseFile = licenseFilePath.toFile();
     log.info("Checking for license file at " + licenseFile.getAbsolutePath());
     if (!licenseFile.exists()) {
       // Exit the application

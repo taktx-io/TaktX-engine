@@ -9,12 +9,17 @@
 package io.taktx.engine.config;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.Getter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 @Getter
 public class TaktConfiguration {
+  private static final Path LICENSE_PATH =
+      Paths.get(System.getProperty("user.home"), ".taktx", "license.lic");
+
   @ConfigProperty(name = "taktx.engine.tenant")
   String tenant;
 
@@ -48,7 +53,7 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.broadcastInstanceUpdates", defaultValue = "true")
   String broadcastInstanceUpdates;
 
-  @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "./license.txt")
+  @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "-")
   String licenseFileLocation;
 
   public boolean inTestMode() {
@@ -61,6 +66,10 @@ public class TaktConfiguration {
       throw new IllegalArgumentException("Topic name is too long: " + prefixedName);
     }
     return prefixedName;
+  }
+
+  public Path getLicenseFilePath() {
+    return "-".equals(licenseFileLocation) ? LICENSE_PATH : Path.of(licenseFileLocation);
   }
 
   public boolean getTopicCreationEnabled() {
