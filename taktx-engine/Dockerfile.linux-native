@@ -1,5 +1,5 @@
 # Use the official Eclipse Temurin image as a parent image
-FROM ibm-semeru-runtimes:open-21-jre
+FROM ibm-semeru-runtimes:open-25-jre
 
 # Define build arguments
 ARG VERSION=dev
