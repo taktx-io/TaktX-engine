@@ -1,4 +1,4 @@
-version: "3"
+version: "3.9"
 services:
   kafka:
     image: 'bitnami/kafka:latest'
@@ -16,6 +16,12 @@ services:
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT,DOCKER:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/tcp/localhost/9094 >/dev/null 2>&1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   kafka-ui:
     image: 'provectuslabs/kafka-ui:latest'
@@ -30,6 +36,20 @@ services:
       - KAFKA_CLUSTERS_0_PROPERTIES_CONSUMER_VALUE_DESERIALIZER=org.apache.kafka.common.serialization.HexDeserializer
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_KEY_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_VALUE_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
+
+  taktx:
+    image: ghcr.io/taktx-io/taktx-engine:0.0.8-alpha-2
+    ports:
+      - 8080:8080
+    depends_on:
+      - kafka
+    environment:
+        - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+        - TAKTX_TENANT=tenant
+        - TAKTX_NAMESPACE=default
+        - TAKTX_LICENSE_FILE_LOCATION=/opt/taktx/licence.lic
+    volumes:
+      - ~/.taktx/license.lic:/opt/taktx/licence.lic:ro
 
   prometheus:
     image: prom/prometheus
