@@ -9,7 +9,7 @@ ARG CHANGE_DATE=unknown
 LABEL org.opencontainers.image.version=${VERSION}
 LABEL com.taktx.license.change-date=${CHANGE_DATE}
 LABEL org.opencontainers.image.description="TaktX Engine - A high-performance BPMN engine"
-LABEL org.opencontainers.image.licenses="TaktX Business Source License 1.0"
+LABEL org.opencontainers.image.licenses="TaktX Alpha License 1.0"
 
 # Set the working directory in the container
 WORKDIR /app

@@ -41,7 +41,6 @@ dependencies {
     implementation("io.quarkus:quarkus-jackson")
     implementation("io.quarkus:quarkus-websockets")
     implementation(project(":taktx-client"))
-    implementation(project(":taktx-shared"))
 
     testImplementation(libs.quarkus.junit5)
     testImplementation(libs.quarkus.junit5.mockito)

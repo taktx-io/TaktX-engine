@@ -37,7 +37,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":taktx-shared"))
+    api(project(":taktx-shared"))
     implementation(libs.slf4j.api)
     implementation(libs.slf4j.simple)
     implementation(libs.kafka.clients)

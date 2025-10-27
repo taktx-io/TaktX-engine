@@ -193,7 +193,12 @@ public class TaktClient {
       for (TaktDeployment annotation : taktDeployments) {
         String resource = annotation.resource();
         log.info("Deploying process definition from resource {}", resource);
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resource);
+
+        InputStream inputStream =
+            Optional.ofNullable(
+                    Thread.currentThread().getContextClassLoader().getResourceAsStream(resource))
+                .orElseGet(() -> TaktClient.class.getClassLoader().getResourceAsStream(resource));
+
         if (inputStream == null) {
           throw new FileNotFoundException("Resource not found: " + resource);
         }

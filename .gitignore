@@ -6,3 +6,4 @@
 /taktx-shared/bin/
 /docker/grafana/data/
 /.vscode/
+/docker/kafka/
