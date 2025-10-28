@@ -31,11 +31,11 @@ tasks {
 }
 
 dependencies {
-    implementation(libs.cronutils)
-    implementation(libs.jackson.annotations)
-    implementation(libs.jackson.databind)
+    api(libs.jackson.databind)
+
     implementation(libs.jackson.cbor)
     implementation(libs.kafka.clients)
+    implementation(libs.cronutils)
     implementation(libs.quarkus.core)
 
     testImplementation(libs.junit.jupiter)
