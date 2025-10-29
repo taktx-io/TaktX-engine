@@ -6,7 +6,7 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.app;
+package io.taktx.client.quarkus;
 
 import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
@@ -15,49 +15,57 @@ import io.taktx.client.TaktClient;
 import io.taktx.client.TaktClient.TaktClientBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
-import java.io.FileInputStream;
-import java.io.IOException;
+import jakarta.inject.Inject;
 import java.util.Properties;
-import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+@ApplicationScoped
 @Startup
-@Slf4j
 @Priority(Integer.MAX_VALUE) // Lower value means higher priority
 public class TaktClientProvider {
   private static TaktClient taktClient;
 
-  public TaktClientProvider() {
-    log.info("TaktClientProvider instantiated");
-  }
+  // Inject the full MicroProfile Config so we can read all application properties
+  @Inject Config config;
+
+  @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
+  int partitions;
+
+  @ConfigProperty(name = "taktx.engine.topic.replicationFactor", defaultValue = "1")
+  short replicationFactor;
 
   @PostConstruct
-  void init() throws IOException {
+  void init() {
     TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
+
     synchronized (TaktClientProvider.class) {
       if (taktClient == null) {
-        Properties properties = new Properties();
+        // Build a Properties object containing all application properties. This lets us pass the
+        // full application config to the TaktClient so it can override sensible defaults.
+        Properties taktProperties = new Properties();
 
-        String taktPropertiesFile = System.getenv("TAKTX_PROPERTIES_FILE");
-        log.info("TaktClientProvider taktPropertiesFile: {}", taktPropertiesFile);
-        try (FileInputStream fileInputStream = new FileInputStream(taktPropertiesFile)) {
-          properties.load(fileInputStream);
+        // Copy all available config entries into the Properties object as Strings
+        for (String name : config.getPropertyNames()) {
+          config
+              .getOptionalValue(name, String.class)
+              .ifPresent(value -> taktProperties.put(name, value));
         }
 
-        taktClient = taktClientBuilder.withTaktProperties(properties).build();
+        taktClient = taktClientBuilder.withTaktProperties(taktProperties).build();
         taktClient.start();
+
         taktClient.deployTaktDeploymentAnnotatedClasses();
+
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(), taktClient.getProcessInstanceResponder());
+
         taktClient.registerExternalTaskConsumer(
             externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
-        int partitions =
-            Integer.parseInt(
-                properties.getOrDefault("taktx.engine.topic.partitions", 3).toString());
-        short replicationFactor =
-            Short.parseShort(
-                properties.getOrDefault("taktx.engine.topic.replication-factor", 1).toString());
+
         externalTaskTriggerConsumer
             .getJobIds()
             .forEach(
@@ -69,7 +77,7 @@ public class TaktClientProvider {
   }
 
   @Produces
-  TaktClient taktClient() {
+  public TaktClient taktClient() {
     return taktClient;
   }
 }

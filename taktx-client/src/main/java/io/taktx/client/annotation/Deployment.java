@@ -11,14 +11,19 @@ package io.taktx.client.annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-/** Annotation to mark a class for TaktX deployment with a specified resource. */
+/**
+ * Marks a class whose referenced BPMN resources should be deployed automatically at client startup.
+ *
+ * <p>Provide one or more resource paths (classpath or filesystem). Example resource values:
+ * "classpath:demoProcess.bpmn" or "classpath:processes/*.bpmn".
+ */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({java.lang.annotation.ElementType.TYPE})
-public @interface TaktDeployment {
+public @interface Deployment {
   /**
-   * The resource path for the deployment.
+   * The resource paths for the deployment. Supports multiple values and classpath wildcards.
    *
-   * @return The resource path for the deployment.
+   * @return one or more resource location strings (for example: "classpath:process.bpmn")
    */
-  String resource();
+  String[] resources();
 }

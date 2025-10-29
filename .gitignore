@@ -7,3 +7,4 @@
 /docker/grafana/data/
 /.vscode/
 /docker/kafka/
+/taktx-client-quarkus/build/

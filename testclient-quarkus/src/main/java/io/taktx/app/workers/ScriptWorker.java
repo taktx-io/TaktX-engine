@@ -9,10 +9,10 @@
 package io.taktx.app.workers;
 
 import io.quarkus.runtime.Startup;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @Startup
 @ApplicationScoped
-@TaktDeployment(resource = "bpmn/script-task.bpmn")
+@Deployment(resources = "classpath:bpmn/script-task.bpmn")
 public class ScriptWorker {}

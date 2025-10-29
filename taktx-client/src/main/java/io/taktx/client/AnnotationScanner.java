@@ -10,7 +10,7 @@ package io.taktx.client;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,14 +44,11 @@ public class AnnotationScanner {
    *
    * @return A set of TaktDeployment annotations found on classes
    */
-  public static Set<TaktDeployment> findTaktDeployments() {
+  public static Set<Deployment> findTaktDeployments() {
     try (ScanResult scanResult = new ClassGraph().enableAllInfo().scan()) {
-      return scanResult
-          .getClassesWithAnnotation(TaktDeployment.class.getName())
-          .loadClasses()
-          .stream()
+      return scanResult.getClassesWithAnnotation(Deployment.class.getName()).loadClasses().stream()
           .filter(c -> !isProxyClass(c))
-          .map(c -> c.getAnnotation(TaktDeployment.class))
+          .map(c -> c.getAnnotation(Deployment.class))
           .collect(Collectors.toSet());
     }
   }

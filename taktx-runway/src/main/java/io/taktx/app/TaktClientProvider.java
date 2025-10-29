@@ -42,11 +42,7 @@ public class TaktClientProvider {
           properties.load(fileInputStream);
         }
 
-        taktClient =
-            taktClientBuilder
-                .withNamespace(properties.getProperty("taktx.engine.namespace"))
-                .withKafkaProperties(properties)
-                .build();
+        taktClient = taktClientBuilder.withTaktProperties(properties).build();
         taktClient.start();
       }
     }

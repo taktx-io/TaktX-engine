@@ -18,13 +18,12 @@ import org.apache.kafka.common.serialization.Serializer;
 @Getter
 public class TaktPropertiesHelper {
 
-  private final String namespace;
-
   private final Properties taktProperties;
+  private String namespace;
 
-  public TaktPropertiesHelper(String namespace, Properties taktProperties) {
-    this.namespace = namespace;
+  public TaktPropertiesHelper(Properties taktProperties) {
     this.taktProperties = taktProperties;
+    this.namespace = taktProperties.getProperty("taktx.engine.namespace", "default");
   }
 
   public Properties getKafkaConsumerProperties(
@@ -95,18 +94,6 @@ public class TaktPropertiesHelper {
 
   public String getPrefixedTopicName(String topic) {
     return namespace + "." + topic;
-  }
-
-  public boolean getAutoCreate() {
-    return Boolean.parseBoolean(taktProperties.getProperty("taktx.auto.create.topics", "true"));
-  }
-
-  public int getDefaultPartitions() {
-    return 3;
-  }
-
-  public short getDefaultReplicationFactor() {
-    return 1;
   }
 
   public int getExternalTaskConsumerThreads() {

@@ -9,10 +9,10 @@
 package io.taktx.app.workers;
 
 import io.quarkus.runtime.Startup;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @Startup
 @ApplicationScoped
-@TaktDeployment(resource = "bpmn/signal-catch.bpmn")
+@Deployment(resources = "bpmn/signal-catch.bpmn")
 public class SignalCatchWorker {}

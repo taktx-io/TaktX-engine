@@ -9,7 +9,7 @@
 package io.taktx.app.workers;
 
 import io.quarkus.runtime.Startup;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import io.taktx.client.annotation.TaktWorkerMethod;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
@@ -17,7 +17,7 @@ import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@TaktDeployment(resource = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
+@Deployment(resources = "bpmn/servicetask-multiinstance-parallel.gen1.bpmn")
 @Startup
 @ApplicationScoped
 public class ServiceTaskMultiInstanceParallelWorker {

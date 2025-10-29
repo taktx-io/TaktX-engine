@@ -8,12 +8,18 @@
 
 package io.taktx.client;
 
+import io.github.classgraph.Resource;
 import io.taktx.Topics;
 import io.taktx.client.serdes.XmlDefinitionSerializer;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.xml.BpmnParser;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -48,7 +54,7 @@ public class ProcessDefinitionDeployer {
    * @param xml the BPMN XML string to deploy
    * @return the ParsedDefinitionsDTO containing the parsed definitions
    */
-  public ParsedDefinitionsDTO deploy(String xml) {
+  public ParsedDefinitionsDTO deployInputStream(String xml) {
     log.info("Deploying XML {}", xml);
     ParsedDefinitionsDTO definitions = BpmnParser.parse(xml);
     xmlEmitter.send(
@@ -58,5 +64,32 @@ public class ProcessDefinitionDeployer {
             definitions.getDefinitionsKey().getProcessDefinitionId(),
             new XmlDefinitionsDTO(xml)));
     return definitions;
+  }
+
+  public void deployResource(String resource) {
+    String trimmedResource = resource.trim();
+    if (trimmedResource.startsWith("classpath:")) {
+      List<Resource> resources = ResourceScanner.getResources(resource);
+      for (Resource res : resources) {
+        log.info("Deploying classpath resource: {}", res.getPath());
+        try (InputStream is = res.open()) {
+          deployInputStream(new String(is.readAllBytes()));
+        } catch (IOException e) {
+          throw new IllegalArgumentException(e);
+        }
+      }
+    } else if (trimmedResource.startsWith("file:")) {
+      try {
+        List<Path> fileSystemResources = ResourceScanner.getFileSystemResources(resource);
+        for (Path fileSystemResource : fileSystemResources) {
+          try (InputStream is = Files.newInputStream(fileSystemResource)) {
+            log.info("Deploying file resource: {}", fileSystemResource.toString());
+            deployInputStream(new String(is.readAllBytes()));
+          }
+        }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 }

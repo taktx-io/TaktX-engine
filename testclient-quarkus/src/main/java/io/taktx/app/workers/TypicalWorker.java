@@ -10,7 +10,7 @@ package io.taktx.app.workers;
 
 import io.quarkus.runtime.Startup;
 import io.taktx.client.ExternalTaskInstanceResponder;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import io.taktx.client.annotation.TaktWorkerMethod;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 
 @Startup
 @ApplicationScoped
-@TaktDeployment(resource = "bpmn/typical.bpmn")
+@Deployment(resources = "bpmn/typical.bpmn")
 public class TypicalWorker {
   private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 

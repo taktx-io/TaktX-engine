@@ -9,7 +9,7 @@
 package io.taktx.client;
 
 import io.taktx.CleanupPolicy;
-import io.taktx.client.annotation.TaktDeployment;
+import io.taktx.client.annotation.Deployment;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
@@ -20,7 +20,6 @@ import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -131,7 +130,7 @@ public class TaktClient {
    * @throws IOException If an error occurs while reading the InputStream.
    */
   public ParsedDefinitionsDTO deployProcessDefinition(InputStream inputStream) throws IOException {
-    return this.processDefinitionDeployer.deploy(new String(inputStream.readAllBytes()));
+    return this.processDefinitionDeployer.deployInputStream(new String(inputStream.readAllBytes()));
   }
 
   /**
@@ -188,26 +187,15 @@ public class TaktClient {
 
   /** Deploys all classes annotated with @TaktDeployment found in the classpath. */
   public void deployTaktDeploymentAnnotatedClasses() {
-    try {
-      Set<TaktDeployment> taktDeployments = AnnotationScanner.findTaktDeployments();
-      for (TaktDeployment annotation : taktDeployments) {
-        String resource = annotation.resource();
-        log.info("Deploying process definition from resource {}", resource);
+    Set<Deployment> deployments = AnnotationScanner.findTaktDeployments();
+    for (Deployment annotation : deployments) {
+      String[] resources = annotation.resources();
+      log.info("Deploying process definition from resource {}", resources);
 
-        InputStream inputStream =
-            Optional.ofNullable(
-                    Thread.currentThread().getContextClassLoader().getResourceAsStream(resource))
-                .orElseGet(() -> TaktClient.class.getClassLoader().getResourceAsStream(resource));
-
-        if (inputStream == null) {
-          throw new FileNotFoundException("Resource not found: " + resource);
-        }
-
-        ParsedDefinitionsDTO parsedDefinitionsDTO = deployProcessDefinition(inputStream);
-        log.info("Deploying process definition {}", parsedDefinitionsDTO.getDefinitionsKey());
+      for (String resource : resources) {
+        // Get the input stream for each resource, support classpath, filesystem and wildcards
+        processDefinitionDeployer.deployResource(resource);
       }
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
     }
   }
 
@@ -299,58 +287,43 @@ public class TaktClient {
    */
   public static class TaktClientBuilder {
 
-    private String namespace;
-    private Properties kafkaProperties;
+    private Properties taktProperties;
+    private TaktParameterResolverFactory parameterResolverFactory;
 
-    private TaktClientBuilder() {
-      this.namespace = System.getenv("NAMESPACE");
-    }
+    private TaktClientBuilder() {}
 
     /**
      * Builds and returns a TaktClient instance.
      *
      * @return A TaktClient instance.
-     * @throws IllegalArgumentException if NAMESPACE, or Kafka properties are not set.
+     * @throws IllegalArgumentException if Kafka properties are not set.
      */
     public TaktClient build() {
-      if (namespace == null) {
-        throw new IllegalArgumentException("NAMESPACE environment variable is not set");
-      }
-      if (kafkaProperties == null) {
-        throw new IllegalArgumentException("Kakfa properties should be passed");
+      if (taktProperties == null) {
+        throw new IllegalArgumentException("TaktX properties should be passed");
       }
 
-      TaktPropertiesHelper taktPropertiesHelper =
-          new TaktPropertiesHelper(namespace, kafkaProperties);
+      TaktPropertiesHelper taktPropertiesHelper = new TaktPropertiesHelper(taktProperties);
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper);
 
       TaktParameterResolverFactory parameterResolverFactory =
-          new DefaultTaktParameterResolverFactory(externalTaskResponder);
+          this.parameterResolverFactory != null
+              ? this.parameterResolverFactory
+              : new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
       return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
     }
 
-    /**
-     * Sets the namespace for the TaktClient.
-     *
-     * @param namespace The namespace to set.
-     * @return The TaktClientBuilder instance.
-     */
-    public TaktClientBuilder withNamespace(String namespace) {
-      this.namespace = namespace;
+    public TaktClientBuilder withTaktParameterResolverFactory(
+        TaktParameterResolverFactory parameterResolverFactory) {
+      this.parameterResolverFactory = parameterResolverFactory;
       return this;
     }
 
-    /**
-     * Sets the Kafka properties for the TaktClient.
-     *
-     * @param kafkaProperties The Kafka properties to set.
-     * @return The TaktClientBuilder instance.
-     */
-    public TaktClientBuilder withKafkaProperties(Properties kafkaProperties) {
-      this.kafkaProperties = kafkaProperties;
+    public TaktClientBuilder withTaktProperties(Properties kafkaProperties) {
+      this.taktProperties = kafkaProperties;
       return this;
     }
   }

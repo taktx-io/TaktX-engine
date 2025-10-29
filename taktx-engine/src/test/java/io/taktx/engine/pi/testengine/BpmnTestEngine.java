@@ -143,13 +143,10 @@ public class BpmnTestEngine {
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
+    kakaProperties.put("taktx.engine.namespace", "namespace");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
 
-    taktClient =
-        TaktClient.newClientBuilder()
-            .withNamespace("namespace")
-            .withKafkaProperties(kakaProperties)
-            .build();
+    taktClient = TaktClient.newClientBuilder().withTaktProperties(kakaProperties).build();
     taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
     taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);
     taktClient.start();
