@@ -20,9 +20,6 @@ public class TaktConfiguration {
   private static final Path LICENSE_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "license.lic");
 
-  @ConfigProperty(name = "taktx.engine.tenant")
-  String tenant;
-
   @ConfigProperty(name = "taktx.engine.namespace")
   String namespace;
 
@@ -61,7 +58,7 @@ public class TaktConfiguration {
   }
 
   public String getPrefixed(String name) {
-    String prefixedName = tenant + "." + namespace + "." + name;
+    String prefixedName = namespace + "." + name;
     if (prefixedName.length() > 254) {
       throw new IllegalArgumentException("Topic name is too long: " + prefixedName);
     }

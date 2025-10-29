@@ -294,17 +294,15 @@ public class TaktClient {
   }
 
   /**
-   * Builder class for creating TaktClient instances. Requires TENANT, NAMESPACE, and
+   * Builder class for creating TaktClient instances. Requires NAMESPACE, and
    * KAFKA_BOOTSTRAP_SERVERS environment variables to be set or configured via the builder methods.
    */
   public static class TaktClientBuilder {
 
-    private String tenant;
     private String namespace;
     private Properties kafkaProperties;
 
     private TaktClientBuilder() {
-      this.tenant = System.getenv("TENANT");
       this.namespace = System.getenv("NAMESPACE");
     }
 
@@ -312,12 +310,9 @@ public class TaktClient {
      * Builds and returns a TaktClient instance.
      *
      * @return A TaktClient instance.
-     * @throws IllegalArgumentException if TENANT, NAMESPACE, or Kafka properties are not set.
+     * @throws IllegalArgumentException if NAMESPACE, or Kafka properties are not set.
      */
     public TaktClient build() {
-      if (tenant == null) {
-        throw new IllegalArgumentException("TENANT environment variable is not set");
-      }
       if (namespace == null) {
         throw new IllegalArgumentException("NAMESPACE environment variable is not set");
       }
@@ -326,7 +321,7 @@ public class TaktClient {
       }
 
       TaktPropertiesHelper taktPropertiesHelper =
-          new TaktPropertiesHelper(tenant, namespace, kafkaProperties);
+          new TaktPropertiesHelper(namespace, kafkaProperties);
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper);
@@ -335,17 +330,6 @@ public class TaktClient {
           new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
       return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
-    }
-
-    /**
-     * Sets the tenant for the TaktClient.
-     *
-     * @param tenant The tenant to set.
-     * @return The TaktClientBuilder instance.
-     */
-    public TaktClientBuilder withTenant(String tenant) {
-      this.tenant = tenant;
-      return this;
     }
 
     /**

@@ -18,14 +18,11 @@ import org.apache.kafka.common.serialization.Serializer;
 @Getter
 public class TaktPropertiesHelper {
 
-  private final String tenant;
-
   private final String namespace;
 
   private final Properties taktProperties;
 
-  public TaktPropertiesHelper(String tenant, String namespace, Properties taktProperties) {
-    this.tenant = tenant;
+  public TaktPropertiesHelper(String namespace, Properties taktProperties) {
     this.namespace = namespace;
     this.taktProperties = taktProperties;
   }
@@ -97,7 +94,7 @@ public class TaktPropertiesHelper {
   }
 
   public String getPrefixedTopicName(String topic) {
-    return tenant + "." + namespace + "." + topic;
+    return namespace + "." + topic;
   }
 
   public boolean getAutoCreate() {

@@ -44,7 +44,6 @@ public class TaktClientProvider {
 
         taktClient =
             taktClientBuilder
-                .withTenant(properties.getProperty("taktx.engine.tenant"))
                 .withNamespace(properties.getProperty("taktx.engine.namespace"))
                 .withKafkaProperties(properties)
                 .build();

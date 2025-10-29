@@ -86,25 +86,21 @@ public class XmlByProcessDefinitionIdConsumer {
               String xml = instanceUpdateRecord.value();
               String filename = key.getProcessDefinitionId() + "." + key.getVersion() + ".bpmn";
               log.info("Consume XML definition for {} and store to {}", key, filename);
-              writeDefinition(
-                  taktPropertiesHelper.getTenant(),
-                  taktPropertiesHelper.getNamespace(),
-                  filename,
-                  xml);
+              writeDefinition(taktPropertiesHelper.getNamespace(), filename, xml);
             });
   }
 
-  private void writeDefinition(String tenant, String namespace, String filename, String xml) {
+  private void writeDefinition(String namespace, String filename, String xml) {
     try {
-      // Create directory structure for tenant and namespace if it doesn't exist
-      Path tenantNamespacePath = Paths.get(DEFINITION_XML_PATH.toString(), tenant, namespace);
-      if (!java.nio.file.Files.exists(tenantNamespacePath)) {
-        java.nio.file.Files.createDirectories(tenantNamespacePath);
-        log.info("Created directory structure: {}", tenantNamespacePath);
+      // Create directory structure for namespace if it doesn't exist
+      Path namespacePath = Paths.get(DEFINITION_XML_PATH.toString(), namespace);
+      if (!java.nio.file.Files.exists(namespacePath)) {
+        java.nio.file.Files.createDirectories(namespacePath);
+        log.info("Created directory structure: {}", namespacePath);
       }
 
       // Create the file path
-      Path filePath = tenantNamespacePath.resolve(filename);
+      Path filePath = namespacePath.resolve(filename);
 
       // Check if the file already exists
       if (java.nio.file.Files.exists(filePath)) {
@@ -139,13 +135,10 @@ public class XmlByProcessDefinitionIdConsumer {
    */
   public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
       throws IOException {
-    Path tenantNamespacePath =
-        Paths.get(
-            DEFINITION_XML_PATH.toString(),
-            taktPropertiesHelper.getTenant(),
-            taktPropertiesHelper.getNamespace());
+    Path namespacePath =
+        Paths.get(DEFINITION_XML_PATH.toString(), taktPropertiesHelper.getNamespace());
     Path filePath =
-        tenantNamespacePath.resolve(
+        namespacePath.resolve(
             processDefinitionKey.getProcessDefinitionId()
                 + "."
                 + processDefinitionKey.getVersion()

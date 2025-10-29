@@ -40,14 +40,13 @@ services:
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_VALUE_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
 
   taktx:
-    image: ghcr.io/taktx-io/taktx-engine:latest
+    image: ghcr.io/taktx-io/taktx-engine:0.0.8-alpha-4
     ports:
       - 8080:8080
     depends_on:
       - kafka
     environment:
         - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-        - TAKTX_TENANT=tenant
         - TAKTX_NAMESPACE=namespace
         - TAKTX_LICENSE_FILE_LOCATION=/opt/taktx/licence.lic
     volumes:

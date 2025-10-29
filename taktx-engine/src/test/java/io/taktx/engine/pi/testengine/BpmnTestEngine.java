@@ -74,7 +74,7 @@ import org.slf4j.LoggerFactory;
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  public static final String TOPIC_TEST_PREFIX = "tenant.namespace.";
+  public static final String TOPIC_TEST_PREFIX = "namespace.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   private TaktClient taktClient;
@@ -147,7 +147,6 @@ public class BpmnTestEngine {
 
     taktClient =
         TaktClient.newClientBuilder()
-            .withTenant("tenant")
             .withNamespace("namespace")
             .withKafkaProperties(kakaProperties)
             .build();
