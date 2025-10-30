@@ -37,7 +37,7 @@ This document outlines the implementation plan for a real-time process monitorin
 +-----------------|-----------------------+
                   | 
          +--------v---------+
-         |   TaktClient     |
+         |   TaktXClient     |
          +-----------------+
 
 ```
@@ -108,18 +108,18 @@ This document outlines the implementation plan for a real-time process monitorin
 
 2. **Implement Process Definition WebSocket**
    - Create endpoint at `/ws/process-definitions`
-   - Connect to TaktClient's process definition update consumer
+   - Connect to TaktXClient's process definition update consumer
    - Handle new connections and subscriptions
 
 3. **Implement Process Instance WebSocket**
    - Create endpoint at `/ws/process-instances/{processDefinitionId}`
-   - Connect to TaktClient's process instance update consumer
+   - Connect to TaktXClient's process instance update consumer
    - Implement filtering by process definition
    - Store and serve last 100 instances
 
 4. **Implement Flow Node Instance WebSocket**
    - Create endpoint at `/ws/flow-node-instances/{processInstanceId}`
-   - Connect to TaktClient for flow node instance updates
+   - Connect to TaktXClient for flow node instance updates
    - Filter updates by process instance
 
 ### Phase 3: Frontend Static Resources

@@ -8,7 +8,7 @@
 
 package io.taktx.app;
 
-import io.taktx.client.TaktClient;
+import io.taktx.client.TaktXClient;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import jakarta.inject.Inject;
@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DefinitionResource {
 
-  @Inject TaktClient taktClient;
+  @Inject TaktXClient taktClient;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)

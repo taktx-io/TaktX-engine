@@ -9,7 +9,7 @@
 package io.taktx.app;
 
 import io.taktx.client.InstanceUpdateRecord;
-import io.taktx.client.TaktClient;
+import io.taktx.client.TaktXClient;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -43,7 +43,7 @@ public class InstanceUpdateRegistry {
   private final Map<ProcessDefinitionKey, List<UUID>> processInstanceIdUpdates =
       new ConcurrentHashMap<>();
 
-  private final TaktClient taktClient;
+  private final TaktXClient taktClient;
   private final List<InstanceUpdateConsumer> instanceUpdateConsumers = new ArrayList<>();
 
   @PostConstruct

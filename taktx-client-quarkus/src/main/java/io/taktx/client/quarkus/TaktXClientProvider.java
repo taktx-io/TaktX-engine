@@ -12,8 +12,8 @@ import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
-import io.taktx.client.TaktClient;
-import io.taktx.client.TaktClient.TaktClientBuilder;
+import io.taktx.client.TaktXClient;
+import io.taktx.client.TaktXClient.TaktXClientBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -23,13 +23,13 @@ import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
- * Provides a singleton TaktClient instance for the application, initialized at startup with
+ * Provides a singleton TaktXClient instance for the application, initialized at startup with
  * configuration from MicroProfile Config.
  */
 @ApplicationScoped
 @Startup
-public class TaktClientProvider {
-  private static TaktClient taktClient;
+public class TaktXClientProvider {
+  private static TaktXClient taktClient;
 
   // Inject the full MicroProfile Config so we can read all application properties
   private final Config config;
@@ -49,7 +49,7 @@ public class TaktClientProvider {
    * @param observerChecker the ObserverChecker to check for CDI observers
    * @param events the CDI Event to fire InstanceUpdateRecords
    */
-  public TaktClientProvider(
+  public TaktXClientProvider(
       Config config,
       InstanceUpdateRecordObserverChecker observerChecker,
       Event<InstanceUpdateRecord> events) {
@@ -60,12 +60,12 @@ public class TaktClientProvider {
 
   @PostConstruct
   void init() {
-    TaktClientBuilder taktClientBuilder = TaktClient.newClientBuilder();
+    TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
 
-    synchronized (TaktClientProvider.class) {
+    synchronized (TaktXClientProvider.class) {
       if (taktClient == null) {
         // Build a Properties object containing all application properties. This lets us pass the
-        // full application config to the TaktClient so it can override sensible defaults.
+        // full application config to the TaktXClient so it can override sensible defaults.
         Properties taktProperties = new Properties();
 
         // Copy all available config entries into the Properties object as Strings
@@ -107,12 +107,12 @@ public class TaktClientProvider {
   }
 
   /**
-   * Produces the singleton TaktClient instance for injection.
+   * Produces the singleton TaktXClient instance for injection.
    *
-   * @return the TaktClient instance
+   * @return the TaktXClient instance
    */
   @Produces
-  public TaktClient taktClient() {
+  public TaktXClient taktClient() {
     return taktClient;
   }
 }

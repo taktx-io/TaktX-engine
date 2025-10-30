@@ -12,7 +12,7 @@ import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
-import io.taktx.client.TaktClient;
+import io.taktx.client.TaktXClient;
 import io.taktx.client.UserTaskTriggerConsumer;
 import io.taktx.client.serdes.TopicMetaJsonDeserializer;
 import io.taktx.dto.ActivityInstanceDTO;
@@ -77,7 +77,7 @@ public class BpmnTestEngine {
   public static final String TOPIC_TEST_PREFIX = "namespace.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
-  private TaktClient taktClient;
+  private TaktXClient taktClient;
 
   private final Map<UUID, Set<UUID>> processInstanceParentChildMap = new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedQueue<UserTaskTriggerDTO>> userTaskTriggerQueueMap =
@@ -146,7 +146,7 @@ public class BpmnTestEngine {
     kakaProperties.put("taktx.engine.namespace", "namespace");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
 
-    taktClient = TaktClient.newClientBuilder().withTaktProperties(kakaProperties).build();
+    taktClient = TaktXClient.newClientBuilder().withTaktProperties(kakaProperties).build();
     taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
     taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);
     taktClient.start();

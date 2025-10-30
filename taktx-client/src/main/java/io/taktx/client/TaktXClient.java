@@ -34,14 +34,14 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 
 /**
- * TaktClient is the main entry point for interacting with the TaktX BPMN engine. It provides
+ * TaktXClient is the main entry point for interacting with the TaktX BPMN engine. It provides
  * methods to deploy process definitions, start process instances, send message events, and register
  * consumers for process definition updates, instance updates, external task triggers, and user task
  * triggers.
  */
-public class TaktClient {
+public class TaktXClient {
 
-  private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktClient.class);
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
   private final TaktParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
@@ -56,7 +56,7 @@ public class TaktClient {
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
   private final ExternalTaskTopicRequester externalTaskTopicRequester;
 
-  private TaktClient(
+  private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ProcessInstanceResponder processInstanceResponder,
       TaktParameterResolverFactory parameterResolverFactory) {
@@ -81,16 +81,16 @@ public class TaktClient {
   }
 
   /**
-   * Creates a new TaktClientBuilder instance to create a new TaktClient.
+   * Creates a new TaktXClientBuilder instance to create a new TaktXClient.
    *
-   * @return A new TaktClientBuilder instance.
+   * @return A new TaktXClientBuilder instance.
    */
-  public static TaktClientBuilder newClientBuilder() {
-    return new TaktClientBuilder();
+  public static TaktXClientBuilder newClientBuilder() {
+    return new TaktXClientBuilder();
   }
 
   /**
-   * Starts the TaktClient, which subscribes to process definition records and process definition
+   * Starts the TaktXClient, which subscribes to process definition records and process definition
    * updates.
    */
   public void start() {
@@ -98,7 +98,7 @@ public class TaktClient {
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
   }
 
-  /** Stops the TaktClient, which unsubscribes from process definition records and process */
+  /** Stops the TaktXClient, which unsubscribes from process definition records and process */
   public void stop() {
     this.processDefinitionConsumer.stop();
     this.externalTaskTriggerTopicConsumer.stop();
@@ -310,23 +310,23 @@ public class TaktClient {
   }
 
   /**
-   * Builder class for creating TaktClient instances. Requires NAMESPACE, and
+   * Builder class for creating TaktXClient instances. Requires NAMESPACE, and
    * KAFKA_BOOTSTRAP_SERVERS environment variables to be set or configured via the builder methods.
    */
-  public static class TaktClientBuilder {
+  public static class TaktXClientBuilder {
 
     private Properties taktProperties;
     private TaktParameterResolverFactory parameterResolverFactory;
 
-    private TaktClientBuilder() {}
+    private TaktXClientBuilder() {}
 
     /**
-     * Builds and returns a TaktClient instance.
+     * Builds and returns a TaktXClient instance.
      *
-     * @return A TaktClient instance.
+     * @return A TaktXClient instance.
      * @throws IllegalArgumentException if Kafka properties are not set.
      */
-    public TaktClient build() {
+    public TaktXClient build() {
       if (taktProperties == null) {
         throw new IllegalArgumentException("TaktX properties should be passed");
       }
@@ -341,28 +341,28 @@ public class TaktClient {
               ? this.parameterResolverFactory
               : new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
-      return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
+      return new TaktXClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
     }
 
     /**
-     * Sets the TaktParameterResolverFactory to be used by the TaktClient.
+     * Sets the TaktParameterResolverFactory to be used by the TaktXClient.
      *
      * @param parameterResolverFactory The TaktParameterResolverFactory instance.
-     * @return The TaktClientBuilder instance.
+     * @return The TaktXClientBuilder instance.
      */
-    public TaktClientBuilder withTaktParameterResolverFactory(
+    public TaktXClientBuilder withTaktParameterResolverFactory(
         TaktParameterResolverFactory parameterResolverFactory) {
       this.parameterResolverFactory = parameterResolverFactory;
       return this;
     }
 
     /**
-     * Sets the TaktX properties to be used by the TaktClient.
+     * Sets the TaktX properties to be used by the TaktXClient.
      *
      * @param kafkaProperties The TaktX properties.
-     * @return The TaktClientBuilder instance.
+     * @return The TaktXClientBuilder instance.
      */
-    public TaktClientBuilder withTaktProperties(Properties kafkaProperties) {
+    public TaktXClientBuilder withTaktProperties(Properties kafkaProperties) {
       this.taktProperties = kafkaProperties;
       return this;
     }

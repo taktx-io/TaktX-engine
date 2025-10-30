@@ -345,10 +345,10 @@ public class ExternalTaskMetaMonitor implements ExternalTaskMetaConsumer {
 }
 ```
 
-#### 4. Update TaktClient to Initialize Topic Management
+#### 4. Update TaktXClient to Initialize Topic Management
 
 ```java
-public TaktClient(...) {
+public TaktXClient(...) {
     // Existing initialization...
     this.topicManager = new KafkaTopicManager(taktPropertiesHelper, kafkaProperties);
     this.topicRegistrar = new TopicRegistrar(taktPropertiesHelper, topicManager);

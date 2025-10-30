@@ -110,7 +110,7 @@ class DefaultTaktParameterResolverFactoryTest {
       // Empty Method for testing purpose
     }
 
-    void methodWithTaktClient(TaktClient client) {
+    void methodWithTaktXClient(TaktXClient client) {
       // Empty Method for testing purpose
     }
 

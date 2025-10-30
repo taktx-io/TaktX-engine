@@ -123,7 +123,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
             .respondError(false, "ERROR", e.getMessage());
       }
     } else {
-      // Worker has to respond itself by Responder or TaktClient. Result is ignored
+      // Worker has to respond itself by Responder or TaktXClient. Result is ignored
       try {
         method.invoke(beanInstance, arguments);
       } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
