@@ -35,16 +35,13 @@ repositories {
 }
 
 dependencies {
-    // MicroProfile Config API (annotations + Config interface)
-    compileOnlyApi("org.eclipse.microprofile.config:microprofile-config-api:3.1")
-
     // CDI/Jakarta APIs (no runtime impl here)
-    compileOnlyApi("jakarta.inject:jakarta.inject-api:2.0.1")
-    compileOnlyApi("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
-    compileOnlyApi("jakarta.annotation:jakarta.annotation-api:2.1.1")
-    compileOnly("io.quarkus:quarkus-arc:3.15.1")
+    compileOnlyApi(libs.jakarta.inject.api)
+    compileOnlyApi(libs.jakarta.cdi.api)
+    compileOnlyApi(libs.jakarta.annotation.api)
+    compileOnly(libs.quarkus.arc)
+    compileOnly(libs.quarkus.core)
 
-    implementation("io.quarkus:quarkus-arc")
     api(project(":taktx-client"))
 }
 

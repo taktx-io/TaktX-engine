@@ -15,7 +15,9 @@ reflections = "0.10.2"
 jaxb = "3.0.2"
 license3j = "3.3.0"
 classgraph = "4.8.184"
-jakarta = "4.1.0"
+jakarta-cdi = "4.1.0"
+jakarta-inject = "2.0.1"
+jakarta-annotation = "3.0.0"
 
 [libraries]
 # Quarkus dependencies
@@ -31,6 +33,7 @@ quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
 quarkus-junit5-mockito = { module = "io.quarkus:quarkus-junit5-mockito" }
 quarkus-jacoco = { module = "io.quarkus:quarkus-jacoco" }
 quarkus-core = { module = "io.quarkus:quarkus-core", version.ref = "quarkus" }
+quarkus-arc = { module = "io.quarkus:quarkus-arc", version.ref = "quarkus" }
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler", version.ref = "quarkus" }
 quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi", version.ref = "quarkus" }
 quarkus-swagger-ui = { module = "io.quarkus:quarkus-swagger-ui", version.ref = "quarkus" }
@@ -53,7 +56,9 @@ kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafk
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
-jakarta-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.ref = "jakarta" }
+jakarta-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.ref = "jakarta-cdi" }
+jakarta-inject-api = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
+jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakarta-annotation" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

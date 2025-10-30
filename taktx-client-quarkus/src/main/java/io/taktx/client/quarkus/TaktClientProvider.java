@@ -17,7 +17,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
-import jakarta.inject.Inject;
 import java.util.Properties;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -29,13 +28,17 @@ public class TaktClientProvider {
   private static TaktClient taktClient;
 
   // Inject the full MicroProfile Config so we can read all application properties
-  @Inject Config config;
+  private final Config config;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
 
   @ConfigProperty(name = "taktx.engine.topic.replicationFactor", defaultValue = "1")
   short replicationFactor;
+
+  public TaktClientProvider(Config config) {
+    this.config = config;
+  }
 
   @PostConstruct
   void init() {

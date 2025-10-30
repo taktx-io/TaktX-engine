@@ -29,13 +29,6 @@ tasks {
     }
 }
 
-// Group and version are inherited from the root project
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-}
-
 dependencies {
     api(project(":taktx-shared"))
     implementation(libs.slf4j.api)
