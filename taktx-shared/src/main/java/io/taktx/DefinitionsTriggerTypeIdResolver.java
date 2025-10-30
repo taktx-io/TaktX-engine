@@ -21,9 +21,9 @@ public class DefinitionsTriggerTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case XmlDefinitionsDTO _ -> "X";
-      case ParsedDefinitionsDTO _ -> "P";
-      case ProcessDefinitionActivationDTO _ -> "A";
+      case XmlDefinitionsDTO ignored -> "X";
+      case ParsedDefinitionsDTO ignored -> "P";
+      case ProcessDefinitionActivationDTO ignored -> "A";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

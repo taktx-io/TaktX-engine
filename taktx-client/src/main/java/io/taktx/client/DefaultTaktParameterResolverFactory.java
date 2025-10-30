@@ -20,6 +20,7 @@ import java.util.Map;
  * parameter types and annotations.
  */
 public class DefaultTaktParameterResolverFactory implements TaktParameterResolverFactory {
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
   private final ProcessInstanceResponder externalTaskResponder;

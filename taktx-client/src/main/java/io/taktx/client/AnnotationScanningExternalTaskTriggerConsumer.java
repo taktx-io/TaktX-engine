@@ -20,15 +20,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * An ExternalTaskTriggerConsumer that scans for methods annotated with @TaktWorkerMethod and
  * invokes them when an external task is received.
  */
-@Slf4j
 public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTaskTriggerConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(AnnotationScanningExternalTaskTriggerConsumer.class);
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
   private final TaktParameterResolverFactory parameterResolverFactory;

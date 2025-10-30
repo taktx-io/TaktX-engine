@@ -19,11 +19,11 @@ services:
     volumes:
       - ./kafka/data:/bitnami/kafka
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'cat < /dev/tcp/localhost/9094 >/dev/null 2>&1'"]
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 5s
+      start_period: 1s
 
   kafka-ui:
     image: 'provectuslabs/kafka-ui:latest'
@@ -40,7 +40,7 @@ services:
       - KAFKA_CLUSTERS_0_PROPERTIES_PRODUCER_VALUE_SERIALIZER=org.apache.kafka.common.serialization.HexSerializer
 
   taktx:
-    image: ghcr.io/taktx-io/taktx-engine:0.0.8-alpha-4
+    image: ghcr.io/taktx-io/taktx-engine:0.0.8-alpha-7
     ports:
       - 8080:8080
     depends_on:

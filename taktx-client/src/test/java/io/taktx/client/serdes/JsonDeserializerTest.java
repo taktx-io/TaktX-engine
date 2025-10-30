@@ -12,9 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.serdes.JsonDeserializer;
 import io.taktx.serdes.JsonSerializer;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 
 class JsonDeserializerTest {
@@ -35,11 +33,36 @@ class JsonDeserializerTest {
     }
   }
 
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
   static class MyObject {
 
     private String field;
+
+    public MyObject() {}
+
+    public MyObject(String field) {
+      this.field = field;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      MyObject myObject = (MyObject) o;
+      return Objects.equals(field, myObject.field);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(field);
+    }
+
+    public String getField() {
+      return field;
+    }
+
+    public void setField(String field) {
+      this.field = field;
+    }
   }
 }

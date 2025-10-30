@@ -31,6 +31,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  * promise responses back to the process engine via Kafka.
  */
 public class ExternalTaskInstanceResponder {
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;

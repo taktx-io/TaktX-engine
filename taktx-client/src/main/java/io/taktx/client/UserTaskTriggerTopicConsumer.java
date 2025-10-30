@@ -19,18 +19,19 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * This class is responsible for consuming user task trigger events from a Kafka topic and passing
  * them to a provided consumer.
  */
-@Slf4j
 public class UserTaskTriggerTopicConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(UserTaskTriggerTopicConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private KafkaConsumer<UUID, UserTaskTriggerDTO> userTaskTriggerKafkaConsumer;

@@ -104,7 +104,7 @@ public class BpmnTestEngine {
   private KafkaConsumerUtil<String, TopicMetaDTO> actualTopicMetaConsumer;
   private FlowNodeInstanceDTO selectedFlowNodeInstance;
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
-  private Map<String, TopicMetaDTO> topicMetaCache = new ConcurrentHashMap<>();
+  private final Map<String, TopicMetaDTO> topicMetaCache = new ConcurrentHashMap<>();
   private AdminClientHelper adminClientHelper;
 
   public BpmnTestEngine(Clock clock) {
@@ -253,45 +253,52 @@ public class BpmnTestEngine {
             + System.identityHashCode(userTaskTriggerQueueMap));
   }
 
-  public void consume(InstanceUpdateRecord instanceUpdateRecord) {
-    if (instanceUpdateRecord.getUpdate()
-        instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
-      LOG.info(
-          "Received process instanceToContinue update: "
-              + instanceUpdateRecord.getProcessInstanceId()
-              + " "
-              + instanceUpdateRecord.getUpdate());
+  public void consume(List<InstanceUpdateRecord> instanceUpdateRecords) {
+    for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+      if (instanceUpdateRecord.getUpdate()
+          instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
+        LOG.info(
+            "Received process instanceToContinue update: "
+                + instanceUpdateRecord.getProcessInstanceId()
+                + " "
+                + instanceUpdateRecord.getUpdate());
 
-      ProcessInstanceDTO processInstanceDTO =
-          getProcessInstanceDTO(instanceUpdateRecord.getProcessInstanceId(), processInstanceUpdate);
-      log.info(
-          "Adding to process instanceToContinue map {} {}",
-          System.identityHashCode(processInstanceMap),
-          processInstanceDTO);
-      ProcessInstanceDTO previousProcessInstance =
-          processInstanceMap.put(instanceUpdateRecord.getProcessInstanceId(), processInstanceDTO);
-      if (previousProcessInstance == null) {
-        latestInstantiatedProcessInstanceId = processInstanceDTO.getProcessInstanceId();
+        ProcessInstanceDTO processInstanceDTO =
+            getProcessInstanceDTO(
+                instanceUpdateRecord.getProcessInstanceId(), processInstanceUpdate);
+        log.info(
+            "Adding to process instanceToContinue map {} {}",
+            System.identityHashCode(processInstanceMap),
+            processInstanceDTO);
+        ProcessInstanceDTO previousProcessInstance =
+            processInstanceMap.put(instanceUpdateRecord.getProcessInstanceId(), processInstanceDTO);
+        if (previousProcessInstance == null) {
+          latestInstantiatedProcessInstanceId = processInstanceDTO.getProcessInstanceId();
+        }
+
+        VariablesDTO existingVariables =
+            variablesMap.computeIfAbsent(
+                instanceUpdateRecord.getProcessInstanceId(), k -> VariablesDTO.empty());
+        existingVariables
+            .getVariables()
+            .putAll(processInstanceUpdate.getVariables().getVariables());
+
+      } else if (instanceUpdateRecord.getUpdate()
+          instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
+        LOG.info("Received FlowNode instanceToContinue update: " + instanceUpdateRecord);
+
+        FlowNodeInstanceKeyDTO key =
+            new FlowNodeInstanceKeyDTO(
+                instanceUpdateRecord.getProcessInstanceId(),
+                flowNodeInstanceUpdate.getFlowNodeInstancePath());
+        this.flowNodeInstanceMap.put(key, flowNodeInstanceUpdate.getFlowNodeInstance());
+
+        VariablesDTO existingVariables =
+            variablesMap.computeIfAbsent(key.getProcessInstanceId(), k -> VariablesDTO.empty());
+        existingVariables
+            .getVariables()
+            .putAll(flowNodeInstanceUpdate.getVariables().getVariables());
       }
-
-      VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(
-              instanceUpdateRecord.getProcessInstanceId(), k -> VariablesDTO.empty());
-      existingVariables.getVariables().putAll(processInstanceUpdate.getVariables().getVariables());
-
-    } else if (instanceUpdateRecord.getUpdate()
-        instanceof FlowNodeInstanceUpdateDTO flowNodeInstanceUpdate) {
-      LOG.info("Received FlowNode instanceToContinue update: " + instanceUpdateRecord);
-
-      FlowNodeInstanceKeyDTO key =
-          new FlowNodeInstanceKeyDTO(
-              instanceUpdateRecord.getProcessInstanceId(),
-              flowNodeInstanceUpdate.getFlowNodeInstancePath());
-      this.flowNodeInstanceMap.put(key, flowNodeInstanceUpdate.getFlowNodeInstance());
-
-      VariablesDTO existingVariables =
-          variablesMap.computeIfAbsent(key.getProcessInstanceId(), k -> VariablesDTO.empty());
-      existingVariables.getVariables().putAll(flowNodeInstanceUpdate.getVariables().getVariables());
     }
   }
 

@@ -13,6 +13,7 @@ import io.taktx.client.serdes.InstanceUpdateJsonDeserializer;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,20 +22,23 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * This class is responsible for managing the subscription to external tasks for all process
  * definitions.
  */
-@Slf4j
 public class ProcessInstanceUpdateConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(ProcessInstanceUpdateConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private boolean running = false;
-  private final List<Consumer<InstanceUpdateRecord>> instanceUpdateConsumers = new ArrayList<>();
+  private final List<Consumer<List<InstanceUpdateRecord>>> instanceUpdateConsumers =
+      new ArrayList<>();
 
   /**
    * Constructor for ProcessInstanceUpdateConsumer.
@@ -53,7 +57,7 @@ public class ProcessInstanceUpdateConsumer {
    *
    * @param consumer the consumer to register
    */
-  public void registerInstanceUpdateConsumer(Consumer<InstanceUpdateRecord> consumer) {
+  public void registerInstanceUpdateConsumer(Consumer<List<InstanceUpdateRecord>> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
       subscribeToTopic();
     }
@@ -89,17 +93,19 @@ public class ProcessInstanceUpdateConsumer {
   }
 
   private void consumeRecords(KafkaConsumer<UUID, InstanceUpdateDTO> consumer) {
-    consumer
-        .poll(java.time.Duration.ofMillis(100))
-        .forEach(
-            instanceUpdateConsumerRecord ->
-                instanceUpdateConsumers.forEach(
-                    instanceUpdateConsumer ->
-                        instanceUpdateConsumer.accept(
-                            new InstanceUpdateRecord(
-                                instanceUpdateConsumerRecord.timestamp(),
-                                instanceUpdateConsumerRecord.key(),
-                                instanceUpdateConsumerRecord.value()))));
+    ConsumerRecords<UUID, InstanceUpdateDTO> poll = consumer.poll(Duration.ofMillis(100));
+
+    List<InstanceUpdateRecord> records = new ArrayList<>();
+    poll.forEach(
+        instanceUpdateConsumerRecord ->
+            records.add(
+                new InstanceUpdateRecord(
+                    instanceUpdateConsumerRecord.timestamp(),
+                    instanceUpdateConsumerRecord.key(),
+                    instanceUpdateConsumerRecord.value())));
+
+    instanceUpdateConsumers.forEach(
+        instanceUpdateConsumer -> instanceUpdateConsumer.accept(records));
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() {

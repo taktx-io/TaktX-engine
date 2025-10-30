@@ -9,14 +9,15 @@
 package io.taktx.client;
 
 import jakarta.enterprise.inject.spi.CDI;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * A utility class to provide instances of classes based on the runtime environment (Quarkus,
  * Spring, or plain Java).
  */
-@Slf4j
 public class InstanceProvider {
+
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(InstanceProvider.class);
 
   private InstanceProvider() {
     // Private constructor to prevent instantiation
@@ -29,11 +30,11 @@ public class InstanceProvider {
     try {
       Class.forName("io.quarkus.runtime.Quarkus");
       environment = Environment.QUARKUS;
-    } catch (ClassNotFoundException _) {
+    } catch (ClassNotFoundException classNotFoundException) {
       try {
         Class.forName("org.springframework.context.ApplicationContext");
         environment = Environment.SPRING;
-      } catch (ClassNotFoundException _) {
+      } catch (ClassNotFoundException classNotFoundException1) {
         environment = Environment.PLAIN_JAVA;
       }
     }

@@ -20,8 +20,8 @@ public class InstanceUpdateTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case FlowNodeInstanceUpdateDTO _ -> "F";
-      case ProcessInstanceUpdateDTO _ -> "P";
+      case FlowNodeInstanceUpdateDTO ignored -> "F";
+      case ProcessInstanceUpdateDTO ignored -> "P";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

@@ -31,8 +31,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * TaktClient is the main entry point for interacting with the TaktX BPMN engine. It provides
@@ -40,12 +39,12 @@ import lombok.extern.slf4j.Slf4j;
  * consumers for process definition updates, instance updates, external task triggers, and user task
  * triggers.
  */
-@Slf4j
 public class TaktClient {
 
-  @Getter private final ProcessDefinitionConsumer processDefinitionConsumer;
-  @Getter private final TaktParameterResolverFactory parameterResolverFactory;
-  @Getter private final ProcessInstanceResponder processInstanceResponder;
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktClient.class);
+  private final ProcessDefinitionConsumer processDefinitionConsumer;
+  private final TaktParameterResolverFactory parameterResolverFactory;
+  private final ProcessInstanceResponder processInstanceResponder;
 
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
@@ -171,7 +170,7 @@ public class TaktClient {
    *
    * @param consumer The consumer to register.
    */
-  public void registerInstanceUpdateConsumer(Consumer<InstanceUpdateRecord> consumer) {
+  public void registerInstanceUpdateConsumer(Consumer<List<InstanceUpdateRecord>> consumer) {
     this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(consumer);
   }
 
@@ -190,7 +189,9 @@ public class TaktClient {
     Set<Deployment> deployments = AnnotationScanner.findTaktDeployments();
     for (Deployment annotation : deployments) {
       String[] resources = annotation.resources();
-      log.info("Deploying process definition from resource {}", resources);
+
+      String joined = String.join(",", resources);
+      log.info("Deploying process definition from resource {}", joined);
 
       for (String resource : resources) {
         // Get the input stream for each resource, support classpath, filesystem and wildcards
@@ -279,6 +280,33 @@ public class TaktClient {
    */
   public void sendSignal(String signalName) {
     this.signalSender.sendMSignal(new SignalDTO(signalName));
+  }
+
+  /**
+   * Gets the ProcessDefinitionConsumer instance.
+   *
+   * @return The ProcessDefinitionConsumer.
+   */
+  public ProcessDefinitionConsumer getProcessDefinitionConsumer() {
+    return this.processDefinitionConsumer;
+  }
+
+  /**
+   * Gets the TaktParameterResolverFactory instance.
+   *
+   * @return The TaktParameterResolverFactory.
+   */
+  public TaktParameterResolverFactory getParameterResolverFactory() {
+    return this.parameterResolverFactory;
+  }
+
+  /**
+   * Gets the ProcessInstanceResponder instance.
+   *
+   * @return The ProcessInstanceResponder.
+   */
+  public ProcessInstanceResponder getProcessInstanceResponder() {
+    return this.processInstanceResponder;
   }
 
   /**

@@ -20,8 +20,8 @@ public class EventSignalTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case ErrorEventSignalDTO _ -> "R";
-      case EscalationEventSignalDTO _ -> "S";
+      case ErrorEventSignalDTO ignored -> "R";
+      case EscalationEventSignalDTO ignored -> "S";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

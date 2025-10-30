@@ -30,6 +30,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  * back to the process instance via Kafka.
  */
 public class UserTaskInstanceResponder {
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
   private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
   private final String topicName;

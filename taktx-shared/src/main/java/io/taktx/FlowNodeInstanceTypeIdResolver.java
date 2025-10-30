@@ -38,26 +38,26 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case StartEventInstanceDTO _ -> "A";
-      case BoundaryEventInstanceDTO _ -> "B";
-      case CallActivityInstanceDTO _ -> "C";
-      case SendTaskInstanceDTO _ -> "D";
-      case EndEventInstanceDTO _ -> "E";
-      case ScriptTaskInstanceDTO _ -> "F";
-      case MessageEndEventInstanceDTO _ -> "G";
-      case MessageIntermediateThrowEventInstanceDTO _ -> "H";
-      case IntermediateCatchEventInstanceDTO _ -> "I";
-      case EventBasedGatewayInstanceDTO _ -> "J";
-      case MultiInstanceInstanceDTO _ -> "M";
-      case InclusiveGatewayInstanceDTO _ -> "N";
-      case ParallelGatewayInstanceDTO _ -> "P";
-      case ReceiveTaskInstanceDTO _ -> "R";
-      case SubProcessInstanceDTO _ -> "S";
-      case UserTaskInstanceDTO _ -> "U";
-      case ServiceTaskInstanceDTO _ -> "V";
-      case IntermediateThrowEventInstanceDTO _ -> "W";
-      case ExclusiveGatewayInstanceDTO _ -> "X";
-      case TaskInstanceDTO _ -> "T";
+      case StartEventInstanceDTO ignored -> "A";
+      case BoundaryEventInstanceDTO ignored -> "B";
+      case CallActivityInstanceDTO ignored -> "C";
+      case SendTaskInstanceDTO ignored -> "D";
+      case EndEventInstanceDTO ignored -> "E";
+      case ScriptTaskInstanceDTO ignored -> "F";
+      case MessageEndEventInstanceDTO ignored -> "G";
+      case MessageIntermediateThrowEventInstanceDTO ignored -> "H";
+      case IntermediateCatchEventInstanceDTO ignored -> "I";
+      case EventBasedGatewayInstanceDTO ignored -> "J";
+      case MultiInstanceInstanceDTO ignored -> "M";
+      case InclusiveGatewayInstanceDTO ignored -> "N";
+      case ParallelGatewayInstanceDTO ignored -> "P";
+      case ReceiveTaskInstanceDTO ignored -> "R";
+      case SubProcessInstanceDTO ignored -> "S";
+      case UserTaskInstanceDTO ignored -> "U";
+      case ServiceTaskInstanceDTO ignored -> "V";
+      case IntermediateThrowEventInstanceDTO ignored -> "W";
+      case ExclusiveGatewayInstanceDTO ignored -> "X";
+      case TaskInstanceDTO ignored -> "T";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

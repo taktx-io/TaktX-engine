@@ -20,18 +20,19 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.slf4j.Logger;
 
 /**
  * A deployer for process definitions, responsible for parsing BPMN XML and sending the parsed
  * definitions to a Kafka topic.
  */
-@Slf4j
-public class ProcessDefinitionDeployer {
+class ProcessDefinitionDeployer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(ProcessDefinitionDeployer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter;
 
@@ -90,7 +91,7 @@ public class ProcessDefinitionDeployer {
         try (InputStream is = res.toURL().openStream()) {
           deployInputStream(new String(is.readAllBytes()));
         } catch (IOException e) {
-          throw new RuntimeException(e);
+          throw new IllegalStateException(e);
         }
       }
     } else if (trimmedResource.startsWith("file:")) {
@@ -98,12 +99,12 @@ public class ProcessDefinitionDeployer {
         List<Path> fileSystemResources = ResourceScanner.getFileSystemResources(resource);
         for (Path fileSystemResource : fileSystemResources) {
           try (InputStream is = Files.newInputStream(fileSystemResource)) {
-            log.info("Deploying file resource: {}", fileSystemResource.toString());
+            log.info("Deploying file resource: {}", fileSystemResource);
             deployInputStream(new String(is.readAllBytes()));
           }
         }
       } catch (IOException e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
   }

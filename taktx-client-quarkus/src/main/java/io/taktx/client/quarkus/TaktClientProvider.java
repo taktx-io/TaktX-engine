@@ -11,24 +11,31 @@ package io.taktx.client.quarkus;
 import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
+import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktClient;
 import io.taktx.client.TaktClient.TaktClientBuilder;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Produces;
+import java.util.List;
 import java.util.Properties;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+/**
+ * Provides a singleton TaktClient instance for the application, initialized at startup with
+ * configuration from MicroProfile Config.
+ */
 @ApplicationScoped
 @Startup
-@Priority(Integer.MAX_VALUE) // Lower value means higher priority
 public class TaktClientProvider {
   private static TaktClient taktClient;
 
   // Inject the full MicroProfile Config so we can read all application properties
   private final Config config;
+  private final InstanceUpdateRecordObserverChecker observerChecker;
+  private final Event<List<InstanceUpdateRecord>> events;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
@@ -36,8 +43,20 @@ public class TaktClientProvider {
   @ConfigProperty(name = "taktx.engine.topic.replicationFactor", defaultValue = "1")
   short replicationFactor;
 
-  public TaktClientProvider(Config config) {
+  /**
+   * Constructor injecting the MicroProfile Config.
+   *
+   * @param config the MicroProfile Config instance
+   * @param observerChecker the ObserverChecker to check for CDI observers
+   * @param events the CDI Event to fire InstanceUpdateRecords
+   */
+  public TaktClientProvider(
+      Config config,
+      InstanceUpdateRecordObserverChecker observerChecker,
+      Event<List<InstanceUpdateRecord>> events) {
     this.config = config;
+    this.observerChecker = observerChecker;
+    this.events = events;
   }
 
   @PostConstruct
@@ -75,10 +94,20 @@ public class TaktClientProvider {
                 jobId ->
                     taktClient.requestExternalTaskTopic(
                         jobId, partitions, CleanupPolicy.COMPACT, replicationFactor));
+
+        if (observerChecker.hasInstanceUpdateRecordObservers()) {
+          taktClient.registerInstanceUpdateConsumer(
+              instanceUpdateRecords -> events.fire(instanceUpdateRecords));
+        }
       }
     }
   }
 
+  /**
+   * Produces the singleton TaktClient instance for injection.
+   *
+   * @return the TaktClient instance
+   */
   @Produces
   public TaktClient taktClient() {
     return taktClient;

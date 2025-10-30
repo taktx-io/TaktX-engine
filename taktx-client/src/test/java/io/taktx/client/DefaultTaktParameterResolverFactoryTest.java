@@ -16,7 +16,6 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Map;
-import lombok.Data;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -128,7 +127,6 @@ class DefaultTaktParameterResolverFactoryTest {
     }
   }
 
-  @Data
   static class TestDto {
     private String value;
   }

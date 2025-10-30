@@ -23,11 +23,11 @@ public class SignalTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case NewInstanceSignalSubscriptionDTO _ -> "NS";
-      case CancelInstanceSignalSubscriptionDTO _ -> "CS";
-      case NewDefinitionSignalSubscriptionDTO _ -> "ND";
-      case CancelDefinitionSignalSubscriptionDTO _ -> "CD";
-      case SignalDTO _ -> "S";
+      case NewInstanceSignalSubscriptionDTO ignored -> "NS";
+      case CancelInstanceSignalSubscriptionDTO ignored -> "CS";
+      case NewDefinitionSignalSubscriptionDTO ignored -> "ND";
+      case CancelDefinitionSignalSubscriptionDTO ignored -> "CD";
+      case SignalDTO ignored -> "S";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

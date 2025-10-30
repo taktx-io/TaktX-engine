@@ -24,12 +24,12 @@ public class MessageEventTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case DefinitionMessageSubscriptionDTO _ -> "D";
-      case CancelDefinitionMessageSubscriptionDTO _ -> "C";
-      case CorrelationMessageSubscriptionDTO _ -> "O";
-      case CancelCorrelationMessageSubscriptionDTO _ -> "A";
-      case DefinitionMessageEventTriggerDTO _ -> "E";
-      case CorrelationMessageEventTriggerDTO _ -> "R";
+      case DefinitionMessageSubscriptionDTO ignored -> "D";
+      case CancelDefinitionMessageSubscriptionDTO ignored -> "C";
+      case CorrelationMessageSubscriptionDTO ignored -> "O";
+      case CancelCorrelationMessageSubscriptionDTO ignored -> "A";
+      case DefinitionMessageEventTriggerDTO ignored -> "E";
+      case CorrelationMessageEventTriggerDTO ignored -> "R";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

@@ -28,18 +28,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * A consumer that subscribes to process definition activation records from a Kafka topic, maintains
  * a map of deployed process definitions, and notifies registered consumers of updates.
  */
-@Slf4j
 public class ProcessDefinitionConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(ProcessDefinitionConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private final Map<ProcessDefinitionKey, String> storedHashes = new ConcurrentHashMap<>();

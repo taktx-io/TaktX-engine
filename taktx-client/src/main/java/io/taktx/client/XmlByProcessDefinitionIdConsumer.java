@@ -21,16 +21,17 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * This class is responsible for managing the subscription to external tasks for all process
  * definitions.
  */
-@Slf4j
 public class XmlByProcessDefinitionIdConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(XmlByProcessDefinitionIdConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private boolean running = false;

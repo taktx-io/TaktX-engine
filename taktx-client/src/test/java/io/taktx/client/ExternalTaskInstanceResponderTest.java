@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Data;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +74,7 @@ class ExternalTaskInstanceResponderTest {
   void respondSuccessWithCustomObject() {
     // Given
     TestDto testDto = new TestDto();
-    testDto.setValue("test-value");
+    testDto.value = "test-value";
 
     // When
     responder.respondSuccess(testDto);
@@ -256,8 +255,15 @@ class ExternalTaskInstanceResponderTest {
     assertThat(resultDTO.getTimeout()).isEqualTo(duration.toMillis());
   }
 
-  @Data
   static class TestDto {
     private String value;
+
+    public String getValue() {
+      return value;
+    }
+
+    public void setValue(String value) {
+      this.value = value;
+    }
   }
 }

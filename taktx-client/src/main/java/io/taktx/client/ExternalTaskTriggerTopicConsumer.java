@@ -20,19 +20,20 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * A Kafka consumer that subscribes to external task trigger topics and processes incoming messages
  * using the provided ExternalTaskTriggerConsumer.
  */
-@Slf4j
 public class ExternalTaskTriggerTopicConsumer {
 
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(ExternalTaskTriggerTopicConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private final int consumerThreads;

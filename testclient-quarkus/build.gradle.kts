@@ -6,24 +6,24 @@ plugins {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 tasks {
     withType<JavaCompile>().configureEach {
-        options.release = 23
+        options.release = 21
     }
 
     withType<Javadoc>().configureEach {
         with(options as StandardJavadocDocletOptions) {
-            addStringOption("-release", "23")
+            addStringOption("-release", "21")
         }
     }
 
     withType<Test>().configureEach {
         javaLauncher.set(project.javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(23)
+            languageVersion = JavaLanguageVersion.of(21)
         })
     }
 }

@@ -29,6 +29,10 @@ import java.util.stream.Stream;
 
 public final class ResourceScanner {
 
+  private ResourceScanner() {
+    // static utility class
+  }
+
   public static List<URI> getResources(String pattern) {
     String p = stripClasspathPrefix(pattern);
     String regex = antToRegex(p);
@@ -65,7 +69,7 @@ public final class ResourceScanner {
     // determine base directory to start walking from (up to the last slash before the first
     // wildcard)
     int firstWildcard = firstWildcardIndex(normalizedPattern);
-    int slashBefore = normalizedPattern.lastIndexOf('/', firstWildcard >= 0 ? firstWildcard : 0);
+    int slashBefore = normalizedPattern.lastIndexOf('/', Math.max(firstWildcard, 0));
     String baseDirStr = slashBefore >= 0 ? normalizedPattern.substring(0, slashBefore) : ".";
     Path start = Paths.get(baseDirStr);
 
@@ -159,8 +163,7 @@ public final class ResourceScanner {
             .replace("}", "\\}")
             .replace("|", "\\|")
             .replace("[", "\\[")
-            .replace("]", "\\]")
-            .replace("/", "/"); // keep slash
+            .replace("]", "\\]");
 
     // Handle special wildcard sequences
     // Replace "**/" with "(.*/)?"

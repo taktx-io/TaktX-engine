@@ -20,8 +20,8 @@ public class ScheduleKeyTypeIdResolver extends TypeIdResolverBase {
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case DefinitionScheduleKeyDTO _ -> "D";
-      case InstanceScheduleKeyDTO _ -> "I";
+      case DefinitionScheduleKeyDTO ignored -> "D";
+      case InstanceScheduleKeyDTO ignored -> "I";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }

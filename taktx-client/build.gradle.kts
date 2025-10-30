@@ -7,24 +7,24 @@ plugins {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 tasks {
     withType<JavaCompile>().configureEach {
-        options.release = 23
+        options.release = 21
     }
 
     withType<Javadoc>().configureEach {
         with(options as StandardJavadocDocletOptions) {
-            addStringOption("-release", "23")
+            addStringOption("-release", "21")
         }
     }
 
     withType<Test>().configureEach {
         javaLauncher.set(project.javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(23)
+            languageVersion = JavaLanguageVersion.of(21)
         })
     }
 }
@@ -41,13 +41,6 @@ dependencies {
     implementation(libs.awaitility)
 
     compileOnly(libs.jakarta.cdi.api)
-
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-
-    // Add these two lines to enable Lombok in tests
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.params)

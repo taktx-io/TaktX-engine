@@ -48,7 +48,13 @@ public class InstanceUpdateRegistry {
 
   @PostConstruct
   void init() {
-    taktClient.registerInstanceUpdateConsumer(this::handleInstanceUpdate);
+    taktClient.registerInstanceUpdateConsumer(this::handleInstanceUpdates);
+  }
+
+  private void handleInstanceUpdates(List<InstanceUpdateRecord> instanceUpdateRecords) {
+    for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+      handleInstanceUpdate(instanceUpdateRecord);
+    }
   }
 
   private void handleInstanceUpdate(InstanceUpdateRecord instanceUpdateRecord) {
