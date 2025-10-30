@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.jib)
     alias(libs.plugins.spotless)
     id("jacoco")
-    id("org.jreleaser") version "1.18.0"
+    id("org.jreleaser") version "1.20.0"
 }
 
 allprojects {
