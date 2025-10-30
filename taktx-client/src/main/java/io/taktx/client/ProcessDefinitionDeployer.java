@@ -8,7 +8,6 @@
 
 package io.taktx.client;
 
-import io.github.classgraph.Resource;
 import io.taktx.Topics;
 import io.taktx.client.serdes.XmlDefinitionSerializer;
 import io.taktx.dto.ParsedDefinitionsDTO;
@@ -17,6 +16,7 @@ import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.xml.BpmnParser;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -36,16 +36,30 @@ public class ProcessDefinitionDeployer {
   private final KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter;
 
   /**
-   * Constructor for ProcessDefinitionDeployer.
+   * Constructor for ProcessDefinitionDeployer that creates a KafkaProducer from properties.
    *
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
    */
   ProcessDefinitionDeployer(TaktPropertiesHelper taktPropertiesHelper) {
-    this.taktPropertiesHelper = taktPropertiesHelper;
-    this.xmlEmitter =
+    this(
+        taktPropertiesHelper,
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(
-                StringSerializer.class, XmlDefinitionSerializer.class));
+                StringSerializer.class, XmlDefinitionSerializer.class)));
+  }
+
+  /**
+   * Constructor that accepts an externally provided KafkaProducer. This is intended for tests and
+   * advanced usage where the producer lifecycle is managed outside this class.
+   *
+   * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
+   * @param xmlEmitter an externally created KafkaProducer (may be a mock in tests)
+   */
+  ProcessDefinitionDeployer(
+      TaktPropertiesHelper taktPropertiesHelper,
+      KafkaProducer<String, XmlDefinitionsDTO> xmlEmitter) {
+    this.taktPropertiesHelper = taktPropertiesHelper;
+    this.xmlEmitter = xmlEmitter;
   }
 
   /**
@@ -69,13 +83,14 @@ public class ProcessDefinitionDeployer {
   public void deployResource(String resource) {
     String trimmedResource = resource.trim();
     if (trimmedResource.startsWith("classpath:")) {
-      List<Resource> resources = ResourceScanner.getResources(resource);
-      for (Resource res : resources) {
+      List<URI> resources = ResourceScanner.getResources(resource);
+      for (URI res : resources) {
         log.info("Deploying classpath resource: {}", res.getPath());
-        try (InputStream is = res.open()) {
+        // Read the contants of the resource pointed at by the URI
+        try (InputStream is = res.toURL().openStream()) {
           deployInputStream(new String(is.readAllBytes()));
         } catch (IOException e) {
-          throw new IllegalArgumentException(e);
+          throw new RuntimeException(e);
         }
       }
     } else if (trimmedResource.startsWith("file:")) {

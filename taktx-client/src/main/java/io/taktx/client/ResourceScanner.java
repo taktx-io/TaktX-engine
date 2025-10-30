@@ -14,9 +14,11 @@ package io.taktx.client;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.Resource;
+import io.github.classgraph.ResourceList;
 import io.github.classgraph.ScanResult;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,14 +29,18 @@ import java.util.stream.Stream;
 
 public final class ResourceScanner {
 
-  public static List<Resource> getResources(String pattern) {
+  public static List<URI> getResources(String pattern) {
     String p = stripClasspathPrefix(pattern);
     String regex = antToRegex(p);
     Pattern compiled = Pattern.compile(regex);
 
-    List<Resource> results = new ArrayList<>();
+    List<URI> results = new ArrayList<>();
     try (ScanResult scanResult = new ClassGraph().scan()) {
-      results.addAll(scanResult.getResourcesMatchingPattern(compiled));
+
+      ResourceList resourcesMatchingPattern = scanResult.getResourcesMatchingPattern(compiled);
+      for (Resource resource : resourcesMatchingPattern) {
+        results.add(resource.getURI());
+      }
     }
     return results;
   }
