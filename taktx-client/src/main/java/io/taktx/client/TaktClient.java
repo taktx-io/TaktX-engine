@@ -344,12 +344,24 @@ public class TaktClient {
       return new TaktClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
     }
 
+    /**
+     * Sets the TaktParameterResolverFactory to be used by the TaktClient.
+     *
+     * @param parameterResolverFactory The TaktParameterResolverFactory instance.
+     * @return The TaktClientBuilder instance.
+     */
     public TaktClientBuilder withTaktParameterResolverFactory(
         TaktParameterResolverFactory parameterResolverFactory) {
       this.parameterResolverFactory = parameterResolverFactory;
       return this;
     }
 
+    /**
+     * Sets the TaktX properties to be used by the TaktClient.
+     *
+     * @param kafkaProperties The TaktX properties.
+     * @return The TaktClientBuilder instance.
+     */
     public TaktClientBuilder withTaktProperties(Properties kafkaProperties) {
       this.taktProperties = kafkaProperties;
       return this;

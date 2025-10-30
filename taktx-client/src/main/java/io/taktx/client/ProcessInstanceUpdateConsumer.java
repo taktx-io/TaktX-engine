@@ -104,8 +104,10 @@ public class ProcessInstanceUpdateConsumer {
                     instanceUpdateConsumerRecord.key(),
                     instanceUpdateConsumerRecord.value())));
 
-    instanceUpdateConsumers.forEach(
-        instanceUpdateConsumer -> instanceUpdateConsumer.accept(records));
+    if (!records.isEmpty()) {
+      instanceUpdateConsumers.forEach(
+          instanceUpdateConsumer -> instanceUpdateConsumer.accept(records));
+    }
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() {

@@ -27,12 +27,19 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+/** Utility class for scanning resources on the classpath or filesystem using Ant-style patterns. */
 public final class ResourceScanner {
 
   private ResourceScanner() {
     // static utility class
   }
 
+  /**
+   * Scan the classpath for resources matching the given Ant-style pattern.
+   *
+   * @param pattern the Ant-style pattern (e.g. "classpath*:com/example/**\/*.xml")
+   * @return a list of URIs of matching resources
+   */
   public static List<URI> getResources(String pattern) {
     String p = stripClasspathPrefix(pattern);
     String regex = antToRegex(p);
@@ -49,6 +56,13 @@ public final class ResourceScanner {
     return results;
   }
 
+  /**
+   * Scan the filesystem for resources matching the given Ant-style pattern.
+   *
+   * @param pattern the Ant-style pattern (e.g. "file:/path/to/dir/**\/*.xml")
+   * @return a list of Paths of matching resources
+   * @throws IOException if an I/O error occurs
+   */
   public static List<Path> getFileSystemResources(String pattern) throws IOException {
     String p = stripFilePrefix(pattern);
     String normalizedPattern = p.replace(File.separatorChar, '/');

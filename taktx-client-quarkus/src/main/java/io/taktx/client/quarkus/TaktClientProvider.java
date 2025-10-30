@@ -18,7 +18,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Produces;
-import java.util.List;
 import java.util.Properties;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -35,7 +34,7 @@ public class TaktClientProvider {
   // Inject the full MicroProfile Config so we can read all application properties
   private final Config config;
   private final InstanceUpdateRecordObserverChecker observerChecker;
-  private final Event<List<InstanceUpdateRecord>> events;
+  private final Event<InstanceUpdateRecord> events;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
@@ -53,7 +52,7 @@ public class TaktClientProvider {
   public TaktClientProvider(
       Config config,
       InstanceUpdateRecordObserverChecker observerChecker,
-      Event<List<InstanceUpdateRecord>> events) {
+      Event<InstanceUpdateRecord> events) {
     this.config = config;
     this.observerChecker = observerChecker;
     this.events = events;
@@ -97,7 +96,11 @@ public class TaktClientProvider {
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           taktClient.registerInstanceUpdateConsumer(
-              instanceUpdateRecords -> events.fire(instanceUpdateRecords));
+              instanceUpdateRecords -> {
+                for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+                  events.fire(instanceUpdateRecord);
+                }
+              });
         }
       }
     }
