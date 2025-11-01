@@ -8,7 +8,7 @@
 
 package io.taktx.client;
 
-import io.taktx.client.annotation.TaktWorkerMethod;
+import io.taktx.client.annotation.JobWorker;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,7 +32,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       org.slf4j.LoggerFactory.getLogger(AnnotationScanningExternalTaskTriggerConsumer.class);
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
-  private final TaktParameterResolverFactory parameterResolverFactory;
+  private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder externalTaskResponder;
   private final WorkerBeanInstanceProvider instanceProvider;
 
@@ -43,7 +43,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * @param externalTaskResponder Responder to handle external task instances
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
-      TaktParameterResolverFactory parameterResolverFactory,
+      ParameterResolverFactory parameterResolverFactory,
       ProcessInstanceResponder externalTaskResponder) {
     this(parameterResolverFactory, externalTaskResponder, new PlainJavaInstanceProvider());
   }
@@ -56,7 +56,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * @param instanceProvider THe provider for worker bean instances
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
-      TaktParameterResolverFactory parameterResolverFactory,
+      ParameterResolverFactory parameterResolverFactory,
       ProcessInstanceResponder externalTaskResponder,
       WorkerBeanInstanceProvider instanceProvider) {
     this.parameterResolverFactory = parameterResolverFactory;
@@ -64,7 +64,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
     this.instanceProvider = instanceProvider;
 
     Set<Class<?>> annotatedClasses =
-        AnnotationScanner.findClassesWithAnnotatedMethods(TaktWorkerMethod.class);
+        AnnotationScanner.findClassesWithAnnotatedMethods(JobWorker.class);
     log.info(
         "Found {} classes with @TaktWorkerMethod annotation: {}",
         annotatedClasses.size(),
@@ -72,10 +72,10 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
     for (Class<?> clazz : annotatedClasses) {
       Object instance = instanceProvider.getInstance(clazz);
       Stream.of(clazz.getDeclaredMethods())
-          .filter(m -> m.isAnnotationPresent(TaktWorkerMethod.class))
+          .filter(m -> m.isAnnotationPresent(JobWorker.class))
           .forEach(
               m -> {
-                TaktWorkerMethod annotation = m.getAnnotation(TaktWorkerMethod.class);
+                JobWorker annotation = m.getAnnotation(JobWorker.class);
                 String taskId = annotation.taskId();
                 workerMethods.put(taskId, m);
                 workerInstances.put(taskId, instance);
@@ -102,7 +102,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
             throw new IllegalStateException(
                 "No worker method or bean instance found for task ID: " + taskId);
           }
-          TaktWorkerMethod workerMethod = method.getAnnotation(TaktWorkerMethod.class);
+          JobWorker workerMethod = method.getAnnotation(JobWorker.class);
           boolean autoComplete = workerMethod.autoComplete();
           boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
 
@@ -153,7 +153,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     List<Object> result = new ArrayList<>();
     for (Parameter parameter : method.getParameters()) {
-      TaktParameterResolver parameterResolver = parameterResolverFactory.create(parameter);
+      ParameterResolver parameterResolver = parameterResolverFactory.create(parameter);
       Object resolved = parameterResolver.resolve(externalTaskTriggerDTO);
       result.add(resolved);
     }

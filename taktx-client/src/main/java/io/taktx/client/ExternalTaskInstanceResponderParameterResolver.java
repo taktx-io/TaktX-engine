@@ -14,7 +14,7 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
  * A parameter resolver that provides an ExternalTaskInstanceResponder for handling external task
  * instances.
  */
-public class ExternalTaskInstanceResponderParameterResolver implements TaktParameterResolver {
+public class ExternalTaskInstanceResponderParameterResolver implements ParameterResolver {
 
   private final ProcessInstanceResponder externalTaskResponder;
 

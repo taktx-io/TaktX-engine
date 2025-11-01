@@ -11,7 +11,7 @@ package io.taktx.client;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 
 /** A resolver interface for resolving method parameters from ExternalTaskTriggerDTOs. */
-public interface TaktParameterResolver {
+public interface ParameterResolver {
 
   /**
    * Resolves a method parameter from the given ExternalTaskTriggerDTO.

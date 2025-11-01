@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /** A parameter resolver that converts the variables of an ExternalTaskTriggerDTO into a Map. */
-public class MapParameterResolver implements TaktParameterResolver {
+public class MapParameterResolver implements ParameterResolver {
 
   private final ObjectMapper mapper;
 

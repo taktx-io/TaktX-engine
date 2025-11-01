@@ -39,7 +39,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(parameter);
+    ParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(ExternalTaskTriggerDTOParameterResolver.class);
@@ -54,7 +54,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(parameter);
+    ParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(ExternalTaskInstanceResponderParameterResolver.class);
@@ -68,7 +68,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(parameter);
+    ParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(VariableParameterResolver.class);
@@ -81,7 +81,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(parameter);
+    ParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(MapParameterResolver.class);
@@ -94,7 +94,7 @@ class DefaultTaktParameterResolverFactoryTest {
     Parameter parameter = method.getParameters()[0];
 
     // When
-    TaktParameterResolver resolver = factory.create(parameter);
+    ParameterResolver resolver = factory.create(parameter);
 
     // Then
     assertThat(resolver).isInstanceOf(VariableParameterResolver.class);

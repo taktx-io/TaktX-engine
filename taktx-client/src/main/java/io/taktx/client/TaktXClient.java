@@ -43,7 +43,7 @@ public class TaktXClient {
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
-  private final TaktParameterResolverFactory parameterResolverFactory;
+  private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
 
   private final ProcessDefinitionDeployer processDefinitionDeployer;
@@ -59,7 +59,7 @@ public class TaktXClient {
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ProcessInstanceResponder processInstanceResponder,
-      TaktParameterResolverFactory parameterResolverFactory) {
+      ParameterResolverFactory parameterResolverFactory) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
@@ -296,7 +296,7 @@ public class TaktXClient {
    *
    * @return The TaktParameterResolverFactory.
    */
-  public TaktParameterResolverFactory getParameterResolverFactory() {
+  public ParameterResolverFactory getParameterResolverFactory() {
     return this.parameterResolverFactory;
   }
 
@@ -316,7 +316,7 @@ public class TaktXClient {
   public static class TaktXClientBuilder {
 
     private Properties taktProperties;
-    private TaktParameterResolverFactory parameterResolverFactory;
+    private ParameterResolverFactory parameterResolverFactory;
 
     private TaktXClientBuilder() {}
 
@@ -336,7 +336,7 @@ public class TaktXClient {
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper);
 
-      TaktParameterResolverFactory parameterResolverFactory =
+      ParameterResolverFactory parameterResolverFactory =
           this.parameterResolverFactory != null
               ? this.parameterResolverFactory
               : new DefaultTaktParameterResolverFactory(externalTaskResponder);
@@ -351,7 +351,7 @@ public class TaktXClient {
      * @return The TaktXClientBuilder instance.
      */
     public TaktXClientBuilder withTaktParameterResolverFactory(
-        TaktParameterResolverFactory parameterResolverFactory) {
+        ParameterResolverFactory parameterResolverFactory) {
       this.parameterResolverFactory = parameterResolverFactory;
       return this;
     }

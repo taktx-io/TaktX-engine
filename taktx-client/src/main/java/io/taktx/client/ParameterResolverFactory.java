@@ -11,7 +11,7 @@ package io.taktx.client;
 import java.lang.reflect.Parameter;
 
 /** A factory interface for creating TaktParameterResolver instances based on method parameters. */
-public interface TaktParameterResolverFactory {
+public interface ParameterResolverFactory {
 
   /**
    * Creates a TaktParameterResolver for the given method parameter.
@@ -19,5 +19,5 @@ public interface TaktParameterResolverFactory {
    * @param parameter The method parameter for which to create a resolver.
    * @return A TaktParameterResolver instance.
    */
-  TaktParameterResolver create(Parameter parameter);
+  ParameterResolver create(Parameter parameter);
 }

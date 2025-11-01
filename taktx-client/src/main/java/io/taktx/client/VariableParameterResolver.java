@@ -16,7 +16,7 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
  * A parameter resolver that extracts a variable from the ExternalTaskTriggerDTO's variables map and
  * converts it to the specified type using Jackson's ObjectMapper.
  */
-public class VariableParameterResolver implements TaktParameterResolver {
+public class VariableParameterResolver implements ParameterResolver {
 
   private final ObjectMapper objectMapper;
   private final Class<?> type;

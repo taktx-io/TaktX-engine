@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
  */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface TaktWorkerMethod {
+public @interface JobWorker {
   /**
    * The task ID associated with the worker method.
    *

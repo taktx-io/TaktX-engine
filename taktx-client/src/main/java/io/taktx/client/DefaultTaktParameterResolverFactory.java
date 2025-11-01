@@ -19,7 +19,7 @@ import java.util.Map;
  * Default implementation of TaktParameterResolverFactory that creates parameter resolvers based on
  * parameter types and annotations.
  */
-public class DefaultTaktParameterResolverFactory implements TaktParameterResolverFactory {
+public class DefaultTaktParameterResolverFactory implements ParameterResolverFactory {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
@@ -35,7 +35,7 @@ public class DefaultTaktParameterResolverFactory implements TaktParameterResolve
   }
 
   @Override
-  public TaktParameterResolver create(Parameter parameter) {
+  public ParameterResolver create(Parameter parameter) {
     if (parameter.getType().isAssignableFrom(ExternalTaskTriggerDTO.class)) {
       return new ExternalTaskTriggerDTOParameterResolver();
     } else if (parameter.getType().isAssignableFrom(ExternalTaskInstanceResponder.class)) {
