@@ -34,6 +34,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final Map<String, Object> workerInstances = new HashMap<>();
   private final TaktParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder externalTaskResponder;
+  private final WorkerBeanInstanceProvider instanceProvider;
 
   /**
    * Constructor
@@ -43,9 +44,11 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       TaktParameterResolverFactory parameterResolverFactory,
-      ProcessInstanceResponder externalTaskResponder) {
+      ProcessInstanceResponder externalTaskResponder,
+      WorkerBeanInstanceProvider instanceProvider) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.externalTaskResponder = externalTaskResponder;
+    this.instanceProvider = instanceProvider;
 
     Set<Class<?>> annotatedClasses =
         AnnotationScanner.findClassesWithAnnotatedMethods(TaktWorkerMethod.class);
@@ -54,7 +57,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         annotatedClasses.size(),
         annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
     for (Class<?> clazz : annotatedClasses) {
-      Object instance = InstanceProvider.getInstance(clazz);
+      Object instance = instanceProvider.getInstance(clazz);
       Stream.of(clazz.getDeclaredMethods())
           .filter(m -> m.isAnnotationPresent(TaktWorkerMethod.class))
           .forEach(

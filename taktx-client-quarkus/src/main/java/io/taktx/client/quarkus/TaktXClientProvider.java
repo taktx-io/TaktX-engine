@@ -14,6 +14,7 @@ import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.TaktXClient.TaktXClientBuilder;
+import io.taktx.client.WorkerBeanInstanceProvider;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -35,6 +36,7 @@ public class TaktXClientProvider {
   private final Config config;
   private final InstanceUpdateRecordObserverChecker observerChecker;
   private final Event<InstanceUpdateRecord> events;
+  private final WorkerBeanInstanceProvider instanceProvider;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
@@ -52,10 +54,12 @@ public class TaktXClientProvider {
   public TaktXClientProvider(
       Config config,
       InstanceUpdateRecordObserverChecker observerChecker,
-      Event<InstanceUpdateRecord> events) {
+      Event<InstanceUpdateRecord> events,
+      WorkerBeanInstanceProvider instanceProvider) {
     this.config = config;
     this.observerChecker = observerChecker;
     this.events = events;
+    this.instanceProvider = instanceProvider;
   }
 
   @PostConstruct
@@ -82,7 +86,9 @@ public class TaktXClientProvider {
 
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
             new AnnotationScanningExternalTaskTriggerConsumer(
-                taktClient.getParameterResolverFactory(), taktClient.getProcessInstanceResponder());
+                taktClient.getParameterResolverFactory(),
+                taktClient.getProcessInstanceResponder(),
+                instanceProvider);
 
         taktClient.registerExternalTaskConsumer(
             externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
