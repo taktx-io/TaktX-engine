@@ -37,10 +37,23 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final WorkerBeanInstanceProvider instanceProvider;
 
   /**
+   * Constructor using the default PlainJavaInstanceProvider
+   *
+   * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param externalTaskResponder Responder to handle external task instances
+   */
+  public AnnotationScanningExternalTaskTriggerConsumer(
+      TaktParameterResolverFactory parameterResolverFactory,
+      ProcessInstanceResponder externalTaskResponder) {
+    this(parameterResolverFactory, externalTaskResponder, new PlainJavaInstanceProvider());
+  }
+
+  /**
    * Constructor
    *
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
    * @param externalTaskResponder Responder to handle external task instances
+   * @param instanceProvider THe provider for worker bean instances
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       TaktParameterResolverFactory parameterResolverFactory,
