@@ -79,7 +79,7 @@ public class TaktXClientProvider {
               .ifPresent(value -> taktProperties.put(name, value));
         }
 
-        taktClient = taktClientBuilder.withTaktProperties(taktProperties).build();
+        taktClient = taktClientBuilder.withProperties(taktProperties).build();
         taktClient.start();
 
         taktClient.deployTaktDeploymentAnnotatedClasses();
@@ -88,17 +88,14 @@ public class TaktXClientProvider {
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(),
                 taktClient.getProcessInstanceResponder(),
-                instanceProvider);
+                instanceProvider,
+                taktClient.getExternalTaskTopicRequester(),
+                partitions,
+                CleanupPolicy.COMPACT,
+                replicationFactor);
 
         taktClient.registerExternalTaskConsumer(
             externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
-
-        externalTaskTriggerConsumer
-            .getJobIds()
-            .forEach(
-                jobId ->
-                    taktClient.requestExternalTaskTopic(
-                        jobId, partitions, CleanupPolicy.COMPACT, replicationFactor));
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           taktClient.registerInstanceUpdateConsumer(

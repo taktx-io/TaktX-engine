@@ -310,12 +310,21 @@ public class TaktXClient {
   }
 
   /**
+   * Gets the ExternalTaskTopicRequester instance.
+   *
+   * @return The ExternalTaskTopicRequester.
+   */
+  public ExternalTaskTopicRequester getExternalTaskTopicRequester() {
+    return this.externalTaskTopicRequester;
+  }
+
+  /**
    * Builder class for creating TaktXClient instances. Requires NAMESPACE, and
    * KAFKA_BOOTSTRAP_SERVERS environment variables to be set or configured via the builder methods.
    */
   public static class TaktXClientBuilder {
 
-    private Properties taktProperties;
+    private Properties properties;
     private ParameterResolverFactory parameterResolverFactory;
 
     private TaktXClientBuilder() {}
@@ -327,11 +336,11 @@ public class TaktXClient {
      * @throws IllegalArgumentException if Kafka properties are not set.
      */
     public TaktXClient build() {
-      if (taktProperties == null) {
+      if (properties == null) {
         throw new IllegalArgumentException("TaktX properties should be passed");
       }
 
-      TaktPropertiesHelper taktPropertiesHelper = new TaktPropertiesHelper(taktProperties);
+      TaktPropertiesHelper taktPropertiesHelper = new TaktPropertiesHelper(properties);
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper);
@@ -359,11 +368,11 @@ public class TaktXClient {
     /**
      * Sets the TaktX properties to be used by the TaktXClient.
      *
-     * @param kafkaProperties The TaktX properties.
+     * @param properties The TaktX properties.
      * @return The TaktXClientBuilder instance.
      */
-    public TaktXClientBuilder withTaktProperties(Properties kafkaProperties) {
-      this.taktProperties = kafkaProperties;
+    public TaktXClientBuilder withProperties(Properties properties) {
+      this.properties = properties;
       return this;
     }
   }

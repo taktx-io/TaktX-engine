@@ -8,8 +8,10 @@
 
 package io.taktx.client;
 
+import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.JobWorker;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -35,17 +37,36 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder externalTaskResponder;
   private final WorkerBeanInstanceProvider instanceProvider;
+  private final ExternalTaskTopicRequester externalTaskTopicRequester;
+  private final int partitions;
+  private final CleanupPolicy cleanupPolicy;
+  private final short replicationFactor;
 
   /**
    * Constructor using the default PlainJavaInstanceProvider
    *
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
    * @param externalTaskResponder Responder to handle external task instances
+   * @param externalTaskTopicRequester Requester to manage external task topics
+   * @param partitions THe number of partitions for the external task topic
+   * @param cleanupPolicy The cleanup policy for the external task topic
+   * @param replicationFactor The replication factor for the external task topic
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
-      ProcessInstanceResponder externalTaskResponder) {
-    this(parameterResolverFactory, externalTaskResponder, new PlainJavaInstanceProvider());
+      ProcessInstanceResponder externalTaskResponder,
+      ExternalTaskTopicRequester externalTaskTopicRequester,
+      int partitions,
+      CleanupPolicy cleanupPolicy,
+      short replicationFactor) {
+    this(
+        parameterResolverFactory,
+        externalTaskResponder,
+        new PlainJavaInstanceProvider(),
+        externalTaskTopicRequester,
+        partitions,
+        cleanupPolicy,
+        replicationFactor);
   }
 
   /**
@@ -54,14 +75,26 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
    * @param externalTaskResponder Responder to handle external task instances
    * @param instanceProvider THe provider for worker bean instances
+   * @param externalTaskTopicRequester Requester to manage external task topics
+   * @param partitions THe number of partitions for the external task topic
+   * @param cleanupPolicy The cleanup policy for the external task topic
+   * @param replicationFactor The replication factor for the external task topic
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
       ProcessInstanceResponder externalTaskResponder,
-      WorkerBeanInstanceProvider instanceProvider) {
+      WorkerBeanInstanceProvider instanceProvider,
+      ExternalTaskTopicRequester externalTaskTopicRequester,
+      int partitions,
+      CleanupPolicy cleanupPolicy,
+      short replicationFactor) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.externalTaskResponder = externalTaskResponder;
     this.instanceProvider = instanceProvider;
+    this.externalTaskTopicRequester = externalTaskTopicRequester;
+    this.partitions = partitions;
+    this.cleanupPolicy = cleanupPolicy;
+    this.replicationFactor = replicationFactor;
 
     Set<Class<?>> annotatedClasses =
         AnnotationScanner.findClassesWithAnnotatedMethods(JobWorker.class);
@@ -79,6 +112,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
                 String taskId = annotation.taskId();
                 workerMethods.put(taskId, m);
                 workerInstances.put(taskId, instance);
+                externalTaskTopicRequester.requestExternalTaskTopic(
+                    taskId, partitions, cleanupPolicy, replicationFactor);
               });
     }
   }

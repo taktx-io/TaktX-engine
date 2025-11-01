@@ -42,7 +42,7 @@ public class TaktXClientProvider {
           properties.load(fileInputStream);
         }
 
-        taktClient = taktClientBuilder.withTaktProperties(properties).build();
+        taktClient = taktClientBuilder.withProperties(properties).build();
         taktClient.start();
       }
     }
