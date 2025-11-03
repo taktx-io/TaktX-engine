@@ -10,6 +10,7 @@ package io.taktx.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import io.taktx.client.annotation.CustomHeaders;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.lang.reflect.Parameter;
@@ -43,6 +44,8 @@ public class DefaultTaktParameterResolverFactory implements ParameterResolverFac
     } else if (parameter.getAnnotation(Variable.class) != null) {
       return new VariableParameterResolver(
           OBJECT_MAPPER, parameter.getType(), parameter.getAnnotation(Variable.class).value());
+    } else if (parameter.getAnnotation(CustomHeaders.class) != null) {
+      return new HeadersParameterResolver(OBJECT_MAPPER, parameter.getType());
     } else if (parameter.getType().isAssignableFrom(Map.class)) {
       return new MapParameterResolver(OBJECT_MAPPER);
     } else {

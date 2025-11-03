@@ -37,6 +37,8 @@ class ExternalTaskTest {
         .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
         .startProcessInstance(VariablesDTO.of("var1", "value1"))
         .waitForExternalTaskTrigger("service-task")
+        .assertThatExternalTaskTriggerHasTaskHeader("service-task", "header1", "headerValue1")
+        .assertThatExternalTaskTriggerHasTaskHeader("service-task", "header2", "headerValue2")
         .andRespondToExternalTaskWithSuccess("service-task", VariablesDTO.of("var1", "value1"))
         .waitUntilDone()
         .assertThatProcess()

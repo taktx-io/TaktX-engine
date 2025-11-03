@@ -33,6 +33,7 @@ import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
+import java.util.Map;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -62,6 +63,7 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId =
         getExternalTaskId(flowNode.getWorkerDefinition(), scope.getVariableScope());
+    Map<String, String> headers = flowNode.getHeaders();
 
     if (failIfTopicDoesNotExist(
         processInstanceProcessingContext, scope, flownodeInstance, externalTaskId)) {
@@ -70,7 +72,7 @@ public abstract class ExternalTaskInstanceProcessor<
 
     retryDirectly(
         getExternalTaskInfo(
-            externalTaskId, flowNode, flownodeInstance, scope.getVariableScope(), null),
+            externalTaskId, flowNode, flownodeInstance, scope.getVariableScope(), headers, null),
         processInstanceProcessingContext.getInstanceResult());
     flownodeInstance.setState(ExecutionState.ACTIVE);
     flownodeInstance.setAttempt(0);
@@ -94,6 +96,7 @@ public abstract class ExternalTaskInstanceProcessor<
           scope.getDirectInstanceResult(),
           flownodeInstance,
           scope.getVariableScope(),
+          flownodeInstance.getFlowNode().getHeaders(),
           new ExternalTaskResponseResultDTO(
               ExternalTaskResponseType.ERROR,
               false,
@@ -133,6 +136,7 @@ public abstract class ExternalTaskInstanceProcessor<
           scope.getDirectInstanceResult(),
           externalTaskInstance,
           scope.getVariableScope(),
+          externalTaskInstance.getFlowNode().getHeaders(),
           responseResult);
     }
   }
@@ -142,6 +146,7 @@ public abstract class ExternalTaskInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
       VariableScope flowNodeInstanceVariables,
+      Map<String, String> headers,
       ExternalTaskResponseResultDTO responseResult) {
     E externalTask = externalTaskInstance.getFlowNode();
     if (externalTask.getRetries() != null) {
@@ -150,6 +155,7 @@ public abstract class ExternalTaskInstanceProcessor<
           directInstanceResult,
           externalTaskInstance,
           flowNodeInstanceVariables,
+          headers,
           responseResult,
           externalTask);
     } else {
@@ -164,6 +170,7 @@ public abstract class ExternalTaskInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
       VariableScope flowNodeInstanceVariables,
+      Map<String, String> headers,
       ExternalTaskResponseResultDTO responseResult,
       E externalTask) {
     // We have some kind of retry definition
@@ -205,6 +212,7 @@ public abstract class ExternalTaskInstanceProcessor<
             externalTask,
             externalTaskInstance,
             flowNodeInstanceVariables,
+            headers,
             instanceResult);
       } else {
         // No backoff time defined, retry directly
@@ -214,6 +222,7 @@ public abstract class ExternalTaskInstanceProcessor<
                 externalTask,
                 externalTaskInstance,
                 flowNodeInstanceVariables,
+                headers,
                 null),
             instanceResult);
       }
@@ -224,8 +233,8 @@ public abstract class ExternalTaskInstanceProcessor<
   }
 
   private static void retryDirectly(
-      ExternalTaskInfo externalTaskId, InstanceResult instanceResult) {
-    instanceResult.addExternalTaskRequest(externalTaskId);
+      ExternalTaskInfo externalTaskInfo, InstanceResult instanceResult) {
+    instanceResult.addExternalTaskRequest(externalTaskInfo);
   }
 
   private static <E extends ExternalTask, I extends ExternalTaskInstance<E>>
@@ -296,10 +305,11 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
       VariableScope variables,
+      Map<String, String> headers,
       InstanceResult instanceResult) {
     retryDirectly(
         getExternalTaskInfo(
-            workerDefinition, externalTask, instance, variables, backoff.toMillis()),
+            workerDefinition, externalTask, instance, variables, headers, backoff.toMillis()),
         instanceResult);
   }
 
@@ -308,7 +318,9 @@ public abstract class ExternalTaskInstanceProcessor<
       ExternalTask externalTask,
       ExternalTaskInstance<?> instance,
       VariableScope variables,
+      Map<String, String> headers,
       Long backoff) {
-    return new ExternalTaskInfo(workerDefinition, externalTask, instance, variables, backoff);
+    return new ExternalTaskInfo(
+        workerDefinition, externalTask, instance, headers, variables, backoff);
   }
 }

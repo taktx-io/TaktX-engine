@@ -8,6 +8,8 @@
 
 package io.taktx.engine.pi.testengine;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.client.ExternalTaskTriggerConsumer;
@@ -987,6 +989,15 @@ public class BpmnTestEngine {
 
   public BpmnTestEngine sendSignal(String signalName) {
     taktClient.sendSignal(signalName);
+    return this;
+  }
+
+  public BpmnTestEngine assertThatExternalTaskTriggerHasTaskHeader(
+      String taskId, String header, String headerValue) {
+    ExternalTaskTriggerDTO externalTaskTriggerDTO =
+        activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
+    assertThat(externalTaskTriggerDTO).isNotNull();
+    assertThat(externalTaskTriggerDTO.getHeaders()).containsEntry(header, headerValue);
     return this;
   }
 }

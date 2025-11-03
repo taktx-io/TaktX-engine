@@ -10,6 +10,7 @@ package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -36,16 +37,20 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
   private VariablesDTO variables;
 
+  private Map<String, String> headers;
+
   public ExternalTaskTriggerDTO(
       UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey,
       String externalTaskId,
       List<Long> elementInstanceIdPath,
-      VariablesDTO variables) {
+      VariablesDTO variables,
+      Map<String, String> headers) {
     this.processInstanceId = processInstanceId;
     this.processDefinitionKey = processDefinitionKey;
     this.externalTaskId = externalTaskId;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.variables = variables;
+    this.headers = headers;
   }
 }

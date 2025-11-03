@@ -449,7 +449,8 @@ public class Forwarder {
         processDefinitionKey,
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
-        externalTaskInfo.variables().scopeToDTO());
+        externalTaskInfo.variables().scopeToDTO(),
+        externalTaskInfo.headers());
   }
 
   private UserTaskTriggerDTO toUserTaskTrigger(

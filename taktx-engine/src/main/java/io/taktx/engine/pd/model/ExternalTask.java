@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pd.model;
 
+import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -19,4 +20,5 @@ public abstract class ExternalTask extends Activity {
   private String workerDefinition;
   private String retries;
   private String implementation;
+  private Map<String, String> headers;
 }

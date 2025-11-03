@@ -9,10 +9,12 @@
 package io.taktx.engine.pi.model;
 
 import io.taktx.engine.pd.model.ExternalTask;
+import java.util.Map;
 
 public record ExternalTaskInfo(
     String externalTaskId,
     ExternalTask element,
     ExternalTaskInstance<?> instance,
+    Map<String, String> headers,
     VariableScope variables,
     Long backoff) {}
