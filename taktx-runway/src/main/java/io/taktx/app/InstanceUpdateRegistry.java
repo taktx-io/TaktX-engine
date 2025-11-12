@@ -48,7 +48,8 @@ public class InstanceUpdateRegistry {
 
   @PostConstruct
   void init() {
-    taktClient.registerInstanceUpdateConsumer(this::handleInstanceUpdates);
+    taktClient.registerInstanceUpdateConsumer(
+        "instance-update-consumer-runway", this::handleInstanceUpdates);
   }
 
   private void handleInstanceUpdates(List<InstanceUpdateRecord> instanceUpdateRecords) {

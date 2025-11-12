@@ -8,3 +8,4 @@
 /.vscode/
 /docker/kafka/
 /taktx-client-quarkus/build/
+/taktx-ingesters/full-updates-cassandra/build/

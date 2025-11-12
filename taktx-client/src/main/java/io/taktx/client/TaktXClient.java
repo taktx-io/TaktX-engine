@@ -170,8 +170,9 @@ public class TaktXClient {
    *
    * @param consumer The consumer to register.
    */
-  public void registerInstanceUpdateConsumer(Consumer<List<InstanceUpdateRecord>> consumer) {
-    this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(consumer);
+  public void registerInstanceUpdateConsumer(
+      String groupId, Consumer<List<InstanceUpdateRecord>> consumer) {
+    this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(groupId, consumer);
   }
 
   /**
@@ -244,12 +245,12 @@ public class TaktXClient {
    * Registers an external task consumer that will be notified of external task triggers.
    *
    * @param externalTaskTriggerConsumer The external task trigger consumer to register.
-   * @param gruopId The group ID for the consumer.
+   * @param groupId The group ID for the consumer.
    */
   public void registerExternalTaskConsumer(
-      ExternalTaskTriggerConsumer externalTaskTriggerConsumer, String gruopId) {
+      ExternalTaskTriggerConsumer externalTaskTriggerConsumer, String groupId) {
     this.externalTaskTriggerTopicConsumer.subscribeToExternalTaskTriggerTopics(
-        externalTaskTriggerConsumer, gruopId);
+        externalTaskTriggerConsumer, groupId);
   }
 
   /**
@@ -345,12 +346,12 @@ public class TaktXClient {
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper);
 
-      ParameterResolverFactory parameterResolverFactory =
+      ParameterResolverFactory clientParameterResolverFactory =
           this.parameterResolverFactory != null
               ? this.parameterResolverFactory
               : new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
-      return new TaktXClient(taktPropertiesHelper, externalTaskResponder, parameterResolverFactory);
+      return new TaktXClient(taktPropertiesHelper, externalTaskResponder, clientParameterResolverFactory);
     }
 
     /**

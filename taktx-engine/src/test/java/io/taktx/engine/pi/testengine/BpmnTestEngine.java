@@ -149,7 +149,7 @@ public class BpmnTestEngine {
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
 
     taktClient = TaktXClient.newClientBuilder().withProperties(kakaProperties).build();
-    taktClient.registerInstanceUpdateConsumer(BpmnTestEngine.this::consume);
+    taktClient.registerInstanceUpdateConsumer("bpmntestengine", BpmnTestEngine.this::consume);
     taktClient.registerUserTaskConsumer(BpmnTestEngine.this::consumeUserTaskTrigger);
     taktClient.start();
 

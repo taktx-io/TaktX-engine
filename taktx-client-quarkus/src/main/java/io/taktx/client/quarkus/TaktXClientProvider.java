@@ -44,6 +44,9 @@ public class TaktXClientProvider {
   @ConfigProperty(name = "taktx.engine.topic.replicationFactor", defaultValue = "1")
   short replicationFactor;
 
+  @ConfigProperty(name = "taktx.client.groupId.instanceupdate")
+  String groupIdInstanceUpdate;
+
   /**
    * Constructor injecting the MicroProfile Config.
    *
@@ -64,6 +67,15 @@ public class TaktXClientProvider {
 
   @PostConstruct
   void init() {
+    // allow tests to disable the real TaktXClient by setting taktX.client.enabled=false
+    boolean clientEnabled =
+        config.getOptionalValue("taktx.client.enabled", Boolean.class).orElse(true);
+    if (!clientEnabled) {
+      // skip initialization in test-mode
+      System.out.println(
+          "TaktXClientProvider: taktX.client.enabled=false, skipping TaktXClient startup (test mode)");
+      return;
+    }
     TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
 
     synchronized (TaktXClientProvider.class) {
@@ -94,11 +106,14 @@ public class TaktXClientProvider {
                 CleanupPolicy.COMPACT,
                 replicationFactor);
 
-        taktClient.registerExternalTaskConsumer(
-            externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+        if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
+          taktClient.registerExternalTaskConsumer(
+              externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+        }
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           taktClient.registerInstanceUpdateConsumer(
+              groupIdInstanceUpdate,
               instanceUpdateRecords -> {
                 for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
                   events.fire(instanceUpdateRecord);

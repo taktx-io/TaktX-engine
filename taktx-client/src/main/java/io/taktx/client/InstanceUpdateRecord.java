@@ -20,6 +20,8 @@ public class InstanceUpdateRecord {
   private final long timestamp;
   private final UUID processInstanceId;
   private final InstanceUpdateDTO update;
+  private final int kafkaPartition;
+  private final long kafkaOffset;
 
   /**
    * Create a new InstanceUpdateRecord.
@@ -28,10 +30,17 @@ public class InstanceUpdateRecord {
    * @param processInstanceId the id of the process instance affected
    * @param update the details of the update
    */
-  public InstanceUpdateRecord(long timestamp, UUID processInstanceId, InstanceUpdateDTO update) {
+  public InstanceUpdateRecord(
+      long timestamp,
+      UUID processInstanceId,
+      InstanceUpdateDTO update,
+      int kafkaPartition,
+      long kafkaOffset) {
     this.timestamp = timestamp;
     this.processInstanceId = processInstanceId;
     this.update = update;
+    this.kafkaPartition = kafkaPartition;
+    this.kafkaOffset = kafkaOffset;
   }
 
   /**
@@ -59,5 +68,23 @@ public class InstanceUpdateRecord {
    */
   public InstanceUpdateDTO getUpdate() {
     return this.update;
+  }
+
+  /**
+   * Get the Kafka partition from which this record was consumed.
+   *
+   * @return the Kafka partition number
+   */
+  public int getKafkaPartition() {
+    return kafkaPartition;
+  }
+
+  /**
+   * Get the Kafka offset of this record.
+   *
+   * @return the Kafka offset
+   */
+  public long getKafkaOffset() {
+    return kafkaOffset;
   }
 }
