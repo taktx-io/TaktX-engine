@@ -351,7 +351,8 @@ public class TaktXClient {
               ? this.parameterResolverFactory
               : new DefaultTaktParameterResolverFactory(externalTaskResponder);
 
-      return new TaktXClient(taktPropertiesHelper, externalTaskResponder, clientParameterResolverFactory);
+      return new TaktXClient(
+          taktPropertiesHelper, externalTaskResponder, clientParameterResolverFactory);
     }
 
     /**

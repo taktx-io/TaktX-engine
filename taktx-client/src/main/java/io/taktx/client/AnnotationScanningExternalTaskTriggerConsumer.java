@@ -36,11 +36,6 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final Map<String, Object> workerInstances = new HashMap<>();
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder externalTaskResponder;
-  private final WorkerBeanInstanceProvider instanceProvider;
-  private final ExternalTaskTopicRequester externalTaskTopicRequester;
-  private final int partitions;
-  private final CleanupPolicy cleanupPolicy;
-  private final short replicationFactor;
 
   /**
    * Constructor using the default PlainJavaInstanceProvider
@@ -90,18 +85,15 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       short replicationFactor) {
     this.parameterResolverFactory = parameterResolverFactory;
     this.externalTaskResponder = externalTaskResponder;
-    this.instanceProvider = instanceProvider;
-    this.externalTaskTopicRequester = externalTaskTopicRequester;
-    this.partitions = partitions;
-    this.cleanupPolicy = cleanupPolicy;
-    this.replicationFactor = replicationFactor;
 
     Set<Class<?>> annotatedClasses =
         AnnotationScanner.findClassesWithAnnotatedMethods(JobWorker.class);
-    log.info(
-        "Found {} classes with @TaktWorkerMethod annotation: {}",
-        annotatedClasses.size(),
-        annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
+    if (log.isInfoEnabled()) {
+      log.info(
+          "Found {} classes with @TaktWorkerMethod annotation: {}",
+          annotatedClasses.size(),
+          annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
+    }
     for (Class<?> clazz : annotatedClasses) {
       Object instance = instanceProvider.getInstance(clazz);
       Stream.of(clazz.getDeclaredMethods())

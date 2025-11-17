@@ -78,36 +78,6 @@ public abstract class ExternalTaskInstanceProcessor<
     flownodeInstance.setAttempt(0);
   }
 
-  private boolean failIfTopicDoesNotExist(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      I flownodeInstance,
-      String externalTaskId) {
-    if (!processInstanceProcessingContext
-        .getTopicManager()
-        .topicExists(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)) {
-      log.warn(
-          "Topic for External task {} is not created, failing external task instanceToContinue {}",
-          externalTaskId,
-          flownodeInstance);
-      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
-      handleErrorOrTimeout(
-          instanceResult,
-          scope.getDirectInstanceResult(),
-          flownodeInstance,
-          scope.getVariableScope(),
-          flownodeInstance.getFlowNode().getHeaders(),
-          new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.ERROR,
-              false,
-              "Topic not created",
-              "Topic not created",
-              -1L));
-      return true;
-    }
-    return false;
-  }
-
   @Override
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
@@ -322,5 +292,35 @@ public abstract class ExternalTaskInstanceProcessor<
       Long backoff) {
     return new ExternalTaskInfo(
         workerDefinition, externalTask, instance, headers, variables, backoff);
+  }
+
+  private boolean failIfTopicDoesNotExist(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      I flownodeInstance,
+      String externalTaskId) {
+    if (!processInstanceProcessingContext
+        .getTopicManager()
+        .topicExists(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId)) {
+      log.warn(
+          "Topic for External task {} is not created, failing external task instanceToContinue {}",
+          externalTaskId,
+          flownodeInstance);
+      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
+      handleErrorOrTimeout(
+          instanceResult,
+          scope.getDirectInstanceResult(),
+          flownodeInstance,
+          scope.getVariableScope(),
+          flownodeInstance.getFlowNode().getHeaders(),
+          new ExternalTaskResponseResultDTO(
+              ExternalTaskResponseType.ERROR,
+              false,
+              "Topic not created",
+              "Topic not created",
+              -1L));
+      return true;
+    }
+    return false;
   }
 }

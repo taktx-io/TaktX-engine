@@ -22,7 +22,7 @@ import lombok.Getter;
 public class DirectInstanceResult {
 
   private final List<String> sequenceFlows = new ArrayList<>();
-  private final Queue<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
+  private final ArrayDeque<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
   private final Queue<ContinueFlowNodeInstanceInfo> continueInstances = new ArrayDeque<>();
   private final Queue<FlowNodeInstance<?>> abortInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
@@ -50,6 +50,12 @@ public class DirectInstanceResult {
       sequenceFlows.add(startFlowNodeInstanceInfo.inputSequenceFlowId());
     }
     newFlowNodeInstances.add(startFlowNodeInstanceInfo);
+  }
+
+  public List<String> getSequenceFlowsFromNewFlowNodeInstances() {
+    return newFlowNodeInstances.stream()
+        .map(StartFlowNodeInstanceInfo::inputSequenceFlowId)
+        .toList();
   }
 
   public StartFlowNodeInstanceInfo pollNewFlowNodeInstance() {
@@ -102,5 +108,9 @@ public class DirectInstanceResult {
 
   public void addEvent(EventSignal event) {
     events.add(event);
+  }
+
+  public void clearNewFlowNodeInstances() {
+    newFlowNodeInstances.clear();
   }
 }

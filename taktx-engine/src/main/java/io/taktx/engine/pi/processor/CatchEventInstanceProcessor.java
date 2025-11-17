@@ -28,6 +28,7 @@ import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import java.time.Clock;
+import java.util.Collections;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 
@@ -229,7 +230,8 @@ public abstract class CatchEventInstanceProcessor<
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
       newInstanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, scope, now));
+          createFlowNodeInstanceUpdate(
+              processInstance, catchEventInstance, scope, now, Collections.emptyList()));
       return true;
     }
     return false;
@@ -248,7 +250,8 @@ public abstract class CatchEventInstanceProcessor<
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
       instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(processInstance, catchEventInstance, scope, now));
+          createFlowNodeInstanceUpdate(
+              processInstance, catchEventInstance, scope, now, Collections.emptyList()));
       return true;
     }
     return false;

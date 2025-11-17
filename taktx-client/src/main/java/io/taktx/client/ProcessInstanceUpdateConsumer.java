@@ -24,7 +24,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.slf4j.Logger;
 
 /**
  * This class is responsible for managing the subscription to external tasks for all process
