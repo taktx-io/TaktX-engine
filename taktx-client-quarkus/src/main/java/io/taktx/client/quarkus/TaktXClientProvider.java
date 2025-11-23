@@ -12,6 +12,8 @@ import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
+import io.taktx.client.ParameterResolverFactory;
+import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.TaktXClient.TaktXClientBuilder;
 import io.taktx.client.WorkerBeanInstanceProvider;
@@ -37,6 +39,8 @@ public class TaktXClientProvider {
   private final InstanceUpdateRecordObserverChecker observerChecker;
   private final Event<InstanceUpdateRecord> events;
   private final WorkerBeanInstanceProvider instanceProvider;
+  private final ParameterResolverFactory parameterResolverFactory;
+  private final ResultProcessorFactory resultProcessorFactory;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
@@ -54,16 +58,22 @@ public class TaktXClientProvider {
    * @param observerChecker the ObserverChecker to check for CDI observers
    * @param events the CDI Event to fire InstanceUpdateRecords
    * @param instanceProvider the WorkerBeanInstanceProvider for bean instances
+   * @param parameterResolverFactory the ParameterResolverFactory to use
+   * @param resultProcessorFactory the ResultProcessorFactory to use
    */
   public TaktXClientProvider(
       Config config,
       InstanceUpdateRecordObserverChecker observerChecker,
       Event<InstanceUpdateRecord> events,
-      WorkerBeanInstanceProvider instanceProvider) {
+      WorkerBeanInstanceProvider instanceProvider,
+      ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory) {
     this.config = config;
     this.observerChecker = observerChecker;
     this.events = events;
     this.instanceProvider = instanceProvider;
+    this.parameterResolverFactory = parameterResolverFactory;
+    this.resultProcessorFactory = resultProcessorFactory;
   }
 
   @PostConstruct
@@ -91,6 +101,8 @@ public class TaktXClientProvider {
               .getOptionalValue(name, String.class)
               .ifPresent(value -> taktProperties.put(name, value));
         }
+        taktClientBuilder.withTaktParameterResolverFactory(parameterResolverFactory);
+        taktClientBuilder.withResultProcessorFactory(resultProcessorFactory);
 
         taktClient = taktClientBuilder.withProperties(taktProperties).build();
         taktClient.start();
@@ -100,6 +112,7 @@ public class TaktXClientProvider {
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(),
+                taktClient.getResultProcessorFactory(),
                 taktClient.getProcessInstanceResponder(),
                 instanceProvider,
                 taktClient.getExternalTaskTopicRequester(),

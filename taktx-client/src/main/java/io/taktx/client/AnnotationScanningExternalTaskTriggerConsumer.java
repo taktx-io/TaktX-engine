@@ -8,6 +8,7 @@
 
 package io.taktx.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.JobWorker;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -36,6 +37,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
   private final ParameterResolverFactory parameterResolverFactory;
+  private final ResultProcessorFactory resultProcessorFactory;
   private final ProcessInstanceResponder externalTaskResponder;
 
   /**
@@ -50,6 +52,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
       ProcessInstanceResponder externalTaskResponder,
       ExternalTaskTopicRequester externalTaskTopicRequester,
       int partitions,
@@ -57,6 +60,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       short replicationFactor) {
     this(
         parameterResolverFactory,
+        resultProcessorFactory,
         externalTaskResponder,
         new PlainJavaInstanceProvider(),
         externalTaskTopicRequester,
@@ -69,6 +73,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * Constructor
    *
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param resultProcessorFactory Factory to create result processor for method parameters
    * @param externalTaskResponder Responder to handle external task instances
    * @param instanceProvider THe provider for worker bean instances
    * @param externalTaskTopicRequester Requester to manage external task topics
@@ -78,6 +83,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
       ProcessInstanceResponder externalTaskResponder,
       WorkerBeanInstanceProvider instanceProvider,
       ExternalTaskTopicRequester externalTaskTopicRequester,
@@ -85,6 +91,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       CleanupPolicy cleanupPolicy,
       short replicationFactor) {
     this.parameterResolverFactory = parameterResolverFactory;
+    this.resultProcessorFactory = resultProcessorFactory;
+
     this.externalTaskResponder = externalTaskResponder;
 
     Set<Class<?>> annotatedClasses =
@@ -132,10 +140,9 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
           }
           JobWorker workerMethod = method.getAnnotation(JobWorker.class);
           boolean autoComplete = workerMethod.autoComplete();
-          boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
 
           for (ExternalTaskTriggerDTO task : tasks) {
-            processTask(task, method, autoComplete, beanInstance, methodIsVoid);
+            processTask(task, method, autoComplete, beanInstance);
           }
         });
   }
@@ -144,23 +151,17 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       ExternalTaskTriggerDTO externalTaskTriggerDTO,
       Method method,
       boolean autoComplete,
-      Object beanInstance,
-      boolean methodIsVoid) {
+      Object beanInstance) {
     Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
     if (autoComplete) {
       // Rely on result and exceptions to determine success or failure
 
       try {
         Object result = method.invoke(beanInstance, arguments);
-        if (methodIsVoid) {
-          externalTaskResponder
-              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-              .respondSuccess();
-        } else {
-          externalTaskResponder
-              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-              .respondSuccess(result);
-        }
+        Object resolvedResult = processResult(method, result);
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondSuccess(resolvedResult);
       } catch (TaktXBpmnError e) {
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
@@ -213,6 +214,16 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
             .respondIncident(e.getMessage(), stackTraceStrings);
       }
     }
+  }
+
+  private Object processResult(Method method, Object result) {
+    if (result != null) {
+      ResultProcessor resultProcessor = resultProcessorFactory.create(method.getReturnType());
+      if (resultProcessor != null) {
+        return resultProcessor.process(result);
+      }
+    }
+    return new HashMap<String, JsonNode>();
   }
 
   private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {

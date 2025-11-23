@@ -20,7 +20,7 @@ import java.util.Map;
  * Default implementation of TaktParameterResolverFactory that creates parameter resolvers based on
  * parameter types and annotations.
  */
-public class DefaultTaktParameterResolverFactory implements ParameterResolverFactory {
+public class DefaultParameterResolverFactory implements ParameterResolverFactory {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
 
@@ -31,7 +31,7 @@ public class DefaultTaktParameterResolverFactory implements ParameterResolverFac
    *
    * @param externalTaskResponder The responder to handle external task instances.
    */
-  public DefaultTaktParameterResolverFactory(ProcessInstanceResponder externalTaskResponder) {
+  public DefaultParameterResolverFactory(ProcessInstanceResponder externalTaskResponder) {
     this.externalTaskResponder = externalTaskResponder;
   }
 

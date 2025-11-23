@@ -17,6 +17,12 @@ import jakarta.enterprise.inject.spi.CDI;
 @ApplicationScoped
 public class QuarkusBeanInstanceProvider implements WorkerBeanInstanceProvider {
 
+  /**
+   * Gets an instance of the specified class using CDI.
+   *
+   * @param clazz the class to get an instance of
+   * @return an instance of the specified class
+   */
   @Override
   public <T> T getInstance(Class<T> clazz) {
     Instance<T> select = CDI.current().select(clazz);

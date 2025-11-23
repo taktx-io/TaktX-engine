@@ -55,15 +55,18 @@ public class TaktXClient {
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
   private final ExternalTaskTopicRequester externalTaskTopicRequester;
+  private final ResultProcessorFactory resultProcessorFactory;
 
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
       ProcessInstanceResponder processInstanceResponder,
-      ParameterResolverFactory parameterResolverFactory) {
+      ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
+    this.resultProcessorFactory = resultProcessorFactory;
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.xmlByProcessDefinitionIdConsumer =
         new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
@@ -303,6 +306,15 @@ public class TaktXClient {
   }
 
   /**
+   * Gets the ResultProcessorFactory instance.
+   *
+   * @return The ResultProcessorFactory.
+   */
+  public ResultProcessorFactory getResultProcessorFactory() {
+    return resultProcessorFactory;
+  }
+
+  /**
    * Gets the ProcessInstanceResponder instance.
    *
    * @return The ProcessInstanceResponder.
@@ -328,6 +340,7 @@ public class TaktXClient {
 
     private Properties properties;
     private ParameterResolverFactory parameterResolverFactory;
+    private ResultProcessorFactory resultProcessorFactory;
 
     private TaktXClientBuilder() {}
 
@@ -350,10 +363,16 @@ public class TaktXClient {
       ParameterResolverFactory clientParameterResolverFactory =
           this.parameterResolverFactory != null
               ? this.parameterResolverFactory
-              : new DefaultTaktParameterResolverFactory(externalTaskResponder);
-
+              : new DefaultParameterResolverFactory(externalTaskResponder);
+      ResultProcessorFactory clientResultProcessorFactory =
+          this.resultProcessorFactory != null
+              ? this.resultProcessorFactory
+              : new DefaultResultProcessorFactory();
       return new TaktXClient(
-          taktPropertiesHelper, externalTaskResponder, clientParameterResolverFactory);
+          taktPropertiesHelper,
+          externalTaskResponder,
+          clientParameterResolverFactory,
+          clientResultProcessorFactory);
     }
 
     /**
@@ -365,6 +384,12 @@ public class TaktXClient {
     public TaktXClientBuilder withTaktParameterResolverFactory(
         ParameterResolverFactory parameterResolverFactory) {
       this.parameterResolverFactory = parameterResolverFactory;
+      return this;
+    }
+
+    public TaktXClientBuilder withResultProcessorFactory(
+        ResultProcessorFactory resultProcessorFactory) {
+      this.resultProcessorFactory = resultProcessorFactory;
       return this;
     }
 
