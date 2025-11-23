@@ -101,8 +101,9 @@ public class TaktXClientProvider {
               .getOptionalValue(name, String.class)
               .ifPresent(value -> taktProperties.put(name, value));
         }
-        taktClientBuilder.withTaktParameterResolverFactory(parameterResolverFactory);
-        taktClientBuilder.withResultProcessorFactory(resultProcessorFactory);
+        taktClientBuilder
+            .withTaktParameterResolverFactory(parameterResolverFactory)
+            .withResultProcessorFactory(resultProcessorFactory);
 
         taktClient = taktClientBuilder.withProperties(taktProperties).build();
         taktClient.start();
