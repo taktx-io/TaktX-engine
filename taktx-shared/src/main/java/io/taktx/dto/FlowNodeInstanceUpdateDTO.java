@@ -21,6 +21,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @RegisterForReflection
 public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
+
   private List<Long> flowNodeInstancePath;
 
   private FlowNodeInstanceDTO flowNodeInstance;
@@ -29,18 +30,22 @@ public class FlowNodeInstanceUpdateDTO extends InstanceUpdateDTO {
 
   private long processTime;
 
-  private List<String> sequenceFlowIds;
+  private String inputSequenceFlowId;
+
+  private List<String> outputSequenceFlowIds;
 
   public FlowNodeInstanceUpdateDTO(
       List<Long> flowNodeInstancePath,
       FlowNodeInstanceDTO flowNodeInstance,
       VariablesDTO variables,
       long processTime,
-      List<String> sequenceFlowIds) {
+      String inputSequenceFlowId,
+      List<String> outputSequenceFlowIds) {
     this.flowNodeInstancePath = flowNodeInstancePath;
     this.flowNodeInstance = flowNodeInstance;
     this.variables = variables;
     this.processTime = processTime;
-    this.sequenceFlowIds = sequenceFlowIds;
+    this.inputSequenceFlowId = inputSequenceFlowId;
+    this.outputSequenceFlowIds = outputSequenceFlowIds;
   }
 }

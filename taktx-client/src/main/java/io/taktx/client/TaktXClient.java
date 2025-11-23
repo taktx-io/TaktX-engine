@@ -168,6 +168,7 @@ public class TaktXClient {
   /**
    * Registers a consumer that will be notified of instance update records.
    *
+   * @param groupId The Kafka consumer group ID to use.
    * @param consumer The consumer to register.
    */
   public void registerInstanceUpdateConsumer(

@@ -86,6 +86,14 @@ public class ProcessInstanceAssert {
     return this;
   }
 
+  public ProcessInstanceAssert hasIncidentElementWithId(String elementId) {
+    List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
+    assertThat(bpmnElementState.getFirst().isIncident())
+        .as("element " + elementId + " was not in incident")
+        .isTrue();
+    return this;
+  }
+
   public ProcessInstanceAssert hasCompletedElementWithId(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState = getFlowNodeInstanceDTOS(elementId);
     assertThat(bpmnElementState.getFirst().isCompleted())
@@ -174,6 +182,12 @@ public class ProcessInstanceAssert {
   public ProcessInstanceAssert isAborted() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
     assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.ABORTED);
+    return this;
+  }
+
+  public ProcessInstanceAssert isIncident() {
+    ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
+    assertThat(processInstance.getIncidentInfo()).isNotNull();
     return this;
   }
 

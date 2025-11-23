@@ -15,7 +15,6 @@ import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
-import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.GatewayInstance;
@@ -26,8 +25,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @NoArgsConstructor
+@Slf4j
 public abstract class GatewayInstanceProcessor<
         E extends Gateway, I extends GatewayInstance<E>, C extends ContinueFlowElementTriggerDTO>
     extends FlowNodeInstanceProcessor<E, I, C> {
@@ -95,11 +96,8 @@ public abstract class GatewayInstanceProcessor<
       }
 
       if (outgoingFlows.isEmpty()) {
-        throw new ProcessInstanceException(
-            processInstance,
-            gatewayInstance,
-            "No outgoing flow could be selected found for exclusive gateway: "
-                + gatewayNode.getId());
+        log.warn("No outgoing sequence flow selected for gateway {}", gatewayNode.getId());
+        gatewayInstance.raiseIncident("No outgoing sequence flow selected for gateway");
       }
     }
     gatewayInstance.setSelectedOutputFlows(

@@ -121,7 +121,7 @@ public abstract class ThrowEventInstanceProcessor<
                         new StartFlowNodeInstanceInfo(catchEventInstance, null);
                     scope
                         .getDirectInstanceResult()
-                        .addNewFlowNodeInstance(processInstance, startFlowNodeInstanceInfo);
+                        .addNewFlowNodeInstance(startFlowNodeInstanceInfo);
                   });
             });
 

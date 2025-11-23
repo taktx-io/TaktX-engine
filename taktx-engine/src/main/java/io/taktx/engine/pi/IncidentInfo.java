@@ -8,16 +8,7 @@
 
 package io.taktx.engine.pi;
 
-import io.taktx.engine.pi.model.FlowNodeInstance;
-import lombok.Getter;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 
-@Getter
-public class ProcessInstanceException extends RuntimeException {
-
-  private final transient FlowNodeInstance<?> flowNodeInstance;
-
-  public ProcessInstanceException(FlowNodeInstance<?> flowNodeInstance, String message) {
-    super(message);
-    this.flowNodeInstance = flowNodeInstance;
-  }
-}
+public record IncidentInfo(
+    IFlowNodeInstance flowNodeInstance, String message, String[] stacktrace) {}

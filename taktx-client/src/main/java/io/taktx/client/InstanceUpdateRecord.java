@@ -29,6 +29,8 @@ public class InstanceUpdateRecord {
    * @param timestamp the epoch millis timestamp when the update occurred
    * @param processInstanceId the id of the process instance affected
    * @param update the details of the update
+   * @param kafkaPartition the Kafka partition from which this record was consumed
+   * @param kafkaOffset the Kafka offset of this record
    */
   public InstanceUpdateRecord(
       long timestamp,

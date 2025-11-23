@@ -16,6 +16,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,19 +161,56 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
               .responderForExternalTaskTrigger(externalTaskTriggerDTO)
               .respondSuccess(result);
         }
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+      } catch (TaktXBpmnError e) {
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", e.getMessage());
+            .respondError(
+                e.getAllowRetry(), e.getErrorCode(), e.getErrorMessage(), e.getVariables());
+      } catch (TaktXBpmnEscalation e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondEscalation(e.getErrorCode(), e.getErrorMessage(), e.getVariables());
+      } catch (TaktXBpmnPromise e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondPromise(e.getDuration());
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        // Convert stack trace to string array
+        String[] stackTraceStrings =
+            Arrays.stream(stackTrace)
+                .map(stackTraceElement -> stackTraceElement.toString())
+                .toArray(String[]::new);
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondIncident(e.getMessage(), stackTraceStrings);
       }
     } else {
       // Worker has to respond itself by Responder or TaktXClient. Result is ignored
       try {
         method.invoke(beanInstance, arguments);
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+      } catch (TaktXBpmnError e) {
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", e.getMessage());
+            .respondError(
+                e.getAllowRetry(), e.getErrorCode(), e.getErrorMessage(), e.getVariables());
+      } catch (TaktXBpmnEscalation e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondEscalation(e.getErrorCode(), e.getErrorMessage(), e.getVariables());
+      } catch (TaktXBpmnPromise e) {
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondPromise(e.getDuration());
+      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        String[] stackTraceStrings =
+            Arrays.stream(stackTrace)
+                .map(stackTraceElement -> stackTraceElement.toString())
+                .toArray(String[]::new);
+        externalTaskResponder
+            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .respondIncident(e.getMessage(), stackTraceStrings);
       }
     }
   }

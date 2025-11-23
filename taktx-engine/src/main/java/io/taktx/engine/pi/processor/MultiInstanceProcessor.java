@@ -114,8 +114,7 @@ public class MultiInstanceProcessor
         multiInstanceInstance
             .getScope()
             .getDirectInstanceResult()
-            .addNewFlowNodeInstance(
-                processInstanceProcessingContext.getProcessInstance(), newFlowNodeInstanceInfo);
+            .addNewFlowNodeInstance(newFlowNodeInstanceInfo);
         iterationInstance =
             getNextIterationInstance(multiInstanceInstance.getScope(), iterationInstance);
       }
@@ -164,8 +163,7 @@ public class MultiInstanceProcessor
     multiInstanceInstance
         .getScope()
         .getDirectInstanceResult()
-        .addNewFlowNodeInstance(
-            processInstanceProcessingContext.getProcessInstance(), newFlowNodeInstanceInfo);
+        .addNewFlowNodeInstance(newFlowNodeInstanceInfo);
     scopeProcessor.doBusiness(processInstanceProcessingContext, multiInstanceInstance.getScope());
   }
 

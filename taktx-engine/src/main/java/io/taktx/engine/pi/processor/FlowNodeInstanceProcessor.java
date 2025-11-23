@@ -26,7 +26,6 @@ import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import lombok.Getter;
@@ -55,7 +54,7 @@ public abstract class FlowNodeInstanceProcessor<
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       FlowNodeInstance<?> flowNodeInstance,
-      String sequenceFlowId) {
+      String inputSequenceFlowId) {
 
     if (!flowNodeInstance.stateAllowsStart()) {
       return;
@@ -70,7 +69,7 @@ public abstract class FlowNodeInstanceProcessor<
     addInputVariablesToScope(flowNode, scope.getVariableScope());
 
     this.processStartSpecificFlowNodeInstance(
-        processInstanceProcessingContext, scope, (I) flowNodeInstance, sequenceFlowId);
+        processInstanceProcessingContext, scope, (I) flowNodeInstance, inputSequenceFlowId);
 
     if (flowNodeInstance.getState().isDone()) {
       processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesFinished();
@@ -81,14 +80,18 @@ public abstract class FlowNodeInstanceProcessor<
     selectNextNodeIfAllowedStart(processInstance, (I) flowNodeInstance, scope);
 
     if (flowNodeInstance.isDirty()) {
-      List<String> sequenceFlowIdList =
-          sequenceFlowId != null ? List.of(sequenceFlowId) : Collections.emptyList();
-
+      List<String> outputSequenceFlowIds =
+          scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
       processInstanceProcessingContext
           .getInstanceResult()
           .addInstanceUpdate(
               createFlowNodeInstanceUpdate(
-                  processInstance, flowNodeInstance, scope, now, sequenceFlowIdList));
+                  processInstance,
+                  flowNodeInstance,
+                  scope,
+                  now,
+                  inputSequenceFlowId,
+                  outputSequenceFlowIds));
     }
   }
 
@@ -116,13 +119,13 @@ public abstract class FlowNodeInstanceProcessor<
     selectNextNodeIfAllowedContinue((I) flowNodeInstance, processInstance, scope);
 
     if (flowNodeInstance.isDirty()) {
-      List<String> sequenceFlowIds =
+      List<String> outputSequenceFlowIds =
           scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
       processInstanceProcessingContext
           .getInstanceResult()
           .addInstanceUpdate(
               createFlowNodeInstanceUpdate(
-                  processInstance, flowNodeInstance, scope, now, sequenceFlowIds));
+                  processInstance, flowNodeInstance, scope, now, null, outputSequenceFlowIds));
     }
   }
 
@@ -144,8 +147,7 @@ public abstract class FlowNodeInstanceProcessor<
       processInstanceProcessingContext
           .getInstanceResult()
           .addInstanceUpdate(
-              createFlowNodeInstanceUpdate(
-                  processInstance, instance, scope, now, Collections.emptyList()));
+              createFlowNodeInstanceUpdate(processInstance, instance, scope, now, null, null));
     }
   }
 
@@ -202,7 +204,6 @@ public abstract class FlowNodeInstanceProcessor<
               scope
                   .getDirectInstanceResult()
                   .addNewFlowNodeInstance(
-                      processInstance,
                       new StartFlowNodeInstanceInfo(newFlowNodeInstance, sequenceFlow.getId()));
             });
     return newFlowNodeInstances;
@@ -231,7 +232,8 @@ public abstract class FlowNodeInstanceProcessor<
       FlowNodeInstance<?> flowNodeInstance,
       Scope scope,
       long processTime,
-      List<String> sequenceFlowIds) {
+      String inputSequenceFlowId,
+      List<String> outputSequenceFlowIds) {
     List<Long> elementInstanceIdPath = flowNodeInstance.createKeyPath();
     VariablesDTO processInstanceVariablesDTO = scope.getVariableScope().scopeToDTO();
     FlowNodeInstanceDTO flowNodeInstanceDTO =
@@ -246,6 +248,7 @@ public abstract class FlowNodeInstanceProcessor<
             flowNodeInstanceDTO,
             processInstanceVariablesDTO,
             processTime,
-            sequenceFlowIds));
+            inputSequenceFlowId,
+            outputSequenceFlowIds));
   }
 }

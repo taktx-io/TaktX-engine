@@ -48,6 +48,7 @@ import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.DtoMapper;
 import io.taktx.engine.pi.Forwarder;
+import io.taktx.engine.pi.PathExtractor;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
@@ -145,6 +146,7 @@ public class TopologyProducer {
   private final FeelExpressionHandler feelExpressionHandler;
   private final DynamicTopicManager topicManager;
   private final DefinitionsCache definitionsCache;
+  private final PathExtractor pathExtractor;
 
   @Produces
   public Topology buildTopology() {
@@ -339,7 +341,8 @@ public class TopologyProducer {
                     clock,
                     dtoMapper,
                     processingStatistics,
-                    topicManager),
+                    topicManager,
+                    pathExtractor),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

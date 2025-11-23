@@ -11,7 +11,6 @@ package io.taktx.engine.pi;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -35,17 +34,17 @@ public class DirectInstanceResult {
     return new DirectInstanceResult();
   }
 
-  public void addNewFlowNodeInstance(
-      ProcessInstance processInstance, StartFlowNodeInstanceInfo startFlowNodeInstanceInfo) {
+  public void addNewFlowNodeInstance(StartFlowNodeInstanceInfo startFlowNodeInstanceInfo) {
     if (startFlowNodeInstanceInfo.inputSequenceFlowId() != null) {
       if (sequenceFlows.contains(startFlowNodeInstanceInfo.inputSequenceFlowId())) {
-        throw new ProcessInstanceException(
-            processInstance,
-            startFlowNodeInstanceInfo.flowNodeInstance(),
-            "Straight through processing loop detected for sequenceflow "
-                + startFlowNodeInstanceInfo.inputSequenceFlowId()
-                + " in: "
-                + sequenceFlows);
+        startFlowNodeInstanceInfo
+            .flowNodeInstance()
+            .raiseIncident(
+                "Straight through processing loop detected for sequenceflow "
+                    + startFlowNodeInstanceInfo.inputSequenceFlowId()
+                    + " in: "
+                    + sequenceFlows);
+        return;
       }
       sequenceFlows.add(startFlowNodeInstanceInfo.inputSequenceFlowId());
     }
@@ -108,9 +107,5 @@ public class DirectInstanceResult {
 
   public void addEvent(EventSignal event) {
     events.add(event);
-  }
-
-  public void clearNewFlowNodeInstances() {
-    newFlowNodeInstances.clear();
   }
 }

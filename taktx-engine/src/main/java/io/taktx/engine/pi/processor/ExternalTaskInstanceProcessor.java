@@ -21,6 +21,7 @@ import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.InstanceResult;
+import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ErrorEventSignal;
@@ -96,6 +97,8 @@ public abstract class ExternalTaskInstanceProcessor<
       handleSuccess(instanceResult, externalTaskInstance);
     } else if (ExternalTaskResponseType.PROMISE == responseResult.getResponseType()) {
       handlePromise(instanceResult, externalTaskInstance, trigger);
+    } else if (ExternalTaskResponseType.INCIDENT == responseResult.getResponseType()) {
+      handleIncident(instanceResult, externalTaskInstance, trigger);
     } else if (ExternalTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
           instanceResult, scope.getDirectInstanceResult(), externalTaskInstance, responseResult);
@@ -245,6 +248,18 @@ public abstract class ExternalTaskInstanceProcessor<
     instanceResult.addScheduledExternalTaskTriggerTimeout(
         new ScheduledExternalTaskTriggerTimeoutInfo(
             externalTaskInstance, trigger.getExternalTaskResponseResult().getTimeout()));
+  }
+
+  private void handleIncident(
+      InstanceResult instanceResult,
+      I externalTaskInstance,
+      ExternalTaskResponseTriggerDTO trigger) {
+    cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
+    StringBuilder sb = new StringBuilder(trigger.getExternalTaskResponseResult().getMessage());
+    for (String st : trigger.getExternalTaskResponseResult().getStacktrace()) {
+      sb.append("\n").append(st);
+    }
+    throw new ProcessInstanceException(externalTaskInstance, sb.toString());
   }
 
   private void handleSuccess(InstanceResult instanceResult, I externalTaskInstance) {

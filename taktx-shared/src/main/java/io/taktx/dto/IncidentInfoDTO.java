@@ -8,26 +8,20 @@
 
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
 @RegisterForReflection
-public enum ExternalTaskResponseType {
-  SUCCESS("S"),
-  PROMISE("P"),
-  TIMEOUT("T"),
-  ESCALATION("ES"),
-  ERROR("ER"),
-  INCIDENT("I");
-
-  private final String code;
-
-  ExternalTaskResponseType(String code) {
-    this.code = code;
-  }
-
-  @JsonValue
-  public String getCode() {
-    return code;
-  }
+public class IncidentInfoDTO {
+  private List<Long> elementInstanceIdPath;
+  private String message;
+  private String[] stacktrace;
 }

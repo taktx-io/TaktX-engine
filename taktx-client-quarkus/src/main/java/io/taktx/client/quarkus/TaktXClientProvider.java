@@ -53,6 +53,7 @@ public class TaktXClientProvider {
    * @param config the MicroProfile Config instance
    * @param observerChecker the ObserverChecker to check for CDI observers
    * @param events the CDI Event to fire InstanceUpdateRecords
+   * @param instanceProvider the WorkerBeanInstanceProvider for bean instances
    */
   public TaktXClientProvider(
       Config config,

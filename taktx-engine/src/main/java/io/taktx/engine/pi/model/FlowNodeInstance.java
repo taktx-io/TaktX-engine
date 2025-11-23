@@ -10,6 +10,7 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pi.ProcessInstanceException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -39,6 +40,8 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   private WithScope parentInstance;
 
   private boolean dirty = false;
+
+  private boolean incident = false;
 
   protected FlowNodeInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     this.parentInstance = parentInstance;
@@ -101,7 +104,7 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean stateAllowsStart() {
-    return state == ExecutionState.INITIALIZED;
+    return state == ExecutionState.INITIALIZED && !incident;
   }
 
   public boolean isDone() {
@@ -109,11 +112,11 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
   }
 
   public boolean stateAllowsStopping() {
-    return state == ExecutionState.ACTIVE || state == ExecutionState.INITIALIZED;
+    return !incident && (state == ExecutionState.ACTIVE || state == ExecutionState.INITIALIZED);
   }
 
   public boolean stateAllowsContinue() {
-    return state == ExecutionState.ACTIVE;
+    return state == ExecutionState.ACTIVE && !incident;
   }
 
   public boolean isNotAwaiting() {
@@ -124,6 +127,12 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
     if (stateAllowsStopping()) {
       setState(ExecutionState.ABORTED);
     }
+  }
+
+  public void raiseIncident(String message) {
+    this.incident = true;
+    setDirty();
+    throw new ProcessInstanceException(this, message);
   }
 
   public abstract boolean canSelectNextNodeStart();

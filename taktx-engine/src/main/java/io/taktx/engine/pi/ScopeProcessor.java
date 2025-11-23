@@ -68,7 +68,7 @@ public class ScopeProcessor {
     this.dtoMapper = dtoMapper;
   }
 
-  public void processStart(
+  public Void processStart(
       List<Long> parentElementInstanceIdPath,
       String elementId,
       VariablesDTO variables,
@@ -153,9 +153,10 @@ public class ScopeProcessor {
               + " is out of bounds for parentElementInstanceIdPath "
               + parentElementInstanceIdPath);
     }
+    return null;
   }
 
-  public void processContinue(
+  public Void processContinue(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       ContinueFlowElementTriggerDTO trigger,
@@ -170,7 +171,6 @@ public class ScopeProcessor {
       if (instanceWithInstanceId instanceof WithScope withScope) {
         processContinue(
             processInstanceProcessingContext, withScope.getScope(), trigger, elementInstanceIdPath);
-
         bubbleUpEvents(scope, withScope);
 
         scope
@@ -209,9 +209,10 @@ public class ScopeProcessor {
       }
       doBusiness(processInstanceProcessingContext, scope);
     }
+    return null;
   }
 
-  public void processAbort(
+  public Void processAbort(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       AbortTriggerDTO trigger) {
@@ -224,7 +225,6 @@ public class ScopeProcessor {
               .getInstanceWithInstanceId(trigger.getElementInstanceIdPath().get(subProcessLevel));
       if (instanceWithInstanceId instanceof WithScope withScope) {
         processAbort(processInstanceProcessingContext, withScope.getScope(), trigger);
-
         bubbleUpEvents(scope, withScope);
 
         ContinueFlowElementTriggerDTO continueTrigger =
@@ -261,6 +261,7 @@ public class ScopeProcessor {
       }
       doBusiness(processInstanceProcessingContext, scope);
     }
+    return null;
   }
 
   public void doBusiness(
@@ -336,7 +337,7 @@ public class ScopeProcessor {
           instanceInfo.inputSequenceFlowId());
 
       if (fLowNodeInstance.isActive()) {
-        startAttachedBoundaryEvents(processInstanceProcessingContext, scope, fLowNodeInstance);
+        startAttachedBoundaryEvents(scope, fLowNodeInstance);
       }
 
       instanceInfo = scope.getDirectInstanceResult().pollNewFlowNodeInstance();
@@ -428,11 +429,11 @@ public class ScopeProcessor {
   private void abortBoundaryEvents(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
-      FlowNodeInstance<?> abortInstance) {
+      FlowNodeInstance<?> flowNodeInstance) {
     Set<Long> boundaryEvents =
         scope
             .getActivityToBoundaryEvents()
-            .getOrDefault(abortInstance.getElementInstanceId(), Collections.emptySet());
+            .getOrDefault(flowNodeInstance.getElementInstanceId(), Collections.emptySet());
 
     boundaryEvents.forEach(
         boundaryEventId -> {
@@ -443,10 +444,7 @@ public class ScopeProcessor {
         });
   }
 
-  private void startAttachedBoundaryEvents(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      FlowNodeInstance<?> fLowNodeInstance) {
+  private void startAttachedBoundaryEvents(Scope scope, FlowNodeInstance<?> fLowNodeInstance) {
     if (fLowNodeInstance instanceof ActivityInstance<?> activityInstance) {
       Activity activity = activityInstance.getFlowNode();
       activity
@@ -471,7 +469,6 @@ public class ScopeProcessor {
                 scope
                     .getDirectInstanceResult()
                     .addNewFlowNodeInstance(
-                        processInstanceProcessingContext.getProcessInstance(),
                         new StartFlowNodeInstanceInfo(boundaryEventInstance, null));
               });
     }
@@ -491,8 +488,7 @@ public class ScopeProcessor {
     StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
         new StartFlowNodeInstanceInfo(flowNodeInstance, null);
 
-    directInstanceResult.addNewFlowNodeInstance(
-        processInstanceProcessingContext.getProcessInstance(), startFlowNodeInstanceInfo);
+    directInstanceResult.addNewFlowNodeInstance(startFlowNodeInstanceInfo);
     return flowNodeInstance;
   }
 
@@ -551,11 +547,7 @@ public class ScopeProcessor {
                     fLowNodeInstance.getParentInstance(), scope);
             StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
                 new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
-            scope
-                .getDirectInstanceResult()
-                .addNewFlowNodeInstance(
-                    processInstanceProcessingContext.getProcessInstance(),
-                    startFlowNodeInstanceInfo);
+            scope.getDirectInstanceResult().addNewFlowNodeInstance(startFlowNodeInstanceInfo);
 
             if (startEvent.isInterrupting()) {
               scope.getDirectInstanceResult().addAbortInstance(event.getCurrentInstance());
@@ -596,11 +588,7 @@ public class ScopeProcessor {
                       fLowNodeInstance.getParentInstance(), scope);
               StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
                   new StartFlowNodeInstanceInfo(eventSubProcessInstance, null);
-              scope
-                  .getDirectInstanceResult()
-                  .addNewFlowNodeInstance(
-                      processInstanceProcessingContext.getProcessInstance(),
-                      startFlowNodeInstanceInfo);
+              scope.getDirectInstanceResult().addNewFlowNodeInstance(startFlowNodeInstanceInfo);
               eventHandled = true;
             }
             if (eventHandled) {

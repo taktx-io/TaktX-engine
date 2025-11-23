@@ -10,10 +10,12 @@ package io.taktx.engine.pi.model;
 
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.engine.pd.model.IoVariableMapping;
+import io.taktx.engine.pi.IncidentInfo;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 public class ProcessInstance {
@@ -24,6 +26,7 @@ public class ProcessInstance {
   private final Scope scope;
   private final boolean propagateAllToParent;
   private final Set<IoVariableMapping> outputMappings;
+  @Setter private IncidentInfo incidentInfo;
 
   public ProcessInstance(
       UUID processInstanceId,

@@ -34,13 +34,12 @@ class StraightThroughTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitForExternalTaskTrigger("external-task")
         .andRespondToExternalTaskWithSuccess("external-task", VariablesDTO.empty())
-        .waitUntilDone()
+        .waitUntilIncident()
         .assertThatProcess()
-        .isAborted()
-        .hasAbortedElementWithId("ExternalTask_1")
-        .hasNotPassedElementWithId("Activity_0cxnpbx")
-        .hasNotPassedElementWithId("Activity_1ohwsp7")
-        .hasNotPassedElementWithId("Activity_09g9dzh")
-        .hasNotPassedElementWithId("Event_1h5ln3k");
+        .isIncident()
+        .hasPassedElementWithId("Activity_0cxnpbx")
+        .hasPassedElementWithId("Activity_1ohwsp7")
+        .hasPassedElementWithId("Activity_09g9dzh")
+        .hasPassedElementWithId("Event_1h5ln3k");
   }
 }

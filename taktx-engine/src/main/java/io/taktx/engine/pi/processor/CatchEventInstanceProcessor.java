@@ -28,7 +28,7 @@ import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import java.time.Clock;
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 
@@ -229,9 +229,11 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(processInstanceProcessingContext, scope, catchEventInstance);
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
+      List<String> outputSequenceFlowIds =
+          scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, scope, now, Collections.emptyList()));
+              processInstance, catchEventInstance, scope, now, null, outputSequenceFlowIds));
       return true;
     }
     return false;
@@ -249,9 +251,12 @@ public abstract class CatchEventInstanceProcessor<
       getInstanceResultForContinue(processInstanceProcessingContext, scope, catchEventInstance);
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
       selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
+      List<String> sequenceFlowIds =
+          scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
+
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, scope, now, Collections.emptyList()));
+              processInstance, catchEventInstance, scope, now, null, sequenceFlowIds));
       return true;
     }
     return false;

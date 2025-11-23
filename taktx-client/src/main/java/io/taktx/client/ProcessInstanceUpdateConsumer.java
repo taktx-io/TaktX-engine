@@ -52,6 +52,7 @@ public class ProcessInstanceUpdateConsumer {
   /**
    * Registers a consumer that will be notified of instance update records.
    *
+   * @param groupId the Kafka consumer group ID to use
    * @param consumer the consumer to register
    */
   public void registerInstanceUpdateConsumer(

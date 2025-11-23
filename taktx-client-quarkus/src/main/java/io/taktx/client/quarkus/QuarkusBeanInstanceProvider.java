@@ -13,6 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.CDI;
 
+/** Quarkus implementation of WorkerBeanInstanceProvider using CDI to obtain bean instances. */
 @ApplicationScoped
 public class QuarkusBeanInstanceProvider implements WorkerBeanInstanceProvider {
 

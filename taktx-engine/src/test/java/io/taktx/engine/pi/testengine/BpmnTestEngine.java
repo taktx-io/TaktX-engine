@@ -123,7 +123,8 @@ public class BpmnTestEngine {
         processInstanceUpdate.getParentElementInstancePath(),
         processInstanceUpdate.getProcessDefinitionKey(),
         false,
-        Set.of());
+        Set.of(),
+        processInstanceUpdate.getIncidentInfoDTO());
   }
 
   public void close() {
@@ -625,6 +626,10 @@ public class BpmnTestEngine {
     return waitUntilDone(DEFAULT_DURATION);
   }
 
+  public BpmnTestEngine waitUntilIncident() {
+    return waitUntilIncident(DEFAULT_DURATION);
+  }
+
   public BpmnTestEngine waitUntilDone(Duration duration) {
     Awaitility.await()
         .atMost(duration)
@@ -636,6 +641,21 @@ public class BpmnTestEngine {
                       .getScope()
                       .getState()
                       .isDone()) {
+                return activeProcessInstanceId;
+              }
+              return null;
+            },
+            Objects::nonNull);
+    return this;
+  }
+
+  public BpmnTestEngine waitUntilIncident(Duration duration) {
+    Awaitility.await()
+        .atMost(duration)
+        .until(
+            () -> {
+              if (activeProcessInstanceId != null
+                  && processInstanceMap.get(activeProcessInstanceId).getIncidentInfo() != null) {
                 return activeProcessInstanceId;
               }
               return null;
