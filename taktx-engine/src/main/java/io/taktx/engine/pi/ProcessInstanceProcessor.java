@@ -320,8 +320,6 @@ public class ProcessInstanceProcessor
                     trigger,
                     trigger.getElementInstanceIdPath()));
 
-        processResultAndForward(
-            processInstanceProcessingContext, processDefinitionKey, processInstance.getScope());
       }
     } else {
       log.warn("Process instanceToContinue not found for key: {}", processInstanceId);
