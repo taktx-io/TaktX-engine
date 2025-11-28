@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pi.ProcessInstanceMapper;
@@ -47,6 +48,6 @@ public class EndEventInstanceProcessor
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       EndEventInstance flowNodeInstance) {
-    // nothing to do
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 }
