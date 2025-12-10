@@ -51,7 +51,7 @@ public enum TimeBucket {
     } else if (millis < Constants.DAY_MS) {
       return DAILY;
     } else if (millis < Constants.WEEK_MS) {
-      return DAILY;
+      return WEEKLY;
     } else {
       return YEARLY;
     }
