@@ -449,7 +449,7 @@ public class Forwarder {
         processDefinitionKey,
         externalTaskInfo.externalTaskId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
-        externalTaskInfo.variables().scopeToDTO(),
+        externalTaskInfo.variables().scopeAndParentsToDto(),
         externalTaskInfo.headers());
   }
 
@@ -465,6 +465,6 @@ public class Forwarder {
         userTaskInfo.assignmentDefinition(),
         userTaskInfo.taskSchedule(),
         userTaskInfo.priorityDefinition(),
-        userTaskInfo.variables().scopeToDTO());
+        userTaskInfo.variables().scopeAndParentsToDto());
   }
 }
