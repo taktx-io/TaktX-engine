@@ -319,7 +319,6 @@ public class ProcessInstanceProcessor
                     processInstance.getScope(),
                     trigger,
                     trigger.getElementInstanceIdPath()));
-
       }
     } else {
       log.warn("Process instanceToContinue not found for key: {}", processInstanceId);
