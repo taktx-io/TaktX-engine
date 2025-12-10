@@ -10,7 +10,9 @@ package io.taktx.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.CleanupPolicy;
+import io.taktx.client.annotation.AckStrategy;
 import io.taktx.client.annotation.JobWorker;
+import io.taktx.client.annotation.ThreadingStrategy;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import java.lang.reflect.InvocationTargetException;
@@ -36,6 +38,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       org.slf4j.LoggerFactory.getLogger(AnnotationScanningExternalTaskTriggerConsumer.class);
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
+  private final Map<String, AckStrategy> ackStrategies = new HashMap<>();
+  private final Map<String, ThreadingStrategy> threadingStrategies = new HashMap<>();
   private final ParameterResolverFactory parameterResolverFactory;
   private final ResultProcessorFactory resultProcessorFactory;
   private final ProcessInstanceResponder externalTaskResponder;
@@ -113,6 +117,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
                 String taskId = annotation.taskId();
                 workerMethods.put(taskId, m);
                 workerInstances.put(taskId, instance);
+                ackStrategies.put(taskId, annotation.ackStrategy());
+                threadingStrategies.put(taskId, annotation.threadingStrategy());
                 externalTaskTopicRequester.requestExternalTaskTopic(
                     taskId, partitions, cleanupPolicy, replicationFactor);
               });
@@ -162,58 +168,88 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
             .respondSuccess(resolvedResult);
-      } catch (TaktXBpmnError e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(
-                e.getAllowRetry(), e.getErrorCode(), e.getErrorMessage(), e.getVariables());
-      } catch (TaktXBpmnEscalation e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondEscalation(e.getErrorCode(), e.getErrorMessage(), e.getVariables());
-      } catch (TaktXBpmnPromise e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondPromise(e.getDuration());
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+      } catch (InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof TaktXBpmnError bpmnError) {
+          respondError(externalTaskTriggerDTO, bpmnError);
+        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
+          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
+        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
+          respondPromis(externalTaskTriggerDTO, bpmnPromise);
+        } else {
+          StackTraceElement[] stackTrace = cause.getStackTrace();
+          // Convert stack trace to string array
+          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        }
+      } catch (RuntimeException | IllegalAccessException e) {
         StackTraceElement[] stackTrace = e.getStackTrace();
         // Convert stack trace to string array
-        String[] stackTraceStrings =
-            Arrays.stream(stackTrace)
-                .map(stackTraceElement -> stackTraceElement.toString())
-                .toArray(String[]::new);
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondIncident(e.getMessage(), stackTraceStrings);
+        respondIncident(externalTaskTriggerDTO, stackTrace, e);
       }
     } else {
       // Worker has to respond itself by Responder or TaktXClient. Result is ignored
       try {
         method.invoke(beanInstance, arguments);
-      } catch (TaktXBpmnError e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(
-                e.getAllowRetry(), e.getErrorCode(), e.getErrorMessage(), e.getVariables());
-      } catch (TaktXBpmnEscalation e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondEscalation(e.getErrorCode(), e.getErrorMessage(), e.getVariables());
-      } catch (TaktXBpmnPromise e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondPromise(e.getDuration());
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+      } catch (InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof TaktXBpmnError bpmnError) {
+          respondError(externalTaskTriggerDTO, bpmnError);
+        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
+          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
+        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
+          respondPromis(externalTaskTriggerDTO, bpmnPromise);
+        } else {
+          StackTraceElement[] stackTrace = cause.getStackTrace();
+          // Convert stack trace to string array
+          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        }
+      } catch (RuntimeException | IllegalAccessException e) {
         StackTraceElement[] stackTrace = e.getStackTrace();
-        String[] stackTraceStrings =
-            Arrays.stream(stackTrace)
-                .map(stackTraceElement -> stackTraceElement.toString())
-                .toArray(String[]::new);
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondIncident(e.getMessage(), stackTraceStrings);
+        // Convert stack trace to string array
+        respondIncident(externalTaskTriggerDTO, stackTrace, e);
       }
     }
+  }
+
+  private void respondPromis(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnPromise bpmnPromise) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondPromise(bpmnPromise.getDuration());
+  }
+
+  private void respondEscalation(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnEscalation bpmnEscalation) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondEscalation(
+            bpmnEscalation.getErrorCode(),
+            bpmnEscalation.getErrorMessage(),
+            bpmnEscalation.getVariables());
+  }
+
+  private void respondError(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnError bpmnError) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondError(
+            bpmnError.getAllowRetry(),
+            bpmnError.getErrorCode(),
+            bpmnError.getErrorMessage(),
+            bpmnError.getVariables());
+  }
+
+  private void respondIncident(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO,
+      StackTraceElement[] stackTrace,
+      Throwable cause) {
+    String[] stackTraceStrings =
+        Arrays.stream(stackTrace)
+            .map(stackTraceElement -> stackTraceElement.toString())
+            .toArray(String[]::new);
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondIncident(cause.getMessage(), stackTraceStrings);
   }
 
   private Object processResult(Method method, Object result) {
@@ -235,5 +271,13 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
     }
 
     return result.toArray();
+  }
+
+  public AckStrategy getAckStrategy(String taskId) {
+    return ackStrategies.getOrDefault(taskId, AckStrategy.EXPLICIT_BATCH);
+  }
+
+  public ThreadingStrategy getThreadingStrategy(String taskId) {
+    return threadingStrategies.getOrDefault(taskId, ThreadingStrategy.VIRTUAL_THREAD_WAIT);
   }
 }

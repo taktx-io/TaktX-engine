@@ -89,7 +89,7 @@ public abstract class ExternalTaskInstanceProcessor<
     ExternalTaskResponseResultDTO responseResult = trigger.getExternalTaskResponseResult();
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
-    log.info(
+    log.debug(
         "Processing external task response: {} for flowNode {}",
         responseResult,
         externalTaskInstance.getFlowNode().getId());
