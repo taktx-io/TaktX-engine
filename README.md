@@ -2,28 +2,21 @@
 
 <!-- Build & CI -->
 [![Java CI](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml)
-[![License Compliance](https://github.com/taktx-io/TaktX-engine/actions/workflows/license-compliance.yml/badge.svg)](https://github.com/taktx-io/TaktX-engine/actions/workflows/license-compliance.yml)
 
 <!-- Code Quality -->
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Code Coverage](https://codecov.io/gh/taktx-io/TaktX-engine/branch/main/graph/badge.svg)](https://codecov.io/gh/taktx-io/TaktX-engine)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/coverage.svg)
+![Engine Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-engine-coverage.svg)
+![Client Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-coverage.svg)
+![Client Quarkus Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-quarkus-coverage.svg)
+![Shared Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-shared-coverage.svg)
 
 <!-- Security -->
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Known Vulnerabilities](https://snyk.io/test/github/taktx-io/TaktX-engine/badge.svg)](https://snyk.io/test/github/taktx-io/TaktX-engine)
 
 <!-- License & Version -->
 [![License: BSL 1.0](https://img.shields.io/badge/License-BSL%201.0-blue.svg)](LICENSE.md)
 [![SDK License: Apache 2.0](https://img.shields.io/badge/SDK%20License-Apache%202.0-green.svg)](taktx-client/LICENSE)
 [![Version](https://img.shields.io/badge/version-0.0.9--alpha--3-orange.svg)](VERSION.txt)
 
-<!-- Stats -->
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
 - Java 23+
 - Apache Kafka
 - Docker (optional)
@@ -73,6 +66,20 @@ TaktX Engine consists of several modules:
 - **taktx-client**: Client library for process interaction
 - **taktx-shared**: Shared models and utilities
 - **testclient-quarkus**: Example implementation based on Quarkus ans using of the client
+
+## Test Coverage
+
+TaktX maintains comprehensive test coverage across all modules:
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| **Overall Project** | ![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/coverage.svg) | 67.5% - Good |
+| **taktx-engine** | ![Engine](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-engine-coverage.svg) | 87.0% - Excellent |
+| **taktx-client** | ![Client](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-coverage.svg) | 20.8% - Improving |
+| **taktx-client-quarkus** | ![Quarkus](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-quarkus-coverage.svg) | 55.4% - Acceptable |
+| **taktx-shared** | ![Shared](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-shared-coverage.svg) | 2.1% - Work in Progress |
+
+Coverage badges are automatically generated from JaCoCo test reports and include both unit tests and integration tests with Testcontainers.
 
 ## Configuration
 

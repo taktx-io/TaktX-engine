@@ -76,9 +76,23 @@ tasks.test {
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
+
+    // Merge both standard test coverage and Quarkus integration test coverage
+    executionData.setFrom(
+        fileTree(project.buildDir) {
+            include("jacoco/test.exec")
+            include("jacoco-quarkus.exec")
+        }
+    )
+
     reports {
         xml.required = true
         html.required = true
+    }
+
+    doFirst {
+        val execFiles = executionData.files.filter { it.exists() }
+        logger.lifecycle("JaCoCo merging coverage from: ${execFiles.joinToString(", ") { it.name }}")
     }
 }
 
