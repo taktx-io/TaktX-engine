@@ -16,6 +16,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.NewStartCommand;
+import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
@@ -57,28 +58,29 @@ public class CallActivityInstanceProcessor
     JsonNode jsonNode =
         feelExpressionHandler.processFeelExpression(
             flowNode.getCalledElement(), scope.getVariableScope());
-    if (jsonNode != null) {
-      VariablesDTO commandVariables;
-      if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
-        commandVariables = scope.getVariableScope().scopeAndParentsToDto();
-      } else {
-        commandVariables = scope.getVariableScope().scopeToDTO();
-      }
-
-      processInstanceProcessingContext
-          .getInstanceResult()
-          .addNewStartCommand(
-              new NewStartCommand(
-                  newProcessInstanceId,
-                  flowNode,
-                  callActivityInstance,
-                  jsonNode.asText(),
-                  commandVariables,
-                  callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
-                  callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
-    } else {
-      callActivityInstance.setState(ExecutionState.ABORTED);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new ProcessInstanceException(
+          callActivityInstance, "Called element expression returned null");
     }
+
+    VariablesDTO commandVariables;
+    if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
+      commandVariables = scope.getVariableScope().scopeAndParentsToDto();
+    } else {
+      commandVariables = scope.getVariableScope().scopeToDTO();
+    }
+
+    processInstanceProcessingContext
+        .getInstanceResult()
+        .addNewStartCommand(
+            new NewStartCommand(
+                newProcessInstanceId,
+                flowNode,
+                callActivityInstance,
+                jsonNode.asText(),
+                commandVariables,
+                callActivityInstance.getFlowNode().isPropagateAllChildVariables(),
+                callActivityInstance.getFlowNode().getIoMapping().getOutputMappings()));
   }
 
   @Override

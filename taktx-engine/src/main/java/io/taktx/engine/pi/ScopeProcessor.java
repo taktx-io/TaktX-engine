@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalDTO;
@@ -20,6 +21,7 @@ import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.EventDefinition;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.MessageEventDefinition;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
@@ -126,8 +128,7 @@ public class ScopeProcessor {
       scope.getVariableScope().merge(variables);
 
       FlowNodeInstance<?> newInstance =
-          createNewInstanceAndAddToDirectInstanceResult(
-              processInstanceProcessingContext, scope, elementId);
+          createNewInstanceAndAddToDirectInstanceResult(scope, elementId);
 
       // If the new instance is an event triggered subprocess with an interrupting start event,
       if (newInstance instanceof SubProcessInstance subProcessInstance
@@ -475,9 +476,7 @@ public class ScopeProcessor {
   }
 
   private static FlowNodeInstance<?> createNewInstanceAndAddToDirectInstanceResult(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      String elementId) {
+      Scope scope, String elementId) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
     FlowNodeInstance<?> flowNodeInstance =
@@ -505,9 +504,7 @@ public class ScopeProcessor {
 
     if (!eventHandled) {
       // Not handled by boundary event, check event subprocesses
-      eventHandled =
-          processEventByEventSubprocesses(
-              processInstanceProcessingContext, scope, event, fLowNodeInstance, eventHandled);
+      eventHandled = processEventByEventSubprocesses(scope, event, fLowNodeInstance, eventHandled);
     }
 
     if (!eventHandled) {
@@ -516,11 +513,7 @@ public class ScopeProcessor {
   }
 
   private static boolean processEventByEventSubprocesses(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      EventSignal event,
-      FlowNodeInstance<?> fLowNodeInstance,
-      boolean eventHandled) {
+      Scope scope, EventSignal event, FlowNodeInstance<?> fLowNodeInstance, boolean eventHandled) {
     // First check any event subprocesses which are able to handle this event
     // First do a round for specific event codes
     List<SubProcess> eventTriggeredSubProcesses =
@@ -694,14 +687,23 @@ public class ScopeProcessor {
         if (optMessageventDefinition.isPresent()) {
           MessageEventDefinition messageEventDefinition = optMessageventDefinition.get();
 
-          String correlationKey =
-              feelExpressionHandler
-                  .processFeelExpression(
-                      messageEventDefinition.getReferencedMessage().correlationKey(),
-                      scope.getVariableScope())
-                  .asText();
+          Message referencedMessage = messageEventDefinition.getReferencedMessage();
+          if (referencedMessage == null) {
+            throw new ProcessInstanceException(
+                null, "Message event definition has no referenced message");
+          }
+          JsonNode jsonNode =
+              feelExpressionHandler.processFeelExpression(
+                  referencedMessage.correlationKey(), scope.getVariableScope());
+          if (jsonNode == null || jsonNode.isNull()) {
+            throw new ProcessInstanceException(
+                null,
+                "Correlation key expression returned null for message event subprocess start event");
+          }
 
-          String messageName = messageEventDefinition.getReferencedMessage().name();
+          String correlationKey = jsonNode.asText();
+
+          String messageName = referencedMessage.name();
           NewCorrelationSubscriptionMessageEventInfo messageSubscription =
               new NewCorrelationSubscriptionMessageEventInfo(
                   messageName,

@@ -15,8 +15,10 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.Message;
+import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.SignalEventDefinition;
 import io.taktx.engine.pi.InstanceResult;
+import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
@@ -63,14 +65,25 @@ public abstract class CatchEventInstanceProcessor<
         .ifPresent(
             signalEventDefinition -> {
               catchEventInstance.setState(ExecutionState.ACTIVE);
-              String name =
-                  feelExpressionHandler
-                      .processFeelExpression(
-                          signalEventDefinition.getReferencedSignal().name(),
-                          scope.getVariableScope())
-                      .asText();
+
+              if (signalEventDefinition.getReferencedSignal() == null) {
+                throw new ProcessInstanceException(
+                    catchEventInstance, "SignalEventDefinition has no referenced signal");
+              }
+
+              JsonNode jsonNode =
+                  feelExpressionHandler.processFeelExpression(
+                      signalEventDefinition.getReferencedSignal().name(), scope.getVariableScope());
+
+              if (jsonNode == null || jsonNode.isNull()) {
+                throw new ProcessInstanceException(
+                    catchEventInstance, "Signal name expression returned null");
+              }
+
+              String name = jsonNode.asText();
               NewInstanceSignalSubscriptionInfo subscriptionInfo =
                   new NewInstanceSignalSubscriptionInfo(name, catchEventInstance);
+
               processInstanceProcessingContext
                   .getInstanceResult()
                   .addNewInstanceSignalSubscription(subscriptionInfo);
@@ -116,10 +129,19 @@ public abstract class CatchEventInstanceProcessor<
             messageEventDefinition -> {
               catchEventInstance.setState(ExecutionState.ACTIVE);
               Message message = messageEventDefinition.getReferencedMessage();
+              if (message == null) {
+                throw new ProcessInstanceException(
+                    catchEventInstance, "Message event definition has no referenced message");
+              }
+
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =
                   feelExpressionHandler.processFeelExpression(
                       correlationKeyExpression, scope.getVariableScope());
+              if (jsonNode == null || jsonNode.isNull()) {
+                throw new ProcessInstanceException(
+                    catchEventInstance, "Correlation key expression returned null");
+              }
               String correlationKey = jsonNode.asText();
               String messageName = message.name();
               NewCorrelationSubscriptionMessageEventInfo messageInfo =
@@ -160,19 +182,26 @@ public abstract class CatchEventInstanceProcessor<
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
     terminateEscalationAndErrorSubscriptions(flowNodeInstance);
-    terminateSignelSubscription(flowNodeInstance, result, scope);
+    terminateSignalSubscription(flowNodeInstance, result, scope);
   }
 
-  private void terminateSignelSubscription(I flowNodeInstance, InstanceResult result, Scope scope) {
+  private void terminateSignalSubscription(I flowNodeInstance, InstanceResult result, Scope scope) {
     Optional<SignalEventDefinition> signalEventDefinition =
         flowNodeInstance.getFlowNode().getSignalEventDefinition();
     if (signalEventDefinition.isPresent()) {
-      String name =
-          feelExpressionHandler
-              .processFeelExpression(
-                  signalEventDefinition.get().getReferencedSignal().name(),
-                  scope.getVariableScope())
-              .asText();
+      SignalEvent referencedSignal = signalEventDefinition.get().getReferencedSignal();
+      if (referencedSignal == null) {
+        throw new ProcessInstanceException(
+            flowNodeInstance, "SignalEventDefinition has no referenced signal");
+      }
+      JsonNode jsonNode =
+          feelExpressionHandler.processFeelExpression(
+              referencedSignal.name(), scope.getVariableScope());
+      if (jsonNode == null || jsonNode.isNull()) {
+        throw new ProcessInstanceException(
+            flowNodeInstance, "Signal name expression returned null");
+      }
+      String name = jsonNode.asText();
 
       result.addCancelInstanceSignalSubscription(
           new CancelInstanceSignalSubscriptionInfo(name, flowNodeInstance));

@@ -63,7 +63,8 @@ public abstract class ExternalTaskInstanceProcessor<
       String inputFlowId) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId =
-        getExternalTaskId(flowNode.getWorkerDefinition(), scope.getVariableScope());
+        getExternalTaskId(
+            flownodeInstance, flowNode.getWorkerDefinition(), scope.getVariableScope());
     Map<String, String> headers = flowNode.getHeaders();
 
     if (failIfTopicDoesNotExist(
@@ -150,6 +151,14 @@ public abstract class ExternalTaskInstanceProcessor<
     JsonNode jsonNode =
         feelExpressionHandler.processFeelExpression(
             externalTask.getRetries(), flowNodeInstanceVariables);
+
+    if (jsonNode == null || jsonNode.isNull()) {
+      // Expression returned null, no retries possible
+      handleNoRetriesAllowed(
+          instanceResult, directInstanceResult, externalTaskInstance, responseResult);
+      return;
+    }
+
     String retryString = jsonNode.asText();
 
     // Analyze the retry definition
@@ -157,7 +166,16 @@ public abstract class ExternalTaskInstanceProcessor<
     Optional<Duration> backoff = Optional.empty();
     if (isNumeric(retryString)) {
       // Definition is just a number
-      retries = Integer.parseInt(retryString);
+      try {
+        retries = Integer.parseInt(retryString);
+        if (retries > 1000) { // Reasonable maximum
+          log.warn("Retry count {} exceeds maximum, capping at 1000", retries);
+          retries = 1000;
+        }
+      } catch (NumberFormatException e) {
+        log.error("Invalid retry count format: {}", retryString);
+        retries = -1; // Will fail the task
+      }
     } else {
       // Definition might be a repeat limit with a backoff time
       try {
@@ -174,7 +192,8 @@ public abstract class ExternalTaskInstanceProcessor<
         && Boolean.TRUE.equals(responseResult.getAllowRetry())) {
       // Retry allowed, possibly with backoff
       String externalTaskId =
-          getExternalTaskId(externalTask.getWorkerDefinition(), flowNodeInstanceVariables);
+          getExternalTaskId(
+              externalTaskInstance, externalTask.getWorkerDefinition(), flowNodeInstanceVariables);
 
       ioMappingProcessor.addInputVariables(externalTask, flowNodeInstanceVariables);
       if (backoff.isPresent()) {
@@ -279,8 +298,13 @@ public abstract class ExternalTaskInstanceProcessor<
     // Nothing to do here
   }
 
-  private String getExternalTaskId(String workerDefinition, VariableScope variables) {
+  private String getExternalTaskId(
+      I flownodeInstance, String workerDefinition, VariableScope variables) {
     JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new ProcessInstanceException(
+          flownodeInstance, "External task worker definition expression returned null");
+    }
     return jsonNode.asText();
   }
 

@@ -9,12 +9,10 @@
 package io.taktx.engine.pi.processor;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-import io.taktx.dto.ExecutionState;
-import io.taktx.engine.pd.model.EndEvent;
+import io.taktx.engine.pd.model.ExclusiveGateway;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.EndEventInstance;
+import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.Scope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,27 +21,33 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class EndEventInstanceProcessorTest {
+class ExclusiveGatewayInstanceProcessorTest {
 
-  @InjectMocks private EndEventInstanceProcessor processor;
+  @InjectMocks private ExclusiveGatewayInstanceProcessor processor;
 
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
-  @Mock private EndEventInstance endEventInstance;
-  @Mock private EndEvent endEvent;
+  @Mock private ExclusiveGatewayInstance gatewayInstance;
+  @Mock private ExclusiveGateway gateway;
 
   @Test
-  void processAbortSpecificFlowNodeInstance_shouldDoNothing() {
-    assertDoesNotThrow(
-        () ->
-            processor.processAbortSpecificFlowNodeInstance(
-                processingContext, scope, endEventInstance));
+  void canTriggerOutputFlows_shouldAlwaysReturnTrue() {
+    boolean result = processor.canTriggerOutputFlows(gatewayInstance, scope);
+
+    assertTrue(result);
   }
 
   @Test
-  void processStartSpecificThrowEventInstance_shouldCompleteEndEvent() {
-    processor.processStartSpecificThrowEventInstance(processingContext, scope, endEventInstance);
+  void processStartSpecificGatewayInstance_shouldDoNothing() {
+    assertDoesNotThrow(
+        () ->
+            processor.processStartSpecificGatewayInstance(
+                processingContext, scope, gatewayInstance, "flow1"));
+  }
 
-    verify(endEventInstance).setState(ExecutionState.COMPLETED);
+  @Test
+  void processTerminateSpecificGatewayInstance_shouldDoNothing() {
+    assertDoesNotThrow(
+        () -> processor.processTerminateSpecificGatewayInstance(null, null, gatewayInstance));
   }
 }

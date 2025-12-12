@@ -78,11 +78,14 @@ public abstract class GatewayInstanceProcessor<
       Set<SequenceFlow> flowsWithMatchingCondition =
           flowsWithCondition.stream()
               .filter(
-                  sequenceFlow ->
-                      feelExpressionHandler
-                          .processFeelExpression(
-                              sequenceFlow.getCondition().getExpression(), scope.getVariableScope())
-                          .asBoolean())
+                  sequenceFlow -> {
+                    com.fasterxml.jackson.databind.JsonNode result =
+                        feelExpressionHandler.processFeelExpression(
+                            sequenceFlow.getCondition().getExpression(), scope.getVariableScope());
+                    // Handle null FEEL expression results (e.g., missing variables, invalid
+                    // expressions)
+                    return result != null && result.asBoolean();
+                  })
               .collect(Collectors.toSet());
 
       outgoingFlows.addAll(flowsWithMatchingCondition);

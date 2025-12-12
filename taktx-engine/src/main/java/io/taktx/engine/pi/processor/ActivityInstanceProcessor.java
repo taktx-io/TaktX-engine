@@ -110,9 +110,18 @@ public abstract class ActivityInstanceProcessor<
     VariableScope variableScope = scope.getVariableScope();
     if (flownodeInstance.getState() == ExecutionState.COMPLETED && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
-      String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
-      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(outputElement, variableScope);
-      flownodeInstance.setOutputElement(jsonNode);
+      // Handle null loop characteristics
+      if (flowNode.getLoopCharacteristics() != null) {
+        String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
+        if (outputElement != null) {
+          JsonNode jsonNode =
+              feelExpressionHandler.processFeelExpression(outputElement, variableScope);
+          // Only set output element if FEEL expression returns a non-null result
+          if (jsonNode != null) {
+            flownodeInstance.setOutputElement(jsonNode);
+          }
+        }
+      }
     }
   }
 }

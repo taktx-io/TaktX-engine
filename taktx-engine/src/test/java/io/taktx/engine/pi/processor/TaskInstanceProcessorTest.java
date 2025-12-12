@@ -12,10 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.taktx.dto.ExecutionState;
-import io.taktx.engine.pd.model.EndEvent;
+import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.TaskInstance;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,27 +23,34 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class EndEventInstanceProcessorTest {
+class TaskInstanceProcessorTest {
 
-  @InjectMocks private EndEventInstanceProcessor processor;
+  @InjectMocks private TaskInstanceProcessor processor;
 
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
-  @Mock private EndEventInstance endEventInstance;
-  @Mock private EndEvent endEvent;
+  @Mock private TaskInstance taskInstance;
+  @Mock private Task task;
 
   @Test
-  void processAbortSpecificFlowNodeInstance_shouldDoNothing() {
-    assertDoesNotThrow(
-        () ->
-            processor.processAbortSpecificFlowNodeInstance(
-                processingContext, scope, endEventInstance));
+  void processStartSpecificActivityInstance_shouldCompleteTaskImmediately() {
+    processor.processStartSpecificActivityInstance(processingContext, scope, taskInstance, "flow1");
+
+    verify(taskInstance).setState(ExecutionState.COMPLETED);
   }
 
   @Test
-  void processStartSpecificThrowEventInstance_shouldCompleteEndEvent() {
-    processor.processStartSpecificThrowEventInstance(processingContext, scope, endEventInstance);
+  void processContinueSpecificActivityInstance_shouldDoNothing() {
+    assertDoesNotThrow(
+        () ->
+            processor.processContinueSpecificActivityInstance(
+                processingContext, scope, taskInstance, null));
+  }
 
-    verify(endEventInstance).setState(ExecutionState.COMPLETED);
+  @Test
+  void processAbortSpecificActivityInstance_shouldDoNothing() {
+    assertDoesNotThrow(
+        () ->
+            processor.processAbortSpecificActivityInstance(processingContext, scope, taskInstance));
   }
 }

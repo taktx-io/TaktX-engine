@@ -9,12 +9,9 @@
 package io.taktx.engine.pi.processor;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-import io.taktx.dto.ExecutionState;
-import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.EndEventInstance;
+import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.Scope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,27 +20,33 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class EndEventInstanceProcessorTest {
+class IntermediateCatchEventInstanceProcessorTest {
 
-  @InjectMocks private EndEventInstanceProcessor processor;
+  @InjectMocks private IntermediateCatchEventInstanceProcessor processor;
 
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
-  @Mock private EndEventInstance endEventInstance;
-  @Mock private EndEvent endEvent;
+  @Mock private IntermediateCatchEventInstance intermediateCatchEventInstance;
 
   @Test
-  void processAbortSpecificFlowNodeInstance_shouldDoNothing() {
-    assertDoesNotThrow(
-        () ->
-            processor.processAbortSpecificFlowNodeInstance(
-                processingContext, scope, endEventInstance));
+  void shoudHandleTimerEvents_shouldReturnTrue() {
+    boolean result = processor.shoudHandleTimerEvents();
+
+    assertTrue(result);
   }
 
   @Test
-  void processStartSpecificThrowEventInstance_shouldCompleteEndEvent() {
-    processor.processStartSpecificThrowEventInstance(processingContext, scope, endEventInstance);
+  void processContinueSpecificCatchEventInstance_shouldDoNothing() {
+    assertDoesNotThrow(
+        () ->
+            processor.processContinueSpecificCatchEventInstance(
+                processingContext, scope, intermediateCatchEventInstance));
+  }
 
-    verify(endEventInstance).setState(ExecutionState.COMPLETED);
+  @Test
+  void shouldCancel_shouldAlwaysReturnTrue() {
+    boolean result = processor.shouldCancel(intermediateCatchEventInstance);
+
+    assertTrue(result);
   }
 }
