@@ -84,3 +84,29 @@ spotless {
 dependencyLocking {
     lockAllConfigurations()
 }
+
+// Task to generate coverage badges from JaCoCo reports
+tasks.register<Exec>("generateCoverageBadges") {
+    group = "verification"
+    description = "Generate coverage badges from JaCoCo XML reports"
+
+    commandLine("python3", "${projectDir}/scripts/generate_coverage_badges.py")
+
+    doFirst {
+        println("🎨 Generating coverage badges from JaCoCo reports...")
+    }
+
+    doLast {
+        println("✅ Coverage badges updated in badges/ directory")
+    }
+}
+
+// Automatically generate badges after all JaCoCo reports are created
+subprojects {
+    plugins.withId("jacoco") {
+        tasks.named("jacocoTestReport") {
+            finalizedBy(rootProject.tasks.named("generateCoverageBadges"))
+        }
+    }
+}
+
