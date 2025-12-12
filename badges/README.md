@@ -23,20 +23,27 @@ These badges are generated from JaCoCo XML coverage reports:
 
 ## Using Badges in README
 
-To use these badges in your README or documentation:
+To use these badges in your README or documentation, use **relative paths**:
 
+### From Root README
 ```markdown
-![Coverage](https://raw.githubusercontent.com/YOUR_ORG/TaktX-engine2/main/badges/coverage.svg)
+![Coverage](./badges/coverage.svg)
 ```
 
-Or for module-specific badges:
-
+### From Module READMEs
 ```markdown
-![Engine Coverage](https://raw.githubusercontent.com/YOUR_ORG/TaktX-engine2/main/badges/taktx-engine-coverage.svg)
-![Client Coverage](https://raw.githubusercontent.com/YOUR_ORG/TaktX-engine2/main/badges/taktx-client-coverage.svg)
-![Client Quarkus Coverage](https://raw.githubusercontent.com/YOUR_ORG/TaktX-engine2/main/badges/taktx-client-quarkus-coverage.svg)
-![Shared Coverage](https://raw.githubusercontent.com/YOUR_ORG/TaktX-engine2/main/badges/taktx-shared-coverage.svg)
+![Coverage](../badges/taktx-engine-coverage.svg)
 ```
+
+### All Module Badges
+```markdown
+![Engine Coverage](../badges/taktx-engine-coverage.svg)
+![Client Coverage](../badges/taktx-client-coverage.svg)
+![Client Quarkus Coverage](../badges/taktx-client-quarkus-coverage.svg)
+![Shared Coverage](../badges/taktx-shared-coverage.svg)
+```
+
+**Note**: For private repositories, relative paths work correctly on GitHub. Raw URLs (raw.githubusercontent.com) require authentication tokens and won't display publicly.
 
 ## Coverage Summary
 
