@@ -1,6 +1,6 @@
 # TaktX Client Quarkus
 
-![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-quarkus-coverage.svg)
+![Coverage](../badges/taktx-client-quarkus-coverage.svg)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
 This module provides Quarkus convenience beans for the TaktX plain Java client.

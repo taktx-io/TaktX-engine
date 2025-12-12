@@ -1,6 +1,6 @@
 # TaktX Shared
 
-![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-shared-coverage.svg)
+![Coverage](../badges/taktx-shared-coverage.svg)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
 Shared library for TaktX BPM Engine containing common models, utilities, and BPMN definitions used across all TaktX modules.

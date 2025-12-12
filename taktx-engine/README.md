@@ -1,6 +1,6 @@
 # Takt BPMN Engine
 
-![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-engine-coverage.svg)
+![Coverage](../badges/taktx-engine-coverage.svg)
 
 The TaktX Engine is the core BPMN process automation engine with **87% test coverage**, including comprehensive integration tests with Testcontainers.
 

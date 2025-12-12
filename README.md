@@ -4,11 +4,11 @@
 [![Java CI](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml)
 
 <!-- Code Quality -->
-![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/coverage.svg)
-![Engine Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-engine-coverage.svg)
-![Client Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-coverage.svg)
-![Client Quarkus Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-quarkus-coverage.svg)
-![Shared Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-shared-coverage.svg)
+![Coverage](./badges/coverage.svg)
+![Engine Coverage](./badges/taktx-engine-coverage.svg)
+![Client Coverage](./badges/taktx-client-coverage.svg)
+![Client Quarkus Coverage](./badges/taktx-client-quarkus-coverage.svg)
+![Shared Coverage](./badges/taktx-shared-coverage.svg)
 
 <!-- Security -->
 
@@ -73,11 +73,11 @@ TaktX maintains comprehensive test coverage across all modules:
 
 | Module | Coverage | Status |
 |--------|----------|--------|
-| **Overall Project** | ![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/coverage.svg) | 67.5% - Good |
-| **taktx-engine** | ![Engine](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-engine-coverage.svg) | 87.0% - Excellent |
-| **taktx-client** | ![Client](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-coverage.svg) | 20.8% - Improving |
-| **taktx-client-quarkus** | ![Quarkus](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-quarkus-coverage.svg) | 55.4% - Acceptable |
-| **taktx-shared** | ![Shared](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-shared-coverage.svg) | 2.1% - Work in Progress |
+| **Overall Project** | ![Coverage](./badges/coverage.svg) | 67.5% - Good |
+| **taktx-engine** | ![Engine](./badges/taktx-engine-coverage.svg) | 87.0% - Excellent |
+| **taktx-client** | ![Client](./badges/taktx-client-coverage.svg) | 20.8% - Improving |
+| **taktx-client-quarkus** | ![Quarkus](./badges/taktx-client-quarkus-coverage.svg) | 55.4% - Acceptable |
+| **taktx-shared** | ![Shared](./badges/taktx-shared-coverage.svg) | 2.1% - Work in Progress |
 
 Coverage badges are automatically generated from JaCoCo test reports and include both unit tests and integration tests with Testcontainers.
 

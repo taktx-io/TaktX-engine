@@ -1,6 +1,6 @@
 # TAKT Client
 
-![Coverage](https://raw.githubusercontent.com/taktx-io/TaktX-engine/main/badges/taktx-client-coverage.svg)
+![Coverage](../badges/taktx-client-coverage.svg)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
 The TaktX Client library provides a simple Java API for interacting with the TaktX BPMN Engine.
