@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.quarkus)
     alias(libs.plugins.jib)
+    id("com.github.jk1.dependency-license-report") version "2.0"
+    jacoco
 }
 
 java {
@@ -69,6 +71,15 @@ dependencies {
 
 tasks.test {
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 spotless {
@@ -95,9 +106,14 @@ tasks.withType<Jar>().configureEach {
     }
 }
 
-tasks.withType<JacocoReport> {
-    executionData.setFrom(files(
-        "${layout.buildDirectory}/jacoco/test.exec",
-        "${layout.buildDirectory}/jacoco-quarkus.exec"
-    ))
+
+// Configure dependency license report
+licenseReport {
+    outputDir = "${layout.buildDirectory.get()}/reports/dependency-license"
+    renderers = arrayOf(
+        com.github.jk1.license.render.JsonReportRenderer(),
+        com.github.jk1.license.render.CsvReportRenderer()
+    )
+    configurations = arrayOf("runtimeClasspath")
 }
+

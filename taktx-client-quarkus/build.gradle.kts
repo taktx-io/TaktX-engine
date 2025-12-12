@@ -3,6 +3,7 @@ plugins {
     `maven-publish`
     alias(libs.plugins.spotless)
     id("org.jreleaser")
+    id("com.github.jk1.dependency-license-report") version "2.0"
 }
 
 java {
@@ -43,6 +44,17 @@ dependencies {
     compileOnly(libs.quarkus.core)
 
     api(project(":taktx-client"))
+
+    // Test dependencies
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.params)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.jakarta.cdi.api)
+    testImplementation(libs.quarkus.arc)
+    testImplementation(libs.quarkus.core)
+    testImplementation(libs.kafka.clients)
 }
 
 // These are required for Maven Central
@@ -53,6 +65,15 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 // Adds dependency locking to ensure reproducible builds
@@ -146,4 +167,3 @@ spotless {
         googleJavaFormat()
     }
 }
-

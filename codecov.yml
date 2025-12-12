@@ -1,0 +1,105 @@
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+        if_ci_failed: error
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+
+# Define all modules
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: 70%
+      - type: patch
+        target: 70%
+
+flags:
+  taktx-engine:
+    paths:
+      - taktx-engine/src/main/java/
+    carryforward: true
+
+  taktx-client:
+    paths:
+      - taktx-client/src/main/java/
+    carryforward: true
+
+  taktx-client-quarkus:
+    paths:
+      - taktx-client-quarkus/src/main/java/
+    carryforward: true
+
+  taktx-shared:
+    paths:
+      - taktx-shared/src/main/java/
+    carryforward: true
+
+# Component-level coverage tracking
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: 70%
+
+  individual_components:
+    - component_id: taktx-engine
+      name: TaktX Engine
+      paths:
+        - taktx-engine/src/main/java/**
+      flag_regexes:
+        - taktx-engine
+
+    - component_id: taktx-client
+      name: TaktX Client
+      paths:
+        - taktx-client/src/main/java/**
+      flag_regexes:
+        - taktx-client
+
+    - component_id: taktx-client-quarkus
+      name: TaktX Client Quarkus
+      paths:
+        - taktx-client-quarkus/src/main/java/**
+      flag_regexes:
+        - taktx-client-quarkus
+
+    - component_id: taktx-shared
+      name: TaktX Shared
+      paths:
+        - taktx-shared/src/main/java/**
+      flag_regexes:
+        - taktx-shared
+
+# Comment formatting
+comment:
+  layout: "reach, diff, flags, components"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore patterns
+ignore:
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/*Test.java"
+  - "**/*Tests.java"
+  - "**/build/**"
+  - "**/.gradle/**"
+

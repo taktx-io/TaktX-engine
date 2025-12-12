@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.xjc)
     alias(libs.plugins.spotless)
     id("org.jreleaser")
+    jacoco
 }
 
 java {
@@ -52,6 +53,15 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 // Configure javadoc to work with Lombok
