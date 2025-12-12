@@ -8,6 +8,10 @@
 
 package io.taktx.client;
 
+import static java.util.Collections.singletonMap;
+
+import io.taktx.client.annotation.AckStrategy;
+import io.taktx.client.annotation.ThreadingStrategy;
 import io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializer;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -16,14 +20,18 @@ import io.taktx.util.TaktUUIDDeserializer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 
 /**
@@ -43,6 +51,9 @@ public class ExternalTaskTriggerTopicConsumer {
   private final Object consumerLock = new Object(); // Lock for synchronization
   private final List<CompletableFuture<Void>> consumerFutures = new ArrayList<>();
   private volatile boolean running = false;
+
+  // Virtual thread executor for job handling
+  private final Executor virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
   /**
    * Constructor for ExternalTaskTriggerTopicConsumer.
@@ -101,7 +112,6 @@ public class ExternalTaskTriggerTopicConsumer {
       externalTaskTriggerKafkaConsumers = new ArrayList<>();
     }
 
-    // Mark as running
     running = true;
     for (int i = 0; i < consumerThreads; i++) {
       CompletableFuture<Void> consumerFuture =
@@ -123,13 +133,72 @@ public class ExternalTaskTriggerTopicConsumer {
                       continue;
                     }
 
-                    List<ExternalTaskTriggerDTO> batch = new ArrayList<>(records.count());
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> externalTaskRecord :
-                        records) {
-                      batch.add(externalTaskRecord.value());
+                    // Group records by topic/jobId
+                    Map<String, List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>> recordsByJobId =
+                        new java.util.HashMap<>();
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                      String jobId =
+                          record.topic().replace(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX, "");
+                      recordsByJobId.computeIfAbsent(jobId, k -> new ArrayList<>()).add(record);
                     }
-                    externalTaskTriggerConsumer.acceptBatch(batch);
+
+                    for (String jobId : recordsByJobId.keySet()) {
+                      List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> jobRecords =
+                          recordsByJobId.get(jobId);
+                      AckStrategy ackStrategy =
+                          getEffectiveAckStrategy(jobId, externalTaskTriggerConsumer);
+                      ThreadingStrategy threadingStrategy =
+                          getEffectiveThreadingStrategy(jobId, externalTaskTriggerConsumer);
+
+                      // Prepare batch
+                      List<ExternalTaskTriggerDTO> batch =
+                          jobRecords.stream().map(ConsumerRecord::value).toList();
+
+                      // Threading strategy
+                      switch (threadingStrategy) {
+                        case SINGLE_THREAD -> {
+                          externalTaskTriggerConsumer.acceptBatch(batch);
+                        }
+                        case VIRTUAL_THREAD_WAIT -> {
+                          List<CompletableFuture<Void>> futures = new ArrayList<>();
+                          for (ExternalTaskTriggerDTO dto : batch) {
+                            futures.add(
+                                CompletableFuture.runAsync(
+                                    () -> externalTaskTriggerConsumer.acceptBatch(List.of(dto)),
+                                    virtualThreadExecutor));
+                          }
+                          CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                        }
+                        case VIRTUAL_THREAD_FIRE_AND_FORGET -> {
+                          for (ExternalTaskTriggerDTO dto : batch) {
+                            CompletableFuture.runAsync(
+                                () -> externalTaskTriggerConsumer.acceptBatch(List.of(dto)),
+                                virtualThreadExecutor);
+                          }
+                        }
+                      }
+
+                      // Ack strategy
+                      switch (ackStrategy) {
+                        case IMPLICIT -> {
+                          // Default Kafka auto-commit, do nothing
+                        }
+                        case EXPLICIT_BATCH -> {
+                          consumer.commitSync();
+                        }
+                        case EXPLICIT_MESSAGE -> {
+                          for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
+                            consumer.commitSync(
+                                singletonMap(
+                                    new TopicPartition(record.topic(), record.partition()),
+                                    new OffsetAndMetadata(record.offset() + 1)));
+                          }
+                        }
+                      }
+                    }
                   } while (running);
+                } catch (Throwable t) {
+                  log.error("Error in consumer thread", t);
                 } finally {
                   // Clean up the resources when the thread exits
                   synchronized (consumerLock) {
@@ -185,5 +254,46 @@ public class ExternalTaskTriggerTopicConsumer {
     props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecords);
 
     return new KafkaConsumer<>(props);
+  }
+
+  private AckStrategy getEffectiveAckStrategy(String jobId, ExternalTaskTriggerConsumer consumer) {
+    // 1. Annotation
+    if (consumer instanceof AnnotationScanningExternalTaskTriggerConsumer asConsumer) {
+      AckStrategy annotationStrategy = asConsumer.getAckStrategy(jobId);
+      if (annotationStrategy != null) {
+        return annotationStrategy;
+      }
+    }
+    // 2. Config property
+    String configValue = taktPropertiesHelper.getExternalTaskAckStrategy();
+    if (configValue != null) {
+      try {
+        return AckStrategy.valueOf(configValue.trim().toUpperCase());
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    // 3. Default
+    return AckStrategy.EXPLICIT_BATCH;
+  }
+
+  private ThreadingStrategy getEffectiveThreadingStrategy(
+      String jobId, ExternalTaskTriggerConsumer consumer) {
+    // 1. Annotation
+    if (consumer instanceof AnnotationScanningExternalTaskTriggerConsumer asConsumer) {
+      ThreadingStrategy annotationStrategy = asConsumer.getThreadingStrategy(jobId);
+      if (annotationStrategy != null) {
+        return annotationStrategy;
+      }
+    }
+    // 2. Config property
+    String configValue = taktPropertiesHelper.getEffectiveThreadingStrategy();
+    if (configValue != null) {
+      try {
+        return ThreadingStrategy.valueOf(configValue.trim().toUpperCase());
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    // 3. Default
+    return ThreadingStrategy.VIRTUAL_THREAD_WAIT;
   }
 }

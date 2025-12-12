@@ -183,6 +183,44 @@ public class ExternalTaskInstanceResponder {
   }
 
   /**
+   * Responds with an error message.
+   *
+   * @param message The error message.
+   * @param stackTrace the stack trace
+   */
+  public void respondIncident(String message, String[] stackTrace) {
+    respondIncident(message, stackTrace, VariablesDTO.empty());
+  }
+
+  /**
+   * Responds with an incident message which will directly end the running process instance.
+   *
+   * @param message The error message.
+   * @param stackTrace the stack trace
+   * @param variables The variables to include in the response.
+   */
+  public void respondIncident(String message, String[] stackTrace, VariablesDTO variables) {
+
+    ExternalTaskResponseTriggerDTO processInstanceTrigger =
+        new ExternalTaskResponseTriggerDTO(
+            processInstanceId,
+            elementInstanceIdPath,
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.INCIDENT, false, null, message, 0L, stackTrace),
+            variables);
+
+    // Set explicit timestamp for accurate latency measurement
+    long currentTimestamp = System.currentTimeMillis();
+    responseEmitter.send(
+        new ProducerRecord<>(
+            topicName,
+            null, // partition - let Kafka decide
+            currentTimestamp, // explicit timestamp
+            processInstanceTrigger.getProcessInstanceId(),
+            processInstanceTrigger));
+  }
+
+  /**
    * Responds with a promise message indicating the task will be completed after the specified
    * duration.
    *

@@ -11,7 +11,6 @@ package io.taktx.engine.pi;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -22,7 +21,7 @@ import lombok.Getter;
 public class DirectInstanceResult {
 
   private final List<String> sequenceFlows = new ArrayList<>();
-  private final Queue<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
+  private final ArrayDeque<StartFlowNodeInstanceInfo> newFlowNodeInstances = new ArrayDeque<>();
   private final Queue<ContinueFlowNodeInstanceInfo> continueInstances = new ArrayDeque<>();
   private final Queue<FlowNodeInstance<?>> abortInstances = new ArrayDeque<>();
   private final Queue<EventSignal> events = new ArrayDeque<>();
@@ -35,21 +34,27 @@ public class DirectInstanceResult {
     return new DirectInstanceResult();
   }
 
-  public void addNewFlowNodeInstance(
-      ProcessInstance processInstance, StartFlowNodeInstanceInfo startFlowNodeInstanceInfo) {
+  public void addNewFlowNodeInstance(StartFlowNodeInstanceInfo startFlowNodeInstanceInfo) {
     if (startFlowNodeInstanceInfo.inputSequenceFlowId() != null) {
       if (sequenceFlows.contains(startFlowNodeInstanceInfo.inputSequenceFlowId())) {
-        throw new ProcessInstanceException(
-            processInstance,
-            startFlowNodeInstanceInfo.flowNodeInstance(),
-            "Straight through processing loop detected for sequenceflow "
-                + startFlowNodeInstanceInfo.inputSequenceFlowId()
-                + " in: "
-                + sequenceFlows);
+        startFlowNodeInstanceInfo
+            .flowNodeInstance()
+            .raiseIncident(
+                "Straight through processing loop detected for sequenceflow "
+                    + startFlowNodeInstanceInfo.inputSequenceFlowId()
+                    + " in: "
+                    + sequenceFlows);
+        return;
       }
       sequenceFlows.add(startFlowNodeInstanceInfo.inputSequenceFlowId());
     }
     newFlowNodeInstances.add(startFlowNodeInstanceInfo);
+  }
+
+  public List<String> getSequenceFlowsFromNewFlowNodeInstances() {
+    return newFlowNodeInstances.stream()
+        .map(StartFlowNodeInstanceInfo::inputSequenceFlowId)
+        .toList();
   }
 
   public StartFlowNodeInstanceInfo pollNewFlowNodeInstance() {

@@ -1,29 +1,29 @@
 # TaktX Engine - High-Performance BPMN Process Automation
 
-[![Java CI with Gradle](https://github.com/taktx-io/TaktX-engine/.github/workflows/ci.yml/badge.svg)](https://github.com/taktx/TaktX-engine/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/taktx-io/TaktX-engine/branch/main/graph/badge.svg)](https://codecov.io/gh/taktx-io/TaktX-engine)
-[![License](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE.md)
+<!-- Build & CI -->
+[![Java CI](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/taktx-io/TaktX-engine/actions/workflows/ci.yml)
+[![License Compliance](https://github.com/taktx-io/TaktX-engine/actions/workflows/license-compliance.yml/badge.svg)](https://github.com/taktx-io/TaktX-engine/actions/workflows/license-compliance.yml)
 
-## Overview
+<!-- Code Quality -->
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Code Coverage](https://codecov.io/gh/taktx-io/TaktX-engine/branch/main/graph/badge.svg)](https://codecov.io/gh/taktx-io/TaktX-engine)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
 
-TaktX Engine is a high-performance BPMN process automation engine built on modern streaming architecture. 
-Leveraging Apache Kafka and Quarkus, it provides a scalable, event-driven platform for running business 
-processes with high throughput and reliability.
+<!-- Security -->
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Known Vulnerabilities](https://snyk.io/test/github/taktx-io/TaktX-engine/badge.svg)](https://snyk.io/test/github/taktx-io/TaktX-engine)
 
+<!-- License & Version -->
+[![License: BSL 1.0](https://img.shields.io/badge/License-BSL%201.0-blue.svg)](LICENSE.md)
+[![SDK License: Apache 2.0](https://img.shields.io/badge/SDK%20License-Apache%202.0-green.svg)](taktx-client/LICENSE)
+[![Version](https://img.shields.io/badge/version-0.0.9--alpha--3-orange.svg)](VERSION.txt)
 
-### Key Features
-
-- **Event-Driven Architecture**: Built on Apache Kafka streams for maximum scalability
-- **BPMN 2.0 Support**: Complete implementation of the BPMN 2.0 standard
-- **Stateless Processing**: Horizontal scaling without sticky sessions
-- **High Throughput**: Optimized for processing thousands of tasks per second
-- **Fault Tolerance**: Built-in resilience with at-least-once processing guarantees
-- **Developer-Friendly API**: Simple client library for easy integration
-
-## Quick Start
-
-### Prerequisites
-
+<!-- Stats -->
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=taktx-io_TaktX-engine&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=taktx-io_TaktX-engine)
 - Java 23+
 - Apache Kafka
 - Docker (optional)

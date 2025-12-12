@@ -70,9 +70,11 @@ public class InclusiveGatewayInstanceProcessor
     // If there are no corresponding gateways, we assume we are a diverging and allow the flow to
     // trigger the output flows.
 
+    // Use a visited set to prevent infinite recursion in circular BPMN models
+    Set<String> visitedNodeIds = new HashSet<>();
     Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousTriggeredInstancePairs =
         findPreviousInclusiveGatewayInstances(
-            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), scope);
+            gatewayInstance.getFlowNode().getIncomingSequenceFlows(), scope, visitedNodeIds);
     Set<String> collect =
         previousTriggeredInstancePairs.keySet().stream()
             .map(SequenceFlow::getId)
@@ -85,10 +87,22 @@ public class InclusiveGatewayInstanceProcessor
   }
 
   private Map<SequenceFlow, Set<InclusiveGatewayInstance>> findPreviousInclusiveGatewayInstances(
-      Set<SequenceFlow> incomingSequenceFlows, Scope scope) {
+      Set<SequenceFlow> incomingSequenceFlows, Scope scope, Set<String> visitedNodeIds) {
     Map<SequenceFlow, Set<InclusiveGatewayInstance>> instanceMap = new HashMap<>();
     for (SequenceFlow incomingSequenceFlow : incomingSequenceFlows) {
       FlowNode sourceNode = incomingSequenceFlow.getSourceNode();
+
+      // Cycle detection: Check if we've already visited this node in THIS path
+      if (visitedNodeIds.contains(sourceNode.getId())) {
+        // Cycle detected, skip this path to prevent infinite recursion
+        continue;
+      }
+
+      // Create a new visited set for this branch to avoid false positives
+      // (different branches can visit the same node without creating a cycle)
+      Set<String> branchVisitedNodeIds = new HashSet<>(visitedNodeIds);
+      branchVisitedNodeIds.add(sourceNode.getId());
+
       if (sourceNode instanceof InclusiveGateway inclusiveGateway) {
         Optional<FlowNodeInstance<?>> instanceWithFlowNode =
             scope.getFlowNodeInstances().getInstanceWithFlowNode(inclusiveGateway);
@@ -103,7 +117,8 @@ public class InclusiveGatewayInstanceProcessor
         }
       } else {
         Map<SequenceFlow, Set<InclusiveGatewayInstance>> previousInclusiveGatewayInstances =
-            findPreviousInclusiveGatewayInstances(sourceNode.getIncomingSequenceFlows(), scope);
+            findPreviousInclusiveGatewayInstances(
+                sourceNode.getIncomingSequenceFlows(), scope, branchVisitedNodeIds);
         if (!previousInclusiveGatewayInstances.isEmpty()) {
           instanceMap
               .computeIfAbsent(incomingSequenceFlow, k -> new HashSet<>())

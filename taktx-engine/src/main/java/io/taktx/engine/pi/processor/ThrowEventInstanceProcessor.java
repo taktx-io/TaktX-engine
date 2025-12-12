@@ -8,10 +8,13 @@
 
 package io.taktx.engine.pi.processor;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
+import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.ThrowEvent;
+import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.ErrorEventSignal;
@@ -65,12 +68,20 @@ public abstract class ThrowEventInstanceProcessor<
         .getSignalEventDefinition()
         .ifPresent(
             signalEventDefinition -> {
-              String name =
-                  feelExpressionHandler
-                      .processFeelExpression(
-                          signalEventDefinition.getReferencedSignal().name(),
-                          scope.getVariableScope())
-                      .asText();
+              SignalEvent referencedSignal = signalEventDefinition.getReferencedSignal();
+              if (referencedSignal == null) {
+                throw new ProcessInstanceException(
+                    flowNodeInstance, "SignalEventDefinition has no referenced signal");
+              }
+              JsonNode jsonNode =
+                  feelExpressionHandler.processFeelExpression(
+                      referencedSignal.name(), scope.getVariableScope());
+              if (jsonNode == null || jsonNode.isNull()) {
+                throw new ProcessInstanceException(
+                    flowNodeInstance, "Signal name expression returned null");
+              }
+
+              String name = jsonNode.asText();
 
               processInstanceProcessingContext.getInstanceResult().addSignal(name);
             });
@@ -121,7 +132,7 @@ public abstract class ThrowEventInstanceProcessor<
                         new StartFlowNodeInstanceInfo(catchEventInstance, null);
                     scope
                         .getDirectInstanceResult()
-                        .addNewFlowNodeInstance(processInstance, startFlowNodeInstanceInfo);
+                        .addNewFlowNodeInstance(startFlowNodeInstanceInfo);
                   });
             });
 

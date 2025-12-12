@@ -96,6 +96,18 @@ public class TaktPropertiesHelper {
     return namespace + "." + topic;
   }
 
+  public String getExternalTaskAckStrategy() {
+    return taktProperties
+        .getOrDefault("taktx.external.task.ack.strategy", "EXPLICIT_BATCH")
+        .toString();
+  }
+
+  public String getEffectiveThreadingStrategy() {
+    return taktProperties
+        .getOrDefault("taktx.external.task.threading.strategy", "VIRTUAL_THREAD_WAIT")
+        .toString();
+  }
+
   public int getExternalTaskConsumerThreads() {
     return Integer.parseInt(
         taktProperties.getOrDefault("taktx.external.task.consumer.threads", 1).toString());

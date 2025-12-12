@@ -12,6 +12,8 @@ import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
+import io.taktx.client.ParameterResolverFactory;
+import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.TaktXClient.TaktXClientBuilder;
 import io.taktx.client.WorkerBeanInstanceProvider;
@@ -37,6 +39,8 @@ public class TaktXClientProvider {
   private final InstanceUpdateRecordObserverChecker observerChecker;
   private final Event<InstanceUpdateRecord> events;
   private final WorkerBeanInstanceProvider instanceProvider;
+  private final ParameterResolverFactory parameterResolverFactory;
+  private final ResultProcessorFactory resultProcessorFactory;
 
   @ConfigProperty(name = "taktx.engine.topic.partitions", defaultValue = "3")
   int partitions;
@@ -44,26 +48,45 @@ public class TaktXClientProvider {
   @ConfigProperty(name = "taktx.engine.topic.replicationFactor", defaultValue = "1")
   short replicationFactor;
 
+  @ConfigProperty(name = "taktx.client.groupId.instanceupdate")
+  String groupIdInstanceUpdate;
+
   /**
    * Constructor injecting the MicroProfile Config.
    *
    * @param config the MicroProfile Config instance
    * @param observerChecker the ObserverChecker to check for CDI observers
    * @param events the CDI Event to fire InstanceUpdateRecords
+   * @param instanceProvider the WorkerBeanInstanceProvider for bean instances
+   * @param parameterResolverFactory the ParameterResolverFactory to use
+   * @param resultProcessorFactory the ResultProcessorFactory to use
    */
   public TaktXClientProvider(
       Config config,
       InstanceUpdateRecordObserverChecker observerChecker,
       Event<InstanceUpdateRecord> events,
-      WorkerBeanInstanceProvider instanceProvider) {
+      WorkerBeanInstanceProvider instanceProvider,
+      ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory) {
     this.config = config;
     this.observerChecker = observerChecker;
     this.events = events;
     this.instanceProvider = instanceProvider;
+    this.parameterResolverFactory = parameterResolverFactory;
+    this.resultProcessorFactory = resultProcessorFactory;
   }
 
   @PostConstruct
   void init() {
+    // allow tests to disable the real TaktXClient by setting taktX.client.enabled=false
+    boolean clientEnabled =
+        config.getOptionalValue("taktx.client.enabled", Boolean.class).orElse(true);
+    if (!clientEnabled) {
+      // skip initialization in test-mode
+      System.out.println(
+          "TaktXClientProvider: taktX.client.enabled=false, skipping TaktXClient startup (test mode)");
+      return;
+    }
     TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
 
     synchronized (TaktXClientProvider.class) {
@@ -78,6 +101,9 @@ public class TaktXClientProvider {
               .getOptionalValue(name, String.class)
               .ifPresent(value -> taktProperties.put(name, value));
         }
+        taktClientBuilder
+            .withTaktParameterResolverFactory(parameterResolverFactory)
+            .withResultProcessorFactory(resultProcessorFactory);
 
         taktClient = taktClientBuilder.withProperties(taktProperties).build();
         taktClient.start();
@@ -87,6 +113,7 @@ public class TaktXClientProvider {
         AnnotationScanningExternalTaskTriggerConsumer externalTaskTriggerConsumer =
             new AnnotationScanningExternalTaskTriggerConsumer(
                 taktClient.getParameterResolverFactory(),
+                taktClient.getResultProcessorFactory(),
                 taktClient.getProcessInstanceResponder(),
                 instanceProvider,
                 taktClient.getExternalTaskTopicRequester(),
@@ -94,11 +121,14 @@ public class TaktXClientProvider {
                 CleanupPolicy.COMPACT,
                 replicationFactor);
 
-        taktClient.registerExternalTaskConsumer(
-            externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+        if (!externalTaskTriggerConsumer.getJobIds().isEmpty()) {
+          taktClient.registerExternalTaskConsumer(
+              externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
+        }
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
           taktClient.registerInstanceUpdateConsumer(
+              groupIdInstanceUpdate,
               instanceUpdateRecords -> {
                 for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
                   events.fire(instanceUpdateRecord);

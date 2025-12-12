@@ -68,7 +68,7 @@ public class SubProcessInstanceProcessor
 
     scopeProcessor.processStart(
         instancePath, null, VariablesDTO.empty(), processInstanceProcessingContext, subScope);
-
+    scope.getVariableScope().merge(subScope.getVariableScope().scopeToDTO());
     scopeProcessor.bubbleUpEvents(scope, subProcessInstance);
 
     subProcessInstance.setState(subScope.getState());

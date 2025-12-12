@@ -17,7 +17,8 @@ public enum ExternalTaskResponseType {
   PROMISE("P"),
   TIMEOUT("T"),
   ESCALATION("ES"),
-  ERROR("ER");
+  ERROR("ER"),
+  INCIDENT("I");
 
   private final String code;
 

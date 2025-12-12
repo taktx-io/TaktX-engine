@@ -28,6 +28,8 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
 
   private ProcessDefinitionKey processDefinitionKey;
 
+  private IncidentInfoDTO incidentInfoDTO;
+
   private ScopeDTO scope;
 
   private VariablesDTO variables;
@@ -38,6 +40,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
       UUID parentProcessInstanceId,
       List<Long> parentElementInstancePath,
       ProcessDefinitionKey processDefinitionKey,
+      IncidentInfoDTO incidentInfoDTO,
       ScopeDTO scope,
       VariablesDTO variables,
       long processTime) {
@@ -45,6 +48,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
+    this.incidentInfoDTO = incidentInfoDTO;
     this.scope = scope;
     this.variables = variables;
     this.processTime = processTime;
@@ -56,6 +60,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
         processInstance.getParentProcessInstanceId(),
         processInstance.getParentElementInstancePath(),
         processInstance.getProcessDefinitionKey(),
+        processInstance.getIncidentInfo(),
         processInstance.getScope(),
         variables,
         processTime);

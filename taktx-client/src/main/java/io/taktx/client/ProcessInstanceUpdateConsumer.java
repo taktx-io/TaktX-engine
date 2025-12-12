@@ -24,7 +24,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.slf4j.Logger;
 
 /**
  * This class is responsible for managing the subscription to external tasks for all process
@@ -32,8 +31,6 @@ import org.slf4j.Logger;
  */
 public class ProcessInstanceUpdateConsumer {
 
-  private static final Logger log =
-      org.slf4j.LoggerFactory.getLogger(ProcessInstanceUpdateConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private boolean running = false;
@@ -55,11 +52,13 @@ public class ProcessInstanceUpdateConsumer {
   /**
    * Registers a consumer that will be notified of instance update records.
    *
+   * @param groupId the Kafka consumer group ID to use
    * @param consumer the consumer to register
    */
-  public void registerInstanceUpdateConsumer(Consumer<List<InstanceUpdateRecord>> consumer) {
+  public void registerInstanceUpdateConsumer(
+      String groupId, Consumer<List<InstanceUpdateRecord>> consumer) {
     if (instanceUpdateConsumers.isEmpty()) {
-      subscribeToTopic();
+      subscribeToTopic(groupId);
     }
     instanceUpdateConsumers.add(consumer);
   }
@@ -69,12 +68,12 @@ public class ProcessInstanceUpdateConsumer {
     running = false;
   }
 
-  private void subscribeToTopic() {
+  private void subscribeToTopic(String groupId) {
     running = true;
 
     CompletableFuture.runAsync(
         () -> {
-          try (KafkaConsumer<UUID, InstanceUpdateDTO> consumer = createConsumer()) {
+          try (KafkaConsumer<UUID, InstanceUpdateDTO> consumer = createConsumer(groupId)) {
 
             String prefixedTopicName =
                 taktPropertiesHelper.getPrefixedTopicName(
@@ -102,7 +101,9 @@ public class ProcessInstanceUpdateConsumer {
                 new InstanceUpdateRecord(
                     instanceUpdateConsumerRecord.timestamp(),
                     instanceUpdateConsumerRecord.key(),
-                    instanceUpdateConsumerRecord.value())));
+                    instanceUpdateConsumerRecord.value(),
+                    instanceUpdateConsumerRecord.partition(),
+                    instanceUpdateConsumerRecord.offset())));
 
     if (!records.isEmpty()) {
       instanceUpdateConsumers.forEach(
@@ -110,13 +111,10 @@ public class ProcessInstanceUpdateConsumer {
     }
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer() {
+  private <K, V> KafkaConsumer<K, V> createConsumer(String groupId) {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            "instance-update-consumer",
-            TaktUUIDDeserializer.class,
-            InstanceUpdateJsonDeserializer.class,
-            "latest");
+            groupId, TaktUUIDDeserializer.class, InstanceUpdateJsonDeserializer.class, "latest");
     return new KafkaConsumer<>(props);
   }
 }

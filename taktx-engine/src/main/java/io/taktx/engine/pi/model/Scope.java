@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -47,7 +48,7 @@ public class Scope {
   private WithScope parentFlowNodeInstance;
 
   private final DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-  private final Map<Long, Long> boundaryEventToActivity = new java.util.WeakHashMap<>();
+  private final Map<Long, Long> boundaryEventToActivity = new WeakHashMap<>();
 
   private int subProcessLevel;
   private int activeCnt = 0;
@@ -57,7 +58,7 @@ public class Scope {
   private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
   private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
 
-  private final Map<Long, Set<Long>> activityToBoundaryEvents = new java.util.WeakHashMap<>();
+  private final Map<Long, Set<Long>> activityToBoundaryEvents = new WeakHashMap<>();
   private ProcessInstanceMapper processInstanceMapper;
   private FlowElements flowElements;
 

@@ -25,7 +25,7 @@ public enum ExecutionState {
   COMPLETED("C"),
   // For scope: A child threw an uncaught Error.
   // For flow node: A child threw an uncaught Error.
-  ABORTED("F"); //
+  ABORTED("F");
 
   private final String code;
 

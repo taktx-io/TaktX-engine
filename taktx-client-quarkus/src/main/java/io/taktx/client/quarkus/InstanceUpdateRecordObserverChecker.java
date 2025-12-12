@@ -37,7 +37,7 @@ public class InstanceUpdateRecordObserverChecker {
    * @return true if there are observers, false otherwise
    */
   public boolean hasInstanceUpdateRecordObservers() {
-    InstanceUpdateRecord eventInstance = new InstanceUpdateRecord(0, null, null);
+    InstanceUpdateRecord eventInstance = new InstanceUpdateRecord(0, null, null, 0, 0);
     Set<ObserverMethod<? super InstanceUpdateRecord>> observers =
         beanManager.resolveObserverMethods(eventInstance);
     return !observers.isEmpty();

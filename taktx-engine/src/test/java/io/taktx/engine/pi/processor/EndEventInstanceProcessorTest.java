@@ -8,39 +8,42 @@
 
 package io.taktx.engine.pi.processor;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import io.taktx.dto.ExecutionState;
+import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.Scope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mockito;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class EndEventInstanceProcessorTest {
 
-  @InjectMocks EndEventInstanceProcessor endEventInstanceProcessor;
+  @InjectMocks private EndEventInstanceProcessor processor;
+
+  @Mock private ProcessInstanceProcessingContext processingContext;
+  @Mock private Scope scope;
+  @Mock private EndEventInstance endEventInstance;
+  @Mock private EndEvent endEvent;
 
   @Test
-  void testProcessAbortSpecificFlowNodeInstance() {
+  void processAbortSpecificFlowNodeInstance_shouldDoNothing() {
     assertDoesNotThrow(
         () ->
-            endEventInstanceProcessor.processAbortSpecificFlowNodeInstance(
-                Mockito.mock(ProcessInstanceProcessingContext.class),
-                Mockito.mock(Scope.class),
-                Mockito.mock(EndEventInstance.class)));
+            processor.processAbortSpecificFlowNodeInstance(
+                processingContext, scope, endEventInstance));
   }
 
   @Test
-  void testProcessStartSpecificThrowEventInstance() {
-    assertDoesNotThrow(
-        () ->
-            endEventInstanceProcessor.processStartSpecificThrowEventInstance(
-                Mockito.mock(ProcessInstanceProcessingContext.class),
-                Mockito.mock(Scope.class),
-                Mockito.mock(EndEventInstance.class)));
+  void processStartSpecificThrowEventInstance_shouldCompleteEndEvent() {
+    processor.processStartSpecificThrowEventInstance(processingContext, scope, endEventInstance);
+
+    verify(endEventInstance).setState(ExecutionState.COMPLETED);
   }
 }

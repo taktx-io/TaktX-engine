@@ -13,6 +13,7 @@ import static com.cronutils.model.CronType.QUARTZ;
 import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.FixedRateMessageScheduleDTO;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
@@ -54,10 +55,14 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
 
-    String timeDuration =
-        feelExpressionHandler
-            .processFeelExpression(timerEventDefinition.getTimeDuration(), variables)
-            .asText();
+    JsonNode jsonNode =
+        feelExpressionHandler.processFeelExpression(
+            timerEventDefinition.getTimeDuration(), variables);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new IllegalArgumentException("TimeDuration expression returned null");
+    }
+    String timeDuration = jsonNode.asText();
+
     RepeatDuration repeatDuration = RepeatDuration.parse(timeDuration);
     Duration duration = repeatDuration.getDuration();
 
@@ -70,10 +75,12 @@ public class MessageSchedulerFactory {
       SchedulableMessageDTO messages,
       VariableScope variables,
       long now) {
-    String timeDate =
-        feelExpressionHandler
-            .processFeelExpression(timerEventDefinition.getTimeDate(), variables)
-            .asText();
+    JsonNode jsonNode =
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeDate(), variables);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new IllegalArgumentException("TimeDate expression returned null");
+    }
+    String timeDate = jsonNode.asText();
     return new OneTimeScheduleDTO(messages, now, Instant.parse(timeDate).toEpochMilli());
   }
 
@@ -95,10 +102,13 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
 
-    String timeCycle =
-        feelExpressionHandler
-            .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
-            .asText();
+    JsonNode jsonNode =
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new IllegalArgumentException("TimeCycle expression returned null");
+    }
+
+    String timeCycle = jsonNode.asText();
 
     RepeatDuration repeatDuration = RepeatDuration.parse(timeCycle);
     return new FixedRateMessageScheduleDTO(
@@ -110,6 +120,11 @@ public class MessageSchedulerFactory {
       SchedulableMessageDTO messages,
       VariableScope variables,
       long now) {
+    JsonNode jsonNode =
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
+    if (jsonNode == null || jsonNode.isNull()) {
+      throw new IllegalArgumentException("TimeCycle expression returned null");
+    }
     String timeCycle =
         feelExpressionHandler
             .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)

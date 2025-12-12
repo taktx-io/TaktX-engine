@@ -8,14 +8,18 @@
 
 package io.taktx.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.CleanupPolicy;
+import io.taktx.client.annotation.AckStrategy;
 import io.taktx.client.annotation.JobWorker;
+import io.taktx.client.annotation.ThreadingStrategy;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,13 +38,11 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       org.slf4j.LoggerFactory.getLogger(AnnotationScanningExternalTaskTriggerConsumer.class);
   private final Map<String, Method> workerMethods = new HashMap<>();
   private final Map<String, Object> workerInstances = new HashMap<>();
+  private final Map<String, AckStrategy> ackStrategies = new HashMap<>();
+  private final Map<String, ThreadingStrategy> threadingStrategies = new HashMap<>();
   private final ParameterResolverFactory parameterResolverFactory;
+  private final ResultProcessorFactory resultProcessorFactory;
   private final ProcessInstanceResponder externalTaskResponder;
-  private final WorkerBeanInstanceProvider instanceProvider;
-  private final ExternalTaskTopicRequester externalTaskTopicRequester;
-  private final int partitions;
-  private final CleanupPolicy cleanupPolicy;
-  private final short replicationFactor;
 
   /**
    * Constructor using the default PlainJavaInstanceProvider
@@ -54,6 +56,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
       ProcessInstanceResponder externalTaskResponder,
       ExternalTaskTopicRequester externalTaskTopicRequester,
       int partitions,
@@ -61,6 +64,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       short replicationFactor) {
     this(
         parameterResolverFactory,
+        resultProcessorFactory,
         externalTaskResponder,
         new PlainJavaInstanceProvider(),
         externalTaskTopicRequester,
@@ -73,6 +77,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * Constructor
    *
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param resultProcessorFactory Factory to create result processor for method parameters
    * @param externalTaskResponder Responder to handle external task instances
    * @param instanceProvider THe provider for worker bean instances
    * @param externalTaskTopicRequester Requester to manage external task topics
@@ -82,6 +87,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    */
   public AnnotationScanningExternalTaskTriggerConsumer(
       ParameterResolverFactory parameterResolverFactory,
+      ResultProcessorFactory resultProcessorFactory,
       ProcessInstanceResponder externalTaskResponder,
       WorkerBeanInstanceProvider instanceProvider,
       ExternalTaskTopicRequester externalTaskTopicRequester,
@@ -89,19 +95,18 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       CleanupPolicy cleanupPolicy,
       short replicationFactor) {
     this.parameterResolverFactory = parameterResolverFactory;
+    this.resultProcessorFactory = resultProcessorFactory;
+
     this.externalTaskResponder = externalTaskResponder;
-    this.instanceProvider = instanceProvider;
-    this.externalTaskTopicRequester = externalTaskTopicRequester;
-    this.partitions = partitions;
-    this.cleanupPolicy = cleanupPolicy;
-    this.replicationFactor = replicationFactor;
 
     Set<Class<?>> annotatedClasses =
         AnnotationScanner.findClassesWithAnnotatedMethods(JobWorker.class);
-    log.info(
-        "Found {} classes with @TaktWorkerMethod annotation: {}",
-        annotatedClasses.size(),
-        annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
+    if (log.isInfoEnabled()) {
+      log.info(
+          "Found {} classes with @TaktWorkerMethod annotation: {}",
+          annotatedClasses.size(),
+          annotatedClasses.stream().map(Class::getName).collect(Collectors.joining(",")));
+    }
     for (Class<?> clazz : annotatedClasses) {
       Object instance = instanceProvider.getInstance(clazz);
       Stream.of(clazz.getDeclaredMethods())
@@ -112,6 +117,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
                 String taskId = annotation.taskId();
                 workerMethods.put(taskId, m);
                 workerInstances.put(taskId, instance);
+                ackStrategies.put(taskId, annotation.ackStrategy());
+                threadingStrategies.put(taskId, annotation.threadingStrategy());
                 externalTaskTopicRequester.requestExternalTaskTopic(
                     taskId, partitions, cleanupPolicy, replicationFactor);
               });
@@ -139,10 +146,9 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
           }
           JobWorker workerMethod = method.getAnnotation(JobWorker.class);
           boolean autoComplete = workerMethod.autoComplete();
-          boolean methodIsVoid = method.getReturnType().equals(Void.TYPE);
 
           for (ExternalTaskTriggerDTO task : tasks) {
-            processTask(task, method, autoComplete, beanInstance, methodIsVoid);
+            processTask(task, method, autoComplete, beanInstance);
           }
         });
   }
@@ -151,38 +157,109 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       ExternalTaskTriggerDTO externalTaskTriggerDTO,
       Method method,
       boolean autoComplete,
-      Object beanInstance,
-      boolean methodIsVoid) {
+      Object beanInstance) {
     Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
     if (autoComplete) {
       // Rely on result and exceptions to determine success or failure
 
       try {
         Object result = method.invoke(beanInstance, arguments);
-        if (methodIsVoid) {
-          externalTaskResponder
-              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-              .respondSuccess();
-        } else {
-          externalTaskResponder
-              .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-              .respondSuccess(result);
-        }
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
+        Object resolvedResult = processResult(method, result);
         externalTaskResponder
             .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", e.getMessage());
+            .respondSuccess(resolvedResult);
+      } catch (InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof TaktXBpmnError bpmnError) {
+          respondError(externalTaskTriggerDTO, bpmnError);
+        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
+          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
+        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
+          respondPromis(externalTaskTriggerDTO, bpmnPromise);
+        } else {
+          StackTraceElement[] stackTrace = cause.getStackTrace();
+          // Convert stack trace to string array
+          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        }
+      } catch (RuntimeException | IllegalAccessException e) {
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        // Convert stack trace to string array
+        respondIncident(externalTaskTriggerDTO, stackTrace, e);
       }
     } else {
       // Worker has to respond itself by Responder or TaktXClient. Result is ignored
       try {
         method.invoke(beanInstance, arguments);
-      } catch (RuntimeException | IllegalAccessException | InvocationTargetException e) {
-        externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
-            .respondError(false, "ERROR", e.getMessage());
+      } catch (InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof TaktXBpmnError bpmnError) {
+          respondError(externalTaskTriggerDTO, bpmnError);
+        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
+          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
+        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
+          respondPromis(externalTaskTriggerDTO, bpmnPromise);
+        } else {
+          StackTraceElement[] stackTrace = cause.getStackTrace();
+          // Convert stack trace to string array
+          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        }
+      } catch (RuntimeException | IllegalAccessException e) {
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        // Convert stack trace to string array
+        respondIncident(externalTaskTriggerDTO, stackTrace, e);
       }
     }
+  }
+
+  private void respondPromis(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnPromise bpmnPromise) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondPromise(bpmnPromise.getDuration());
+  }
+
+  private void respondEscalation(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnEscalation bpmnEscalation) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondEscalation(
+            bpmnEscalation.getErrorCode(),
+            bpmnEscalation.getErrorMessage(),
+            bpmnEscalation.getVariables());
+  }
+
+  private void respondError(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO, TaktXBpmnError bpmnError) {
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondError(
+            bpmnError.getAllowRetry(),
+            bpmnError.getErrorCode(),
+            bpmnError.getErrorMessage(),
+            bpmnError.getVariables());
+  }
+
+  private void respondIncident(
+      ExternalTaskTriggerDTO externalTaskTriggerDTO,
+      StackTraceElement[] stackTrace,
+      Throwable cause) {
+    String[] stackTraceStrings =
+        Arrays.stream(stackTrace)
+            .map(stackTraceElement -> stackTraceElement.toString())
+            .toArray(String[]::new);
+    externalTaskResponder
+        .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+        .respondIncident(cause.getMessage(), stackTraceStrings);
+  }
+
+  private Object processResult(Method method, Object result) {
+    if (result != null) {
+      ResultProcessor resultProcessor = resultProcessorFactory.create(method.getReturnType());
+      if (resultProcessor != null) {
+        return resultProcessor.process(result);
+      }
+    }
+    return new HashMap<String, JsonNode>();
   }
 
   private Object[] resolveParameters(Method method, ExternalTaskTriggerDTO externalTaskTriggerDTO) {
@@ -194,5 +271,13 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
     }
 
     return result.toArray();
+  }
+
+  public AckStrategy getAckStrategy(String taskId) {
+    return ackStrategies.getOrDefault(taskId, AckStrategy.EXPLICIT_BATCH);
+  }
+
+  public ThreadingStrategy getThreadingStrategy(String taskId) {
+    return threadingStrategies.getOrDefault(taskId, ThreadingStrategy.VIRTUAL_THREAD_WAIT);
   }
 }

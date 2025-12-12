@@ -35,16 +35,29 @@ public class ExternalTaskResponseResultDTO {
 
   private long timeout;
 
+  private String[] stacktrace;
+
   public ExternalTaskResponseResultDTO(
       ExternalTaskResponseType responseType,
       Boolean allowRetry,
       String code,
       String message,
       long timeout) {
+    this(responseType, allowRetry, code, message, timeout, null);
+  }
+
+  public ExternalTaskResponseResultDTO(
+      ExternalTaskResponseType responseType,
+      Boolean allowRetry,
+      String code,
+      String message,
+      long timeout,
+      String[] stacktrace) {
     this.responseType = responseType;
     this.code = code;
     this.message = message;
     this.allowRetry = allowRetry;
     this.timeout = timeout;
+    this.stacktrace = stacktrace;
   }
 }

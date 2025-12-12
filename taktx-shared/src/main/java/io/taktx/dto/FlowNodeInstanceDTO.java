@@ -45,6 +45,8 @@ public abstract class FlowNodeInstanceDTO {
 
   private int passedCnt;
 
+  private IncidentInfoDTO incidentInfo;
+
   @JsonIgnore
   public boolean isActive() {
     return state == ExecutionState.ACTIVE;
@@ -53,6 +55,11 @@ public abstract class FlowNodeInstanceDTO {
   @JsonIgnore
   public boolean isAborted() {
     return state == ExecutionState.ABORTED;
+  }
+
+  @JsonIgnore
+  public boolean isIncident() {
+    return incidentInfo != null;
   }
 
   @JsonIgnore

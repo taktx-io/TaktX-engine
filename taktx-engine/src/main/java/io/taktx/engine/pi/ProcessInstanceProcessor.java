@@ -45,12 +45,14 @@ import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -65,6 +67,7 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @RequiredArgsConstructor
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerDTO, Object, Object> {
+
   private final DefinitionsCache definitionsCache;
   private final DefinitionMapper definitionMapper;
   private final ProcessInstanceMapper instanceMapper;
@@ -76,7 +79,7 @@ public class ProcessInstanceProcessor
   private final DtoMapper dtoMapper;
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
-
+  private final PathExtractor pathExtractor;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
@@ -85,6 +88,10 @@ public class ProcessInstanceProcessor
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
   private ProcessorContext<Object, Object> context;
+  private ThreadLocal<ProcessInstance> processInstanceThreadLocal = new ThreadLocal<>();
+  private ThreadLocal<ProcessInstanceProcessingContext>
+      processInstanceProcessingContextThreadLocal = new ThreadLocal<>();
+  private ThreadLocal<ProcessDefinitionKey> processDefinitionKeyThreadLocal = new ThreadLocal<>();
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -140,10 +147,21 @@ public class ProcessInstanceProcessor
         default ->
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
-    } catch (ProcessInstanceException e) {
-      handleExceptional(flowNodeInstanceStore, e);
     } catch (Throwable t) { // NOSONAR
+      handleIncident(trigger, t);
       log.error("Internal error occurred for", t);
+    }
+  }
+
+  private void handleIncident(ProcessInstanceTriggerDTO trigger, Throwable t) {
+    ProcessInstance processInstance = processInstanceThreadLocal.get();
+    ProcessDefinitionKey processDefinitionKey = processDefinitionKeyThreadLocal.get();
+
+    ProcessInstanceProcessingContext processInstanceProcessingContext =
+        processInstanceProcessingContextThreadLocal.get();
+    if (processInstance != null && processInstanceProcessingContext != null) {
+      Scope scope = processInstance.getScope();
+      processResultAndForward(processInstanceProcessingContext, processDefinitionKey, scope);
     }
   }
 
@@ -153,6 +171,8 @@ public class ProcessInstanceProcessor
 
     ProcessDefinitionDTO processDefinition =
         getProcessDefinitionDTO(startCommand.getProcessDefinitionKey());
+    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(processDefinition);
+    processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
     String startNodeId = startCommand.getElementId();
 
@@ -170,7 +190,6 @@ public class ProcessInstanceProcessor
 
     String startEventId = startNode.getId();
 
-    ProcessDefinitionKey processDefinitionKey = ProcessDefinitionKey.of(processDefinition);
     FlowElements flowElements = getFlowElements(processDefinitionKey);
     Scope scope =
         new Scope(
@@ -193,6 +212,7 @@ public class ProcessInstanceProcessor
             scope,
             startCommand.isPropagateAllToParent(),
             ioVariableMappings);
+    processInstanceThreadLocal.set(processInstance);
 
     InstanceResult instanceResult = InstanceResult.empty();
 
@@ -201,15 +221,19 @@ public class ProcessInstanceProcessor
 
     ProcessInstanceProcessingContext processInstanceProcessingContext =
         createProcessInstanceProcessingContext(processInstance, instanceResult);
+    processInstanceProcessingContextThreadLocal.set(processInstanceProcessingContext);
 
-    scopeProcessor.processStart(
-        Collections.emptyList(),
-        startEventId,
-        startCommand.getVariables(),
+    doWhileCatching(
         processInstanceProcessingContext,
-        scope);
-
-    processResultAndForward(processInstanceProcessingContext, processDefinitionKey, scope);
+        processDefinitionKey,
+        scope,
+        () ->
+            scopeProcessor.processStart(
+                Collections.emptyList(),
+                startEventId,
+                startCommand.getVariables(),
+                processInstanceProcessingContext,
+                scope));
   }
 
   private ProcessInstanceProcessingContext createProcessInstanceProcessingContext(
@@ -226,21 +250,6 @@ public class ProcessInstanceProcessor
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
     return definitionsCache.computeIfAbsent(
         processDefinitionKey, key -> definitionsStore.get(key).value());
-  }
-
-  private void handleExceptional(
-      KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore,
-      ProcessInstanceException e) {
-    FlowNodeInstance<?> flowNodeInstance = e.getFlowNodeInstance();
-    flowNodeInstance.abort();
-    ProcessInstance processInstance = e.getProcessInstance();
-    log.warn(
-        "Takt exception occurred for processinstance {}, {}, {}: {}",
-        processInstance.getProcessInstanceId(),
-        flowNodeInstance.getFlowNode().getId(),
-        flowNodeInstance.getElementInstanceId(),
-        e.getMessage());
-    handleTerminate(new AbortTriggerDTO(processInstance.getProcessInstanceId(), List.of()));
   }
 
   private InstanceUpdate processInstanceToUpdate(
@@ -263,21 +272,23 @@ public class ProcessInstanceProcessor
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
       enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+      ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+      processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
       ProcessInstanceProcessingContext processInstanceProcessingContext =
           createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-      scopeProcessor.processStart(
-          trigger.getParentElementInstanceIdPath(),
-          trigger.getElementId(),
-          trigger.getVariables(),
+      doWhileCatching(
           processInstanceProcessingContext,
-          processInstance.getScope());
-
-      processResultAndForward(
-          processInstanceProcessingContext,
-          processInstance.getProcessDefinitionKey(),
-          processInstance.getScope());
+          processDefinitionKey,
+          processInstance.getScope(),
+          () ->
+              scopeProcessor.processStart(
+                  trigger.getParentElementInstanceIdPath(),
+                  trigger.getElementId(),
+                  trigger.getVariables(),
+                  processInstanceProcessingContext,
+                  processInstance.getScope()));
     }
   }
 
@@ -292,20 +303,22 @@ public class ProcessInstanceProcessor
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
         enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+        ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+        processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-        scopeProcessor.processContinue(
+        doWhileCatching(
             processInstanceProcessingContext,
+            processDefinitionKey,
             processInstance.getScope(),
-            trigger,
-            trigger.getElementInstanceIdPath());
-
-        processResultAndForward(
-            processInstanceProcessingContext,
-            processInstance.getProcessDefinitionKey(),
-            processInstance.getScope());
+            () ->
+                scopeProcessor.processContinue(
+                    processInstanceProcessingContext,
+                    processInstance.getScope(),
+                    trigger,
+                    trigger.getElementInstanceIdPath()));
       }
     } else {
       log.warn("Process instanceToContinue not found for key: {}", processInstanceId);
@@ -322,17 +335,19 @@ public class ProcessInstanceProcessor
         UUID processInstanceId = processInstanceDTO.getProcessInstanceId();
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
         enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+        ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+        processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
             createProcessInstanceProcessingContext(processInstance, instanceResult);
 
-        scopeProcessor.processAbort(
-            processInstanceProcessingContext, processInstance.getScope(), trigger);
-
-        processResultAndForward(
+        doWhileCatching(
             processInstanceProcessingContext,
-            processInstance.getProcessDefinitionKey(),
-            processInstance.getScope());
+            processDefinitionKey,
+            processInstance.getScope(),
+            () ->
+                scopeProcessor.processAbort(
+                    processInstanceProcessingContext, processInstance.getScope(), trigger));
       }
     }
   }
@@ -357,7 +372,6 @@ public class ProcessInstanceProcessor
     }
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
-
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
@@ -366,7 +380,7 @@ public class ProcessInstanceProcessor
 
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
-    if (scope.isStateChanged()) {
+    if (scope.isStateChanged() || processInstance.getIncidentInfo() != null) {
       if (scope.getState() == ExecutionState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
@@ -521,6 +535,37 @@ public class ProcessInstanceProcessor
     try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
         this.variablesStore.range(variableStartKey, variableEndKey)) {
       range.forEachRemaining(r -> this.variablesStore.delete(r.key));
+    }
+  }
+
+  private void doWhileCatching(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      ProcessDefinitionKey processDefinitionKey,
+      Scope scope,
+      Callable<Void> callable) {
+
+    try {
+      callable.call();
+    } catch (ProcessInstanceException processInstanceException) {
+      StackTraceElement[] stackTrace = processInstanceException.getStackTrace();
+      String[] stackTraceStrings =
+          Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new);
+      processInstanceProcessingContext
+          .getProcessInstance()
+          .setIncidentInfo(
+              new IncidentInfo(
+                  processInstanceException.getFlowNodeInstance(),
+                  processInstanceException.getMessage(),
+                  stackTraceStrings));
+    } catch (Throwable t) {
+      StackTraceElement[] stackTrace = t.getStackTrace();
+      String[] stackTraceStrings =
+          Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new);
+      processInstanceProcessingContext
+          .getProcessInstance()
+          .setIncidentInfo(new IncidentInfo(null, t.getMessage(), stackTraceStrings));
+    } finally {
+      processResultAndForward(processInstanceProcessingContext, processDefinitionKey, scope);
     }
   }
 }

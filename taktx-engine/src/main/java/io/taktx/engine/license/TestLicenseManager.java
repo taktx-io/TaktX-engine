@@ -16,12 +16,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class TestLicenseManager implements LicenseManager {
 
   @Override
-  public boolean isLicenseValid() {
-    return true;
+  public LicenseState getLicenseState() {
+    return LicenseState.VALID;
   }
 
   @Override
   public String getLicenseInfo() {
     return "Test License";
+  }
+
+  @Override
+  public int getMaxAllowedPartitions() {
+    return 5;
   }
 }

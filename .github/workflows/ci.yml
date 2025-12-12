@@ -41,3 +41,47 @@ jobs:
 
       - name: Build with Gradle Wrapper
         run: ./gradlew build
+
+      - name: Run tests with coverage
+        run: ./gradlew test jacocoTestReport
+
+      - name: Upload coverage to Codecov - taktx-engine
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./taktx-engine/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: taktx-engine
+          name: taktx-engine-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage to Codecov - taktx-client
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./taktx-client/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: taktx-client
+          name: taktx-client-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage to Codecov - taktx-client-quarkus
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./taktx-client-quarkus/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: taktx-client-quarkus
+          name: taktx-client-quarkus-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage to Codecov - taktx-shared
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./taktx-shared/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: taktx-shared
+          name: taktx-shared-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+

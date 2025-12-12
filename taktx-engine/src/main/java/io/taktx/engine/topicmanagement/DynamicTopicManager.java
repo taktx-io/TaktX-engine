@@ -16,6 +16,7 @@ import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
+import io.taktx.engine.license.LicenseManager;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Duration;
 import java.util.Collection;
@@ -52,6 +53,7 @@ public class DynamicTopicManager {
   private final AdminClient adminClient;
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
+  private final LicenseManager licenseManager;
   private final ExecutorService executor = Executors.newCachedThreadPool();
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final ConcurrentHashMap<String, TopicMetaDTO> cachedRequestTopicMetaMap =
@@ -117,15 +119,24 @@ public class DynamicTopicManager {
                   log.info("Processing topic meta request record {}", entry.getKey());
                   var topicMeta = entry.getValue();
                   cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+                  if (topicMeta.getNrPartitions() <= licenseManager.getMaxAllowedPartitions()) {
+                    if (createTopicIfNotExists(
+                        topicMeta.getTopicName(),
+                        topicMeta.getNrPartitions(),
+                        topicMeta.getCleanupPolicy(),
+                        topicMeta.getReplicationFactor())) {
+                      publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
+                    }
 
-                  if (createTopicIfNotExists(
-                      topicMeta.getTopicName(),
-                      topicMeta.getNrPartitions(),
-                      topicMeta.getCleanupPolicy(),
-                      topicMeta.getReplicationFactor())) {
-                    publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
+                    cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+                  } else {
+                    log.warn(
+                        "Topic {} requests {} partitions, which exceeds the licensed maximum of {} partitions. Halting the process.",
+                        topicMeta.getTopicName(),
+                        topicMeta.getNrPartitions(),
+                        licenseManager.getMaxAllowedPartitions());
+                    Runtime.getRuntime().halt(1);
                   }
-                  cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
                 }
                 collectedTopics.clear();
                 continue;
@@ -232,6 +243,17 @@ public class DynamicTopicManager {
       actualTopicMeta.setCleanupPolicy(cachedRequestTopicMeta.getCleanupPolicy());
       actualTopicMeta.setNrPartitions(actualTopicDescription.partitions().size());
 
+      // Check with license manager if this is allowed and stop the process if not
+      if (actualTopicMeta.getNrPartitions() > licenseManager.getMaxAllowedPartitions()) {
+        log.warn(
+            "Topic {} has {} partitions, which exceeds the licensed maximum of {} partitions. Skipping update.",
+            prefixedTopicName,
+            actualTopicMeta.getNrPartitions(),
+            licenseManager.getMaxAllowedPartitions());
+        Runtime.getRuntime().halt(1);
+        return;
+      }
+
       TopicMetaDTO cachedActualTopicMeta = cachedActualTopicMetaMap.get(prefixedTopicName);
       // If we found differences, publish the actual topic info
       if (!cachedRequestTopicMeta.equals(actualTopicMeta)
@@ -241,6 +263,7 @@ public class DynamicTopicManager {
             prefixedTopicNames,
             cachedRequestTopicMeta,
             actualTopicMeta);
+
         publishTopicMetaActual(prefixedTopicName, actualTopicMeta);
       }
 

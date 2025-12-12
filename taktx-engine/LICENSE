@@ -1,0 +1,155 @@
+This license is based on the Business Source License 1.1
+as published by MariaDB plc.
+
+This version has been modified by TaktX to define specific
+usage limitations and terms applicable to the TaktX BPMN Engine.
+
+The original Business Source License 1.1 is available at:
+https://mariadb.com/bsl11/
+
+
+Business Source License 1.1 – TaktX Variant
+
+Licensor:
+TaktX B.V. (or the legal entity owning the software)
+
+Licensed Work:
+The TaktX BPMN Engine, including all engine-related components,
+source code, binaries, and documentation.
+
+For the avoidance of doubt, TaktX client libraries, SDKs, and
+language bindings are NOT part of the Licensed Work and are
+licensed separately under the Apache License, Version 2.0.
+
+Change Date:
+Four (4) years after the date of each release of the Licensed Work.
+
+Change License:
+Apache License, Version 2.0.
+
+
+1. Definitions
+
+“Licensed Work” means the software identified above as the
+TaktX BPMN Engine.
+
+“You” means an individual or legal entity exercising permissions
+granted by this License.
+
+“Production Use” means use of the Licensed Work to support live,
+operational business processes, including mission-critical workloads.
+
+“SaaS Offering” means providing the Licensed Work, or any substantial
+functionality of it, as a hosted, managed, or software-as-a-service
+offering to third parties.
+
+“Change Date” means the date on which the Licensed Work becomes
+available under the Change License.
+
+
+2. Grant of Rights
+
+Subject to the terms and conditions of this License, the Licensor
+grants You a non-exclusive, worldwide, royalty-free license to:
+
+- Use, copy, modify, and distribute the Licensed Work
+- Deploy and operate the Licensed Work in self-managed environments
+- Use the Licensed Work for internal business purposes, including
+  Production Use
+- Provide consulting, integration, and operational services related
+  to the Licensed Work for a single customer’s environment
+
+
+3. Limitations
+
+3.1 SaaS Restriction
+
+You may not offer the Licensed Work as a SaaS Offering, nor provide
+access to the Licensed Work to third parties as a hosted or managed
+service, without a separate commercial agreement with the Licensor.
+
+This restriction includes, but is not limited to:
+- Multi-tenant hosted offerings
+- Hosted access sold or provided to multiple customers
+- BPMN-as-a-Service, workflow-as-a-service, or similar offerings
+  based on the Licensed Work
+
+Notwithstanding the SaaS restriction above, the Licensor permits
+third‑party providers (such as system integrators, consultants,
+or managed‑service providers) to provide professional services,
+maintenance, installation, or operational management of an instance
+of the Licensed Work for a single customer's dedicated deployment,
+provided that:
+ - The deployment runs within infrastructure dedicated to that customer
+  (for example on the customer's on‑premises hardware or in a cloud
+  instance dedicated to that customer); and
+ - Access to that deployment is limited exclusively to that customer's
+ users; and
+ - The third party does not re‑sell, sub‑license, or otherwise offer
+ access to the deployment as a multi‑tenant hosted service to unrelated
+ third parties.
+
+3.2 No Circumvention
+
+You may not circumvent, disable, or remove technical or contractual
+limitations that differentiate free and premium features of the
+Licensed Work.
+
+3.3 Community Edition Limitations
+
+a. Kafka Topic Limitation: Each Kafka topic created or used by the Licensed Work is
+limited to a maximum of 3 partitions per topic when the Licensed Work is used under
+this License. There is no limit on the number of topics or deployments unless otherwise
+stated.
+
+b. Enforcement: If the Licensed Work detects any Kafka topic configured with more than
+3 partitions while operating under this License, the Licensed Work may refuse to operate
+for that topic (for example, refuse to start, disable processing for the topic, or
+otherwise block functionality that depends on that topic) until the partition count is
+reduced or a commercial license is obtained from Licensor.
+
+4. Redistribution
+
+You may redistribute the Licensed Work provided that:
+- This License is included in its entirety
+- All copyright notices are retained
+- The Licensed Work is not offered as a SaaS Offering
+
+
+5. Change License
+
+On the Change Date, the Licensed Work will automatically become
+available under the Change License specified above.
+
+
+6. Termination
+
+This License terminates automatically if You violate its terms.
+Upon termination, You must cease all use and distribution of the
+Licensed Work unless otherwise permitted by the Change License.
+
+
+7. Disclaimer of Warranty
+
+THE LICENSED WORK IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NON-INFRINGEMENT.
+
+
+8. Limitation of Liability
+
+IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES,
+OR OTHER LIABILITY ARISING FROM USE OF THE LICENSED WORK.
+
+
+9. Governing Law
+
+This License shall be governed by the laws of the Netherlands,
+excluding conflict-of-law provisions.
+
+
+10. Entire Agreement
+
+This License constitutes the entire agreement between You and the
+Licensor concerning the Licensed Work.

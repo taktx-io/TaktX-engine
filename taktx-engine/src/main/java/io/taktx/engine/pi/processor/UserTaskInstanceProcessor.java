@@ -79,10 +79,10 @@ public class UserTaskInstanceProcessor
   private PriorityDefinitionDTO getProcessedPriorityDefinition(
       VariableScope flowNodeInstanceVariablesn, PriorityDefinition priorityDefinition) {
     if (priorityDefinition != null) {
-      String priority =
-          feelExpressionHandler
-              .processFeelExpression(priorityDefinition.getPriority(), flowNodeInstanceVariablesn)
-              .asText();
+      com.fasterxml.jackson.databind.JsonNode priorityNode =
+          feelExpressionHandler.processFeelExpression(
+              priorityDefinition.getPriority(), flowNodeInstanceVariablesn);
+      String priority = priorityNode != null ? priorityNode.asText() : null;
       return new PriorityDefinitionDTO(priority);
     } else {
       return null;
@@ -92,14 +92,16 @@ public class UserTaskInstanceProcessor
   private TaskScheduleDTO getProcessedTaskSchedule(
       VariableScope flowNodeInstanceVariables, TaskSchedule taskSchedule) {
     if (taskSchedule != null) {
-      String dueDate =
-          feelExpressionHandler
-              .processFeelExpression(taskSchedule.getDueDate(), flowNodeInstanceVariables)
-              .asText();
-      String followupDate =
-          feelExpressionHandler
-              .processFeelExpression(taskSchedule.getFollowUpDate(), flowNodeInstanceVariables)
-              .asText();
+      com.fasterxml.jackson.databind.JsonNode dueDateNode =
+          feelExpressionHandler.processFeelExpression(
+              taskSchedule.getDueDate(), flowNodeInstanceVariables);
+      String dueDate = dueDateNode != null ? dueDateNode.asText() : null;
+
+      com.fasterxml.jackson.databind.JsonNode followupDateNode =
+          feelExpressionHandler.processFeelExpression(
+              taskSchedule.getFollowUpDate(), flowNodeInstanceVariables);
+      String followupDate = followupDateNode != null ? followupDateNode.asText() : null;
+
       return new TaskScheduleDTO(dueDate, followupDate);
     } else {
       return null;
@@ -109,20 +111,21 @@ public class UserTaskInstanceProcessor
   private AssignmentDefinitionDTO getProcessedAssignmentDefinition(
       VariableScope flowNodeInstanceVariables, AssignmentDefinition assignmentDefinition) {
     if (assignmentDefinition != null) {
-      String assignee =
-          feelExpressionHandler
-              .processFeelExpression(assignmentDefinition.getAssignee(), flowNodeInstanceVariables)
-              .asText();
-      String candidateGroups =
-          feelExpressionHandler
-              .processFeelExpression(
-                  assignmentDefinition.getCandidateGroups(), flowNodeInstanceVariables)
-              .asText();
-      String candidateUsers =
-          feelExpressionHandler
-              .processFeelExpression(
-                  assignmentDefinition.getCandidateUsers(), flowNodeInstanceVariables)
-              .asText();
+      com.fasterxml.jackson.databind.JsonNode assigneeNode =
+          feelExpressionHandler.processFeelExpression(
+              assignmentDefinition.getAssignee(), flowNodeInstanceVariables);
+      String assignee = assigneeNode != null ? assigneeNode.asText() : null;
+
+      com.fasterxml.jackson.databind.JsonNode candidateGroupsNode =
+          feelExpressionHandler.processFeelExpression(
+              assignmentDefinition.getCandidateGroups(), flowNodeInstanceVariables);
+      String candidateGroups = candidateGroupsNode != null ? candidateGroupsNode.asText() : null;
+
+      com.fasterxml.jackson.databind.JsonNode candidateUsersNode =
+          feelExpressionHandler.processFeelExpression(
+              assignmentDefinition.getCandidateUsers(), flowNodeInstanceVariables);
+      String candidateUsers = candidateUsersNode != null ? candidateUsersNode.asText() : null;
+
       return new AssignmentDefinitionDTO(assignee, candidateGroups, candidateUsers);
     } else {
       return null;

@@ -10,7 +10,9 @@ package io.taktx.engine.license;
 
 public interface LicenseManager {
 
-  boolean isLicenseValid();
+  LicenseState getLicenseState();
 
   String getLicenseInfo();
+
+  int getMaxAllowedPartitions();
 }
