@@ -61,11 +61,11 @@ public class LicenseInfoConfig {
         String.format(
             """
         TaktX Engine v%s - Copyright (c) 2025 TaktX B.V. All rights reserved.
-        Alpha version - NOT for production use
+        Alpha version
 
         TERMS SUMMARY:
         - Free use for testing and evaluation purposes
-        - NO production use
+        - Use in production is allowed but features and performance may be limited
         - No warranty or liability (provided "AS IS")
 
         Full license terms at [https://taktx.io/license]
@@ -73,21 +73,26 @@ public class LicenseInfoConfig {
         """,
             version);
 
+    String licenseCheckMessage =
+        switch (licenseManager.getLicenseState()) {
+          case VALID -> "✅ Valid license found: " + licenseManager.getLicenseInfo();
+          case EXPIRED ->
+              "⚠️ Warning: Your license has expired. Please renew at https://taktx.io/contact";
+          case INVALID ->
+              "❌ Error: Your license is invalid, did somebody tamper with it? Engine will not start. Please contact support at https://taktx.io/contact";
+          case NOT_FOUND ->
+              "⚠️ Warning: No license file found. Features & performance may be limited.";
+          default -> "";
+        };
+
     // Print to console with clear formatting
     System.out.println(taktxBanner);
     System.out.println(separator);
     System.out.println("LICENSE INFORMATION");
     System.out.println(separator);
     System.out.println(licenseInfo);
-
-    String invalidLicenseMessage =
-        "⚠️ This alpha-release requires a valid license file. Contact us at [https://taktx.io/contact].";
-
-    if (licenseManager.isLicenseValid()) {
-      System.out.println("✅ Valid license found: " + licenseManager.getLicenseInfo());
-    } else {
-      System.out.println(invalidLicenseMessage);
-    }
+    System.out.println(separator);
+    System.out.println(licenseCheckMessage);
     System.out.println(separator);
 
     // Also log through the logging system
@@ -99,11 +104,12 @@ public class LicenseInfoConfig {
             + "\nLICENSE INFORMATION\n"
             + separator
             + "\n"
-            + licenseInfo);
-    if (licenseManager.isLicenseValid()) {
-      log.info("Valid license found: {}", licenseManager.getLicenseInfo());
-    } else {
-      log.warn(invalidLicenseMessage);
+            + licenseInfo
+            + separator
+            + "\n"
+            + licenseCheckMessage
+            + "\n");
+    if (licenseManager.getLicenseState() == LicenseState.INVALID) {
       // Exit the application if we don't have a valid license
       Runtime.getRuntime().halt(1);
     }

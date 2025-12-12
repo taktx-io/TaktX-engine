@@ -8,11 +8,9 @@
 
 package io.taktx.engine.license;
 
-public interface LicenseManager {
-
-  LicenseState getLicenseState();
-
-  String getLicenseInfo();
-
-  int getMaxAllowedPartitions();
+public enum LicenseState {
+  VALID,
+  EXPIRED,
+  INVALID,
+  NOT_FOUND
 }

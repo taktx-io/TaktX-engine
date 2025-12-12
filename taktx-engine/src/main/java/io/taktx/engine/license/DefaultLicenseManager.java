@@ -338,7 +338,7 @@ public class DefaultLicenseManager implements LicenseManager {
   private License license;
   private final TaktConfiguration taktConfiguration;
 
-  @Getter private boolean licenseValid = false;
+  @Getter private LicenseState licenseState = LicenseState.NOT_FOUND;
 
   @PostConstruct
   public void init() {
@@ -351,7 +351,7 @@ public class DefaultLicenseManager implements LicenseManager {
       loadLicense();
     } catch (Exception e) {
       log.warn("No valid license found." + e.getMessage());
-      licenseValid = false;
+      licenseState = LicenseState.INVALID;
     }
   }
 
@@ -361,7 +361,8 @@ public class DefaultLicenseManager implements LicenseManager {
     log.info("Checking for license file at " + licenseFile.getAbsolutePath());
     if (!licenseFile.exists()) {
       // Exit the application
-      throw new LicenseException("License file not found");
+      licenseState = LicenseState.NOT_FOUND;
+      return;
     } else {
       log.info("License file found at " + licenseFile.getAbsolutePath());
     }
@@ -372,7 +373,7 @@ public class DefaultLicenseManager implements LicenseManager {
       if (!license.isOK(PUBLIC_KEY_BYTES)) {
         System.out.println(
             "❌ License file not valid according key. Has the license file been tampered with?");
-        licenseValid = false;
+        licenseState = LicenseState.INVALID;
         // Exit the application
         Runtime.getRuntime().halt(1);
         throw new LicenseException(
@@ -382,11 +383,11 @@ public class DefaultLicenseManager implements LicenseManager {
       Feature feature = license.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_EXPIRY_DATE);
       Date expirationDate = feature.getDate();
       if (new Date().after(expirationDate)) {
-        licenseValid = false;
+        licenseState = LicenseState.EXPIRED;
         throw new LicenseException("License expired on " + expirationDate);
       }
 
-      licenseValid = true;
+      licenseState = LicenseState.VALID;
     } catch (IOException e) {
       throw new LicenseException("Error reading license file " + e);
     }
@@ -395,5 +396,17 @@ public class DefaultLicenseManager implements LicenseManager {
   @Override
   public String getLicenseInfo() {
     return license.getFeatures().toString();
+  }
+
+  @Override
+  public int getMaxAllowedPartitions() {
+    int maxAllowed = 3; // default free tier
+    if (license != null && licenseState == LicenseState.VALID) {
+      Feature maxAllowedPartitions = license.getFeatures().get("maxAllowedPartitions");
+      if (maxAllowedPartitions != null) {
+        maxAllowed = maxAllowedPartitions.getInt();
+      }
+    }
+    return maxAllowed;
   }
 }

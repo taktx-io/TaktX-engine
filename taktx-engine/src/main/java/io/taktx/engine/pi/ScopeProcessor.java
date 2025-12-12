@@ -43,6 +43,7 @@ import io.taktx.engine.pi.processor.BoundaryEventInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.ProcessingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -128,7 +129,8 @@ public class ScopeProcessor {
       scope.getVariableScope().merge(variables);
 
       FlowNodeInstance<?> newInstance =
-          createNewInstanceAndAddToDirectInstanceResult(scope, elementId);
+          createNewInstanceAndAddToDirectInstanceResult(
+              processInstanceProcessingContext, scope, elementId);
 
       // If the new instance is an event triggered subprocess with an interrupting start event,
       if (newInstance instanceof SubProcessInstance subProcessInstance
@@ -476,7 +478,9 @@ public class ScopeProcessor {
   }
 
   private static FlowNodeInstance<?> createNewInstanceAndAddToDirectInstanceResult(
-      Scope scope, String elementId) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      String elementId) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
     FlowNodeInstance<?> flowNodeInstance =
@@ -504,7 +508,9 @@ public class ScopeProcessor {
 
     if (!eventHandled) {
       // Not handled by boundary event, check event subprocesses
-      eventHandled = processEventByEventSubprocesses(scope, event, fLowNodeInstance, eventHandled);
+      eventHandled =
+          processEventByEventSubprocesses(
+              processInstanceProcessingContext, scope, event, fLowNodeInstance, eventHandled);
     }
 
     if (!eventHandled) {
@@ -513,7 +519,11 @@ public class ScopeProcessor {
   }
 
   private static boolean processEventByEventSubprocesses(
-      Scope scope, EventSignal event, FlowNodeInstance<?> fLowNodeInstance, boolean eventHandled) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      EventSignal event,
+      FlowNodeInstance<?> fLowNodeInstance,
+      boolean eventHandled) {
     // First check any event subprocesses which are able to handle this event
     // First do a round for specific event codes
     List<SubProcess> eventTriggeredSubProcesses =
@@ -689,18 +699,17 @@ public class ScopeProcessor {
 
           Message referencedMessage = messageEventDefinition.getReferencedMessage();
           if (referencedMessage == null) {
-            throw new ProcessInstanceException(
-                null, "Message event definition has no referenced message");
+            throw new ProcessingException(
+                "Message event definition "
+                    + messageEventDefinition.getId()
+                    + " has no referenced message");
           }
           JsonNode jsonNode =
               feelExpressionHandler.processFeelExpression(
                   referencedMessage.correlationKey(), scope.getVariableScope());
           if (jsonNode == null || jsonNode.isNull()) {
-            throw new ProcessInstanceException(
-                null,
-                "Correlation key expression returned null for message event subprocess start event");
+            throw new ProcessingException("Correlation key expression returned null");
           }
-
           String correlationKey = jsonNode.asText();
 
           String messageName = referencedMessage.name();

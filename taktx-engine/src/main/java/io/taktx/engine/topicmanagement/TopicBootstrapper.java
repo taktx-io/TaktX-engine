@@ -14,6 +14,7 @@ import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
+import io.taktx.engine.license.LicenseManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
@@ -34,6 +35,8 @@ public class TopicBootstrapper {
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
   private final DynamicTopicManager topicManager;
+  private final LicenseManager licenseManager;
+
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
 
   @PostConstruct
@@ -91,7 +94,13 @@ public class TopicBootstrapper {
   }
 
   private void bootstrapManagedTopics() {
-
+    if (taktConfiguration.getPartitions() > licenseManager.getMaxAllowedPartitions()) {
+      log.error(
+          "License limit of {} partitions exceeded: {}",
+          licenseManager.getMaxAllowedPartitions(),
+          taktConfiguration.getPartitions());
+      Runtime.getRuntime().halt(1);
+    }
     List<NewTopic> newTopics =
         Topics.managedFixedTopics().stream()
             .map(

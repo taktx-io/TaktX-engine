@@ -125,7 +125,10 @@ public class MessageSchedulerFactory {
     if (jsonNode == null || jsonNode.isNull()) {
       throw new IllegalArgumentException("TimeCycle expression returned null");
     }
-    String timeCycle = jsonNode.asText();
+    String timeCycle =
+        feelExpressionHandler
+            .processFeelExpression(timerEventDefinition.getTimeCycle(), variables)
+            .asText();
     return new RecurringMessageScheduleDTO(messages, timeCycle, now);
   }
 
