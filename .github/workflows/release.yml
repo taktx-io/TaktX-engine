@@ -109,9 +109,6 @@ jobs:
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
           echo "License change date: $CHANGE_DATE"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -122,21 +119,52 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build multi-platform Docker image and push
+      - name: Build and push AMD64 image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./taktx-engine/Dockerfile.jvm
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}
-            ghcr.io/${{ github.repository_owner }}/taktx-engine:latest
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-amd64
           build-args: |
             VERSION=${{ steps.extract_version.outputs.VERSION }}
             CHANGE_DATE=${{ env.CHANGE_DATE }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+
+      - name: Set up QEMU for ARM64
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build and push ARM64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./taktx-engine/Dockerfile.jvm
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
+          build-args: |
+            VERSION=${{ steps.extract_version.outputs.VERSION }}
+            CHANGE_DATE=${{ env.CHANGE_DATE }}
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+
+      - name: Create and push multi-platform manifest
+        run: |
+          # Create manifest list that points to both platform-specific images
+          docker buildx imagetools create -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-amd64 \
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
+          
+          # Also tag as latest
+          docker buildx imagetools create -t ghcr.io/${{ github.repository_owner }}/taktx-engine:latest \
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-amd64 \
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
 
       - name: Build uber-jar for release artifact
         run: |
