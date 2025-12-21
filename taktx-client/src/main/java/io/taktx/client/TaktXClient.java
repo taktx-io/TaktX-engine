@@ -149,7 +149,7 @@ public class TaktXClient {
   }
 
   /**
-   * Starts a new process instance.
+   * Starts a new process instance of the latest version of the given process definition.
    *
    * @param process The ID of the process definition to start.
    * @param variables The initial variables for the process instance.
@@ -157,6 +157,18 @@ public class TaktXClient {
    */
   public UUID startProcess(String process, VariablesDTO variables) {
     return processInstanceProducer.startProcess(process, variables);
+  }
+
+  /**
+   * Starts a new process instance of the specific version of the given process definition.
+   *
+   * @param process The ID of the process definition to start.
+   * @param version The version of the process definition to start.
+   * @param variables The initial variables for the process instance.
+   * @return The UUID of the started process instance.
+   */
+  public UUID startProcess(String process, int version, VariablesDTO variables) {
+    return processInstanceProducer.startProcess(process, version, variables);
   }
 
   /**

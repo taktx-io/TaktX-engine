@@ -53,13 +53,25 @@ public class ProcessInstanceProducer {
    * @return the UUID of the started process instance
    */
   public UUID startProcess(String processDefinitionId, VariablesDTO variables) {
+    return startProcess(processDefinitionId, -1, variables);
+  }
+
+  /**
+   * Starts a new process instance by sending a StartCommandDTO to the configured Kafka topic.
+   *
+   * @param processDefinitionId the ID of the process definition to start
+   * @param version the version of the process definition to start, -1 for latest
+   * @param variables the initial variables for the process instance
+   * @return the UUID of the started process instance
+   */
+  public UUID startProcess(String processDefinitionId, int version, VariablesDTO variables) {
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceId,
             null,
             null,
-            new ProcessDefinitionKey(processDefinitionId),
+            new ProcessDefinitionKey(processDefinitionId, version),
             variables);
     processInstanceTriggerEmitter.send(
         new ProducerRecord<>(

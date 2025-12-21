@@ -11,6 +11,7 @@ package io.taktx.xml;
 import io.taktx.bpmn.TFlowElement;
 import io.taktx.bpmn.TProcess;
 import io.taktx.bpmn.TRootElement;
+import io.taktx.bpmn.VersionTag;
 import io.taktx.dto.FlowElementDTO;
 import io.taktx.dto.FlowElementsDTO;
 import io.taktx.dto.ProcessDTO;
@@ -18,19 +19,24 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-public class GenericRootElementMapper implements RootElementMapper {
+public class ZeebeRootElementMapper implements RootElementMapper {
 
   private final BpmnMapperFactory bpmnMapperFactory;
 
-  public GenericRootElementMapper(BpmnMapperFactory bpmnMapperFactory) {
+  public ZeebeRootElementMapper(BpmnMapperFactory bpmnMapperFactory) {
     this.bpmnMapperFactory = bpmnMapperFactory;
   }
 
   public ProcessDTO map(TRootElement tRootElement) {
     if (tRootElement instanceof TProcess tProcess) {
       String id = tProcess.getId();
-      return new ProcessDTO(id, null, null, mapFlowElements(tProcess.getFlowElement()));
+      Optional<VersionTag> versionTag =
+          ExtensionElementHelper.extractExtensionElement(
+              tProcess.getExtensionElements(), VersionTag.class);
+      String versionTagValue = versionTag.map(VersionTag::getValue).orElse(null);
+      return new ProcessDTO(id, null, versionTagValue, mapFlowElements(tProcess.getFlowElement()));
     }
     return ProcessDTO.NONE;
   }

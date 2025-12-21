@@ -21,12 +21,15 @@ import lombok.ToString;
 @RegisterForReflection
 public class ProcessDTO extends RootElementDTO {
 
-  public static final ProcessDTO NONE = new ProcessDTO(null, null, null);
+  public static final ProcessDTO NONE = new ProcessDTO(null, null, null, null);
+
+  private String versionTag;
 
   private FlowElementsDTO flowElements;
 
-  public ProcessDTO(String id, String parentId, FlowElementsDTO flowElements) {
+  public ProcessDTO(String id, String parentId, String versionTag, FlowElementsDTO flowElements) {
     super(id, parentId);
+    this.versionTag = versionTag;
     this.flowElements = flowElements;
   }
 }

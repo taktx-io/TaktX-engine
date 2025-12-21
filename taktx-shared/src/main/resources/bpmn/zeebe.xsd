@@ -73,6 +73,11 @@
       <xs:attribute name="resultVariable" use="required"/>
     </xs:complexType>
   </xs:element>
+  <xs:element name="versionTag">
+    <xs:complexType>
+      <xs:attribute name="value" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
   <xs:element name="ioMapping">
     <xs:complexType id="ioMapping">

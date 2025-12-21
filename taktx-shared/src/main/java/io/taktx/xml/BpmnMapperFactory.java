@@ -24,7 +24,11 @@ public class BpmnMapperFactory {
   }
 
   public RootElementMapper createRootElementMapper() {
-    return new GenericRootElementMapper(this);
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeRootElementMapper(this);
+    } else {
+      return new GenericRootElementMapper(this);
+    }
   }
 
   public FlowElementMapper createFlowElementMapper() {
