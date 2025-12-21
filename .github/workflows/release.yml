@@ -138,21 +138,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Extract uber-jar from Docker build for release artifact
+      - name: Build uber-jar for release artifact
         run: |
-          # Build a temporary single-platform image to extract the uber-jar
-          docker buildx build \
-            --platform linux/amd64 \
-            --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
-            --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
-            --target builder \
-            --output type=local,dest=./extract \
-            -f taktx-engine/Dockerfile.jvm \
-            .
-          
-          # Copy the uber-jar to expected location
-          mkdir -p taktx-engine/build
-          cp extract/workspace/taktx-engine/build/*runner.jar taktx-engine/build/
+          # Build uber-jar directly with Gradle (much simpler than extracting from Docker)
+          ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.jar.type=uber-jar -x test
 
       - uses: AButler/upload-release-assets@v3.0
         with:

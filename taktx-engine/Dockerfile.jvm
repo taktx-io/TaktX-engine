@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/root/.gradle/caches \
 # Build uber-jar for artifact distribution
 RUN --mount=type=cache,target=/root/.gradle/caches \
     --mount=type=cache,target=/root/.gradle/wrapper \
-    ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.type=uber-jar -x test --no-daemon \
+    ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.jar.type=uber-jar -x test --no-daemon \
     -Dorg.gradle.java.installations.auto-detect=true
 
 # ============================================================================
