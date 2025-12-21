@@ -74,7 +74,6 @@ jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb
 
 [plugins]
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
-jib = { id = "com.google.cloud.tools.jib", version = "3.4.4" }
 spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 xjc = { id = "com.github.bjornvester.xjc", version = "1.8.1" }
 

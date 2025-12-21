@@ -2,7 +2,6 @@ plugins {
     id("java")
     alias(libs.plugins.spotless)
     alias(libs.plugins.quarkus)
-    alias(libs.plugins.jib)
     id("com.github.jk1.dependency-license-report") version "2.0"
     jacoco
 }

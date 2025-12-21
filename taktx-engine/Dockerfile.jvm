@@ -1,7 +1,84 @@
-# Use the official Eclipse Temurin image as a parent image
-FROM ibm-semeru-runtimes:open-25-jre
+# syntax=docker/dockerfile:1.4
 
-# Define build arguments
+# ============================================================================
+# Stage 1: Gradle Dependency Cache
+# ============================================================================
+FROM amazoncorretto:23 AS deps
+
+# Install required build tools and Java 21 for modules that require it
+RUN yum install -y findutils java-21-amazon-corretto-devel && yum clean all
+
+WORKDIR /workspace
+
+# Copy Gradle wrapper and configuration files
+COPY gradle/ gradle/
+COPY gradlew gradlew.bat gradle.properties settings.gradle.kts ./
+COPY gradle/libs.versions.toml gradle/
+
+# Copy all module build files to resolve dependencies
+COPY build.gradle.kts ./
+COPY taktx-shared/build.gradle.kts taktx-shared/
+COPY taktx-client/build.gradle.kts taktx-client/
+COPY taktx-client-quarkus/build.gradle.kts taktx-client-quarkus/
+COPY taktx-engine/build.gradle.kts taktx-engine/
+
+# Download dependencies with BuildKit cache mount for Gradle cache
+RUN --mount=type=cache,target=/root/.gradle/caches \
+    --mount=type=cache,target=/root/.gradle/wrapper \
+    ./gradlew dependencies --no-daemon \
+    -Dorg.gradle.java.installations.auto-detect=false
+
+# ============================================================================
+# Stage 2: Build Application
+# ============================================================================
+FROM amazoncorretto:23 AS builder
+
+# Install required build tools and Java 21 for modules that require it
+RUN yum install -y findutils java-21-amazon-corretto-devel && yum clean all
+
+ARG VERSION=dev
+ARG CHANGE_DATE=unknown
+
+WORKDIR /workspace
+
+# Copy Gradle wrapper and configuration from deps stage
+COPY --from=deps /workspace/gradle gradle/
+COPY --from=deps /workspace/gradlew* ./
+COPY --from=deps /workspace/gradle.properties ./
+COPY --from=deps /workspace/settings.gradle.kts ./
+
+# Copy all build configuration files
+COPY build.gradle.kts ./
+COPY gradle/ gradle/
+
+# Copy all source code for all modules (needed for multi-module build)
+COPY taktx-shared/ taktx-shared/
+COPY taktx-client/ taktx-client/
+COPY taktx-client-quarkus/ taktx-client-quarkus/
+COPY taktx-engine/ taktx-engine/
+
+# Inject license change date into source
+RUN mkdir -p taktx-engine/src/main/resources/META-INF/ && \
+    echo "${CHANGE_DATE}" > taktx-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
+
+# Build the application (regular JAR for Docker image)
+RUN --mount=type=cache,target=/root/.gradle/caches \
+    --mount=type=cache,target=/root/.gradle/wrapper \
+    ./gradlew :taktx-engine:build -x test --no-daemon \
+    -Dorg.gradle.java.installations.auto-detect=true
+
+# Build uber-jar for artifact distribution
+RUN --mount=type=cache,target=/root/.gradle/caches \
+    --mount=type=cache,target=/root/.gradle/wrapper \
+    ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.type=uber-jar -x test --no-daemon \
+    -Dorg.gradle.java.installations.auto-detect=true
+
+# ============================================================================
+# Stage 3: Runtime Image
+# ============================================================================
+FROM amazoncorretto:23
+
+# Define build arguments for metadata
 ARG VERSION=dev
 ARG CHANGE_DATE=unknown
 
@@ -9,22 +86,25 @@ ARG CHANGE_DATE=unknown
 LABEL org.opencontainers.image.version=${VERSION}
 LABEL com.taktx.license.change-date=${CHANGE_DATE}
 LABEL org.opencontainers.image.description="TaktX Engine - A high-performance BPMN engine"
-LABEL org.opencontainers.image.licenses="TaktX Alpha License 1.0"
+LABEL org.opencontainers.image.licenses="TaktX Business Source License 1.0"
+LABEL org.opencontainers.image.source="https://github.com/taktx-io/TaktX-engine"
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy all project's build artifacts from build/quarkus-app recursively to the container
-COPY build/quarkus-app /app/
+# Copy the built application from builder stage
+COPY --from=builder /workspace/taktx-engine/build/quarkus-app/ /app/
 
 # Copy license information
 COPY LICENSE.md /app/LICENSE.md
+COPY NOTICE /app/NOTICE
 
 # Add license change date file
 RUN echo "${CHANGE_DATE}" > /app/LICENSE_CHANGE_DATE.txt
 
 # Expose the port the application runs on
 EXPOSE 8080
+
 
 # Set the entrypoint to run the application
 ENTRYPOINT ["java", "-Dquarkus.http.host=0.0.0.0", "-jar", "/app/quarkus-run.jar"]

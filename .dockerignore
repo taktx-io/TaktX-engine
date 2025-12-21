@@ -1,0 +1,52 @@
+# Build outputs
+**/build/
+**/target/
+**/.gradle/
+**/.quarkus/
+
+# IDE files
+**/.idea/
+**/.vscode/
+**/.DS_Store
+**/*.iml
+**/.run/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation and scripts (not needed in build context)
+*.md
+!LICENSE.md
+!NOTICE
+scripts/
+badges/
+
+# Test and coverage reports
+**/test-results/
+**/jacoco/
+**/reports/
+
+# Logs
+**/*.log
+
+# Temporary files
+**/tmp/
+**/.tmp/
+**/*.swp
+**/*.swo
+
+# Docker files (exclude other Dockerfiles)
+**/Dockerfile*
+!taktx-engine/Dockerfile.jvm
+
+# Lock files (keep gradle.lockfile, exclude others)
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+
+# Config files that shouldn't be in container
+codecov.yml
+.gitattributes
+

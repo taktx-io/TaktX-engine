@@ -106,49 +106,58 @@ jobs:
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
           CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
-          mkdir -p taktx-engine/src/main/resources/META-INF/
-          echo "$CHANGE_DATE" > taktx-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
-          # Also create a file for the Docker build to use
-          echo "$CHANGE_DATE" > LICENSE_CHANGE_DATE.txt
-          # Copy license file to taktx-engine directory for Docker build
-          cp LICENSE.md taktx-engine/
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
+          echo "License change date: $CHANGE_DATE"
 
-      - name: Build uber jar with Gradle
-        run: ./gradlew quarkusBuild -Dquarkus.package.type=uber-jar -x test
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - uses: AButler/upload-release-assets@v3.0
-        with:
-          files: "taktx-engine/build/*runner.jar"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build jar for docker image
-        run: ./gradlew build -x test
-
-      - name: Build Docker image
-        run: |
-          # Copy the LICENSE_CHANGE_DATE.txt file to the taktx-engine directory for Docker build
-          cp LICENSE_CHANGE_DATE.txt taktx-engine/
-
-          docker build \
-            --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
-            --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
-            -f taktx-engine/Dockerfile.jvm \
-            -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
-            -t ghcr.io/${{ github.repository_owner }}/taktx-engine:latest \
-            taktx-engine/
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push Docker image
+      - name: Build multi-platform Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./taktx-engine/Dockerfile.jvm
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}
+            ghcr.io/${{ github.repository_owner }}/taktx-engine:latest
+          build-args: |
+            VERSION=${{ steps.extract_version.outputs.VERSION }}
+            CHANGE_DATE=${{ env.CHANGE_DATE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract uber-jar from Docker build for release artifact
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}
-          docker push ghcr.io/${{ github.repository_owner }}/taktx-engine:latest
+          # Build a temporary single-platform image to extract the uber-jar
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${{ steps.extract_version.outputs.VERSION }} \
+            --build-arg CHANGE_DATE=${{ env.CHANGE_DATE }} \
+            --target builder \
+            --output type=local,dest=./extract \
+            -f taktx-engine/Dockerfile.jvm \
+            .
+          
+          # Copy the uber-jar to expected location
+          mkdir -p taktx-engine/build
+          cp extract/workspace/taktx-engine/build/*runner.jar taktx-engine/build/
+
+      - uses: AButler/upload-release-assets@v3.0
+        with:
+          files: "taktx-engine/build/*runner.jar"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Maven Central
         run: ./gradlew publishMavenJavaPublicationToMavenRepository jreleaserDeploy
