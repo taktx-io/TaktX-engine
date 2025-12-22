@@ -172,7 +172,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         Throwable cause = e.getCause();
         switch (cause) {
           case TaktXBpmnError bpmnError -> respondError(externalTaskTrigger, bpmnError);
-          case TaktXBpmnEscalation bpmnEscalation -> respondEscalation(externalTaskTrigger, bpmnEscalation);
+          case TaktXBpmnEscalation bpmnEscalation ->
+              respondEscalation(externalTaskTrigger, bpmnEscalation);
           case TaktXBpmnPromise bpmnPromise -> respondPromis(externalTaskTrigger, bpmnPromise);
           default -> {
             StackTraceElement[] stackTrace = cause.getStackTrace();
@@ -193,7 +194,8 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         Throwable cause = e.getCause();
         switch (cause) {
           case TaktXBpmnError bpmnError -> respondError(externalTaskTrigger, bpmnError);
-          case TaktXBpmnEscalation bpmnEscalation -> respondEscalation(externalTaskTrigger, bpmnEscalation);
+          case TaktXBpmnEscalation bpmnEscalation ->
+              respondEscalation(externalTaskTrigger, bpmnEscalation);
           case TaktXBpmnPromise bpmnPromise -> respondPromis(externalTaskTrigger, bpmnPromise);
           default -> {
             StackTraceElement[] stackTrace = cause.getStackTrace();
@@ -242,9 +244,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       StackTraceElement[] stackTrace,
       Throwable cause) {
     String[] stackTraceStrings =
-        Arrays.stream(stackTrace)
-            .map(StackTraceElement::toString)
-            .toArray(String[]::new);
+        Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new);
     externalTaskResponder
         .responderForExternalTaskTrigger(externalTaskTriggerDTO)
         .respondIncident(cause.getMessage(), stackTraceStrings);

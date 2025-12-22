@@ -78,7 +78,7 @@ tasks.jacocoTestReport {
 
     // Merge both standard test coverage and Quarkus integration test coverage
     executionData.setFrom(
-        fileTree(project.buildDir) {
+        fileTree(project.layout.buildDirectory) {
             include("jacoco/test.exec")
             include("jacoco-quarkus.exec")
         }

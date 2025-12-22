@@ -1,5 +1,5 @@
 [versions]
-quarkus = "3.28.4"
+quarkus = "3.30.4"
 jackson = "2.19.2"
 cronutils = "9.2.1"
 lombok = "1.18.42"
@@ -7,7 +7,7 @@ junit = "5.10.1"
 assertj = "3.27.6"
 mapstruct = "1.6.3"
 slf4j = "2.0.17"
-kafka = "4.1.0"
+kafka = "4.1.1"
 camunda-feel = "1.19.3"
 awaitility = "4.3.0"
 mockito = "3.12.4"
@@ -83,7 +83,7 @@ jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb
 
 [plugins]
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
-spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
+spotless = { id = "com.diffplug.spotless", version = "8.1.0" }
 xjc = { id = "com.github.bjornvester.xjc", version = "1.8.1" }
 
 [metadata]
