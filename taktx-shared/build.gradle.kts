@@ -37,7 +37,8 @@ dependencies {
     implementation(libs.jackson.cbor)
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
-    implementation(libs.quarkus.core)
+
+    compileOnly(libs.quarkus.core)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.params)

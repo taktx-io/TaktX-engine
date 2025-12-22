@@ -12,7 +12,10 @@ import io.taktx.client.WorkerBeanInstanceProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-/** Spring implementation of WorkerBeanInstanceProvider using ApplicationContext to obtain bean instances. */
+/**
+ * Spring implementation of WorkerBeanInstanceProvider using ApplicationContext to obtain bean
+ * instances.
+ */
 @Component
 public class SpringBeanInstanceProvider implements WorkerBeanInstanceProvider {
 
@@ -38,4 +41,3 @@ public class SpringBeanInstanceProvider implements WorkerBeanInstanceProvider {
     return applicationContext.getBean(clazz);
   }
 }
-

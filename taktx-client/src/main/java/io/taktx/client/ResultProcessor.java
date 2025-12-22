@@ -8,6 +8,8 @@
 
 package io.taktx.client;
 
+import io.taktx.dto.ExternalTaskTriggerDTO;
+
 /** A resolver interface for resolving method parameters from ExternalTaskTriggerDTOs. */
 public interface ResultProcessor {
 
@@ -15,7 +17,8 @@ public interface ResultProcessor {
    * Processes the result of a jobworker call
    *
    * @param object The result processor to process the result.
+   * @param externalTaskTrigger
    * @return The processed result value.
    */
-  Object process(Object object);
+  Object process(Object object, ExternalTaskTriggerDTO externalTaskTrigger);
 }

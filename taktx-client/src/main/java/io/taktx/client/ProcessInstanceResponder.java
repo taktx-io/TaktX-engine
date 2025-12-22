@@ -15,6 +15,7 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
+import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
@@ -55,6 +56,19 @@ public class ProcessInstanceResponder {
         topicName,
         externalTaskTriggerDTO.getProcessInstanceId(),
         externalTaskTriggerDTO.getElementInstanceIdPath());
+  }
+
+  /**
+   * Creates an ExternalTaskInstanceResponder for the given ExternalTaskTriggerDTO.
+   *
+   * @param processInstanceId process instance id
+   * @param elementInstanceIdPath the path to the element instance id
+   * @return the created ExternalTaskInstanceResponder
+   */
+  public ExternalTaskInstanceResponder responderForExternalTask(
+      UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    return new ExternalTaskInstanceResponder(
+        responseEmitter, topicName, processInstanceId, elementInstanceIdPath);
   }
 
   /**

@@ -448,6 +448,7 @@ public class Forwarder {
         processInstanceId,
         processDefinitionKey,
         externalTaskInfo.externalTaskId(),
+        externalTaskInfo.element().getId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
         externalTaskInfo.variables().scopeAndParentsToDto(),
         externalTaskInfo.headers());

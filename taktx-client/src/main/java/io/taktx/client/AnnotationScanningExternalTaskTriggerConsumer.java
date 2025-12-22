@@ -114,7 +114,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
           .forEach(
               m -> {
                 JobWorker annotation = m.getAnnotation(JobWorker.class);
-                String type = annotation.type();
+                String type = annotation.type().replaceAll("[^a-zA-Z0-9._-]", "_");
                 workerMethods.put(type, m);
                 workerInstances.put(type, instance);
                 ackStrategies.put(type, annotation.ackStrategy());
@@ -154,37 +154,36 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
   }
 
   private void processTask(
-      ExternalTaskTriggerDTO externalTaskTriggerDTO,
+      ExternalTaskTriggerDTO externalTaskTrigger,
       Method method,
       boolean autoComplete,
       Object beanInstance) {
-    Object[] arguments = resolveParameters(method, externalTaskTriggerDTO);
+    Object[] arguments = resolveParameters(method, externalTaskTrigger);
     if (autoComplete) {
       // Rely on result and exceptions to determine success or failure
 
       try {
         Object result = method.invoke(beanInstance, arguments);
-        Object resolvedResult = processResult(method, result);
+        Object resolvedResult = processResult(method, result, externalTaskTrigger);
         externalTaskResponder
-            .responderForExternalTaskTrigger(externalTaskTriggerDTO)
+            .responderForExternalTaskTrigger(externalTaskTrigger)
             .respondSuccess(resolvedResult);
       } catch (InvocationTargetException e) {
         Throwable cause = e.getCause();
-        if (cause instanceof TaktXBpmnError bpmnError) {
-          respondError(externalTaskTriggerDTO, bpmnError);
-        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
-          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
-        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
-          respondPromis(externalTaskTriggerDTO, bpmnPromise);
-        } else {
-          StackTraceElement[] stackTrace = cause.getStackTrace();
-          // Convert stack trace to string array
-          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        switch (cause) {
+          case TaktXBpmnError bpmnError -> respondError(externalTaskTrigger, bpmnError);
+          case TaktXBpmnEscalation bpmnEscalation -> respondEscalation(externalTaskTrigger, bpmnEscalation);
+          case TaktXBpmnPromise bpmnPromise -> respondPromis(externalTaskTrigger, bpmnPromise);
+          default -> {
+            StackTraceElement[] stackTrace = cause.getStackTrace();
+            // Convert stack trace to string array
+            respondIncident(externalTaskTrigger, stackTrace, cause);
+          }
         }
       } catch (RuntimeException | IllegalAccessException e) {
         StackTraceElement[] stackTrace = e.getStackTrace();
         // Convert stack trace to string array
-        respondIncident(externalTaskTriggerDTO, stackTrace, e);
+        respondIncident(externalTaskTrigger, stackTrace, e);
       }
     } else {
       // Worker has to respond itself by Responder or TaktXClient. Result is ignored
@@ -192,21 +191,20 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
         method.invoke(beanInstance, arguments);
       } catch (InvocationTargetException e) {
         Throwable cause = e.getCause();
-        if (cause instanceof TaktXBpmnError bpmnError) {
-          respondError(externalTaskTriggerDTO, bpmnError);
-        } else if (cause instanceof TaktXBpmnEscalation bpmnEscalation) {
-          respondEscalation(externalTaskTriggerDTO, bpmnEscalation);
-        } else if (cause instanceof TaktXBpmnPromise bpmnPromise) {
-          respondPromis(externalTaskTriggerDTO, bpmnPromise);
-        } else {
-          StackTraceElement[] stackTrace = cause.getStackTrace();
-          // Convert stack trace to string array
-          respondIncident(externalTaskTriggerDTO, stackTrace, cause);
+        switch (cause) {
+          case TaktXBpmnError bpmnError -> respondError(externalTaskTrigger, bpmnError);
+          case TaktXBpmnEscalation bpmnEscalation -> respondEscalation(externalTaskTrigger, bpmnEscalation);
+          case TaktXBpmnPromise bpmnPromise -> respondPromis(externalTaskTrigger, bpmnPromise);
+          default -> {
+            StackTraceElement[] stackTrace = cause.getStackTrace();
+            // Convert stack trace to string array
+            respondIncident(externalTaskTrigger, stackTrace, cause);
+          }
         }
       } catch (RuntimeException | IllegalAccessException e) {
         StackTraceElement[] stackTrace = e.getStackTrace();
         // Convert stack trace to string array
-        respondIncident(externalTaskTriggerDTO, stackTrace, e);
+        respondIncident(externalTaskTrigger, stackTrace, e);
       }
     }
   }
@@ -245,18 +243,19 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
       Throwable cause) {
     String[] stackTraceStrings =
         Arrays.stream(stackTrace)
-            .map(stackTraceElement -> stackTraceElement.toString())
+            .map(StackTraceElement::toString)
             .toArray(String[]::new);
     externalTaskResponder
         .responderForExternalTaskTrigger(externalTaskTriggerDTO)
         .respondIncident(cause.getMessage(), stackTraceStrings);
   }
 
-  private Object processResult(Method method, Object result) {
+  private Object processResult(
+      Method method, Object result, ExternalTaskTriggerDTO externalTaskTrigger) {
     if (result != null) {
       ResultProcessor resultProcessor = resultProcessorFactory.create(method.getReturnType());
       if (resultProcessor != null) {
-        return resultProcessor.process(result);
+        return resultProcessor.process(result, externalTaskTrigger);
       }
     }
     return new HashMap<String, JsonNode>();

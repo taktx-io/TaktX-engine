@@ -9,12 +9,13 @@
 package io.taktx.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.HashMap;
 
 public class VoidResultProcessor implements ResultProcessor {
 
   @Override
-  public Object process(Object object) {
+  public Object process(Object object, ExternalTaskTriggerDTO externalTaskTrigger) {
     return new HashMap<String, JsonNode>();
   }
 }

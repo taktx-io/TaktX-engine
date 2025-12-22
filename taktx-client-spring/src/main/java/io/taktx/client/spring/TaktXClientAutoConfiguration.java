@@ -24,8 +24,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Auto-configuration for TaktXClient in Spring Boot applications.
- * Creates and configures a TaktXClient instance with all necessary dependencies.
+ * Auto-configuration for TaktXClient in Spring Boot applications. Creates and configures a
+ * TaktXClient instance with all necessary dependencies.
  */
 @Configuration
 @ConditionalOnProperty(name = "taktx.client.enabled", havingValue = "true", matchIfMissing = true)
@@ -73,9 +73,7 @@ public class TaktXClientAutoConfiguration {
     this.resultProcessorFactory = resultProcessorFactory;
   }
 
-  /**
-   * Initializes the TaktXClient after construction.
-   */
+  /** Initializes the TaktXClient after construction. */
   @PostConstruct
   public void init() {
     TaktXClientBuilder taktClientBuilder = TaktXClient.newClientBuilder();
@@ -84,9 +82,7 @@ public class TaktXClientAutoConfiguration {
         .withTaktParameterResolverFactory(parameterResolverFactory)
         .withResultProcessorFactory(resultProcessorFactory);
 
-    taktClient = taktClientBuilder
-        .withProperties(taktPropertiesHelper.getTaktProperties())
-        .build();
+    taktClient = taktClientBuilder.withProperties(taktPropertiesHelper.getTaktProperties()).build();
 
     taktClient.start();
 
@@ -108,7 +104,9 @@ public class TaktXClientAutoConfiguration {
           externalTaskTriggerConsumer, "taktx-client-external-task-trigger-consumer");
     }
 
-    if (instanceUpdateEnabled && groupIdInstanceUpdate != null && !groupIdInstanceUpdate.isEmpty()) {
+    if (instanceUpdateEnabled
+        && groupIdInstanceUpdate != null
+        && !groupIdInstanceUpdate.isEmpty()) {
       taktClient.registerInstanceUpdateConsumer(
           groupIdInstanceUpdate,
           instanceUpdateRecords -> {
@@ -130,4 +128,3 @@ public class TaktXClientAutoConfiguration {
     return taktClient;
   }
 }
-

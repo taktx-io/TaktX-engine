@@ -445,11 +445,11 @@ public class ProcessInstanceProcessor
       VariablesDTO variables;
 
       if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.of(scope.retrieveAndFlattenAllVariables());
+        variables = VariablesDTO.ofJsonMap(scope.retrieveAndFlattenAllVariables());
       } else {
         VariableScope outputVariables = new VariableScope(scope, variablesStore);
         ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
-        variables = VariablesDTO.of(outputVariables.getVariables());
+        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
       }
 
       instanceResult.addContinuation(
@@ -470,11 +470,11 @@ public class ProcessInstanceProcessor
       VariablesDTO variables;
 
       if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.of(scope.retrieveAndFlattenAllVariables());
+        variables = VariablesDTO.ofJsonMap(scope.retrieveAndFlattenAllVariables());
       } else {
         VariableScope outputVariables = new VariableScope(scope, variablesStore);
         ioMappingProcessor.addVariables(outputVariables, processInstance.getOutputMappings());
-        variables = VariablesDTO.of(outputVariables.getVariables());
+        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
       }
       instanceResult.addEventSignals(
           new EventSignalTriggerDTO(

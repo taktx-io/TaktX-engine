@@ -18,6 +18,8 @@ classgraph = "4.8.184"
 jakarta-cdi = "4.1.0"
 jakarta-inject = "2.0.1"
 jakarta-annotation = "3.0.0"
+spring-framework = "6.2.15"
+spring-boot = "3.5.9"
 
 [libraries]
 # Quarkus dependencies
@@ -59,6 +61,13 @@ classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classg
 jakarta-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.ref = "jakarta-cdi" }
 jakarta-inject-api = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
 jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakarta-annotation" }
+
+# Spring Framework
+springContext6 = { module = "org.springframework:spring-context", version.ref = "spring-framework" }
+springBeans6 = { module = "org.springframework:spring-beans", version.ref = "spring-framework" }
+springTest6 = { module = "org.springframework:spring-test", version.ref = "spring-framework" }
+springBoot3 = { module = "org.springframework.boot:spring-boot", version.ref = "spring-boot" }
+springBootAutoconfigure3 = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "spring-boot" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

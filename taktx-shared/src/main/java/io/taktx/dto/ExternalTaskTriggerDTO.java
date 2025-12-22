@@ -33,6 +33,8 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
 
   private String externalTaskId;
 
+  private String elementId;
+
   private List<Long> elementInstanceIdPath;
 
   private VariablesDTO variables;
@@ -43,12 +45,14 @@ public class ExternalTaskTriggerDTO implements SchedulableMessageDTO {
       UUID processInstanceId,
       ProcessDefinitionKey processDefinitionKey,
       String externalTaskId,
+      String elementId,
       List<Long> elementInstanceIdPath,
       VariablesDTO variables,
       Map<String, String> headers) {
     this.processInstanceId = processInstanceId;
     this.processDefinitionKey = processDefinitionKey;
     this.externalTaskId = externalTaskId;
+    this.elementId = elementId;
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.variables = variables;
     this.headers = headers;

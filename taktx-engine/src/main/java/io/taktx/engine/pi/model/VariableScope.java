@@ -76,7 +76,7 @@ public class VariableScope {
   }
 
   public VariablesDTO scopeAndParentsToDto() {
-    VariablesDTO dto = VariablesDTO.of(retrieveAllInScope());
+    VariablesDTO dto = VariablesDTO.ofJsonMap(retrieveAllInScope());
     if (scope.getParentScope() != null) {
       VariablesDTO parentVariablesDTO =
           scope.getParentScope().getVariableScope().scopeAndParentsToDto();

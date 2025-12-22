@@ -31,4 +31,3 @@ public class ProcessInstanceResponderConfiguration {
     return new ProcessInstanceResponder(taktPropertiesHelper);
   }
 }
-

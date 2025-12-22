@@ -43,12 +43,13 @@ class TaktXClientAutoConfigurationTest {
     parameterResolverFactory = mock(ParameterResolverFactory.class);
     resultProcessorFactory = mock(ResultProcessorFactory.class);
 
-    configuration = new TaktXClientAutoConfiguration(
-        taktPropertiesHelper,
-        eventChecker,
-        instanceProvider,
-        parameterResolverFactory,
-        resultProcessorFactory);
+    configuration =
+        new TaktXClientAutoConfiguration(
+            taktPropertiesHelper,
+            eventChecker,
+            instanceProvider,
+            parameterResolverFactory,
+            resultProcessorFactory);
 
     // Set default values using reflection
     ReflectionTestUtils.setField(configuration, "partitions", 3);
@@ -88,4 +89,3 @@ class TaktXClientAutoConfigurationTest {
     assertThat(resultFactory).isNotNull();
   }
 }
-

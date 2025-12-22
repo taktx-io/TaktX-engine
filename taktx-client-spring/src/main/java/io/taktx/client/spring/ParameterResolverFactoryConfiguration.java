@@ -32,4 +32,3 @@ public class ParameterResolverFactoryConfiguration {
     return new DefaultParameterResolverFactory(processInstanceResponder);
   }
 }
-

@@ -49,4 +49,3 @@ public class TaktPropertiesHelperConfiguration {
     return new TaktPropertiesHelper(properties);
   }
 }
-

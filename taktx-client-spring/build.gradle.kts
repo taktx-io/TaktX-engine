@@ -37,10 +37,10 @@ repositories {
 
 dependencies {
     // Spring Framework dependencies
-    compileOnly("org.springframework:spring-context:6.2.1")
-    compileOnly("org.springframework:spring-beans:6.2.1")
-    compileOnly("org.springframework.boot:spring-boot:3.4.1")
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.4.1")
+    compileOnly(libs.springContext6)
+    compileOnly(libs.springBeans6)
+    compileOnly(libs.springBoot3)
+    compileOnly(libs.springBootAutoconfigure3)
     compileOnlyApi(libs.jakarta.inject.api)
     compileOnlyApi(libs.jakarta.annotation.api)
 
@@ -52,11 +52,11 @@ dependencies {
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.junit.jupiter)
-    testImplementation("org.springframework:spring-context:6.2.1")
-    testImplementation("org.springframework:spring-beans:6.2.1")
-    testImplementation("org.springframework:spring-test:6.2.1")
-    testImplementation("org.springframework.boot:spring-boot:3.4.1")
-    testImplementation("org.springframework.boot:spring-boot-autoconfigure:3.4.1")
+    testImplementation(libs.springContext6)
+    testImplementation(libs.springBeans6)
+    testImplementation(libs.springTest6)
+    testImplementation(libs.springBoot3)
+    testImplementation(libs.springBootAutoconfigure3)
     testImplementation(libs.kafka.clients)
 }
 
@@ -91,8 +91,8 @@ publishing {
 
             // Maven Central requires POM metadata
             pom {
-                name.set("TaktX Client Spring")
-                description.set("Spring convenience beans for the TaktX plain Java client")
+                name.set("TaktX Client Spring 3")
+                description.set("Spring 3 convenience beans for the TaktX plain Java client")
                 url.set("https://github.com/taktx-io/TaktX-engine")
 
                 licenses {
@@ -104,8 +104,8 @@ publishing {
 
                 developers {
                     developer {
-                        id.set("taktx-io")
-                        name.set("TaktX Team")
+                        id.set("taktx")
+                        name.set("Eric Hendriks")
                         email.set("info@taktx.io")
                     }
                 }
@@ -118,5 +118,55 @@ publishing {
             }
         }
     }
+    repositories {
+        maven {
+            url = uri(layout.buildDirectory.dir("staging-deploy").get().asFile)
+        }
+    }
 }
 
+jreleaser {
+    gitRootSearch.set(true)
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                register("release-deploy") {
+                    active.set(org.jreleaser.model.Active.RELEASE)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("build/staging-deploy")
+                }
+            }
+            nexus2 {
+                register("snapshot-deploy") {
+                    active.set(org.jreleaser.model.Active.SNAPSHOT)
+                    url.set("https://s01.oss.sonatype.org/service/local/")
+                    snapshotUrl.set("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                    applyMavenCentralRules.set(true)
+                    snapshotSupported.set(true)
+                    closeRepository.set(true)
+                    releaseRepository.set(true)
+                    stagingRepository("build/staging-deploy")
+                }
+            }
+        }
+    }
+    release {
+        github {
+            name.set("TaktX-engine")
+            commitAuthor {
+                name.set("Eric Hendriks")
+                email.set("info@taktx.io")
+            }
+        }
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
+}

@@ -48,7 +48,12 @@ public class VariablesDTO {
     return new VariablesDTO(Map.of(key, OBJECT_MAPPER.valueToTree(value)));
   }
 
-  public static VariablesDTO of(Map<String, JsonNode> variables) {
+  public static VariablesDTO ofObjectMap(Map<String, Object> variables) {
+    Map<String, JsonNode> variablesMap = OBJECT_MAPPER.convertValue(variables, Map.class);
+    return new VariablesDTO(variablesMap);
+  }
+
+  public static VariablesDTO ofJsonMap(Map<String, JsonNode> variables) {
     return new VariablesDTO(variables);
   }
 
@@ -74,16 +79,8 @@ public class VariablesDTO {
     return variables.get(key);
   }
 
-  public VariablesDTO diff(VariablesDTO updatedVariablesAtStart) {
-    Map<String, JsonNode> diff = new HashMap<>();
-    variables.forEach(
-        (key, value) -> {
-          JsonNode startValue = updatedVariablesAtStart.get(key);
-          if (startValue == null || !startValue.equals(value)) {
-            diff.put(key, value);
-          }
-        });
-
-    return new VariablesDTO(diff);
+  @JsonIgnore
+  public boolean containsKey(String key) {
+    return variables.containsKey(key);
   }
 }

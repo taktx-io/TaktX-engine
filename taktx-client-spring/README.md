@@ -17,7 +17,7 @@ It provides auto-configuration that creates a `io.taktx.client.TaktXClient` bean
 ```xml
 <dependency>
     <groupId>io.taktx</groupId>
-    <artifactId>taktx-client-spring</artifactId>
+    <artifactId>taktx-client-spring3</artifactId>
     <version>0.0.9-alpha-3-SNAPSHOT</version>
 </dependency>
 ```
@@ -25,7 +25,7 @@ It provides auto-configuration that creates a `io.taktx.client.TaktXClient` bean
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client-spring:0.0.9-alpha-3-SNAPSHOT")
+implementation("io.taktx:taktx-client-spring3:0.0.9-alpha-3-SNAPSHOT")
 ```
 
 ## Configuration

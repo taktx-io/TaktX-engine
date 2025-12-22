@@ -54,4 +54,3 @@ class ParameterResolverFactoryConfigurationTest {
     assertThat(factory1).isNotSameAs(factory2);
   }
 }
-

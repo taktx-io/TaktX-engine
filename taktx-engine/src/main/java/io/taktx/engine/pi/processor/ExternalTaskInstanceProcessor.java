@@ -305,7 +305,9 @@ public abstract class ExternalTaskInstanceProcessor<
       throw new ProcessInstanceException(
           flownodeInstance, "External task worker definition expression returned null");
     }
-    return jsonNode.asText();
+    String text = jsonNode.asText();
+    // Sanitize the external task id to make it suitable for a topic name
+    return text.replaceAll("[^a-zA-Z0-9._-]", "_");
   }
 
   private void scheduleNextExternalTask(

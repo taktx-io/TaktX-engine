@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertySource;
 
 class TaktPropertiesHelperConfigurationTest {
 
@@ -39,16 +38,20 @@ class TaktPropertiesHelperConfigurationTest {
     props.setProperty("taktx.namespace", "test-namespace");
     props.setProperty("kafka.bootstrap.servers", "localhost:9092");
 
-    MapPropertySource propertySource = new MapPropertySource("test",
-        props.entrySet().stream()
-            .collect(java.util.stream.Collectors.toMap(
-                e -> e.getKey().toString(),
-                e -> e.getValue())));
+    MapPropertySource propertySource =
+        new MapPropertySource(
+            "test",
+            props.entrySet().stream()
+                .collect(
+                    java.util.stream.Collectors.toMap(
+                        e -> e.getKey().toString(), e -> e.getValue())));
     propertySources.addFirst(propertySource);
 
     org.mockito.Mockito.when(environment.getPropertySources()).thenReturn(propertySources);
-    org.mockito.Mockito.when(environment.getProperty("taktx.namespace")).thenReturn("test-namespace");
-    org.mockito.Mockito.when(environment.getProperty("kafka.bootstrap.servers")).thenReturn("localhost:9092");
+    org.mockito.Mockito.when(environment.getProperty("taktx.namespace"))
+        .thenReturn("test-namespace");
+    org.mockito.Mockito.when(environment.getProperty("kafka.bootstrap.servers"))
+        .thenReturn("localhost:9092");
 
     // When
     TaktPropertiesHelper helper = configuration.taktPropertiesHelper(environment);
@@ -72,4 +75,3 @@ class TaktPropertiesHelperConfigurationTest {
     assertThat(helper.getTaktProperties()).isNotNull();
   }
 }
-

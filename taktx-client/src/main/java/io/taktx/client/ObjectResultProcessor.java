@@ -8,10 +8,12 @@
 
 package io.taktx.client;
 
+import io.taktx.dto.ExternalTaskTriggerDTO;
+
 public class ObjectResultProcessor implements ResultProcessor {
 
   @Override
-  public Object process(Object object) {
+  public Object process(Object object, ExternalTaskTriggerDTO externalTaskTrigger) {
     return object;
   }
 }

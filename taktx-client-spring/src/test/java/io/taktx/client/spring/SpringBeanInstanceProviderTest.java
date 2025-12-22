@@ -62,4 +62,3 @@ class SpringBeanInstanceProviderTest {
 
   static class AnotherBean {}
 }
-

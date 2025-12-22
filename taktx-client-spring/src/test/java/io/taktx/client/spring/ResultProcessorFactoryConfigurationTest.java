@@ -47,4 +47,3 @@ class ResultProcessorFactoryConfigurationTest {
     assertThat(factory1).isNotSameAs(factory2);
   }
 }
-

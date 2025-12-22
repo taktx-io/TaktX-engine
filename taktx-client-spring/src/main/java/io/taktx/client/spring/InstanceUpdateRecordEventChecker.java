@@ -12,9 +12,7 @@ import io.taktx.client.InstanceUpdateRecord;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/**
- * Utility class to check for the presence of Spring event listeners for specific event types.
- */
+/** Utility class to check for the presence of Spring event listeners for specific event types. */
 @Component
 public class InstanceUpdateRecordEventChecker {
 
@@ -32,9 +30,9 @@ public class InstanceUpdateRecordEventChecker {
   /**
    * Check if there are any listeners for InstanceUpdateRecord events.
    *
-   * Note: In Spring, we cannot easily check for listeners without reflection,
-   * so we assume listeners exist if the eventPublisher is available.
-   * Users should configure taktx.client.instanceupdate.enabled=false if they don't need this.
+   * <p>Note: In Spring, we cannot easily check for listeners without reflection, so we assume
+   * listeners exist if the eventPublisher is available. Users should configure
+   * taktx.client.instanceupdate.enabled=false if they don't need this.
    *
    * @return true if event publisher is available
    */
@@ -45,12 +43,11 @@ public class InstanceUpdateRecordEventChecker {
   /**
    * Publishes an InstanceUpdateRecord event.
    *
-   * @param record the InstanceUpdateRecord to publish
+   * @param instanceUpdateRecord the InstanceUpdateRecord to publish
    */
-  public void publishInstanceUpdateRecord(InstanceUpdateRecord record) {
+  public void publishInstanceUpdateRecord(InstanceUpdateRecord instanceUpdateRecord) {
     if (eventPublisher != null) {
-      eventPublisher.publishEvent(record);
+      eventPublisher.publishEvent(instanceUpdateRecord);
     }
   }
 }
-
