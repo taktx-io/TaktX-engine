@@ -114,13 +114,13 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
           .forEach(
               m -> {
                 JobWorker annotation = m.getAnnotation(JobWorker.class);
-                String taskId = annotation.taskId();
-                workerMethods.put(taskId, m);
-                workerInstances.put(taskId, instance);
-                ackStrategies.put(taskId, annotation.ackStrategy());
-                threadingStrategies.put(taskId, annotation.threadingStrategy());
+                String type = annotation.type();
+                workerMethods.put(type, m);
+                workerInstances.put(type, instance);
+                ackStrategies.put(type, annotation.ackStrategy());
+                threadingStrategies.put(type, annotation.threadingStrategy());
                 externalTaskTopicRequester.requestExternalTaskTopic(
-                    taskId, partitions, cleanupPolicy, replicationFactor);
+                    type, partitions, cleanupPolicy, replicationFactor);
               });
     }
   }

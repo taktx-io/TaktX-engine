@@ -24,7 +24,7 @@ public @interface JobWorker {
    *
    * @return The task ID associated with the worker method.
    */
-  String taskId();
+  String type();
 
   /**
    * Whether the task should be auto-completed after execution. Default is true.
