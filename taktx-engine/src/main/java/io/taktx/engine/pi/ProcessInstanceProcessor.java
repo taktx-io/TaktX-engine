@@ -158,6 +158,10 @@ public class ProcessInstanceProcessor
     } catch (Throwable t) { // NOSONAR
       handleIncident(trigger, t);
       log.error("Internal error occurred for", t);
+    } finally {
+      processDefinitionKeyThreadLocal.remove();
+      processInstanceThreadLocal.remove();
+      processInstanceProcessingContextThreadLocal.remove();
     }
   }
 
@@ -169,6 +173,13 @@ public class ProcessInstanceProcessor
         processInstanceProcessingContextThreadLocal.get();
     if (processInstance != null && processInstanceProcessingContext != null) {
       Scope scope = processInstance.getScope();
+      processInstance.setIncidentInfo(
+          new IncidentInfo(
+              null,
+              t.getMessage(),
+              Arrays.stream(t.getStackTrace())
+                  .map(StackTraceElement::toString)
+                  .toArray(String[]::new)));
       processResultAndForward(processInstanceProcessingContext, processDefinitionKey, scope);
     }
   }
@@ -267,9 +278,11 @@ public class ProcessInstanceProcessor
     ProcessInstanceDTO processInstanceDTO =
         instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
 
+    VariablesDTO variables = VariablesDTO.ofJsonMap(scope.getVariableScope().getVariables());
+
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
-        new ProcessInstanceUpdateDTO(processInstanceDTO, VariablesDTO.empty(), processTime));
+        new ProcessInstanceUpdateDTO(processInstanceDTO, variables, processTime));
   }
 
   public void handleSetVariables(SetVariableTriggerDTO trigger) {
@@ -415,7 +428,9 @@ public class ProcessInstanceProcessor
 
     InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
 
-    if (scope.isStateChanged() || processInstance.getIncidentInfo() != null) {
+    if (scope.isStateChanged()
+        || !scope.getVariableScope().getDirtyVariables().isEmpty()
+        || processInstance.getIncidentInfo() != null) {
       if (scope.getState() == ExecutionState.COMPLETED) {
         processingStatistics.increaseProcessInstancesFinished();
       }
@@ -592,7 +607,7 @@ public class ProcessInstanceProcessor
                   processInstanceException.getFlowNodeInstance(),
                   processInstanceException.getMessage(),
                   stackTraceStrings));
-    } catch (Throwable t) {
+    } catch (Exception t) {
       StackTraceElement[] stackTrace = t.getStackTrace();
       String[] stackTraceStrings =
           Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new);

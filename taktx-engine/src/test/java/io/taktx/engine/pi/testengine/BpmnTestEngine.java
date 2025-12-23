@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -767,6 +768,36 @@ public class BpmnTestEngine {
     return new ArrayList<>(filteredByElementIdOnIndex.values());
   }
 
+  public List<FlowNodeInstanceDTO> getScopePathToElementId(
+      UUID processInstanceId, String elementPath) {
+
+    List<String> elementPathList = Stream.of(elementPath.split("/")).toList();
+    Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> filteredByProcessInstance =
+        flowNodeInstanceMap.entrySet().stream()
+            .filter(e -> e.getKey().getProcessInstanceId().equals(processInstanceId))
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+
+    List<FlowNodeInstanceDTO> path = new ArrayList<>();
+    for (int index = 0; index < elementPathList.size(); index++) {
+      int currentIndex = index;
+
+      Optional<FlowNodeInstanceDTO> first =
+          filteredByProcessInstance.values().stream()
+              .filter(
+                  flowNodeInstanceDTO ->
+                      flowNodeInstanceDTO.getElementId().equals(elementPathList.get(currentIndex)))
+              .findFirst();
+      if (first.isPresent()) {
+        path.add(first.get());
+      } else {
+        throw new IllegalStateException(
+            "No flow node instance found for element id: " + elementPathList.get(currentIndex));
+      }
+    }
+
+    return path;
+  }
+
   public BpmnTestEngine sendMessage(String messageName, VariablesDTO variables) {
     LOG.info("Sending message: " + messageName);
     DefinitionMessageEventTriggerDTO messageEvent =
@@ -1027,8 +1058,10 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine setVariablesForElement(String elementIdPath, VariablesDTO vars) {
-    List<FlowNodeInstanceDTO> scopeWithElementId = getScopeWithElementId(activeProcessInstanceId, elementIdPath);
-    List<Long> idList = scopeWithElementId.stream().map(FlowNodeInstanceDTO::getElementInstanceId).toList();
+    List<FlowNodeInstanceDTO> scopeWithElementId =
+        getScopePathToElementId(activeProcessInstanceId, elementIdPath);
+    List<Long> idList =
+        scopeWithElementId.stream().map(FlowNodeInstanceDTO::getElementInstanceId).toList();
     taktClient.setVariable(activeProcessInstanceId, idList, vars);
     return this;
   }

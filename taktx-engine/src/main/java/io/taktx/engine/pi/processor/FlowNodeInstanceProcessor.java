@@ -26,6 +26,7 @@ import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import lombok.Getter;
@@ -93,6 +94,25 @@ public abstract class FlowNodeInstanceProcessor<
                   inputSequenceFlowId,
                   outputSequenceFlowIds));
     }
+  }
+
+  public void processSetVariables(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      FlowNodeInstance<?> flowNodeInstance,
+      VariablesDTO variables) {
+
+    long now = clock.instant().toEpochMilli();
+
+    scope.getVariableScope().merge(variables);
+
+    ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
+
+    processInstanceProcessingContext
+        .getInstanceResult()
+        .addInstanceUpdate(
+            createFlowNodeInstanceUpdate(
+                processInstance, flowNodeInstance, scope, now, null, Collections.emptyList()));
   }
 
   public final void processContinue(

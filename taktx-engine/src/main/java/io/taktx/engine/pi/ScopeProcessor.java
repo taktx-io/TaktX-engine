@@ -129,8 +129,7 @@ public class ScopeProcessor {
       scope.getVariableScope().merge(variables);
 
       FlowNodeInstance<?> newInstance =
-          createNewInstanceAndAddToDirectInstanceResult(
-              processInstanceProcessingContext, scope, elementId);
+          createNewInstanceAndAddToDirectInstanceResult(scope, elementId);
 
       // If the new instance is an event triggered subprocess with an interrupting start event,
       if (newInstance instanceof SubProcessInstance subProcessInstance
@@ -478,9 +477,7 @@ public class ScopeProcessor {
   }
 
   private static FlowNodeInstance<?> createNewInstanceAndAddToDirectInstanceResult(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      String elementId) {
+      Scope scope, String elementId) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
     FlowNodeInstance<?> flowNodeInstance =
@@ -508,9 +505,7 @@ public class ScopeProcessor {
 
     if (!eventHandled) {
       // Not handled by boundary event, check event subprocesses
-      eventHandled =
-          processEventByEventSubprocesses(
-              processInstanceProcessingContext, scope, event, fLowNodeInstance, eventHandled);
+      eventHandled = processEventByEventSubprocesses(scope, event, fLowNodeInstance, eventHandled);
     }
 
     if (!eventHandled) {
@@ -519,11 +514,7 @@ public class ScopeProcessor {
   }
 
   private static boolean processEventByEventSubprocesses(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      EventSignal event,
-      FlowNodeInstance<?> fLowNodeInstance,
-      boolean eventHandled) {
+      Scope scope, EventSignal event, FlowNodeInstance<?> fLowNodeInstance, boolean eventHandled) {
     // First check any event subprocesses which are able to handle this event
     // First do a round for specific event codes
     List<SubProcess> eventTriggeredSubProcesses =
@@ -763,7 +754,7 @@ public class ScopeProcessor {
 
     int subProcessLevel = scope.getSubProcessLevel();
 
-    if (subProcessLevel < parentElementInstanceIdPath.size()) {
+    if (subProcessLevel < parentElementInstanceIdPath.size() - 1) {
       FlowNodeInstance<?> instanceWithInstanceId =
           scope
               .getFlowNodeInstances()
@@ -790,7 +781,22 @@ public class ScopeProcessor {
                 + parentElementInstanceIdPath.get(subProcessLevel)
                 + " is not a scope");
       }
-    } else if (subProcessLevel == parentElementInstanceIdPath.size()) {
+    } else if (subProcessLevel == parentElementInstanceIdPath.size() - 1) {
+      FlowNodeInstance<?> flowNodeInstance =
+          scope
+              .getFlowNodeInstances()
+              .getInstanceWithInstanceId(
+                  parentElementInstanceIdPath.get(scope.getSubProcessLevel()));
+
+      FlowNodeInstanceProcessor<?, ?, ?> processor =
+          flowNodeInstanceProcessorProvider.getProcessor(
+              flowNodeInstance.getFlowNode(), flowNodeInstance.isIteration());
+
+      processor.processSetVariables(
+          processInstanceProcessingContext, scope, flowNodeInstance, variables);
+
+    } else if (parentElementInstanceIdPath.isEmpty()) {
+      // Special case for process instance level variable set
       scope.getVariableScope().merge(variables);
     } else {
       throw new IllegalArgumentException(

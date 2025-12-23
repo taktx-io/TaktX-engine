@@ -229,6 +229,19 @@ public class TaktXClient {
   }
 
   /**
+   * Responds to an external task trigger.
+   *
+   * @param processInstanceId process instance id
+   * @param elementInstanceIdPath the path to the element instance id
+   * @return The ExternalTaskInstanceResponder to respond to the external task.
+   */
+  public ExternalTaskInstanceResponder respondToExternalTask(
+      UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    return processInstanceResponder.responderForExternalTask(
+        processInstanceId, elementInstanceIdPath);
+  }
+
+  /**
    * Completes a user task.
    *
    * @param userTaskTriggerDTO The user task trigger DTO.
