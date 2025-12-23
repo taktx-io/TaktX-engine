@@ -17,6 +17,7 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
@@ -34,6 +35,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
       case UserTaskResponseTriggerDTO ignored -> "U";
       case ContinueFlowElementTriggerDTO ignored -> "C";
       case StartCommandDTO ignored -> "A";
+      case SetVariableTriggerDTO ignored -> "F";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -59,6 +61,7 @@ public class ProcessInstanceTriggerTypeIdResolver extends TypeIdResolverBase {
       case "U" -> context.constructType(UserTaskResponseTriggerDTO.class);
       case "C" -> context.constructType(ContinueFlowElementTriggerDTO.class);
       case "A" -> context.constructType(StartCommandDTO.class);
+      case "F" -> context.constructType(SetVariableTriggerDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

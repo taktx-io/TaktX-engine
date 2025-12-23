@@ -43,6 +43,20 @@ class VariablesTest {
         .hasVariableWithValue("MappedOutputVariable", "value1")
         .hasVariableWithValue("var2", "value2");
   }
+  @Test
+  void tesSettVariablesRootScope() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn")
+        .startProcessInstance(VariablesDTO.of("var1", "value1"))
+        .waitForExternalTaskTrigger("service-task")
+        .setVariablesAtRootScope(VariablesDTO.of("rootVar", "rootValue"))
+        .andRespondToExternalTaskWithSuccess("service-task", VariablesDTO.of("var2", "value2"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasVariableWithValue("rootVar", "rootValue");
+  }
 
   @Test
   void testProcessServiceTaskInSubProcess() throws IOException {

@@ -1020,4 +1020,16 @@ public class BpmnTestEngine {
     assertThat(externalTaskTriggerDTO.getHeaders()).containsEntry(header, headerValue);
     return this;
   }
+
+  public BpmnTestEngine setVariablesAtRootScope(VariablesDTO vars) {
+    taktClient.setVariable(activeProcessInstanceId, List.of(), vars);
+    return this;
+  }
+
+  public BpmnTestEngine setVariablesForElement(String elementIdPath, VariablesDTO vars) {
+    List<FlowNodeInstanceDTO> scopeWithElementId = getScopeWithElementId(activeProcessInstanceId, elementIdPath);
+    List<Long> idList = scopeWithElementId.stream().map(FlowNodeInstanceDTO::getElementInstanceId).toList();
+    taktClient.setVariable(activeProcessInstanceId, idList, vars);
+    return this;
+  }
 }

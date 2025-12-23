@@ -754,4 +754,51 @@ public class ScopeProcessor {
                   processInstanceProcessingContext.getInstanceResult().cancelSchedule(scheduleKey));
     }
   }
+
+  public Void processSetVariables(
+      List<Long> parentElementInstanceIdPath,
+      VariablesDTO variables,
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope) {
+
+    int subProcessLevel = scope.getSubProcessLevel();
+
+    if (subProcessLevel < parentElementInstanceIdPath.size()) {
+      FlowNodeInstance<?> instanceWithInstanceId =
+          scope
+              .getFlowNodeInstances()
+              .getInstanceWithInstanceId(parentElementInstanceIdPath.get(subProcessLevel));
+      if (instanceWithInstanceId == null) {
+        // Element should be there. We can't start an element in a subprocess which is not there
+        throw new IllegalArgumentException(
+            "No element with instance id "
+                + parentElementInstanceIdPath.get(subProcessLevel)
+                + " found on level "
+                + subProcessLevel);
+      }
+
+      if (instanceWithInstanceId instanceof WithScope withScope) {
+        processSetVariables(
+            parentElementInstanceIdPath,
+            variables,
+            processInstanceProcessingContext,
+            withScope.getScope());
+
+      } else {
+        throw new IllegalArgumentException(
+            "Element with instance id "
+                + parentElementInstanceIdPath.get(subProcessLevel)
+                + " is not a scope");
+      }
+    } else if (subProcessLevel == parentElementInstanceIdPath.size()) {
+      scope.getVariableScope().merge(variables);
+    } else {
+      throw new IllegalArgumentException(
+          "Subprocess level "
+              + subProcessLevel
+              + " is out of bounds for parentElementInstanceIdPath "
+              + parentElementInstanceIdPath);
+    }
+    return null;
+  }
 }

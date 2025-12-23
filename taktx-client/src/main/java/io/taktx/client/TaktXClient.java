@@ -239,6 +239,18 @@ public class TaktXClient {
   }
 
   /**
+   * Set variables in a scope.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the scope.
+   * @param variables The variables to set.
+   */
+  public void setVariable(
+      UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
+    processInstanceProducer.setVariable(processInstanceId, elementInstanceIdPath, variables);
+  }
+
+  /**
    * Terminates a process instance.
    *
    * @param processInstanceId The UUID of the process instance to terminate.

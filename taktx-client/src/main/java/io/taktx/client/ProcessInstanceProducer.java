@@ -13,6 +13,7 @@ import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
@@ -89,6 +90,23 @@ public class ProcessInstanceProducer {
    */
   public void abortProcessInstance(UUID processInstanceId) {
     abortElementInstance(processInstanceId, List.of());
+  }
+
+  /**
+   * Aborts a process instance by sending an AbortTriggerDTO to the configured Kafka topic.
+   *
+   * @param processInstanceId the UUID of the process instance to abort
+   */
+  public void setVariable(
+      UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
+    SetVariableTriggerDTO setVariableTrigger =
+        new SetVariableTriggerDTO(processInstanceId, elementInstanceIdPath, variables);
+    processInstanceTriggerEmitter.send(
+        new ProducerRecord<>(
+            kafkaPropertiesHelper.getPrefixedTopicName(
+                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+            processInstanceId,
+            setVariableTrigger));
   }
 
   /**

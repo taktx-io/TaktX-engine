@@ -25,6 +25,7 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.ScopeDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
@@ -124,6 +125,13 @@ public class ProcessInstanceProcessor
               kafkaTimestamp, trigger.getClass().getSimpleName());
 
           processStartCommandRecord(triggerRecord.key(), startCommand);
+        }
+        case SetVariableTriggerDTO setVariableTrigger -> {
+          // Record end-to-end latency using Kafka timestamp
+          processingStatistics.recordProcessInstanceLatency(
+              kafkaTimestamp, trigger.getClass().getSimpleName());
+
+          handleSetVariables(setVariableTrigger);
         }
         case StartFlowElementTriggerDTO starteFlowElementTrigger -> {
           // Record end-to-end latency using Kafka timestamp
@@ -262,6 +270,33 @@ public class ProcessInstanceProcessor
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
         new ProcessInstanceUpdateDTO(processInstanceDTO, VariablesDTO.empty(), processTime));
+  }
+
+  public void handleSetVariables(SetVariableTriggerDTO trigger) {
+    InstanceResult instanceResult = InstanceResult.empty();
+    UUID processInstanceId = trigger.getProcessInstanceId();
+    ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);
+    if (processInstanceDTO != null) {
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+      enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+      ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+      processDefinitionKeyThreadLocal.set(processDefinitionKey);
+
+      ProcessInstanceProcessingContext processInstanceProcessingContext =
+          createProcessInstanceProcessingContext(processInstance, instanceResult);
+
+      doWhileCatching(
+          processInstanceProcessingContext,
+          processDefinitionKey,
+          processInstance.getScope(),
+          () ->
+              scopeProcessor.processSetVariables(
+                  trigger.getParentElementInstanceIdPath(),
+                  trigger.getVariables(),
+                  processInstanceProcessingContext,
+                  processInstance.getScope()));
+    }
   }
 
   public void handleStartFlowElement(StartFlowElementTriggerDTO trigger) {
