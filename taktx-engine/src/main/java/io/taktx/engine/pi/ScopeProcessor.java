@@ -122,11 +122,11 @@ public class ScopeProcessor {
       }
     } else if (subProcessLevel == parentElementInstanceIdPath.size()) {
 
+      scope.getVariableScope().merge(variables);
+
       if (scope.getActiveCnt() == 0) {
         startSubscriptionsForEventSubprocesses(processInstanceProcessingContext, scope);
       }
-
-      scope.getVariableScope().merge(variables);
 
       FlowNodeInstance<?> newInstance =
           createNewInstanceAndAddToDirectInstanceResult(scope, elementId);
