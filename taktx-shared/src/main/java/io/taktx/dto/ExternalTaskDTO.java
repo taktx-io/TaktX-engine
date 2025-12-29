@@ -32,6 +32,7 @@ public abstract class ExternalTaskDTO extends TaskDTO {
   protected ExternalTaskDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
@@ -40,7 +41,7 @@ public abstract class ExternalTaskDTO extends TaskDTO {
       String retries,
       String implementation,
       Map<String, String> headers) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
     this.workerDefinition = workerDefinition;
     this.retries = retries;
     this.implementation = implementation;

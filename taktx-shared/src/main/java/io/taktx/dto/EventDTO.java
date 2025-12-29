@@ -25,10 +25,11 @@ public abstract class EventDTO extends FlowNodeDTO implements WithIoMappingDTO {
   protected EventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing);
+    super(id, parentId, name, incoming, outgoing);
     this.ioMapping = ioMapping;
   }
 }

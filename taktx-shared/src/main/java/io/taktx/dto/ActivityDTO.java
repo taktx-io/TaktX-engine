@@ -26,11 +26,12 @@ public abstract class ActivityDTO extends FlowNodeDTO implements WithIoMappingDT
   protected ActivityDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing);
+    super(id, parentId, name, incoming, outgoing);
     this.loopCharacteristics = loopCharacteristics;
     this.ioMapping = ioMapping;
   }

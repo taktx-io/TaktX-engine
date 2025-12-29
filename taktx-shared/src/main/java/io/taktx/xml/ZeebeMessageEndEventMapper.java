@@ -36,6 +36,7 @@ public class ZeebeMessageEndEventMapper implements MessageEndEventMapper {
     return new MessageEndEventDTO(
         endEvent.getId(),
         parentId,
+        endEvent.getName(),
         taskDefinitionId,
         retries,
         mapQNameList(endEvent.getIncoming()),

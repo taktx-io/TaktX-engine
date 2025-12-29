@@ -29,6 +29,7 @@ public class GenericReceiveTaskMapper implements ReceiveTaskMapper {
     return new ReceiveTaskDTO(
         receiveTask.getId(),
         parentId,
+        receiveTask.getName(),
         incoming,
         outgoing,
         loopCharacteristics,

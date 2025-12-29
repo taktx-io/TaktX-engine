@@ -26,6 +26,7 @@ public class SubProcessDTO extends ActivityDTO {
   public SubProcessDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
@@ -33,7 +34,7 @@ public class SubProcessDTO extends ActivityDTO {
       InputOutputMappingDTO ioMapping,
       boolean triggeredByEvent) {
 
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
     this.elements = elements;
     this.triggeredByEvent = triggeredByEvent;
   }

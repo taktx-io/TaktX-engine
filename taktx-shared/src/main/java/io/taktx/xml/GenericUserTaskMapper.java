@@ -26,6 +26,7 @@ public class GenericUserTaskMapper implements UserTaskMapper {
     return new UserTaskDTO(
         userTask.getId(),
         parentId,
+        userTask.getName(),
         mapQNameList(userTask.getIncoming()),
         mapQNameList(userTask.getOutgoing()),
         loopCharacteristics,

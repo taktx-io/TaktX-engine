@@ -39,6 +39,7 @@ public class ZeebeMessageIntermediateThrowEventMapper
     return new MessageIntermediateThrowEventDTO(
         intermediateThrowEvent.getId(),
         parentId,
+        intermediateThrowEvent.getName(),
         taskDefinitionId,
         retries,
         mapQNameList(intermediateThrowEvent.getIncoming()),

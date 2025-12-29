@@ -23,6 +23,7 @@ public class MessageEndEventDTO extends ExternalTaskDTO {
   public MessageEndEventDTO(
       String id,
       String parentId,
+      String name,
       String workerDefinition,
       String retries,
       Set<String> incoming,
@@ -32,6 +33,7 @@ public class MessageEndEventDTO extends ExternalTaskDTO {
     super(
         id,
         parentId,
+        name,
         incoming,
         outgoing,
         LoopCharacteristicsDTO.NONE,

@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 public class ExclusiveGatewayDTO extends GatewayDTO {
 
   public ExclusiveGatewayDTO(
-      String id, String parentId, Set<String> incoming, Set<String> outgoing, String defaultFlow) {
-    super(id, parentId, incoming, outgoing, defaultFlow);
+      String id, String parentId, String name, Set<String> incoming, Set<String> outgoing, String defaultFlow) {
+    super(id, parentId, name, incoming, outgoing, defaultFlow);
   }
 }

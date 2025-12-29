@@ -10,14 +10,19 @@ package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+@Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RegisterForReflection
 public abstract class FlowElementDTO extends BaseElementDTO {
+  private String name;
 
-  protected FlowElementDTO(String id, String parentId) {
+  protected FlowElementDTO(String id, String parentId, String name) {
     super(id, parentId);
+    this.name = name;
   }
+
 }

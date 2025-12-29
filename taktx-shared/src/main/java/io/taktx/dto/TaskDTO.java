@@ -22,10 +22,11 @@ public class TaskDTO extends ActivityDTO {
   public TaskDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
   }
 }

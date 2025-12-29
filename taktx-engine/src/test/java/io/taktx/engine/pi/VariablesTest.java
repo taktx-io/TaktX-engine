@@ -60,7 +60,7 @@ class VariablesTest {
   }
 
   @Test
-  void tesSettVariablesElementScope() throws IOException {
+  void testSetVariablesElementScope() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
         .registerAndSubscribeToExternalTaskIds("servicetask")

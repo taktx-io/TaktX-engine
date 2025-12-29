@@ -49,6 +49,7 @@ public class ZeebeSendTaskMapper implements SendTaskMapper {
     return new SendTaskDTO(
         sendTask.getId(),
         parentId,
+        sendTask.getName(),
         taskDefinitionId,
         retries,
         mapQNameList(sendTask.getIncoming()),

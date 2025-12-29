@@ -23,6 +23,7 @@ public class SendTaskDTO extends ExternalTaskDTO {
   public SendTaskDTO(
       String id,
       String parentId,
+      String name,
       String workerDefinition,
       String retries,
       Set<String> incoming,
@@ -34,6 +35,7 @@ public class SendTaskDTO extends ExternalTaskDTO {
     super(
         id,
         parentId,
+        name,
         incoming,
         outgoing,
         loopCharacteristics,

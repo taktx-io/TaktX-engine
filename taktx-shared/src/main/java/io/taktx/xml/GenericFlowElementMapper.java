@@ -98,6 +98,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         return new EndEventDTO(
             endEvent.getId(),
             parentId,
+            endEvent.getName(),
             mapQNameList(endEvent.getIncoming()),
             mapQNameList(endEvent.getOutgoing()),
             ioMapping,
@@ -116,6 +117,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         return new IntermediateThrowEventDTO(
             intermediateThrowEvent.getId(),
             parentId,
+            intermediateThrowEvent.getName(),
             mapQNameList(intermediateThrowEvent.getIncoming()),
             mapQNameList(intermediateThrowEvent.getOutgoing()),
             ioMapping,
@@ -137,12 +139,14 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new ParallelGatewayDTO(
           parallelGateway.getId(),
           parentId,
+          parallelGateway.getName(),
           mapQNameList(parallelGateway.getIncoming()),
           mapQNameList(parallelGateway.getOutgoing()));
     } else if (gateway instanceof TExclusiveGateway exclusiveGateway) {
       return new ExclusiveGatewayDTO(
           exclusiveGateway.getId(),
           parentId,
+          exclusiveGateway.getName(),
           mapQNameList(exclusiveGateway.getIncoming()),
           mapQNameList(exclusiveGateway.getOutgoing()),
           (exclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
@@ -152,6 +156,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new InclusiveGatewayDTO(
           inclusiveGateway.getId(),
           parentId,
+          inclusiveGateway.getName(),
           mapQNameList(inclusiveGateway.getIncoming()),
           mapQNameList(inclusiveGateway.getOutgoing()),
           (inclusiveGateway.getDefault() instanceof TSequenceFlow sequenceFlow)
@@ -161,6 +166,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new EventBasedGatewayDTO(
           eventBasedGateway.getId(),
           parentId,
+          eventBasedGateway.getName(),
           mapQNameList(eventBasedGateway.getIncoming()),
           mapQNameList(eventBasedGateway.getOutgoing()),
           null);
@@ -175,6 +181,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new StartEventDTO(
           startEvent.getId(),
           parentId,
+          startEvent.getName(),
           mapQNameList(startEvent.getIncoming()),
           mapQNameList(startEvent.getOutgoing()),
           bpmnMapperFactory
@@ -186,6 +193,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new BoundaryEventDTO(
           boundaryEvent.getId(),
           parentId,
+          boundaryEvent.getName(),
           mapQNameList(boundaryEvent.getIncoming()),
           mapQNameList(boundaryEvent.getOutgoing()),
           bpmnMapperFactory
@@ -198,6 +206,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
       return new IntermediateCatchEventDTO(
           intermediateCatchEvent.getId(),
           parentId,
+          intermediateCatchEvent.getName(),
           mapQNameList(intermediateCatchEvent.getIncoming()),
           mapQNameList(intermediateCatchEvent.getOutgoing()),
           bpmnMapperFactory
@@ -213,7 +222,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   private SequenceFlowDTO mapSequenceFlow(String parentId, TSequenceFlow tSequenceFlow) {
     return new SequenceFlowDTO(
         tSequenceFlow.getId(),
-        parentId,
+        parentId, tSequenceFlow.getName(),
         ((TBaseElement) tSequenceFlow.getSourceRef()).getId(),
         ((TBaseElement) tSequenceFlow.getTargetRef()).getId(),
         tSequenceFlow.getConditionExpression() != null
@@ -246,6 +255,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               new TaskDTO(
                   manualTask.getId(),
                   parentId,
+                  manualTask.getName(),
                   mapQNameList(manualTask.getIncoming()),
                   mapQNameList(manualTask.getOutgoing()),
                   loopCharacteristics,
@@ -270,6 +280,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
               new TaskDTO(
                   task.getId(),
                   parentId,
+                  task.getName(),
                   mapQNameList(task.getIncoming()),
                   mapQNameList(task.getOutgoing()),
                   loopCharacteristics,
@@ -288,6 +299,7 @@ public class GenericFlowElementMapper implements FlowElementMapper {
             new SubProcessDTO(
                 activity.getId(),
                 parentId,
+                activity.getName(),
                 mapQNameList(subProcess.getIncoming()),
                 mapQNameList(subProcess.getOutgoing()),
                 loopCharacteristics,

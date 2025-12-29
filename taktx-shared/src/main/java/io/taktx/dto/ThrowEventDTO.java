@@ -25,11 +25,12 @@ public abstract class ThrowEventDTO extends EventDTO {
   protected ThrowEventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       InputOutputMappingDTO ioMapping,
       Set<EventDefinitionDTO> eventDefinitions) {
-    super(id, parentId, incoming, outgoing, ioMapping);
+    super(id, parentId, name, incoming, outgoing, ioMapping);
     this.eventDefinitions = eventDefinitions;
   }
 }

@@ -23,8 +23,8 @@ public abstract class GatewayDTO extends FlowNodeDTO {
   private String defaultFlow;
 
   protected GatewayDTO(
-      String id, String parentId, Set<String> incoming, Set<String> outgoing, String defaultFlow) {
-    super(id, parentId, incoming, outgoing);
+      String id, String parentId, String name, Set<String> incoming, Set<String> outgoing, String defaultFlow) {
+    super(id, parentId, name, incoming, outgoing);
     this.defaultFlow = defaultFlow;
   }
 }

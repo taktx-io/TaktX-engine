@@ -29,6 +29,7 @@ public class ScriptTaskDTO extends ExternalTaskDTO {
   public ScriptTaskDTO(
       String id,
       String parentId,
+      String name,
       String workerDefinition,
       String retries,
       Set<String> incoming,
@@ -42,6 +43,7 @@ public class ScriptTaskDTO extends ExternalTaskDTO {
     super(
         id,
         parentId,
+        name,
         incoming,
         outgoing,
         loopCharacteristics,

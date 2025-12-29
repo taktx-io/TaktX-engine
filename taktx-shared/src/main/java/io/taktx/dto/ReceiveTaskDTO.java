@@ -25,12 +25,13 @@ public class ReceiveTaskDTO extends TaskDTO {
   public ReceiveTaskDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
       String messageRef,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
     this.messageRef = messageRef;
   }
 }

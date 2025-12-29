@@ -25,6 +25,7 @@ public class GenericSendTaskMapper implements SendTaskMapper {
     return new SendTaskDTO(
         sendTask.getId(),
         parentId,
+        sendTask.getName(),
         sendTask.getId(),
         DEFAULT_RETRIES,
         mapQNameList(sendTask.getIncoming()),

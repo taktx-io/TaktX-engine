@@ -23,8 +23,8 @@ public abstract class FlowNodeDTO extends FlowElementDTO {
 
   private Set<String> outgoing;
 
-  protected FlowNodeDTO(String id, String parentId, Set<String> incoming, Set<String> outgoing) {
-    super(id, parentId);
+  protected FlowNodeDTO(String id, String parentId, String name, Set<String> incoming, Set<String> outgoing) {
+    super(id, parentId, name);
     this.incoming = incoming;
     this.outgoing = outgoing;
   }

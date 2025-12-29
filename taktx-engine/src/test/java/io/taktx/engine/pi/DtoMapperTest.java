@@ -36,6 +36,7 @@ class DtoMapperTest {
         new StartEventDTO(
             "id",
             "parentId",
+            "name",
             Set.of("incoming"),
             Set.of("outgoing"),
             Set.of(eventDefinition),
@@ -48,6 +49,7 @@ class DtoMapperTest {
     StartEvent startEvent2 = (StartEvent) map;
 
     assertThat(startEvent2.getId()).isEqualTo("id");
+    assertThat(startEvent2.getName()).isEqualTo("name");
     assertThat(startEvent2.getIncoming()).containsExactly("incoming");
     assertThat(startEvent2.getOutgoing()).containsExactly("outgoing");
     assertThat(startEvent2.getEventDefinitions().iterator().next().getId())

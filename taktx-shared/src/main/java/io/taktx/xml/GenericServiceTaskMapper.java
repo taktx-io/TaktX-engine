@@ -25,6 +25,7 @@ public class GenericServiceTaskMapper implements ServiceTaskMapper {
     return new ServiceTaskDTO(
         serviceTask.getId(),
         parentId,
+        serviceTask.getName(),
         serviceTask.getId(),
         DEFAULT_RETRIES,
         mapQNameList(serviceTask.getIncoming()),

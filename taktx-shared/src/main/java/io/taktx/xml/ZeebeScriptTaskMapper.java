@@ -68,6 +68,7 @@ public class ZeebeScriptTaskMapper implements ScriptTaskMapper {
     return new ScriptTaskDTO(
         scriptTask.getId(),
         parentId,
+        scriptTask.getName(),
         taskDefinitionId,
         retries,
         mapQNameList(scriptTask.getIncoming()),

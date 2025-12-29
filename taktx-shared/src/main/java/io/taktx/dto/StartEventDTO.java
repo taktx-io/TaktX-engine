@@ -25,12 +25,13 @@ public class StartEventDTO extends CatchEventDTO {
   public StartEventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       Set<EventDefinitionDTO> eventDefinitions,
       InputOutputMappingDTO ioMapping,
       boolean interrupting) {
-    super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
+    super(id, parentId, name, incoming, outgoing, eventDefinitions, ioMapping);
     this.interrupting = interrupting;
   }
 }

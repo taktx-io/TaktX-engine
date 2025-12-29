@@ -23,6 +23,7 @@ public class MessageIntermediateThrowEventDTO extends ExternalTaskDTO {
   public MessageIntermediateThrowEventDTO(
       String id,
       String parentId,
+      String name,
       String workerDefinition,
       String retries,
       Set<String> incoming,
@@ -32,6 +33,7 @@ public class MessageIntermediateThrowEventDTO extends ExternalTaskDTO {
     super(
         id,
         parentId,
+        name,
         incoming,
         outgoing,
         LoopCharacteristicsDTO.NONE,

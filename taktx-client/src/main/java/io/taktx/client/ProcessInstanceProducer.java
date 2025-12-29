@@ -93,7 +93,7 @@ public class ProcessInstanceProducer {
   }
 
   /**
-   * Aborts a process instance by sending an AbortTriggerDTO to the configured Kafka topic.
+   * Aborts a process instance by sending an SetVariableTriggerDTO to the configured Kafka topic.
    *
    * @param processInstanceId the UUID of the process instance to abort
    */

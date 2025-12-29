@@ -19,4 +19,5 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class FlowElement extends BaseElement {
   private FlowElement parentElement;
+  private String name;
 }

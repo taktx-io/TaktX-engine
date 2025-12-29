@@ -48,6 +48,7 @@ public class ZeebeCallActivityMapper implements CallActivityMapper {
     return new CallActivityDTO(
         callActivity.getId(),
         parentId,
+        callActivity.getName(),
         mapQNameList(callActivity.getIncoming()),
         mapQNameList(callActivity.getOutgoing()),
         loopCharacteristics,

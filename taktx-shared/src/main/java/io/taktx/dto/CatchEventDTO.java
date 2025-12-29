@@ -26,11 +26,12 @@ public abstract class CatchEventDTO extends EventDTO {
   protected CatchEventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       Set<EventDefinitionDTO> eventDefinitions,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing, ioMapping);
+    super(id, parentId, name, incoming, outgoing, ioMapping);
     this.eventDefinitions = eventDefinitions;
   }
 

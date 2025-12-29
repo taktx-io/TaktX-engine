@@ -49,6 +49,7 @@ public class ZeebeServiceTaskMapper implements ServiceTaskMapper {
     return new ServiceTaskDTO(
         serviceTask.getId(),
         parentId,
+        serviceTask.getName(),
         taskDefinitionId,
         retries,
         mapQNameList(serviceTask.getIncoming()),

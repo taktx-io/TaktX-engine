@@ -29,6 +29,7 @@ public class CallActivityDTO extends ActivityDTO {
   public CallActivityDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
@@ -36,7 +37,7 @@ public class CallActivityDTO extends ActivityDTO {
       boolean propagateAllParentVariables,
       boolean propagateAllChildVariables,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
     this.calledElement = calledElement;
     this.propagateAllParentVariables = propagateAllParentVariables;
     this.propagateAllChildVariables = propagateAllChildVariables;

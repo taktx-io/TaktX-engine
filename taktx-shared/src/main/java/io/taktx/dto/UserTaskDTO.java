@@ -30,6 +30,7 @@ public class UserTaskDTO extends TaskDTO {
   public UserTaskDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       LoopCharacteristicsDTO loopCharacteristics,
@@ -39,7 +40,7 @@ public class UserTaskDTO extends TaskDTO {
       AssignmentDefinitionDTO assignmentDefinitionDTO,
       TaskScheduleDTO taskScheduleDTO,
       PriorityDefinitionDTO priorityDefinitionDTO) {
-    super(id, parentId, incoming, outgoing, loopCharacteristics, ioMapping);
+    super(id, parentId, name, incoming, outgoing, loopCharacteristics, ioMapping);
     this.headers = headers;
     this.userTaskType = userTaskType;
     this.assignmentDefinition = assignmentDefinitionDTO;

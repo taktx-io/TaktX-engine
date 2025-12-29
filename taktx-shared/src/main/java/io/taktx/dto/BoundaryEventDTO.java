@@ -27,13 +27,14 @@ public class BoundaryEventDTO extends CatchEventDTO {
   public BoundaryEventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       Set<EventDefinitionDTO> eventDefinitions,
       String attachedToRef,
       boolean cancelActivity,
       InputOutputMappingDTO ioMapping) {
-    super(id, parentId, incoming, outgoing, eventDefinitions, ioMapping);
+    super(id, parentId, name, incoming, outgoing, eventDefinitions, ioMapping);
     this.attachedToRef = attachedToRef;
     this.cancelActivity = cancelActivity;
   }

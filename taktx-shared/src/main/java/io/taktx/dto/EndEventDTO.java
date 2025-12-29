@@ -22,10 +22,11 @@ public class EndEventDTO extends ThrowEventDTO {
   public EndEventDTO(
       String id,
       String parentId,
+      String name,
       Set<String> incoming,
       Set<String> outgoing,
       InputOutputMappingDTO ioMapping,
       Set<EventDefinitionDTO> eventDefinitions) {
-    super(id, parentId, incoming, outgoing, ioMapping, eventDefinitions);
+    super(id, parentId, name, incoming, outgoing, ioMapping, eventDefinitions);
   }
 }
