@@ -42,8 +42,10 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
     } else if (parameter.getType().isAssignableFrom(ExternalTaskInstanceResponder.class)) {
       return new ExternalTaskInstanceResponderParameterResolver(externalTaskResponder);
     } else if (parameter.getAnnotation(Variable.class) != null) {
-      return new VariableParameterResolver(
-          OBJECT_MAPPER, parameter.getType(), parameter.getAnnotation(Variable.class).value());
+      Variable variableAnnotation = parameter.getAnnotation(Variable.class);
+      String name =
+          !variableAnnotation.value().isEmpty() ? variableAnnotation.value() : parameter.getName();
+      return new VariableParameterResolver(OBJECT_MAPPER, parameter.getType(), name);
     } else if (parameter.getAnnotation(CustomHeaders.class) != null) {
       return new HeadersParameterResolver(OBJECT_MAPPER, parameter.getType());
     } else if (parameter.getType().isAssignableFrom(Map.class)) {
