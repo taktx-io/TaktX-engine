@@ -1,15 +1,15 @@
 {
   "overall": {
-    "coverage": 67.54,
-    "covered": 27569,
-    "total": 40818
+    "coverage": 3.81,
+    "covered": 1574,
+    "total": 41300
   },
   "modules": {
     "taktx-engine": {
-      "coverage": 87.06
+      "coverage": 0.79
     },
     "taktx-client": {
-      "coverage": 20.78
+      "coverage": 19.6
     },
     "taktx-client-quarkus": {
       "coverage": 55.38

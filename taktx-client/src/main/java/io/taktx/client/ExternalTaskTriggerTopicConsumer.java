@@ -97,7 +97,7 @@ public class ExternalTaskTriggerTopicConsumer {
     stop();
 
     // Wait for previous future to complete to avoid thread issues
-    if (consumerFutures != null && !consumerFutures.isEmpty()) {
+    if (!consumerFutures.isEmpty()) {
       try {
         for (CompletableFuture<Void> consumerFuture : consumerFutures) {
           consumerFuture.join();
@@ -123,12 +123,20 @@ public class ExternalTaskTriggerTopicConsumer {
                   consumer.subscribe(topics);
 
                   do {
-                    if (!running || consumer == null) {
+                    if (!running) {
                       break;
                     }
 
-                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records =
-                        consumer.poll(Duration.ofMillis(pollTimeoutMs));
+                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records;
+                    try {
+                      records = consumer.poll(Duration.ofMillis(pollTimeoutMs));
+                    } catch (Exception e) {
+                      // Kafka infrastructure error - fatal, need to stop consumer
+                      log.error("Fatal Kafka polling error, stopping consumer", e);
+                      running = false;
+                      break;
+                    }
+
                     if (records.isEmpty()) {
                       continue;
                     }
@@ -138,7 +146,12 @@ public class ExternalTaskTriggerTopicConsumer {
                         new java.util.HashMap<>();
                     for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
                       String jobId =
-                          record.topic().replace(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX, "");
+                          record
+                              .topic()
+                              .replace(
+                                  taktPropertiesHelper.getPrefixedTopicName(
+                                      Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX),
+                                  "");
                       recordsByJobId.computeIfAbsent(jobId, k -> new ArrayList<>()).add(record);
                     }
 
@@ -150,65 +163,58 @@ public class ExternalTaskTriggerTopicConsumer {
                       ThreadingStrategy threadingStrategy =
                           getEffectiveThreadingStrategy(jobId, externalTaskTriggerConsumer);
 
-                      // Prepare batch
-                      List<ExternalTaskTriggerDTO> batch =
-                          jobRecords.stream().map(ConsumerRecord::value).toList();
+                      // Process batch with error handling
+                      boolean batchProcessedSuccessfully =
+                          processBatchWithErrorHandling(
+                              externalTaskTriggerConsumer,
+                              jobRecords,
+                              threadingStrategy,
+                              ackStrategy);
 
-                      // Threading strategy
-                      switch (threadingStrategy) {
-                        case SINGLE_THREAD -> {
-                          externalTaskTriggerConsumer.acceptBatch(batch);
+                      // Acknowledge only if processing was successful
+                      if (batchProcessedSuccessfully) {
+                        try {
+                          acknowledgeRecords(consumer, jobRecords, ackStrategy);
+                        } catch (Exception e) {
+                          // Acknowledgment error - log but don't stop consumer
+                          // Messages will be reprocessed on next poll
+                          log.error(
+                              "Error acknowledging messages for jobId {}, messages will be reprocessed",
+                              jobId,
+                              e);
                         }
-                        case VIRTUAL_THREAD_WAIT -> {
-                          List<CompletableFuture<Void>> futures = new ArrayList<>();
-                          for (ExternalTaskTriggerDTO dto : batch) {
-                            futures.add(
-                                CompletableFuture.runAsync(
-                                    () -> externalTaskTriggerConsumer.acceptBatch(List.of(dto)),
-                                    virtualThreadExecutor));
-                          }
-                          CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-                        }
-                        case VIRTUAL_THREAD_FIRE_AND_FORGET -> {
-                          for (ExternalTaskTriggerDTO dto : batch) {
-                            CompletableFuture.runAsync(
-                                () -> externalTaskTriggerConsumer.acceptBatch(List.of(dto)),
-                                virtualThreadExecutor);
-                          }
-                        }
-                      }
-
-                      // Ack strategy
-                      switch (ackStrategy) {
-                        case IMPLICIT -> {
-                          // Default Kafka auto-commit, do nothing
-                        }
-                        case EXPLICIT_BATCH -> {
-                          consumer.commitSync();
-                        }
-                        case EXPLICIT_MESSAGE -> {
-                          for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
-                            consumer.commitSync(
-                                singletonMap(
-                                    new TopicPartition(record.topic(), record.partition()),
-                                    new OffsetAndMetadata(record.offset() + 1)));
+                      } else {
+                        log.warn(
+                            "Batch processing failed for jobId {}, not acknowledging {} messages",
+                            jobId,
+                            jobRecords.size());
+                        // Don't acknowledge - messages will be reprocessed
+                        // For IMPLICIT strategy, seek back to avoid auto-commit
+                        if (ackStrategy == AckStrategy.IMPLICIT) {
+                          try {
+                            for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
+                              consumer.seek(
+                                  new TopicPartition(record.topic(), record.partition()),
+                                  record.offset());
+                            }
+                          } catch (Exception e) {
+                            log.error("Error seeking back after failed batch", e);
                           }
                         }
                       }
                     }
                   } while (running);
                 } catch (Throwable t) {
-                  log.error("Error in consumer thread", t);
+                  // Unexpected fatal error - stop consumer
+                  log.error("Unexpected fatal error in consumer thread, stopping consumer", t);
+                  running = false;
                 } finally {
                   // Clean up the resources when the thread exits
                   synchronized (consumerLock) {
                     log.info("Cleaning up resources");
-                    if (consumer != null) {
-                      consumer.unsubscribe();
-                      consumer.close();
-                      externalTaskTriggerKafkaConsumers.remove(consumer);
-                      consumer = null;
-                    }
+                    consumer.unsubscribe();
+                    consumer.close();
+                    externalTaskTriggerKafkaConsumers.remove(consumer);
                   }
                 }
               },
@@ -222,7 +228,7 @@ public class ExternalTaskTriggerTopicConsumer {
     running = false;
 
     // Wait for all consumer futures to complete
-    if (consumerFutures != null && !consumerFutures.isEmpty()) {
+    if (!consumerFutures.isEmpty()) {
       try {
         for (CompletableFuture<Void> future : consumerFutures) {
           future.join();
@@ -254,6 +260,134 @@ public class ExternalTaskTriggerTopicConsumer {
     props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecords);
 
     return new KafkaConsumer<>(props);
+  }
+
+  /**
+   * Process a batch of records with error handling that doesn't stop the consumer.
+   *
+   * @return true if batch was processed successfully, false if any error occurred
+   */
+  private boolean processBatchWithErrorHandling(
+      ExternalTaskTriggerConsumer consumer,
+      List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> jobRecords,
+      ThreadingStrategy threadingStrategy,
+      AckStrategy ackStrategy) {
+
+    List<ExternalTaskTriggerDTO> batch = jobRecords.stream().map(ConsumerRecord::value).toList();
+
+    try {
+      switch (threadingStrategy) {
+        case SINGLE_THREAD -> {
+          // Process batch synchronously
+          try {
+            consumer.acceptBatch(batch);
+            return true;
+          } catch (Exception e) {
+            log.error(
+                "Error processing batch of {} messages in SINGLE_THREAD mode", batch.size(), e);
+            return false;
+          }
+        }
+        case VIRTUAL_THREAD_WAIT -> {
+          // Process each message in parallel and wait for all to complete
+          List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+          for (ExternalTaskTriggerDTO dto : batch) {
+            futures.add(
+                CompletableFuture.supplyAsync(
+                    () -> {
+                      try {
+                        consumer.acceptBatch(List.of(dto));
+                        return true;
+                      } catch (Exception e) {
+                        log.error(
+                            "Error processing message {} in VIRTUAL_THREAD_WAIT mode",
+                            dto.getExternalTaskId(),
+                            e);
+                        return false;
+                      }
+                    },
+                    virtualThreadExecutor));
+          }
+
+          // Wait for all and check if all succeeded
+          try {
+            CompletableFuture<Void> allOf =
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+            allOf.join();
+
+            // Check if all succeeded
+            boolean allSucceeded = futures.stream().allMatch(f -> f.getNow(false));
+            if (!allSucceeded) {
+              log.warn(
+                  "Some messages failed processing in VIRTUAL_THREAD_WAIT mode, batch considered failed");
+            }
+            return allSucceeded;
+          } catch (Exception e) {
+            log.error("Error waiting for virtual threads to complete", e);
+            return false;
+          }
+        }
+        case VIRTUAL_THREAD_FIRE_AND_FORGET -> {
+          // Fire and forget - we can't track success, so we assume success
+          // This is inherently unsafe for acknowledgment
+          if (ackStrategy != AckStrategy.IMPLICIT) {
+            log.warn(
+                "VIRTUAL_THREAD_FIRE_AND_FORGET with explicit acknowledgment is unsafe - messages may be lost");
+          }
+
+          for (ExternalTaskTriggerDTO dto : batch) {
+            CompletableFuture.runAsync(
+                () -> {
+                  try {
+                    consumer.acceptBatch(List.of(dto));
+                  } catch (Exception e) {
+                    log.error(
+                        "Error processing message {} in VIRTUAL_THREAD_FIRE_AND_FORGET mode (message may be lost)",
+                        dto.getExternalTaskId(),
+                        e);
+                  }
+                },
+                virtualThreadExecutor);
+          }
+          // Return true immediately as we don't wait
+          return true;
+        }
+      }
+    } catch (Exception e) {
+      log.error("Unexpected error in batch processing", e);
+      return false;
+    }
+
+    return false; // Should never reach here
+  }
+
+  /** Acknowledge records based on the ack strategy. Only called if processing was successful. */
+  private void acknowledgeRecords(
+      KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer,
+      List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> jobRecords,
+      AckStrategy ackStrategy) {
+
+    switch (ackStrategy) {
+      case IMPLICIT -> {
+        // Default Kafka auto-commit, do nothing
+        // Consumer will auto-commit based on auto.commit.interval.ms
+      }
+      case EXPLICIT_BATCH -> {
+        // Commit all offsets synchronously after successful batch processing
+        consumer.commitSync();
+        log.debug("Committed batch of {} messages", jobRecords.size());
+      }
+      case EXPLICIT_MESSAGE -> {
+        // Commit each message offset individually
+        for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
+          consumer.commitSync(
+              singletonMap(
+                  new TopicPartition(record.topic(), record.partition()),
+                  new OffsetAndMetadata(record.offset() + 1)));
+        }
+        log.debug("Committed {} individual message offsets", jobRecords.size());
+      }
+    }
   }
 
   private AckStrategy getEffectiveAckStrategy(String jobId, ExternalTaskTriggerConsumer consumer) {
