@@ -235,8 +235,7 @@ public class ProcessInstanceProcessor
 
     InstanceResult instanceResult = InstanceResult.empty();
 
-    instanceResult.addInstanceUpdate(
-        processInstanceToUpdate(processInstance, scope, clock.millis()));
+    instanceResult.addInstanceUpdate(processInstanceToUpdate(processInstance, scope));
 
     ProcessInstanceProcessingContext processInstanceProcessingContext =
         createProcessInstanceProcessingContext(processInstance, instanceResult);
@@ -271,8 +270,7 @@ public class ProcessInstanceProcessor
         processDefinitionKey, key -> definitionsStore.get(key).value());
   }
 
-  private InstanceUpdate processInstanceToUpdate(
-      ProcessInstance processInstance, Scope scope, long processTime) {
+  private InstanceUpdate processInstanceToUpdate(ProcessInstance processInstance, Scope scope) {
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =
@@ -280,9 +278,18 @@ public class ProcessInstanceProcessor
 
     VariablesDTO variables = VariablesDTO.ofJsonMap(scope.getVariableScope().getVariables());
 
+    Long processStartTime =
+        scope.isStateChanged() && scope.getState() == ExecutionState.ACTIVE ? clock.millis() : null;
+    Long processEndTime =
+        scope.isStateChanged()
+                && (scope.getState() == ExecutionState.COMPLETED
+                    || scope.getState() == ExecutionState.ABORTED)
+            ? clock.millis()
+            : null;
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
-        new ProcessInstanceUpdateDTO(processInstanceDTO, variables, processTime));
+        new ProcessInstanceUpdateDTO(
+            processInstanceDTO, variables, processStartTime, processEndTime));
   }
 
   public void handleSetVariables(SetVariableTriggerDTO trigger) {
@@ -435,8 +442,7 @@ public class ProcessInstanceProcessor
         processingStatistics.increaseProcessInstancesFinished();
       }
 
-      instanceResult.addInstanceUpdate(
-          processInstanceToUpdate(processInstance, scope, clock.millis()));
+      instanceResult.addInstanceUpdate(processInstanceToUpdate(processInstance, scope));
     }
 
     if (processInstance.getScope().getState().isDone() && eventSignalList.isEmpty()) {

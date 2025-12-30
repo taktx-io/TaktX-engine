@@ -24,5 +24,4 @@ public abstract class FlowElementDTO extends BaseElementDTO {
     super(id, parentId);
     this.name = name;
   }
-
 }

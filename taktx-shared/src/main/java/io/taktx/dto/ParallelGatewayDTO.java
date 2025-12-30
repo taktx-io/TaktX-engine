@@ -21,6 +21,6 @@ import lombok.NoArgsConstructor;
 public class ParallelGatewayDTO extends GatewayDTO {
   public ParallelGatewayDTO(
       String id, String parentId, String name, Set<String> incoming, Set<String> outgoing) {
-    super(id, parentId, name,  incoming, outgoing, null);
+    super(id, parentId, name, incoming, outgoing, null);
   }
 }

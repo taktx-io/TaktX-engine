@@ -26,7 +26,12 @@ public class SequenceFlowDTO extends FlowElementDTO {
   private FlowConditionDTO condition;
 
   public SequenceFlowDTO(
-      String id, String parentId, String name, String source, String target, FlowConditionDTO condition) {
+      String id,
+      String parentId,
+      String name,
+      String source,
+      String target,
+      FlowConditionDTO condition) {
     super(id, parentId, name);
     this.source = source;
     this.target = target;

@@ -222,7 +222,8 @@ public class GenericFlowElementMapper implements FlowElementMapper {
   private SequenceFlowDTO mapSequenceFlow(String parentId, TSequenceFlow tSequenceFlow) {
     return new SequenceFlowDTO(
         tSequenceFlow.getId(),
-        parentId, tSequenceFlow.getName(),
+        parentId,
+        tSequenceFlow.getName(),
         ((TBaseElement) tSequenceFlow.getSourceRef()).getId(),
         ((TBaseElement) tSequenceFlow.getTargetRef()).getId(),
         tSequenceFlow.getConditionExpression() != null

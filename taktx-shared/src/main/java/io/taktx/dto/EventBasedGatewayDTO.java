@@ -19,7 +19,12 @@ import lombok.NoArgsConstructor;
 public class EventBasedGatewayDTO extends GatewayDTO {
 
   public EventBasedGatewayDTO(
-      String id, String parentId, String name, Set<String> incoming, Set<String> outgoing, String defaultFlow) {
+      String id,
+      String parentId,
+      String name,
+      Set<String> incoming,
+      Set<String> outgoing,
+      String defaultFlow) {
     super(id, parentId, name, incoming, outgoing, defaultFlow);
   }
 }
