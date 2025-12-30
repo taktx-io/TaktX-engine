@@ -235,7 +235,7 @@ public class ProcessInstanceProcessor
 
     InstanceResult instanceResult = InstanceResult.empty();
 
-    instanceResult.addInstanceUpdate(processInstanceToUpdate(processInstance, scope));
+    instanceResult.addInstanceUpdate(startProcessInstanceToUpdate(processInstance, scope));
 
     ProcessInstanceProcessingContext processInstanceProcessingContext =
         createProcessInstanceProcessingContext(processInstance, instanceResult);
@@ -268,6 +268,20 @@ public class ProcessInstanceProcessor
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
     return definitionsCache.computeIfAbsent(
         processDefinitionKey, key -> definitionsStore.get(key).value());
+  }
+
+  private InstanceUpdate startProcessInstanceToUpdate(ProcessInstance processInstance, Scope scope) {
+
+    ScopeDTO scopeDTO = scopeToDTO(scope);
+    ProcessInstanceDTO processInstanceDTO =
+        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
+
+    VariablesDTO variables = VariablesDTO.ofJsonMap(scope.getVariableScope().getVariables());
+
+    return new InstanceUpdate(
+        processInstance.getProcessInstanceId(),
+        new ProcessInstanceUpdateDTO(
+            processInstanceDTO, variables, clock.millis(), null));
   }
 
   private InstanceUpdate processInstanceToUpdate(ProcessInstance processInstance, Scope scope) {
