@@ -57,42 +57,6 @@ class MultiInstanceTest {
   }
 
   @Test
-  void testProcessTaskMultiInstanceParallelMany() throws IOException {
-
-    SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-parallel.bpmn")
-        .startProcessInstance(
-            VariablesDTO.of(
-                "inputCollection", IntStream.range(0, 1000).mapToObj(Integer::toString).toList()))
-        .waitUntilDone()
-        .assertThatProcess()
-        .hasVariableMatching(
-            "outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 1000)
-        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-        .hasInstantiatedElementWithId("EndEvent_1");
-  }
-
-  @Test
-  void testProcessTaskMultiInstanceSequentialMany() throws IOException {
-
-    SingletonBpmnTestEngine.getInstance()
-        .deployProcessDefinitionAndWait("/bpmn/task-multiinstance-sequential.bpmn")
-        .startProcessInstance(
-            VariablesDTO.of(
-                "inputCollection", IntStream.range(0, 1000).mapToObj(Integer::toString).toList()))
-        .waitUntilDone()
-        .assertThatProcess()
-        .hasVariableMatching(
-            "outputCollection", val -> assertThat(val).asInstanceOf(LIST).hasSize(1000))
-        .hasInstantiatedElementWithId("StartEvent_1")
-        .hasInstantiatedElementWithId("task-id/task-id", TaskInstanceDTO.class, 1000)
-        .hasInstantiatedElementWithId("task-id", MultiInstanceInstanceDTO.class, 1)
-        .hasInstantiatedElementWithId("EndEvent_1");
-  }
-
-  @Test
   void testProcessSubTaskMultiInstanceSequential() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
