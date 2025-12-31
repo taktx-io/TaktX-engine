@@ -9,3 +9,12 @@
 /docker/kafka/
 /taktx-client-quarkus/build/
 /taktx-client-spring/build/
+/build-logic-jreleaser/build/
+/build-logic-jreleaser/.gradle/
+
+# jReleaser secrets and configuration
+.env.jreleaser
+*.asc
+private-key.asc
+public-key.asc
+/env.jreleaser

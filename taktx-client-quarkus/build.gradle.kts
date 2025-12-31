@@ -124,6 +124,16 @@ publishing {
 
 jreleaser {
     gitRootSearch.set(true)
+    project {
+        name.set("taktx-client-quarkus")
+        description.set("TaktX Quarkus Client Library")
+        authors.set(listOf("Eric Hendriks"))
+        license.set("Apache-2.0")
+        inceptionYear.set("2025")
+        links {
+            homepage.set("https://www.taktx.io")
+        }
+    }
     signing {
         active.set(org.jreleaser.model.Active.ALWAYS)
         armored.set(true)
@@ -148,15 +158,6 @@ jreleaser {
                     releaseRepository.set(true)
                     stagingRepository("build/staging-deploy")
                 }
-            }
-        }
-    }
-    release {
-        github {
-            name.set("TaktX-engine")
-            commitAuthor {
-                name.set("Eric Hendriks")
-                email.set("info@taktx.io")
             }
         }
     }
