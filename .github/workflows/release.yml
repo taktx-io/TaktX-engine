@@ -3,6 +3,32 @@ name: Release
 on:
   release:
     types: [ published ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      update_version_files:
+        description: 'Update version files'
+        required: false
+        type: boolean
+        default: true
+      build_docker_images:
+        description: 'Build and push Docker images'
+        required: false
+        type: boolean
+        default: true
+      build_uber_jar:
+        description: 'Build uber-jar and upload to release'
+        required: false
+        type: boolean
+        default: true
+      publish_maven_central:
+        description: 'Publish to Maven Central'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-and-publish:
@@ -28,14 +54,20 @@ jobs:
       - name: Extract version
         id: extract_version
         run: |
-          # Handle both v-prefixed and non-v-prefixed tags
-          TAG=${GITHUB_REF#refs/tags/}
-          # Remove 'v' prefix if present
-          VERSION=${TAG#v}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger - use input version
+            VERSION="${{ inputs.version }}"
+          else
+            # Release event - extract from tag
+            TAG=${GITHUB_REF#refs/tags/}
+            # Remove 'v' prefix if present
+            VERSION=${TAG#v}
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
       - name: Update version files
+        if: github.event_name == 'release' || inputs.update_version_files
         run: |
           # Get default branch name
           DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -110,9 +142,11 @@ jobs:
           echo "License change date: $CHANGE_DATE"
 
       - name: Set up Docker Buildx
+        if: github.event_name == 'release' || inputs.build_docker_images
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
+        if: github.event_name == 'release' || inputs.build_docker_images
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -120,6 +154,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push AMD64 image
+        if: github.event_name == 'release' || inputs.build_docker_images
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -135,11 +170,13 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
 
       - name: Set up QEMU for ARM64
+        if: github.event_name == 'release' || inputs.build_docker_images
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
 
       - name: Build and push ARM64 image
+        if: github.event_name == 'release' || inputs.build_docker_images
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -155,6 +192,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=arm64
 
       - name: Create and push multi-platform manifest
+        if: github.event_name == 'release' || inputs.build_docker_images
         run: |
           # Create manifest list that points to both platform-specific images
           docker buildx imagetools create -t ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }} \
@@ -167,16 +205,19 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
 
       - name: Build uber-jar for release artifact
+        if: github.event_name == 'release' || inputs.build_uber_jar
         run: |
           # Build uber-jar directly with Gradle (much simpler than extracting from Docker)
           ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.jar.type=uber-jar -x test
 
       - uses: AButler/upload-release-assets@v3.0
+        if: github.event_name == 'release' || inputs.build_uber_jar
         with:
           files: "taktx-engine/build/*runner.jar"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Maven Central
+        if: github.event_name == 'release' || inputs.publish_maven_central
         run: ./gradlew publishMavenJavaPublicationToMavenRepository jreleaserDeploy
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
