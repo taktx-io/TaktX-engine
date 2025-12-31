@@ -7,13 +7,6 @@ plugins {
     jacoco
 }
 
-buildscript {
-    dependencies {
-        classpath("org.eclipse.jgit:org.eclipse.jgit:7.1.0.202411261347-r")
-        classpath("org.eclipse.jgit:org.eclipse.jgit.gpg.bc:7.1.0.202411261347-r")
-    }
-}
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)

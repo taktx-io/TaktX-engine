@@ -5,12 +5,6 @@ plugins {
     id("org.jreleaser") version "1.21.0"
 }
 
-// Add JGit GPG dependencies to JReleaser's classpath
-dependencies {
-    "jreleaserClasspath"("org.eclipse.jgit:org.eclipse.jgit:7.1.0.202411261347-r")
-    "jreleaserClasspath"("org.eclipse.jgit:org.eclipse.jgit.gpg.bc:7.1.0.202411261347-r")
-}
-
 allprojects {
     group = "io.taktx"
     version = "0.0.11-alpha-4"
