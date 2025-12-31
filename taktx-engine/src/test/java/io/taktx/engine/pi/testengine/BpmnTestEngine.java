@@ -280,6 +280,9 @@ public class BpmnTestEngine {
           latestInstantiatedProcessInstanceId = processInstanceDTO.getProcessInstanceId();
         }
 
+        log.info(
+            "Setting variables for process: {}",
+            processInstanceUpdate.getVariables().getVariables());
         VariablesDTO existingVariables =
             variablesMap.computeIfAbsent(
                 instanceUpdateRecord.getProcessInstanceId(), k -> VariablesDTO.empty());
@@ -983,31 +986,6 @@ public class BpmnTestEngine {
     this.mutableClock.set(originalClock.instant());
   }
 
-  /** Waits for Kafka broker and required topics to be available. */
-  private void waitForKafkaTopics() {
-    LOG.info("Waiting for Kafka broker and required topics to be available...");
-
-    final Set<String> requiredTopics =
-        Set.of(
-            TOPIC_TEST_PREFIX + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(),
-            TOPIC_TEST_PREFIX + Topics.MESSAGE_EVENT_TOPIC.getTopicName(),
-            TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
-
-    Awaitility.await()
-        .atMost(Duration.ofMinutes(2))
-        .pollInterval(Duration.ofSeconds(1))
-        .until(
-            () -> {
-              boolean allTopicsAvailable = topicMetaCache.keySet().containsAll(requiredTopics);
-              if (!allTopicsAvailable) {
-                LOG.info("Still waiting for topics: " + topicMetaCache.keySet());
-              }
-              return allTopicsAvailable;
-            });
-
-    LOG.info("Kafka broker and all required topics are now available");
-  }
-
   public BpmnTestEngine waitForSignalSubscription(String name) {
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
@@ -1053,11 +1031,13 @@ public class BpmnTestEngine {
   }
 
   public BpmnTestEngine setVariablesAtRootScope(VariablesDTO vars) {
+    log.info("Setting variables at root scope: {}", vars);
     taktClient.setVariable(activeProcessInstanceId, List.of(), vars);
     return this;
   }
 
   public BpmnTestEngine setVariablesForElement(String elementIdPath, VariablesDTO vars) {
+    log.info("Setting variables for element {}: {}", elementIdPath, vars);
     List<FlowNodeInstanceDTO> scopeWithElementId =
         getScopePathToElementId(activeProcessInstanceId, elementIdPath);
     List<Long> idList =

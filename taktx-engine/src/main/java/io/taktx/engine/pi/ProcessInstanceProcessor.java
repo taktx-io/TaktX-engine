@@ -156,7 +156,7 @@ public class ProcessInstanceProcessor
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (Throwable t) { // NOSONAR
-      handleIncident(trigger, t);
+      handleIncident(t);
       log.error("Internal error occurred for", t);
     } finally {
       processDefinitionKeyThreadLocal.remove();
@@ -165,7 +165,7 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void handleIncident(ProcessInstanceTriggerDTO trigger, Throwable t) {
+  private void handleIncident(Throwable t) {
     ProcessInstance processInstance = processInstanceThreadLocal.get();
     ProcessDefinitionKey processDefinitionKey = processDefinitionKeyThreadLocal.get();
 
@@ -270,7 +270,8 @@ public class ProcessInstanceProcessor
         processDefinitionKey, key -> definitionsStore.get(key).value());
   }
 
-  private InstanceUpdate startProcessInstanceToUpdate(ProcessInstance processInstance, Scope scope) {
+  private InstanceUpdate startProcessInstanceToUpdate(
+      ProcessInstance processInstance, Scope scope) {
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =
@@ -280,8 +281,7 @@ public class ProcessInstanceProcessor
 
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
-        new ProcessInstanceUpdateDTO(
-            processInstanceDTO, variables, clock.millis(), null));
+        new ProcessInstanceUpdateDTO(processInstanceDTO, variables, clock.millis(), null));
   }
 
   private InstanceUpdate processInstanceToUpdate(ProcessInstance processInstance, Scope scope) {
@@ -307,6 +307,10 @@ public class ProcessInstanceProcessor
   }
 
   public void handleSetVariables(SetVariableTriggerDTO trigger) {
+    log.info(
+        "Handling SetVariables for processInstanceId: {} {}",
+        trigger.getProcessInstanceId(),
+        trigger);
     InstanceResult instanceResult = InstanceResult.empty();
     UUID processInstanceId = trigger.getProcessInstanceId();
     ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);

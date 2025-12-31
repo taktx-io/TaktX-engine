@@ -10,16 +10,19 @@ package io.taktx.client;
 
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.Deployment;
+import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
+import io.taktx.util.TaktUUIDSerializer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -31,6 +34,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.slf4j.Logger;
 
 /**
@@ -45,7 +49,6 @@ public class TaktXClient {
   private final ProcessDefinitionConsumer processDefinitionConsumer;
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
-
   private final ProcessDefinitionDeployer processDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
@@ -59,6 +62,7 @@ public class TaktXClient {
 
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter,
       ProcessInstanceResponder processInstanceResponder,
       ParameterResolverFactory parameterResolverFactory,
       ResultProcessorFactory resultProcessorFactory) {
@@ -71,7 +75,8 @@ public class TaktXClient {
     this.xmlByProcessDefinitionIdConsumer =
         new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
-    this.processInstanceProducer = new ProcessInstanceProducer(taktPropertiesHelper);
+    this.processInstanceProducer =
+        new ProcessInstanceProducer(taktPropertiesHelper, processInstanceTriggerEmitter);
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
     this.signalSender = new SignalSender(taktPropertiesHelper);
     this.processInstanceUpdateConsumer =
@@ -394,8 +399,13 @@ public class TaktXClient {
 
       TaktPropertiesHelper taktPropertiesHelper = new TaktPropertiesHelper(properties);
 
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
+          new KafkaProducer<>(
+              taktPropertiesHelper.getKafkaProducerProperties(
+                  TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
+
       ProcessInstanceResponder externalTaskResponder =
-          new ProcessInstanceResponder(taktPropertiesHelper);
+          new ProcessInstanceResponder(taktPropertiesHelper, processInstanceTriggerEmitter);
 
       ParameterResolverFactory clientParameterResolverFactory =
           this.parameterResolverFactory != null
@@ -407,6 +417,7 @@ public class TaktXClient {
               : new DefaultResultProcessorFactory();
       return new TaktXClient(
           taktPropertiesHelper,
+          processInstanceTriggerEmitter,
           externalTaskResponder,
           clientParameterResolverFactory,
           clientResultProcessorFactory);

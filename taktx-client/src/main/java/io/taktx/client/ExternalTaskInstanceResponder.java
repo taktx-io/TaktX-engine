@@ -12,10 +12,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import java.time.Duration;
 import java.util.HashMap;
@@ -33,7 +33,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 public class ExternalTaskInstanceResponder {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
-  private final KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter;
+  private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
@@ -47,7 +47,7 @@ public class ExternalTaskInstanceResponder {
    * @param elementInstanceIdPath The path of element instance IDs.
    */
   public ExternalTaskInstanceResponder(
-      KafkaProducer<UUID, ContinueFlowElementTriggerDTO> responseEmitter,
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
       UUID processInstanceId,
       List<Long> elementInstanceIdPath) {

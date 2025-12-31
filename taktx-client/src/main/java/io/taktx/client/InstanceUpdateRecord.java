@@ -89,4 +89,20 @@ public class InstanceUpdateRecord {
   public long getKafkaOffset() {
     return kafkaOffset;
   }
+
+  @Override
+  public String toString() {
+    return "InstanceUpdateRecord{"
+        + "timestamp="
+        + timestamp
+        + ", processInstanceId="
+        + processInstanceId
+        + ", update="
+        + update
+        + ", kafkaPartition="
+        + kafkaPartition
+        + ", kafkaOffset="
+        + kafkaOffset
+        + '}';
+  }
 }

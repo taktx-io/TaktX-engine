@@ -9,7 +9,6 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
@@ -17,7 +16,6 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
-import io.taktx.util.TaktUUIDSerializer;
 import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -37,13 +35,12 @@ public class ProcessInstanceProducer {
    *
    * @param kafkaPropertiesHelper the TaktPropertiesHelper to use for configuration
    */
-  public ProcessInstanceProducer(TaktPropertiesHelper kafkaPropertiesHelper) {
+  public ProcessInstanceProducer(
+      TaktPropertiesHelper kafkaPropertiesHelper,
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter) {
     this.kafkaPropertiesHelper = kafkaPropertiesHelper;
 
-    processInstanceTriggerEmitter =
-        new KafkaProducer<>(
-            kafkaPropertiesHelper.getKafkaProducerProperties(
-                TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
+    this.processInstanceTriggerEmitter = processInstanceTriggerEmitter;
   }
 
   /**

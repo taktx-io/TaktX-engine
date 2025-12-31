@@ -16,6 +16,7 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class ExternalTaskInstanceResponderTest {
-  private KafkaProducer<UUID, ContinueFlowElementTriggerDTO> mockProducer;
+  private KafkaProducer<UUID, ProcessInstanceTriggerDTO> mockProducer;
   private ExternalTaskInstanceResponder responder;
   private UUID processInstanceId;
   private List<Long> elementInstanceIdPath;
@@ -53,15 +54,15 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess();
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ProcessInstanceTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
     ExternalTaskResponseResultDTO resultDTO =
@@ -80,13 +81,13 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess(testDto);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
-    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ProcessInstanceTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
     ExternalTaskResponseResultDTO resultDTO =
@@ -106,11 +107,11 @@ class ExternalTaskInstanceResponderTest {
     responder.respondSuccess(variables);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
         assertRecordBasics(externalTaskResponseTriggerRecord);
@@ -133,11 +134,11 @@ class ExternalTaskInstanceResponderTest {
     responder.respondEscalation(code, message);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
         assertRecordBasics(externalTaskResponseTriggerRecord);
@@ -161,11 +162,11 @@ class ExternalTaskInstanceResponderTest {
     responder.respondError(allowRetry, code, message);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO =
         assertRecordBasics(externalTaskResponseTriggerRecord);
@@ -187,15 +188,15 @@ class ExternalTaskInstanceResponderTest {
     responder.respondPromise(duration);
 
     // Then
-    ArgumentCaptor<ProducerRecord<UUID, ContinueFlowElementTriggerDTO>> captor =
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
     verify(mockProducer).send(captor.capture());
 
-    ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord =
         captor.getValue();
     assertRecordBasics(externalTaskResponseTriggerRecord);
 
-    ContinueFlowElementTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
+    ProcessInstanceTriggerDTO triggerDTO = externalTaskResponseTriggerRecord.value();
     ExternalTaskResponseTriggerDTO externalTaskResponseTriggerDTO = assertTriggerBasics(triggerDTO);
 
     ExternalTaskResponseResultDTO resultDTO =
@@ -205,7 +206,7 @@ class ExternalTaskInstanceResponderTest {
 
   // Helper assertion methods
   private ExternalTaskResponseTriggerDTO assertRecordBasics(
-      ProducerRecord<UUID, ContinueFlowElementTriggerDTO> externalTaskResponseTriggerRecord) {
+      ProducerRecord<UUID, ProcessInstanceTriggerDTO> externalTaskResponseTriggerRecord) {
     assertThat(externalTaskResponseTriggerRecord.topic()).isEqualTo(topicName);
     assertThat(externalTaskResponseTriggerRecord.key()).isEqualTo(processInstanceId);
     assertThat(externalTaskResponseTriggerRecord.value())
@@ -213,10 +214,11 @@ class ExternalTaskInstanceResponderTest {
     return (ExternalTaskResponseTriggerDTO) externalTaskResponseTriggerRecord.value();
   }
 
-  private ExternalTaskResponseTriggerDTO assertTriggerBasics(
-      ContinueFlowElementTriggerDTO triggerDTO) {
+  private ExternalTaskResponseTriggerDTO assertTriggerBasics(ProcessInstanceTriggerDTO triggerDTO) {
     assertThat(triggerDTO.getProcessInstanceId()).isEqualTo(processInstanceId);
-    assertThat(triggerDTO.getElementInstanceIdPath()).isEqualTo(elementInstanceIdPath);
+    assertThat(triggerDTO).isInstanceOf(ContinueFlowElementTriggerDTO.class);
+    assertThat(((ContinueFlowElementTriggerDTO) triggerDTO).getElementInstanceIdPath())
+        .isEqualTo(elementInstanceIdPath);
     assertThat(triggerDTO).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
     return (ExternalTaskResponseTriggerDTO) triggerDTO;
   }
