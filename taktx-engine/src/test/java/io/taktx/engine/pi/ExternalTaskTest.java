@@ -84,13 +84,13 @@ class ExternalTaskTest {
         .andRespondToExternalTaskWithError("service-task", true, "fail", "failure")
         .waitForExternalTaskTrigger("service-task")
         .andRespondToExternalTaskWithError("service-task", true, "fail", "failure")
-        .waitUntilElementHasAborted("ServiceTask_1")
-        .waitUntilDone()
+        //        .waitUntilElementHasAborted("ServiceTask_1")
+        .waitUntilIncident()
         .assertThatProcess()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("EndEvent_1")
         .hasNotPassedElementWithId("ServiceTask_1")
-        .isAborted();
+        .isStillActive();
   }
 
   @Test
@@ -205,8 +205,33 @@ class ExternalTaskTest {
         .isStillActive()
         .toProcessLevel()
         .moveTimeForward(Duration.ofDays(3))
+        .waitUntilIdle()
+        .assertThatProcess()
+        .isIncident()
+        .isStillActive()
+        .hasPassedElementWithId("StartEvent_1", 1)
+        .hasNotPassedElementWithId("EndEvent_1");
+  }
+
+  @Test
+  void testProcessServiceTaskPromise_CatchError() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("service-task")
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single-catch-error.bpmn")
+        .startProcessInstance(VariablesDTO.of("var1", "value1"))
+        .waitForExternalTaskTrigger("service-task")
+        .andRespondToExternalTaskWithPromise("service-task", "P10D")
+        .waitFor(Duration.ofSeconds(1))
+        .moveTimeForward(Duration.ofDays(7).plusMillis(1))
+        .waitFor(Duration.ofSeconds(1))
+        .assertThatProcess()
+        .isStillActive()
+        .toProcessLevel()
+        .moveTimeForward(Duration.ofDays(3))
         .waitUntilDone()
         .assertThatProcess()
+        .isCompleted()
         .hasPassedElementWithId("StartEvent_1", 1)
         .hasAbortedElementWithId("ServiceTask_1")
         .hasNotPassedElementWithId("EndEvent_1");

@@ -191,6 +191,20 @@ public class ProcessInstanceAssert {
     return this;
   }
 
+  public ProcessInstanceAssert isIncidentWithMessage(String expectedMessage) {
+    ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
+    assertThat(processInstance.getIncidentInfo()).isNotNull();
+    assertThat(processInstance.getIncidentInfo().getMessage()).contains(expectedMessage);
+    return this;
+  }
+
+  public ProcessInstanceAssert isIncidentWithErrorCode(String errorCode) {
+    ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
+    assertThat(processInstance.getIncidentInfo()).isNotNull();
+    assertThat(processInstance.getIncidentInfo().getMessage()).contains("Error code: " + errorCode);
+    return this;
+  }
+
   public ProcessInstanceAssert isStillActive() {
     ProcessInstanceDTO processInstance = bpmnTestEngine.getProcessInstance(processInstanceId);
     assertThat(processInstance.getScope().getState()).isEqualTo(ExecutionState.ACTIVE);

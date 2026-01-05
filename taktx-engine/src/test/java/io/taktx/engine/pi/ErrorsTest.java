@@ -142,13 +142,12 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitForExternalTaskTrigger("service-task")
         .andRespondToExternalTaskWithError("service-task", false, "456", null)
-        .waitUntilDone()
+        .waitUntilIdle()
         .assertThatProcess()
+        .isIncident()
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasNotPassedElementWithId("ServiceTask_1")
-        .hasAbortedElementWithId("ServiceTask_1")
-        .hasNotPassedElementWithId("EndEvent_1")
-        .isAborted();
+        .hasNotPassedElementWithId("EndEvent_1");
   }
 
   @Test
@@ -232,8 +231,8 @@ class ErrorsTest {
         .startProcessInstance(VariablesDTO.empty())
         .waitForExternalTaskTrigger("service-task")
         .andRespondToExternalTaskWithError("service-task", false, "456", null)
-        .waitUntilDone()
+        .waitUntilIdle()
         .assertThatProcess()
-        .isAborted();
+        .isIncident();
   }
 }

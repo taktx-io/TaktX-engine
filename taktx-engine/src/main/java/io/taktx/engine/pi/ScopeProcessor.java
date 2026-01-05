@@ -520,6 +520,12 @@ public class ScopeProcessor {
     List<SubProcess> eventTriggeredSubProcesses =
         scope.getFlowElements().getEventTriggeredSubProcesses();
     for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
+      // Check if the event originated from within this event subprocess to prevent infinite loops
+      // This applies to all event types: errors, escalations, signals, etc.
+      if (eventOriginatesFromSubProcess(event, eventSsubProcess)) {
+        continue; // Skip this subprocess - let the event bubble up further
+      }
+
       List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
       for (StartEvent startEvent : startEvents) {
         Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
@@ -561,6 +567,12 @@ public class ScopeProcessor {
     // Now for catch all events
     if (!eventHandled) {
       for (SubProcess eventSsubProcess : eventTriggeredSubProcesses) {
+        // Check if the event originated from within this event subprocess to prevent infinite loops
+        // This applies to all event types: errors, escalations, signals, etc.
+        if (eventOriginatesFromSubProcess(event, eventSsubProcess)) {
+          continue; // Skip this subprocess - let the event bubble up further
+        }
+
         List<StartEvent> startEvents = eventSsubProcess.getElements().getStartEvents();
         for (StartEvent startEvent : startEvents) {
           Set<EventDefinition> eventDefinitions = startEvent.getEventDefinitions();
@@ -596,6 +608,38 @@ public class ScopeProcessor {
       }
     }
     return eventHandled;
+  }
+
+  /**
+   * Checks if an event originated from within a specific event subprocess. This prevents infinite
+   * loops where an event subprocess triggers an event that would trigger itself again.
+   *
+   * <p>Examples of scenarios this prevents:
+   *
+   * <ul>
+   *   <li>Error Event Subprocess throws an error → would match itself
+   *   <li>Escalation Event Subprocess throws an escalation → would match itself
+   *   <li>Signal Event Subprocess throws a signal → would match itself
+   * </ul>
+   *
+   * <p>Works for both interrupting and non-interrupting event subprocesses.
+   *
+   * @param event The event signal (error, escalation, signal, message, etc.)
+   * @param eventSubProcess The event subprocess to check
+   * @return true if the event originated from within the event subprocess
+   */
+  private static boolean eventOriginatesFromSubProcess(
+      EventSignal event, SubProcess eventSubProcess) {
+    // Check the path to source to see if any element in the path is this event subprocess
+    for (FlowNodeInstance<?> instanceInPath : event.getPathToSource()) {
+      if (instanceInPath instanceof SubProcessInstance subProcessInstance) {
+        // Check if this subprocess instance is an instance of the event subprocess we're checking
+        if (subProcessInstance.getFlowNode().getId().equals(eventSubProcess.getId())) {
+          return true; // Event originated from within this event subprocess
+        }
+      }
+    }
+    return false;
   }
 
   private boolean processEventsByBoundaryEvents(

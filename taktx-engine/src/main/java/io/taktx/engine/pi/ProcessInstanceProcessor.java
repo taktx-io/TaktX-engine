@@ -36,6 +36,7 @@ import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pi.model.ErrorEventSignal;
+import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.FlowNodeInstances;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -433,13 +434,34 @@ public class ProcessInstanceProcessor
     EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
     List<EventSignalDTO> eventSignalList = new ArrayList<>();
     while (eventSignal != null) {
-      if (eventSignal instanceof ErrorEventSignal) {
-        AbortTriggerDTO trigger =
-            new AbortTriggerDTO(
-                processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
-                Collections.emptyList());
-        scopeProcessor.processAbort(processInstanceProcessingContext, scope, trigger);
+      if (eventSignal instanceof ErrorEventSignal errorEventSignal) {
+        // Unhandled error event - create an incident
+        // This is BPMN 2.0 compliant: when error handling fails, it's an exceptional condition
+        // requiring human intervention (similar to Camunda/Zeebe behavior)
+        ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
+        processInstance.setIncidentInfo(
+            new IncidentInfo(
+                errorEventSignal.getCurrentInstance(),
+                "Unhandled error event: "
+                    + errorEventSignal.getCode()
+                    + " - "
+                    + errorEventSignal.getMessage(),
+                new String[] {
+                  "Error code: " + errorEventSignal.getCode(),
+                  "Error message: " + errorEventSignal.getMessage(),
+                  "Source element: " + errorEventSignal.getCurrentInstance().getFlowNode().getId()
+                }));
+        // Don't abort - leave process in incident state for potential resolution
+      } else if (eventSignal instanceof EscalationEventSignal) {
+        // Unhandled escalation event - this is BPMN 2.0 compliant
+        // Unlike errors, escalations can be unhandled without creating incidents
+        // They are forwarded to parent process (if any) via eventSignalList
+        // If no parent exists, the escalation is logged but process continues normally
+        log.warn(
+            "Unhandled escalation event: {} - forwarding to parent or discarding",
+            ((EscalationEventSignal) eventSignal).getCode());
       }
+      // All event signals are added to the list for potential forwarding to parent
       eventSignalList.add(dtoMapper.map(eventSignal));
       eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
     }

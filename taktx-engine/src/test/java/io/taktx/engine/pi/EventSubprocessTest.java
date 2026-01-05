@@ -70,6 +70,24 @@ class EventSubprocessTest {
   }
 
   @Test
+  void test_EventSubProcess_ErrorTriggered_catchAll_recursive() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_recursive.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("ServiceTask_1")
+        .waitForExternalTaskTrigger("ServiceTask_2")
+        .andRespondToExternalTaskWithError("ServiceTask_2", false, "1234", "error message")
+        .waitUntilDone()
+        .assertThatProcess()
+        .isIncident()
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2")
+        .hasNotPassedElementWithId("EndEvent_1");
+  }
+
+  @Test
   void test_EventSubProcess_EscalationTriggered_Catchall() throws IOException {
 
     SingletonBpmnTestEngine.getInstance()
@@ -113,6 +131,25 @@ class EventSubprocessTest {
         .hasPassedElementWithId("Activity_1jz01tr/Event_0utmfy5", 1)
         .hasPassedElementWithId("Activity_1jz01tr/Activity_0xpyuez", 1)
         .hasPassedElementWithId("Activity_1jz01tr/Event_1ffpqj3", 1);
+  }
+
+  @Test
+  void test_EventSubProcess_EscalationTriggered_NonInterrupting_Recursive() throws IOException {
+
+    SingletonBpmnTestEngine.getInstance()
+        .registerAndSubscribeToExternalTaskIds("ServiceTask_1", "ServiceTask_2")
+        .deployProcessDefinitionAndWait("/bpmn/eventsubprocess_recursive.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitForExternalTaskTrigger("ServiceTask_1")
+        .andRespondToExternalTaskWithEscalation(
+            "ServiceTask_1", "1234", "error message", VariablesDTO.empty())
+        .andRespondToExternalTaskWithSuccess("ServiceTask_1", VariablesDTO.empty())
+        .waitForExternalTaskTrigger("ServiceTask_2")
+        .andRespondToExternalTaskWithSuccess("ServiceTask_2", VariablesDTO.empty())
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasAbortedElementWithId("ServiceTask_1")
+        .hasAbortedElementWithId("ServiceTask_2");
   }
 
   @Test
