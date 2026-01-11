@@ -8,12 +8,10 @@
 
 package io.taktx.engine.pi.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.InstanceScheduleKeyDTO;
-import io.taktx.dto.VariableKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -37,10 +35,12 @@ import org.apache.kafka.streams.state.KeyValueStore;
 @Slf4j
 @NoArgsConstructor
 public class Scope {
+
+  private final Map<Long, Long> boundaryEventToActivity = new WeakHashMap<>();
+  private final Map<Long, Set<Long>> activityToBoundaryEvents = new WeakHashMap<>();
+
   private Scope parentScope;
   private UUID processInstanceId;
-  private VariableScope variableScope;
-  private KeyValueStore<VariableKeyDTO, JsonNode> variableStore;
   private FlowNodeInstances flowNodeInstances;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
   private ExecutionState initialState;
@@ -48,7 +48,6 @@ public class Scope {
   private WithScope parentFlowNodeInstance;
 
   private final DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
-  private final Map<Long, Long> boundaryEventToActivity = new WeakHashMap<>();
 
   private int subProcessLevel;
   private int activeCnt = 0;
@@ -57,8 +56,6 @@ public class Scope {
   private Map<String, Long> gatewayInstances = new HashMap<>();
   private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
   private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
-
-  private final Map<Long, Set<Long>> activityToBoundaryEvents = new WeakHashMap<>();
   private ProcessInstanceMapper processInstanceMapper;
   private FlowElements flowElements;
 
@@ -68,7 +65,6 @@ public class Scope {
       WithScope parentFlowNodeInstance,
       FlowElements flowElements,
       ProcessInstanceMapper processInstanceMapper,
-      KeyValueStore<VariableKeyDTO, JsonNode> variableStore,
       KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore) {
     this.parentScope = parentScope;
     this.subProcessLevel = parentScope != null ? parentScope.getSubProcessLevel() + 1 : 0;
@@ -76,8 +72,6 @@ public class Scope {
     this.parentFlowNodeInstance = parentFlowNodeInstance;
     this.processInstanceMapper = processInstanceMapper;
     this.flowElements = flowElements;
-    this.variableScope = new VariableScope(this, variableStore);
-    this.variableStore = variableStore;
     this.flowNodeInstances = new FlowNodeInstances(this, flowNodeInstanceStore);
     this.flowNodeInstanceStore = flowNodeInstanceStore;
   }
@@ -191,7 +185,6 @@ public class Scope {
         parentFlowNodeInstance,
         flowElements,
         processInstanceMapper,
-        variableScope.getVariableStore(),
         flowNodeInstances.getFlowNodeInstanceStore());
   }
 
@@ -202,12 +195,9 @@ public class Scope {
       Scope childScope = withScope.getScope();
       childScope.setParentScope(this);
       childScope.setFlowNodeInstanceStore(this.getFlowNodeInstanceStore());
-      childScope.setVariableStore(this.getVariableStore());
       childScope.setParentFlowNodeInstance(withScope);
       childScope.setProcessInstanceMapper(processInstanceMapper);
       childScope.setProcessInstanceId(processInstanceId);
-      VariableScope childVariableScope = new VariableScope(childScope, variableStore);
-      childScope.setVariableScope(childVariableScope);
       FlowElements elements =
           instance.getFlowNode() instanceof WIthChildElements withChildElements
               ? withChildElements.getElements()
@@ -217,32 +207,5 @@ public class Scope {
       childScope.setParentFlowNodeInstance(withScope);
     }
     return instance;
-  }
-
-  public void persistVariables() {
-    variableScope.persist();
-    flowNodeInstances
-        .getInstances()
-        .values()
-        .forEach(
-            instance -> {
-              if (instance instanceof WithScope withScope) {
-                withScope.getScope().persistVariables();
-              }
-            });
-  }
-
-  public Map<String, JsonNode> retrieveAndFlattenAllVariables() {
-    Map<String, JsonNode> variables = new HashMap<>(variableScope.retrieveAllInScope());
-    flowNodeInstances
-        .getAllInstances()
-        .values()
-        .forEach(
-            instance -> {
-              if (instance instanceof WithScope withScope) {
-                variables.putAll(withScope.getScope().retrieveAndFlattenAllVariables());
-              }
-            });
-    return variables;
   }
 }

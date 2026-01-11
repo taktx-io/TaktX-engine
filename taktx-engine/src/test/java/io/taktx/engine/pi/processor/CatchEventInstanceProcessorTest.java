@@ -69,7 +69,7 @@ class CatchEventInstanceProcessorTest {
     when(catchEvent.getMessageventDefinition()).thenReturn(Optional.empty());
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.COMPLETED);
   }
@@ -87,13 +87,12 @@ class CatchEventInstanceProcessorTest {
     when(catchEvent.getErrorEventDefinition()).thenReturn(Optional.empty());
     when(catchEvent.getTimerEventDefinition()).thenReturn(Optional.empty());
     when(catchEvent.getMessageventDefinition()).thenReturn(Optional.empty());
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("signalName", variableScope))
         .thenReturn(new TextNode("resolvedSignalName"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
 
@@ -118,7 +117,7 @@ class CatchEventInstanceProcessorTest {
     when(catchEvent.getMessageventDefinition()).thenReturn(Optional.empty());
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
     verify(catchEventInstance).addEscalationSubscription(escalationDef);
@@ -136,7 +135,7 @@ class CatchEventInstanceProcessorTest {
     when(catchEvent.getMessageventDefinition()).thenReturn(Optional.empty());
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
     verify(catchEventInstance).addErrorSubscription(errorDef);
@@ -152,11 +151,10 @@ class CatchEventInstanceProcessorTest {
     when(catchEvent.getErrorEventDefinition()).thenReturn(Optional.empty());
     when(catchEvent.getTimerEventDefinition()).thenReturn(Optional.of(timerDef));
     when(catchEvent.getMessageventDefinition()).thenReturn(Optional.empty());
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
 
@@ -183,13 +181,12 @@ class CatchEventInstanceProcessorTest {
     when(messageDef.getReferencedMessage()).thenReturn(message);
     when(message.correlationKey()).thenReturn("correlationKeyExpr");
     when(message.name()).thenReturn("messageName");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("correlationKeyExpr", variableScope))
         .thenReturn(new TextNode("key123"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, catchEventInstance, "flow1");
+        processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
 

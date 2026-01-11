@@ -16,6 +16,7 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TaskInstance;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -40,6 +41,7 @@ public class TaskInstanceProcessor
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       TaskInstance instance) {
     // Nothing to do here
   }
@@ -48,6 +50,7 @@ public class TaskInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       TaskInstance flowNodeInstance,
       String inputFlowId) {
     flowNodeInstance.setState(ExecutionState.COMPLETED);
@@ -57,6 +60,7 @@ public class TaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       TaskInstance externalTaskInstance,
       ContinueFlowElementTriggerDTO trigger) {
     // Nothing to do here

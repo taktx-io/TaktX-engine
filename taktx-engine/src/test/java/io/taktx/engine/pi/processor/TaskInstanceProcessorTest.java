@@ -16,6 +16,7 @@ import io.taktx.engine.pd.model.Task;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TaskInstance;
+import io.taktx.engine.pi.model.VariableScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,12 +30,14 @@ class TaskInstanceProcessorTest {
 
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
+  @Mock private VariableScope variableScope;
   @Mock private TaskInstance taskInstance;
   @Mock private Task task;
 
   @Test
   void processStartSpecificActivityInstance_shouldCompleteTaskImmediately() {
-    processor.processStartSpecificActivityInstance(processingContext, scope, taskInstance, "flow1");
+    processor.processStartSpecificActivityInstance(
+        processingContext, scope, variableScope, taskInstance, "flow1");
 
     verify(taskInstance).setState(ExecutionState.COMPLETED);
   }
@@ -44,13 +47,14 @@ class TaskInstanceProcessorTest {
     assertDoesNotThrow(
         () ->
             processor.processContinueSpecificActivityInstance(
-                processingContext, scope, taskInstance, null));
+                processingContext, scope, variableScope, taskInstance, null));
   }
 
   @Test
   void processAbortSpecificActivityInstance_shouldDoNothing() {
     assertDoesNotThrow(
         () ->
-            processor.processAbortSpecificActivityInstance(processingContext, scope, taskInstance));
+            processor.processAbortSpecificActivityInstance(
+                processingContext, scope, variableScope, taskInstance));
   }
 }

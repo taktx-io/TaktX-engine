@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pd.model;
 
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.WithScope;
 import java.util.LinkedList;
@@ -18,8 +19,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public abstract class EventSignal {
   private final LinkedList<FlowNodeInstance<?>> pathToSource = new LinkedList<>();
+  private VariablesDTO variables = VariablesDTO.empty();
 
-  protected EventSignal(FlowNodeInstance<?> fLowNodeInstance) {
+  protected EventSignal(FlowNodeInstance<?> fLowNodeInstance, VariablesDTO variables) {
+    this.variables = variables;
     pathToSource.addFirst(fLowNodeInstance);
   }
 

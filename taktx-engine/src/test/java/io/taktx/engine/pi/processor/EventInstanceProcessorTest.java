@@ -19,6 +19,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -36,6 +37,7 @@ class EventInstanceProcessorTest {
   @Mock private ProcessInstanceMapper processInstanceMapper;
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
+  @Mock private VariableScope variableScope;
   @Mock private EventInstance<?> eventInstance;
   @Mock private Event event;
 
@@ -57,7 +59,7 @@ class EventInstanceProcessorTest {
             IllegalStateException.class,
             () ->
                 processor.processContinueSpecificFlowNodeInstance(
-                    processingContext, scope, eventInstance, trigger));
+                    processingContext, scope, variableScope, eventInstance, trigger));
 
     assertEquals("We should never continue an event instance", exception.getMessage());
   }
@@ -71,7 +73,8 @@ class EventInstanceProcessorTest {
     when(event.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(mock(ProcessInstance.class), eventInstance, scope);
+        processor.getSelectedSequenceFlows(
+            mock(ProcessInstance.class), eventInstance, scope, variableScope);
 
     assertEquals(2, result.size());
     assertTrue(result.contains(flow1));
@@ -93,6 +96,7 @@ class EventInstanceProcessorTest {
     protected void processStartSpecificEventInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         EventInstance<?> flowNodeInstance,
         String inputFlowId) {
       // Test implementation
@@ -102,6 +106,7 @@ class EventInstanceProcessorTest {
     protected void processAbortSpecificFlowNodeInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         EventInstance<?> instance) {
       // Test implementation
     }

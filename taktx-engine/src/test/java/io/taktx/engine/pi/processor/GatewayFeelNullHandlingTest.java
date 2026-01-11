@@ -72,7 +72,6 @@ class GatewayFeelNullHandlingTest {
     when(gateway.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
     when(flow1.getCondition()).thenReturn(condition1);
     when(flow2.getCondition()).thenReturn(condition2);
-    when(scope.getVariableScope()).thenReturn(variableScope);
 
     // Simulate FEEL expression returning null (e.g., missing variable)
     when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
@@ -84,7 +83,7 @@ class GatewayFeelNullHandlingTest {
 
     // Should NOT throw NPE, should skip flow1 and select flow2
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(1, result.size());
     assertTrue(result.contains(flow2));
@@ -105,7 +104,6 @@ class GatewayFeelNullHandlingTest {
     when(gateway.getDefaultSequenceFlow()).thenReturn(defaultFlow);
     when(flow1.getCondition()).thenReturn(condition1);
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
-    when(scope.getVariableScope()).thenReturn(variableScope);
 
     // All conditions return null
     when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
@@ -115,7 +113,7 @@ class GatewayFeelNullHandlingTest {
 
     // Should select default flow instead of crashing
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(1, result.size());
     assertTrue(result.contains(defaultFlow));
@@ -133,7 +131,6 @@ class GatewayFeelNullHandlingTest {
     when(gateway.getDefaultFlow()).thenReturn(null);
     when(gateway.getId()).thenReturn("gateway1");
     when(flow1.getCondition()).thenReturn(condition1);
-    when(scope.getVariableScope()).thenReturn(variableScope);
 
     when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
         .thenReturn(null);
@@ -141,7 +138,7 @@ class GatewayFeelNullHandlingTest {
     processor.setCanTrigger(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(0, result.size());
     verify(gatewayInstance).raiseIncident("No outgoing sequence flow selected for gateway");
@@ -176,12 +173,16 @@ class GatewayFeelNullHandlingTest {
         io.taktx.engine.pi.ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
         GatewayInstance<Gateway> flownodeInstance,
-        String inputFlowId) {}
+        String inputFlowId) {
+      // No-op
+    }
 
     @Override
     protected void processTerminateSpecificGatewayInstance(
         io.taktx.engine.pi.InstanceResult instanceResult,
         io.taktx.engine.pi.DirectInstanceResult directInstanceResult,
-        GatewayInstance<Gateway> instance) {}
+        GatewayInstance<Gateway> instance) {
+      // No-op
+    }
   }
 }

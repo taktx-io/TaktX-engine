@@ -50,13 +50,12 @@ class ReceiveTaskInstanceProcessorTest {
     when(receiveTask.getReferencedMessage()).thenReturn(message);
     when(message.correlationKey()).thenReturn("correlationKeyExpression");
     when(message.name()).thenReturn("MessageName");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("correlationKeyExpression", variableScope))
         .thenReturn(new TextNode("key123"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
-        processingContext, scope, receiveTaskInstance, "flow1");
+        processingContext, scope, variableScope, receiveTaskInstance, "flow1");
 
     verify(receiveTaskInstance).setState(ExecutionState.ACTIVE);
     verify(receiveTaskInstance).setCorrelationKey("key123");
@@ -80,7 +79,7 @@ class ReceiveTaskInstanceProcessorTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processContinueSpecificActivityInstance(
-        processingContext, scope, receiveTaskInstance, null);
+        processingContext, scope, variableScope, receiveTaskInstance, null);
 
     verify(receiveTaskInstance).setState(ExecutionState.COMPLETED);
 
@@ -101,7 +100,8 @@ class ReceiveTaskInstanceProcessorTest {
     when(receiveTaskInstance.getCorrelationKey()).thenReturn("key123");
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
-    processor.processAbortSpecificActivityInstance(processingContext, scope, receiveTaskInstance);
+    processor.processAbortSpecificActivityInstance(
+        processingContext, scope, variableScope, receiveTaskInstance);
 
     ArgumentCaptor<TerminateCorrelationSubscriptionMessageEventInfo> captor =
         ArgumentCaptor.forClass(TerminateCorrelationSubscriptionMessageEventInfo.class);

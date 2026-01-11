@@ -341,8 +341,7 @@ public class TopologyProducer {
                     clock,
                     dtoMapper,
                     processingStatistics,
-                    topicManager,
-                    pathExtractor),
+                    topicManager),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

@@ -88,9 +88,9 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstanceDTO);
     forwardContinuations(context, instanceResult);
     forwardCancelSchedules(context, instanceResult);
-    forwardScheduledStarts(context, instanceResult, processInstanceDTO, scope);
+    forwardScheduledStarts(context, instanceResult, processInstanceDTO);
     forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
-    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO, scope);
+    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
     forwardTerminateCommands(context, instanceResult);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
     forwardEventSignalTriggers(context, instanceResult);
@@ -177,8 +177,7 @@ public class Forwarder {
   private void forwardScheduledStarts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance,
-      Scope scope) {
+      ProcessInstanceDTO processInstance) {
     Queue<ScheduledStartInfo> scheduledStartInfos = instanceResult.getScheduledStartInfos();
     while (!scheduledStartInfos.isEmpty()) {
       ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
@@ -199,7 +198,7 @@ public class Forwarder {
               dtoMapper.map(scheduledStartInfo.timerEventDefinition()),
               now,
               startFlowElementTrigger,
-              VariableScope.empty(scope));
+              VariableScope.empty(null, null));
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
@@ -251,8 +250,7 @@ public class Forwarder {
   private void forwardScheduledExternalTaskTriggerTimeouts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance,
-      Scope scope) {
+      ProcessInstanceDTO processInstance) {
     Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
         instanceResult.getScheduledExternalTaskTriggerTimeouts();
     while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {
@@ -278,7 +276,10 @@ public class Forwarder {
       long now = clock.millis();
       MessageScheduleDTO schedule =
           messageSchedulerFactory.schedule(
-              timerEventDefinition, now, externalTaskResponseResultDTO, VariableScope.empty(scope));
+              timerEventDefinition,
+              now,
+              externalTaskResponseResultDTO,
+              VariableScope.empty(null, null));
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduleKey =

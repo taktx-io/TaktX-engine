@@ -11,4 +11,6 @@ package io.taktx.engine.pi.model;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 
 public record ContinueFlowNodeInstanceInfo(
-    FlowNodeInstance<?> flowNodeInstance, ContinueFlowElementTriggerDTO trigger) {}
+    FlowNodeInstance<?> flowNodeInstance,
+    ContinueFlowElementTriggerDTO trigger,
+    VariableScope variableScope) {}

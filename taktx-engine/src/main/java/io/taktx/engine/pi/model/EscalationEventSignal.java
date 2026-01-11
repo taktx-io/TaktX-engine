@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.EventSignal;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -21,8 +22,9 @@ public class EscalationEventSignal extends EventSignal {
   private String code;
   private String message;
 
-  public EscalationEventSignal(FlowNodeInstance<?> fLowNodeInstance, String code, String message) {
-    super(fLowNodeInstance);
+  public EscalationEventSignal(
+      FlowNodeInstance<?> fLowNodeInstance, String code, String message, VariablesDTO variables) {
+    super(fLowNodeInstance, variables);
     this.code = code;
     this.message = message;
   }

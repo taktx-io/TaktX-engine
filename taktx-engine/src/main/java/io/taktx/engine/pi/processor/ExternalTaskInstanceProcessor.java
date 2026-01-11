@@ -16,6 +16,7 @@ import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
@@ -59,22 +60,22 @@ public abstract class ExternalTaskInstanceProcessor<
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flownodeInstance,
       String inputFlowId) {
     ExternalTask flowNode = flownodeInstance.getFlowNode();
     String externalTaskId =
-        getExternalTaskId(
-            flownodeInstance, flowNode.getWorkerDefinition(), scope.getVariableScope());
+        getExternalTaskId(flownodeInstance, flowNode.getWorkerDefinition(), variableScope);
     Map<String, String> headers = flowNode.getHeaders();
 
     if (failIfTopicDoesNotExist(
-        processInstanceProcessingContext, scope, flownodeInstance, externalTaskId)) {
+        processInstanceProcessingContext, scope, variableScope, flownodeInstance, externalTaskId)) {
       return;
     }
 
     retryDirectly(
         getExternalTaskInfo(
-            externalTaskId, flowNode, flownodeInstance, scope.getVariableScope(), headers, null),
+            externalTaskId, flowNode, flownodeInstance, variableScope, headers, null),
         processInstanceProcessingContext.getInstanceResult());
     flownodeInstance.setState(ExecutionState.ACTIVE);
     flownodeInstance.setAttempt(0);
@@ -84,6 +85,7 @@ public abstract class ExternalTaskInstanceProcessor<
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger) {
 
@@ -102,16 +104,21 @@ public abstract class ExternalTaskInstanceProcessor<
       handleIncident(instanceResult, externalTaskInstance, trigger);
     } else if (ExternalTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
-          instanceResult, scope.getDirectInstanceResult(), externalTaskInstance, responseResult);
+          instanceResult,
+          scope.getDirectInstanceResult(),
+          externalTaskInstance,
+          responseResult,
+          trigger.getVariables());
     } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
         || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleErrorOrTimeout(
           instanceResult,
           scope.getDirectInstanceResult(),
           externalTaskInstance,
-          scope.getVariableScope(),
+          variableScope,
           externalTaskInstance.getFlowNode().getHeaders(),
-          responseResult);
+          responseResult,
+          trigger.getVariables());
     }
   }
 
@@ -119,23 +126,25 @@ public abstract class ExternalTaskInstanceProcessor<
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      VariableScope flowNodeInstanceVariables,
+      VariableScope variableScope,
       Map<String, String> headers,
-      ExternalTaskResponseResultDTO responseResult) {
+      ExternalTaskResponseResultDTO responseResult,
+      VariablesDTO variables) {
     E externalTask = externalTaskInstance.getFlowNode();
     if (externalTask.getRetries() != null) {
       handleRetries(
           instanceResult,
           directInstanceResult,
           externalTaskInstance,
-          flowNodeInstanceVariables,
+          variableScope,
           headers,
           responseResult,
-          externalTask);
+          externalTask,
+          variables);
     } else {
       // No retries allowed
       handleNoRetriesAllowed(
-          instanceResult, directInstanceResult, externalTaskInstance, responseResult);
+          instanceResult, directInstanceResult, externalTaskInstance, responseResult, variables);
     }
   }
 
@@ -143,19 +152,19 @@ public abstract class ExternalTaskInstanceProcessor<
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      VariableScope flowNodeInstanceVariables,
+      VariableScope variableScope,
       Map<String, String> headers,
       ExternalTaskResponseResultDTO responseResult,
-      E externalTask) {
+      E externalTask,
+      VariablesDTO variables) {
     // We have some kind of retry definition
     JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(
-            externalTask.getRetries(), flowNodeInstanceVariables);
+        feelExpressionHandler.processFeelExpression(externalTask.getRetries(), variableScope);
 
     if (jsonNode == null || jsonNode.isNull()) {
       // Expression returned null, no retries possible
       handleNoRetriesAllowed(
-          instanceResult, directInstanceResult, externalTaskInstance, responseResult);
+          instanceResult, directInstanceResult, externalTaskInstance, responseResult, variables);
       return;
     }
 
@@ -193,9 +202,9 @@ public abstract class ExternalTaskInstanceProcessor<
       // Retry allowed, possibly with backoff
       String externalTaskId =
           getExternalTaskId(
-              externalTaskInstance, externalTask.getWorkerDefinition(), flowNodeInstanceVariables);
+              externalTaskInstance, externalTask.getWorkerDefinition(), variableScope);
 
-      ioMappingProcessor.addInputVariables(externalTask, flowNodeInstanceVariables);
+      ioMappingProcessor.processInputMappings(externalTask, variableScope);
       if (backoff.isPresent()) {
         // This means for now we do nothing, the retry will be scheduled by the scheduler
         scheduleNextExternalTask(
@@ -203,24 +212,19 @@ public abstract class ExternalTaskInstanceProcessor<
             backoff.get(),
             externalTask,
             externalTaskInstance,
-            flowNodeInstanceVariables,
+            variableScope,
             headers,
             instanceResult);
       } else {
         // No backoff time defined, retry directly
         retryDirectly(
             getExternalTaskInfo(
-                externalTaskId,
-                externalTask,
-                externalTaskInstance,
-                flowNodeInstanceVariables,
-                headers,
-                null),
+                externalTaskId, externalTask, externalTaskInstance, variableScope, headers, null),
             instanceResult);
       }
     } else {
       // No more retries, either by limit or by disallowing retry by the worker
-      handleNoMoreRetries(directInstanceResult, externalTaskInstance, responseResult);
+      handleNoMoreRetries(directInstanceResult, externalTaskInstance, responseResult, variables);
     }
   }
 
@@ -233,30 +237,39 @@ public abstract class ExternalTaskInstanceProcessor<
       void handleNoMoreRetries(
           DirectInstanceResult directInstanceResult,
           I externalTaskInstance,
-          ExternalTaskResponseResultDTO responseResult) {
+          ExternalTaskResponseResultDTO responseResult,
+          VariablesDTO variables) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
-            externalTaskInstance, responseResult.getCode(), responseResult.getMessage()));
+            externalTaskInstance,
+            responseResult.getCode(),
+            responseResult.getMessage(),
+            variables));
   }
 
   private void handleNoRetriesAllowed(
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      ExternalTaskResponseResultDTO responseResult) {
+      ExternalTaskResponseResultDTO responseResult,
+      VariablesDTO variables) {
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
-    handleNoMoreRetries(directInstanceResult, externalTaskInstance, responseResult);
+    handleNoMoreRetries(directInstanceResult, externalTaskInstance, responseResult, variables);
   }
 
   private void handleEscalation(
       InstanceResult instanceResult,
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
-      ExternalTaskResponseResultDTO responseResult) {
+      ExternalTaskResponseResultDTO responseResult,
+      VariablesDTO variables) {
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
     directInstanceResult.addEvent(
         new EscalationEventSignal(
-            externalTaskInstance, responseResult.getCode(), responseResult.getMessage()));
+            externalTaskInstance,
+            responseResult.getCode(),
+            responseResult.getMessage(),
+            variables));
   }
 
   private void handlePromise(
@@ -294,7 +307,10 @@ public abstract class ExternalTaskInstanceProcessor<
 
   @Override
   protected void processAbortSpecificActivityInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I instance) {
     // Nothing to do here
   }
 
@@ -338,6 +354,7 @@ public abstract class ExternalTaskInstanceProcessor<
   private boolean failIfTopicDoesNotExist(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flownodeInstance,
       String externalTaskId) {
     if (!processInstanceProcessingContext
@@ -352,14 +369,11 @@ public abstract class ExternalTaskInstanceProcessor<
           instanceResult,
           scope.getDirectInstanceResult(),
           flownodeInstance,
-          scope.getVariableScope(),
+          variableScope,
           flownodeInstance.getFlowNode().getHeaders(),
           new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.ERROR,
-              false,
-              "Topic not created",
-              "Topic not created",
-              -1L));
+              ExternalTaskResponseType.ERROR, false, "Topic not created", "Topic not created", -1L),
+          VariablesDTO.empty());
       return true;
     }
     return false;

@@ -29,6 +29,7 @@ import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
@@ -54,6 +55,7 @@ public abstract class CatchEventInstanceProcessor<
   protected void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I catchEventInstance,
       String inputFlowId) {
 
@@ -73,7 +75,7 @@ public abstract class CatchEventInstanceProcessor<
 
               JsonNode jsonNode =
                   feelExpressionHandler.processFeelExpression(
-                      signalEventDefinition.getReferencedSignal().name(), scope.getVariableScope());
+                      signalEventDefinition.getReferencedSignal().name(), variableScope);
 
               if (jsonNode == null || jsonNode.isNull()) {
                 throw new ProcessInstanceException(
@@ -118,7 +120,7 @@ public abstract class CatchEventInstanceProcessor<
                     .getInstanceResult()
                     .addNewScheduledContinuation(
                         new ScheduledContinuationInfo(
-                            catchEventInstance, timerEventDefinition, scope.getVariableScope()));
+                            catchEventInstance, timerEventDefinition, variableScope));
               });
     }
 
@@ -137,7 +139,7 @@ public abstract class CatchEventInstanceProcessor<
               String correlationKeyExpression = message.correlationKey();
               JsonNode jsonNode =
                   feelExpressionHandler.processFeelExpression(
-                      correlationKeyExpression, scope.getVariableScope());
+                      correlationKeyExpression, variableScope);
               if (jsonNode == null || jsonNode.isNull()) {
                 throw new ProcessInstanceException(
                     catchEventInstance, "Correlation key expression returned null");
@@ -159,33 +161,38 @@ public abstract class CatchEventInstanceProcessor<
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger) {
-    getInstanceResultForContinue(processInstanceProcessingContext, scope, flowNodeInstance);
+    getInstanceResultForContinue(
+        processInstanceProcessingContext, scope, variableScope, flowNodeInstance);
   }
 
   private void getInstanceResultForContinue(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance) {
     if (shouldCancel(flowNodeInstance)) {
       // Complete the catch event instance
       flowNodeInstance.setState(ExecutionState.COMPLETED);
       terminateSubscriptions(
-          flowNodeInstance, processInstanceProcessingContext.getInstanceResult(), scope);
+          flowNodeInstance, processInstanceProcessingContext.getInstanceResult(), variableScope);
     }
     processContinueSpecificCatchEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
   }
 
-  private void terminateSubscriptions(I flowNodeInstance, InstanceResult result, Scope scope) {
+  private void terminateSubscriptions(
+      I flowNodeInstance, InstanceResult result, VariableScope variableScope) {
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
     terminateEscalationAndErrorSubscriptions(flowNodeInstance);
-    terminateSignalSubscription(flowNodeInstance, result, scope);
+    terminateSignalSubscription(flowNodeInstance, result, variableScope);
   }
 
-  private void terminateSignalSubscription(I flowNodeInstance, InstanceResult result, Scope scope) {
+  private void terminateSignalSubscription(
+      I flowNodeInstance, InstanceResult result, VariableScope variableScope) {
     Optional<SignalEventDefinition> signalEventDefinition =
         flowNodeInstance.getFlowNode().getSignalEventDefinition();
     if (signalEventDefinition.isPresent()) {
@@ -195,8 +202,7 @@ public abstract class CatchEventInstanceProcessor<
             flowNodeInstance, "SignalEventDefinition has no referenced signal");
       }
       JsonNode jsonNode =
-          feelExpressionHandler.processFeelExpression(
-              referencedSignal.name(), scope.getVariableScope());
+          feelExpressionHandler.processFeelExpression(referencedSignal.name(), variableScope);
       if (jsonNode == null || jsonNode.isNull()) {
         throw new ProcessInstanceException(
             flowNodeInstance, "Signal name expression returned null");
@@ -242,27 +248,43 @@ public abstract class CatchEventInstanceProcessor<
 
   @Override
   protected void processAbortSpecificFlowNodeInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
-    terminateSubscriptions(instance, processInstanceProcessingContext.getInstanceResult(), scope);
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I instance) {
+    terminateSubscriptions(
+        instance, processInstanceProcessingContext.getInstanceResult(), variableScope);
   }
 
   public boolean processEvent(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I catchEventInstance,
       EventSignal event) {
     long now = clock.millis();
 
+    ioMappingProcessor.processInputMappings(catchEventInstance.getFlowNode(), variableScope);
+
     InstanceResult newInstanceResult = processInstanceProcessingContext.getInstanceResult();
     if (catchEventInstance.matchesEvent(event)) {
-      getInstanceResultForContinue(processInstanceProcessingContext, scope, catchEventInstance);
+      variableScope.merge(event.getVariables());
+      getInstanceResultForContinue(
+          processInstanceProcessingContext, scope, variableScope, catchEventInstance);
+      ioMappingProcessor.processOutputMappings(catchEventInstance.getFlowNode(), variableScope);
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
+      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope, variableScope);
       List<String> outputSequenceFlowIds =
           scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
       newInstanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, scope, now, null, outputSequenceFlowIds));
+              processInstance,
+              catchEventInstance,
+              scope,
+              variableScope,
+              now,
+              null,
+              outputSequenceFlowIds));
       return true;
     }
     return false;
@@ -271,21 +293,34 @@ public abstract class CatchEventInstanceProcessor<
   public boolean processEventCatchAll(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I catchEventInstance,
       EventSignal event) {
     long now = clock.millis();
 
+    ioMappingProcessor.processInputMappings(catchEventInstance.getFlowNode(), variableScope);
+
     if (catchEventInstance.matchesEventCatchAll(event)) {
+      variableScope.merge(event.getVariables());
       InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
-      getInstanceResultForContinue(processInstanceProcessingContext, scope, catchEventInstance);
+      getInstanceResultForContinue(
+          processInstanceProcessingContext, scope, variableScope, catchEventInstance);
+      ioMappingProcessor.processOutputMappings(catchEventInstance.getFlowNode(), variableScope);
+
       ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope);
+      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope, variableScope);
       List<String> sequenceFlowIds =
           scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
 
       instanceResult.addInstanceUpdate(
           createFlowNodeInstanceUpdate(
-              processInstance, catchEventInstance, scope, now, null, sequenceFlowIds));
+              processInstance,
+              catchEventInstance,
+              scope,
+              variableScope,
+              now,
+              null,
+              sequenceFlowIds));
       return true;
     }
     return false;

@@ -21,6 +21,7 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -47,6 +48,7 @@ public class CallActivityInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       CallActivityInstance callActivityInstance,
       String inputFlowId) {
     callActivityInstance.setState(ExecutionState.ACTIVE);
@@ -56,8 +58,7 @@ public class CallActivityInstanceProcessor
     CallActivity flowNode = callActivityInstance.getFlowNode();
 
     JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(
-            flowNode.getCalledElement(), scope.getVariableScope());
+        feelExpressionHandler.processFeelExpression(flowNode.getCalledElement(), variableScope);
     if (jsonNode == null || jsonNode.isNull()) {
       throw new ProcessInstanceException(
           callActivityInstance, "Called element expression returned null");
@@ -65,9 +66,9 @@ public class CallActivityInstanceProcessor
 
     VariablesDTO commandVariables;
     if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
-      commandVariables = scope.getVariableScope().scopeAndParentsToDto();
+      commandVariables = variableScope.scopeAndParentsToDto();
     } else {
-      commandVariables = scope.getVariableScope().scopeToDTO();
+      commandVariables = variableScope.scopeToDTO();
     }
 
     processInstanceProcessingContext
@@ -87,6 +88,7 @@ public class CallActivityInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       CallActivityInstance instance,
       ContinueFlowElementTriggerDTO trigger) {
     instance.setState(ExecutionState.COMPLETED);
@@ -96,6 +98,7 @@ public class CallActivityInstanceProcessor
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       CallActivityInstance instance) {
     processInstanceProcessingContext
         .getInstanceResult()

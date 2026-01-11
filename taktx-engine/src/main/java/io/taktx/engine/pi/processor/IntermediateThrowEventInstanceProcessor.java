@@ -14,6 +14,7 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.IntermediateThrowEventInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -37,6 +38,7 @@ public class IntermediateThrowEventInstanceProcessor
   protected void processAbortSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       IntermediateThrowEventInstance instance) {
     // nothing to do
   }

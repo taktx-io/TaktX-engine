@@ -16,6 +16,7 @@ import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,7 @@ class EndEventInstanceProcessorTest {
 
   @Mock private ProcessInstanceProcessingContext processingContext;
   @Mock private Scope scope;
+  @Mock private VariableScope variableScope;
   @Mock private EndEventInstance endEventInstance;
   @Mock private EndEvent endEvent;
 
@@ -37,7 +39,7 @@ class EndEventInstanceProcessorTest {
     assertDoesNotThrow(
         () ->
             processor.processAbortSpecificFlowNodeInstance(
-                processingContext, scope, endEventInstance));
+                processingContext, scope, variableScope, endEventInstance));
   }
 
   @Test

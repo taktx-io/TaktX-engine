@@ -24,4 +24,6 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonTypeIdResolver(EventSignalTypeIdResolver.class)
-public abstract class EventSignalDTO {}
+public abstract class EventSignalDTO {
+  VariablesDTO variables;
+}

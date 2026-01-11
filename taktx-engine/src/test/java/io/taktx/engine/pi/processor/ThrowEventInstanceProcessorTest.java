@@ -72,7 +72,7 @@ class ThrowEventInstanceProcessorTest {
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, throwEventInstance, "flow1");
+        processingContext, scope, variableScope, throwEventInstance, "flow1");
 
     verify(directInstanceResult).setAbortScope();
   }
@@ -90,13 +90,12 @@ class ThrowEventInstanceProcessorTest {
     when(throwEvent.getErrorEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getEscalationEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getLinkventDefinition()).thenReturn(Optional.empty());
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("signalName", variableScope))
         .thenReturn(new TextNode("resolvedSignalName"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, throwEventInstance, "flow1");
+        processingContext, scope, variableScope, throwEventInstance, "flow1");
 
     verify(instanceResult).addSignal("resolvedSignalName");
   }
@@ -117,7 +116,7 @@ class ThrowEventInstanceProcessorTest {
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, throwEventInstance, "flow1");
+        processingContext, scope, variableScope, throwEventInstance, "flow1");
 
     ArgumentCaptor<ErrorEventSignal> captor = ArgumentCaptor.forClass(ErrorEventSignal.class);
     verify(directInstanceResult).addEvent(captor.capture());
@@ -143,7 +142,7 @@ class ThrowEventInstanceProcessorTest {
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 
     processor.processStartSpecificEventInstance(
-        processingContext, scope, throwEventInstance, "flow1");
+        processingContext, scope, variableScope, throwEventInstance, "flow1");
 
     ArgumentCaptor<EscalationEventSignal> captor =
         ArgumentCaptor.forClass(EscalationEventSignal.class);
@@ -178,6 +177,7 @@ class ThrowEventInstanceProcessorTest {
     protected void processAbortSpecificFlowNodeInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         ThrowEventInstance<?> instance) {
       // Test implementation
     }

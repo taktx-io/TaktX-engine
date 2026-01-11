@@ -80,14 +80,13 @@ class MultiInstanceProcessorTest {
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
         .thenReturn(emptyArray);
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);
 
     processor.processStartSpecificFlowNodeInstance(
-        processingContext, scope, multiInstanceInstance, "flow1");
+        processingContext, scope, variableScope, multiInstanceInstance, "flow1");
 
     verify(multiInstanceInstance).setState(ExecutionState.COMPLETED);
     verify(multiInstanceInstance).setScope(subScope);
@@ -98,14 +97,13 @@ class MultiInstanceProcessorTest {
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
         .thenReturn(null);
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);
 
     processor.processStartSpecificFlowNodeInstance(
-        processingContext, scope, multiInstanceInstance, "flow1");
+        processingContext, scope, variableScope, multiInstanceInstance, "flow1");
 
     verify(multiInstanceInstance).setState(ExecutionState.COMPLETED);
   }
@@ -128,7 +126,7 @@ class MultiInstanceProcessorTest {
 
     Set<SequenceFlow> result =
         processor.getSelectedSequenceFlows(
-            mock(ProcessInstance.class), multiInstanceInstance, scope);
+            mock(ProcessInstance.class), multiInstanceInstance, scope, variableScope);
 
     assertEquals(2, result.size());
     assertTrue(result.contains(flow1));

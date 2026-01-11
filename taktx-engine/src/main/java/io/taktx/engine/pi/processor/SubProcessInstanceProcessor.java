@@ -21,6 +21,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.SubProcessInstance;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -53,6 +54,7 @@ public class SubProcessInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       SubProcessInstance subProcessInstance,
       String inputFlowId) {
 
@@ -67,8 +69,13 @@ public class SubProcessInstanceProcessor
     List<Long> instancePath = pathExtractor.getInstancePath(subProcessInstance);
 
     scopeProcessor.processStart(
-        instancePath, null, VariablesDTO.empty(), processInstanceProcessingContext, subScope);
-    scope.getVariableScope().merge(subScope.getVariableScope().scopeToDTO());
+        instancePath,
+        null,
+        VariablesDTO.empty(),
+        processInstanceProcessingContext,
+        subScope,
+        variableScope);
+
     scopeProcessor.bubbleUpEvents(scope, subProcessInstance);
 
     subProcessInstance.setState(subScope.getState());
@@ -78,6 +85,7 @@ public class SubProcessInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       SubProcessInstance subProcessInstance,
       ContinueFlowElementTriggerDTO trigger) {
     subProcessInstance.setState(subProcessInstance.getScope().getState());
@@ -87,6 +95,7 @@ public class SubProcessInstanceProcessor
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       SubProcessInstance subProcessInstance) {
 
     Scope childScope = subProcessInstance.getScope();
@@ -95,6 +104,7 @@ public class SubProcessInstanceProcessor
         new AbortTriggerDTO(
             processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
             List.of());
-    scopeProcessor.processAbort(processInstanceProcessingContext, childScope, trigger);
+    scopeProcessor.processAbort(
+        processInstanceProcessingContext, childScope, variableScope, trigger);
   }
 }

@@ -20,6 +20,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,6 +49,7 @@ public abstract class GatewayInstanceProcessor<
   protected final void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I gatewayInstance,
       String inputFlowId) {
     processStartSpecificGatewayInstance(
@@ -58,6 +60,7 @@ public abstract class GatewayInstanceProcessor<
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       C trigger) {
     throw new IllegalStateException("We should never continue a gateway instance");
@@ -65,7 +68,10 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I gatewayInstance, Scope scope) {
+      ProcessInstance processInstance,
+      I gatewayInstance,
+      Scope scope,
+      VariableScope variableScope) {
     Set<SequenceFlow> outgoingFlows = new HashSet<>();
     if (canTriggerOutputFlows(gatewayInstance, scope)) {
       gatewayInstance.resetFlows();
@@ -81,7 +87,7 @@ public abstract class GatewayInstanceProcessor<
                   sequenceFlow -> {
                     com.fasterxml.jackson.databind.JsonNode result =
                         feelExpressionHandler.processFeelExpression(
-                            sequenceFlow.getCondition().getExpression(), scope.getVariableScope());
+                            sequenceFlow.getCondition().getExpression(), variableScope);
                     // Handle null FEEL expression results (e.g., missing variables, invalid
                     // expressions)
                     return result != null && result.asBoolean();
@@ -112,7 +118,10 @@ public abstract class GatewayInstanceProcessor<
 
   @Override
   protected void processAbortSpecificFlowNodeInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I instance) {
     processTerminateSpecificGatewayInstance(
         processInstanceProcessingContext.getInstanceResult(),
         scope.getDirectInstanceResult(),

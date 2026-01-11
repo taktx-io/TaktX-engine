@@ -22,6 +22,7 @@ import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ReceiveTaskInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -46,6 +47,7 @@ public class ReceiveTaskInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ReceiveTaskInstance receiveTaskInstance,
       String inputFlowId) {
     receiveTaskInstance.setState(ExecutionState.ACTIVE);
@@ -58,8 +60,7 @@ public class ReceiveTaskInstanceProcessor
     }
     String correlationKeyExpression = referencedMessage.correlationKey();
     JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(
-            correlationKeyExpression, scope.getVariableScope());
+        feelExpressionHandler.processFeelExpression(correlationKeyExpression, variableScope);
     String correlationKey = jsonNode != null ? jsonNode.asText() : null;
     if (correlationKey == null) {
       throw new ProcessInstanceException(
@@ -80,6 +81,7 @@ public class ReceiveTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger) {
     receiveTaskInstance.setState(ExecutionState.COMPLETED);
@@ -91,6 +93,7 @@ public class ReceiveTaskInstanceProcessor
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ReceiveTaskInstance instance) {
     terminatingSubscriptionInstanceResult(
         processInstanceProcessingContext.getInstanceResult(), instance);

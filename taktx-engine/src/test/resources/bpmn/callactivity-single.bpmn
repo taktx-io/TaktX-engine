@@ -15,6 +15,7 @@
         <zeebe:calledElement processId="=calledActivity" propagateAllChildVariables="true" propagateAllParentVariables="false" />
         <zeebe:ioMapping>
           <zeebe:input source="=&#34;123&#34;" target="InputVariable" />
+          <zeebe:input source="=var1" target="var1" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0v3edbs</bpmn:incoming>
@@ -67,11 +68,11 @@
         <dc:Bounds x="370" y="257" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0t6z7aq_di" bpmnElement="EndErrorEvent_123">
-        <dc:Bounds x="642" y="512" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0wswvho_di" bpmnElement="EndErrorEvent_CatchAll">
         <dc:Bounds x="642" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0t6z7aq_di" bpmnElement="EndErrorEvent_123">
+        <dc:Bounds x="642" y="512" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0wutr48_di" bpmnElement="EndEscalationEvent_ABC">
         <dc:Bounds x="642" y="82" width="36" height="36" />
@@ -79,17 +80,17 @@
       <bpmndi:BPMNShape id="Event_1kg7ysx_di" bpmnElement="EndEscalationEvent_CatchAll">
         <dc:Bounds x="642" y="152" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0qbziy2_di" bpmnElement="Event_0qbziy2">
-        <dc:Bounds x="422" y="319" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0gbcy9k_di" bpmnElement="Event_0gbcy9k">
-        <dc:Bounds x="372" y="319" width="36" height="36" />
+      <bpmndi:BPMNShape id="Event_1kmqppt_di" bpmnElement="Event_1kmqppt">
+        <dc:Bounds x="422" y="239" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0trjszl_di" bpmnElement="Event_0trjszl">
         <dc:Bounds x="372" y="239" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_1kmqppt_di" bpmnElement="Event_1kmqppt">
-        <dc:Bounds x="422" y="239" width="36" height="36" />
+      <bpmndi:BPMNShape id="Event_0gbcy9k_di" bpmnElement="Event_0gbcy9k">
+        <dc:Bounds x="372" y="319" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0qbziy2_di" bpmnElement="Event_0qbziy2">
+        <dc:Bounds x="422" y="319" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0v3edbs_di" bpmnElement="Flow_0v3edbs">
         <di:waypoint x="215" y="297" />
@@ -99,15 +100,15 @@
         <di:waypoint x="470" y="297" />
         <di:waypoint x="642" y="297" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1hfrcr8_di" bpmnElement="Flow_1hfrcr8">
-        <di:waypoint x="390" y="355" />
-        <di:waypoint x="390" y="530" />
-        <di:waypoint x="642" y="530" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0otmdx0_di" bpmnElement="Flow_0otmdx0">
         <di:waypoint x="440" y="355" />
         <di:waypoint x="440" y="420" />
         <di:waypoint x="642" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1hfrcr8_di" bpmnElement="Flow_1hfrcr8">
+        <di:waypoint x="390" y="355" />
+        <di:waypoint x="390" y="530" />
+        <di:waypoint x="642" y="530" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_085j618_di" bpmnElement="Flow_085j618">
         <di:waypoint x="390" y="239" />

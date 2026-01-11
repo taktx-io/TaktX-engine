@@ -9,6 +9,8 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.dto.ExecutionState;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
@@ -25,6 +27,7 @@ import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
+import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -51,6 +54,7 @@ public abstract class ThrowEventInstanceProcessor<
   protected void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       String inputFlowId) {
 
@@ -75,7 +79,7 @@ public abstract class ThrowEventInstanceProcessor<
               }
               JsonNode jsonNode =
                   feelExpressionHandler.processFeelExpression(
-                      referencedSignal.name(), scope.getVariableScope());
+                      referencedSignal.name(), variableScope);
               if (jsonNode == null || jsonNode.isNull()) {
                 throw new ProcessInstanceException(
                     flowNodeInstance, "Signal name expression returned null");
@@ -93,7 +97,10 @@ public abstract class ThrowEventInstanceProcessor<
             errorEventDefinition -> {
               EventSignal errorEvent =
                   new ErrorEventSignal(
-                      flowNodeInstance, errorEventDefinition.getReferencedError().code(), "");
+                      flowNodeInstance,
+                      errorEventDefinition.getReferencedError().code(),
+                      "",
+                      VariablesDTO.empty());
               scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
@@ -106,7 +113,8 @@ public abstract class ThrowEventInstanceProcessor<
                   new EscalationEventSignal(
                       flowNodeInstance,
                       errorEventDefinition.getReferencedEscalation().escalationCode(),
-                      "");
+                      "",
+                      VariablesDTO.empty());
               scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
@@ -128,14 +136,17 @@ public abstract class ThrowEventInstanceProcessor<
                             flowNodeInstance.getParentInstance(),
                             event,
                             processInstance.getScope().nextElementInstanceId());
+                    VariableScope childVariableScope =
+                        variableScope.getParentScope().selectChildScope(catchEventInstance);
                     StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
-                        new StartFlowNodeInstanceInfo(catchEventInstance, null);
+                        new StartFlowNodeInstanceInfo(catchEventInstance, null, childVariableScope);
                     scope
                         .getDirectInstanceResult()
                         .addNewFlowNodeInstance(startFlowNodeInstanceInfo);
                   });
             });
 
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
     processStartSpecificThrowEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
   }

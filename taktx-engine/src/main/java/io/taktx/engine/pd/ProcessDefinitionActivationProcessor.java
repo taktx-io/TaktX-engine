@@ -178,7 +178,7 @@ public class ProcessDefinitionActivationProcessor {
                   feelExpressionHandler
                       .processFeelExpression(
                           processDefinition.getDefinitions().getSignals().get(signalRef).getName(),
-                          VariableScope.empty(null))
+                          VariableScope.empty(null, null))
                       .asText();
               NewDefinitionSignalSubscriptionDTO signalSubscription =
                   new NewDefinitionSignalSubscriptionDTO(
@@ -245,7 +245,7 @@ public class ProcessDefinitionActivationProcessor {
                       timerEventDefinition,
                       now,
                       getStartCommand(processDefinitionKey.getProcessDefinitionId(), startEvent),
-                      new VariableScope(null, null));
+                      VariableScope.empty(null, null));
               TimeBucket timeBucket =
                   TimeBucket.ofMillis(
                       schedule.getNextExecutionTime(schedule.getInstantiationTime())

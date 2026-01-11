@@ -20,6 +20,7 @@ import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -49,7 +50,10 @@ public class EventBasedGatewayInstanceProcessor
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, EventBasedGatewayInstance gatewayInstance, Scope scope) {
+      ProcessInstance processInstance,
+      EventBasedGatewayInstance gatewayInstance,
+      Scope scope,
+      VariableScope variableScope) {
     return gatewayInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
@@ -57,10 +61,12 @@ public class EventBasedGatewayInstanceProcessor
   protected void selectNextNodeIfAllowedStart(
       ProcessInstance processInstance,
       EventBasedGatewayInstance eventBasedGatewayInstance,
-      Scope scope) {
+      Scope scope,
+      VariableScope variableScope) {
     if (eventBasedGatewayInstance.canSelectNextNodeStart()) {
       List<Long> flowNodeInstances =
-          processNodeResultAndSelectNextInstance(processInstance, eventBasedGatewayInstance, scope)
+          processNodeResultAndSelectNextInstance(
+                  processInstance, eventBasedGatewayInstance, scope, variableScope)
               .stream()
               .map(FlowNodeInstance::getElementInstanceId)
               .toList();

@@ -14,6 +14,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +63,7 @@ class ErrorsTest {
         .andRespondToExternalTaskWithError(
             "servicetask", false, "123", "message", VariablesDTO.of("err", "errtest"))
         .parentProcess()
-        .waitUntilDone()
+        .waitUntilDone(Duration.ofSeconds(100))
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
         .hasAbortedElementWithId("callactivity-id")

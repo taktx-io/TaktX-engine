@@ -18,6 +18,7 @@ import io.taktx.dto.TaskScheduleDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -54,11 +55,11 @@ public class UserTaskInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       UserTaskInstance userTaskInstance,
       String inputFlowId) {
     userTaskInstance.setState(ExecutionState.ACTIVE);
     UserTask userTaskNode = userTaskInstance.getFlowNode();
-    VariableScope variableScope = scope.getVariableScope();
     AssignmentDefinitionDTO assignmentDefinition =
         getProcessedAssignmentDefinition(variableScope, userTaskNode.getAssignmentDefinition());
     TaskScheduleDTO taskSchedule =
@@ -136,6 +137,7 @@ public class UserTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       UserTaskInstance userTaskInstance,
       UserTaskResponseTriggerDTO trigger) {
 
@@ -144,34 +146,45 @@ public class UserTaskInstanceProcessor
     if (UserTaskResponseType.COMPLETED == responseResult.getResponseType()) {
       userTaskInstance.setState(ExecutionState.COMPLETED);
     } else if (UserTaskResponseType.ERROR == responseResult.getResponseType()) {
-      handleError(scope.getDirectInstanceResult(), userTaskInstance, responseResult);
+      handleError(
+          scope.getDirectInstanceResult(),
+          userTaskInstance,
+          responseResult,
+          trigger.getVariables());
     } else if (UserTaskResponseType.ESCALATION == responseResult.getResponseType()) {
-      handleEscalation(scope.getDirectInstanceResult(), userTaskInstance, responseResult);
+      handleEscalation(
+          scope.getDirectInstanceResult(),
+          userTaskInstance,
+          responseResult,
+          trigger.getVariables());
     }
   }
 
   private void handleEscalation(
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
-      UserTaskResponseResultDTO responseResult) {
+      UserTaskResponseResultDTO responseResult,
+      VariablesDTO variables) {
     directInstanceResult.addEvent(
         new EscalationEventSignal(
-            userTaskInstance, responseResult.getCode(), responseResult.getMessage()));
+            userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
   }
 
   private void handleError(
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
-      UserTaskResponseResultDTO responseResult) {
+      UserTaskResponseResultDTO responseResult,
+      VariablesDTO variables) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
-            userTaskInstance, responseResult.getCode(), responseResult.getMessage()));
+            userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
   }
 
   @Override
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       UserTaskInstance instance) {
     // no specific termination logic for user tasks
   }

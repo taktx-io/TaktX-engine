@@ -45,69 +45,82 @@ public abstract class ActivityInstanceProcessor<
   protected final void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flownodeInstance,
       String inputFlowId) {
 
-    VariableScope variables = scope.getVariableScope();
     if (flownodeInstance.isIteration()) {
-      variables.put("loopCnt", new IntNode(flownodeInstance.getLoopCnt()));
-      variables.put(
+      variableScope.put("loopCnt", new IntNode(flownodeInstance.getLoopCnt()));
+      variableScope.put(
           flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
           flownodeInstance.getInputElement());
     }
 
     processStartSpecificActivityInstance(
-        processInstanceProcessingContext, scope, flownodeInstance, inputFlowId);
+        processInstanceProcessingContext, scope, variableScope, flownodeInstance, inputFlowId);
 
-    handleFinishedIteration(flownodeInstance, scope);
+    handleFinishedIteration(flownodeInstance, variableScope);
   }
 
   @Override
   protected final void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       C trigger) {
 
     processContinueSpecificActivityInstance(
-        processInstanceProcessingContext, scope, flowNodeInstance, trigger);
+        processInstanceProcessingContext, scope, variableScope, flowNodeInstance, trigger);
 
-    handleFinishedIteration(flowNodeInstance, scope);
+    handleFinishedIteration(flowNodeInstance, variableScope);
   }
 
   @Override
   protected void processAbortSpecificFlowNodeInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance) {
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I instance) {
 
-    processAbortSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
+    processAbortSpecificActivityInstance(
+        processInstanceProcessingContext, scope, variableScope, instance);
   }
 
   protected abstract void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flownodeInstance,
       String inputFlowId);
 
   protected abstract void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I externalTaskInstance,
       C trigger);
 
   protected abstract void processAbortSpecificActivityInstance(
-      ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope, I instance);
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I instance);
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I flowNodeInstance, Scope scope) {
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      Scope scope,
+      VariableScope variableScope) {
     if (flowNodeInstance.isIteration()) {
       return Set.of();
     }
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-  private void handleFinishedIteration(I flownodeInstance, Scope scope) {
-    VariableScope variableScope = scope.getVariableScope();
+  private void handleFinishedIteration(
+      I flownodeInstance, VariableScope variableScope) {
     if (flownodeInstance.getState() == ExecutionState.COMPLETED && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
       // Handle null loop characteristics

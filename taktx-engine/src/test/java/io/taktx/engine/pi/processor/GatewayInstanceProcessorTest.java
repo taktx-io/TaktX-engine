@@ -68,7 +68,7 @@ class GatewayInstanceProcessorTest {
             IllegalStateException.class,
             () ->
                 processor.processContinueSpecificFlowNodeInstance(
-                    processingContext, scope, gatewayInstance, trigger));
+                    processingContext, scope, variableScope, gatewayInstance, trigger));
 
     assertEquals("We should never continue a gateway instance", exception.getMessage());
   }
@@ -76,7 +76,7 @@ class GatewayInstanceProcessorTest {
   @Test
   void getSelectedSequenceFlows_shouldReturnEmptySetWhenCannotTriggerOutputFlows() {
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(0, result.size());
     verify(gatewayInstance).setSelectedOutputFlows(Set.of());
@@ -93,7 +93,6 @@ class GatewayInstanceProcessorTest {
     when(gateway.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
     when(flow1.getCondition()).thenReturn(condition1);
     when(flow2.getCondition()).thenReturn(condition2);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
         .thenReturn(BooleanNode.TRUE);
     when(feelExpressionHandler.processFeelExpression("y < 10", variableScope))
@@ -102,7 +101,7 @@ class GatewayInstanceProcessorTest {
     processor.setCanTrigger(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(1, result.size());
     assertTrue(result.contains(flow1));
@@ -121,14 +120,13 @@ class GatewayInstanceProcessorTest {
     when(gateway.getDefaultSequenceFlow()).thenReturn(defaultFlow);
     when(flow1.getCondition()).thenReturn(condition1);
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
         .thenReturn(BooleanNode.FALSE);
 
     processor.setCanTrigger(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(1, result.size());
     assertTrue(result.contains(defaultFlow));
@@ -147,7 +145,7 @@ class GatewayInstanceProcessorTest {
     processor.setCanTrigger(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(2, result.size());
     assertTrue(result.contains(flow1));
@@ -163,7 +161,7 @@ class GatewayInstanceProcessorTest {
     processor.setCanTrigger(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope);
+        processor.getSelectedSequenceFlows(processInstance, gatewayInstance, scope, variableScope);
 
     assertEquals(0, result.size());
     verify(gatewayInstance).raiseIncident("No outgoing sequence flow selected for gateway");

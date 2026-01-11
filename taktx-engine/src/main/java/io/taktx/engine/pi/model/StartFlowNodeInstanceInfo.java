@@ -9,4 +9,6 @@
 package io.taktx.engine.pi.model;
 
 public record StartFlowNodeInstanceInfo(
-    FlowNodeInstance<?> flowNodeInstance, String inputSequenceFlowId) {}
+    FlowNodeInstance<?> flowNodeInstance,
+    String inputSequenceFlowId,
+    VariableScope variableScope) {}

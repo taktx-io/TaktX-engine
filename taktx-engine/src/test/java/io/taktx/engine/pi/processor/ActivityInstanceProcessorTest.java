@@ -75,11 +75,10 @@ class ActivityInstanceProcessorTest {
     when(activityInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputElement()).thenReturn("inputVar");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(activityInstance.getState()).thenReturn(ExecutionState.COMPLETED);
 
     processor.processStartSpecificFlowNodeInstance(
-        processingContext, scope, activityInstance, "flow1");
+        processingContext, scope, variableScope, activityInstance, "flow1");
 
     verify(variableScope).put("loopCnt", new IntNode(5));
     verify(variableScope).put("inputVar", new TextNode("testElement"));
@@ -88,10 +87,9 @@ class ActivityInstanceProcessorTest {
   @Test
   void processStartSpecificFlowNodeInstance_shouldNotSetLoopVariablesWhenNotIteration() {
     when(activityInstance.isIteration()).thenReturn(false);
-    when(scope.getVariableScope()).thenReturn(variableScope);
 
     processor.processStartSpecificFlowNodeInstance(
-        processingContext, scope, activityInstance, "flow1");
+        processingContext, scope, variableScope, activityInstance, "flow1");
 
     verify(variableScope, never()).put(eq("loopCnt"), any());
   }
@@ -102,7 +100,6 @@ class ActivityInstanceProcessorTest {
     when(activityInstance.getFlowNode()).thenReturn(activity);
     when(activityInstance.getState()).thenReturn(ExecutionState.COMPLETED);
     when(activityInstance.isIteration()).thenReturn(true);
-    when(scope.getVariableScope()).thenReturn(variableScope);
 
     LoopCharacteristics loopCharacteristics = mock(LoopCharacteristics.class);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
@@ -111,7 +108,7 @@ class ActivityInstanceProcessorTest {
         .thenReturn(new TextNode("outputValue"));
 
     processor.processContinueSpecificFlowNodeInstance(
-        processingContext, scope, activityInstance, trigger);
+        processingContext, scope, variableScope, activityInstance, trigger);
 
     verify(activityInstance).setOutputElement(any());
   }
@@ -121,7 +118,8 @@ class ActivityInstanceProcessorTest {
     when(activityInstance.isIteration()).thenReturn(true);
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(mock(ProcessInstance.class), activityInstance, scope);
+        processor.getSelectedSequenceFlows(
+            mock(ProcessInstance.class), activityInstance, scope, variableScope);
 
     assertEquals(0, result.size());
   }
@@ -135,7 +133,8 @@ class ActivityInstanceProcessorTest {
     when(activity.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
 
     Set<SequenceFlow> result =
-        processor.getSelectedSequenceFlows(mock(ProcessInstance.class), activityInstance, scope);
+        processor.getSelectedSequenceFlows(
+            mock(ProcessInstance.class), activityInstance, scope, variableScope);
 
     assertEquals(2, result.size());
     assertTrue(result.contains(flow1));
@@ -159,6 +158,7 @@ class ActivityInstanceProcessorTest {
     protected void processStartSpecificActivityInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         ActivityInstance<Activity> flownodeInstance,
         String inputFlowId) {
       // Test implementation
@@ -168,6 +168,7 @@ class ActivityInstanceProcessorTest {
     protected void processContinueSpecificActivityInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         ActivityInstance<Activity> externalTaskInstance,
         ContinueFlowElementTriggerDTO trigger) {
       // Test implementation
@@ -177,6 +178,7 @@ class ActivityInstanceProcessorTest {
     protected void processAbortSpecificActivityInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         ActivityInstance<Activity> instance) {
       // Test implementation
     }

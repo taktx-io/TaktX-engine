@@ -59,7 +59,7 @@ class FlowNodeInstanceProcessorTest {
   void processStart_shouldNotProcessWhenStateDoesNotAllowStart() {
     when(flowNodeInstance.stateAllowsStart()).thenReturn(false);
 
-    processor.processStart(processingContext, scope, flowNodeInstance, "flow1");
+    processor.processStart(processingContext, scope, variableScope, flowNodeInstance, "flow1");
 
     verify(flowNodeInstance).stateAllowsStart();
     verifyNoMoreInteractions(processingContext);
@@ -78,7 +78,7 @@ class FlowNodeInstanceProcessorTest {
     ContinueFlowElementTriggerDTO trigger = mock(ContinueFlowElementTriggerDTO.class);
     when(flowNodeInstance.stateAllowsContinue()).thenReturn(false);
 
-    processor.processContinue(processingContext, scope, flowNodeInstance, trigger);
+    processor.processContinue(processingContext, scope, variableScope, flowNodeInstance, trigger);
 
     verify(flowNodeInstance).stateAllowsContinue();
     verifyNoMoreInteractions(processingContext);
@@ -95,7 +95,7 @@ class FlowNodeInstanceProcessorTest {
   void processAbort_shouldNotAbortWhenStateDoesNotAllowStopping() {
     when(flowNodeInstance.stateAllowsStopping()).thenReturn(false);
 
-    processor.processAbort(processingContext, scope, flowNodeInstance);
+    processor.processAbort(processingContext, scope, variableScope, flowNodeInstance);
 
     verify(flowNodeInstance, never()).abort();
   }
@@ -114,7 +114,10 @@ class FlowNodeInstanceProcessorTest {
 
     @Override
     protected Set<SequenceFlow> getSelectedSequenceFlows(
-        ProcessInstance processInstance, FlowNodeInstance<?> flowNodeInstance, Scope scope) {
+        ProcessInstance processInstance,
+        FlowNodeInstance<?> flowNodeInstance,
+        Scope scope,
+        VariableScope variableScope) {
       return Set.of();
     }
 
@@ -122,6 +125,7 @@ class FlowNodeInstanceProcessorTest {
     protected void processStartSpecificFlowNodeInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         FlowNodeInstance<?> flownodeInstance,
         String inputFlowId) {
       // Test implementation
@@ -131,6 +135,7 @@ class FlowNodeInstanceProcessorTest {
     protected void processContinueSpecificFlowNodeInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         FlowNodeInstance<?> flowNodeInstance,
         ContinueFlowElementTriggerDTO trigger) {
       // Test implementation
@@ -140,6 +145,7 @@ class FlowNodeInstanceProcessorTest {
     protected void processAbortSpecificFlowNodeInstance(
         ProcessInstanceProcessingContext processInstanceProcessingContext,
         Scope scope,
+        VariableScope variableScope,
         FlowNodeInstance<?> instance) {
       // Test implementation
     }

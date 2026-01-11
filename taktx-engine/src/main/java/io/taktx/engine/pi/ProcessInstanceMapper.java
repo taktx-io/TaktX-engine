@@ -641,8 +641,6 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "stateNoChange", ignore = true)
   @Mapping(target = "parentScope", ignore = true)
   @Mapping(target = "processInstanceId", ignore = true)
-  @Mapping(target = "variableScope", ignore = true)
-  @Mapping(target = "variableStore", ignore = true)
   @Mapping(target = "flowNodeInstances", ignore = true)
   @Mapping(target = "flowNodeInstanceStore", ignore = true)
   @Mapping(target = "initialState", ignore = true)

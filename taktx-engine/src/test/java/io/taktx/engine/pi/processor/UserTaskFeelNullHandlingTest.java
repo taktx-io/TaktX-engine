@@ -74,7 +74,6 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getAssignmentDefinition()).thenReturn(assignmentDef);
     when(userTask.getTaskSchedule()).thenReturn(null);
     when(userTask.getPriorityDefinition()).thenReturn(null);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Simulate FEEL expression returning null (missing variable)
@@ -85,7 +84,7 @@ class UserTaskFeelNullHandlingTest {
     assertDoesNotThrow(
         () ->
             processor.processStartSpecificActivityInstance(
-                processingContext, scope, userTaskInstance, "flow1"));
+                processingContext, scope, variableScope, userTaskInstance, "flow1"));
 
     verify(userTaskInstance).setState(ExecutionState.ACTIVE);
     verify(instanceResult).addUserTask(any());
@@ -102,7 +101,6 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getAssignmentDefinition()).thenReturn(null);
     when(userTask.getTaskSchedule()).thenReturn(taskSchedule);
     when(userTask.getPriorityDefinition()).thenReturn(null);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Due date returns null, follow-up is valid
@@ -114,7 +112,7 @@ class UserTaskFeelNullHandlingTest {
     assertDoesNotThrow(
         () ->
             processor.processStartSpecificActivityInstance(
-                processingContext, scope, userTaskInstance, "flow1"));
+                processingContext, scope, variableScope, userTaskInstance, "flow1"));
 
     verify(userTaskInstance).setState(ExecutionState.ACTIVE);
   }
@@ -129,7 +127,6 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getAssignmentDefinition()).thenReturn(null);
     when(userTask.getTaskSchedule()).thenReturn(null);
     when(userTask.getPriorityDefinition()).thenReturn(priorityDef);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     when(feelExpressionHandler.processFeelExpression("unknownVariable", variableScope))
@@ -138,7 +135,7 @@ class UserTaskFeelNullHandlingTest {
     assertDoesNotThrow(
         () ->
             processor.processStartSpecificActivityInstance(
-                processingContext, scope, userTaskInstance, "flow1"));
+                processingContext, scope, variableScope, userTaskInstance, "flow1"));
 
     verify(userTaskInstance).setState(ExecutionState.ACTIVE);
   }
@@ -158,7 +155,6 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getAssignmentDefinition()).thenReturn(assignmentDef);
     when(userTask.getTaskSchedule()).thenReturn(taskSchedule);
     when(userTask.getPriorityDefinition()).thenReturn(priorityDef);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // All expressions return null
@@ -168,7 +164,7 @@ class UserTaskFeelNullHandlingTest {
     assertDoesNotThrow(
         () ->
             processor.processStartSpecificActivityInstance(
-                processingContext, scope, userTaskInstance, "flow1"));
+                processingContext, scope, variableScope, userTaskInstance, "flow1"));
 
     verify(userTaskInstance).setState(ExecutionState.ACTIVE);
     verify(instanceResult).addUserTask(any());

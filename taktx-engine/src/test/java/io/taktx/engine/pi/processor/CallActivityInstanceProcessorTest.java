@@ -56,14 +56,13 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(true);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(variableScope.scopeToDTO()).thenReturn(new VariablesDTO());
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(new TextNode("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
-        processingContext, scope, callActivityInstance, "flow1");
+        processingContext, scope, variableScope, callActivityInstance, "flow1");
 
     verify(callActivityInstance).setState(ExecutionState.ACTIVE);
     verify(callActivityInstance).setChildProcessInstanceId(any(UUID.class));
@@ -85,14 +84,13 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(false);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(variableScope.scopeAndParentsToDto()).thenReturn(new VariablesDTO());
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(new TextNode("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
-        processingContext, scope, callActivityInstance, "flow1");
+        processingContext, scope, variableScope, callActivityInstance, "flow1");
 
     verify(variableScope).scopeAndParentsToDto();
   }
@@ -101,7 +99,6 @@ class CallActivityInstanceProcessorTest {
   void processStartSpecificActivityInstance_shouldAbortWhenCalledElementIsNull() {
     when(callActivityInstance.getFlowNode()).thenReturn(callActivity);
     when(callActivity.getCalledElement()).thenReturn("childProcess");
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(null);
 
@@ -109,13 +106,13 @@ class CallActivityInstanceProcessorTest {
         ProcessInstanceException.class,
         () ->
             processor.processStartSpecificActivityInstance(
-                processingContext, scope, callActivityInstance, "flow1"));
+                processingContext, scope, variableScope, callActivityInstance, "flow1"));
   }
 
   @Test
   void processContinueSpecificActivityInstance_shouldCompleteActivity() {
     processor.processContinueSpecificActivityInstance(
-        processingContext, scope, callActivityInstance, null);
+        processingContext, scope, variableScope, callActivityInstance, null);
 
     verify(callActivityInstance).setState(ExecutionState.COMPLETED);
   }
@@ -126,7 +123,8 @@ class CallActivityInstanceProcessorTest {
     when(callActivityInstance.getChildProcessInstanceId()).thenReturn(childProcessId);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
-    processor.processAbortSpecificActivityInstance(processingContext, scope, callActivityInstance);
+    processor.processAbortSpecificActivityInstance(
+        processingContext, scope, variableScope, callActivityInstance);
 
     ArgumentCaptor<AbortTriggerDTO> captor = ArgumentCaptor.forClass(AbortTriggerDTO.class);
     verify(instanceResult).addTerminateCommand(captor.capture());

@@ -33,20 +33,27 @@ public class IoMappingProcessor {
     this.objectMapper = objectMapper;
   }
 
+  public void processInputMappings(WithIoMapping element, VariableScope variables) {
+    Set<IoVariableMapping> inputMappings = element.getIoMapping().getInputMappings();
+    if (inputMappings.isEmpty()) {
+      return;
+    }
+
+    addVariables(variables.getParentScope(), variables, inputMappings);
+  }
+
   public void processOutputMappings(WithIoMapping element, VariableScope variables) {
     Set<IoVariableMapping> outputMappings = element.getIoMapping().getOutputMappings();
 
-    addVariables(variables, outputMappings);
+    addVariables(variables, variables.getParentScope(), outputMappings);
   }
 
-  public void addVariables(VariableScope variables, Set<IoVariableMapping> mappings) {
-    if (!mappings.isEmpty()) {
-      for (IoVariableMapping mapping : mappings) {
-        String varName = mapping.getTarget();
-        JsonNode jsonNode =
-            feelExpressionHandler.processFeelExpression(mapping.getSource(), variables);
-        setNestedVariable(variables, varName, jsonNode);
-      }
+  public void addVariables(
+      VariableScope source, VariableScope target, Set<IoVariableMapping> mappings) {
+    for (IoVariableMapping mapping : mappings) {
+      String varName = mapping.getTarget();
+      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(mapping.getSource(), source);
+      setNestedVariable(target, varName, jsonNode);
     }
   }
 
@@ -95,14 +102,5 @@ public class IoMappingProcessor {
 
     // Store the modified root object back to variables
     variables.put(rootVarName, rootObject);
-  }
-
-  public void addInputVariables(WithIoMapping element, VariableScope variables) {
-    Set<IoVariableMapping> inputMappings = element.getIoMapping().getInputMappings();
-    if (inputMappings.isEmpty()) {
-      return;
-    }
-
-    addVariables(variables, inputMappings);
   }
 }

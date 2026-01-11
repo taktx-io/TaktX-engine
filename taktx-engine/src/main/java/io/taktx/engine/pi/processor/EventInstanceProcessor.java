@@ -16,6 +16,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.EventInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Set;
 import lombok.NoArgsConstructor;
@@ -35,16 +36,18 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
   protected void processStartSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       String inputFlowId) {
     processStartSpecificEventInstance(
-        processInstanceProcessingContext, scope, flowNodeInstance, inputFlowId);
+        processInstanceProcessingContext, scope, variableScope, flowNodeInstance, inputFlowId);
   }
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger) {
     throw new IllegalStateException("We should never continue an event instance");
@@ -52,13 +55,17 @@ public abstract class EventInstanceProcessor<E extends Event, I extends EventIns
 
   @Override
   protected Set<SequenceFlow> getSelectedSequenceFlows(
-      ProcessInstance processInstance, I flowNodeInstance, Scope scope) {
+      ProcessInstance processInstance,
+      I flowNodeInstance,
+      Scope scope,
+      VariableScope variableScope) {
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
   protected abstract void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       I flowNodeInstance,
       String inputFlowId);
 }

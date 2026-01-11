@@ -44,18 +44,18 @@ public class ScriptTaskInstanceProcessor
   protected void processStartSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ScriptTaskInstance flownodeInstance,
       String inputFlowId) {
     ScriptType scriptType = flownodeInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.FEEL) {
       String expression = flownodeInstance.getFlowNode().getScriptExpressions().getFirst();
-      VariableScope variableScope = scope.getVariableScope();
       JsonNode jsonNode = feelExpressionHandler.processFeelExpression(expression, variableScope);
       variableScope.put(flownodeInstance.getFlowNode().getResultVariableName(), jsonNode);
       flownodeInstance.setState(ExecutionState.COMPLETED);
     } else if (scriptType == ScriptType.JOBWORKER) {
       super.processStartSpecificActivityInstance(
-          processInstanceProcessingContext, scope, flownodeInstance, inputFlowId);
+          processInstanceProcessingContext, scope, variableScope, flownodeInstance, inputFlowId);
     }
   }
 
@@ -63,12 +63,13 @@ public class ScriptTaskInstanceProcessor
   protected void processContinueSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ScriptTaskInstance externalTaskInstance,
       ExternalTaskResponseTriggerDTO trigger) {
     ScriptType scriptType = externalTaskInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.JOBWORKER) {
       super.processContinueSpecificActivityInstance(
-          processInstanceProcessingContext, scope, externalTaskInstance, trigger);
+          processInstanceProcessingContext, scope, variableScope, externalTaskInstance, trigger);
     } else if (scriptType == ScriptType.FEEL) {
       // For FEEL scripts, we do not continue the instance, as it is already finished
       log.warn(
@@ -81,10 +82,12 @@ public class ScriptTaskInstanceProcessor
   protected void processAbortSpecificActivityInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       ScriptTaskInstance instance) {
     ScriptType scriptType = instance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.JOBWORKER) {
-      super.processAbortSpecificActivityInstance(processInstanceProcessingContext, scope, instance);
+      super.processAbortSpecificActivityInstance(
+          processInstanceProcessingContext, scope, variableScope, instance);
     } else if (scriptType == ScriptType.FEEL) {
       // For FEEL scripts, we do not continue the instance, as it is already finished
       log.warn(

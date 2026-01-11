@@ -50,11 +50,10 @@ class UserTaskInstanceProcessorTest {
     when(userTask.getAssignmentDefinition()).thenReturn(null);
     when(userTask.getTaskSchedule()).thenReturn(null);
     when(userTask.getPriorityDefinition()).thenReturn(null);
-    when(scope.getVariableScope()).thenReturn(variableScope);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
-        processingContext, scope, userTaskInstance, "flow1");
+        processingContext, scope, variableScope, userTaskInstance, "flow1");
 
     verify(userTaskInstance).setState(ExecutionState.ACTIVE);
     verify(instanceResult).addUserTask(any(UserTaskInfo.class));
@@ -69,7 +68,7 @@ class UserTaskInstanceProcessorTest {
     when(responseResult.getResponseType()).thenReturn(UserTaskResponseType.COMPLETED);
 
     processor.processContinueSpecificActivityInstance(
-        processingContext, scope, userTaskInstance, trigger);
+        processingContext, scope, variableScope, userTaskInstance, trigger);
 
     verify(userTaskInstance).setState(ExecutionState.COMPLETED);
   }
@@ -85,7 +84,7 @@ class UserTaskInstanceProcessorTest {
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 
     processor.processContinueSpecificActivityInstance(
-        processingContext, scope, userTaskInstance, trigger);
+        processingContext, scope, variableScope, userTaskInstance, trigger);
 
     verify(directInstanceResult).addEvent(any());
   }
@@ -101,7 +100,7 @@ class UserTaskInstanceProcessorTest {
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 
     processor.processContinueSpecificActivityInstance(
-        processingContext, scope, userTaskInstance, trigger);
+        processingContext, scope, variableScope, userTaskInstance, trigger);
 
     verify(directInstanceResult).addEvent(any());
   }
@@ -111,6 +110,6 @@ class UserTaskInstanceProcessorTest {
     assertDoesNotThrow(
         () ->
             processor.processAbortSpecificActivityInstance(
-                processingContext, scope, userTaskInstance));
+                processingContext, scope, variableScope, userTaskInstance));
   }
 }

@@ -15,6 +15,7 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartEventInstance;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -43,6 +44,7 @@ public class StartEventInstanceProcessor
   protected void processStartSpecificEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
+      VariableScope variableScope,
       StartEventInstance startEventInstance,
       String inputFlowId) {
     startEventInstance.setState(ExecutionState.COMPLETED);
