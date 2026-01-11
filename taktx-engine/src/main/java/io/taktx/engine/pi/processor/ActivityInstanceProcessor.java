@@ -119,8 +119,7 @@ public abstract class ActivityInstanceProcessor<
     return flowNodeInstance.getFlowNode().getOutGoingSequenceFlows();
   }
 
-  private void handleFinishedIteration(
-      I flownodeInstance, VariableScope variableScope) {
+  private void handleFinishedIteration(I flownodeInstance, VariableScope variableScope) {
     if (flownodeInstance.getState() == ExecutionState.COMPLETED && flownodeInstance.isIteration()) {
       Activity flowNode = flownodeInstance.getFlowNode();
       // Handle null loop characteristics
