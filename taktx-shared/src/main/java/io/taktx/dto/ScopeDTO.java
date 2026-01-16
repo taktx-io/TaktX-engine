@@ -33,7 +33,7 @@ public class ScopeDTO {
   private Map<String, Long> gatewayInstances;
   private Map<String, Set<String>> messageSubscriptions;
   private Set<InstanceScheduleKeyDTO> scheduleKeys;
-  private Map<Long, Set<Long>> activityToBoundaryEvents;
+  private SubscriptionsDTO subscriptions;
 
   public ScopeDTO(
       ExecutionState state,
@@ -43,7 +43,7 @@ public class ScopeDTO {
       Map<String, Long> gatewayInstances,
       Map<String, Set<String>> messageSubscriptions,
       Set<InstanceScheduleKeyDTO> scheduleKeys,
-      Map<Long, Set<Long>> activityToBoundaryEvents) {
+      SubscriptionsDTO subscriptions) {
     this.state = state;
     this.activeCnt = activeCnt;
     this.subProcessLevel = subProcessLevel;
@@ -51,6 +51,6 @@ public class ScopeDTO {
     this.gatewayInstances = gatewayInstances;
     this.messageSubscriptions = messageSubscriptions;
     this.scheduleKeys = scheduleKeys;
-    this.activityToBoundaryEvents = activityToBoundaryEvents;
+    this.subscriptions = subscriptions;
   }
 }

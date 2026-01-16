@@ -25,7 +25,7 @@ public class BoundaryEventInstance extends CatchEventInstance<BoundaryEvent> {
 
   @Override
   public boolean canSelectNextNodeStart() {
-    return false;
+    return true;
   }
 
   @Override

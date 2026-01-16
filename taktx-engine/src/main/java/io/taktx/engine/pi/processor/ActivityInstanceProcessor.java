@@ -56,6 +56,15 @@ public abstract class ActivityInstanceProcessor<
           flownodeInstance.getInputElement());
     }
 
+    Activity activity = flownodeInstance.getFlowNode();
+    activity
+        .getBoundaryEvents()
+        .forEach(
+            boundaryEvent ->
+                scope
+                    .getSubscriptions()
+                    .addSubscriptionsForBoundaryEventDefinitions(boundaryEvent, flownodeInstance));
+
     processStartSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, flownodeInstance, inputFlowId);
 
@@ -82,6 +91,8 @@ public abstract class ActivityInstanceProcessor<
       Scope scope,
       VariableScope variableScope,
       I instance) {
+
+    scope.getSubscriptions().cancelSubscriptionsForInstance(instance, scope);
 
     processAbortSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, instance);

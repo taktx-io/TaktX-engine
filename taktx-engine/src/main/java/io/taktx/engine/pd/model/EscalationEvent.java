@@ -8,4 +8,4 @@
 
 package io.taktx.engine.pd.model;
 
-public record EscalationEvent(String name, String escalationCode) {}
+public record EscalationEvent(String name, String code) {}

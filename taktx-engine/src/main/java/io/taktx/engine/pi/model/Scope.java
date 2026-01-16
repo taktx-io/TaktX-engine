@@ -16,6 +16,7 @@ import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
+import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -35,10 +35,6 @@ import org.apache.kafka.streams.state.KeyValueStore;
 @Slf4j
 @NoArgsConstructor
 public class Scope {
-
-  private final Map<Long, Long> boundaryEventToActivity = new WeakHashMap<>();
-  private final Map<Long, Set<Long>> activityToBoundaryEvents = new WeakHashMap<>();
-
   private Scope parentScope;
   private UUID processInstanceId;
   private FlowNodeInstances flowNodeInstances;
@@ -46,7 +42,6 @@ public class Scope {
   private ExecutionState initialState;
   private boolean stateChanged = false;
   private WithScope parentFlowNodeInstance;
-
   private final DirectInstanceResult directInstanceResult = DirectInstanceResult.empty();
 
   private int subProcessLevel;
@@ -56,6 +51,8 @@ public class Scope {
   private Map<String, Long> gatewayInstances = new HashMap<>();
   private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
   private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
+  private Subscriptions subscriptions = new Subscriptions();
+
   private ProcessInstanceMapper processInstanceMapper;
   private FlowElements flowElements;
 

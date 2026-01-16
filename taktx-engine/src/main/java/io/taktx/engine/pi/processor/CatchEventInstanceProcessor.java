@@ -13,7 +13,6 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
-import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.SignalEventDefinition;
@@ -25,13 +24,11 @@ import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
-import java.util.List;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 
@@ -89,24 +86,6 @@ public abstract class CatchEventInstanceProcessor<
               processInstanceProcessingContext
                   .getInstanceResult()
                   .addNewInstanceSignalSubscription(subscriptionInfo);
-            });
-
-    catchEventInstance
-        .getFlowNode()
-        .getEscalationEventDefinition()
-        .ifPresent(
-            escalationEventDefinition -> {
-              catchEventInstance.setState(ExecutionState.ACTIVE);
-              catchEventInstance.addEscalationSubscription(escalationEventDefinition);
-            });
-
-    catchEventInstance
-        .getFlowNode()
-        .getErrorEventDefinition()
-        .ifPresent(
-            errorEventDefinition -> {
-              catchEventInstance.setState(ExecutionState.ACTIVE);
-              catchEventInstance.addErrorSubscription(errorEventDefinition);
             });
 
     if (shoudHandleTimerEvents()) {
@@ -187,7 +166,6 @@ public abstract class CatchEventInstanceProcessor<
       I flowNodeInstance, InstanceResult result, VariableScope variableScope) {
     terminateScheduleKeys(flowNodeInstance, result);
     terminateMessageSubscriptions(flowNodeInstance, result);
-    terminateEscalationAndErrorSubscriptions(flowNodeInstance);
     terminateSignalSubscription(flowNodeInstance, result, variableScope);
   }
 
@@ -212,11 +190,6 @@ public abstract class CatchEventInstanceProcessor<
       result.addCancelInstanceSignalSubscription(
           new CancelInstanceSignalSubscriptionInfo(name, flowNodeInstance));
     }
-  }
-
-  private void terminateEscalationAndErrorSubscriptions(I flowNodeInstance) {
-    flowNodeInstance.clearEscalationSubscriptions();
-    flowNodeInstance.clearErrorSubscriptions();
   }
 
   private static <I extends CatchEventInstance<? extends CatchEvent>>
@@ -254,75 +227,5 @@ public abstract class CatchEventInstanceProcessor<
       I instance) {
     terminateSubscriptions(
         instance, processInstanceProcessingContext.getInstanceResult(), variableScope);
-  }
-
-  public boolean processEvent(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      VariableScope variableScope,
-      I catchEventInstance,
-      EventSignal event) {
-    long now = clock.millis();
-
-    ioMappingProcessor.processInputMappings(catchEventInstance.getFlowNode(), variableScope);
-
-    InstanceResult newInstanceResult = processInstanceProcessingContext.getInstanceResult();
-    if (catchEventInstance.matchesEvent(event)) {
-      variableScope.merge(event.getVariables());
-      getInstanceResultForContinue(
-          processInstanceProcessingContext, scope, variableScope, catchEventInstance);
-      ioMappingProcessor.processOutputMappings(catchEventInstance.getFlowNode(), variableScope);
-      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope, variableScope);
-      List<String> outputSequenceFlowIds =
-          scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
-      newInstanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(
-              processInstance,
-              catchEventInstance,
-              scope,
-              variableScope,
-              now,
-              null,
-              outputSequenceFlowIds));
-      return true;
-    }
-    return false;
-  }
-
-  public boolean processEventCatchAll(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      VariableScope variableScope,
-      I catchEventInstance,
-      EventSignal event) {
-    long now = clock.millis();
-
-    ioMappingProcessor.processInputMappings(catchEventInstance.getFlowNode(), variableScope);
-
-    if (catchEventInstance.matchesEventCatchAll(event)) {
-      variableScope.merge(event.getVariables());
-      InstanceResult instanceResult = processInstanceProcessingContext.getInstanceResult();
-      getInstanceResultForContinue(
-          processInstanceProcessingContext, scope, variableScope, catchEventInstance);
-      ioMappingProcessor.processOutputMappings(catchEventInstance.getFlowNode(), variableScope);
-
-      ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-      selectNextNodeIfAllowedContinue(catchEventInstance, processInstance, scope, variableScope);
-      List<String> sequenceFlowIds =
-          scope.getDirectInstanceResult().getSequenceFlowsFromNewFlowNodeInstances();
-
-      instanceResult.addInstanceUpdate(
-          createFlowNodeInstanceUpdate(
-              processInstance,
-              catchEventInstance,
-              scope,
-              variableScope,
-              now,
-              null,
-              sequenceFlowIds));
-      return true;
-    }
-    return false;
   }
 }

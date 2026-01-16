@@ -274,7 +274,9 @@ public class ProcessInstanceProcessor
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
+        instanceMapper.map(processInstance, scope.getFlowElements()).toBuilder()
+            .scope(scopeDTO)
+            .build();
 
     VariablesDTO variables = variableScope.scopeToDTO();
 
@@ -288,7 +290,9 @@ public class ProcessInstanceProcessor
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
+        instanceMapper.map(processInstance, scope.getFlowElements()).toBuilder()
+            .scope(scopeDTO)
+            .build();
 
     VariablesDTO variables = variableScope.scopeToDTO();
 
@@ -476,7 +480,9 @@ public class ProcessInstanceProcessor
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
     ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance).toBuilder().scope(scopeDTO).build();
+        instanceMapper.map(processInstance, scope.getFlowElements()).toBuilder()
+            .scope(scopeDTO)
+            .build();
 
     variableScope.persistTree(processInstance.getProcessInstanceId(), variablesStore);
 
@@ -613,7 +619,7 @@ public class ProcessInstanceProcessor
         scope.getGatewayInstances(),
         scope.getMessageSubscriptions(),
         scope.getScheduleKeys(),
-        scope.getActivityToBoundaryEvents());
+        instanceMapper.map(scope.getSubscriptions(), scope.getFlowElements()));
   }
 
   private void purgeProcessInstance(ProcessInstanceDTO processInstance) {

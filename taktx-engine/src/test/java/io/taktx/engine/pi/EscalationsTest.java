@@ -179,7 +179,7 @@ class EscalationsTest {
         .hasInstantiatedElementWithId("EscalationBoundaryEvent_Interrupting")
         .hasInstantiatedElementWithId("EndEvent_Interrupting_1")
         .hasInstantiatedElementWithId("EndEvent_Noninterrupting", 2)
-        .hasPassedElementWithId("EscalationBoundaryEvent_Noninterrupting", 2);
+        .hasInstantiatedElementWithId("EscalationBoundaryEvent_Noninterrupting", 2);
   }
 
   @Test

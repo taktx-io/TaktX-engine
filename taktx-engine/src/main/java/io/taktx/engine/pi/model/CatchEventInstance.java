@@ -11,9 +11,6 @@ package io.taktx.engine.pi.model;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.CatchEvent;
-import io.taktx.engine.pd.model.ErrorEventDefinition;
-import io.taktx.engine.pd.model.EscalationEventDefinition;
-import io.taktx.engine.pd.model.EventSignal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,10 +26,6 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     implements ReceivingMessageInstance, FlowNodeInstanceWithScheduleKeys {
   private Set<ScheduleKeyDTO> scheduledKeys = new HashSet<>();
   private Map<MessageEventKeyDTO, Set<String>> messageEventKeys = new HashMap<>();
-  private Set<EscalationSubscription> escalationSubscriptions = new HashSet<>();
-  private Set<ErrorSubscription> errorSubscriptions = new HashSet<>();
-  private boolean catchAllEscalations = false;
-  private boolean catchAllErrors = false;
 
   protected CatchEventInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
@@ -47,54 +40,5 @@ public abstract class CatchEventInstance<N extends CatchEvent> extends EventInst
     this.messageEventKeys
         .computeIfAbsent(messageEventKey, k -> new HashSet<>())
         .add(correlationKey);
-  }
-
-  public void addEscalationSubscription(EscalationEventDefinition escalationEventDefinition) {
-    if (escalationEventDefinition.getReferencedEscalation() != null) {
-      this.catchAllEscalations = false;
-      escalationSubscriptions.add(
-          new EscalationSubscription(
-              escalationEventDefinition.getReferencedEscalation().escalationCode()));
-    } else {
-      this.catchAllEscalations = true;
-    }
-  }
-
-  public void addErrorSubscription(ErrorEventDefinition errorEventDefinition) {
-    if (errorEventDefinition.getReferencedError() != null) {
-      errorSubscriptions.add(
-          new ErrorSubscription(errorEventDefinition.getReferencedError().code()));
-    } else {
-      this.catchAllErrors = true;
-    }
-  }
-
-  public void clearEscalationSubscriptions() {
-    escalationSubscriptions.clear();
-  }
-
-  public void clearErrorSubscriptions() {
-    errorSubscriptions.clear();
-  }
-
-  public boolean matchesEvent(EventSignal event) {
-    if (event instanceof EscalationEventSignal escalationEventSignal) {
-      return escalationSubscriptions.stream()
-          .anyMatch(
-              escalationSubscription -> escalationSubscription.matchesEvent(escalationEventSignal));
-    } else if (event instanceof ErrorEventSignal errorEventSignal) {
-      return errorSubscriptions.stream()
-          .anyMatch(errorSubscription -> errorSubscription.matchesEvent(errorEventSignal));
-    }
-    return false;
-  }
-
-  public boolean matchesEventCatchAll(EventSignal event) {
-    if (event instanceof EscalationEventSignal) {
-      return isCatchAllEscalations();
-    } else if (event instanceof ErrorEventSignal) {
-      return isCatchAllErrors();
-    }
-    return false;
   }
 }

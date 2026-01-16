@@ -23,7 +23,7 @@ public class EscalationEventDefinition extends EventDefinition {
   public boolean handlesEvent(EventSignal event) {
     if (event instanceof EscalationEventSignal escalationEventSignal) {
       return referencedEscalation != null
-          && referencedEscalation.escalationCode().equals(escalationEventSignal.getCode());
+          && referencedEscalation.code().equals(escalationEventSignal.getCode());
     }
     return false;
   }

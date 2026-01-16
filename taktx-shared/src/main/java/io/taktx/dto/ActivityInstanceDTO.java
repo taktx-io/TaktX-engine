@@ -23,7 +23,7 @@ import lombok.ToString;
 @RegisterForReflection
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
 
-  private Set<Long> boundaryEventIds;
+  private Set<Long> boundaryEventInstanceIds;
 
   private boolean iteration = false;
 

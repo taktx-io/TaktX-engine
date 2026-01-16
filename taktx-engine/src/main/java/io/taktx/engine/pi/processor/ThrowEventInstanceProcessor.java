@@ -112,7 +112,7 @@ public abstract class ThrowEventInstanceProcessor<
               EventSignal errorEvent =
                   new EscalationEventSignal(
                       flowNodeInstance,
-                      errorEventDefinition.getReferencedEscalation().escalationCode(),
+                      errorEventDefinition.getReferencedEscalation().code(),
                       "",
                       VariablesDTO.empty());
               scope.getDirectInstanceResult().addEvent(errorEvent);

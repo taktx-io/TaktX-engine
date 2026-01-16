@@ -6,21 +6,23 @@
  * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
  */
 
-package io.taktx.engine.pi.model;
+package io.taktx.dto;
 
-import lombok.AllArgsConstructor;
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import java.util.List;
+import java.util.Map;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
-@NoArgsConstructor
-@AllArgsConstructor
+@ToString(callSuper = true)
 @Getter
 @Setter
-public class EscalationSubscription {
-  private String code;
-
-  public boolean matchesEvent(EscalationEventSignal event) {
-    return code.equals(event.getCode());
-  }
+@NoArgsConstructor
+@EqualsAndHashCode
+@RegisterForReflection
+public class SubscriptionsDTO {
+  Map<Long, List<SubscriptionDTO>> instanceSubscriptions;
 }

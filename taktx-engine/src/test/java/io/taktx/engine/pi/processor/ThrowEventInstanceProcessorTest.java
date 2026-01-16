@@ -137,7 +137,7 @@ class ThrowEventInstanceProcessorTest {
     when(throwEvent.getErrorEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getEscalationEventDefinition()).thenReturn(Optional.of(escalationDef));
     when(escalationDef.getReferencedEscalation()).thenReturn(escalation);
-    when(escalation.escalationCode()).thenReturn("ESCALATION_CODE");
+    when(escalation.code()).thenReturn("ESCALATION_CODE");
     when(throwEvent.getLinkventDefinition()).thenReturn(Optional.empty());
     when(scope.getDirectInstanceResult()).thenReturn(directInstanceResult);
 

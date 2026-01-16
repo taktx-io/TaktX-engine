@@ -11,8 +11,6 @@ package io.taktx.engine.pi;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
-import io.taktx.dto.ErrorSubscriptionDTO;
-import io.taktx.dto.EscalationSubscriptionDTO;
 import io.taktx.dto.EventBasedGatewayInstanceDTO;
 import io.taktx.dto.ExclusiveGatewayInstanceDTO;
 import io.taktx.dto.ExecutionState;
@@ -33,8 +31,18 @@ import io.taktx.dto.SendTaskInstanceDTO;
 import io.taktx.dto.ServiceTaskInstanceDTO;
 import io.taktx.dto.StartEventInstanceDTO;
 import io.taktx.dto.SubProcessInstanceDTO;
+import io.taktx.dto.SubscriptionDTO;
+import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TaskInstanceDTO;
 import io.taktx.dto.UserTaskInstanceDTO;
+import io.taktx.dto.subscriptions.BoundaryEventCatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.BoundaryEventCatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.BoundaryEventErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.BoundaryEventEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.EventSubProcessCatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EventSubProcessCatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.EventSubProcessErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EventSubProcessEscalationSubscriptionDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.IoVariableMapping;
@@ -42,8 +50,6 @@ import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.EndEventInstance;
-import io.taktx.engine.pi.model.ErrorSubscription;
-import io.taktx.engine.pi.model.EscalationSubscription;
 import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
@@ -64,15 +70,26 @@ import io.taktx.engine.pi.model.StartEventInstance;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.TaskInstance;
 import io.taktx.engine.pi.model.UserTaskInstance;
+import io.taktx.engine.pi.model.subscriptions.BoundaryEventCatchAllErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.BoundaryEventCatchAllEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.BoundaryEventErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.BoundaryEventEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.EventSubProcessCatchAllErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.EventSubProcessCatchAllEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.EventSubProcessErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.EventSubProcessEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.Subscription;
+import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
@@ -425,18 +442,134 @@ public interface ProcessInstanceMapper {
 
   ProcessInstance map(ProcessInstanceDTO source, @Context FlowElements flowElements);
 
-  @Mapping(target = "name", ignore = true)
-  EscalationSubscriptionDTO map(EscalationSubscription source);
+  @Mapping(
+      target = "instanceSubscriptions",
+      source = "instanceSubscriptions",
+      qualifiedByName = "mapInstanceSubscriptions")
+  Subscriptions map(SubscriptionsDTO source, @Context FlowElements flowElements);
 
-  @Mapping(target = "name", ignore = true)
-  ErrorSubscriptionDTO map(ErrorSubscription source);
+  // Helper method to map the nested Map<Long, List<SubscriptionDTO>> to Map<Long,
+  // List<Subscription>>
+  @Named("mapInstanceSubscriptions")
+  default Map<Long, List<Subscription>> mapInstanceSubscriptions(
+      Map<Long, List<SubscriptionDTO>> subscriptions, @Context FlowElements flowElements) {
+    if (subscriptions == null) {
+      return null;
+    }
+    Map<Long, List<Subscription>> result = new java.util.HashMap<>();
+    for (Map.Entry<Long, List<SubscriptionDTO>> entry : subscriptions.entrySet()) {
+      List<Subscription> mappedList = new java.util.ArrayList<>();
+      for (SubscriptionDTO dto : entry.getValue()) {
+        mappedList.add(map(dto, flowElements));
+      }
+      result.put(entry.getKey(), mappedList);
+    }
+    return result;
+  }
+
+  @Mapping(
+      target = "boundaryEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  BoundaryEventCatchAllErrorSubscription map(
+      BoundaryEventCatchAllErrorSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  BoundaryEventCatchAllEscalationSubscription map(
+      BoundaryEventCatchAllEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  BoundaryEventErrorSubscription map(
+      BoundaryEventErrorSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  BoundaryEventEscalationSubscription map(
+      BoundaryEventEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubProcess",
+      expression =
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
+  @Mapping(
+      target = "startEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
+  EventSubProcessCatchAllErrorSubscription map(
+      EventSubProcessCatchAllErrorSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubProcess",
+      expression =
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
+  @Mapping(
+      target = "startEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
+  EventSubProcessCatchAllEscalationSubscription map(
+      EventSubProcessCatchAllEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubProcess",
+      expression =
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
+  @Mapping(
+      target = "startEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
+  EventSubProcessErrorSubscription map(
+      EventSubProcessErrorSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubProcess",
+      expression =
+          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
+  @Mapping(
+      target = "startEvent",
+      expression =
+          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
+  EventSubProcessEscalationSubscription map(
+      EventSubProcessEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+
+  @SubclassMapping(
+      target = BoundaryEventCatchAllErrorSubscription.class,
+      source = BoundaryEventCatchAllErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      target = BoundaryEventCatchAllEscalationSubscription.class,
+      source = BoundaryEventCatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      target = BoundaryEventErrorSubscription.class,
+      source = BoundaryEventErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      target = BoundaryEventEscalationSubscription.class,
+      source = BoundaryEventEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      target = EventSubProcessCatchAllErrorSubscription.class,
+      source = EventSubProcessCatchAllErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      target = EventSubProcessCatchAllEscalationSubscription.class,
+      source = EventSubProcessCatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      target = EventSubProcessErrorSubscription.class,
+      source = EventSubProcessErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      target = EventSubProcessEscalationSubscription.class,
+      source = EventSubProcessEscalationSubscriptionDTO.class)
+  Subscription map(SubscriptionDTO source, @Context FlowElements flowElements);
 
   @Mapping(
       target = "elementIndex",
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   TaskInstanceDTO map(TaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -482,7 +615,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   ServiceTaskInstanceDTO map(ServiceTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -490,7 +622,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   SendTaskInstanceDTO map(SendTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -498,7 +629,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   MessageEndEventInstanceDTO map(
       MessageEndEventInstance source, @Context FlowElements flowElements);
 
@@ -507,7 +637,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   MessageIntermediateThrowEventInstanceDTO map(
       MessageIntermediateThrowEventInstance source, @Context FlowElements flowElements);
 
@@ -516,7 +645,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   ScriptTaskInstanceDTO map(ScriptTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -524,7 +652,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   UserTaskInstanceDTO map(UserTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -532,7 +659,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   ReceiveTaskInstanceDTO map(ReceiveTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -540,7 +666,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   SubProcessInstanceDTO map(SubProcessInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -548,7 +673,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   CallActivityInstanceDTO map(CallActivityInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -556,7 +680,6 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
-  @Mapping(target = "boundaryEventIds", ignore = true)
   MultiInstanceInstanceDTO map(MultiInstanceInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -633,7 +756,7 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "elementId", ignore = true)
   FlowNodeInstanceDTO map(FlowNodeInstance<?> source, @Context FlowElements flowElements);
 
-  ProcessInstanceDTO map(ProcessInstance source);
+  ProcessInstanceDTO map(ProcessInstance source, @Context FlowElements flowElements);
 
   IoVariableMappingDTO map(IoVariableMapping value);
 
@@ -649,19 +772,121 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "processInstanceMapper", ignore = true)
   @Mapping(target = "flowElements", ignore = true)
   @Mapping(target = "scopePath", ignore = true)
-  @Mapping(target = "boundaryEventToActivity", ignore = true)
-  Scope map(ScopeDTO source);
+  Scope map(ScopeDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "instanceSubscriptions",
+      source = "instanceSubscriptions",
+      qualifiedByName = "mapInstanceSubscriptionsDTO")
+  SubscriptionsDTO map(Subscriptions source, @Context FlowElements flowElements);
+
+  // Helper method to map the nested Map<Long, List<Subscription>> to Map<Long,
+  // List<SubscriptionDTO>>
+  @Named("mapInstanceSubscriptionsDTO")
+  default Map<Long, List<SubscriptionDTO>> mapInstanceSubscriptionsDTO(
+      Map<Long, List<Subscription>> subscriptions, @Context FlowElements flowElements) {
+    if (subscriptions == null) {
+      return null;
+    }
+    Map<Long, List<SubscriptionDTO>> result = new java.util.HashMap<>();
+    for (Map.Entry<Long, List<Subscription>> entry : subscriptions.entrySet()) {
+      List<SubscriptionDTO> mappedList = new java.util.ArrayList<>();
+      for (Subscription subscription : entry.getValue()) {
+        mappedList.add(map(subscription, flowElements));
+      }
+      result.put(entry.getKey(), mappedList);
+    }
+    return result;
+  }
+
+  @Mapping(
+      target = "boundaryEventIndex",
+      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  BoundaryEventCatchAllErrorSubscriptionDTO map(
+      BoundaryEventCatchAllErrorSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEventIndex",
+      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  BoundaryEventCatchAllEscalationSubscriptionDTO map(
+      BoundaryEventCatchAllEscalationSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEventIndex",
+      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  BoundaryEventErrorSubscriptionDTO map(
+      BoundaryEventErrorSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "boundaryEventIndex",
+      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  BoundaryEventEscalationSubscriptionDTO map(
+      BoundaryEventEscalationSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubprocessIndex",
+      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
+  @Mapping(
+      target = "startEventIndex",
+      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
+  EventSubProcessCatchAllErrorSubscriptionDTO map(
+      EventSubProcessCatchAllErrorSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubprocessIndex",
+      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
+  @Mapping(
+      target = "startEventIndex",
+      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
+  EventSubProcessCatchAllEscalationSubscriptionDTO map(
+      EventSubProcessCatchAllEscalationSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubprocessIndex",
+      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
+  @Mapping(
+      target = "startEventIndex",
+      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
+  EventSubProcessErrorSubscriptionDTO map(
+      EventSubProcessErrorSubscription source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "eventSubprocessIndex",
+      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
+  @Mapping(
+      target = "startEventIndex",
+      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
+  EventSubProcessEscalationSubscriptionDTO map(
+      EventSubProcessEscalationSubscription source, @Context FlowElements flowElements);
+
+  @SubclassMapping(
+      source = BoundaryEventCatchAllErrorSubscription.class,
+      target = BoundaryEventCatchAllErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      source = BoundaryEventCatchAllEscalationSubscription.class,
+      target = BoundaryEventCatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      source = BoundaryEventErrorSubscription.class,
+      target = BoundaryEventErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      source = BoundaryEventEscalationSubscription.class,
+      target = BoundaryEventEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      source = EventSubProcessCatchAllErrorSubscription.class,
+      target = EventSubProcessCatchAllErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      source = EventSubProcessCatchAllEscalationSubscription.class,
+      target = EventSubProcessCatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(
+      source = EventSubProcessErrorSubscription.class,
+      target = EventSubProcessErrorSubscriptionDTO.class)
+  @SubclassMapping(
+      source = EventSubProcessEscalationSubscription.class,
+      target = EventSubProcessEscalationSubscriptionDTO.class)
+  SubscriptionDTO map(Subscription source, @Context FlowElements flowElements);
 
   @AfterMapping
   default void mapState(ScopeDTO source, @MappingTarget Scope target) {
-    if (source.getActivityToBoundaryEvents() != null) {
-      for (Map.Entry<Long, Set<Long>> entry : source.getActivityToBoundaryEvents().entrySet()) {
-        for (Long boundaryEvent : entry.getValue()) {
-          target.getBoundaryEventToActivity().put(boundaryEvent, entry.getKey());
-        }
-      }
-    }
-
     if (source.getState().isDone()) {
       target.setStateNoChange(source.getState());
     } else {
@@ -683,6 +908,18 @@ public interface ProcessInstanceMapper {
   @ObjectFactory
   default <T extends FlowNodeInstanceDTO> T resolveEquipment(
       FlowNodeInstance<?> ignoredSourceDto, @TargetType Class<T> type) {
+    return getNewInstance(type);
+  }
+
+  @ObjectFactory
+  default <T extends Subscription> T resolveSubscription(
+      SubscriptionDTO ignoredSourceDto, @TargetType Class<T> type) {
+    return getNewInstance(type);
+  }
+
+  @ObjectFactory
+  default <T extends SubscriptionDTO> T resolveSubscription(
+      Subscription ignoredSourceDto, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 

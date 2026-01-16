@@ -10,55 +10,27 @@ package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.FlowNodeInstanceTypeIdResolver;
-import lombok.Data;
+import io.taktx.SubscriptionTypeIdResolver;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonFormat(shape = Shape.ARRAY)
-@JsonTypeIdResolver(FlowNodeInstanceTypeIdResolver.class)
+@JsonTypeIdResolver(SubscriptionTypeIdResolver.class)
 @JsonInclude(Include.NON_NULL)
-@Data
+@ToString(callSuper = true)
+@Getter
+@Setter
 @NoArgsConstructor
 @EqualsAndHashCode
-@ToString
 @RegisterForReflection
-public abstract class FlowNodeInstanceDTO {
-  private ExecutionState state;
-
-  private long elementInstanceId;
-
-  private long parentElementInstanceId;
-
-  private int elementIndex;
-
-  private String elementId;
-
-  private int passedCnt;
-
-  private boolean incident;
-
-  @JsonIgnore
-  public boolean isActive() {
-    return state == ExecutionState.ACTIVE;
-  }
-
-  @JsonIgnore
-  public boolean isAborted() {
-    return state == ExecutionState.ABORTED;
-  }
-
-  @JsonIgnore
-  public boolean isCompleted() {
-    return state == ExecutionState.COMPLETED;
-  }
-}
+public abstract class SubscriptionDTO {}

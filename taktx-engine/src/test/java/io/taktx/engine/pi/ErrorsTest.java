@@ -44,7 +44,6 @@ class ErrorsTest {
         .hasInstantiatedElementWithId("BoundaryEvent_WithErrorReference")
         .hasInstantiatedElementWithId("EndEvent_Error_WithErrorReference")
         .hasAbortedElementWithId("ServiceTask_1")
-        .hasAbortedElementWithId("BoundaryEvent_NoErrorReference")
         .isCompleted();
   }
 
@@ -63,7 +62,7 @@ class ErrorsTest {
         .andRespondToExternalTaskWithError(
             "servicetask", false, "123", "message", VariablesDTO.of("err", "errtest"))
         .parentProcess()
-        .waitUntilDone(Duration.ofSeconds(100))
+        .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("StartEvent_1")
         .hasAbortedElementWithId("callactivity-id")
@@ -110,8 +109,7 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasAbortedElementWithId("ServiceTask_1")
-        .hasAbortedElementWithId("BoundaryEvent_WithErrorReference");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 
   @Test
@@ -131,8 +129,7 @@ class ErrorsTest {
         .hasNotPassedElementWithId("EndEvent_Error_WithErrorReference")
         .hasInstantiatedElementWithId("BoundaryEvent_NoErrorReference")
         .hasInstantiatedElementWithId("EndEvent_NoReference")
-        .hasAbortedElementWithId("ServiceTask_1")
-        .hasAbortedElementWithId("BoundaryEvent_WithErrorReference");
+        .hasAbortedElementWithId("ServiceTask_1");
   }
 
   @Test

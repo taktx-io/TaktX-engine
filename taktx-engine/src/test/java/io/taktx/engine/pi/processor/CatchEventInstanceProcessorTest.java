@@ -120,7 +120,6 @@ class CatchEventInstanceProcessorTest {
         processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
-    verify(catchEventInstance).addEscalationSubscription(escalationDef);
   }
 
   @Test
@@ -138,7 +137,6 @@ class CatchEventInstanceProcessorTest {
         processingContext, scope, variableScope, catchEventInstance, "flow1");
 
     verify(catchEventInstance).setState(ExecutionState.ACTIVE);
-    verify(catchEventInstance).addErrorSubscription(errorDef);
   }
 
   @Test

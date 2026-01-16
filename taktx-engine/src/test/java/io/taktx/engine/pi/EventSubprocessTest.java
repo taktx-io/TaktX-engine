@@ -97,7 +97,7 @@ class EventSubprocessTest {
         .waitForExternalTaskTrigger("ServiceTask_1")
         .waitForExternalTaskTrigger("ServiceTask_2")
         .andRespondToExternalTaskWithEscalation(
-            "ServiceTask_2", "escalationCode", "escalation message", VariablesDTO.empty())
+            "ServiceTask_2", "code", "escalation message", VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasAbortedElementWithId("ServiceTask_1")
