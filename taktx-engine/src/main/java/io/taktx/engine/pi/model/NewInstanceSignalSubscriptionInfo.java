@@ -8,4 +8,4 @@
 
 package io.taktx.engine.pi.model;
 
-public record NewInstanceSignalSubscriptionInfo(String name, FlowNodeInstance<?> elementInstance) {}
+public record NewInstanceSignalSubscriptionInfo(String name, IFlowNodeInstance elementInstance) {}

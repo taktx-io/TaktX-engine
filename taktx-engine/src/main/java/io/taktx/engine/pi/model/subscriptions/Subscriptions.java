@@ -12,6 +12,7 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.MessageEventDefinition;
 import io.taktx.engine.pd.model.ReceiveTask;
+import io.taktx.engine.pd.model.SignalEventDefinition;
 import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pd.model.TimerEventDefinition;
@@ -186,6 +187,15 @@ public class Subscriptions {
               boundaryEvent,
               timerEventDefinition,
               variableScope));
+    } else if (eventDefinition instanceof SignalEventDefinition signalEventDefinition) {
+      subscriptionList.add(
+          SignalSubscription.starting(
+              processInstanceProcessingContext,
+              parentInstance,
+              boundaryEvent,
+              signalEventDefinition,
+              variableScope,
+              feelExpressionHandler));
     }
   }
 
@@ -284,6 +294,14 @@ public class Subscriptions {
                         flowNodeInstance,
                         timerEventDefinition,
                         variableScope));
+              } else if (eventDefinition instanceof SignalEventDefinition timerEventDefinition) {
+                subscriptionList.add(
+                    SignalSubscription.continuing(
+                        processInstanceProcessingContext,
+                        flowNodeInstance,
+                        timerEventDefinition,
+                        variableScope,
+                        feelExpressionHandler));
               }
             });
   }

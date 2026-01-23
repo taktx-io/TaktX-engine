@@ -40,6 +40,7 @@ import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
 import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
+import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
@@ -73,6 +74,7 @@ import io.taktx.engine.pi.model.subscriptions.CatchAllEscalationSubscription;
 import io.taktx.engine.pi.model.subscriptions.ErrorSubscription;
 import io.taktx.engine.pi.model.subscriptions.EscalationSubscription;
 import io.taktx.engine.pi.model.subscriptions.MessageSubscription;
+import io.taktx.engine.pi.model.subscriptions.SignalSubscription;
 import io.taktx.engine.pi.model.subscriptions.Subscription;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import io.taktx.engine.pi.model.subscriptions.TimerSubscription;
@@ -501,6 +503,9 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "order", ignore = true)
   MessageSubscription map(MessageSubscriptionDTO source, @Context FlowElements flowElements);
 
+  @Mapping(target = "order", ignore = true)
+  SignalSubscription map(SignalSubscriptionDTO source, @Context FlowElements flowElements);
+
   //  @Mapping(
   //      target = "boundaryEvent",
   //      expression =
@@ -525,6 +530,7 @@ public interface ProcessInstanceMapper {
       source = CatchAllEscalationSubscriptionDTO.class)
   @SubclassMapping(target = ErrorSubscription.class, source = ErrorSubscriptionDTO.class)
   @SubclassMapping(target = MessageSubscription.class, source = MessageSubscriptionDTO.class)
+  @SubclassMapping(target = SignalSubscription.class, source = SignalSubscriptionDTO.class)
   @SubclassMapping(target = EscalationSubscription.class, source = EscalationSubscriptionDTO.class)
   @SubclassMapping(target = TimerSubscription.class, source = TimerSubscriptionDTO.class)
   @Mapping(target = "order", ignore = true)
@@ -736,7 +742,6 @@ public interface ProcessInstanceMapper {
   @Mapping(target = "parentFlowNodeInstance", ignore = true)
   @Mapping(target = "processInstanceMapper", ignore = true)
   @Mapping(target = "flowElements", ignore = true)
-  @Mapping(target = "scopePath", ignore = true)
   Scope map(ScopeDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -786,6 +791,8 @@ public interface ProcessInstanceMapper {
   //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
   MessageSubscriptionDTO map(MessageSubscription source, @Context FlowElements flowElements);
 
+  SignalSubscriptionDTO map(SignalSubscription source, @Context FlowElements flowElements);
+
   //  @Mapping(
   //      target = "boundaryEventIndex",
   //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
@@ -804,6 +811,7 @@ public interface ProcessInstanceMapper {
       target = CatchAllEscalationSubscriptionDTO.class)
   @SubclassMapping(source = ErrorSubscription.class, target = ErrorSubscriptionDTO.class)
   @SubclassMapping(source = MessageSubscription.class, target = MessageSubscriptionDTO.class)
+  @SubclassMapping(source = SignalSubscription.class, target = SignalSubscriptionDTO.class)
   @SubclassMapping(source = EscalationSubscription.class, target = EscalationSubscriptionDTO.class)
   @SubclassMapping(source = TimerSubscription.class, target = TimerSubscriptionDTO.class)
   SubscriptionDTO map(Subscription source, @Context FlowElements flowElements);

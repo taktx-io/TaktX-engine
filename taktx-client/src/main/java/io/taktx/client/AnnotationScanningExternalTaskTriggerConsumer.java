@@ -48,6 +48,7 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
    * Constructor using the default PlainJavaInstanceProvider
    *
    * @param parameterResolverFactory Factory to create parameter resolvers for method parameters
+   * @param resultProcessorFactory Factory to create result processor for method return value
    * @param externalTaskResponder Responder to handle external task instances
    * @param externalTaskTopicRequester Requester to manage external task topics
    * @param partitions THe number of partitions for the external task topic
@@ -151,6 +152,26 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
             processTask(task, method, autoComplete, beanInstance);
           }
         });
+  }
+
+  /**
+   * Get the AckStrategy for the given task ID
+   *
+   * @param taskId The task ID
+   * @return The AckStrategy
+   */
+  public AckStrategy getAckStrategy(String taskId) {
+    return ackStrategies.getOrDefault(taskId, AckStrategy.EXPLICIT_BATCH);
+  }
+
+  /**
+   * Get the ThreadingStrategy for the given task ID
+   *
+   * @param taskId The task ID
+   * @return The ThreadingStrategy
+   */
+  public ThreadingStrategy getThreadingStrategy(String taskId) {
+    return threadingStrategies.getOrDefault(taskId, ThreadingStrategy.VIRTUAL_THREAD_WAIT);
   }
 
   private void processTask(
@@ -270,13 +291,5 @@ public class AnnotationScanningExternalTaskTriggerConsumer implements ExternalTa
     }
 
     return result.toArray();
-  }
-
-  public AckStrategy getAckStrategy(String taskId) {
-    return ackStrategies.getOrDefault(taskId, AckStrategy.EXPLICIT_BATCH);
-  }
-
-  public ThreadingStrategy getThreadingStrategy(String taskId) {
-    return threadingStrategies.getOrDefault(taskId, ThreadingStrategy.VIRTUAL_THREAD_WAIT);
   }
 }

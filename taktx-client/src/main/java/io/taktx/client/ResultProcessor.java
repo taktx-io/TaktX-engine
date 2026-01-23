@@ -17,7 +17,7 @@ public interface ResultProcessor {
    * Processes the result of a jobworker call
    *
    * @param object The result processor to process the result.
-   * @param externalTaskTrigger
+   * @param externalTaskTrigger The ExternalTaskTriggerDTO containing the data to process.
    * @return The processed result value.
    */
   Object process(Object object, ExternalTaskTriggerDTO externalTaskTrigger);

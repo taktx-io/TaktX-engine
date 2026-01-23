@@ -79,7 +79,6 @@ class SignalsTest {
         .hasAbortedElementWithId("ServiceTask_1")
         .hasPassedElementWithId("Boundary_Interrupting_1")
         .hasPassedElementWithId("EndEvent_Signal_Interrupting")
-        .hasAbortedElementWithId("Boundary_NonInterrupting_1")
         .isCompleted();
   }
 

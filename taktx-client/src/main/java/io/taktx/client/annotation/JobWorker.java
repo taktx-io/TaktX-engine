@@ -33,9 +33,17 @@ public @interface JobWorker {
    */
   boolean autoComplete() default true;
 
-  /** The acknowledgement strategy for Kafka messages. Default is EXPLICIT_BATCH. */
+  /**
+   * The acknowledgement strategy for Kafka messages. Default is EXPLICIT_BATCH.
+   *
+   * @return The acknowledgement strategy for Kafka messages.
+   */
   AckStrategy ackStrategy() default AckStrategy.EXPLICIT_BATCH;
 
-  /** The threading strategy for message processing. Default is VIRTUAL_THREAD_WAIT. */
+  /**
+   * The threading strategy for message processing. Default is VIRTUAL_THREAD_WAIT.
+   *
+   * @return The threading strategy for message processing.
+   */
   ThreadingStrategy threadingStrategy() default ThreadingStrategy.VIRTUAL_THREAD_WAIT;
 }

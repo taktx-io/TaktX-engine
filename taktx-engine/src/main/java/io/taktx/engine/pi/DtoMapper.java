@@ -39,6 +39,7 @@ import io.taktx.dto.SendTaskDTO;
 import io.taktx.dto.SequenceFlowDTO;
 import io.taktx.dto.ServiceTaskDTO;
 import io.taktx.dto.SignalEventDefinitionDTO;
+import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
@@ -83,6 +84,7 @@ import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.MessageEventSignal;
+import io.taktx.engine.pi.model.SignalEventSignal;
 import io.taktx.engine.pi.model.TimerEventSignal;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
@@ -230,6 +232,7 @@ public interface DtoMapper {
   @SubclassMapping(source = EscalationEventSignal.class, target = EscalationEventSignalDTO.class)
   @SubclassMapping(source = MessageEventSignal.class, target = MessageEventSignalDTO.class)
   @SubclassMapping(source = TimerEventSignal.class, target = TimerEventSignalDTO.class)
+  @SubclassMapping(source = SignalEventSignal.class, target = SignalEventSignalDTO.class)
   @Mapping(target = "elementInstanceIdPath", ignore = true)
   EventSignalDTO map(EventSignal source);
 
@@ -237,6 +240,7 @@ public interface DtoMapper {
   @SubclassMapping(source = EscalationEventSignalDTO.class, target = EscalationEventSignal.class)
   @SubclassMapping(source = MessageEventSignalDTO.class, target = MessageEventSignal.class)
   @SubclassMapping(source = TimerEventSignalDTO.class, target = TimerEventSignal.class)
+  @SubclassMapping(source = SignalEventSignalDTO.class, target = SignalEventSignal.class)
   @Mapping(target = "pathToSource", ignore = true)
   EventSignal map(EventSignalDTO source);
 

@@ -10,6 +10,7 @@ package io.taktx.client;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
 
+/** A resolver that returns the object as-is. */
 public class ObjectResultProcessor implements ResultProcessor {
 
   @Override

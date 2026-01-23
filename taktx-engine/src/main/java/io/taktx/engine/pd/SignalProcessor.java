@@ -13,12 +13,13 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import io.taktx.dto.CancelDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.CancelInstanceSignalSubscriptionDTO;
 import io.taktx.dto.Constants;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SignalDTO;
+import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
@@ -175,10 +176,13 @@ public class SignalProcessor
           subscription -> {
             UUID processInstanceId = subscription.key.getProcessInstanceId();
             List<Long> elementInstanceIdPath = subscription.key.getElementInstanceIdPath();
-            ContinueFlowElementTriggerDTO trigger =
-                new ContinueFlowElementTriggerDTO(
-                    processInstanceId, elementInstanceIdPath, null, VariablesDTO.empty());
-            context.forward(new Record<>(processInstanceId, trigger, clock.millis()));
+            SignalEventSignalDTO event = new SignalEventSignalDTO();
+            event.setName(signalDTO.getSignalName());
+            event.setElementInstanceIdPath(elementInstanceIdPath);
+            event.setVariables(VariablesDTO.empty());
+            EventSignalTriggerDTO eventSignalTrigger =
+                new EventSignalTriggerDTO(processInstanceId, event);
+            context.forward(new Record<>(processInstanceId, eventSignalTrigger, clock.millis()));
           });
     }
   }

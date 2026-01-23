@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.ErrorEventSignalDTO;
 import io.taktx.dto.EscalationEventSignalDTO;
 import io.taktx.dto.MessageEventSignalDTO;
+import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.TimerEventSignalDTO;
 
 public class EventSignalTypeIdResolver extends TypeIdResolverBase {
@@ -26,6 +27,7 @@ public class EventSignalTypeIdResolver extends TypeIdResolverBase {
       case ErrorEventSignalDTO ignored -> "R";
       case EscalationEventSignalDTO ignored -> "S";
       case TimerEventSignalDTO ignored -> "T";
+      case SignalEventSignalDTO ignored -> "I";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -47,6 +49,7 @@ public class EventSignalTypeIdResolver extends TypeIdResolverBase {
       case "R" -> context.constructType(ErrorEventSignalDTO.class);
       case "S" -> context.constructType(EscalationEventSignalDTO.class);
       case "T" -> context.constructType(TimerEventSignalDTO.class);
+      case "I" -> context.constructType(SignalEventSignalDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

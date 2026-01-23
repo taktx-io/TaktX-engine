@@ -8,6 +8,7 @@
 
 package io.taktx.client.annotation;
 
+/** Acknowledgment strategies for message processing. */
 public enum AckStrategy {
   IMPLICIT,
   EXPLICIT_BATCH,

@@ -17,6 +17,7 @@ import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
 import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
 import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
+import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 
 public class SubscriptionTypeIdResolver extends TypeIdResolverBase {
@@ -30,6 +31,7 @@ public class SubscriptionTypeIdResolver extends TypeIdResolverBase {
       case EscalationSubscriptionDTO ignored -> "D";
       case MessageSubscriptionDTO ignored -> "E";
       case TimerSubscriptionDTO ignored -> "F";
+      case SignalSubscriptionDTO ignored -> "S";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -53,6 +55,7 @@ public class SubscriptionTypeIdResolver extends TypeIdResolverBase {
       case "D" -> context.constructType(EscalationSubscriptionDTO.class);
       case "E" -> context.constructType(MessageSubscriptionDTO.class);
       case "F" -> context.constructType(TimerSubscriptionDTO.class);
+      case "S" -> context.constructType(SignalSubscriptionDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }
