@@ -8,12 +8,7 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.engine.pd.model.ReceiveTask;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,27 +16,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask>
-    implements ReceivingMessageInstance {
-
-  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
-
-  private String correlationKey;
+public class ReceiveTaskInstance extends ActivityInstance<ReceiveTask> {
 
   public ReceiveTaskInstance(
-      WithScope parentInstance, ReceiveTask flowNode, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, ReceiveTask flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
-    messageEventKeys = new HashMap<>();
-  }
-
-  @Override
-  public void addMessageSubscriptionWithCorrelationKey(
-      MessageEventKeyDTO messageEventKey, String correlationKey) {
-    messageEventKeys.computeIfAbsent(messageEventKey, k -> new HashSet<>()).add(correlationKey);
-  }
-
-  @Override
-  public Map<MessageEventKeyDTO, Set<String>> getMessageEventKeys() {
-    return messageEventKeys;
   }
 }

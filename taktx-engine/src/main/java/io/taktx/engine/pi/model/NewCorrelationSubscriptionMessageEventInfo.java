@@ -13,5 +13,5 @@ import io.taktx.engine.pd.model.FlowNode;
 public record NewCorrelationSubscriptionMessageEventInfo(
     String messageName,
     String correlationKey,
-    FlowNodeInstance<?> elementInstance,
+    IFlowNodeInstance elementInstance,
     FlowNode flowNodeToStart) {}

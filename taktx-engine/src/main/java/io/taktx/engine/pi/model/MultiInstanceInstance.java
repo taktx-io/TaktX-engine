@@ -21,7 +21,7 @@ public class MultiInstanceInstance extends ActivityInstance<Activity> implements
   private Scope scope;
 
   public MultiInstanceInstance(
-      Activity activity, WithScope parentInstance, long elementInstanceId) {
+      Activity activity, IFlowNodeInstance parentInstance, long elementInstanceId) {
     super(parentInstance, activity, elementInstanceId);
   }
 

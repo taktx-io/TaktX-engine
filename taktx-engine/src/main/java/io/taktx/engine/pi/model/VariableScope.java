@@ -153,7 +153,7 @@ public class VariableScope {
     }
   }
 
-  public VariableScope selectChildScope(FlowNodeInstance<?> instanceWithInstanceId) {
+  public VariableScope selectChildScope(IFlowNodeInstance instanceWithInstanceId) {
     return this.childScopes.computeIfAbsent(
         instanceWithInstanceId.createKeyPath(),
         k -> new VariableScope(this, instanceWithInstanceId, processInstanceId, variableStore));

@@ -25,7 +25,7 @@ public class AbortTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 
   public AbortTriggerDTO(UUID processInstanceId, List<Long> elementInstanceIdPath) {
-    super(processInstanceId, VariablesDTO.empty());
+    super(processInstanceId);
     this.elementInstanceIdPath = elementInstanceIdPath;
   }
 }

@@ -8,8 +8,8 @@
 
 package io.taktx.engine.pd.model;
 
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.InclusiveGatewayInstance;
-import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,7 +21,7 @@ public class InclusiveGateway extends Gateway {
 
   @Override
   protected InclusiveGatewayInstance newSpecificGatewayInstance(
-      WithScope parentInstance, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, long elementInstanceId) {
     return new InclusiveGatewayInstance(parentInstance, this, elementInstanceId);
   }
 }

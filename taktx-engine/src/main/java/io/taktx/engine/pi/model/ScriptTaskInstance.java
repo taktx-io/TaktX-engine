@@ -14,7 +14,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ScriptTaskInstance extends ExternalTaskInstance<ScriptTask> {
 
-  public ScriptTaskInstance(WithScope parentInstance, ScriptTask flowNode, long elementInstanceId) {
+  public ScriptTaskInstance(
+      IFlowNodeInstance parentInstance, ScriptTask flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

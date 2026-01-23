@@ -37,10 +37,7 @@ public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO
 
   private UUID processInstanceId;
 
-  private VariablesDTO variables;
-
-  protected ProcessInstanceTriggerDTO(UUID processInstanceId, VariablesDTO variables) {
+  protected ProcessInstanceTriggerDTO(UUID processInstanceId) {
     this.processInstanceId = processInstanceId;
-    this.variables = variables;
   }
 }

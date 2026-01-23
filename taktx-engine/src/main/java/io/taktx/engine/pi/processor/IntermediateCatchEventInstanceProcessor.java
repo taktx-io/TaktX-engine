@@ -8,12 +8,14 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -34,8 +36,21 @@ public class IntermediateCatchEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudHandleTimerEvents() {
-    return true;
+  protected void processStartSpecificCatchEventInstance(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      IntermediateCatchEventInstance flowNodeInstance) {
+    // No specific processing for start
+    flowNodeInstance.setState(ExecutionState.ACTIVE);
+
+    scope
+        .getSubscriptions()
+        .startSubscriptionsForIntermediateCatchEventInstance(
+            processInstanceProcessingContext,
+            variableScope,
+            getFeelExpressionHandler(),
+            flowNodeInstance);
   }
 
   @Override
@@ -43,11 +58,6 @@ public class IntermediateCatchEventInstanceProcessor
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       IntermediateCatchEventInstance flowNodeInstance) {
-    // nothing to do
-  }
-
-  @Override
-  protected boolean shouldCancel(IntermediateCatchEventInstance flowNodeInstance) {
-    return true;
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 }

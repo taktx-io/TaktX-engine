@@ -12,28 +12,24 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.subscriptions.BoundaryEventCatchAllErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventCatchAllEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessCatchAllErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessCatchAllEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
+import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 
 public class SubscriptionTypeIdResolver extends TypeIdResolverBase {
 
   @Override
   public String idFromValue(Object value) {
     return switch (value) {
-      case BoundaryEventCatchAllErrorSubscriptionDTO ignored -> "A";
-      case BoundaryEventErrorSubscriptionDTO ignored -> "B";
-      case BoundaryEventCatchAllEscalationSubscriptionDTO ignored -> "C";
-      case BoundaryEventEscalationSubscriptionDTO ignored -> "D";
-      case EventSubProcessCatchAllErrorSubscriptionDTO ignored -> "E";
-      case EventSubProcessErrorSubscriptionDTO ignored -> "F";
-      case EventSubProcessCatchAllEscalationSubscriptionDTO ignored -> "G";
-      case EventSubProcessEscalationSubscriptionDTO ignored -> "H";
+      case CatchAllErrorSubscriptionDTO ignored -> "A";
+      case ErrorSubscriptionDTO ignored -> "B";
+      case CatchAllEscalationSubscriptionDTO ignored -> "C";
+      case EscalationSubscriptionDTO ignored -> "D";
+      case MessageSubscriptionDTO ignored -> "E";
+      case TimerSubscriptionDTO ignored -> "F";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -51,14 +47,12 @@ public class SubscriptionTypeIdResolver extends TypeIdResolverBase {
   @Override
   public JavaType typeFromId(DatabindContext context, String id) {
     return switch (id) {
-      case "A" -> context.constructType(BoundaryEventCatchAllErrorSubscriptionDTO.class);
-      case "B" -> context.constructType(BoundaryEventErrorSubscriptionDTO.class);
-      case "C" -> context.constructType(BoundaryEventCatchAllEscalationSubscriptionDTO.class);
-      case "D" -> context.constructType(BoundaryEventEscalationSubscriptionDTO.class);
-      case "E" -> context.constructType(EventSubProcessCatchAllErrorSubscriptionDTO.class);
-      case "F" -> context.constructType(EventSubProcessErrorSubscriptionDTO.class);
-      case "G" -> context.constructType(EventSubProcessCatchAllEscalationSubscriptionDTO.class);
-      case "H" -> context.constructType(EventSubProcessEscalationSubscriptionDTO.class);
+      case "A" -> context.constructType(CatchAllErrorSubscriptionDTO.class);
+      case "B" -> context.constructType(ErrorSubscriptionDTO.class);
+      case "C" -> context.constructType(CatchAllEscalationSubscriptionDTO.class);
+      case "D" -> context.constructType(EscalationSubscriptionDTO.class);
+      case "E" -> context.constructType(MessageSubscriptionDTO.class);
+      case "F" -> context.constructType(TimerSubscriptionDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

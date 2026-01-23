@@ -10,7 +10,6 @@ package io.taktx.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -22,8 +21,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @RegisterForReflection
 public abstract class ActivityInstanceDTO extends FlowNodeInstanceDTO {
-
-  private Set<Long> boundaryEventInstanceIds;
 
   private boolean iteration = false;
 

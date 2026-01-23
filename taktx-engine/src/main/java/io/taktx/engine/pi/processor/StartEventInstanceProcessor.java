@@ -36,18 +36,12 @@ public class StartEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudHandleTimerEvents() {
-    return false;
-  }
-
-  @Override
-  protected void processStartSpecificEventInstance(
+  protected void processStartSpecificCatchEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope,
-      StartEventInstance startEventInstance,
-      String inputFlowId) {
-    startEventInstance.setState(ExecutionState.COMPLETED);
+      StartEventInstance flowNodeInstance) {
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
@@ -56,10 +50,6 @@ public class StartEventInstanceProcessor
       Scope scope,
       StartEventInstance flowNodeInstance) {
     // No specific processing for continue
-  }
-
-  @Override
-  protected boolean shouldCancel(StartEventInstance flowNodeInstance) {
-    return true;
+    throw new IllegalStateException("We should never continue a start event instance");
   }
 }

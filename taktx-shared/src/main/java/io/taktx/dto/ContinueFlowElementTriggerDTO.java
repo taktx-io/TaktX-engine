@@ -24,7 +24,7 @@ import lombok.ToString;
 public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
 
   private String inputFlowId;
-
+  private VariablesDTO variables;
   private List<Long> elementInstanceIdPath;
 
   public ContinueFlowElementTriggerDTO(
@@ -32,8 +32,9 @@ public class ContinueFlowElementTriggerDTO extends ProcessInstanceTriggerDTO {
       List<Long> elementInstanceIdPath,
       String inputFlowId,
       VariablesDTO variables) {
-    super(processInstanceId, variables);
+    super(processInstanceId);
     this.elementInstanceIdPath = elementInstanceIdPath;
     this.inputFlowId = inputFlowId;
+    this.variables = variables;
   }
 }

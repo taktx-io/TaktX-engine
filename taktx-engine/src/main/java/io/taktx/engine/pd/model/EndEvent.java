@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.EndEventInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -20,7 +20,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class EndEvent extends ThrowEvent {
 
-  public EndEventInstance newInstance(WithScope parentInstance, Scope scope) {
+  public EndEventInstance newInstance(IFlowNodeInstance parentInstance, Scope scope) {
     return new EndEventInstance(parentInstance, this, scope.nextElementInstanceId());
   }
 }

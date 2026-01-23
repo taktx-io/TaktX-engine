@@ -9,8 +9,8 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.ActivityInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.SendTaskInstance;
-import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,7 +21,8 @@ import lombok.experimental.SuperBuilder;
 public class SendTask extends ExternalTask {
 
   @Override
-  public ActivityInstance<?> newActivityInstance(WithScope parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(
+      IFlowNodeInstance parentInstance, long elementInstanceId) {
     return new SendTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -9,8 +9,7 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.WithScope;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import java.util.LinkedList;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,22 +17,26 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public abstract class EventSignal {
-  private final LinkedList<FlowNodeInstance<?>> pathToSource = new LinkedList<>();
+  private final LinkedList<IFlowNodeInstance> pathToSource = new LinkedList<>();
   private VariablesDTO variables = VariablesDTO.empty();
 
-  protected EventSignal(FlowNodeInstance<?> fLowNodeInstance, VariablesDTO variables) {
+  protected EventSignal(IFlowNodeInstance fLowNodeInstance, VariablesDTO variables) {
     this.variables = variables;
     pathToSource.addFirst(fLowNodeInstance);
   }
 
   public void bubbleUp() {
-    WithScope parentInstance = pathToSource.getLast().getParentInstance();
+    IFlowNodeInstance parentInstance = pathToSource.getLast().getParentInstance();
     if (parentInstance != null) {
-      pathToSource.addFirst((FlowNodeInstance<?>) parentInstance);
+      pathToSource.addFirst(parentInstance);
     }
   }
 
-  public FlowNodeInstance<?> getCurrentInstance() {
-    return pathToSource.getFirst();
+  public IFlowNodeInstance getCurrentInstance() {
+    return !pathToSource.isEmpty() ? pathToSource.getFirst() : null;
+  }
+
+  public boolean shouldBubbleUp() {
+    return false;
   }
 }

@@ -9,6 +9,7 @@
 package io.taktx.engine.pi.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -19,11 +20,10 @@ import io.taktx.engine.pd.model.ThrowEvent;
 import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
+import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
-import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
@@ -109,13 +109,13 @@ public abstract class ThrowEventInstanceProcessor<
         .getEscalationEventDefinition()
         .ifPresent(
             errorEventDefinition -> {
-              EventSignal errorEvent =
+              EventSignal escalationEventSignal =
                   new EscalationEventSignal(
                       flowNodeInstance,
                       errorEventDefinition.getReferencedEscalation().code(),
                       "",
                       VariablesDTO.empty());
-              scope.getDirectInstanceResult().addEvent(errorEvent);
+              scope.getDirectInstanceResult().addEvent(escalationEventSignal);
             });
 
     flowNodeInstance
@@ -129,13 +129,9 @@ public abstract class ThrowEventInstanceProcessor<
                       .getIntermediateCatchEventWithName(linkEventDefinition.getName());
               intermediateCatchEvent.ifPresent(
                   event -> {
-                    ProcessInstance processInstance =
-                        processInstanceProcessingContext.getProcessInstance();
                     FlowNodeInstance<?> catchEventInstance =
-                        new IntermediateCatchEventInstance(
-                            flowNodeInstance.getParentInstance(),
-                            event,
-                            processInstance.getScope().nextElementInstanceId());
+                        event.createAndStoreNewInstance(
+                            flowNodeInstance.getParentInstance(), scope);
                     VariableScope childVariableScope =
                         variableScope.getParentScope().selectChildScope(catchEventInstance);
                     StartFlowNodeInstanceInfo startFlowNodeInstanceInfo =
@@ -143,6 +139,18 @@ public abstract class ThrowEventInstanceProcessor<
                     scope
                         .getDirectInstanceResult()
                         .addNewFlowNodeInstance(startFlowNodeInstanceInfo);
+                    ContinueFlowElementTriggerDTO trigger =
+                        new ContinueFlowElementTriggerDTO(
+                            scope.getProcessInstanceId(),
+                            catchEventInstance.createKeyPath(),
+                            null,
+                            childVariableScope.scopeToDTO());
+                    ContinueFlowNodeInstanceInfo continueFlowNodeInstanceInfo =
+                        new ContinueFlowNodeInstanceInfo(
+                            catchEventInstance, trigger, childVariableScope);
+                    scope
+                        .getDirectInstanceResult()
+                        .addContinueInstance(continueFlowNodeInstanceInfo);
                   });
             });
 

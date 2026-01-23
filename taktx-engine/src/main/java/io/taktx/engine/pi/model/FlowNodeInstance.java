@@ -37,13 +37,13 @@ public abstract class FlowNodeInstance<N extends FlowNode> implements IFlowNodeI
 
   private N flowNode;
 
-  private WithScope parentInstance;
+  private IFlowNodeInstance parentInstance;
 
   private boolean dirty = false;
 
   private boolean incident = false;
 
-  protected FlowNodeInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
+  protected FlowNodeInstance(IFlowNodeInstance parentInstance, N flowNode, long elementInstanceId) {
     this.parentInstance = parentInstance;
     this.elementInstanceId = elementInstanceId;
     this.flowNode = flowNode;

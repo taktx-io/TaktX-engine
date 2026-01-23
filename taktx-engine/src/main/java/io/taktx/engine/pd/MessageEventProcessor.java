@@ -10,16 +10,16 @@ package io.taktx.engine.pd;
 
 import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
 import io.taktx.dto.CancelDefinitionMessageSubscriptionDTO;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.dto.MessageEventSignalDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessingStatistics;
 import java.time.Clock;
@@ -136,28 +136,16 @@ public class MessageEventProcessor
               subscription -> {
                 if (subscription.getCorrelationKey().equals(messageEvent.getCorrelationKey())) {
                   UUID processInstanceId = subscription.getProcessInstanceId();
-                  if (subscription.getElementId() == null) {
-                    ContinueFlowElementTriggerDTO flowElementTrigger =
-                        new ContinueFlowElementTriggerDTO(
-                            processInstanceId,
-                            subscription.getElementInstanceIdPath(),
-                            null,
-                            messageEvent.getVariables());
-
-                    context.forward(
-                        new Record<>(processInstanceId, flowElementTrigger, clock.millis()));
-                  } else {
-                    StartFlowElementTriggerDTO flowElementTrigger =
-                        new StartFlowElementTriggerDTO(
-                            processInstanceId,
-                            subscription.getElementInstanceIdPath() == null
-                                ? List.of()
-                                : subscription.getElementInstanceIdPath(),
-                            subscription.getElementId(),
-                            messageEvent.getVariables());
-                    context.forward(
-                        new Record<>(processInstanceId, flowElementTrigger, clock.millis()));
-                  }
+                  MessageEventSignalDTO messageEventSignalDTO = new MessageEventSignalDTO();
+                  messageEventSignalDTO.setName(messageEvent.getMessageName());
+                  messageEventSignalDTO.setElementInstanceIdPath(
+                      subscription.getElementInstanceIdPath());
+                  messageEventSignalDTO.setElementId(subscription.getElementId());
+                  messageEventSignalDTO.setVariables(messageEvent.getVariables());
+                  EventSignalTriggerDTO eventSignalTrigger =
+                      new EventSignalTriggerDTO(processInstanceId, messageEventSignalDTO);
+                  context.forward(
+                      new Record<>(processInstanceId, eventSignalTrigger, clock.millis()));
                 }
               });
     }

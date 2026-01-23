@@ -9,8 +9,6 @@
 package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import java.util.Map;
-import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -21,17 +19,4 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @RegisterForReflection
-public abstract class CatchEventInstanceDTO extends EventInstanceDTO {
-
-  private Set<ScheduleKeyDTO> scheduledKeys;
-
-  private Map<MessageEventKeyDTO, Set<String>> messageEventKeys;
-
-  private Set<EscalationSubscriptionDTO> escalationSubscriptions;
-
-  private Set<ErrorSubscriptionDTO> errorSubscriptions;
-
-  private boolean catchAllEscalations;
-
-  private boolean catchAllErrors;
-}
+public abstract class CatchEventInstanceDTO extends EventInstanceDTO {}

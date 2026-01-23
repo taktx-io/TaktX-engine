@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class MessageEndEventInstance extends ExternalTaskInstance<MessageEndEvent> {
 
   public MessageEndEventInstance(
-      WithScope parentInstance, MessageEndEvent flowNode, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, MessageEndEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

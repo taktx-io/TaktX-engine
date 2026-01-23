@@ -26,10 +26,12 @@ import lombok.ToString;
 public class SetVariableTriggerDTO extends ProcessInstanceTriggerDTO {
 
   private List<Long> parentElementInstanceIdPath;
+  private VariablesDTO variables;
 
   public SetVariableTriggerDTO(
       UUID processInstanceId, List<Long> parentElementInstanceIdPath, VariablesDTO variables) {
-    super(processInstanceId, variables);
+    super(processInstanceId);
     this.parentElementInstanceIdPath = parentElementInstanceIdPath;
+    this.variables = variables;
   }
 }

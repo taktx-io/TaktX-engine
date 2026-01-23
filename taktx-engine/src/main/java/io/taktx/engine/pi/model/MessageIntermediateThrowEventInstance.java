@@ -16,7 +16,9 @@ public class MessageIntermediateThrowEventInstance
     extends ExternalTaskInstance<MessageIntermediateThrowEvent> {
 
   public MessageIntermediateThrowEventInstance(
-      WithScope parentInstance, MessageIntermediateThrowEvent flowNode, long elementInstanceId) {
+      IFlowNodeInstance parentInstance,
+      MessageIntermediateThrowEvent flowNode,
+      long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

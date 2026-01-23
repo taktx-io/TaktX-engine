@@ -144,6 +144,11 @@ public class ProcessInstanceProcessor
               kafkaTimestamp, continueFlowElementTrigger2.getClass().getSimpleName());
           handleContinue(continueFlowElementTrigger2);
         }
+        case EventSignalTriggerDTO eventSignalTrigger -> {
+          processingStatistics.recordProcessInstanceLatency(
+              kafkaTimestamp, eventSignalTrigger.getClass().getSimpleName());
+          handleEvent(eventSignalTrigger);
+        }
         case AbortTriggerDTO terminateTrigger -> {
           // Record end-to-end latency using Kafka timestamp
           processingStatistics.recordProcessInstanceLatency(
@@ -321,7 +326,7 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+      enrichScope(processInstance.getScope(), processInstanceId, flowElements);
       ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
       variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
@@ -349,7 +354,7 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+      enrichScope(processInstance.getScope(), processInstanceId, flowElements);
       ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
       variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
@@ -381,7 +386,7 @@ public class ProcessInstanceProcessor
       if (flowElements != null) {
 
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+        enrichScope(processInstance.getScope(), processInstanceId, flowElements);
         ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
         processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
@@ -406,6 +411,44 @@ public class ProcessInstanceProcessor
     }
   }
 
+  public void handleEvent(EventSignalTriggerDTO trigger) {
+
+    InstanceResult instanceResult = InstanceResult.empty();
+    UUID processInstanceId = trigger.getProcessInstanceId();
+    ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);
+    if (processInstanceDTO != null) {
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      if (flowElements != null) {
+
+        ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+        enrichScope(processInstance.getScope(), processInstanceId, flowElements);
+        ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+        processDefinitionKeyThreadLocal.set(processDefinitionKey);
+
+        ProcessInstanceProcessingContext processInstanceProcessingContext =
+            createProcessInstanceProcessingContext(processInstance, instanceResult);
+        variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
+
+        doWhileCatching(
+            processInstanceProcessingContext,
+            processDefinitionKey,
+            processInstance.getScope(),
+            () -> {
+              EventSignal eventSignal = dtoMapper.map(trigger.getEventSignal());
+              scopeProcessor.processEvent(
+                  processInstanceProcessingContext,
+                  processInstance.getScope(),
+                  variableScopeThreadLocal.get(),
+                  trigger,
+                  eventSignal);
+              return null;
+            });
+      }
+    } else {
+      log.warn("Process instanceToContinue not found for key: {}", processInstanceId);
+    }
+  }
+
   private void handleTerminate(AbortTriggerDTO trigger) {
     InstanceResult instanceResult = InstanceResult.empty();
     UUID processInstanceId = trigger.getProcessInstanceId();
@@ -414,7 +457,7 @@ public class ProcessInstanceProcessor
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       if (flowElements != null) {
         ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-        enrichScope(processInstance.getScope(), null, processInstanceId, flowElements);
+        enrichScope(processInstance.getScope(), processInstanceId, flowElements);
         ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
         processDefinitionKeyThreadLocal.set(processDefinitionKey);
         variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
@@ -442,14 +485,16 @@ public class ProcessInstanceProcessor
       Scope scope,
       VariableScope variableScope) {
 
+    ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
+
     EventSignal eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
     List<EventSignalDTO> eventSignalList = new ArrayList<>();
     while (eventSignal != null) {
-      if (eventSignal instanceof ErrorEventSignal errorEventSignal) {
+      if (eventSignal instanceof ErrorEventSignal errorEventSignal
+          && processInstance.getParentProcessInstanceId() == null) {
         // Unhandled error event - create an incident
         // This is BPMN 2.0 compliant: when error handling fails, it's an exceptional condition
         // requiring human intervention (similar to Camunda/Zeebe behavior)
-        ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
         processInstance.setIncidentInfo(
             new IncidentInfo(
                 errorEventSignal.getCurrentInstance(),
@@ -473,16 +518,14 @@ public class ProcessInstanceProcessor
             ((EscalationEventSignal) eventSignal).getCode());
       }
       // All event signals are added to the list for potential forwarding to parent
-      eventSignalList.add(dtoMapper.map(eventSignal));
+      EventSignalDTO map = dtoMapper.map(eventSignal);
+      map.setElementInstanceIdPath(
+          eventSignal.getCurrentInstance() != null
+              ? eventSignal.getCurrentInstance().createKeyPath()
+              : List.of());
+      eventSignalList.add(map);
       eventSignal = scope.getDirectInstanceResult().pollBubbleUpEvent();
     }
-
-    ScopeDTO scopeDTO = scopeToDTO(scope);
-    ProcessInstance processInstance = processInstanceProcessingContext.getProcessInstance();
-    ProcessInstanceDTO processInstanceDTO =
-        instanceMapper.map(processInstance, scope.getFlowElements()).toBuilder()
-            .scope(scopeDTO)
-            .build();
 
     variableScope.persistTree(processInstance.getProcessInstanceId(), variablesStore);
 
@@ -502,10 +545,22 @@ public class ProcessInstanceProcessor
     if (processInstance.getScope().getState().isDone() && eventSignalList.isEmpty()) {
       continueParentInstance(instanceResult, processInstance, variableScope);
     } else if (!eventSignalList.isEmpty()) {
-      throwEventToParentInstance(instanceResult, processInstance, variableScope, eventSignalList);
+      for (EventSignalDTO eventSignalDTO : eventSignalList) {
+        log.info(
+            "ProcessInstance {} throwing event to parent: {}",
+            processInstance.getProcessInstanceId(),
+            eventSignalDTO);
+        throwEventToParentInstance(instanceResult, processInstance, variableScope, eventSignalDTO);
+      }
     }
 
-    forwarder.forward(context, instanceResult, processDefinitionKey, processInstanceDTO, scope);
+    forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
+
+    ScopeDTO scopeDTO = scopeToDTO(scope);
+    ProcessInstanceDTO processInstanceDTO =
+        instanceMapper.map(processInstance, scope.getFlowElements()).toBuilder()
+            .scope(scopeDTO)
+            .build();
 
     if (processInstance.getScope().getState().isDone()) {
       purgeProcessInstance(processInstanceDTO);
@@ -577,10 +632,9 @@ public class ProcessInstanceProcessor
       InstanceResult instanceResult,
       ProcessInstance processInstance,
       VariableScope variableScope,
-      List<EventSignalDTO> eventSignalList) {
+      EventSignalDTO eventSignal) {
     if (processInstance.getParentProcessInstanceId() != null) {
       VariablesDTO variables;
-
       if (processInstance.isPropagateAllToParent()) {
         variables = VariablesDTO.ofJsonMap(variableScope.retrieveAndFlattenAllVariables());
       } else {
@@ -590,18 +644,16 @@ public class ProcessInstanceProcessor
             outputVariables, variableScope.getParentScope(), processInstance.getOutputMappings());
         variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
       }
+      eventSignal.getVariables().getVariables().forEach(variables::put);
+      eventSignal.setVariables(variables);
+
       instanceResult.addEventSignals(
-          new EventSignalTriggerDTO(
-              processInstance.getParentProcessInstanceId(),
-              processInstance.getParentElementInstancePath(),
-              variables,
-              eventSignalList));
+          new EventSignalTriggerDTO(processInstance.getParentProcessInstanceId(), eventSignal));
     }
   }
 
-  private void enrichScope(
-      Scope scope, Scope parentScope, UUID processInstanceId, FlowElements flowElements) {
-    scope.setParentScope(parentScope);
+  private void enrichScope(Scope scope, UUID processInstanceId, FlowElements flowElements) {
+    scope.setParentScope(null);
     scope.setProcessInstanceId(processInstanceId);
     scope.setProcessInstanceMapper(instanceMapper);
     scope.setFlowNodeInstanceStore(flowNodeInstanceStore);
@@ -617,8 +669,6 @@ public class ProcessInstanceProcessor
         scope.getSubProcessLevel(),
         scope.getElementInstanceCnt(),
         scope.getGatewayInstances(),
-        scope.getMessageSubscriptions(),
-        scope.getScheduleKeys(),
         instanceMapper.map(scope.getSubscriptions(), scope.getFlowElements()));
   }
 

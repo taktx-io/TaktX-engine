@@ -8,12 +8,15 @@
 
 package io.taktx.engine.pi.processor;
 
+import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
+import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.Scope;
+import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -34,8 +37,18 @@ public class BoundaryEventInstanceProcessor
   }
 
   @Override
-  protected boolean shoudHandleTimerEvents() {
-    return true;
+  protected void processStartSpecificCatchEventInstance(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      BoundaryEventInstance flowNodeInstance) {
+    if (flowNodeInstance.getFlowNode().isCancelActivity()) {
+      Long attachedInstanceId = flowNodeInstance.getAttachedInstanceId();
+      FlowNodeInstance<?> attachedInstance =
+          scope.getFlowNodeInstances().getInstanceWithInstanceId(attachedInstanceId);
+      scope.getDirectInstanceResult().addAbortInstance(attachedInstance);
+    }
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
   }
 
   @Override
@@ -43,11 +56,6 @@ public class BoundaryEventInstanceProcessor
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       BoundaryEventInstance boundaryEventInstance) {
-    // No specific processing for continue
-  }
-
-  @Override
-  protected boolean shouldCancel(BoundaryEventInstance flowNodeInstance) {
-    return flowNodeInstance.getFlowNode().isCancelActivity();
+    throw new IllegalStateException("We should never continue a boundary event instance");
   }
 }

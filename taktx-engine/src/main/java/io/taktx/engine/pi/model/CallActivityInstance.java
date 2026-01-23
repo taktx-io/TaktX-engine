@@ -22,7 +22,7 @@ public class CallActivityInstance extends ActivityInstance<CallActivity> {
   private UUID childProcessInstanceId;
 
   public CallActivityInstance(
-      WithScope parentInstance, CallActivity flowNode, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, CallActivity flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 }

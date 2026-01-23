@@ -10,7 +10,6 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
@@ -18,12 +17,15 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowNode;
+import io.taktx.engine.pd.model.StartEvent;
 import io.taktx.engine.pi.model.ContinueFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.EventBasedGatewayInstance;
 import io.taktx.engine.pi.model.FlowNodeInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.IntermediateCatchEventInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
+import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
@@ -40,15 +42,12 @@ public class ScopeProcessor {
 
   private final FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider;
   private final FeelExpressionHandler feelExpressionHandler;
-  private final DtoMapper dtoMapper;
 
   public ScopeProcessor(
       FlowNodeInstanceProcessorProvider flowNodeInstanceProcessorProvider,
-      FeelExpressionHandler feelExpressionHandler,
-      DtoMapper dtoMapper) {
+      FeelExpressionHandler feelExpressionHandler) {
     this.flowNodeInstanceProcessorProvider = flowNodeInstanceProcessorProvider;
     this.feelExpressionHandler = feelExpressionHandler;
-    this.dtoMapper = dtoMapper;
   }
 
   public Void processStart(
@@ -173,20 +172,81 @@ public class ScopeProcessor {
                   trigger.getElementInstanceIdPath().get(scope.getSubProcessLevel()));
       VariableScope childVariableScope = variableScope.selectChildScope(flowNodeInstance);
 
-      if (trigger instanceof EventSignalTriggerDTO eventSignalTriggerDTO) {
-        for (EventSignalDTO eventSignalDTO : eventSignalTriggerDTO.getEventSignalList()) {
-          EventSignal eventSignal = dtoMapper.map(eventSignalDTO);
-          eventSignal.getPathToSource().addFirst(flowNodeInstance);
-          scope.getDirectInstanceResult().addEvent(eventSignal);
-        }
-      } else {
-        ContinueFlowNodeInstanceInfo continueInstance =
-            new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger, childVariableScope);
+      ContinueFlowNodeInstanceInfo continueInstance =
+          new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger, childVariableScope);
 
-        scope.getDirectInstanceResult().addContinueInstance(continueInstance);
+      scope.getDirectInstanceResult().addContinueInstance(continueInstance);
+    }
+    doBusiness(processInstanceProcessingContext, scope, variableScope);
+    return null;
+  }
+
+  public Void processEvent(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      EventSignalTriggerDTO trigger,
+      EventSignal eventSignal) {
+
+    List<Long> elementInstanceIdPath =
+        trigger.getEventSignal().getElementInstanceIdPath() != null
+            ? trigger.getEventSignal().getElementInstanceIdPath()
+            : List.of();
+
+    if (elementInstanceIdPath.isEmpty()) {
+      // special case for process instance level events
+      scope.getDirectInstanceResult().addEvent(eventSignal);
+      doBusiness(processInstanceProcessingContext, scope, variableScope);
+      return null;
+    }
+
+    int subProcessLevel = scope.getSubProcessLevel();
+    FlowNodeInstance<?> instanceWithInstanceId =
+        scope
+            .getFlowNodeInstances()
+            .getInstanceWithInstanceId(elementInstanceIdPath.get(subProcessLevel));
+    VariableScope childVariableScope = variableScope.selectChildScope(instanceWithInstanceId);
+    eventSignal.getPathToSource().addFirst(instanceWithInstanceId);
+
+    if (subProcessLevel < elementInstanceIdPath.size() - 1) {
+      if (instanceWithInstanceId instanceof WithScope withScope) {
+        processEvent(
+            processInstanceProcessingContext,
+            withScope.getScope(),
+            childVariableScope,
+            trigger,
+            eventSignal);
+        bubbleUpEvents(scope, withScope);
+
+        ContinueFlowElementTriggerDTO continueTrigger =
+            new ContinueFlowElementTriggerDTO(
+                processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
+                trigger.getEventSignal().getElementInstanceIdPath(),
+                null,
+                VariablesDTO.empty());
+
+        scope
+            .getDirectInstanceResult()
+            .addContinueInstance(
+                new ContinueFlowNodeInstanceInfo(
+                    instanceWithInstanceId, continueTrigger, childVariableScope));
+
+        doBusiness(processInstanceProcessingContext, scope, variableScope);
+      } else {
+        throw new IllegalArgumentException(
+            "Element with instance id "
+                + elementInstanceIdPath.get(subProcessLevel)
+                + " is not a scope but "
+                + instanceWithInstanceId.getClass().getName());
       }
+    } else {
+      // We have reached the target flow node instance. This can be either a subprocess with a
+      // scope or a regular flow node instance
+      scope.getDirectInstanceResult().addEvent(eventSignal);
+      variableScope.merge(eventSignal.getVariables());
       doBusiness(processInstanceProcessingContext, scope, variableScope);
     }
+
     return null;
   }
 
@@ -302,11 +362,7 @@ public class ScopeProcessor {
     EventSignal eventSignal = scope.getDirectInstanceResult().pollEvent();
     while (eventSignal != null) {
       processEventByFlowNodeInstance(
-          processInstanceProcessingContext,
-          scope,
-          variableScope,
-          eventSignal,
-          eventSignal.getCurrentInstance());
+          processInstanceProcessingContext, scope, variableScope, eventSignal);
       eventSignal = scope.getDirectInstanceResult().pollEvent();
     }
   }
@@ -339,7 +395,6 @@ public class ScopeProcessor {
         scope.getDirectInstanceResult().pollContinueInstance();
     while (continueInstance != null) {
       FlowNodeInstance<?> flowNodeInstance = continueInstance.flowNodeInstance();
-      VariableScope variableScope = continueInstance.variableScope();
 
       if (flowNodeInstance instanceof IntermediateCatchEventInstance intermediateCatchEventInstance
           && intermediateCatchEventInstance.isActive()) {
@@ -389,7 +444,7 @@ public class ScopeProcessor {
       Scope scope,
       VariableScope variableScope) {
 
-    FlowNodeInstance<?> abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
+    IFlowNodeInstance abortInstance = scope.getDirectInstanceResult().pollAbortInstance();
     while (abortInstance != null) {
 
       FlowNodeInstanceProcessor<?, ?, ?> processor =
@@ -408,6 +463,26 @@ public class ScopeProcessor {
       Scope scope, String elementId, VariableScope parentVariableScope, VariablesDTO variables) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
+    if (flowNode instanceof StartEvent startEvent
+        && scope.getParentFlowNodeInstance() instanceof SubProcessInstance subProcessInstance
+        && subProcessInstance.getFlowNode().isTriggeredByEvent()
+        && startEvent.isInterrupting()
+        && scope.getParentScope() != null) {
+      scope
+          .getParentScope()
+          .getFlowNodeInstances()
+          .getAllInstances()
+          .forEach(
+              (id, instance) -> {
+                if (instance.isActive()
+                    && !instance
+                        .getFlowNode()
+                        .getId()
+                        .equals(subProcessInstance.getFlowNode().getId())) {
+                  scope.getDirectInstanceResult().addAbortInstance(instance);
+                }
+              });
+    }
     FlowNodeInstance<?> flowNodeInstance =
         flowNode.createAndStoreNewInstance(scope.getParentFlowNodeInstance(), scope);
 
@@ -426,15 +501,30 @@ public class ScopeProcessor {
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope,
-      EventSignal event,
-      FlowNodeInstance<?> fLowNodeInstance) {
+      EventSignal event) {
 
     boolean eventHandled =
         scope
             .getSubscriptions()
             .processEvent(scope, variableScope, event, event.getCurrentInstance());
 
-    if (!eventHandled) {
+    if (!eventHandled && event.getCurrentInstance() instanceof WithScope withScope) {
+      // Target is a subprocess - try to handle inside its scope
+      VariableScope childVariableScope = variableScope.selectChildScope(event.getCurrentInstance());
+
+      Scope subProcessScope = withScope.getScope();
+      boolean handledInSubProcess =
+          subProcessScope
+              .getSubscriptions()
+              .processEvent(subProcessScope, childVariableScope, event, null);
+
+      if (handledInSubProcess) {
+        doBusiness(processInstanceProcessingContext, subProcessScope, childVariableScope);
+        eventHandled = true;
+      }
+    }
+
+    if (!eventHandled && event.shouldBubbleUp()) {
       scope.getDirectInstanceResult().addBubbleUpEvent(event);
     }
   }

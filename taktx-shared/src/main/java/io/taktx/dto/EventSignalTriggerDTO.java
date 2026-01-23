@@ -9,7 +9,6 @@
 package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -21,16 +20,12 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @RegisterForReflection
-public class EventSignalTriggerDTO extends ContinueFlowElementTriggerDTO {
+public class EventSignalTriggerDTO extends ProcessInstanceTriggerDTO {
 
-  private List<EventSignalDTO> eventSignalList;
+  private EventSignalDTO eventSignal;
 
-  public EventSignalTriggerDTO(
-      UUID processInstanceId,
-      List<Long> elementInstanceIdPath,
-      VariablesDTO variables,
-      List<EventSignalDTO> eventSignalList) {
-    super(processInstanceId, elementInstanceIdPath, null, variables);
-    this.eventSignalList = eventSignalList;
+  public EventSignalTriggerDTO(UUID processInstanceId, EventSignalDTO eventSignal) {
+    super(processInstanceId);
+    this.eventSignal = eventSignal;
   }
 }

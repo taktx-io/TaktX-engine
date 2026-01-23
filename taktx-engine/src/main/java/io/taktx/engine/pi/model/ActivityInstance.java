@@ -25,7 +25,7 @@ public abstract class ActivityInstance<N extends Activity> extends FlowNodeInsta
   private JsonNode outputElement;
   private int loopCnt;
 
-  protected ActivityInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
+  protected ActivityInstance(IFlowNodeInstance parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

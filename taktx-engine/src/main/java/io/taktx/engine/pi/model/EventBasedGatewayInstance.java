@@ -21,7 +21,7 @@ public class EventBasedGatewayInstance extends GatewayInstance<EventBasedGateway
   private List<Long> connectedFlowNodeInstanceIds;
 
   public EventBasedGatewayInstance(
-      WithScope parentInstance, EventBasedGateway flowNode, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, EventBasedGateway flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

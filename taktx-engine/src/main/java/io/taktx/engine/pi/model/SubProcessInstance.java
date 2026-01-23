@@ -22,7 +22,8 @@ public class SubProcessInstance extends ActivityInstance<SubProcess> implements 
 
   private Scope scope;
 
-  public SubProcessInstance(WithScope parentInstance, SubProcess flowNode, long elementInstanceId) {
+  public SubProcessInstance(
+      IFlowNodeInstance parentInstance, SubProcess flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

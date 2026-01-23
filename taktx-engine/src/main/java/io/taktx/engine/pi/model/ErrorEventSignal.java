@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class ErrorEventSignal extends EventSignal {
-
   private String code;
   private String message;
 
@@ -27,5 +26,10 @@ public class ErrorEventSignal extends EventSignal {
     super(fLowNodeInstance, variables);
     this.code = code;
     this.message = message;
+  }
+
+  @Override
+  public boolean shouldBubbleUp() {
+    return true;
   }
 }

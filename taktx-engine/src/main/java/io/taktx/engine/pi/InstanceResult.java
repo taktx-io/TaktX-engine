@@ -12,15 +12,13 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ScheduleKeyDTO;
-import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
-import io.taktx.engine.pi.model.ScheduledContinuationInfo;
+import io.taktx.engine.pi.model.ScheduledEventInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
-import io.taktx.engine.pi.model.ScheduledStartInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import java.util.ArrayDeque;
@@ -30,7 +28,6 @@ import lombok.Getter;
 @Getter
 public class InstanceResult {
 
-  private final Queue<EventSignal> bubbleUpEvents = new ArrayDeque<>();
   private final Queue<InstanceUpdate> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
@@ -46,9 +43,8 @@ public class InstanceResult {
       newCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
   private final Queue<TerminateCorrelationSubscriptionMessageEventInfo>
       terminateCorrelationSubscriptionMessageEventInfos = new ArrayDeque<>();
-  private final Queue<ScheduledStartInfo> scheduledStartInfos = new ArrayDeque<>();
   private final Queue<EventSignalTriggerDTO> eventSignalTriggerList = new ArrayDeque<>();
-  private final Queue<ScheduledContinuationInfo> scheduledContinuationInfos = new ArrayDeque<>();
+  private final Queue<ScheduledEventInfo> scheduledEventInfos = new ArrayDeque<>();
   private final Queue<ScheduleKeyDTO> cancelSchedules = new ArrayDeque<>();
   private final Queue<ScheduledExternalTaskTriggerTimeoutInfo>
       scheduledExternalTaskTriggerTimeouts = new ArrayDeque<>();
@@ -96,20 +92,12 @@ public class InstanceResult {
     scheduledExternalTaskTriggerTimeouts.add(scheduledExternalTaskTriggerTimeoutInfo);
   }
 
-  public void addNewScheduledContinuation(ScheduledContinuationInfo scheduledContinuationInfo) {
-    scheduledContinuationInfos.add(scheduledContinuationInfo);
+  public void addNewScheduledEvent(ScheduledEventInfo scheduledEventInfo) {
+    scheduledEventInfos.add(scheduledEventInfo);
   }
 
   public void cancelSchedule(ScheduleKeyDTO scheduledKey) {
     cancelSchedules.add(scheduledKey);
-  }
-
-  public void addBubbleUpEvent(EventSignal eventSignal) {
-    bubbleUpEvents.add(eventSignal);
-  }
-
-  public void addScheduledStart(ScheduledStartInfo scheduledStartInfo) {
-    scheduledStartInfos.add(scheduledStartInfo);
   }
 
   public void addEventSignals(EventSignalTriggerDTO eventSignalList) {

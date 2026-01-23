@@ -35,14 +35,12 @@ import io.taktx.dto.SubscriptionDTO;
 import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TaskInstanceDTO;
 import io.taktx.dto.UserTaskInstanceDTO;
-import io.taktx.dto.subscriptions.BoundaryEventCatchAllErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventCatchAllEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.BoundaryEventEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessCatchAllErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessCatchAllEscalationSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessErrorSubscriptionDTO;
-import io.taktx.dto.subscriptions.EventSubProcessEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.ErrorSubscriptionDTO;
+import io.taktx.dto.subscriptions.EscalationSubscriptionDTO;
+import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
+import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.IoVariableMapping;
@@ -70,16 +68,14 @@ import io.taktx.engine.pi.model.StartEventInstance;
 import io.taktx.engine.pi.model.SubProcessInstance;
 import io.taktx.engine.pi.model.TaskInstance;
 import io.taktx.engine.pi.model.UserTaskInstance;
-import io.taktx.engine.pi.model.subscriptions.BoundaryEventCatchAllErrorSubscription;
-import io.taktx.engine.pi.model.subscriptions.BoundaryEventCatchAllEscalationSubscription;
-import io.taktx.engine.pi.model.subscriptions.BoundaryEventErrorSubscription;
-import io.taktx.engine.pi.model.subscriptions.BoundaryEventEscalationSubscription;
-import io.taktx.engine.pi.model.subscriptions.EventSubProcessCatchAllErrorSubscription;
-import io.taktx.engine.pi.model.subscriptions.EventSubProcessCatchAllEscalationSubscription;
-import io.taktx.engine.pi.model.subscriptions.EventSubProcessErrorSubscription;
-import io.taktx.engine.pi.model.subscriptions.EventSubProcessEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.CatchAllErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.CatchAllEscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.ErrorSubscription;
+import io.taktx.engine.pi.model.subscriptions.EscalationSubscription;
+import io.taktx.engine.pi.model.subscriptions.MessageSubscription;
 import io.taktx.engine.pi.model.subscriptions.Subscription;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
+import io.taktx.engine.pi.model.subscriptions.TimerSubscription;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
@@ -332,6 +328,10 @@ public interface ProcessInstanceMapper {
       target = "flowNode",
       expression =
           "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
+  @Mapping(
+      target = "scope",
+      expression =
+          "java(map( source.getScope(), ((io.taktx.engine.pd.model.SubProcess)flowElements.get(flowElements.getIndex(source.getElementIndex()))).getElements()))")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
   @Mapping(target = "state", ignore = true)
@@ -467,102 +467,67 @@ public interface ProcessInstanceMapper {
     return result;
   }
 
-  @Mapping(
-      target = "boundaryEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
-  BoundaryEventCatchAllErrorSubscription map(
-      BoundaryEventCatchAllErrorSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  CatchAllErrorSubscription map(
+      CatchAllErrorSubscriptionDTO source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
-  BoundaryEventCatchAllEscalationSubscription map(
-      BoundaryEventCatchAllEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  CatchAllEscalationSubscription map(
+      CatchAllEscalationSubscriptionDTO source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
-  BoundaryEventErrorSubscription map(
-      BoundaryEventErrorSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  ErrorSubscription map(ErrorSubscriptionDTO source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
-  BoundaryEventEscalationSubscription map(
-      BoundaryEventEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  MessageSubscription map(MessageSubscriptionDTO source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "eventSubProcess",
-      expression =
-          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
-  @Mapping(
-      target = "startEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
-  EventSubProcessCatchAllErrorSubscription map(
-      EventSubProcessCatchAllErrorSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  EscalationSubscription map(EscalationSubscriptionDTO source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "eventSubProcess",
-      expression =
-          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
-  @Mapping(
-      target = "startEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
-  EventSubProcessCatchAllEscalationSubscription map(
-      EventSubProcessCatchAllEscalationSubscriptionDTO source, @Context FlowElements flowElements);
-
-  @Mapping(
-      target = "eventSubProcess",
-      expression =
-          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
-  @Mapping(
-      target = "startEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
-  EventSubProcessErrorSubscription map(
-      EventSubProcessErrorSubscriptionDTO source, @Context FlowElements flowElements);
-
-  @Mapping(
-      target = "eventSubProcess",
-      expression =
-          "java((io.taktx.engine.pd.model.SubProcess)flowElements.getFlowNode(flowElements.getIndex(source.getEventSubprocessIndex())).orElseThrow())")
-  @Mapping(
-      target = "startEvent",
-      expression =
-          "java((io.taktx.engine.pd.model.StartEvent)flowElements.getFlowNode(flowElements.getIndex(source.getStartEventIndex())).orElseThrow())")
-  EventSubProcessEscalationSubscription map(
-      EventSubProcessEscalationSubscriptionDTO source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEvent",
+  //      expression =
+  //
+  // "java((io.taktx.engine.pd.model.BoundaryEvent)flowElements.getFlowNode(flowElements.getIndex(source.getBoundaryEventIndex())).orElseThrow())")
+  @Mapping(target = "order", ignore = true)
+  TimerSubscription map(TimerSubscriptionDTO source, @Context FlowElements flowElements);
 
   @SubclassMapping(
-      target = BoundaryEventCatchAllErrorSubscription.class,
-      source = BoundaryEventCatchAllErrorSubscriptionDTO.class)
+      target = CatchAllErrorSubscription.class,
+      source = CatchAllErrorSubscriptionDTO.class)
   @SubclassMapping(
-      target = BoundaryEventCatchAllEscalationSubscription.class,
-      source = BoundaryEventCatchAllEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      target = BoundaryEventErrorSubscription.class,
-      source = BoundaryEventErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      target = BoundaryEventEscalationSubscription.class,
-      source = BoundaryEventEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      target = EventSubProcessCatchAllErrorSubscription.class,
-      source = EventSubProcessCatchAllErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      target = EventSubProcessCatchAllEscalationSubscription.class,
-      source = EventSubProcessCatchAllEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      target = EventSubProcessErrorSubscription.class,
-      source = EventSubProcessErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      target = EventSubProcessEscalationSubscription.class,
-      source = EventSubProcessEscalationSubscriptionDTO.class)
+      target = CatchAllEscalationSubscription.class,
+      source = CatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(target = ErrorSubscription.class, source = ErrorSubscriptionDTO.class)
+  @SubclassMapping(target = MessageSubscription.class, source = MessageSubscriptionDTO.class)
+  @SubclassMapping(target = EscalationSubscription.class, source = EscalationSubscriptionDTO.class)
+  @SubclassMapping(target = TimerSubscription.class, source = TimerSubscriptionDTO.class)
+  @Mapping(target = "order", ignore = true)
   Subscription map(SubscriptionDTO source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -799,90 +764,48 @@ public interface ProcessInstanceMapper {
     return result;
   }
 
-  @Mapping(
-      target = "boundaryEventIndex",
-      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
-  BoundaryEventCatchAllErrorSubscriptionDTO map(
-      BoundaryEventCatchAllErrorSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  CatchAllErrorSubscriptionDTO map(
+      CatchAllErrorSubscription source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEventIndex",
-      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
-  BoundaryEventCatchAllEscalationSubscriptionDTO map(
-      BoundaryEventCatchAllEscalationSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  CatchAllEscalationSubscriptionDTO map(
+      CatchAllEscalationSubscription source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEventIndex",
-      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
-  BoundaryEventErrorSubscriptionDTO map(
-      BoundaryEventErrorSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  ErrorSubscriptionDTO map(ErrorSubscription source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "boundaryEventIndex",
-      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
-  BoundaryEventEscalationSubscriptionDTO map(
-      BoundaryEventEscalationSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  MessageSubscriptionDTO map(MessageSubscription source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "eventSubprocessIndex",
-      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
-  @Mapping(
-      target = "startEventIndex",
-      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
-  EventSubProcessCatchAllErrorSubscriptionDTO map(
-      EventSubProcessCatchAllErrorSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  EscalationSubscriptionDTO map(EscalationSubscription source, @Context FlowElements flowElements);
 
-  @Mapping(
-      target = "eventSubprocessIndex",
-      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
-  @Mapping(
-      target = "startEventIndex",
-      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
-  EventSubProcessCatchAllEscalationSubscriptionDTO map(
-      EventSubProcessCatchAllEscalationSubscription source, @Context FlowElements flowElements);
-
-  @Mapping(
-      target = "eventSubprocessIndex",
-      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
-  @Mapping(
-      target = "startEventIndex",
-      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
-  EventSubProcessErrorSubscriptionDTO map(
-      EventSubProcessErrorSubscription source, @Context FlowElements flowElements);
-
-  @Mapping(
-      target = "eventSubprocessIndex",
-      expression = "java(flowElements.indexOf(source.getEventSubProcess().getId()))")
-  @Mapping(
-      target = "startEventIndex",
-      expression = "java(flowElements.indexOf(source.getStartEvent().getId()))")
-  EventSubProcessEscalationSubscriptionDTO map(
-      EventSubProcessEscalationSubscription source, @Context FlowElements flowElements);
+  //  @Mapping(
+  //      target = "boundaryEventIndex",
+  //      expression = "java(flowElements.indexOf(source.getBoundaryEvent().getId()))")
+  TimerSubscriptionDTO map(TimerSubscription source, @Context FlowElements flowElements);
 
   @SubclassMapping(
-      source = BoundaryEventCatchAllErrorSubscription.class,
-      target = BoundaryEventCatchAllErrorSubscriptionDTO.class)
+      source = CatchAllErrorSubscription.class,
+      target = CatchAllErrorSubscriptionDTO.class)
   @SubclassMapping(
-      source = BoundaryEventCatchAllEscalationSubscription.class,
-      target = BoundaryEventCatchAllEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      source = BoundaryEventErrorSubscription.class,
-      target = BoundaryEventErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      source = BoundaryEventEscalationSubscription.class,
-      target = BoundaryEventEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      source = EventSubProcessCatchAllErrorSubscription.class,
-      target = EventSubProcessCatchAllErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      source = EventSubProcessCatchAllEscalationSubscription.class,
-      target = EventSubProcessCatchAllEscalationSubscriptionDTO.class)
-  @SubclassMapping(
-      source = EventSubProcessErrorSubscription.class,
-      target = EventSubProcessErrorSubscriptionDTO.class)
-  @SubclassMapping(
-      source = EventSubProcessEscalationSubscription.class,
-      target = EventSubProcessEscalationSubscriptionDTO.class)
+      source = CatchAllEscalationSubscription.class,
+      target = CatchAllEscalationSubscriptionDTO.class)
+  @SubclassMapping(source = ErrorSubscription.class, target = ErrorSubscriptionDTO.class)
+  @SubclassMapping(source = MessageSubscription.class, target = MessageSubscriptionDTO.class)
+  @SubclassMapping(source = EscalationSubscription.class, target = EscalationSubscriptionDTO.class)
+  @SubclassMapping(source = TimerSubscription.class, target = TimerSubscriptionDTO.class)
   SubscriptionDTO map(Subscription source, @Context FlowElements flowElements);
 
   @AfterMapping

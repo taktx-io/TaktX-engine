@@ -21,7 +21,7 @@ import lombok.Setter;
 public abstract class GatewayInstance<N extends Gateway> extends FlowNodeInstance<N> {
   private Set<String> selectedOutputFlows = new HashSet<>();
 
-  protected GatewayInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
+  protected GatewayInstance(IFlowNodeInstance parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

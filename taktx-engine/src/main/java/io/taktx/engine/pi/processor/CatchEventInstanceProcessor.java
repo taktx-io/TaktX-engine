@@ -13,7 +13,6 @@ import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CatchEvent;
-import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.SignalEvent;
 import io.taktx.engine.pd.model.SignalEventDefinition;
 import io.taktx.engine.pi.InstanceResult;
@@ -22,14 +21,12 @@ import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
 import io.taktx.engine.pi.model.CatchEventInstance;
-import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
-import io.taktx.engine.pi.model.ScheduledContinuationInfo;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import java.time.Clock;
 import java.util.Optional;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
@@ -37,7 +34,7 @@ public abstract class CatchEventInstanceProcessor<
         E extends CatchEvent, I extends CatchEventInstance<? extends CatchEvent>>
     extends EventInstanceProcessor<E, I> {
 
-  private FeelExpressionHandler feelExpressionHandler;
+  @Getter private FeelExpressionHandler feelExpressionHandler;
 
   protected CatchEventInstanceProcessor(
       IoMappingProcessor ioMappingProcessor,
@@ -55,8 +52,6 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope variableScope,
       I catchEventInstance,
       String inputFlowId) {
-
-    catchEventInstance.setState(ExecutionState.COMPLETED);
 
     catchEventInstance
         .getFlowNode()
@@ -87,54 +82,9 @@ public abstract class CatchEventInstanceProcessor<
                   .getInstanceResult()
                   .addNewInstanceSignalSubscription(subscriptionInfo);
             });
-
-    if (shoudHandleTimerEvents()) {
-      catchEventInstance
-          .getFlowNode()
-          .getTimerEventDefinition()
-          .ifPresent(
-              timerEventDefinition -> {
-                catchEventInstance.setState(ExecutionState.ACTIVE);
-                processInstanceProcessingContext
-                    .getInstanceResult()
-                    .addNewScheduledContinuation(
-                        new ScheduledContinuationInfo(
-                            catchEventInstance, timerEventDefinition, variableScope));
-              });
-    }
-
-    catchEventInstance
-        .getFlowNode()
-        .getMessageventDefinition()
-        .ifPresent(
-            messageEventDefinition -> {
-              catchEventInstance.setState(ExecutionState.ACTIVE);
-              Message message = messageEventDefinition.getReferencedMessage();
-              if (message == null) {
-                throw new ProcessInstanceException(
-                    catchEventInstance, "Message event definition has no referenced message");
-              }
-
-              String correlationKeyExpression = message.correlationKey();
-              JsonNode jsonNode =
-                  feelExpressionHandler.processFeelExpression(
-                      correlationKeyExpression, variableScope);
-              if (jsonNode == null || jsonNode.isNull()) {
-                throw new ProcessInstanceException(
-                    catchEventInstance, "Correlation key expression returned null");
-              }
-              String correlationKey = jsonNode.asText();
-              String messageName = message.name();
-              NewCorrelationSubscriptionMessageEventInfo messageInfo =
-                  new NewCorrelationSubscriptionMessageEventInfo(
-                      messageName, correlationKey, catchEventInstance, null);
-              processInstanceProcessingContext
-                  .getInstanceResult()
-                  .addNewCorrelationSubcriptionMessageEvent(messageInfo);
-            });
+    processStartSpecificCatchEventInstance(
+        processInstanceProcessingContext, scope, variableScope, catchEventInstance);
   }
-
-  protected abstract boolean shoudHandleTimerEvents();
 
   @Override
   protected void processContinueSpecificFlowNodeInstance(
@@ -143,29 +93,14 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope variableScope,
       I flowNodeInstance,
       ContinueFlowElementTriggerDTO trigger) {
-    getInstanceResultForContinue(
-        processInstanceProcessingContext, scope, variableScope, flowNodeInstance);
-  }
+    flowNodeInstance.setState(ExecutionState.COMPLETED);
 
-  private void getInstanceResultForContinue(
-      ProcessInstanceProcessingContext processInstanceProcessingContext,
-      Scope scope,
-      VariableScope variableScope,
-      I flowNodeInstance) {
-    if (shouldCancel(flowNodeInstance)) {
-      // Complete the catch event instance
-      flowNodeInstance.setState(ExecutionState.COMPLETED);
-      terminateSubscriptions(
-          flowNodeInstance, processInstanceProcessingContext.getInstanceResult(), variableScope);
-    }
     processContinueSpecificCatchEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
   }
 
   private void terminateSubscriptions(
       I flowNodeInstance, InstanceResult result, VariableScope variableScope) {
-    terminateScheduleKeys(flowNodeInstance, result);
-    terminateMessageSubscriptions(flowNodeInstance, result);
     terminateSignalSubscription(flowNodeInstance, result, variableScope);
   }
 
@@ -192,32 +127,16 @@ public abstract class CatchEventInstanceProcessor<
     }
   }
 
-  private static <I extends CatchEventInstance<? extends CatchEvent>>
-      void terminateMessageSubscriptions(I flowNodeInstance, InstanceResult result) {
-    flowNodeInstance
-        .getMessageEventKeys()
-        .forEach(
-            (messageEventKey, correlationKeys) ->
-                correlationKeys.forEach(
-                    correlationKey -> {
-                      TerminateCorrelationSubscriptionMessageEventInfo messageEventInfo =
-                          new TerminateCorrelationSubscriptionMessageEventInfo(
-                              messageEventKey.getMessageName(), correlationKey);
-                      result.addTerminateCorrelationSubscriptionMessageEvent(messageEventInfo);
-                    }));
-  }
-
-  private static <I extends CatchEventInstance<? extends CatchEvent>> void terminateScheduleKeys(
-      I flowNodeInstance, InstanceResult result) {
-    flowNodeInstance.getScheduledKeys().forEach(result::cancelSchedule);
-  }
+  protected abstract void processStartSpecificCatchEventInstance(
+      ProcessInstanceProcessingContext processInstanceProcessingContext,
+      Scope scope,
+      VariableScope variableScope,
+      I flowNodeInstance);
 
   protected abstract void processContinueSpecificCatchEventInstance(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       I flowNodeInstance);
-
-  protected abstract boolean shouldCancel(I flowNodeInstance);
 
   @Override
   protected void processAbortSpecificFlowNodeInstance(

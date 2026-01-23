@@ -10,8 +10,8 @@ package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.FlowNodeInstance;
 import io.taktx.engine.pi.model.GatewayInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.WithScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,10 +25,10 @@ public abstract class Gateway extends FlowNode {
   @Setter private SequenceFlow defaultSequenceFlow;
 
   @Override
-  public FlowNodeInstance<?> newInstance(WithScope parentInstance, Scope scope) {
+  public FlowNodeInstance<?> newInstance(IFlowNodeInstance parentInstance, Scope scope) {
     return newSpecificGatewayInstance(parentInstance, scope.nextElementInstanceId());
   }
 
   protected abstract GatewayInstance<?> newSpecificGatewayInstance(
-      WithScope parentInstance, long elementInstanceId);
+      IFlowNodeInstance parentInstance, long elementInstanceId);
 }

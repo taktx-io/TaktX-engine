@@ -24,7 +24,8 @@ public class ExternalTaskInstance<N extends ExternalTask> extends ActivityInstan
   private int attempt;
   private List<ScheduleKeyDTO> scheduledKeys = new ArrayList<>();
 
-  public ExternalTaskInstance(WithScope parentInstance, N flowNode, long elementInstanceId) {
+  public ExternalTaskInstance(
+      IFlowNodeInstance parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

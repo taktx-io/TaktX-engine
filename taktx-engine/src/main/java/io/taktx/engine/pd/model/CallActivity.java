@@ -10,7 +10,7 @@ package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.CallActivityInstance;
-import io.taktx.engine.pi.model.WithScope;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -25,7 +25,8 @@ public class CallActivity extends Activity {
   private boolean propagateAllChildVariables;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(WithScope parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(
+      IFlowNodeInstance parentInstance, long elementInstanceId) {
     return new CallActivityInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -14,7 +14,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class EndEventInstance extends ThrowEventInstance<EndEvent> {
 
-  public EndEventInstance(WithScope parentInstance, EndEvent flowNode, long elementInstanceId) {
+  public EndEventInstance(
+      IFlowNodeInstance parentInstance, EndEvent flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 

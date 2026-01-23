@@ -372,7 +372,11 @@ public abstract class ExternalTaskInstanceProcessor<
           variableScope,
           flownodeInstance.getFlowNode().getHeaders(),
           new ExternalTaskResponseResultDTO(
-              ExternalTaskResponseType.ERROR, false, "Topic not created", "Topic not created", -1L),
+              ExternalTaskResponseType.ERROR,
+              false,
+              "Topic not created",
+              "Topic not created" + externalTaskId,
+              -1L),
           VariablesDTO.empty());
       return true;
     }

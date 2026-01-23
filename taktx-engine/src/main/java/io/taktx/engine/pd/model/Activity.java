@@ -9,9 +9,9 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.ActivityInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.WithScope;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
@@ -29,7 +29,7 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   @Setter private List<BoundaryEvent> boundaryEvents;
 
   @Override
-  public final ActivityInstance<?> newInstance(WithScope parentInstance, Scope scope) {
+  public final ActivityInstance<?> newInstance(IFlowNodeInstance parentInstance, Scope scope) {
     if (loopCharacteristics != null && !loopCharacteristics.equals(LoopCharacteristics.NONE)) {
       return new MultiInstanceInstance(this, parentInstance, scope.nextElementInstanceId());
     } else {
@@ -49,5 +49,5 @@ public abstract class Activity extends FlowNode implements WithIoMapping {
   }
 
   public abstract ActivityInstance<?> newActivityInstance(
-      WithScope parentInstance, long elementInstanceId);
+      IFlowNodeInstance parentInstance, long elementInstanceId);
 }

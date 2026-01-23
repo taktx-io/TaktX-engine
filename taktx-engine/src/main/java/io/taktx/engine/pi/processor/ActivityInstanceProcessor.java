@@ -63,7 +63,12 @@ public abstract class ActivityInstanceProcessor<
             boundaryEvent ->
                 scope
                     .getSubscriptions()
-                    .addSubscriptionsForBoundaryEventDefinitions(boundaryEvent, flownodeInstance));
+                    .addSubscriptionsForBoundaryEventDefinitions(
+                        processInstanceProcessingContext,
+                        variableScope,
+                        boundaryEvent,
+                        flownodeInstance,
+                        feelExpressionHandler));
 
     processStartSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, flownodeInstance, inputFlowId);
@@ -92,7 +97,9 @@ public abstract class ActivityInstanceProcessor<
       VariableScope variableScope,
       I instance) {
 
-    scope.getSubscriptions().cancelSubscriptionsForInstance(instance, scope);
+    scope
+        .getSubscriptions()
+        .cancelSubscriptionsForInstance(processInstanceProcessingContext, instance, scope);
 
     processAbortSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, instance);

@@ -9,7 +9,7 @@
 package io.taktx.engine.pd.model;
 
 import io.taktx.engine.pi.model.ExclusiveGatewayInstance;
-import io.taktx.engine.pi.model.WithScope;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,7 +21,7 @@ public class ExclusiveGateway extends Gateway {
 
   @Override
   protected ExclusiveGatewayInstance newSpecificGatewayInstance(
-      WithScope parentInstance, long elementInstanceId) {
+      IFlowNodeInstance parentInstance, long elementInstanceId) {
     return new ExclusiveGatewayInstance(parentInstance, this, elementInstanceId);
   }
 }

@@ -13,6 +13,7 @@ import io.taktx.dto.CancelCorrelationMessageSubscriptionDTO;
 import io.taktx.dto.CancelInstanceSignalSubscriptionDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
@@ -25,11 +26,9 @@ import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
@@ -38,17 +37,14 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
-import io.taktx.engine.pi.model.CatchEventInstance;
 import io.taktx.engine.pi.model.ExternalTaskInfo;
 import io.taktx.engine.pi.model.ExternalTaskInstance;
-import io.taktx.engine.pi.model.FlowNodeInstance;
-import io.taktx.engine.pi.model.FlowNodeInstanceWithScheduleKeys;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.NewInstanceSignalSubscriptionInfo;
-import io.taktx.engine.pi.model.ScheduledContinuationInfo;
+import io.taktx.engine.pi.model.ProcessInstance;
+import io.taktx.engine.pi.model.ScheduledEventInfo;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
-import io.taktx.engine.pi.model.ScheduledStartInfo;
-import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
@@ -80,28 +76,26 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstanceDTO processInstanceDTO,
-      Scope scope) {
+      ProcessInstance processInstance) {
     forwardInstanceUpdates(context, instanceResult);
-    forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstanceDTO);
-    forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstanceDTO);
-    forwardNewStartCommands(context, instanceResult, processInstanceDTO);
+    forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
+    forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstance);
+    forwardNewStartCommands(context, instanceResult, processInstance);
     forwardContinuations(context, instanceResult);
     forwardCancelSchedules(context, instanceResult);
-    forwardScheduledStarts(context, instanceResult, processInstanceDTO);
-    forwardScheduledContinuations(context, instanceResult, processInstanceDTO);
-    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstanceDTO);
+    forwardScheduledEvents(context, instanceResult, processInstance);
+    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstance);
     forwardTerminateCommands(context, instanceResult);
-    forwardMessageSubscriptionCommands(context, instanceResult, processInstanceDTO);
+    forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
     forwardEventSignalTriggers(context, instanceResult);
     forwardSignals(context, instanceResult);
-    forwardSignalSubscriptions(context, instanceResult, processInstanceDTO);
+    forwardSignalSubscriptions(context, instanceResult, processInstance);
   }
 
   private void forwardSignalSubscriptions(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstanceDTO) {
+      ProcessInstance processInstanceDTO) {
     Queue<NewInstanceSignalSubscriptionInfo> newInstanceSignalSubscriptions =
         instanceResult.getNewInstanceSignalSubscriptions();
     while (!newInstanceSignalSubscriptions.isEmpty()) {
@@ -174,56 +168,20 @@ public class Forwarder {
     }
   }
 
-  private void forwardScheduledStarts(
+  private void forwardScheduledEvents(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
-    Queue<ScheduledStartInfo> scheduledStartInfos = instanceResult.getScheduledStartInfos();
-    while (!scheduledStartInfos.isEmpty()) {
-      ScheduledStartInfo scheduledStartInfo = scheduledStartInfos.poll();
-      List<Long> instancePath =
-          pathExtractor.getInstancePath(scheduledStartInfo.scope().getParentFlowNodeInstance());
-      String elementId = scheduledStartInfo.flowNodeToStart().getId();
-      StartFlowElementTriggerDTO startFlowElementTrigger =
-          new StartFlowElementTriggerDTO(
-              processInstance.getProcessInstanceId(),
-              instancePath,
-              elementId,
-              VariablesDTO.empty());
+      ProcessInstance processInstance) {
+    Queue<ScheduledEventInfo> scheduledEventInfos = instanceResult.getScheduledEventInfos();
+    while (!scheduledEventInfos.isEmpty()) {
+      ScheduledEventInfo info = scheduledEventInfos.poll();
 
-      long now = clock.millis();
-
-      MessageScheduleDTO schedule =
-          messageSchedulerFactory.schedule(
-              dtoMapper.map(scheduledStartInfo.timerEventDefinition()),
-              now,
-              startFlowElementTrigger,
-              VariableScope.empty(null, null));
-
-      TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
-      InstanceScheduleKeyDTO scheduledKey =
-          new InstanceScheduleKeyDTO(
-              processInstance.getProcessInstanceId(), instancePath, elementId, bucket);
-      scheduledStartInfo.scope().addScheduledKey(scheduledKey);
-      context.forward(new Record<>(scheduledKey, schedule, now));
-    }
-  }
-
-  private void forwardScheduledContinuations(
-      ProcessorContext<Object, Object> context,
-      InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
-    Queue<ScheduledContinuationInfo> scheduledContinuationInfos =
-        instanceResult.getScheduledContinuationInfos();
-    while (!scheduledContinuationInfos.isEmpty()) {
-      ScheduledContinuationInfo info = scheduledContinuationInfos.poll();
-      FlowNodeInstanceWithScheduleKeys catchEventInstance = info.catchEventInstance();
-      ContinueFlowElementTriggerDTO continueFlowElementTrigger =
-          new ContinueFlowElementTriggerDTO(
-              processInstance.getProcessInstanceId(),
-              pathExtractor.getInstancePath(catchEventInstance),
-              null,
-              info.variables().scopeToDTO());
+      EventSignalDTO eventDto = dtoMapper.map(info.timerEventSignal());
+      IFlowNodeInstance currentInstance = info.timerEventSignal().getCurrentInstance();
+      List<Long> elementInstanceIdPath = pathExtractor.getInstancePath(currentInstance);
+      eventDto.setElementInstanceIdPath(elementInstanceIdPath);
+      EventSignalTriggerDTO eventSignalTriggerDTO =
+          new EventSignalTriggerDTO(processInstance.getProcessInstanceId(), eventDto);
 
       long now = clock.millis();
 
@@ -231,18 +189,18 @@ public class Forwarder {
           messageSchedulerFactory.schedule(
               dtoMapper.map(info.timerEventDefinition()),
               now,
-              continueFlowElementTrigger,
-              info.variables());
+              eventSignalTriggerDTO,
+              info.variableScope());
 
       TimeBucket bucket = TimeBucket.ofMillis(schedule.getNextExecutionTime(now) - now);
       InstanceScheduleKeyDTO scheduledKey =
           new InstanceScheduleKeyDTO(
               processInstance.getProcessInstanceId(),
-              pathExtractor.getInstancePath(catchEventInstance),
-              catchEventInstance.getFlowNode().getId(),
+              elementInstanceIdPath,
+              info.timerEventSignal().getElementId(),
               bucket);
 
-      catchEventInstance.addScheduledKey(scheduledKey);
+      info.subscription().setScheduledKey(scheduledKey);
       context.forward(new Record<>(scheduledKey, schedule, now));
     }
   }
@@ -250,7 +208,7 @@ public class Forwarder {
   private void forwardScheduledExternalTaskTriggerTimeouts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstance processInstance) {
     Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
         instanceResult.getScheduledExternalTaskTriggerTimeouts();
     while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {
@@ -297,28 +255,25 @@ public class Forwarder {
   private void forwardMessageSubscriptionCommands(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstance processInstance) {
     Queue<NewCorrelationSubscriptionMessageEventInfo> newCorrelationSubscriptionMessageEventInfos =
         instanceResult.getNewCorrelationSubscriptionMessageEventInfos();
     while (!newCorrelationSubscriptionMessageEventInfos.isEmpty()) {
       NewCorrelationSubscriptionMessageEventInfo messageEvent =
           newCorrelationSubscriptionMessageEventInfos.poll();
-      FlowNodeInstance<?> instanceToContinue = messageEvent.elementInstance();
       CorrelationMessageSubscriptionDTO correlationMessageSubscriptionTrigger =
           new CorrelationMessageSubscriptionDTO(
               processInstance.getProcessInstanceId(),
               messageEvent.correlationKey(),
-              instanceToContinue != null ? pathExtractor.getInstancePath(instanceToContinue) : null,
+              messageEvent.elementInstance() != null
+                  ? pathExtractor.getInstancePath(messageEvent.elementInstance())
+                  : null,
               messageEvent.flowNodeToStart() != null
                   ? messageEvent.flowNodeToStart().getId()
                   : null,
               messageEvent.messageName());
       MessageEventKeyDTO messageEventKey =
           correlationMessageSubscriptionTrigger.toMessageEventKey();
-      if (instanceToContinue instanceof CatchEventInstance<?> catchEventInstance) {
-        catchEventInstance.addMessageSubscriptionWithCorrelationKey(
-            messageEventKey, messageEvent.correlationKey());
-      }
       context.forward(
           new Record<>(messageEventKey, correlationMessageSubscriptionTrigger, clock.millis()));
     }
@@ -363,7 +318,7 @@ public class Forwarder {
   private void forwardNewStartCommands(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstance processInstance) {
     Queue<NewStartCommand> newStartCommands = instanceResult.getNewStartCommands();
     while (!newStartCommands.isEmpty()) {
       NewStartCommand newStartCommand = newStartCommands.poll();
@@ -389,7 +344,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstance processInstance) {
     Queue<UserTaskInfo> userTasks = instanceResult.getUserTasks();
     while (!userTasks.isEmpty()) {
       UserTaskInfo userTask = userTasks.poll();
@@ -405,7 +360,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
-      ProcessInstanceDTO processInstance) {
+      ProcessInstance processInstance) {
     Queue<ExternalTaskInfo> externalTaskRequests = instanceResult.getExternalTaskRequests();
     while (!externalTaskRequests.isEmpty()) {
       ExternalTaskInfo externalTask = externalTaskRequests.poll();

@@ -28,4 +28,9 @@ public class EscalationEventSignal extends EventSignal {
     this.code = code;
     this.message = message;
   }
+
+  @Override
+  public boolean shouldBubbleUp() {
+    return true;
+  }
 }

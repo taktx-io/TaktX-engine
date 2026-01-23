@@ -30,6 +30,7 @@ import io.taktx.dto.IoVariableMappingDTO;
 import io.taktx.dto.LinkEventDefinitionDTO;
 import io.taktx.dto.MessageEndEventDTO;
 import io.taktx.dto.MessageEventDefinitionDTO;
+import io.taktx.dto.MessageEventSignalDTO;
 import io.taktx.dto.MessageIntermediateThrowEventDTO;
 import io.taktx.dto.ParallelGatewayDTO;
 import io.taktx.dto.ReceiveTaskDTO;
@@ -43,6 +44,7 @@ import io.taktx.dto.SubProcessDTO;
 import io.taktx.dto.TaskDTO;
 import io.taktx.dto.TerminateEventDefinitionDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
+import io.taktx.dto.TimerEventSignalDTO;
 import io.taktx.dto.UserTaskDTO;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
@@ -80,6 +82,8 @@ import io.taktx.engine.pd.model.TimerEventDefinition;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.model.ErrorEventSignal;
 import io.taktx.engine.pi.model.EscalationEventSignal;
+import io.taktx.engine.pi.model.MessageEventSignal;
+import io.taktx.engine.pi.model.TimerEventSignal;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 import org.mapstruct.Builder;
@@ -224,10 +228,15 @@ public interface DtoMapper {
 
   @SubclassMapping(source = ErrorEventSignal.class, target = ErrorEventSignalDTO.class)
   @SubclassMapping(source = EscalationEventSignal.class, target = EscalationEventSignalDTO.class)
+  @SubclassMapping(source = MessageEventSignal.class, target = MessageEventSignalDTO.class)
+  @SubclassMapping(source = TimerEventSignal.class, target = TimerEventSignalDTO.class)
+  @Mapping(target = "elementInstanceIdPath", ignore = true)
   EventSignalDTO map(EventSignal source);
 
   @SubclassMapping(source = ErrorEventSignalDTO.class, target = ErrorEventSignal.class)
   @SubclassMapping(source = EscalationEventSignalDTO.class, target = EscalationEventSignal.class)
+  @SubclassMapping(source = MessageEventSignalDTO.class, target = MessageEventSignal.class)
+  @SubclassMapping(source = TimerEventSignalDTO.class, target = TimerEventSignal.class)
   @Mapping(target = "pathToSource", ignore = true)
   EventSignal map(EventSignalDTO source);
 

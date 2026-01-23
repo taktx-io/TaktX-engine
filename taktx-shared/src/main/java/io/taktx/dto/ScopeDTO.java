@@ -13,7 +13,6 @@ import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
-import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -31,8 +30,6 @@ public class ScopeDTO {
   private ExecutionState state;
   private long elementInstanceCnt;
   private Map<String, Long> gatewayInstances;
-  private Map<String, Set<String>> messageSubscriptions;
-  private Set<InstanceScheduleKeyDTO> scheduleKeys;
   private SubscriptionsDTO subscriptions;
 
   public ScopeDTO(
@@ -41,16 +38,12 @@ public class ScopeDTO {
       int subProcessLevel,
       long elementInstanceCnt,
       Map<String, Long> gatewayInstances,
-      Map<String, Set<String>> messageSubscriptions,
-      Set<InstanceScheduleKeyDTO> scheduleKeys,
       SubscriptionsDTO subscriptions) {
     this.state = state;
     this.activeCnt = activeCnt;
     this.subProcessLevel = subProcessLevel;
     this.elementInstanceCnt = elementInstanceCnt;
     this.gatewayInstances = gatewayInstances;
-    this.messageSubscriptions = messageSubscriptions;
-    this.scheduleKeys = scheduleKeys;
     this.subscriptions = subscriptions;
   }
 }

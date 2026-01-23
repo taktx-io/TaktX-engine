@@ -87,7 +87,7 @@ class ActivityInstanceProcessorTest {
   @Test
   void processStartSpecificFlowNodeInstance_shouldNotSetLoopVariablesWhenNotIteration() {
     when(activityInstance.isIteration()).thenReturn(false);
-
+    when(activityInstance.getFlowNode()).thenReturn(activity);
     processor.processStartSpecificFlowNodeInstance(
         processingContext, scope, variableScope, activityInstance, "flow1");
 

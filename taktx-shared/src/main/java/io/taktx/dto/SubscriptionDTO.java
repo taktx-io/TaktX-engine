@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.SubscriptionTypeIdResolver;
+import io.taktx.dto.subscriptions.SubScriptionType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,4 +34,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @RegisterForReflection
-public abstract class SubscriptionDTO {}
+public abstract class SubscriptionDTO {
+  private SubScriptionType subScriptionType;
+
+  private String elementId; // In case of starting
+}

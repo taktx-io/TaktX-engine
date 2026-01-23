@@ -10,8 +10,8 @@ package io.taktx.engine.pd.model;
 
 import io.taktx.dto.ScriptType;
 import io.taktx.engine.pi.model.ActivityInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.ScriptTaskInstance;
-import io.taktx.engine.pi.model.WithScope;
 import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,7 +28,8 @@ public class ScriptTask extends ExternalTask {
   private String resultVariableName;
 
   @Override
-  public ActivityInstance<?> newActivityInstance(WithScope parentInstance, long elementInstanceId) {
+  public ActivityInstance<?> newActivityInstance(
+      IFlowNodeInstance parentInstance, long elementInstanceId) {
     return new ScriptTaskInstance(parentInstance, this, elementInstanceId);
   }
 }

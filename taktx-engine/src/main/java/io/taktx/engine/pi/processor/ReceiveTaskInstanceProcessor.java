@@ -8,20 +8,14 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
-import io.taktx.engine.pd.model.Message;
 import io.taktx.engine.pd.model.ReceiveTask;
-import io.taktx.engine.pi.InstanceResult;
-import io.taktx.engine.pi.ProcessInstanceException;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
-import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.ReceiveTaskInstance;
 import io.taktx.engine.pi.model.Scope;
-import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -52,29 +46,13 @@ public class ReceiveTaskInstanceProcessor
       String inputFlowId) {
     receiveTaskInstance.setState(ExecutionState.ACTIVE);
 
-    ReceiveTask receiveTask = receiveTaskInstance.getFlowNode();
-    Message referencedMessage = receiveTask.getReferencedMessage();
-    if (referencedMessage == null) {
-      throw new ProcessInstanceException(
-          receiveTaskInstance, "ReceiveTask does not reference a message");
-    }
-    String correlationKeyExpression = referencedMessage.correlationKey();
-    JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(correlationKeyExpression, variableScope);
-    String correlationKey = jsonNode != null ? jsonNode.asText() : null;
-    if (correlationKey == null) {
-      throw new ProcessInstanceException(
-          receiveTaskInstance, "Correlation key expression returned null");
-    }
-
-    String messageName = referencedMessage.name();
-    receiveTaskInstance.setCorrelationKey(correlationKey);
-
-    processInstanceProcessingContext
-        .getInstanceResult()
-        .addNewCorrelationSubcriptionMessageEvent(
-            new NewCorrelationSubscriptionMessageEventInfo(
-                messageName, correlationKey, receiveTaskInstance, null));
+    scope
+        .getSubscriptions()
+        .startSubscriptionsForReceiveTask(
+            processInstanceProcessingContext,
+            variableScope,
+            feelExpressionHandler,
+            receiveTaskInstance);
   }
 
   @Override
@@ -85,8 +63,6 @@ public class ReceiveTaskInstanceProcessor
       ReceiveTaskInstance receiveTaskInstance,
       ContinueFlowElementTriggerDTO trigger) {
     receiveTaskInstance.setState(ExecutionState.COMPLETED);
-    terminatingSubscriptionInstanceResult(
-        processInstanceProcessingContext.getInstanceResult(), receiveTaskInstance);
   }
 
   @Override
@@ -95,15 +71,6 @@ public class ReceiveTaskInstanceProcessor
       Scope scope,
       VariableScope variableScope,
       ReceiveTaskInstance instance) {
-    terminatingSubscriptionInstanceResult(
-        processInstanceProcessingContext.getInstanceResult(), instance);
-  }
-
-  private static void terminatingSubscriptionInstanceResult(
-      InstanceResult instanceResult, ReceiveTaskInstance receiveTaskInstance) {
-    String messageName = receiveTaskInstance.getFlowNode().getReferencedMessage().name();
-    instanceResult.addTerminateCorrelationSubscriptionMessageEvent(
-        new TerminateCorrelationSubscriptionMessageEventInfo(
-            messageName, receiveTaskInstance.getCorrelationKey()));
+    // No specific processing for abort
   }
 }

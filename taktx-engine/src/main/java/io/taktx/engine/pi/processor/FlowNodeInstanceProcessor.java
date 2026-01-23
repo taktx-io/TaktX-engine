@@ -20,6 +20,7 @@ import io.taktx.engine.pi.InstanceUpdate;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.FlowNodeInstance;
+import io.taktx.engine.pi.model.IFlowNodeInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
@@ -183,7 +184,7 @@ public abstract class FlowNodeInstanceProcessor<
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope,
-      FlowNodeInstance instance) {
+      IFlowNodeInstance instance) {
     // Only terminate if the instanceToContinue is ready or waiting
     if (instance.stateAllowsStopping()) {
       long now = clock.instant().toEpochMilli();
@@ -299,7 +300,7 @@ public abstract class FlowNodeInstanceProcessor<
 
   protected InstanceUpdate createFlowNodeInstanceUpdate(
       ProcessInstance processInstance,
-      FlowNodeInstance<?> flowNodeInstance,
+      IFlowNodeInstance flowNodeInstance,
       Scope scope,
       VariableScope variableScope,
       long processTime,
@@ -309,7 +310,7 @@ public abstract class FlowNodeInstanceProcessor<
 
     VariablesDTO variablesDTO = variableScope.scopeToDTO();
     FlowNodeInstanceDTO flowNodeInstanceDTO =
-        processInstanceMapper.map(flowNodeInstance, scope.getFlowElements());
+        processInstanceMapper.map((FlowNodeInstance<?>) flowNodeInstance, scope.getFlowElements());
     String elementId =
         scope.getFlowElements().getIndex().get(flowNodeInstanceDTO.getElementIndex());
     flowNodeInstanceDTO.setElementId(elementId);

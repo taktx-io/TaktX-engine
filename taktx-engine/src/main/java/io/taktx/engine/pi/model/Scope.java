@@ -11,18 +11,13 @@ package io.taktx.engine.pi.model;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
-import io.taktx.dto.InstanceScheduleKeyDTO;
 import io.taktx.engine.pd.model.FlowElements;
 import io.taktx.engine.pd.model.WIthChildElements;
 import io.taktx.engine.pi.DirectInstanceResult;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,8 +44,6 @@ public class Scope {
   private ExecutionState state = ExecutionState.INITIALIZED;
   private long elementInstanceCnt = 0;
   private Map<String, Long> gatewayInstances = new HashMap<>();
-  private Map<String, Set<String>> messageSubscriptions = new HashMap<>();
-  private Set<InstanceScheduleKeyDTO> scheduleKeys = new HashSet<>();
   private Subscriptions subscriptions = new Subscriptions();
 
   private ProcessInstanceMapper processInstanceMapper;
@@ -81,29 +74,8 @@ public class Scope {
     flowNodeInstances.putInstance(fLowNodeInstance);
   }
 
-  public List<Long> getScopePath() {
-    LinkedList<Long> path = new LinkedList<>();
-    addScopeToPath(path);
-    return path;
-  }
-
-  public void addScopeToPath(LinkedList<Long> path) {
-    if (parentFlowNodeInstance != null) {
-      path.addFirst(parentFlowNodeInstance.getElementInstanceId());
-    }
-    if (parentScope != null) {
-      parentScope.addScopeToPath(path);
-    }
-  }
-
   public Long getGatewayInstanceId(String flowNodeId) {
     return gatewayInstances.get(flowNodeId);
-  }
-
-  public void addMessageSubscription(String messageName, String correlationKey) {
-    Set<String> correlationKeys =
-        messageSubscriptions.computeIfAbsent(messageName, ignored -> new HashSet<>());
-    correlationKeys.add(correlationKey);
   }
 
   public void setState(ExecutionState state) {
@@ -169,10 +141,6 @@ public class Scope {
 
   public long nextElementInstanceId() {
     return ++elementInstanceCnt;
-  }
-
-  public void addScheduledKey(InstanceScheduleKeyDTO scheduledKey) {
-    this.scheduleKeys.add(scheduledKey);
   }
 
   public Scope selectChildScope(WithScope parentFlowNodeInstance, FlowElements flowElements) {

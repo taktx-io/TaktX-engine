@@ -15,9 +15,15 @@ public interface IFlowNodeInstance {
 
   long getElementInstanceId();
 
-  WithScope getParentInstance();
+  IFlowNodeInstance getParentInstance();
 
   FlowNode getFlowNode();
 
   List<Long> createKeyPath();
+
+  boolean isIteration();
+
+  boolean stateAllowsStopping();
+
+  void abort();
 }
