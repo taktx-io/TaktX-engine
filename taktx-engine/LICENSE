@@ -1,5 +1,5 @@
-This license is based on the Business Source License 1.1
-as published by MariaDB plc.
+This license is a source‑available license inspired by the Business Source License 1.1.
+It is not identical to the standard BSL 1.1 text and contains project‑specific terms.
 
 This version has been modified by TaktX to define specific
 usage limitations and terms applicable to the TaktX BPMN Engine.
@@ -7,11 +7,14 @@ usage limitations and terms applicable to the TaktX BPMN Engine.
 The original Business Source License 1.1 is available at:
 https://mariadb.com/bsl11/
 
-
-Business Source License 1.1 – TaktX Variant 1.0
+TaktX Business Source License 1.0
 
 Licensor:
-TaktX B.V. (or the legal entity owning the software)
+Eric Hendriks, Netherlands (operating under the name “TaktX”)
+
+Copyright in the Licensed Work is currently held by Eric Hendriks.
+The Licensor may assign this License and all associated rights to a future legal
+entity without notice.
 
 Licensed Work:
 The TaktX BPMN Engine, including all engine-related components,
@@ -27,11 +30,9 @@ Four (4) years after the date of each release of the Licensed Work.
 Change License:
 Apache License, Version 2.0.
 
-
 1. Definitions
 
-“Licensed Work” means the software identified above as the
-TaktX BPMN Engine.
+“Licensed Work” has the meaning given in the Licensed Work section above.
 
 “You” means an individual or legal entity exercising permissions
 granted by this License.
@@ -91,22 +92,22 @@ provided that:
 
 3.2 No Circumvention
 
-You may not circumvent, disable, or remove technical or contractual
-limitations that differentiate free and premium features of the
-Licensed Work.
+This restriction does not prohibit modification of the Licensed Work
+for evaluation, testing, research, or contribution purposes, provided
+that such modification is not used to avoid purchasing a required
+commercial license in production use.
 
 3.3 Community Edition Limitations
 
-a. Kafka Topic Limitation: Each Kafka topic created or used by the Licensed Work is
-limited to a maximum of 3 partitions per topic when the Licensed Work is used under
-this License. There is no limit on the number of topics or deployments unless otherwise
-stated.
+a. Certain capacity limits may apply when the Licensed Work is used under this License,
+as documented by the Licensor and enforced by the software.
 
-b. Enforcement: If the Licensed Work detects any Kafka topic configured with more than
-3 partitions while operating under this License, the Licensed Work may refuse to operate
-for that topic (for example, refuse to start, disable processing for the topic, or
-otherwise block functionality that depends on that topic) until the partition count is
-reduced or a commercial license is obtained from Licensor.
+b. Enforcement: If the Licensed Work detects settings or configuration which breach a
+capacity or feature limit applicable under this License, the Licensed Work may refuse
+to operate (for example, refuse to start, disable processing, or otherwise block
+functionality) until the configuration is adjusted to comply with this License or a
+commercial license is obtained from the Licensor.
+
 
 4. Redistribution
 
@@ -139,8 +140,10 @@ NON-INFRINGEMENT.
 
 8. Limitation of Liability
 
+
 IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES,
-OR OTHER LIABILITY ARISING FROM USE OF THE LICENSED WORK.
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE LICENSED WORK OR ITS USE.
 
 
 9. Governing Law

@@ -60,8 +60,7 @@ public class LicenseInfoConfig {
     String licenseInfo =
         String.format(
             """
-        TaktX Engine v%s - Copyright (c) 2025 TaktX B.V. All rights reserved.
-        Alpha version
+        TaktX Engine v%s - Copyright (c) 2025 Eric Hendriks All rights reserved.
 
         TERMS SUMMARY:
         - Free use for testing and evaluation purposes
