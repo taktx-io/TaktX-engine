@@ -56,22 +56,24 @@ public abstract class ActivityInstanceProcessor<
           flownodeInstance.getInputElement());
     }
 
-    Activity activity = flownodeInstance.getFlowNode();
-    activity
-        .getBoundaryEvents()
-        .forEach(
-            boundaryEvent ->
-                scope
-                    .getSubscriptions()
-                    .addSubscriptionsForBoundaryEventDefinitions(
-                        processInstanceProcessingContext,
-                        variableScope,
-                        boundaryEvent,
-                        flownodeInstance,
-                        feelExpressionHandler));
-
     processStartSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, flownodeInstance, inputFlowId);
+
+    if (flownodeInstance.isActive()) {
+      Activity activity = flownodeInstance.getFlowNode();
+      activity
+          .getBoundaryEvents()
+          .forEach(
+              boundaryEvent ->
+                  scope
+                      .getSubscriptions()
+                      .addSubscriptionsForBoundaryEventDefinitions(
+                          processInstanceProcessingContext,
+                          variableScope,
+                          boundaryEvent,
+                          flownodeInstance,
+                          feelExpressionHandler));
+    }
 
     handleFinishedIteration(flownodeInstance, variableScope);
   }
@@ -86,6 +88,13 @@ public abstract class ActivityInstanceProcessor<
 
     processContinueSpecificActivityInstance(
         processInstanceProcessingContext, scope, variableScope, flowNodeInstance, trigger);
+
+    if (flowNodeInstance.isDone()) {
+      scope
+          .getSubscriptions()
+          .cancelSubscriptionsForInstance(
+              processInstanceProcessingContext, flowNodeInstance, scope);
+    }
 
     handleFinishedIteration(flowNodeInstance, variableScope);
   }

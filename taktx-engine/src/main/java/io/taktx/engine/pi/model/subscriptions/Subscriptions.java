@@ -85,7 +85,7 @@ public class Subscriptions {
     }
   }
 
-  public void terminateEventSubprocessSubscriptionsIfDone(
+  public void terminateAllSubscriptionsIfDone(
       ProcessInstanceProcessingContext processInstanceProcessingContext, Scope scope) {
 
     if (scope.getState().isDone()) {
@@ -139,6 +139,15 @@ public class Subscriptions {
               subProcess,
               timerEventDefinition,
               variableScope));
+    } else if (eventDefinition instanceof SignalEventDefinition signalEventDefinition) {
+      subscriptionList.add(
+          SignalSubscription.starting(
+              processInstanceProcessingContext,
+              parentInstance,
+              subProcess,
+              signalEventDefinition,
+              variableScope,
+              feelExpressionHandler));
     }
   }
 

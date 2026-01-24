@@ -181,7 +181,7 @@ public class ScopeProcessor {
     return null;
   }
 
-  public Void processEvent(
+  public void processEvent(
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope,
@@ -197,7 +197,7 @@ public class ScopeProcessor {
       // special case for process instance level events
       scope.getDirectInstanceResult().addEvent(eventSignal);
       doBusiness(processInstanceProcessingContext, scope, variableScope);
-      return null;
+      return;
     }
 
     int subProcessLevel = scope.getSubProcessLevel();
@@ -246,8 +246,6 @@ public class ScopeProcessor {
       variableScope.merge(eventSignal.getVariables());
       doBusiness(processInstanceProcessingContext, scope, variableScope);
     }
-
-    return null;
   }
 
   public Void processAbort(
@@ -327,7 +325,7 @@ public class ScopeProcessor {
 
     scope
         .getSubscriptions()
-        .terminateEventSubprocessSubscriptionsIfDone(processInstanceProcessingContext, scope);
+        .terminateAllSubscriptionsIfDone(processInstanceProcessingContext, scope);
   }
 
   private void abortScope(Scope scope) {
@@ -398,30 +396,7 @@ public class ScopeProcessor {
 
       if (flowNodeInstance instanceof IntermediateCatchEventInstance intermediateCatchEventInstance
           && intermediateCatchEventInstance.isActive()) {
-        Optional<EventBasedGateway> eventBasedGateway =
-            flowNodeInstance.getFlowNode().getIncomingSequenceFlows().stream()
-                .filter(flow -> flow.getSourceNode() instanceof EventBasedGateway)
-                .map(flow -> (EventBasedGateway) flow.getSourceNode())
-                .findFirst();
-        if (eventBasedGateway.isPresent()) {
-          Long gatewayInstanceId = scope.getGatewayInstanceId(eventBasedGateway.get().getId());
-          if (gatewayInstanceId != null) {
-            EventBasedGatewayInstance gatewayInstance =
-                (EventBasedGatewayInstance)
-                    scope.getFlowNodeInstances().getInstanceWithInstanceId(gatewayInstanceId);
-            if (gatewayInstance != null) {
-              for (Long connectedInstanceId : gatewayInstance.getConnectedFlowNodeInstanceIds()) {
-                if (connectedInstanceId != flowNodeInstance.getElementInstanceId()) {
-                  FlowNodeInstance<?> connectedInstance =
-                      scope.getFlowNodeInstances().getInstanceWithInstanceId(connectedInstanceId);
-                  if (connectedInstance != null && connectedInstance.isActive()) {
-                    scope.getDirectInstanceResult().addAbortInstance(connectedInstance);
-                  }
-                }
-              }
-            }
-          }
-        }
+        handleEventBasedGatewayForIntermediateCatch(scope, flowNodeInstance);
       }
 
       FlowNodeInstanceProcessor<?, ?, ?> processor =
@@ -436,6 +411,41 @@ public class ScopeProcessor {
           continueInstance.trigger());
 
       continueInstance = scope.getDirectInstanceResult().pollContinueInstance();
+    }
+  }
+
+  private static void handleEventBasedGatewayForIntermediateCatch(
+      Scope scope, FlowNodeInstance<?> flowNodeInstance) {
+    Optional<EventBasedGateway> eventBasedGateway =
+        flowNodeInstance.getFlowNode().getIncomingSequenceFlows().stream()
+            .filter(flow -> flow.getSourceNode() instanceof EventBasedGateway)
+            .map(flow -> (EventBasedGateway) flow.getSourceNode())
+            .findFirst();
+    if (eventBasedGateway.isPresent()) {
+      Long gatewayInstanceId = scope.getGatewayInstanceId(eventBasedGateway.get().getId());
+      if (gatewayInstanceId != null) {
+        EventBasedGatewayInstance gatewayInstance =
+            (EventBasedGatewayInstance)
+                scope.getFlowNodeInstances().getInstanceWithInstanceId(gatewayInstanceId);
+        if (gatewayInstance != null) {
+          abortNonMatchingInstances(scope, flowNodeInstance, gatewayInstance);
+        }
+      }
+    }
+  }
+
+  private static void abortNonMatchingInstances(
+      Scope scope,
+      FlowNodeInstance<?> flowNodeInstance,
+      EventBasedGatewayInstance gatewayInstance) {
+    for (Long connectedInstanceId : gatewayInstance.getConnectedFlowNodeInstanceIds()) {
+      if (connectedInstanceId != flowNodeInstance.getElementInstanceId()) {
+        FlowNodeInstance<?> connectedInstance =
+            scope.getFlowNodeInstances().getInstanceWithInstanceId(connectedInstanceId);
+        if (connectedInstance != null && connectedInstance.isActive()) {
+          scope.getDirectInstanceResult().addAbortInstance(connectedInstance);
+        }
+      }
     }
   }
 
@@ -459,7 +469,7 @@ public class ScopeProcessor {
     }
   }
 
-  private static StartFlowNodeInstanceInfo createNewInstanceAndAddToDirectInstanceResult(
+  private static void createNewInstanceAndAddToDirectInstanceResult(
       Scope scope, String elementId, VariableScope parentVariableScope, VariablesDTO variables) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
@@ -494,7 +504,6 @@ public class ScopeProcessor {
         new StartFlowNodeInstanceInfo(flowNodeInstance, null, childVariableScope);
 
     directInstanceResult.addNewFlowNodeInstance(startFlowNodeInstanceInfo);
-    return startFlowNodeInstanceInfo;
   }
 
   private void processEventByFlowNodeInstance(

@@ -60,6 +60,12 @@ public abstract class CatchEventInstanceProcessor<
 
     processContinueSpecificCatchEventInstance(
         processInstanceProcessingContext, scope, flowNodeInstance);
+    if (flowNodeInstance.isDone()) {
+      scope
+          .getSubscriptions()
+          .cancelSubscriptionsForInstance(
+              processInstanceProcessingContext, flowNodeInstance, scope);
+    }
   }
 
   protected abstract void processStartSpecificCatchEventInstance(
@@ -80,5 +86,8 @@ public abstract class CatchEventInstanceProcessor<
       VariableScope variableScope,
       I instance) {
     // No specific abort logic for catch events
+    scope
+        .getSubscriptions()
+        .cancelSubscriptionsForInstance(processInstanceProcessingContext, instance, scope);
   }
 }

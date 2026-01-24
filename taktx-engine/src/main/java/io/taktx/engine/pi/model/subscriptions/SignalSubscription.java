@@ -61,7 +61,7 @@ public class SignalSubscription extends Subscription {
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       IFlowNodeInstance flowNodeInstance,
       FlowNode flowNode,
-      SignalEventDefinition timerEventDefinition,
+      SignalEventDefinition signalEventDefinition,
       VariableScope variableScope,
       FeelExpressionHandler feelExpressionHandler) {
     return new SignalSubscription(
@@ -69,7 +69,7 @@ public class SignalSubscription extends Subscription {
         flowNodeInstance,
         flowNode.getId(),
         SubScriptionType.STARTING,
-        timerEventDefinition,
+        signalEventDefinition,
         variableScope,
         feelExpressionHandler);
   }
