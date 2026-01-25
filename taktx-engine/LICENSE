@@ -156,3 +156,27 @@ excluding conflict-of-law provisions.
 
 This License constitutes the entire agreement between You and the
 Licensor concerning the Licensed Work.
+
+11. License FAQ
+
+Can I modify TaktX Engine?
+Yes! You can modify, fork, and improve TaktX Engine for any
+legitimate purpose including evaluation, testing, research,
+and contributions.
+
+What modifications are NOT allowed?
+You may not modify the software specifically to bypass the
+3-partition limit or other licensing restrictions in
+production environments without a commercial license.
+
+Examples of acceptable modifications:
+- Performance improvements
+- Bug fixes and security patches
+- New BPMN features
+- Integration enhancements
+- Code quality improvements
+
+Examples of prohibited circumvention:
+- Removing partition limit validation
+- Disabling license checks
+- Patching enforcement mechanisms
