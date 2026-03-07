@@ -19,6 +19,8 @@ jakarta-cdi = "4.1.0"
 jakarta-inject = "2.0.1"
 jakarta-annotation = "3.0.0"
 spring-framework = "6.2.15"
+jjwt = "0.12.5"
+caffeine = "3.1.8"
 spring-boot = "3.5.9"
 
 [libraries]
@@ -55,6 +57,10 @@ mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.re
 camunda-feel = { module = "org.camunda.feel:feel-engine", version.ref = "camunda-feel" }
 license3j = { module = "com.javax0.license3j:license3j", version.ref = "license3j" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
+jjwt-api     = { module = "io.jsonwebtoken:jjwt-api",                          version.ref = "jjwt" }
+jjwt-impl    = { module = "io.jsonwebtoken:jjwt-impl",                         version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson",                      version.ref = "jjwt" }
+caffeine     = { module = "com.github.ben-manes.caffeine:caffeine",             version.ref = "caffeine" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }

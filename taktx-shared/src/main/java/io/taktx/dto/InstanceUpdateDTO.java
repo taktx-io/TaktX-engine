@@ -15,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.InstanceUpdateTypeIdResolver;
+import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,4 +31,10 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @RegisterForReflection
-public abstract class InstanceUpdateDTO {}
+public abstract class InstanceUpdateDTO {
+  /**
+   * Unique ID linking this event back to the user action that triggered it. Null for
+   * engine-internal commands (timers, call activities, message starts).
+   */
+  @Nullable private String auditId;
+}

@@ -139,7 +139,7 @@ public class UserTaskTriggerTopicConsumer {
    * @return a new KafkaConsumer instance
    */
   private <K, V> KafkaConsumer<K, V> createConsumer() {
-    String groupId = "taktx-client-user-task-trigger-consumer";
+    String groupId = "taktx-client-user-task-trigger-consumer-" + UUID.randomUUID();
 
     log.info("Creating consumer for group id {}", groupId);
     Properties props =

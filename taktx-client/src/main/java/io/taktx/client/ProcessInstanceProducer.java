@@ -16,6 +16,8 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
+import jakarta.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -51,18 +53,24 @@ public class ProcessInstanceProducer {
    * @return the UUID of the started process instance
    */
   public UUID startProcess(String processDefinitionId, VariablesDTO variables) {
-    return startProcess(processDefinitionId, -1, variables);
+    return startProcess(processDefinitionId, -1, variables, null);
+  }
+
+  public UUID startProcess(String processDefinitionId, int version, VariablesDTO variables) {
+    return startProcess(processDefinitionId, version, variables, null);
   }
 
   /**
-   * Starts a new process instance by sending a StartCommandDTO to the configured Kafka topic.
+   * Starts a new process instance, optionally attaching a Platform Service authorization token.
    *
-   * @param processDefinitionId the ID of the process definition to start
-   * @param version the version of the process definition to start, -1 for latest
-   * @param variables the initial variables for the process instance
-   * @return the UUID of the started process instance
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
+   *     unauthenticated deployments
    */
-  public UUID startProcess(String processDefinitionId, int version, VariablesDTO variables) {
+  public UUID startProcess(
+      String processDefinitionId,
+      int version,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
@@ -71,12 +79,18 @@ public class ProcessInstanceProducer {
             null,
             new ProcessDefinitionKey(processDefinitionId, version),
             variables);
-    processInstanceTriggerEmitter.send(
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceId,
-            startCommand));
+            startCommand);
+    if (authorizationToken != null && !authorizationToken.isBlank()) {
+      processInstanceTriggerRecord
+          .headers()
+          .add("X-TaktX-Authorization", authorizationToken.getBytes(StandardCharsets.UTF_8));
+    }
+    processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
     return processInstanceId;
   }
 
@@ -86,14 +100,9 @@ public class ProcessInstanceProducer {
    * @param processInstanceId the UUID of the process instance to abort
    */
   public void abortProcessInstance(UUID processInstanceId) {
-    abortElementInstance(processInstanceId, List.of());
+    abortElementInstance(processInstanceId, List.of(), null);
   }
 
-  /**
-   * Aborts a process instance by sending an SetVariableTriggerDTO to the configured Kafka topic.
-   *
-   * @param processInstanceId the UUID of the process instance to abort
-   */
   public void setVariable(
       UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
     SetVariableTriggerDTO setVariableTrigger =
@@ -106,22 +115,32 @@ public class ProcessInstanceProducer {
             setVariableTrigger));
   }
 
-  /**
-   * Aborts a specific element instance within a process instance by sending an AbortTriggerDTO to
-   * the configured Kafka topic.
-   *
-   * @param processInstanceId the UUID of the process instance containing the element instance
-   * @param elementInstanceIdPath the path of element instance IDs leading to the target element
-   *     instance to abort
-   */
   public void abortElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    abortElementInstance(processInstanceId, elementInstanceIdPath, null);
+  }
+
+  /**
+   * Aborts an element instance, optionally attaching a Platform Service authorization token.
+   *
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void abortElementInstance(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      @Nullable String authorizationToken) {
     AbortTriggerDTO terminateTrigger =
         new AbortTriggerDTO(processInstanceId, elementInstanceIdPath);
-    processInstanceTriggerEmitter.send(
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceId,
-            terminateTrigger));
+            terminateTrigger);
+    if (authorizationToken != null && !authorizationToken.isBlank()) {
+      processInstanceTriggerRecord
+          .headers()
+          .add("X-TaktX-Authorization", authorizationToken.getBytes(StandardCharsets.UTF_8));
+    }
+    processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
   }
 }

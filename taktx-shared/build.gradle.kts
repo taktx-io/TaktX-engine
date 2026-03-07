@@ -33,6 +33,9 @@ tasks {
 
 dependencies {
     api(libs.jackson.databind)
+    api(libs.jjwt.api)
+    implementation(libs.jjwt.impl)
+    implementation(libs.jjwt.jackson)
 
     implementation(libs.jackson.cbor)
     implementation(libs.kafka.clients)

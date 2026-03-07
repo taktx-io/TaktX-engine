@@ -17,6 +17,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.license.LicenseManager;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Duration;
 import java.util.Collection;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,20 +56,49 @@ public class DynamicTopicManager {
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
   private final LicenseManager licenseManager;
-  private final ExecutorService executor = Executors.newCachedThreadPool();
+  private final ExecutorService executor =
+      Executors.newCachedThreadPool(
+          r -> {
+            Thread t = new Thread(r, "taktx-topic-manager");
+            t.setDaemon(true);
+            return t;
+          });
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
+  private final AtomicBoolean running = new AtomicBoolean(true);
   private final ConcurrentHashMap<String, TopicMetaDTO> cachedRequestTopicMetaMap =
       new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, TopicMetaDTO> cachedActualTopicMetaMap =
       new ConcurrentHashMap<>();
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
+  // Cached once at startup — avoids CDI proxy access from background threads
+  private String cachedActualTopicName;
+  private String cachedRequestedTopicName;
 
   public void start(KafkaProducer<String, TopicMetaDTO> topicMetaProducer) {
     this.topicMetaProducer = topicMetaProducer;
+    this.cachedActualTopicName =
+        taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
+    this.cachedRequestedTopicName =
+        taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
     scanActual();
 
     if (taktConfiguration.getTopicCreationEnabled()) {
       scanRequest();
+    }
+  }
+
+  @PreDestroy
+  public void stop() {
+    log.info("Shutting down DynamicTopicManager");
+    running.set(false);
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+        executor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      executor.shutdownNow();
     }
   }
 
@@ -76,11 +107,9 @@ public class DynamicTopicManager {
         () -> {
           try (KafkaConsumer<String, TopicMetaDTO> actualConsumer =
               createConsumer("taktx-topicmanager-actuel-consumer-" + UUID.randomUUID())) {
-            String prefixedActualTopicName =
-                taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
-            actualConsumer.subscribe(List.of(prefixedActualTopicName));
+            actualConsumer.subscribe(List.of(cachedActualTopicName));
 
-            while (true) {
+            while (running.get()) {
               var records = actualConsumer.poll(Duration.ofMillis(100));
               records.forEach(
                   topicRecord -> {
@@ -104,15 +133,13 @@ public class DynamicTopicManager {
         () -> {
           try (KafkaConsumer<String, TopicMetaDTO> requestConsumer =
               createConsumer("taktx-topicmanager-request-consumer")) {
-            String prefixedActualTopicName =
-                taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
             requestConsumer.subscribe(
-                List.of(prefixedActualTopicName),
-                getConsumerRebalanceListener(prefixedActualTopicName));
+                List.of(cachedRequestedTopicName),
+                getConsumerRebalanceListener(cachedRequestedTopicName));
 
             Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
 
-            while (true) {
+            while (running.get()) {
               var records = requestConsumer.poll(Duration.ofMillis(100));
               if (records.isEmpty() && !collectedTopics.isEmpty()) {
                 for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
@@ -285,12 +312,13 @@ public class DynamicTopicManager {
   }
 
   private void publishTopicMetaActual(String topicName, TopicMetaDTO topicMeta) {
+    if (!running.get()) {
+      return;
+    }
     try {
       log.info("Publishing topic meta to ACTUAL: " + topicMeta);
-      String actualTopicName =
-          taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
       ProducerRecord<String, TopicMetaDTO> topicRecord =
-          new ProducerRecord<>(actualTopicName, topicName, topicMeta);
+          new ProducerRecord<>(cachedActualTopicName, topicName, topicMeta);
       topicMetaProducer.send(
           topicRecord,
           (metadata, exception) -> {

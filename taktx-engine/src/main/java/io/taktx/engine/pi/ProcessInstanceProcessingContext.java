@@ -12,8 +12,10 @@ import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import jakarta.annotation.Nullable;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 /**
@@ -27,6 +29,9 @@ public class ProcessInstanceProcessingContext {
   private final InstanceResult instanceResult;
   private final ProcessInstance processInstance;
   private final ProcessingStatistics processingStatistics;
+
+  /** AuditId from the authorisation token — null for internal engine commands. */
+  @Setter @Nullable private String auditId;
 
   @Builder
   public ProcessInstanceProcessingContext(

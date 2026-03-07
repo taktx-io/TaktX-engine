@@ -44,7 +44,10 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
+import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.security.AuthorizationTokenException;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,6 +84,8 @@ public class ProcessInstanceProcessor
   private final DtoMapper dtoMapper;
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
+  private final EngineAuthorizationService engineAuthorizationService;
+  private final MessageSigningService messageSigningService;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>
@@ -95,6 +100,7 @@ public class ProcessInstanceProcessor
       processInstanceProcessingContextThreadLocal = new ThreadLocal<>();
   private final ThreadLocal<ProcessDefinitionKey> processDefinitionKeyThreadLocal =
       new ThreadLocal<>();
+  private final ThreadLocal<String> auditIdThreadLocal = new ThreadLocal<>();
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -118,6 +124,16 @@ public class ProcessInstanceProcessor
 
     // Start timing for P99 investigation
     long kafkaTimestamp = triggerRecord.timestamp();
+
+    // ── Authorization ─────────────────────────────────────────────────────────
+    String auditId;
+    try {
+      auditId = engineAuthorizationService.authorize(triggerRecord.headers(), trigger);
+    } catch (AuthorizationTokenException e) {
+      log.error("⛔ Command rejected — authorization failed: {}", e.getMessage());
+      return;
+    }
+    auditIdThreadLocal.set(auditId);
 
     try {
       switch (trigger) {
@@ -166,6 +182,7 @@ public class ProcessInstanceProcessor
       processInstanceThreadLocal.remove();
       variableScopeThreadLocal.remove();
       processInstanceProcessingContextThreadLocal.remove();
+      auditIdThreadLocal.remove();
     }
   }
 
@@ -260,13 +277,16 @@ public class ProcessInstanceProcessor
 
   private ProcessInstanceProcessingContext createProcessInstanceProcessingContext(
       ProcessInstance processInstance, InstanceResult instanceResult) {
-    return ProcessInstanceProcessingContext.builder()
-        .processInstance(processInstance)
-        .processingStatistics(processingStatistics)
-        .instanceResult(instanceResult)
-        .flowNodeInstanceStore(flowNodeInstanceStore)
-        .topicManager(topicManager)
-        .build();
+    ProcessInstanceProcessingContext ctx =
+        ProcessInstanceProcessingContext.builder()
+            .processInstance(processInstance)
+            .processingStatistics(processingStatistics)
+            .instanceResult(instanceResult)
+            .flowNodeInstanceStore(flowNodeInstanceStore)
+            .topicManager(topicManager)
+            .build();
+    ctx.setAuditId(auditIdThreadLocal.get());
+    return ctx;
   }
 
   private ProcessDefinitionDTO getProcessDefinitionDTO(ProcessDefinitionKey processDefinitionKey) {
@@ -508,14 +528,14 @@ public class ProcessInstanceProcessor
                   "Source element: " + errorEventSignal.getCurrentInstance().getFlowNode().getId()
                 }));
         // Don't abort - leave process in incident state for potential resolution
-      } else if (eventSignal instanceof EscalationEventSignal) {
+      } else if (eventSignal instanceof EscalationEventSignal escalationEventSignal) {
         // Unhandled escalation event - this is BPMN 2.0 compliant
         // Unlike errors, escalations can be unhandled without creating incidents
         // They are forwarded to parent process (if any) via eventSignalList
         // If no parent exists, the escalation is logged but process continues normally
         log.warn(
             "Unhandled escalation event: {} - forwarding to parent or discarding",
-            ((EscalationEventSignal) eventSignal).getCode());
+            escalationEventSignal.getCode());
       }
       // All event signals are added to the list for potential forwarding to parent
       EventSignalDTO map = dtoMapper.map(eventSignal);
@@ -554,7 +574,8 @@ public class ProcessInstanceProcessor
       }
     }
 
-    forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
+    forwarder.forward(
+        context, instanceResult, processDefinitionKey, processInstance, auditIdThreadLocal.get());
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =

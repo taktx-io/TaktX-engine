@@ -147,7 +147,7 @@ public class BpmnTestEngine {
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
-    kakaProperties.put("taktx.engine.namespace", "namespace");
+    kakaProperties.put("taktx.engine.namespace", "default");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
 
     taktClient = TaktXClient.newClientBuilder().withProperties(kakaProperties).build();
@@ -980,10 +980,33 @@ public class BpmnTestEngine {
   }
 
   public void reset() {
+    log.info("Resetting the test engine state for the next test");
+    // Per-process-instance state
     this.processInstanceParentChildMap.clear();
     this.processInstanceMap.clear();
     this.flowNodeInstanceMap.clear();
+    this.variablesMap.clear();
+    // Per-test trigger queues — must be cleared so stale triggers from previous tests
+    // do not bleed into waitUntilUserTaskIsWaitingForResponse / waitForExternalTaskTrigger
+    this.userTaskTriggerQueueMap.clear();
+    this.activeExternalTaskTriggers.clear();
+    this.messageSubscriptionMap.clear();
+    this.signalMap.clear();
+    // Active-selection pointers
+    this.activeUserTaskTrigger = null;
+    this.activeProcessInstanceId = null;
+    this.latestInstantiatedProcessInstanceId = null;
+    this.selectedFlowNodeInstance = null;
+    // Reset clock
     this.mutableClock.set(originalClock.instant());
+  }
+
+  public TaktXClient getTaktClient() {
+    return taktClient;
+  }
+
+  public Map<UUID, ProcessInstanceDTO> getProcessInstanceMap() {
+    return processInstanceMap;
   }
 
   public BpmnTestEngine waitForSignalSubscription(String name) {

@@ -13,6 +13,7 @@ import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
+import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -29,6 +30,7 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SignalDTO;
+import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
@@ -54,6 +56,8 @@ import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
+import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
@@ -132,6 +136,11 @@ public class TopologyProducer {
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
+  public static final ObjectMapperSerde<ConfigurationEventDTO> CONFIGURATION_EVENT_SERDE =
+      new ObjectMapperSerde<>(ConfigurationEventDTO.class);
+  public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
+      new ObjectMapperSerde<>(SigningKeyDTO.class);
+
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;
   private final KeyValueStoreSupplier keyValueStoreSupplier;
@@ -147,6 +156,8 @@ public class TopologyProducer {
   private final DynamicTopicManager topicManager;
   private final DefinitionsCache definitionsCache;
   private final PathExtractor pathExtractor;
+  private final EngineAuthorizationService engineAuthorizationService;
+  private final MessageSigningService messageSigningService;
 
   @Produces
   public Topology buildTopology() {
@@ -218,6 +229,19 @@ public class TopologyProducer {
                 keyValueStoreSupplier.get(Stores.XML_BY_PROCESS_DEFINITION_ID))
             .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
             .withValueSerde(ZIPPED_STRING_SERDE));
+
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
+        Materialized.<String, ConfigurationEventDTO>as(
+                keyValueStoreSupplier.get(Stores.GLOBAL_CONFIGURATION))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(CONFIGURATION_EVENT_SERDE));
+
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
+        Materialized.<String, SigningKeyDTO>as(keyValueStoreSupplier.get(Stores.SIGNING_KEYS))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(SIGNING_KEY_SERDE));
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
@@ -341,7 +365,9 @@ public class TopologyProducer {
                     clock,
                     dtoMapper,
                     processingStatistics,
-                    topicManager),
+                    topicManager,
+                    engineAuthorizationService,
+                    messageSigningService),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

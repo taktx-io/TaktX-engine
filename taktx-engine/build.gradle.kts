@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.quarkus.kafka.client)
     implementation(libs.camunda.feel)
     implementation(libs.cronutils)
+    implementation(libs.caffeine)
     implementation(libs.mapstruct)
 
     compileOnly(libs.lombok)

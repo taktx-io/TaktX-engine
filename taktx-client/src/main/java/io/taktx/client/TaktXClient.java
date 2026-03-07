@@ -23,6 +23,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -164,16 +165,18 @@ public class TaktXClient {
     return processInstanceProducer.startProcess(process, variables);
   }
 
-  /**
-   * Starts a new process instance of the specific version of the given process definition.
-   *
-   * @param process The ID of the process definition to start.
-   * @param version The version of the process definition to start.
-   * @param variables The initial variables for the process instance.
-   * @return The UUID of the started process instance.
-   */
   public UUID startProcess(String process, int version, VariablesDTO variables) {
     return processInstanceProducer.startProcess(process, version, variables);
+  }
+
+  /**
+   * Starts a new process instance with a Platform Service authorization token.
+   *
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public UUID startProcess(
+      String process, int version, VariablesDTO variables, @Nullable String authorizationToken) {
+    return processInstanceProducer.startProcess(process, version, variables, authorizationToken);
   }
 
   /**
@@ -285,6 +288,19 @@ public class TaktXClient {
    */
   public void abortElementInstance(UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
     processInstanceProducer.abortElementInstance(activeProcessInstanceId, elementInstanceIdPath);
+  }
+
+  /**
+   * Aborts an element instance with a Platform Service authorization token.
+   *
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public void abortElementInstance(
+      UUID activeProcessInstanceId,
+      List<Long> elementInstanceIdPath,
+      @Nullable String authorizationToken) {
+    processInstanceProducer.abortElementInstance(
+        activeProcessInstanceId, elementInstanceIdPath, authorizationToken);
   }
 
   /**

@@ -17,6 +17,8 @@ import lombok.Getter;
 public enum Topics {
   TOPIC_META_REQUESTED_TOPIC("topic-meta-requested", true, CleanupPolicy.COMPACT),
   TOPIC_META_ACTUAL_TOPIC("topic-meta-actual", true, CleanupPolicy.COMPACT),
+  CONFIGURATION_TOPIC("taktx-configuration", true, CleanupPolicy.COMPACT),
+  SIGNING_KEYS_TOPIC("taktx-signing-keys", true, CleanupPolicy.COMPACT),
   XML_BY_PROCESS_DEFINITION_ID("xml-by-process-definition-id", false, CleanupPolicy.COMPACT),
   PROCESS_DEFINITION_ACTIVATION_TOPIC(
       "process-definition-activation", false, CleanupPolicy.COMPACT),

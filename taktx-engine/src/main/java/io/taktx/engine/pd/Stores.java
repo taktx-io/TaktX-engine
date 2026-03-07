@@ -31,7 +31,9 @@ public enum Stores {
   VARIABLES("variables"),
   VERSION_BY_HASH("version-by-hash"),
   INSTANCE_SIGNAL_SUBSCRIPTIONS("instance-signal-subscriptions"),
-  DEFINITION_SIGNAL_SUBSCRIPTIONS("definition-signal-subscriptions");
+  DEFINITION_SIGNAL_SUBSCRIPTIONS("definition-signal-subscriptions"),
+  GLOBAL_CONFIGURATION(Topics.CONFIGURATION_TOPIC.getTopicName()),
+  SIGNING_KEYS(Topics.SIGNING_KEYS_TOPIC.getTopicName());
 
   private final String storename;
 

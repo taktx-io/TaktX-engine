@@ -11,6 +11,7 @@ package io.taktx.engine.config;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import lombok.Getter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -52,6 +53,23 @@ public class TaktConfiguration {
 
   @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "-")
   String licenseFileLocation;
+
+  // ── Security: command authorization ──────────────────────────────────────────
+  @ConfigProperty(name = "taktx.security.authorization.enabled", defaultValue = "false")
+  boolean authorizationEnabled;
+
+  @ConfigProperty(name = "taktx.security.authorization.reject-expired", defaultValue = "false")
+  boolean rejectExpiredTokens;
+
+  @ConfigProperty(name = "taktx.security.authorization.nonce-check.enabled", defaultValue = "true")
+  boolean nonceCheckEnabled;
+
+  @ConfigProperty(name = "taktx.platform.public-key")
+  Optional<String> platformPublicKeyBase64;
+
+  // ── Security: engine-internal message signing ────────────────────────────────
+  @ConfigProperty(name = "taktx.security.signing.enabled", defaultValue = "false")
+  boolean signingEnabled;
 
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
