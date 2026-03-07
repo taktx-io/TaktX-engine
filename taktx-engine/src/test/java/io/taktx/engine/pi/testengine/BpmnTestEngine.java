@@ -77,7 +77,7 @@ import org.slf4j.LoggerFactory;
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  public static final String TOPIC_TEST_PREFIX = "namespace.";
+  public static final String TOPIC_TEST_PREFIX = "default.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   private TaktXClient taktClient;
