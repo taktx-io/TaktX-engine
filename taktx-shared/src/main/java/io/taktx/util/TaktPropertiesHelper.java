@@ -26,6 +26,11 @@ public class TaktPropertiesHelper {
     this.namespace = taktProperties.getProperty("taktx.engine.namespace", "default");
   }
 
+  /** Returns the Kafka {@code bootstrap.servers} value from the client properties. */
+  public String getBootstrapServers() {
+    return taktProperties.getProperty("bootstrap.servers");
+  }
+
   public Properties getKafkaConsumerProperties(
       String groupId,
       Class<?> keyDeserializer,

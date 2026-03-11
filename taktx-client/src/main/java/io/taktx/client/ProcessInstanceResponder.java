@@ -34,20 +34,15 @@ public class ProcessInstanceResponder {
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
    */
   public ProcessInstanceResponder(TaktPropertiesHelper taktPropertiesHelper) {
-    this.topicName =
-        taktPropertiesHelper.getPrefixedTopicName(
-            Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
-    this.responseEmitter =
-        new KafkaProducer<>(
-            taktPropertiesHelper.getKafkaProducerProperties(
-                TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
+    this(taktPropertiesHelper, (KafkaProducer<UUID, ProcessInstanceTriggerDTO>) null);
   }
 
   /**
-   * Constructor for ProcessInstanceResponder.
+   * Constructor for ProcessInstanceResponder with optional worker response signing.
    *
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
-   * @param processInstanceTriggerEmitter the Kafka producer to emit process instance triggers
+   * @param processInstanceTriggerEmitter the Kafka producer to emit process instance triggers, or
+   *     {@code null} to create a default producer
    */
   public ProcessInstanceResponder(
       TaktPropertiesHelper taktPropertiesHelper,
@@ -55,7 +50,12 @@ public class ProcessInstanceResponder {
     this.topicName =
         taktPropertiesHelper.getPrefixedTopicName(
             Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
-    this.responseEmitter = processInstanceTriggerEmitter;
+    this.responseEmitter =
+        processInstanceTriggerEmitter != null
+            ? processInstanceTriggerEmitter
+            : new KafkaProducer<>(
+                taktPropertiesHelper.getKafkaProducerProperties(
+                    TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
   }
 
   /**

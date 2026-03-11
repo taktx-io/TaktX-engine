@@ -33,7 +33,8 @@ public class ProcessInstanceUpdateConsumer {
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
-  private boolean running = false;
+  private volatile boolean running = false;
+  private volatile KafkaConsumer<UUID, InstanceUpdateDTO> activeConsumer;
   private final List<Consumer<List<InstanceUpdateRecord>>> instanceUpdateConsumers =
       new ArrayList<>();
 
@@ -66,6 +67,10 @@ public class ProcessInstanceUpdateConsumer {
   /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
+    KafkaConsumer<UUID, InstanceUpdateDTO> c = activeConsumer;
+    if (c != null) {
+      c.wakeup();
+    }
   }
 
   private void subscribeToTopic(String groupId) {
@@ -74,6 +79,7 @@ public class ProcessInstanceUpdateConsumer {
     CompletableFuture.runAsync(
         () -> {
           try (KafkaConsumer<UUID, InstanceUpdateDTO> consumer = createConsumer(groupId)) {
+            activeConsumer = consumer;
 
             String prefixedTopicName =
                 taktPropertiesHelper.getPrefixedTopicName(
@@ -81,11 +87,16 @@ public class ProcessInstanceUpdateConsumer {
 
             consumer.subscribe(Collections.singletonList(prefixedTopicName));
 
-            while (running) {
-              consumeRecords(consumer);
+            try {
+              while (running) {
+                consumeRecords(consumer);
+              }
+            } catch (org.apache.kafka.common.errors.WakeupException e) {
+              // stop() was called — exit cleanly
+            } finally {
+              activeConsumer = null;
+              consumer.unsubscribe();
             }
-
-            consumer.unsubscribe();
           }
         },
         executor);

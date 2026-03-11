@@ -131,6 +131,9 @@ public class ProcessDefinitionConsumer {
    */
   public void stop() {
     running = false;
+    if (definitionActivationConsumer != null) {
+      definitionActivationConsumer.wakeup();
+    }
   }
 
   /**

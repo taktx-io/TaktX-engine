@@ -130,6 +130,9 @@ public class ExternalTaskTriggerTopicConsumer {
                     ConsumerRecords<UUID, ExternalTaskTriggerDTO> records;
                     try {
                       records = consumer.poll(Duration.ofMillis(pollTimeoutMs));
+                    } catch (org.apache.kafka.common.errors.WakeupException e) {
+                      // wakeup() was called by stop() — exit the loop cleanly
+                      break;
                     } catch (Exception e) {
                       // Kafka infrastructure error - fatal, need to stop consumer
                       log.error("Fatal Kafka polling error, stopping consumer", e);
@@ -144,15 +147,17 @@ public class ExternalTaskTriggerTopicConsumer {
                     // Group records by topic/jobId
                     Map<String, List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>> recordsByJobId =
                         new java.util.HashMap<>();
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : records) {
+                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> consumerRecord : records) {
                       String jobId =
-                          record
+                          consumerRecord
                               .topic()
                               .replace(
                                   taktPropertiesHelper.getPrefixedTopicName(
                                       Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX),
                                   "");
-                      recordsByJobId.computeIfAbsent(jobId, k -> new ArrayList<>()).add(record);
+                      recordsByJobId
+                          .computeIfAbsent(jobId, k -> new ArrayList<>())
+                          .add(consumerRecord);
                     }
 
                     for (String jobId : recordsByJobId.keySet()) {
@@ -192,10 +197,12 @@ public class ExternalTaskTriggerTopicConsumer {
                         // For IMPLICIT strategy, seek back to avoid auto-commit
                         if (ackStrategy == AckStrategy.IMPLICIT) {
                           try {
-                            for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
+                            for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> consumerRecord :
+                                jobRecords) {
                               consumer.seek(
-                                  new TopicPartition(record.topic(), record.partition()),
-                                  record.offset());
+                                  new TopicPartition(
+                                      consumerRecord.topic(), consumerRecord.partition()),
+                                  consumerRecord.offset());
                             }
                           } catch (Exception e) {
                             log.error("Error seeking back after failed batch", e);
@@ -226,6 +233,14 @@ public class ExternalTaskTriggerTopicConsumer {
   /** Stops all running consumers and waits for them to finish processing. */
   public void stop() {
     running = false;
+
+    // Wake up all polling consumers so they unblock from poll() immediately
+    // rather than waiting the full pollTimeoutMs before noticing running=false.
+    synchronized (consumerLock) {
+      if (externalTaskTriggerKafkaConsumers != null) {
+        externalTaskTriggerKafkaConsumers.forEach(KafkaConsumer::wakeup);
+      }
+    }
 
     // Wait for all consumer futures to complete
     if (!consumerFutures.isEmpty()) {
@@ -379,11 +394,11 @@ public class ExternalTaskTriggerTopicConsumer {
       }
       case EXPLICIT_MESSAGE -> {
         // Commit each message offset individually
-        for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> record : jobRecords) {
+        for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> consumerRecord : jobRecords) {
           consumer.commitSync(
               singletonMap(
-                  new TopicPartition(record.topic(), record.partition()),
-                  new OffsetAndMetadata(record.offset() + 1)));
+                  new TopicPartition(consumerRecord.topic(), consumerRecord.partition()),
+                  new OffsetAndMetadata(consumerRecord.offset() + 1)));
         }
         log.debug("Committed {} individual message offsets", jobRecords.size());
       }

@@ -7,23 +7,24 @@ plugins {
 
 allprojects {
     group = "io.taktx"
-    version = "0.1.0-beta-1"
+    version = "0.3.0-beta-1"
 
     repositories {
         mavenLocal()
         mavenCentral()
     }
-
-    // Apply dependency constraints to all modules
-    configurations.all {
-        resolutionStrategy {
-            // Force specific versions for common dependencies
-            force(libs.jackson.annotations.get())
-            force(libs.jackson.databind.get())
-            force(libs.jackson.cbor.get())
-            force(libs.cronutils.get())
-        }
-    }
+//
+//    // Apply dependency constraints to all modules
+//    configurations.all {
+//        resolutionStrategy {
+//            // Force specific versions for common dependencies
+//            force(libs.jackson.annotations.get())
+//            force(libs.jackson.databind.get())
+//            force(libs.jackson.cbor.get())
+//            force(libs.jackson.datatype.jsr310.get())
+//            force(libs.cronutils.get())
+//        }
+//    }
 }
 
 subprojects {

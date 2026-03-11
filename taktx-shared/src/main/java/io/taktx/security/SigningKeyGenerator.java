@@ -12,6 +12,7 @@ import java.util.Base64;
 
 /** Generates Ed25519 key pairs for engine signing. */
 public final class SigningKeyGenerator {
+
   private SigningKeyGenerator() {}
 
   public static KeyPair generate() {

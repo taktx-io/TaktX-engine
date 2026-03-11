@@ -35,7 +35,6 @@ import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
 import io.taktx.engine.pi.model.CancelInstanceSignalSubscriptionInfo;
@@ -50,7 +49,6 @@ import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
-import io.taktx.engine.security.MessageSigningService;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.time.Duration;
@@ -61,7 +59,6 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
@@ -75,7 +72,6 @@ public class Forwarder {
   private final DtoMapper dtoMapper;
   private final Clock clock;
   private final TaktConfiguration taktConfiguration;
-  private final MessageSigningService messageSigningService;
 
   public void forward(
       ProcessorContext<Object, Object> context,
@@ -167,12 +163,8 @@ public class Forwarder {
           instanceUpdate.update().setAuditId(auditId);
         }
         InstanceUpdateDTO updateDTO = instanceUpdate.update();
-        byte[] payloadBytes =
-            TopologyProducer.INSTANCE_UPDATE_SERDE.serializer().serialize(null, updateDTO);
-        RecordHeaders headers = new RecordHeaders();
-        messageSigningService.signIfEnabled(headers, payloadBytes);
         context.forward(
-            new Record<>(instanceUpdate.processInstanceId(), updateDTO, clock.millis(), headers));
+            new Record<>(instanceUpdate.processInstanceId(), updateDTO, clock.millis()));
       }
     } else {
       instanceUpdates.clear();
@@ -389,7 +381,6 @@ public class Forwarder {
           toExternalTaskTrigger(
               externalTask, processInstance.getProcessInstanceId(), definitionKey);
       if (externalTask.backoff() == null) {
-        // No backoff, forward directly
         context.forward(
             new Record<>(
                 newExternalTaskTrigger.getProcessInstanceId(),

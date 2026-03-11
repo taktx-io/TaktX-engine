@@ -10,6 +10,12 @@ public interface SigningKeyProvider {
 
   boolean hasKey(String keyId);
 
+  /**
+   * Returns the base64-encoded X.509 public key for the given keyId, or {@code null} if not
+   * available.
+   */
+  String getPublicKey(String keyId);
+
   default String getProviderType() {
     return getClass().getSimpleName();
   }

@@ -21,16 +21,30 @@ import java.util.Map;
  *
  * <p>The generated public keys are exposed via static accessors so that tests can produce valid
  * JWTs and verify Ed25519 signatures without any shared mutable state.
+ *
+ * <p>The RSA public key is NOT injected via {@code taktx.platform.public-key} — instead, the test
+ * publishes it to the {@code taktx-signing-keys} KTable under {@link #PLATFORM_KID} in
+ * {@code @BeforeAll}, matching the {@code kid} header the JWT builder sets. The engine resolves the
+ * key at validation time from the KTable, just like the real platform does.
  */
 public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleManager {
+
+  /** Key ID used as JWT {@code kid} header and as the KTable key for the RSA public key. */
+  static final String PLATFORM_KID = "platform-test-key";
 
   /** RSA key-pair generated once per test-suite run, used for RS256 JWT signing. */
   static java.security.PublicKey rsaPublicKey;
 
   static java.security.PrivateKey rsaPrivateKey;
 
+  /** Base64-encoded RSA public key — exposed so tests can publish it to the signing-keys topic. */
+  static String rsaPublicKeyBase64;
+
   /** Ed25519 key-pair generated once per test-suite run, used for Ed25519 message signing. */
   static java.security.PublicKey ed25519PublicKey;
+
+  /** Base64-encoded engine public key — exposed for the test client's JsonDeserializer. */
+  static String ed25519PublicKeyBase64;
 
   @Override
   public Map<String, String> start() {
@@ -39,26 +53,27 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
       KeyPair rsaKp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
       rsaPublicKey = rsaKp.getPublic();
       rsaPrivateKey = rsaKp.getPrivate();
-      String rsaPublicBase64 = Base64.getEncoder().encodeToString(rsaPublicKey.getEncoded());
+      rsaPublicKeyBase64 = Base64.getEncoder().encodeToString(rsaPublicKey.getEncoded());
 
       // ── Ed25519 key-pair for engine-internal message signing ──────────────
       KeyPair ed25519Kp = SigningKeyGenerator.generate();
       ed25519PublicKey = ed25519Kp.getPublic();
+      ed25519PublicKeyBase64 = SigningKeyGenerator.encodePublicKey(ed25519Kp.getPublic());
       String ed25519PrivateBase64 = SigningKeyGenerator.encodePrivateKey(ed25519Kp.getPrivate());
 
-      // EnvironmentVariableKeyProvider reads this system property — set it directly
-      // so it is available before the engine bean is initialised.
+      // Engine signing key — keyId "test-key-1"
       System.setProperty("taktx.signing.private-key", ed25519PrivateBase64);
+      System.setProperty("taktx.signing.public-key", ed25519PublicKeyBase64);
+      System.setProperty("taktx.signing.key-id", "test-key-1");
 
       return Map.of(
           "taktx.test", "true",
           "kafka.devservices.auto-create-topics", "false",
           "taktx.security.authorization.enabled", "true",
           "taktx.security.authorization.nonce-check.enabled", "true",
-          "taktx.platform.public-key", rsaPublicBase64,
           "taktx.security.signing.enabled", "true",
-          // EnvironmentVariableKeyProvider reads this system property for any keyId
-          "taktx.signing.private-key", ed25519PrivateBase64);
+          "taktx.signing.private-key", ed25519PrivateBase64,
+          "taktx.signing.public-key", ed25519PublicKeyBase64);
     } catch (Exception e) {
       throw new RuntimeException("Failed to generate test keys", e);
     }
@@ -66,8 +81,8 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
 
   @Override
   public void stop() {
-    // Clean up the system property so it does not bleed into the next Quarkus instance that
-    // starts after this profile's app shuts down.
     System.clearProperty("taktx.signing.private-key");
+    System.clearProperty("taktx.signing.public-key");
+    System.clearProperty("taktx.signing.key-id");
   }
 }

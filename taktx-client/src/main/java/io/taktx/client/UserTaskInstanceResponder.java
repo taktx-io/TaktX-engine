@@ -37,14 +37,6 @@ public class UserTaskInstanceResponder {
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
 
-  /**
-   * Constructs a UserTaskInstanceResponder.
-   *
-   * @param responseEmitter the Kafka producer used to send responses
-   * @param topicName the name of the Kafka topic to send responses to
-   * @param processInstanceId the ID of the process instance associated with the user task
-   * @param elementInstanceIdPath the path of element instance IDs leading to the user task
-   */
   public UserTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
@@ -90,9 +82,7 @@ public class UserTaskInstanceResponder {
             elementInstanceIdPath,
             userTaskResponseResult,
             new VariablesDTO(variablesMap));
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -119,9 +109,7 @@ public class UserTaskInstanceResponder {
             elementInstanceIdPath,
             new UserTaskResponseResultDTO(UserTaskResponseType.ESCALATION, code, message),
             variables);
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -139,9 +127,7 @@ public class UserTaskInstanceResponder {
             elementInstanceIdPath,
             new UserTaskResponseResultDTO(UserTaskResponseType.ERROR, code, message),
             variables);
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName, processInstanceTrigger.getProcessInstanceId(), processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -152,5 +138,11 @@ public class UserTaskInstanceResponder {
    */
   public void respondError(String code, String message) {
     respondError(code, message, VariablesDTO.empty());
+  }
+
+  private void sendSigned(UserTaskResponseTriggerDTO trigger) {
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record =
+        new ProducerRecord<>(topicName, trigger.getProcessInstanceId(), trigger);
+    responseEmitter.send(record);
   }
 }

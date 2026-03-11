@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.jjwt.jackson)
 
     implementation(libs.jackson.cbor)
+    implementation(libs.jackson.datatype.jsr310)
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
 
@@ -47,7 +48,7 @@ dependencies {
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
-    testImplementation(libs.jackson.annotations)
+//    testImplementation(libs.jackson.annotations)
     testImplementation(libs.reflections)
     testImplementation(libs.jaxb.runtime)
 

@@ -64,12 +64,13 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.security.authorization.nonce-check.enabled", defaultValue = "true")
   boolean nonceCheckEnabled;
 
-  @ConfigProperty(name = "taktx.platform.public-key")
-  Optional<String> platformPublicKeyBase64;
-
   // ── Security: engine-internal message signing ────────────────────────────────
   @ConfigProperty(name = "taktx.security.signing.enabled", defaultValue = "false")
   boolean signingEnabled;
+
+  /** The key ID for this engine's Ed25519 signing key — maps to {@code TAKTX_SIGNING_KEY_ID}. */
+  @ConfigProperty(name = "taktx.signing.key-id")
+  Optional<String> signingKeyId;
 
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);

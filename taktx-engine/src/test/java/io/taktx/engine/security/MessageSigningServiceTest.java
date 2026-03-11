@@ -18,12 +18,9 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningKeyGenerator;
 import io.taktx.security.SigningKeyProvider;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.util.Base64;
 import java.util.List;
-import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +51,6 @@ class MessageSigningServiceTest {
     configStore = mock(ReadOnlyKeyValueStore.class);
     keyProvider = mock(SigningKeyProvider.class);
 
-    // Wire the KafkaStreams mock to return our configStore
     when(kafkaStreams.store(any())).thenReturn(configStore);
     when(config.getPrefixed(any())).thenReturn("default.taktx-configuration");
 
@@ -62,103 +58,72 @@ class MessageSigningServiceTest {
   }
 
   @Test
-  void signingDisabled_locally_noHeaderAdded() {
+  void signingDisabled_locally_returnsNull() {
     when(config.isSigningEnabled()).thenReturn(false);
-
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNull();
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void signingEnabled_but_globalConfigNull_noHeaderAdded() {
+  void signingEnabled_but_globalConfigNull_returnsNull() {
     when(config.isSigningEnabled()).thenReturn(true);
     when(configStore.get("config")).thenReturn(null);
-
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNull();
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void signingEnabled_but_globalConfigDisabled_noHeaderAdded() {
+  void signingEnabled_but_globalConfigDisabled_returnsNull() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(false, List.of(KEY_ID)));
-
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNull();
+    when(configStore.get("config")).thenReturn(configEvent(false, KEY_ID));
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void signingEnabled_noActiveKeyIds_noHeaderAdded() {
+  void signingEnabled_noSigningKeyId_returnsNull() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of()));
-
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNull();
+    when(configStore.get("config")).thenReturn(configEvent(true, null));
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void signingEnabled_keyProviderHasNoMatchingKey_noHeaderAdded() {
+  void signingEnabled_keyProviderHasNoMatchingKey_returnsNull() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of(KEY_ID)));
+    when(configStore.get("config")).thenReturn(configEvent(true, KEY_ID));
     when(keyProvider.hasKey(KEY_ID)).thenReturn(false);
-
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNull();
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
-  void signingEnabled_addsSignatureHeader() {
+  void signingEnabled_returnsHeaderValue() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of(KEY_ID)));
+    when(configStore.get("config")).thenReturn(configEvent(true, KEY_ID));
     when(keyProvider.hasKey(KEY_ID)).thenReturn(true);
     when(keyProvider.getPrivateKey(KEY_ID)).thenReturn(privateKeyBase64);
 
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    assertThat(headers.lastHeader("X-TaktX-Signature")).isNotNull();
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
-  void signatureHeader_hasCorrectFormat_keyIdDotBase64() {
+  void headerValue_hasCorrectFormat_keyIdDotBase64() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of(KEY_ID)));
+    when(configStore.get("config")).thenReturn(configEvent(true, KEY_ID));
     when(keyProvider.hasKey(KEY_ID)).thenReturn(true);
     when(keyProvider.getPrivateKey(KEY_ID)).thenReturn(privateKeyBase64);
 
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
+    String headerValue = service.signToHeaderValue(PAYLOAD);
 
-    String headerValue =
-        new String(headers.lastHeader("X-TaktX-Signature").value(), StandardCharsets.UTF_8);
     assertThat(headerValue).startsWith(KEY_ID + ".");
-    // Second part must be valid base64
     String b64Part = headerValue.substring(KEY_ID.length() + 1);
-    assertThat(Base64.getDecoder().decode(b64Part)).hasSize(64); // Ed25519 sig is always 64 bytes
+    assertThat(Base64.getDecoder().decode(b64Part)).hasSize(64);
   }
 
   @Test
-  void signatureHeader_isVerifiableWithPublicKey() {
+  void headerValue_isVerifiableWithPublicKey() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of(KEY_ID)));
+    when(configStore.get("config")).thenReturn(configEvent(true, KEY_ID));
     when(keyProvider.hasKey(KEY_ID)).thenReturn(true);
     when(keyProvider.getPrivateKey(KEY_ID)).thenReturn(privateKeyBase64);
 
-    Headers headers = new RecordHeaders();
-    service.signIfEnabled(headers, PAYLOAD);
-
-    String headerValue =
-        new String(headers.lastHeader("X-TaktX-Signature").value(), StandardCharsets.UTF_8);
+    String headerValue = service.signToHeaderValue(PAYLOAD);
     byte[] sigBytes = Base64.getDecoder().decode(headerValue.substring(KEY_ID.length() + 1));
 
     assertThat(Ed25519Service.verify(PAYLOAD, sigBytes, publicKeyBase64)).isTrue();
@@ -167,17 +132,14 @@ class MessageSigningServiceTest {
   @Test
   void multipleCallsWithSameKey_eachHasValidSignature() {
     when(config.isSigningEnabled()).thenReturn(true);
-    when(configStore.get("config")).thenReturn(configEvent(true, List.of(KEY_ID)));
+    when(configStore.get("config")).thenReturn(configEvent(true, KEY_ID));
     when(keyProvider.hasKey(KEY_ID)).thenReturn(true);
     when(keyProvider.getPrivateKey(KEY_ID)).thenReturn(privateKeyBase64);
 
     for (int i = 0; i < 5; i++) {
       byte[] payload = ("payload-" + i).getBytes();
-      Headers headers = new RecordHeaders();
-      service.signIfEnabled(headers, payload);
-
-      String hv =
-          new String(headers.lastHeader("X-TaktX-Signature").value(), StandardCharsets.UTF_8);
+      String hv = service.signToHeaderValue(payload);
+      assertThat(hv).isNotNull();
       byte[] sig = Base64.getDecoder().decode(hv.substring(KEY_ID.length() + 1));
       assertThat(Ed25519Service.verify(payload, sig, publicKeyBase64)).isTrue();
     }
@@ -185,11 +147,12 @@ class MessageSigningServiceTest {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  private ConfigurationEventDTO configEvent(boolean signingEnabled, List<String> activeKeyIds) {
+  private ConfigurationEventDTO configEvent(boolean signingEnabled, String signingKeyId) {
     GlobalConfigurationDTO globalConfig =
         GlobalConfigurationDTO.builder()
             .signingEnabled(signingEnabled)
-            .activeKeyIds(activeKeyIds)
+            .signingKeyId(signingKeyId)
+            .trustedKeyIds(signingKeyId != null ? List.of(signingKeyId) : List.of())
             .build();
     return ConfigurationEventDTO.builder()
         .eventType(ConfigurationEventDTO.ConfigurationEventType.CONFIGURATION_UPDATE)

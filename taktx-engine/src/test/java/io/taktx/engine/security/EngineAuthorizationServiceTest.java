@@ -15,31 +15,40 @@ import static org.mockito.Mockito.when;
 import io.jsonwebtoken.Jwts;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.SigningKeyDTO;
+import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.AuthorizationTokenException;
-import java.security.KeyPair;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("unchecked")
 class EngineAuthorizationServiceTest {
 
   private static final String ISSUER = "taktx-platform-service";
+  private static final String PLATFORM_KID = "platform-key-2025";
 
   private TaktConfiguration config;
   private PublicKeyProvider publicKeyProvider;
   private NonceStore nonceStore;
+  private KafkaStreams kafkaStreams;
+  private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
   private EngineAuthorizationService service;
 
-  private KeyPair rsaKeyPair;
+  private java.security.KeyPair rsaKeyPair;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -48,11 +57,16 @@ class EngineAuthorizationServiceTest {
     config = mock(TaktConfiguration.class);
     publicKeyProvider = mock(PublicKeyProvider.class);
     nonceStore = new NonceStore();
+    kafkaStreams = mock(KafkaStreams.class);
+    signingKeysStore = mock(ReadOnlyKeyValueStore.class);
 
-    when(publicKeyProvider.isReady()).thenReturn(true);
-    when(publicKeyProvider.getPlatformKey()).thenReturn(rsaKeyPair.getPublic());
+    when(publicKeyProvider.getKey(PLATFORM_KID)).thenReturn(rsaKeyPair.getPublic());
+    when(kafkaStreams.store(org.mockito.ArgumentMatchers.any())).thenReturn(signingKeysStore);
+    when(config.getPrefixed(org.mockito.ArgumentMatchers.any()))
+        .thenReturn("default.taktx-signing-keys");
+    when(config.getSigningKeyId()).thenReturn(Optional.empty());
 
-    service = new EngineAuthorizationService(config, publicKeyProvider, nonceStore);
+    service = new EngineAuthorizationService(config, publicKeyProvider, nonceStore, kafkaStreams);
   }
 
   // ── authorization disabled ─────────────────────────────────────────────────
@@ -60,12 +74,10 @@ class EngineAuthorizationServiceTest {
   @Test
   void disabled_returnsNull_forAnyCommand() {
     when(config.isAuthorizationEnabled()).thenReturn(false);
-    StartCommandDTO cmd = startCommand("proc", -1);
-    String auditId = service.authorize(new RecordHeaders(), cmd);
-    assertThat(auditId).isNull();
+    assertThat(service.authorize(new RecordHeaders(), startCommand("proc", -1))).isNull();
   }
 
-  // ── valid token ────────────────────────────────────────────────────────────
+  // ── valid JWT token ────────────────────────────────────────────────────────
 
   @Test
   void validToken_start_returnsAuditId() {
@@ -74,9 +86,8 @@ class EngineAuthorizationServiceTest {
 
     String auditId = UUID.randomUUID().toString();
     String jwt = buildJwt("START", "my-proc", -1, auditId, futureExpiry());
-    Headers headers = headersWithAuth(jwt);
 
-    String result = service.authorize(headers, startCommand("my-proc", -1));
+    String result = service.authorize(headersWithAuth(jwt), startCommand("my-proc", -1));
     assertThat(result).isEqualTo(auditId);
   }
 
@@ -87,14 +98,13 @@ class EngineAuthorizationServiceTest {
 
     String auditId = UUID.randomUUID().toString();
     String jwt = buildJwt("CANCEL", null, -1, auditId, futureExpiry());
-    Headers headers = headersWithAuth(jwt);
-
     AbortTriggerDTO cmd = new AbortTriggerDTO(UUID.randomUUID(), List.of());
-    String result = service.authorize(headers, cmd);
+
+    String result = service.authorize(headersWithAuth(jwt), cmd);
     assertThat(result).isEqualTo(auditId);
   }
 
-  // ── missing / malformed header ─────────────────────────────────────────────
+  // ── missing header ─────────────────────────────────────────────────────────
 
   @Test
   void missingHeader_throwsAuthorizationTokenException() {
@@ -122,7 +132,6 @@ class EngineAuthorizationServiceTest {
     when(config.isAuthorizationEnabled()).thenReturn(true);
     when(config.isNonceCheckEnabled()).thenReturn(false);
 
-    // Token authorises "proc-A" but command is for "proc-B"
     String jwt = buildJwt("START", "proc-A", -1, UUID.randomUUID().toString(), futureExpiry());
     assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), startCommand("proc-B", -1)))
         .isInstanceOf(AuthorizationTokenException.class)
@@ -134,7 +143,6 @@ class EngineAuthorizationServiceTest {
     when(config.isAuthorizationEnabled()).thenReturn(true);
     when(config.isNonceCheckEnabled()).thenReturn(false);
 
-    // Token authorises version 2, command requests version 3
     String jwt = buildJwt("START", "proc", 2, UUID.randomUUID().toString(), futureExpiry());
     assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), startCommand("proc", 3)))
         .isInstanceOf(AuthorizationTokenException.class)
@@ -152,10 +160,7 @@ class EngineAuthorizationServiceTest {
     String jwt = buildJwt("START", null, -1, auditId, futureExpiry());
     Headers headers = headersWithAuth(jwt);
 
-    // First call — accepted
     service.authorize(headers, startCommand(null, -1));
-
-    // Second call with same auditId — must be rejected
     assertThatThrownBy(() -> service.authorize(headers, startCommand(null, -1)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Replayed");
@@ -171,8 +176,43 @@ class EngineAuthorizationServiceTest {
     Headers headers = headersWithAuth(jwt);
 
     service.authorize(headers, startCommand(null, -1));
-    // Should not throw
     service.authorize(headers, startCommand(null, -1));
+  }
+
+  // ── Ed25519 passthrough (already verified in deserializer) ─────────────────
+
+  @Test
+  void ed25519Header_present_returnsNull_auditId() {
+    when(config.isAuthorizationEnabled()).thenReturn(true);
+
+    String keyId = "worker-test-001";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    // Ed25519 is already verified in the deserializer — authorize just passes through
+    String result = service.authorize(headers, startCommand("proc", -1));
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void ed25519Header_engineKey_returnsNull_auditId() {
+    when(config.isAuthorizationEnabled()).thenReturn(true);
+    when(config.getSigningKeyId()).thenReturn(Optional.of("engine-key-1"));
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", "engine-key-1.AABB".getBytes(StandardCharsets.UTF_8));
+
+    String result = service.authorize(headers, startCommand("proc", -1));
+    assertThat(result).isNull();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -181,6 +221,9 @@ class EngineAuthorizationServiceTest {
       String action, String processDefinitionId, int version, String auditId, Date expiry) {
     var builder =
         Jwts.builder()
+            .header()
+            .keyId(PLATFORM_KID)
+            .and()
             .subject("user-1")
             .issuer(ISSUER)
             .claim("action", action)
@@ -197,7 +240,7 @@ class EngineAuthorizationServiceTest {
 
   private Headers headersWithAuth(String jwt) {
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Authorization", jwt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    headers.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

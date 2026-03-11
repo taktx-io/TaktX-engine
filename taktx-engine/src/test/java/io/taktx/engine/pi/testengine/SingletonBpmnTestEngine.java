@@ -13,17 +13,26 @@ import io.taktx.engine.generic.ClockProducer;
 public class SingletonBpmnTestEngine {
   private static BpmnTestEngine instance;
 
-  private SingletonBpmnTestEngine() {
-    // Initialize your resource here
-  }
+  private SingletonBpmnTestEngine() {}
 
   public static BpmnTestEngine getInstance() {
     if (instance == null) {
       instance = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
       instance.init();
+      // Ensure all Kafka consumers are closed when the JVM shuts down after tests complete.
+      // Without this the consumer threads keep trying to reconnect to the (now-stopped)
+      // dev-services broker, preventing the Gradle worker process from terminating.
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread(
+                  () -> {
+                    if (instance != null) {
+                      instance.close();
+                      instance = null;
+                    }
+                  },
+                  "singleton-bpmn-engine-shutdown"));
     }
     return instance;
   }
-
-  // Add methods to access the resource
 }

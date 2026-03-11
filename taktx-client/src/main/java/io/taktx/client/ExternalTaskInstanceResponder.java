@@ -38,14 +38,6 @@ public class ExternalTaskInstanceResponder {
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
 
-  /**
-   * Constructs an ExternalTaskInstanceResponder.
-   *
-   * @param responseEmitter The Kafka producer to send responses.
-   * @param topicName The Kafka topic name to send responses to.
-   * @param processInstanceId The ID of the process instance.
-   * @param elementInstanceIdPath The path of element instance IDs.
-   */
   public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
@@ -92,16 +84,7 @@ public class ExternalTaskInstanceResponder {
             elementInstanceIdPath,
             externalTaskResponseResult,
             new VariablesDTO(variablesMap));
-
-    // Set explicit timestamp for accurate latency measurement
-    long currentTimestamp = System.currentTimeMillis();
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName,
-            null, // partition - let Kafka decide
-            currentTimestamp, // explicit timestamp
-            processInstanceTrigger.getProcessInstanceId(),
-            processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -129,16 +112,7 @@ public class ExternalTaskInstanceResponder {
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ESCALATION, true, code, message, 0L),
             variables);
-
-    // Set explicit timestamp for accurate latency measurement
-    long currentTimestamp = System.currentTimeMillis();
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName,
-            null, // partition - let Kafka decide
-            currentTimestamp, // explicit timestamp
-            processInstanceTrigger.getProcessInstanceId(),
-            processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -162,7 +136,6 @@ public class ExternalTaskInstanceResponder {
    */
   public void respondError(
       boolean allowRetry, String code, String message, VariablesDTO variables) {
-
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
@@ -170,16 +143,7 @@ public class ExternalTaskInstanceResponder {
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ERROR, allowRetry, code, message, 0L),
             variables);
-
-    // Set explicit timestamp for accurate latency measurement
-    long currentTimestamp = System.currentTimeMillis();
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName,
-            null, // partition - let Kafka decide
-            currentTimestamp, // explicit timestamp
-            processInstanceTrigger.getProcessInstanceId(),
-            processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -200,7 +164,6 @@ public class ExternalTaskInstanceResponder {
    * @param variables The variables to include in the response.
    */
   public void respondIncident(String message, String[] stackTrace, VariablesDTO variables) {
-
     ExternalTaskResponseTriggerDTO processInstanceTrigger =
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
@@ -208,16 +171,7 @@ public class ExternalTaskInstanceResponder {
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.INCIDENT, false, null, message, 0L, stackTrace),
             variables);
-
-    // Set explicit timestamp for accurate latency measurement
-    long currentTimestamp = System.currentTimeMillis();
-    responseEmitter.send(
-        new ProducerRecord<>(
-            topicName,
-            null, // partition - let Kafka decide
-            currentTimestamp, // explicit timestamp
-            processInstanceTrigger.getProcessInstanceId(),
-            processInstanceTrigger));
+    sendSigned(processInstanceTrigger);
   }
 
   /**
@@ -234,15 +188,13 @@ public class ExternalTaskInstanceResponder {
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.PROMISE, true, null, null, duration.toMillis()),
             VariablesDTO.empty());
+    sendSigned(processInstanceTrigger);
+  }
 
-    // Set explicit timestamp for accurate latency measurement
-    long currentTimestamp = System.currentTimeMillis();
-    responseEmitter.send(
+  private void sendSigned(ExternalTaskResponseTriggerDTO trigger) {
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> producerRecord =
         new ProducerRecord<>(
-            topicName,
-            null, // partition - let Kafka decide
-            currentTimestamp, // explicit timestamp
-            processInstanceTrigger.getProcessInstanceId(),
-            processInstanceTrigger));
+            topicName, null, System.currentTimeMillis(), trigger.getProcessInstanceId(), trigger);
+    responseEmitter.send(producerRecord);
   }
 }

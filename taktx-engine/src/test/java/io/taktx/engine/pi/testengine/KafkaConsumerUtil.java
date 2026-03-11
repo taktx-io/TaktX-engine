@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.function.Consumer;
+import org.apache.kafka.clients.consumer.CloseOptions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -55,17 +56,18 @@ public class KafkaConsumerUtil<K, V> {
   }
 
   void start() {
-    new Thread(
+    Thread t =
+        new Thread(
             () -> {
               LOG.info("Starting Kafka consumer for topic " + topic);
               while (running) {
                 kafkaConsumer
                     .poll(Duration.ofMillis(100))
                     .forEach(
-                        record -> {
+                        consumerRecord -> {
                           if (running) {
                             LOG.info("Received record for topic: " + topic);
-                            consumer.accept(record);
+                            consumer.accept(consumerRecord);
                           }
                         });
               }
@@ -73,18 +75,23 @@ public class KafkaConsumerUtil<K, V> {
               try {
                 if (kafkaConsumer != null) {
                   kafkaConsumer.unsubscribe();
-                  kafkaConsumer.close(Duration.ofMillis(100));
+                  kafkaConsumer.close(CloseOptions.timeout(Duration.ofMillis(100)));
                 }
                 LOG.info("Stopped Kafka consumer for topic " + topic);
                 kafkaConsumer = null;
-              } catch (Throwable t) {
-                t.printStackTrace();
+              } catch (Throwable t2) {
+                t2.printStackTrace();
               }
-            })
-        .start();
+            });
+    t.setDaemon(true);
+    t.start();
   }
 
   void stop() {
     running = false;
+    KafkaConsumer<K, V> c = kafkaConsumer;
+    if (c != null) {
+      c.wakeup();
+    }
   }
 }

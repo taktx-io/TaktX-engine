@@ -20,6 +20,12 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.security.SigningKeyRegistrar;
+import io.taktx.security.SigningKeysStore;
+import io.taktx.security.SigningKeysStoreHolder;
+import io.taktx.security.SigningServiceHolder;
+import io.taktx.security.WorkerSigningContext;
+import io.taktx.serdes.SigningSerializer;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
@@ -60,15 +66,21 @@ public class TaktXClient {
   private final UserTaskTriggerTopicConsumer userTaskTriggerTopicConsumer;
   private final ExternalTaskTopicRequester externalTaskTopicRequester;
   private final ResultProcessorFactory resultProcessorFactory;
+  private final TaktPropertiesHelper taktPropertiesHelper;
+  private final WorkerSigningContext signingContext;
+  private SigningKeysStore signingKeysStore;
 
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter,
       ProcessInstanceResponder processInstanceResponder,
       ParameterResolverFactory parameterResolverFactory,
-      ResultProcessorFactory resultProcessorFactory) {
+      ResultProcessorFactory resultProcessorFactory,
+      WorkerSigningContext signingContext) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
+    this.taktPropertiesHelper = taktPropertiesHelper;
+    this.signingContext = signingContext;
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.resultProcessorFactory = resultProcessorFactory;
@@ -103,8 +115,121 @@ public class TaktXClient {
    * updates.
    */
   public void start() {
+    initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
+    publishWorkerSigningKeyIfConfigured();
+  }
+
+  private void initSigningKeysStore() {
+    String bootstrapServers = taktPropertiesHelper.getBootstrapServers();
+    if (bootstrapServers == null || bootstrapServers.isBlank()) {
+      log.debug("No bootstrap.servers configured — skipping SigningKeysStore initialisation");
+      return;
+    }
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(
+            io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
+    try {
+      // Use the Properties-based constructor so auth/TLS settings flow through automatically,
+      // following the same pattern as ProcessDefinitionDeployer and MessageEventSender.
+      java.util.Properties consumerProps =
+          taktPropertiesHelper.getKafkaConsumerProperties(
+              "signing-keys-store-" + ProcessHandle.current().pid(),
+              org.apache.kafka.common.serialization.StringDeserializer.class,
+              org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
+              "earliest");
+      signingKeysStore = new SigningKeysStore(consumerProps, topic);
+      signingKeysStore.awaitReady(java.time.Duration.ofSeconds(10));
+      SigningKeysStoreHolder.set(signingKeysStore);
+      log.info(
+          "✅ SigningKeysStore ready — {} key(s) loaded from {}",
+          signingKeysStore.snapshot().size(),
+          topic);
+    } catch (Exception e) {
+      log.warn(
+          "SigningKeysStore initialisation failed — signature verification will be skipped: {}",
+          e.getMessage());
+    }
+  }
+
+  /**
+   * Publishes an Ed25519 or RSA public key to the {@code taktx-signing-keys} compacted topic so
+   * that all participants (engine, other workers, platform) can verify signatures produced by the
+   * corresponding private key.
+   *
+   * <p>Use this method from:
+   *
+   * <ul>
+   *   <li><b>Workers</b> — called automatically from {@link #start()} when {@code
+   *       TAKTX_SIGNING_PUBLIC_KEY} is configured; call it explicitly if you manage key lifecycle
+   *       yourself.
+   *   <li><b>Platform / Ingester</b> — publish the RSA public key under keyId {@code "platform"} so
+   *       the engine can verify inbound JWT commands without an env-var restart.
+   *   <li><b>Tests</b> — seed the signing-keys topic before starting the engine.
+   * </ul>
+   *
+   * @param keyId unique identifier for this key (e.g. {@code "worker-billing-1"}, {@code
+   *     "platform"})
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable label, e.g. {@code "worker"}, {@code "platform"}, {@code "engine"}
+   */
+  public void publishSigningKey(String keyId, String publicKeyBase64, String owner) {
+    // Use the instance-based SigningKeyRegistrar so auth/TLS properties flow through automatically,
+    // following the same pattern as ProcessDefinitionDeployer and MessageEventSender.
+    new SigningKeyRegistrar(taktPropertiesHelper).publishPublicKey(keyId, publicKeyBase64, owner);
+    log.info("✅ Signing key published: keyId={} owner={}", keyId, owner);
+  }
+
+  /**
+   * Static convenience overload for callers that do not yet have a running {@link TaktXClient}
+   * instance — e.g. test setup code or platform bootstrap that runs before the client is started.
+   *
+   * <p>The {@code namespace} is used to prefix the signing-keys topic name exactly as a running
+   * client would: {@code <namespace>.taktx-signing-keys}.
+   *
+   * @param bootstrapServers Kafka bootstrap servers
+   * @param namespace topic namespace / prefix (e.g. {@code "default"})
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable label, e.g. {@code "worker"}, {@code "platform"}
+   */
+  public static void publishSigningKey(
+      String bootstrapServers,
+      String namespace,
+      String keyId,
+      String publicKeyBase64,
+      String owner) {
+    String topic = namespace + "." + io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName();
+    SigningKeyRegistrar.publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, owner);
+    log.info("✅ Signing key published: keyId={} owner={}", keyId, owner);
+  }
+
+  private void publishWorkerSigningKeyIfConfigured() {
+    if (signingContext == null) return;
+    String publicKeyBase64 = signingContext.getPublicKeyBase64();
+    if (publicKeyBase64 == null || publicKeyBase64.isBlank()) {
+      log.debug(
+          "No public key in signing context — skipping worker key publication"
+              + " (set TAKTX_SIGNING_PUBLIC_KEY or taktx.signing.public-key)");
+      return;
+    }
+    try {
+      publishSigningKey(signingContext.getKeyId(), publicKeyBase64, "worker");
+    } catch (Exception e) {
+      log.error("Failed to publish worker signing key: {}", e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Stops only the external-task consumer threads, leaving the rest of the client running. Useful
+   * in test harnesses where a single {@link TaktXClient} is reused across tests: calling this in
+   * {@code @BeforeEach} ensures that stale topic subscriptions from a previous test (e.g. {@code
+   * "service-task"}) do not bleed into the next test that never registers that task type. The
+   * consumer is restarted lazily by the next {@link #registerExternalTaskConsumer} call.
+   */
+  public void stopExternalTaskConsumer() {
+    this.externalTaskTriggerTopicConsumer.stop();
   }
 
   /** Stops the TaktXClient, which unsubscribes from process definition records and process */
@@ -113,6 +238,12 @@ public class TaktXClient {
     this.externalTaskTriggerTopicConsumer.stop();
     this.processInstanceUpdateConsumer.stop();
     this.xmlByProcessDefinitionIdConsumer.stop();
+    if (signingKeysStore != null) {
+      SigningKeysStoreHolder.clear();
+      signingKeysStore.close();
+      signingKeysStore = null;
+    }
+    SigningServiceHolder.clear();
   }
 
   /**
@@ -415,10 +546,45 @@ public class TaktXClient {
 
       TaktPropertiesHelper taktPropertiesHelper = new TaktPropertiesHelper(properties);
 
+      // Allow the builder properties to override the worker keyId, so test environments can give
+      // the worker a distinct keyId without touching shared system properties.
+      WorkerSigningContext signingContext = WorkerSigningContext.fromEnvironment();
+      String keyIdOverride = (String) properties.get("taktx.signing.key-id");
+      if (signingContext != null
+          && keyIdOverride != null
+          && !keyIdOverride.isBlank()
+          && !keyIdOverride.equals(signingContext.getKeyId())) {
+        signingContext =
+            WorkerSigningContext.of(
+                signingContext.getPrivateKeyBase64(),
+                signingContext.getPublicKeyBase64(),
+                keyIdOverride);
+        log.info("Worker keyId overridden via properties to '{}'", keyIdOverride);
+      }
+      if (signingContext != null && !"true".equals(properties.get("taktx.signing.disabled"))) {
+        log.info("Worker response signing enabled (keyId={})", signingContext.getKeyId());
+        // Register the worker signing function so SigningSerializer picks it up on the producer
+        String keyId = signingContext.getKeyId();
+        String privateKey = signingContext.getPrivateKeyBase64();
+        SigningServiceHolder.set(
+            payload -> {
+              try {
+                byte[] sig = io.taktx.security.Ed25519Service.sign(payload, privateKey);
+                return keyId + "." + java.util.Base64.getEncoder().encodeToString(sig);
+              } catch (Exception e) {
+                log.warn("Worker signing failed: {}", e.getMessage());
+                return null;
+              }
+            });
+      }
+
+      // Wrap the value serializer with SigningSerializer so signing happens in one pass
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
           new KafkaProducer<>(
               taktPropertiesHelper.getKafkaProducerProperties(
-                  TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
+                  TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class),
+              new io.taktx.util.TaktUUIDSerializer(),
+              new SigningSerializer<>(new ProcessInstanceTriggerSerializer()));
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper, processInstanceTriggerEmitter);
@@ -436,7 +602,8 @@ public class TaktXClient {
           processInstanceTriggerEmitter,
           externalTaskResponder,
           clientParameterResolverFactory,
-          clientResultProcessorFactory);
+          clientResultProcessorFactory,
+          signingContext);
     }
 
     /**

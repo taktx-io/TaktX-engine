@@ -59,6 +59,7 @@ import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -70,6 +71,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serdes.StringSerde;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -111,7 +113,12 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       new ObjectMapperSerde<>(MessageScheduleDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class);
+      new ObjectMapperSerde<ProcessInstanceTriggerDTO>(ProcessInstanceTriggerDTO.class) {
+        @Override
+        public Serializer<ProcessInstanceTriggerDTO> serializer() {
+          return new SigningSerializer<>(super.serializer());
+        }
+      };
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
@@ -122,13 +129,28 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
   public static final ObjectMapperSerde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<>(InstanceUpdateDTO.class);
+      new ObjectMapperSerde<InstanceUpdateDTO>(InstanceUpdateDTO.class) {
+        @Override
+        public Serializer<InstanceUpdateDTO> serializer() {
+          return new SigningSerializer<>(super.serializer());
+        }
+      };
   public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
   public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class);
+      new ObjectMapperSerde<ExternalTaskTriggerDTO>(ExternalTaskTriggerDTO.class) {
+        @Override
+        public Serializer<ExternalTaskTriggerDTO> serializer() {
+          return new SigningSerializer<>(super.serializer());
+        }
+      };
   public static final ObjectMapperSerde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(UserTaskTriggerDTO.class);
+      new ObjectMapperSerde<UserTaskTriggerDTO>(UserTaskTriggerDTO.class) {
+        @Override
+        public Serializer<UserTaskTriggerDTO> serializer() {
+          return new SigningSerializer<>(super.serializer());
+        }
+      };
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
@@ -366,8 +388,7 @@ public class TopologyProducer {
                     dtoMapper,
                     processingStatistics,
                     topicManager,
-                    engineAuthorizationService,
-                    messageSigningService),
+                    engineAuthorizationService),
             taktConfiguration.getPrefixed(Stores.FLOW_NODE_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE.getStorename()),
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))

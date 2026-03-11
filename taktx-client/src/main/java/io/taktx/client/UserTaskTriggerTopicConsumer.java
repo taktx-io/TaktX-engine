@@ -131,6 +131,11 @@ public class UserTaskTriggerTopicConsumer {
   /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
+    synchronized (consumerLock) {
+      if (userTaskTriggerKafkaConsumer != null) {
+        userTaskTriggerKafkaConsumer.wakeup();
+      }
+    }
   }
 
   /**

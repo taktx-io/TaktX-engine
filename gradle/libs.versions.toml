@@ -1,6 +1,6 @@
 [versions]
-quarkus = "3.30.4"
-jackson = "2.19.2"
+quarkus = "3.32.2"
+jackson = "2.21.1"
 cronutils = "9.2.1"
 lombok = "1.18.42"
 junit = "5.10.1"
@@ -8,20 +8,20 @@ assertj = "3.27.6"
 mapstruct = "1.6.3"
 slf4j = "2.0.17"
 kafka = "4.1.1"
-camunda-feel = "1.19.3"
+camunda-feel = "1.21.0"
 awaitility = "4.3.0"
 mockito = "3.12.4"
 reflections = "0.10.2"
-jaxb = "3.0.2"
+jaxb = "4.0.6"
 license3j = "3.3.0"
 classgraph = "4.8.184"
 jakarta-cdi = "4.1.0"
 jakarta-inject = "2.0.1"
 jakarta-annotation = "3.0.0"
 spring-framework = "6.2.15"
-jjwt = "0.12.5"
-caffeine = "3.1.8"
-spring-boot = "3.5.9"
+jjwt = "0.13.0"
+caffeine = "3.2.3"
+spring-boot = "3.5.10"
 
 [libraries]
 # Quarkus dependencies
@@ -45,9 +45,10 @@ quarkus-resteasy-jackson = { module = "io.quarkus:quarkus-resteasy-jackson", ver
 quarkus-jackson = { module = "io.quarkus:quarkus-jackson", version.ref = "quarkus" }
 
 # Jackson
-jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+#jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 
 # Utility libraries
 cronutils = { module = "com.cronutils:cron-utils", version.ref = "cronutils" }
@@ -57,10 +58,10 @@ mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.re
 camunda-feel = { module = "org.camunda.feel:feel-engine", version.ref = "camunda-feel" }
 license3j = { module = "com.javax0.license3j:license3j", version.ref = "license3j" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
-jjwt-api     = { module = "io.jsonwebtoken:jjwt-api",                          version.ref = "jjwt" }
-jjwt-impl    = { module = "io.jsonwebtoken:jjwt-impl",                         version.ref = "jjwt" }
-jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson",                      version.ref = "jjwt" }
-caffeine     = { module = "com.github.ben-manes.caffeine:caffeine",             version.ref = "caffeine" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
@@ -81,8 +82,8 @@ junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", vers
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
-testcontainers-kafka = { module = "org.testcontainers:kafka" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+#testcontainers-kafka = { module = "org.testcontainers:kafka" }
+#testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 reflections = { module = "org.reflections:reflections", version.ref = "reflections" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb" }

@@ -71,7 +71,6 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
 
 public class BpmnTestEngine {
@@ -115,7 +114,15 @@ public class BpmnTestEngine {
     this.mutableClock = (MutableClock) clock;
   }
 
-  private static @NotNull ProcessInstanceDTO getProcessInstanceDTO(
+  /**
+   * Initialises with a known engine Ed25519 public key. Use this overload in security tests so the
+   * client-side {@link io.taktx.serdes.JsonDeserializer} can verify engine-signed records.
+   */
+  public void init(String enginePublicKeyBase64) {
+    doInit(enginePublicKeyBase64);
+  }
+
+  private static ProcessInstanceDTO getProcessInstanceDTO(
       UUID processInstanceId, ProcessInstanceUpdateDTO processInstanceUpdate) {
     return new ProcessInstanceDTO(
         processInstanceId,
@@ -131,6 +138,7 @@ public class BpmnTestEngine {
   public void close() {
     LOG.info("Closing bpmn test engine");
     taktClient.stop();
+    taktClient = null;
     processInstanceTriggerConsumer.stop();
     messageEventConsumer.stop();
     signalConsumer.stop();
@@ -138,6 +146,10 @@ public class BpmnTestEngine {
   }
 
   public void init() {
+    doInit(null);
+  }
+
+  private void doInit(String enginePublicKeyBase64) {
     String kafkaBootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
 
@@ -149,6 +161,13 @@ public class BpmnTestEngine {
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
     kakaProperties.put("taktx.engine.namespace", "default");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
+    // BpmnTestEngine is a test harness — never sign outgoing records so it doesn't
+    // overwrite the engine's SigningServiceHolder registration.
+    kakaProperties.put("taktx.signing.disabled", "true");
+    if (enginePublicKeyBase64 != null) {
+      kakaProperties.put(
+          io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
+    }
 
     taktClient = TaktXClient.newClientBuilder().withProperties(kakaProperties).build();
     taktClient.registerInstanceUpdateConsumer("bpmntestengine", BpmnTestEngine.this::consume);
@@ -178,7 +197,7 @@ public class BpmnTestEngine {
             this::consumeSignal);
     actualTopicMetaConsumer =
         new KafkaConsumerUtil<>(
-            "test-group",
+            "test-group-topic-meta-" + UUID.randomUUID(),
             TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName(),
             StringDeserializer.class.getName(),
             TopicMetaJsonDeserializer.class.getName(),
@@ -981,6 +1000,11 @@ public class BpmnTestEngine {
 
   public void reset() {
     log.info("Resetting the test engine state for the next test");
+    // Stop any running external-task consumer threads so stale topic subscriptions from a
+    // previous test (e.g. "service-task") do not bleed into the next test that never called
+    // registerAndSubscribeToExternalTaskIds().  The consumer is restarted lazily by the next
+    // registerAndSubscribeToExternalTaskIds() call via subscribeToExternalTaskTriggerTopics().
+    taktClient.stopExternalTaskConsumer();
     // Per-process-instance state
     this.processInstanceParentChildMap.clear();
     this.processInstanceMap.clear();
@@ -1003,6 +1027,14 @@ public class BpmnTestEngine {
 
   public TaktXClient getTaktClient() {
     return taktClient;
+  }
+
+  /**
+   * Returns the active {@link ExternalTaskTriggerDTO} for the given task ID on the currently active
+   * process instance, or {@code null} if not yet received.
+   */
+  public ExternalTaskTriggerDTO getActiveExternalTaskTrigger(String taskId) {
+    return activeExternalTaskTriggers.getOrDefault(activeProcessInstanceId, Map.of()).get(taskId);
   }
 
   public Map<UUID, ProcessInstanceDTO> getProcessInstanceMap() {

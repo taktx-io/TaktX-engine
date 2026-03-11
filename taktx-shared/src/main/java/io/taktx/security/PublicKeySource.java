@@ -10,10 +10,10 @@ package io.taktx.security;
 import java.security.PublicKey;
 
 /**
- * Resolves a RSA public key by JWT issuer string. Implementations are provided by the consuming
- * module (engine, ingester).
+ * Resolves an RSA public key by JWT {@code kid} header. Implementations are provided by the
+ * consuming module (engine, ingester).
  */
 @FunctionalInterface
 public interface PublicKeySource {
-  PublicKey getKey(String issuer) throws AuthorizationTokenException;
+  PublicKey getKey(String kid) throws AuthorizationTokenException;
 }

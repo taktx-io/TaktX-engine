@@ -45,7 +45,6 @@ import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.security.AuthorizationTokenException;
 import java.time.Clock;
@@ -85,7 +84,6 @@ public class ProcessInstanceProcessor
   private final ProcessingStatistics processingStatistics;
   private final DynamicTopicManager topicManager;
   private final EngineAuthorizationService engineAuthorizationService;
-  private final MessageSigningService messageSigningService;
   private final Map<ProcessDefinitionKey, FlowElements> flowElementsCache = new HashMap<>();
 
   private ReadOnlyKeyValueStore<ProcessDefinitionKey, ValueAndTimestamp<ProcessDefinitionDTO>>

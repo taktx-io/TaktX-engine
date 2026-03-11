@@ -22,7 +22,7 @@ import java.util.UUID;
  * Validates RS256 JWTs issued by the Platform Service.
  *
  * <p>Framework-agnostic — no CDI or Spring annotations. Callers provide a {@link PublicKeySource}
- * that resolves a key by the JWT {@code iss} claim. Works in both Quarkus (engine) and Spring
+ * that resolves a key by the JWT {@code kid} header. Works in both Quarkus (engine) and Spring
  * (Ingester).
  */
 public class AuthorizationTokenValidator {
@@ -45,17 +45,13 @@ public class AuthorizationTokenValidator {
       throw new AuthorizationTokenException("JWT must not be null or blank");
     }
 
-    // Peek at the issuer before signature verification to resolve the correct key
-    String issuer = peekIssuer(rawJwt);
-    PublicKey publicKey = keySource.getKey(issuer);
+    // Peek at the kid header before signature verification to resolve the correct key
+    String kid = peekKid(rawJwt);
+    PublicKey publicKey = keySource.getKey(kid);
 
     try {
       Claims claims =
-          Jwts.parser()
-              .verifyWith(publicKey)
-              .build()
-              .parseSignedClaims(rawJwt)
-              .getPayload();
+          Jwts.parser().verifyWith(publicKey).build().parseSignedClaims(rawJwt).getPayload();
 
       return mapClaims(claims);
 
@@ -87,21 +83,21 @@ public class AuthorizationTokenValidator {
         .build();
   }
 
-  /** Extracts the {@code iss} claim without verifying the signature. */
-  private static String peekIssuer(String rawJwt) {
+  /** Extracts the {@code kid} header without verifying the signature. */
+  private static String peekKid(String rawJwt) {
     try {
       String[] parts = rawJwt.split("\\.");
       if (parts.length < 2) throw new AuthorizationTokenException("Malformed JWT");
-      String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]));
-      int issStart = payloadJson.indexOf("\"iss\"");
-      if (issStart < 0) throw new AuthorizationTokenException("Missing 'iss' claim in JWT");
-      int valueStart = payloadJson.indexOf('"', issStart + 5) + 1;
-      int valueEnd = payloadJson.indexOf('"', valueStart);
-      return payloadJson.substring(valueStart, valueEnd);
+      String headerJson = new String(Base64.getUrlDecoder().decode(parts[0]));
+      int kidStart = headerJson.indexOf("\"kid\"");
+      if (kidStart < 0) throw new AuthorizationTokenException("Missing 'kid' header in JWT");
+      int valueStart = headerJson.indexOf('"', kidStart + 5) + 1;
+      int valueEnd = headerJson.indexOf('"', valueStart);
+      return headerJson.substring(valueStart, valueEnd);
     } catch (AuthorizationTokenException e) {
       throw e;
     } catch (Exception e) {
-      throw new AuthorizationTokenException("Could not read JWT payload", e);
+      throw new AuthorizationTokenException("Could not read JWT header", e);
     }
   }
 }

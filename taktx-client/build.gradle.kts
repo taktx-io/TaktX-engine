@@ -35,8 +35,8 @@ dependencies {
     implementation(libs.slf4j.simple)
     implementation(libs.kafka.clients)
     implementation(libs.classgraph)
-    implementation(libs.jackson.annotations)
-    implementation(libs.jackson.databind)
+//    implementation(libs.jackson.annotations)
+//    implementation(libs.jackson.databind)
     implementation(libs.jackson.cbor)
     implementation(libs.awaitility)
 

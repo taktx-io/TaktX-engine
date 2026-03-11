@@ -50,6 +50,29 @@ services:
         - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
         - TAKTX_NAMESPACE=namespace
         - TAKTX_LICENSE_FILE_LOCATION=/opt/taktx/licence.lic
+
+        # ── Command Authorization (RS256 JWT) ──────────────────────────────
+        # Enable when running alongside the TaktX Console / Platform Service.
+        # Set TAKTX_PLATFORM_PUBLIC_KEY to the base64-DER RSA public key from:
+        #   GET http://<platform-service>/api/public-key
+        - TAKTX_SECURITY_AUTHORIZATION_ENABLED=false
+        - TAKTX_SECURITY_REJECT_EXPIRED=true
+        - TAKTX_SECURITY_NONCE_CHECK=true
+        # - TAKTX_PLATFORM_PUBLIC_KEY=<base64-DER RSA public key from platform service>
+
+        # ── Engine Message Signing (Ed25519) ───────────────────────────────
+        # When enabled the engine signs every instance-update, external-task-trigger
+        # and user-task-trigger record with Ed25519. Workers and the ingester verify
+        # these signatures using the public key published to taktx-signing-keys.
+        - TAKTX_SECURITY_SIGNING_ENABLED=false
+        # Required when signing is enabled — uniquely identifies this engine's key.
+        # Must match the key registered in the global configuration signing event.
+        # - TAKTX_SIGNING_KEY_ID=engine-key-1
+        # The Ed25519 private key (base64-encoded PKCS8 DER). Inject as a Docker secret
+        # or via a secrets manager — never hardcode in production.
+        # Generate with: openssl genpkey -algorithm ed25519 | openssl pkcs8 -topk8 -nocrypt | base64
+        # - TAKTX_SIGNING_PRIVATE_KEY=<base64-encoded Ed25519 private key>
+
     volumes:
       - ~/.taktx/license.lic:/opt/taktx/licence.lic:ro
 

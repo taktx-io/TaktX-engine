@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 
 class AuthorizationTokenValidatorTest {
 
+  private static final String TEST_KID = "platform-key-test";
+
   private PublicKey publicKey;
   private PrivateKey privateKey;
   private AuthorizationTokenValidator validator;
@@ -32,7 +34,8 @@ class AuthorizationTokenValidatorTest {
     KeyPair kp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
     publicKey = kp.getPublic();
     privateKey = kp.getPrivate();
-    validator = new AuthorizationTokenValidator(issuer -> publicKey);
+    // key source resolves by kid — returns our test key for the expected kid
+    validator = new AuthorizationTokenValidator(kid -> publicKey);
   }
 
   private String buildJwt(
@@ -43,6 +46,9 @@ class AuthorizationTokenValidatorTest {
       String userId,
       Date expiry) {
     return Jwts.builder()
+        .header()
+        .keyId(TEST_KID)
+        .and()
         .subject(userId)
         .issuer("taktx-platform-service")
         .claim("action", action)
@@ -116,6 +122,9 @@ class AuthorizationTokenValidatorTest {
     KeyPair otherKp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
     String jwt =
         Jwts.builder()
+            .header()
+            .keyId(TEST_KID)
+            .and()
             .subject("u")
             .issuer("taktx-platform-service")
             .expiration(Date.from(Instant.now().plusSeconds(300)))
@@ -136,5 +145,21 @@ class AuthorizationTokenValidatorTest {
   void blankToken_throwsAuthorizationTokenException() {
     assertThatThrownBy(() -> validator.validate("  "))
         .isInstanceOf(AuthorizationTokenException.class);
+  }
+
+  @Test
+  void missingKid_throwsAuthorizationTokenException() {
+    // A JWT with no kid header must be rejected
+    String jwt =
+        Jwts.builder()
+            .subject("u")
+            .issuer("taktx-platform-service")
+            .expiration(Date.from(Instant.now().plusSeconds(300)))
+            .signWith(privateKey)
+            .compact();
+
+    assertThatThrownBy(() -> validator.validate(jwt))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("kid");
   }
 }

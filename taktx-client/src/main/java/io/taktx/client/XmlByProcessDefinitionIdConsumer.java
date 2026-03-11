@@ -34,7 +34,8 @@ public class XmlByProcessDefinitionIdConsumer {
       org.slf4j.LoggerFactory.getLogger(XmlByProcessDefinitionIdConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
-  private boolean running = false;
+  private volatile boolean running = false;
+  private volatile KafkaConsumer<ProcessDefinitionKey, String> activeConsumer;
   private static final Path DEFINITION_XML_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "definitions");
 
@@ -60,19 +61,25 @@ public class XmlByProcessDefinitionIdConsumer {
     CompletableFuture.runAsync(
         () -> {
           try (KafkaConsumer<ProcessDefinitionKey, String> consumer = createConsumer()) {
+            activeConsumer = consumer;
 
             String prefixedTopicName =
                 taktPropertiesHelper.getPrefixedTopicName(
                     Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName());
 
-            log.info("Subscribing to topic " + prefixedTopicName);
+            log.info("Subscribing to topic {}", prefixedTopicName);
             consumer.subscribe(Collections.singletonList(prefixedTopicName));
 
-            while (running) {
-              consumeRecords(consumer);
+            try {
+              while (running) {
+                consumeRecords(consumer);
+              }
+            } catch (org.apache.kafka.common.errors.WakeupException e) {
+              // stop() was called — exit cleanly
+            } finally {
+              activeConsumer = null;
+              consumer.unsubscribe();
             }
-
-            consumer.unsubscribe();
           }
         },
         executor);
@@ -153,5 +160,9 @@ public class XmlByProcessDefinitionIdConsumer {
   /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
+    KafkaConsumer<ProcessDefinitionKey, String> c = activeConsumer;
+    if (c != null) {
+      c.wakeup();
+    }
   }
 }

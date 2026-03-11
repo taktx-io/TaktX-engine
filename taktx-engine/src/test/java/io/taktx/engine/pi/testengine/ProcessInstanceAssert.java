@@ -21,7 +21,6 @@ import io.taktx.dto.VariablesDTO;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import org.jetbrains.annotations.NotNull;
 
 public class ProcessInstanceAssert {
 
@@ -109,7 +108,7 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  private @NotNull List<FlowNodeInstanceDTO> getFlowNodeInstanceDTOS(String elementId) {
+  private List<FlowNodeInstanceDTO> getFlowNodeInstanceDTOS(String elementId) {
     List<FlowNodeInstanceDTO> bpmnElementState =
         bpmnTestEngine.getScopeWithElementId(processInstanceId, elementId);
     assertThat(bpmnElementState)

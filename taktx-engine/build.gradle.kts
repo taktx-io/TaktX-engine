@@ -61,8 +61,8 @@ dependencies {
     testImplementation(libs.quarkus.junit5.mockito)
     testImplementation(libs.quarkus.jacoco)
     testImplementation(libs.assertj.core)
-    testImplementation(libs.testcontainers.kafka)
-    testImplementation(libs.testcontainers.junit.jupiter)
+//    testImplementation(libs.testcontainers.kafka)
+//    testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.awaitility)
 
     annotationProcessor(libs.lombok)
