@@ -12,13 +12,14 @@ import java.util.Properties;
 import lombok.Getter;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 @Getter
 public class TaktPropertiesHelper {
 
   private final Properties taktProperties;
-  private String namespace;
+  private final String namespace;
 
   public TaktPropertiesHelper(Properties taktProperties) {
     this.taktProperties = taktProperties;

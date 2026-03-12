@@ -75,7 +75,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
 
   private final Class<T> clazz;
 
-  private boolean shouldValidateSignature;
+  private final boolean shouldValidateSignature;
 
   /** Static fallback key — used when no dynamic key source is set. */
   private String enginePublicKeyBase64;

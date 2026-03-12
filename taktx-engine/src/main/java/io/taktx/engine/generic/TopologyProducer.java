@@ -53,14 +53,12 @@ import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.DtoMapper;
 import io.taktx.engine.pi.Forwarder;
-import io.taktx.engine.pi.PathExtractor;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessor;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.ZippedStringSerde;
@@ -116,7 +114,7 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       new ObjectMapperSerde<>(MessageScheduleDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<ProcessInstanceTriggerDTO>(ProcessInstanceTriggerDTO.class) {
+      new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class) {
         @Override
         public Serializer<ProcessInstanceTriggerDTO> serializer() {
           return new SigningSerializer<>(super.serializer());
@@ -132,7 +130,7 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
   public static final ObjectMapperSerde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<InstanceUpdateDTO>(InstanceUpdateDTO.class) {
+      new ObjectMapperSerde<>(InstanceUpdateDTO.class) {
         @Override
         public Serializer<InstanceUpdateDTO> serializer() {
           return new SigningSerializer<>(super.serializer());
@@ -141,14 +139,14 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
   public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<ExternalTaskTriggerDTO>(ExternalTaskTriggerDTO.class) {
+      new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class) {
         @Override
         public Serializer<ExternalTaskTriggerDTO> serializer() {
           return new SigningSerializer<>(super.serializer());
         }
       };
   public static final ObjectMapperSerde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<UserTaskTriggerDTO>(UserTaskTriggerDTO.class) {
+      new ObjectMapperSerde<>(UserTaskTriggerDTO.class) {
         @Override
         public Serializer<UserTaskTriggerDTO> serializer() {
           return new SigningSerializer<>(super.serializer());
@@ -180,9 +178,7 @@ public class TopologyProducer {
   private final FeelExpressionHandler feelExpressionHandler;
   private final DynamicTopicManager topicManager;
   private final DefinitionsCache definitionsCache;
-  private final PathExtractor pathExtractor;
   private final EngineAuthorizationService engineAuthorizationService;
-  private final MessageSigningService messageSigningService;
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
 

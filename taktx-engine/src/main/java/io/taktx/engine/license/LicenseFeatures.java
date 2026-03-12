@@ -14,7 +14,6 @@ public class LicenseFeatures {
   }
 
   public static final String LICENSE_FEATURE_EXPIRY_DATE = "expiryDate";
-  public static final String LICENSE_FEATURE_PARTITION_LIMIT = "partitionLimit";
 
   // Fields used in licenses pushed via taktx-configuration topic
   public static final String LICENSE_FEATURE_LICENSE_TYPE = "licenseType";
