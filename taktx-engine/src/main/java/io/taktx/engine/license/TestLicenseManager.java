@@ -29,4 +29,15 @@ public class TestLicenseManager implements LicenseManager {
   public int getMaxAllowedPartitions() {
     return 5;
   }
+
+  @Override
+  public boolean isEventSigningAllowed() {
+    return true;
+  }
+
+  @Override
+  public void updateFromLicensePush(
+      String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
+    // no-op in test — test profile uses fixed values above
+  }
 }

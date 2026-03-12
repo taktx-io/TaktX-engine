@@ -75,6 +75,8 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
 
   private final Class<T> clazz;
 
+  private boolean shouldValidateSignature;
+
   /** Static fallback key — used when no dynamic key source is set. */
   private String enginePublicKeyBase64;
 
@@ -87,7 +89,8 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
    */
   private boolean signingRequired;
 
-  protected JsonDeserializer(Class<T> clazz) {
+  protected JsonDeserializer(Class<T> clazz, boolean shouldValidateSignature) {
+    this.shouldValidateSignature = shouldValidateSignature;
     this.clazz = clazz;
   }
 
@@ -107,7 +110,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
     // records are rejected even if they simply have no signature header.
     Object signingEnabledFlag = configs.get(SIGNING_REQUIRED_CONFIG);
     signingRequired = "true".equalsIgnoreCase(String.valueOf(signingEnabledFlag));
-    if (signingRequired) {
+    if (signingRequired && shouldValidateSignature) {
       log.info(
           "{}: inbound signature enforcement enabled ({}=true)",
           getClass().getSimpleName(),
@@ -152,7 +155,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
    */
   @Override
   public T deserialize(String topic, Headers headers, byte[] data) {
-    if (headers != null && hasKeySource()) {
+    if (shouldValidateSignature && headers != null && hasKeySource()) {
       Header sigHeader = headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE);
       if (sigHeader != null && sigHeader.value() != null) {
         verifySignature(data, sigHeader);

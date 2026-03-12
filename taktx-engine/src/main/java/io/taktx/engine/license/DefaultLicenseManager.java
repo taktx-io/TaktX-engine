@@ -13,12 +13,15 @@ import io.quarkus.runtime.Startup;
 import io.taktx.engine.config.TaktConfiguration;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicReference;
 import javax0.license3j.Feature;
 import javax0.license3j.License;
 import javax0.license3j.io.IOFormat;
@@ -340,6 +343,25 @@ public class DefaultLicenseManager implements LicenseManager {
 
   @Getter private LicenseState licenseState = LicenseState.NOT_FOUND;
 
+  // ── Pushed-license state (from taktx-configuration topic, key "license") ─────────────────────
+  // Held in an AtomicReference so the GlobalStreamThread can write while other threads read safely.
+  private static final class PushedLicense {
+    final String licenseType;
+    final Integer maxKafkaPartitions;
+    final Integer maxWorkers;
+    final boolean eventSigning;
+
+    PushedLicense(
+        String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
+      this.licenseType = licenseType;
+      this.maxKafkaPartitions = maxKafkaPartitions;
+      this.maxWorkers = maxWorkers;
+      this.eventSigning = eventSigning;
+    }
+  }
+
+  private final AtomicReference<PushedLicense> pushedLicense = new AtomicReference<>(null);
+
   @PostConstruct
   public void init() {
     try {
@@ -400,6 +422,11 @@ public class DefaultLicenseManager implements LicenseManager {
 
   @Override
   public int getMaxAllowedPartitions() {
+    // Pushed license takes precedence over the file-based license.
+    PushedLicense pushed = pushedLicense.get();
+    if (pushed != null && pushed.maxKafkaPartitions != null) {
+      return pushed.maxKafkaPartitions;
+    }
     int maxAllowed = 3; // default free tier
     if (license != null && licenseState == LicenseState.VALID) {
       Feature maxAllowedPartitions = license.getFeatures().get("maxAllowedPartitions");
@@ -408,5 +435,111 @@ public class DefaultLicenseManager implements LicenseManager {
       }
     }
     return maxAllowed;
+  }
+
+  @Override
+  public boolean isEventSigningAllowed() {
+    PushedLicense pushed = pushedLicense.get();
+    if (pushed != null) {
+      return pushed.eventSigning;
+    }
+    // No pushed license — fall back to false (signing is an enterprise feature).
+    return false;
+  }
+
+  @Override
+  public void updateFromLicensePush(
+      String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
+    PushedLicense updated =
+        new PushedLicense(licenseType, maxKafkaPartitions, maxWorkers, eventSigning);
+    pushedLicense.set(updated);
+    log.info(
+        "License updated from configuration topic: type={} maxPartitions={} maxWorkers={}",
+        licenseType,
+        maxKafkaPartitions != null ? maxKafkaPartitions : "unlimited",
+        maxWorkers != null ? maxWorkers : "unlimited");
+  }
+
+  /**
+   * Parses a raw License3j plain-text string (as pushed to the {@code taktx-configuration} topic),
+   * verifies its signature against the embedded public key, and calls {@link
+   * #updateFromLicensePush} if valid.
+   *
+   * <p>Called by the topology's global-store processor on the Kafka Streams GlobalStreamThread.
+   * Verification failures are logged as warnings and the update is skipped — the existing
+   * file-based license remains active.
+   *
+   * @param licenseText raw License3j plain-text content (UTF-8)
+   */
+  public void parsePushedLicense(String licenseText) {
+    if (licenseText == null || licenseText.isBlank()) {
+      log.warn("Received empty license text via configuration topic — ignoring");
+      return;
+    }
+    try (var reader =
+        new LicenseReader(new ByteArrayInputStream(licenseText.getBytes(StandardCharsets.UTF_8)))) {
+      License pushed = reader.read(IOFormat.STRING);
+
+      if (!pushed.isOK(PUBLIC_KEY_BYTES)) {
+        log.warn(
+            "⚠️ Pushed license failed signature verification — ignoring. "
+                + "Has the license been tampered with?");
+        return;
+      }
+
+      // Check expiry
+      Feature expiryFeature = pushed.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_EXPIRY_DATE);
+      if (expiryFeature != null) {
+        Date expiryDate = expiryFeature.getDate();
+        if (new Date().after(expiryDate)) {
+          log.warn("⚠️ Pushed license is expired (expiry={}) — ignoring", expiryDate);
+          return;
+        }
+      }
+
+      // Extract fields — all optional; null means unlimited / not present
+      String licenseType = getStringFeature(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
+      Integer maxKafkaPartitions =
+          getIntFeature(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_KAFKA_PARTITIONS);
+      Integer maxWorkers = getIntFeature(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_WORKERS);
+      boolean eventSigning =
+          getBooleanFeature(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
+
+      updateFromLicensePush(licenseType, maxKafkaPartitions, maxWorkers, eventSigning);
+    } catch (IOException e) {
+      log.warn("Failed to read pushed license text: {}", e.getMessage());
+    } catch (Exception e) {
+      log.warn("Unexpected error parsing pushed license: {}", e.getMessage(), e);
+    }
+  }
+
+  private static String getStringFeature(License lic, String name) {
+    Feature f = lic.getFeatures().get(name);
+    return f != null ? f.getString() : null;
+  }
+
+  private static Integer getIntFeature(License lic, String name) {
+    Feature f = lic.getFeatures().get(name);
+    if (f == null) return null;
+    try {
+      return f.getInt();
+    } catch (Exception e) {
+      // Feature may be stored as a String — try parsing
+      try {
+        return Integer.parseInt(f.getString().trim());
+      } catch (Exception ignored) {
+        return null;
+      }
+    }
+  }
+
+  private static boolean getBooleanFeature(License lic, String name) {
+    Feature f = lic.getFeatures().get(name);
+    if (f == null) return false;
+    try {
+      return Boolean.parseBoolean(f.getString().trim());
+    } catch (Exception e) {
+      return false;
+    }
   }
 }

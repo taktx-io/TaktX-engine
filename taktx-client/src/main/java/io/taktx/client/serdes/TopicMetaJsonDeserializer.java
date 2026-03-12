@@ -15,6 +15,6 @@ import io.taktx.serdes.JsonDeserializer;
 public class TopicMetaJsonDeserializer extends JsonDeserializer<TopicMetaDTO> {
   /** Constructor for TopicMetaJsonDeserializer. */
   public TopicMetaJsonDeserializer() {
-    super(TopicMetaDTO.class);
+    super(TopicMetaDTO.class, false);
   }
 }

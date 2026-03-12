@@ -13,6 +13,6 @@ import io.taktx.dto.TopicMetaDTO;
 public class ExternalTaskMetaDeserializer extends JsonDeserializer<TopicMetaDTO> {
 
   public ExternalTaskMetaDeserializer() {
-    super(TopicMetaDTO.class);
+    super(TopicMetaDTO.class, false);
   }
 }

@@ -16,6 +16,6 @@ public class ProcessDefinitionJsonDeserializer extends JsonDeserializer<ProcessD
 
   /** Constructor for ProcessDefinitionJsonDeserializer. */
   public ProcessDefinitionJsonDeserializer() {
-    super(ProcessDefinitionDTO.class);
+    super(ProcessDefinitionDTO.class, false);
   }
 }

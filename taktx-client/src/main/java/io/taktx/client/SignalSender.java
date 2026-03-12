@@ -34,8 +34,9 @@ public class SignalSender {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.signalEmitter =
         new KafkaProducer<>(
-            taktPropertiesHelper.getKafkaProducerProperties(
-                StringSerializer.class, SignalSerializer.class));
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            new StringSerializer(),
+            new SignalSerializer());
   }
 
   /**

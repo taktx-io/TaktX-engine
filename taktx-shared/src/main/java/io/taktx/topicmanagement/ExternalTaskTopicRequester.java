@@ -27,8 +27,9 @@ public class ExternalTaskTopicRequester {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.producer =
         new KafkaProducer<>(
-            taktPropertiesHelper.getKafkaProducerProperties(
-                StringSerializer.class, ExternalTaskMetaSerializer.class));
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            new StringSerializer(),
+            new ExternalTaskMetaSerializer());
   }
 
   public String requestExternalTaskTopic(

@@ -13,7 +13,6 @@ import lombok.Getter;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.Serializer;
 
 @Getter
 public class TaktPropertiesHelper {
@@ -66,9 +65,12 @@ public class TaktPropertiesHelper {
     return props;
   }
 
-  public Properties getKafkaProducerProperties(
-      Class<? extends Serializer<?>> keySerializer,
-      Class<? extends Serializer<?>> valueSerializer) {
+  /**
+   * Returns Kafka producer properties with default tuning applied. Serializer class entries are
+   * intentionally omitted — callers pass serializer <em>instances</em> directly to the {@link
+   * KafkaProducer} constructor, keeping the serializer type explicit at the call site.
+   */
+  public Properties getKafkaProducerProperties() {
     Properties props = new Properties();
 
     props.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -92,8 +94,6 @@ public class TaktPropertiesHelper {
       props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
     }
 
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySerializer.getName());
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer.getName());
     return props;
   }
 

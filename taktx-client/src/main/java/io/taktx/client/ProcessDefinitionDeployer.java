@@ -45,8 +45,9 @@ class ProcessDefinitionDeployer {
     this(
         taktPropertiesHelper,
         new KafkaProducer<>(
-            taktPropertiesHelper.getKafkaProducerProperties(
-                StringSerializer.class, XmlDefinitionSerializer.class)));
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            new StringSerializer(),
+            new XmlDefinitionSerializer()));
   }
 
   /**

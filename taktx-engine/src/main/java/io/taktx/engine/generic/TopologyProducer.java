@@ -36,8 +36,11 @@ import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
+import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.feel.FeelExpressionHandler;
+import io.taktx.engine.license.LicenseConfigProcessor;
+import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
@@ -180,6 +183,8 @@ public class TopologyProducer {
   private final PathExtractor pathExtractor;
   private final EngineAuthorizationService engineAuthorizationService;
   private final MessageSigningService messageSigningService;
+  private final LicenseManager licenseManager;
+  private final GlobalConfigStore globalConfigStore;
 
   @Produces
   public Topology buildTopology() {
@@ -252,12 +257,21 @@ public class TopologyProducer {
             .withKeySerde(PROCESS_DEFINITION_KEY_SERDE)
             .withValueSerde(ZIPPED_STRING_SERDE));
 
-    builder.globalTable(
+    // Single registration on taktx-configuration handles both keys:
+    //   "config"  → deserialises ConfigurationEventDTO and updates GlobalConfigStore
+    //   "license" → parses License3j text and calls LicenseManager.parsePushedLicense()
+    // Using addGlobalStore (raw byte[]) avoids the double-registration TopologyException
+    // that would occur if globalTable and addGlobalStore both subscribed to the same topic.
+    builder.addGlobalStore(
+        keyValueStoreBuilder(
+                org.apache.kafka.streams.state.Stores.inMemoryKeyValueStore(
+                    taktConfiguration.getPrefixed(Stores.GLOBAL_CONFIGURATION.getStorename())),
+                Serdes.String(),
+                Serdes.ByteArray())
+            .withLoggingDisabled(),
         taktConfiguration.getPrefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
-        Materialized.<String, ConfigurationEventDTO>as(
-                keyValueStoreSupplier.get(Stores.GLOBAL_CONFIGURATION))
-            .withKeySerde(Serdes.String())
-            .withValueSerde(CONFIGURATION_EVENT_SERDE));
+        Consumed.with(Serdes.String(), Serdes.ByteArray()),
+        () -> new LicenseConfigProcessor(licenseManager, globalConfigStore));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),

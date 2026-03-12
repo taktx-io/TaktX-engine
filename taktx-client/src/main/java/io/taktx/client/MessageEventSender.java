@@ -35,8 +35,9 @@ public class MessageEventSender {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.messageEventEmitter =
         new KafkaProducer<>(
-            taktPropertiesHelper.getKafkaProducerProperties(
-                MessageEventKeySerializer.class, MessageEventSerializer.class));
+            taktPropertiesHelper.getKafkaProducerProperties(),
+            new MessageEventKeySerializer(),
+            new MessageEventSerializer());
   }
 
   /**

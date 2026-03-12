@@ -16,6 +16,6 @@ public class ProcessDefinitionKeyJsonDeserializer extends JsonDeserializer<Proce
 
   /** Constructor for ProcessDefinitionKeyJsonDeserializer. */
   public ProcessDefinitionKeyJsonDeserializer() {
-    super(ProcessDefinitionKey.class);
+    super(ProcessDefinitionKey.class, false);
   }
 }

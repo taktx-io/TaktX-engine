@@ -9,6 +9,7 @@ package io.taktx.engine.security;
 
 import io.taktx.Topics;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.license.LicenseManager;
 import io.taktx.security.EnvironmentVariableKeyProvider;
 import io.taktx.security.SigningKeyProvider;
 import io.taktx.security.SigningKeyRegistrar;
@@ -26,19 +27,28 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class EngineSigningKeyPublisher {
   private final TaktConfiguration config;
   private final String bootstrapServers;
+  private final LicenseManager licenseManager;
 
   @Inject
   public EngineSigningKeyPublisher(
       TaktConfiguration config,
-      @ConfigProperty(name = "kafka.bootstrap.servers") String bootstrapServers) {
+      @ConfigProperty(name = "kafka.bootstrap.servers") String bootstrapServers,
+      LicenseManager licenseManager) {
     this.config = config;
     this.bootstrapServers = bootstrapServers;
+    this.licenseManager = licenseManager;
   }
 
   /** Called during startup, before Kafka Streams begins processing. */
   public void publishIfEnabled() {
     if (!config.isSigningEnabled()) {
       log.debug("Engine signing disabled — skipping key publication");
+      return;
+    }
+    if (!licenseManager.isEventSigningAllowed()) {
+      log.warn(
+          "taktx.security.signing.enabled=true but the active license does not permit event"
+              + " signing — key publication skipped");
       return;
     }
     String keyId = System.getenv("TAKTX_SIGNING_KEY_ID");

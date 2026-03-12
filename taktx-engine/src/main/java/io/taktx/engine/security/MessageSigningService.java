@@ -8,10 +8,10 @@
 package io.taktx.engine.security;
 
 import io.quarkus.runtime.Startup;
-import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.pd.Stores;
+import io.taktx.engine.license.LicenseManager;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EnvironmentVariableKeyProvider;
 import io.taktx.security.SigningException;
@@ -24,10 +24,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 /**
  * Signs engine-internal Kafka messages with Ed25519.
@@ -41,33 +37,56 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 @Slf4j
 public class MessageSigningService {
 
-  private static final String CONFIG_KEY = "config";
-
   private final TaktConfiguration config;
   private final SigningKeyProvider keyProvider;
-  private final KafkaStreams kafkaStreams;
-
-  private ReadOnlyKeyValueStore<String, ConfigurationEventDTO> configStore;
+  private final GlobalConfigStore globalConfigStore;
+  private final LicenseManager licenseManager;
 
   /** Cached at startup for self-verification. */
   private String cachedPublicKeyBase64;
 
   @Inject
-  public MessageSigningService(TaktConfiguration config, KafkaStreams kafkaStreams) {
+  public MessageSigningService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      LicenseManager licenseManager) {
     this.config = config;
-    this.kafkaStreams = kafkaStreams;
+    this.globalConfigStore = globalConfigStore;
+    this.licenseManager = licenseManager;
     this.keyProvider = new EnvironmentVariableKeyProvider();
   }
 
-  MessageSigningService(
-      TaktConfiguration config, KafkaStreams kafkaStreams, SigningKeyProvider keyProvider) {
+  /** Test constructor — no CDI, license check and global config skipped. */
+  MessageSigningService(TaktConfiguration config, SigningKeyProvider keyProvider) {
     this.config = config;
-    this.kafkaStreams = kafkaStreams;
     this.keyProvider = keyProvider;
+    this.globalConfigStore = null;
+    this.licenseManager = null;
+  }
+
+  /** Test constructor — full control over all collaborators, no CDI. */
+  MessageSigningService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      SigningKeyProvider keyProvider) {
+    this.config = config;
+    this.globalConfigStore = globalConfigStore;
+    this.keyProvider = keyProvider;
+    this.licenseManager = null;
   }
 
   @PostConstruct
   void registerSigningFunction() {
+    if (!config.isSigningEnabled()) {
+      log.debug("Message signing disabled — skipping SigningServiceHolder registration");
+      return;
+    }
+    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
+      log.warn(
+          "taktx.security.signing.enabled=true but the active license does not permit event"
+              + " signing — SigningServiceHolder registration skipped");
+      return;
+    }
     SigningServiceHolder.set(this::signToHeaderValue);
     log.debug("MessageSigningService registered in SigningServiceHolder");
     publishEnginePublicKey();
@@ -86,7 +105,6 @@ public class MessageSigningService {
    * simply overwrites the same key record.
    */
   private void publishEnginePublicKey() {
-    if (!config.isSigningEnabled()) return;
     String keyId = config.getSigningKeyId().filter(s -> !s.isBlank()).orElse(null);
     if (keyId == null) {
       log.debug("No signing keyId configured — skipping engine public key publication");
@@ -129,7 +147,6 @@ public class MessageSigningService {
    * via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
-    if (!config.isSigningEnabled()) return null;
 
     String keyId = resolveKeyId();
     if (keyId == null) {
@@ -185,6 +202,10 @@ public class MessageSigningService {
    * </ol>
    */
   private String resolveKeyId() {
+    // License is the gate — the env property is the operator's request.
+    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
+      return null;
+    }
     GlobalConfigurationDTO globalConfig = getGlobalConfig();
     if (globalConfig != null && globalConfig.isSigningEnabled()) {
       String kid = globalConfig.getSigningKeyId();
@@ -195,19 +216,7 @@ public class MessageSigningService {
   }
 
   private GlobalConfigurationDTO getGlobalConfig() {
-    try {
-      if (configStore == null) {
-        configStore =
-            kafkaStreams.store(
-                StoreQueryParameters.fromNameAndType(
-                    config.getPrefixed(Stores.GLOBAL_CONFIGURATION.getStorename()),
-                    QueryableStoreTypes.keyValueStore()));
-      }
-      ConfigurationEventDTO event = configStore.get(CONFIG_KEY);
-      return event != null ? event.getConfiguration() : null;
-    } catch (Exception e) {
-      log.debug("Could not read global configuration store: {}", e.getMessage());
-      return null;
-    }
+    if (globalConfigStore == null) return null;
+    return globalConfigStore.get();
   }
 }

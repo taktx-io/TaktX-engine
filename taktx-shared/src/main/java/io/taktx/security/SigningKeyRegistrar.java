@@ -97,10 +97,15 @@ public class SigningKeyRegistrar {
     props.put("max.block.ms", "5000");
     props.put("delivery.timeout.ms", "5000");
     props.put("request.timeout.ms", "3000");
-    props.put("key.serializer", StringSerializer.class.getName());
-    props.put("value.serializer", ByteArraySerializer.class.getName());
 
-    doPublish(props, topic, keyId, publicKeyBase64, owner);
+    doPublish(
+        props,
+        new StringSerializer(),
+        new ByteArraySerializer(),
+        topic,
+        keyId,
+        publicKeyBase64,
+        owner);
   }
 
   /**
@@ -114,14 +119,24 @@ public class SigningKeyRegistrar {
       String publicKeyBase64,
       String owner) {
 
-    Properties props =
-        taktPropertiesHelper.getKafkaProducerProperties(
-            StringSerializer.class, ByteArraySerializer.class);
-    doPublish(props, topic, keyId, publicKeyBase64, owner);
+    doPublish(
+        taktPropertiesHelper.getKafkaProducerProperties(),
+        new StringSerializer(),
+        new ByteArraySerializer(),
+        topic,
+        keyId,
+        publicKeyBase64,
+        owner);
   }
 
   private static void doPublish(
-      Properties producerProps, String topic, String keyId, String publicKeyBase64, String owner) {
+      Properties producerProps,
+      StringSerializer keySerializer,
+      ByteArraySerializer valueSerializer,
+      String topic,
+      String keyId,
+      String publicKeyBase64,
+      String owner) {
 
     SigningKeyDTO dto =
         SigningKeyDTO.builder()
@@ -133,7 +148,8 @@ public class SigningKeyRegistrar {
             .owner(owner)
             .build();
 
-    try (KafkaProducer<String, byte[]> producer = new KafkaProducer<>(producerProps)) {
+    try (KafkaProducer<String, byte[]> producer =
+        new KafkaProducer<>(producerProps, keySerializer, valueSerializer)) {
       byte[] valueBytes = CBOR.writeValueAsBytes(dto);
       producer.send(new ProducerRecord<>(topic, keyId, valueBytes));
       producer.flush();

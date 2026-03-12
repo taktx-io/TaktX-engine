@@ -28,7 +28,6 @@ import io.taktx.security.WorkerSigningContext;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
-import io.taktx.util.TaktUUIDSerializer;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -150,6 +149,47 @@ public class TaktXClient {
       log.warn(
           "SigningKeysStore initialisation failed — signature verification will be skipped: {}",
           e.getMessage());
+    }
+  }
+
+  /**
+   * Publishes the active license to the {@code taktx-configuration} compacted topic.
+   *
+   * <p>All engine nodes consume this topic as a global KTable ({@code
+   * Stores.GLOBAL_CONFIGURATION}). On receiving a record with key {@code "license"}, the engine
+   * parses the License3j payload and updates its in-memory license state immediately — no restart
+   * required.
+   *
+   * <p>Called by the ingester whenever Platform Service pushes a new or updated license. Publishing
+   * the same license text twice is idempotent — compaction retains only the latest record per key.
+   *
+   * @param licenseText raw License3j-signed license file content (UTF-8 plain text)
+   */
+  public void publishLicense(String licenseText) {
+    if (licenseText == null || licenseText.isBlank()) {
+      throw new IllegalArgumentException("licenseText must not be null or blank");
+    }
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(
+            io.taktx.Topics.CONFIGURATION_TOPIC.getTopicName());
+    java.util.Properties producerProps = taktPropertiesHelper.getKafkaProducerProperties();
+    // Fail fast so callers notice connectivity problems immediately.
+    producerProps.put("max.block.ms", "10000");
+    producerProps.put("delivery.timeout.ms", "10000");
+    producerProps.put("request.timeout.ms", "8000");
+    try (org.apache.kafka.clients.producer.KafkaProducer<String, byte[]> producer =
+        new org.apache.kafka.clients.producer.KafkaProducer<>(
+            producerProps,
+            new org.apache.kafka.common.serialization.StringSerializer(),
+            new org.apache.kafka.common.serialization.ByteArraySerializer())) {
+      byte[] valueBytes = licenseText.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      producer.send(
+          new org.apache.kafka.clients.producer.ProducerRecord<>(topic, "license", valueBytes));
+      producer.flush();
+      log.info("✅ License published to configuration topic: topic={}", topic);
+    } catch (Exception e) {
+      log.error("Failed to publish license to {}: {}", topic, e.getMessage(), e);
+      throw new IllegalStateException("Failed to publish license", e);
     }
   }
 
@@ -561,7 +601,7 @@ public class TaktXClient {
                 keyIdOverride);
         log.info("Worker keyId overridden via properties to '{}'", keyIdOverride);
       }
-      if (signingContext != null && !"true".equals(properties.get("taktx.signing.disabled"))) {
+      if (signingContext != null) {
         log.info("Worker response signing enabled (keyId={})", signingContext.getKeyId());
         // Register the worker signing function so SigningSerializer picks it up on the producer
         String keyId = signingContext.getKeyId();
@@ -581,8 +621,7 @@ public class TaktXClient {
       // Wrap the value serializer with SigningSerializer so signing happens in one pass
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
           new KafkaProducer<>(
-              taktPropertiesHelper.getKafkaProducerProperties(
-                  TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class),
+              taktPropertiesHelper.getKafkaProducerProperties(),
               new io.taktx.util.TaktUUIDSerializer(),
               new SigningSerializer<>(new ProcessInstanceTriggerSerializer()));
 

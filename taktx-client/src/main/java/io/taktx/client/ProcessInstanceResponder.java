@@ -13,6 +13,7 @@ import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
+import io.taktx.serdes.SigningSerializer;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
 import java.util.List;
@@ -54,8 +55,9 @@ public class ProcessInstanceResponder {
         processInstanceTriggerEmitter != null
             ? processInstanceTriggerEmitter
             : new KafkaProducer<>(
-                taktPropertiesHelper.getKafkaProducerProperties(
-                    TaktUUIDSerializer.class, ProcessInstanceTriggerSerializer.class));
+                taktPropertiesHelper.getKafkaProducerProperties(),
+                new TaktUUIDSerializer(),
+                new SigningSerializer<>(new ProcessInstanceTriggerSerializer()));
   }
 
   /**
