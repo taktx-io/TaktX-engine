@@ -37,7 +37,7 @@ public class TestLicenseManager implements LicenseManager {
 
   @Override
   public void updateFromLicensePush(
-      String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
+      String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
     // no-op in test — test profile uses fixed values above
   }
 }

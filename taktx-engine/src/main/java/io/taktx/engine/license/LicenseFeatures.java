@@ -19,7 +19,6 @@ public class LicenseFeatures {
   // Fields used in licenses pushed via taktx-configuration topic
   public static final String LICENSE_FEATURE_LICENSE_TYPE = "licenseType";
   public static final String LICENSE_FEATURE_MAX_KAFKA_PARTITIONS = "maxKafkaPartitions";
-  public static final String LICENSE_FEATURE_MAX_WORKERS = "maxWorkers";
   public static final String LICENSE_FEATURE_EVENT_SIGNING = "eventSigning";
   public static final String LICENSE_FEATURE_CUSTOM_PERMISSIONS = "customPermissions";
   public static final String LICENSE_FEATURE_RUNWAY_STORAGE_TIER = "runwayStorageTier";

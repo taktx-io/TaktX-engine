@@ -48,33 +48,33 @@ class DefaultLicenseManagerTest {
 
   @Test
   void afterPush_maxPartitionsReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, 50, true);
+    manager.updateFromLicensePush("ENTERPRISE", 10, true);
     assertThat(manager.getMaxAllowedPartitions()).isEqualTo(10);
   }
 
   @Test
   void afterPush_eventSigningReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, 50, true);
+    manager.updateFromLicensePush("ENTERPRISE", 10, true);
     assertThat(manager.isEventSigningAllowed()).isTrue();
   }
 
   @Test
   void afterPush_eventSigningFalseWhenLicenseDoesNotPermit() {
-    manager.updateFromLicensePush("COMMUNITY", 3, null, false);
+    manager.updateFromLicensePush("COMMUNITY", 3, false);
     assertThat(manager.isEventSigningAllowed()).isFalse();
   }
 
   @Test
   void afterPush_unlimitedPartitions_returnsFreeTierDefault() {
     // null maxKafkaPartitions means unlimited; fall back to file-based value (3 since no file)
-    manager.updateFromLicensePush("ENTERPRISE", null, null, true);
+    manager.updateFromLicensePush("ENTERPRISE", null, true);
     assertThat(manager.getMaxAllowedPartitions()).isEqualTo(3);
   }
 
   @Test
   void secondPush_overridesFirstPush() {
-    manager.updateFromLicensePush("STANDARD", 5, 20, false);
-    manager.updateFromLicensePush("ENTERPRISE", 20, 100, true);
+    manager.updateFromLicensePush("STANDARD", 5, false);
+    manager.updateFromLicensePush("ENTERPRISE", 20, true);
 
     assertThat(manager.getMaxAllowedPartitions()).isEqualTo(20);
     assertThat(manager.isEventSigningAllowed()).isTrue();

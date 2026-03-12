@@ -348,14 +348,11 @@ public class DefaultLicenseManager implements LicenseManager {
   private static final class PushedLicense {
     final String licenseType;
     final Integer maxKafkaPartitions;
-    final Integer maxWorkers;
     final boolean eventSigning;
 
-    PushedLicense(
-        String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
+    PushedLicense(String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
       this.licenseType = licenseType;
       this.maxKafkaPartitions = maxKafkaPartitions;
-      this.maxWorkers = maxWorkers;
       this.eventSigning = eventSigning;
     }
   }
@@ -449,15 +446,13 @@ public class DefaultLicenseManager implements LicenseManager {
 
   @Override
   public void updateFromLicensePush(
-      String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning) {
-    PushedLicense updated =
-        new PushedLicense(licenseType, maxKafkaPartitions, maxWorkers, eventSigning);
+      String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
+    PushedLicense updated = new PushedLicense(licenseType, maxKafkaPartitions, eventSigning);
     pushedLicense.set(updated);
     log.info(
-        "License updated from configuration topic: type={} maxPartitions={} maxWorkers={}",
+        "License updated from configuration topic: type={} maxPartitions={}",
         licenseType,
-        maxKafkaPartitions != null ? maxKafkaPartitions : "unlimited",
-        maxWorkers != null ? maxWorkers : "unlimited");
+        maxKafkaPartitions != null ? maxKafkaPartitions : "unlimited");
   }
 
   /**
@@ -498,14 +493,13 @@ public class DefaultLicenseManager implements LicenseManager {
       }
 
       // Extract fields — all optional; null means unlimited / not present
-      String licenseType = getStringFeature(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
+      String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
       Integer maxKafkaPartitions =
-          getIntFeature(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_KAFKA_PARTITIONS);
-      Integer maxWorkers = getIntFeature(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_WORKERS);
+          getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_KAFKA_PARTITIONS);
       boolean eventSigning =
-          getBooleanFeature(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
+          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
 
-      updateFromLicensePush(licenseType, maxKafkaPartitions, maxWorkers, eventSigning);
+      updateFromLicensePush(licenseType, maxKafkaPartitions, eventSigning);
     } catch (IOException e) {
       log.warn("Failed to read pushed license text: {}", e.getMessage());
     } catch (Exception e) {
@@ -513,32 +507,31 @@ public class DefaultLicenseManager implements LicenseManager {
     }
   }
 
-  private static String getStringFeature(License lic, String name) {
+  private static String getFeatureString(License lic, String name) {
     Feature f = lic.getFeatures().get(name);
     return f != null ? f.getString() : null;
   }
 
-  private static Integer getIntFeature(License lic, String name) {
+  private static Integer getFeatureInt(License lic, String name) {
     Feature f = lic.getFeatures().get(name);
     if (f == null) return null;
     try {
       return f.getInt();
-    } catch (Exception e) {
-      // Feature may be stored as a String — try parsing
+    } catch (Exception _) {
       try {
         return Integer.parseInt(f.getString().trim());
-      } catch (Exception ignored) {
+      } catch (Exception __) {
         return null;
       }
     }
   }
 
-  private static boolean getBooleanFeature(License lic, String name) {
+  private static boolean getFeatureBoolean(License lic, String name) {
     Feature f = lic.getFeatures().get(name);
     if (f == null) return false;
     try {
       return Boolean.parseBoolean(f.getString().trim());
-    } catch (Exception e) {
+    } catch (Exception _) {
       return false;
     }
   }

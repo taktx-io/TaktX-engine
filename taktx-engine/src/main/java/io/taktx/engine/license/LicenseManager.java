@@ -33,11 +33,9 @@ public interface LicenseManager {
    *
    * @param licenseType e.g. {@code "COMMUNITY"}, {@code "STANDARD"}, {@code "ENTERPRISE"}
    * @param maxKafkaPartitions {@code null} means unlimited
-   * @param maxWorkers {@code null} means unlimited (not enforced in current version)
    * @param eventSigning whether event signing is permitted by this license
    */
-  void updateFromLicensePush(
-      String licenseType, Integer maxKafkaPartitions, Integer maxWorkers, boolean eventSigning);
+  void updateFromLicensePush(String licenseType, Integer maxKafkaPartitions, boolean eventSigning);
 
   /**
    * Parses, verifies and applies a raw License3j plain-text string pushed via the {@code

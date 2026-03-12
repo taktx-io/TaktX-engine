@@ -14,7 +14,7 @@ in-memory and has a TODO stub waiting for this deliverable:
 ```
 
 The license must reach all engine nodes for all namespaces so they can enforce
-`maxKafkaPartitions`, `maxWorkers`, and any other limit flags at runtime — without
+enforce `maxKafkaPartitions` and any other limit flags at runtime — without
 requiring an engine restart when a new license is uploaded.
 
 ---
@@ -70,11 +70,10 @@ When a record with key `"license"` arrives, the engine should:
    not required for beta).
 2. Extract the relevant limit fields:
     - `maxKafkaPartitions` (Integer) — enforce on topic/partition creation
-    - `maxWorkers` (Integer) — enforce on external task consumer registration
     - `eventSigning` (Boolean) — already enforced via `taktx.security.signing.enabled`
     - `licenseType` (String) — for logging/diagnostics
 3. Update the engine's in-memory license state atomically.
-4. Log the update: `"License updated from configuration topic: type={} maxPartitions={} maxWorkers={}"`.
+4. Log the update: `"License updated from configuration topic: type={} maxPartitions={}"`.
 
 The engine does **not** need to re-verify the License3j signature for beta — Platform
 Service and the ingester have already validated it before publishing. Full independent
@@ -89,7 +88,6 @@ The fields the engine needs to read (all present in the signed license):
 ```
 licenseType=COMMUNITY          # FREE | STANDARD | ENTERPRISE
 maxKafkaPartitions=3           # Integer, null = unlimited
-maxWorkers=50                  # Integer, null = unlimited
 eventSigning=false             # Boolean
 customPermissions=false        # Boolean (not enforced by engine, informational)
 runwayStorageTier=inmemory     # String: inmemory | persisted | persisted-scalable
@@ -108,7 +106,7 @@ has the License3j dependency transitively through `taktx-shared`.
 - [ ] `TaktXClient.publishLicense(String licenseText)` exists and publishes to
   `<namespace>.taktx-configuration` with key `"license"`
 - [ ] Engine's `GLOBAL_CONFIGURATION` KTable processor handles key `"license"`:
-  updates `maxKafkaPartitions`, `maxWorkers` in-memory on each record
+  updates `maxKafkaPartitions` in-memory on each record
 - [ ] Existing `taktx-configuration` topic and `GLOBAL_CONFIGURATION` store are reused
   — no new topic or store needed
 - [ ] Publishing the same license twice is idempotent (compaction ensures one record)
