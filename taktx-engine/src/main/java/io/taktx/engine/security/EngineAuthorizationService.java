@@ -15,6 +15,8 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.license.LicenseManager;
+import io.taktx.engine.license.LicenseState;
 import io.taktx.engine.pd.Stores;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
@@ -61,6 +63,7 @@ public class EngineAuthorizationService {
   private final NonceStore nonceStore;
   private final AuthorizationTokenValidator validator;
   private final KafkaStreams kafkaStreams;
+  private final LicenseManager licenseManager;
 
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
 
@@ -69,11 +72,57 @@ public class EngineAuthorizationService {
       TaktConfiguration config,
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
-      KafkaStreams kafkaStreams) {
+      KafkaStreams kafkaStreams,
+      LicenseManager licenseManager) {
     this.config = config;
     this.nonceStore = nonceStore;
     this.kafkaStreams = kafkaStreams;
+    this.licenseManager = licenseManager;
     this.validator = new AuthorizationTokenValidator(publicKeyProvider);
+  }
+
+  /** Test constructor — no CDI, license check always permits authorization. */
+  EngineAuthorizationService(
+      TaktConfiguration config,
+      PublicKeyProvider publicKeyProvider,
+      NonceStore nonceStore,
+      KafkaStreams kafkaStreams) {
+    this(config, publicKeyProvider, nonceStore, kafkaStreams, new AlwaysAllowLicenseManager());
+  }
+
+  /** Minimal LicenseManager used only by the no-CDI test constructor above. */
+  private static final class AlwaysAllowLicenseManager implements LicenseManager {
+    @Override
+    public LicenseState getLicenseState() {
+      return LicenseState.VALID;
+    }
+
+    @Override
+    public String getLicenseInfo() {
+      return "test";
+    }
+
+    @Override
+    public int getPartitionBudget() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public boolean isEventSigningAllowed() {
+      return true;
+    }
+
+    @Override
+    public boolean isCommandAuthorizationAllowed() {
+      return true;
+    }
+
+    @Override
+    public void updateFromLicensePush(
+        String licenseType,
+        Integer partitionBudget,
+        boolean eventSigning,
+        boolean commandAuthorization) {}
   }
 
   @PostConstruct
@@ -118,6 +167,12 @@ public class EngineAuthorizationService {
    */
   public String authorize(Headers headers, ProcessInstanceTriggerDTO trigger) {
     if (!config.isAuthorizationEnabled()) {
+      return null;
+    }
+    if (!licenseManager.isCommandAuthorizationAllowed()) {
+      log.warn(
+          "taktx.security.authorization.enabled=true but the active license does not permit"
+              + " command authorization — command accepted without validation");
       return null;
     }
 

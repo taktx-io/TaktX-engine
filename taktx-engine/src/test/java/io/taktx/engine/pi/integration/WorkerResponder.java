@@ -18,6 +18,7 @@ import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningException;
+import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDSerializer;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -52,11 +53,15 @@ class WorkerResponder implements AutoCloseable {
 
   WorkerResponder(
       String bootstrapServers, String namespace, String keyId, String privateKeyBase64) {
-    this.topicName = namespace + "." + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
-
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
+    props.put("taktx.engine.tenant-id", "test-tenant");
+    props.put("taktx.engine.namespace", namespace);
     props.put("acks", "all");
+
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(props);
+    this.topicName =
+        helper.getPrefixedTopicName(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
 
     this.producer =
         new KafkaProducer<>(

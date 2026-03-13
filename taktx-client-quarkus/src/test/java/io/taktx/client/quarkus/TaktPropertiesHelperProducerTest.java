@@ -9,8 +9,6 @@
 package io.taktx.client.quarkus;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import io.taktx.util.TaktPropertiesHelper;
@@ -34,10 +32,24 @@ class TaktPropertiesHelperProducerTest {
     producer = new TaktPropertiesHelperProducer(config);
   }
 
+  /** Returns the minimum set of property names required by TaktPropertiesHelper. */
+  private static Iterable<String> requiredNames() {
+    return java.util.Arrays.asList("taktx.engine.tenant-id", "taktx.engine.namespace");
+  }
+
+  /** Stubs the two mandatory properties on the mock config. */
+  private void stubRequiredProperties() {
+    when(config.getOptionalValue("taktx.engine.tenant-id", String.class))
+        .thenReturn(Optional.of("test-tenant"));
+    when(config.getOptionalValue("taktx.engine.namespace", String.class))
+        .thenReturn(Optional.of("default"));
+  }
+
   @Test
   void testTaktPropertiesHelperProduction_withEmptyConfig() {
-    // Given
-    when(config.getPropertyNames()).thenReturn(java.util.Collections.emptyList());
+    // Given – only the mandatory properties are present
+    when(config.getPropertyNames()).thenReturn(requiredNames());
+    stubRequiredProperties();
 
     // When
     TaktPropertiesHelper helper = producer.taktPropertiesHelper();
@@ -51,8 +63,14 @@ class TaktPropertiesHelperProducerTest {
   void testTaktPropertiesHelperProduction_withProperties() {
     // Given
     Iterable<String> propertyNames =
-        java.util.Arrays.asList("taktx.property1", "taktx.property2", "other.property");
+        java.util.Arrays.asList(
+            "taktx.engine.tenant-id",
+            "taktx.engine.namespace",
+            "taktx.property1",
+            "taktx.property2",
+            "other.property");
     when(config.getPropertyNames()).thenReturn(propertyNames);
+    stubRequiredProperties();
     when(config.getOptionalValue("taktx.property1", String.class))
         .thenReturn(Optional.of("value1"));
     when(config.getOptionalValue("taktx.property2", String.class))
@@ -69,10 +87,14 @@ class TaktPropertiesHelperProducerTest {
 
   @Test
   void testTaktPropertiesHelperProduction_withEmptyOptionalValues() {
-    // Given
-    Iterable<String> propertyNames = java.util.Arrays.asList("property1", "property2");
+    // Given – property list contains required keys; their values are stubbed explicitly
+    Iterable<String> propertyNames =
+        java.util.Arrays.asList(
+            "taktx.engine.tenant-id", "taktx.engine.namespace", "property1", "property2");
     when(config.getPropertyNames()).thenReturn(propertyNames);
-    when(config.getOptionalValue(any(), eq(String.class))).thenReturn(Optional.empty());
+    stubRequiredProperties();
+    when(config.getOptionalValue("property1", String.class)).thenReturn(Optional.empty());
+    when(config.getOptionalValue("property2", String.class)).thenReturn(Optional.empty());
 
     // When
     TaktPropertiesHelper helper = producer.taktPropertiesHelper();
@@ -84,7 +106,8 @@ class TaktPropertiesHelperProducerTest {
   @Test
   void testTaktPropertiesHelperProduction_returnsNewInstance() {
     // Given
-    when(config.getPropertyNames()).thenReturn(java.util.Collections.emptyList());
+    when(config.getPropertyNames()).thenReturn(requiredNames());
+    stubRequiredProperties();
 
     // When
     TaktPropertiesHelper helper1 = producer.taktPropertiesHelper();
@@ -102,10 +125,13 @@ class TaktPropertiesHelperProducerTest {
     // Given
     Iterable<String> propertyNames =
         java.util.Arrays.asList(
+            "taktx.engine.tenant-id",
+            "taktx.engine.namespace",
             "taktx.kafka.bootstrap.servers",
             "taktx.engine.topic.partitions",
             "taktx.client.groupId");
     when(config.getPropertyNames()).thenReturn(propertyNames);
+    stubRequiredProperties();
     when(config.getOptionalValue("taktx.kafka.bootstrap.servers", String.class))
         .thenReturn(Optional.of("localhost:9092"));
     when(config.getOptionalValue("taktx.engine.topic.partitions", String.class))

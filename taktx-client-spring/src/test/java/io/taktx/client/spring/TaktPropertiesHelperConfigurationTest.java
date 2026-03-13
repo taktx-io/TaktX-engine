@@ -9,49 +9,38 @@
 package io.taktx.client.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import io.taktx.util.TaktPropertiesHelper;
-import java.util.Properties;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.StandardEnvironment;
 
 class TaktPropertiesHelperConfigurationTest {
 
   private TaktPropertiesHelperConfiguration configuration;
-  private ConfigurableEnvironment environment;
 
   @BeforeEach
   void setUp() {
     configuration = new TaktPropertiesHelperConfiguration();
-    environment = mock(ConfigurableEnvironment.class);
+  }
+
+  private static StandardEnvironment environmentWith(Map<String, Object> properties) {
+    StandardEnvironment env = new StandardEnvironment();
+    env.getPropertySources().addFirst(new MapPropertySource("test", properties));
+    return env;
   }
 
   @Test
   void testTaktPropertiesHelperCreation() {
     // Given
-    MutablePropertySources propertySources = new MutablePropertySources();
-    Properties props = new Properties();
-    props.setProperty("taktx.namespace", "test-namespace");
-    props.setProperty("kafka.bootstrap.servers", "localhost:9092");
-
-    MapPropertySource propertySource =
-        new MapPropertySource(
-            "test",
-            props.entrySet().stream()
-                .collect(
-                    java.util.stream.Collectors.toMap(
-                        e -> e.getKey().toString(), e -> e.getValue())));
-    propertySources.addFirst(propertySource);
-
-    org.mockito.Mockito.when(environment.getPropertySources()).thenReturn(propertySources);
-    org.mockito.Mockito.when(environment.getProperty("taktx.namespace"))
-        .thenReturn("test-namespace");
-    org.mockito.Mockito.when(environment.getProperty("kafka.bootstrap.servers"))
-        .thenReturn("localhost:9092");
+    StandardEnvironment environment =
+        environmentWith(
+            Map.of(
+                "taktx.engine.tenant-id", "test-tenant",
+                "taktx.engine.namespace", "test-namespace",
+                "kafka.bootstrap.servers", "localhost:9092"));
 
     // When
     TaktPropertiesHelper helper = configuration.taktPropertiesHelper(environment);
@@ -59,13 +48,20 @@ class TaktPropertiesHelperConfigurationTest {
     // Then
     assertThat(helper).isNotNull();
     assertThat(helper.getTaktProperties()).isNotNull();
+    assertThat(helper.getTaktProperties().getProperty("taktx.engine.tenant-id"))
+        .isEqualTo("test-tenant");
+    assertThat(helper.getTaktProperties().getProperty("taktx.engine.namespace"))
+        .isEqualTo("test-namespace");
   }
 
   @Test
   void testTaktPropertiesHelperCreation_emptyEnvironment() {
-    // Given
-    MutablePropertySources propertySources = new MutablePropertySources();
-    org.mockito.Mockito.when(environment.getPropertySources()).thenReturn(propertySources);
+    // Given – only the two mandatory fields; simulates a minimal config
+    StandardEnvironment environment =
+        environmentWith(
+            Map.of(
+                "taktx.engine.tenant-id", "test-tenant",
+                "taktx.engine.namespace", "default"));
 
     // When
     TaktPropertiesHelper helper = configuration.taktPropertiesHelper(environment);
@@ -73,5 +69,9 @@ class TaktPropertiesHelperConfigurationTest {
     // Then
     assertThat(helper).isNotNull();
     assertThat(helper.getTaktProperties()).isNotNull();
+    assertThat(helper.getTaktProperties().getProperty("taktx.engine.tenant-id"))
+        .isEqualTo("test-tenant");
+    assertThat(helper.getTaktProperties().getProperty("taktx.engine.namespace"))
+        .isEqualTo("default");
   }
 }

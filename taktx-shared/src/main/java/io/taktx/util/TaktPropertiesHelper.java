@@ -19,11 +19,23 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 public class TaktPropertiesHelper {
 
   private final Properties taktProperties;
+  private final String tenantId;
   private final String namespace;
 
   public TaktPropertiesHelper(Properties taktProperties) {
     this.taktProperties = taktProperties;
-    this.namespace = taktProperties.getProperty("taktx.engine.namespace", "default");
+    String rawTenantId = taktProperties.getProperty("taktx.engine.tenant-id");
+    if (rawTenantId == null || rawTenantId.isBlank()) {
+      throw new IllegalArgumentException("taktx.engine.tenant-id is required but was not set");
+    }
+    this.tenantId = rawTenantId.strip();
+    String rawNamespace = taktProperties.getProperty("taktx.engine.namespace");
+    if (rawNamespace == null || rawNamespace.isBlank()) {
+      throw new IllegalArgumentException("taktx.engine.namespace is required but was not set");
+    }
+    this.namespace = rawNamespace;
+    TopicSegmentValidator.validate("tenant-id", tenantId);
+    TopicSegmentValidator.validate("namespace", namespace);
   }
 
   /** Returns the Kafka {@code bootstrap.servers} value from the client properties. */
@@ -98,8 +110,9 @@ public class TaktPropertiesHelper {
     return props;
   }
 
+  /** Returns the fully-qualified topic name. Format: {@code <tenantId>.<namespace>.<topic>} */
   public String getPrefixedTopicName(String topic) {
-    return namespace + "." + topic;
+    return tenantId + "." + namespace + "." + topic;
   }
 
   public String getExternalTaskAckStrategy() {

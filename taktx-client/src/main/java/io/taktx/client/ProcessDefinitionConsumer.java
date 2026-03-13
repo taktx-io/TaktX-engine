@@ -84,10 +84,34 @@ public class ProcessDefinitionConsumer {
     CompletableFuture.runAsync(
         () -> {
           while (running) {
-            ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records =
-                definitionActivationConsumer.poll(Duration.ofMillis(100));
+            ConsumerRecords<ProcessDefinitionKey, ProcessDefinitionDTO> records;
+            try {
+              records = definitionActivationConsumer.poll(Duration.ofMillis(100));
+            } catch (org.apache.kafka.common.errors.WakeupException e) {
+              break;
+            } catch (org.apache.kafka.common.errors.RecordDeserializationException e) {
+              log.error(
+                  "Failed to deserialise ProcessDefinitionDTO on topic={} partition={} offset={}"
+                      + " — seeking past poison record: {}",
+                  e.topicPartition().topic(),
+                  e.topicPartition().partition(),
+                  e.offset(),
+                  e.getMessage());
+              definitionActivationConsumer.seek(e.topicPartition(), e.offset() + 1);
+              continue;
+            } catch (Exception e) {
+              log.error("Unexpected error polling process definition topic", e);
+              break;
+            }
             for (ConsumerRecord<ProcessDefinitionKey, ProcessDefinitionDTO> activationRecord :
                 records) {
+              if (activationRecord.key() == null || activationRecord.value() == null) {
+                log.warn(
+                    "Null key or value in ProcessDefinitionDTO record at partition={} offset={} — skipping",
+                    activationRecord.partition(),
+                    activationRecord.offset());
+                continue;
+              }
               log.info(
                   "Received definition activation record {} to state {}",
                   activationRecord.key(),

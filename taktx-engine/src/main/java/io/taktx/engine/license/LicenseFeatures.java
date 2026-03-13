@@ -17,8 +17,12 @@ public class LicenseFeatures {
 
   // Fields used in licenses pushed via taktx-configuration topic
   public static final String LICENSE_FEATURE_LICENSE_TYPE = "licenseType";
-  public static final String LICENSE_FEATURE_MAX_KAFKA_PARTITIONS = "maxKafkaPartitions";
+
+  /** Canonical field name as emitted by the TaktX license tool. Zero means unlimited. */
+  public static final String LICENSE_FEATURE_PARTITION_BUDGET = "partitionBudget";
+
   public static final String LICENSE_FEATURE_EVENT_SIGNING = "eventSigning";
+  public static final String LICENSE_FEATURE_COMMAND_AUTHORIZATION = "commandAuthorization";
   public static final String LICENSE_FEATURE_CUSTOM_PERMISSIONS = "customPermissions";
   public static final String LICENSE_FEATURE_RUNWAY_STORAGE_TIER = "runwayStorageTier";
   public static final String LICENSE_FEATURE_DEPLOYMENT_MODEL = "deploymentModel";

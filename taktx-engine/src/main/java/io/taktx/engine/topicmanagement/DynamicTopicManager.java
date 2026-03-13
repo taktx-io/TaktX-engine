@@ -97,7 +97,7 @@ public class DynamicTopicManager {
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
         executor.shutdownNow();
       }
-    } catch (InterruptedException e) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
       executor.shutdownNow();
     }
@@ -111,7 +111,19 @@ public class DynamicTopicManager {
             actualConsumer.subscribe(List.of(cachedActualTopicName));
 
             while (running.get()) {
-              var records = actualConsumer.poll(Duration.ofMillis(100));
+              org.apache.kafka.clients.consumer.ConsumerRecords<String, TopicMetaDTO> records;
+              try {
+                records = actualConsumer.poll(Duration.ofMillis(100));
+              } catch (org.apache.kafka.common.errors.RecordDeserializationException e) {
+                log.error(
+                    "Failed to deserialise TopicMetaDTO (actual) on partition={} offset={}"
+                        + " — seeking past poison record: {}",
+                    e.topicPartition().partition(),
+                    e.offset(),
+                    e.getMessage());
+                actualConsumer.seek(e.topicPartition(), e.offset() + 1);
+                continue;
+              }
               records.forEach(
                   topicRecord -> {
                     log.info(
@@ -141,7 +153,19 @@ public class DynamicTopicManager {
             Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
 
             while (running.get()) {
-              var records = requestConsumer.poll(Duration.ofMillis(100));
+              org.apache.kafka.clients.consumer.ConsumerRecords<String, TopicMetaDTO> records;
+              try {
+                records = requestConsumer.poll(Duration.ofMillis(100));
+              } catch (org.apache.kafka.common.errors.RecordDeserializationException e) {
+                log.error(
+                    "Failed to deserialise TopicMetaDTO (requested) on partition={} offset={}"
+                        + " — seeking past poison record: {}",
+                    e.topicPartition().partition(),
+                    e.offset(),
+                    e.getMessage());
+                requestConsumer.seek(e.topicPartition(), e.offset() + 1);
+                continue;
+              }
               if (records.isEmpty() && !collectedTopics.isEmpty()) {
                 for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
                   log.info("Processing topic meta request record {}", entry.getKey());
@@ -279,7 +303,7 @@ public class DynamicTopicManager {
       // Check the total partition budget
       int budget = licenseManager.getPartitionBudget();
       int currentTotal = computeCurrentTotal();
-      if (budget == 0 || currentTotal > budget) {
+      if (budget > 0 && currentTotal > budget) {
         log.warn(
             "Total partition count ({}) exceeds license budget ({}). "
                 + "New topic requests will be rejected until the total is within budget.",

@@ -95,9 +95,10 @@ public class TaktXClient {
         new ProcessInstanceUpdateConsumer(taktPropertiesHelper, executor);
     this.processInstanceResponder = processInstanceResponder;
     this.externalTaskTriggerTopicConsumer =
-        new ExternalTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
+        new ExternalTaskTriggerTopicConsumer(
+            taktPropertiesHelper, executor, processInstanceResponder);
     this.userTaskTriggerTopicConsumer =
-        new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor);
+        new UserTaskTriggerTopicConsumer(taktPropertiesHelper, executor, processInstanceResponder);
   }
 
   /**
@@ -225,23 +226,22 @@ public class TaktXClient {
    * Static convenience overload for callers that do not yet have a running {@link TaktXClient}
    * instance — e.g. test setup code or platform bootstrap that runs before the client is started.
    *
-   * <p>The {@code namespace} is used to prefix the signing-keys topic name exactly as a running
-   * client would: {@code <namespace>.taktx-signing-keys}.
+   * <p>Builds a temporary {@link TaktPropertiesHelper} from {@code properties} so the topic name is
+   * prefixed consistently with any running client using the same properties: {@code
+   * [<tenantId>.]<namespace>.taktx-signing-keys}.
    *
-   * @param bootstrapServers Kafka bootstrap servers
-   * @param namespace topic namespace / prefix (e.g. {@code "default"})
+   * @param properties must contain {@code bootstrap.servers}, {@code taktx.engine.tenant-id}, and
+   *     {@code taktx.engine.namespace} — all three are required
    * @param keyId unique identifier for this key
    * @param publicKeyBase64 X.509 DER public key, base64-encoded
    * @param owner human-readable label, e.g. {@code "worker"}, {@code "platform"}
    */
   public static void publishSigningKey(
-      String bootstrapServers,
-      String namespace,
-      String keyId,
-      String publicKeyBase64,
-      String owner) {
-    String topic = namespace + "." + io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName();
-    SigningKeyRegistrar.publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, owner);
+      Properties properties, String keyId, String publicKeyBase64, String owner) {
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
+    String topic = helper.getPrefixedTopicName(io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
+    SigningKeyRegistrar.publishPublicKey(
+        helper.getBootstrapServers(), topic, keyId, publicKeyBase64, owner);
     log.info("✅ Signing key published: keyId={} owner={}", keyId, owner);
   }
 

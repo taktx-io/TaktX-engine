@@ -13,9 +13,9 @@
 <!-- Security -->
 
 <!-- License & Version -->
-[![License: BSL 1.0](https://img.shields.io/badge/License-BSL%201.0-blue.svg)](LICENSE.md)
+[![License: TaktX BSL 1.0](https://img.shields.io/badge/License-TaktX%20BSL%201.0-blue.svg)](LICENSE.md)
 [![SDK License: Apache 2.0](https://img.shields.io/badge/SDK%20License-Apache%202.0-green.svg)](taktx-client/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.9--alpha--3-orange.svg)](VERSION.txt)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta--1-orange.svg)](VERSION.txt)
 
 - Java 23+
 - Apache Kafka
@@ -89,19 +89,31 @@ TaktX Engine can be configured using application properties or environment varia
 # Core Engine Configuration
 taktx.engine.keyvaluestoretype=inmemory
 taktx.engine.host=localhost
-taktx.engine.namespace=namespace
-taktx.engine.topic.partitions=3  # Free version limit
+# Both tenant-id and namespace are required. All topic names are derived from them:
+#   regular topics:  <tenantId>.<namespace>.<topic>
+#   changelog topics: <tenantId>.<namespace>.taktx-engine-...-changelog
+# Both sets share the same ACL prefix, so a single wildcard rule covers the whole tenant.
+taktx.engine.tenant-id=my-tenant
+taktx.engine.namespace=default
+# Partition count for all fixed managed topics.
+# The total partition budget across all managed topics is enforced by your license tier
+# (Community: 60 total, Standard: 180 total, Enterprise: unlimited).
+taktx.engine.topic.partitions=3
 ```
 
 ## Licensing
 
-TaktX Engine is available under the Business Source License 1.0:
+The repository contains components under two different licenses:
 
-- **Free Version**: Limited to 3 Kafka partitions
-- **Commercial License**: Unlimited partitions and enterprise support
-- **Open Source Transition**: Converts to Apache 2.0 after 4 years
+- **TaktX Engine** (`taktx-engine/`) — licensed under the [TaktX Business Source License 1.0](taktx-engine/LICENSE).
+  - Free use (Community tier) is permitted within a **total partition budget of 60** across all engine-managed topics. See [`docs/partition-budget.md`](docs/partition-budget.md) for how the budget is allocated.
+  - **Engine message signing** (Ed25519 signatures on outbound `instance-update` events) and **command authorization** (RS256 JWT validation on inbound commands) are **not available** in the Community tier. See [`docs/security.md`](docs/security.md) for details.
+  - Each release automatically converts to **Apache License 2.0** four years after its release date (see `VERSION.txt` for the exact Change Date of the current release).
+  - For commercial use beyond the free-tier limits, contact [https://taktx.io/contact](https://taktx.io/contact).
 
-For commercial licensing, please contact [info@taktx.io](mailto:info@taktx.io).
+- **Client SDKs** (`taktx-client/`, `taktx-client-quarkus/`, `taktx-client-spring/`) — licensed under the [Apache License 2.0](taktx-client/LICENSE). Free to use, modify, and distribute without restriction.
+
+For full license terms see the `LICENSE` file in each module directory.
 
 ## Documentation
 

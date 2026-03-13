@@ -76,7 +76,7 @@ import org.slf4j.LoggerFactory;
 public class BpmnTestEngine {
   private static final Logger LOG = Logger.getLogger(BpmnTestEngine.class);
   public static final Duration DEFAULT_DURATION = Duration.ofSeconds(10);
-  public static final String TOPIC_TEST_PREFIX = "default.";
+  public static final String TOPIC_TEST_PREFIX = "test-tenant.default.";
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(BpmnTestEngine.class);
 
   private TaktXClient taktClient;
@@ -159,6 +159,7 @@ public class BpmnTestEngine {
 
     Properties kakaProperties = new Properties();
     kakaProperties.put("bootstrap.servers", kafkaBootstrapServers);
+    kakaProperties.put("taktx.engine.tenant-id", "test-tenant");
     kakaProperties.put("taktx.engine.namespace", "default");
     kakaProperties.put("taktx.external.task.consumer.threads", 2);
     // BpmnTestEngine is a test harness — never sign outgoing records so it doesn't

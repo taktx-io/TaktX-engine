@@ -116,6 +116,21 @@ class SecurityIntegrationTest {
   private static final String NAMESPACE = "default";
   private static final String ISSUER = "taktx-platform-service";
 
+  // Shared helper so all topic names honour any future tenant-id without touching each call site.
+  private static final java.util.Properties TEST_PROPS = new java.util.Properties();
+
+  static {
+    TEST_PROPS.put("taktx.engine.tenant-id", "test-tenant");
+    TEST_PROPS.put("taktx.engine.namespace", NAMESPACE);
+  }
+
+  private static final io.taktx.util.TaktPropertiesHelper TOPIC_HELPER =
+      new io.taktx.util.TaktPropertiesHelper(TEST_PROPS);
+
+  private static String prefixed(String topicName) {
+    return TOPIC_HELPER.getPrefixedTopicName(topicName);
+  }
+
   /** Key ID embedded as {@code kid} in every JWT and stored in the signing-keys KTable. */
   private static final String PLATFORM_KID = SecurityTestConfigResource.PLATFORM_KID;
 
@@ -169,22 +184,21 @@ class SecurityIntegrationTest {
     String revokedPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(revokedKp.getPublic());
 
     // Publish the active worker public key so the engine KTable knows about it
-    TaktXClient.publishSigningKey(
-        bootstrapServers, NAMESPACE, WORKER_KEY_ID, workerPublicKeyBase64, "worker");
+    Properties signingKeyProps = new Properties();
+    signingKeyProps.put("bootstrap.servers", bootstrapServers);
+    signingKeyProps.put("taktx.engine.tenant-id", "test-tenant");
+    signingKeyProps.put("taktx.engine.namespace", NAMESPACE);
+    TaktXClient.publishSigningKey(signingKeyProps, WORKER_KEY_ID, workerPublicKeyBase64, "worker");
 
     // Publish the platform RSA public key under PLATFORM_KID so the engine can resolve it
     // from the KTable when validating JWTs (the kid header in every JWT points to this entry)
     TaktXClient.publishSigningKey(
-        bootstrapServers,
-        NAMESPACE,
-        PLATFORM_KID,
-        SecurityTestConfigResource.rsaPublicKeyBase64,
-        "platform");
+        signingKeyProps, PLATFORM_KID, SecurityTestConfigResource.rsaPublicKeyBase64, "platform");
 
     // Publish the revoked key — status REVOKED so the engine rejects messages signed with it
     publishRevokedSigningKey(
         bootstrapServers,
-        NAMESPACE + "." + Topics.SIGNING_KEYS_TOPIC.getTopicName(),
+        prefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
         REVOKED_KEY_ID,
         revokedPublicKeyBase64);
 
@@ -198,6 +212,7 @@ class SecurityIntegrationTest {
     // registration and cause all outbound engine records to be signed with the wrong key.
     Properties workerProps = new Properties();
     workerProps.put("bootstrap.servers", bootstrapServers);
+    workerProps.put("taktx.engine.tenant-id", "test-tenant");
     workerProps.put("taktx.engine.namespace", NAMESPACE);
     workerProps.put("taktx.external.task.consumer.threads", 1);
     workerProps.put("taktx.signing.disabled", "true");
@@ -213,7 +228,7 @@ class SecurityIntegrationTest {
     // ── Subscribe to raw topics for header assertions ─────────────────────────
     new KafkaConsumerUtil<>(
         "security-test-raw-group",
-        NAMESPACE + "." + Topics.INSTANCE_UPDATE_TOPIC.getTopicName(),
+        prefixed(Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
         io.taktx.util.TaktUUIDDeserializer.class.getName(),
         io.taktx.engine.pi.testengine.InstanceUpdateDeserializer.class.getName(),
         rawInstanceUpdates::add);
@@ -463,7 +478,7 @@ class SecurityIntegrationTest {
   void externalTaskTriggerRecord_hasSignatureHeader() throws IOException {
     // Subscribe to the raw external-task trigger topic before starting the process
     String externalTaskTopic =
-        NAMESPACE + "." + Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + SERVICE_TASK_TYPE;
+        prefixed(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + SERVICE_TASK_TYPE);
 
     new KafkaConsumerUtil<>(
         "security-test-ext-task-group-" + UUID.randomUUID(),
@@ -663,7 +678,7 @@ class SecurityIntegrationTest {
 
       producer.send(
           new ProducerRecord<>(
-              NAMESPACE + "." + Topics.CONFIGURATION_TOPIC.getTopicName(), "config", event));
+              prefixed(Topics.CONFIGURATION_TOPIC.getTopicName()), "config", event));
       producer.flush();
     }
   }
@@ -751,7 +766,7 @@ class SecurityIntegrationTest {
           ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
       java.util.Properties props = new java.util.Properties();
       props.put("bootstrap.servers", bootstrapServers);
-      String topic = NAMESPACE + "." + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
+      String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
 
       try (KafkaProducer<byte[], byte[]> producer =
           new KafkaProducer<>(
@@ -794,7 +809,7 @@ class SecurityIntegrationTest {
 
     String bootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
-    String topic = NAMESPACE + "." + Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName();
+    String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
 
     // Serialise via the no-Headers overload — SigningSerializer only signs in the Headers overload,
     // so calling serialize(topic, value) always returns plain CBOR bytes with no side-effects.

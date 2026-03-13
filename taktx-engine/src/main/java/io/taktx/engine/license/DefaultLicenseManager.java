@@ -347,13 +347,19 @@ public class DefaultLicenseManager implements LicenseManager {
   // Held in an AtomicReference so the GlobalStreamThread can write while other threads read safely.
   private static final class PushedLicense {
     final String licenseType;
-    final Integer maxKafkaPartitions;
+    final Integer partitionBudget;
     final boolean eventSigning;
+    final boolean commandAuthorization;
 
-    PushedLicense(String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
+    PushedLicense(
+        String licenseType,
+        Integer partitionBudget,
+        boolean eventSigning,
+        boolean commandAuthorization) {
       this.licenseType = licenseType;
-      this.maxKafkaPartitions = maxKafkaPartitions;
+      this.partitionBudget = partitionBudget;
       this.eventSigning = eventSigning;
+      this.commandAuthorization = commandAuthorization;
     }
   }
 
@@ -421,14 +427,25 @@ public class DefaultLicenseManager implements LicenseManager {
   public int getPartitionBudget() {
     // Pushed license takes precedence over the file-based license.
     PushedLicense pushed = pushedLicense.get();
-    if (pushed != null && pushed.maxKafkaPartitions != null) {
-      return pushed.maxKafkaPartitions;
+    if (pushed != null && pushed.partitionBudget != null) {
+      return pushed.partitionBudget;
+    }
+    // Pushed license present but maxKafkaPartitions is null → unlimited (return 0 sentinel)
+    if (pushed != null) {
+      return 0;
     }
     int budget = 60; // default free tier — total partition budget across all topics
     if (license != null && licenseState == LicenseState.VALID) {
-      Feature maxAllowedPartitions = license.getFeatures().get("maxAllowedPartitions");
-      if (maxAllowedPartitions != null) {
-        budget = maxAllowedPartitions.getInt();
+      // Try canonical name first, then legacy alias used in older file-based licenses.
+      Feature budgetFeature =
+          license.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      if (budgetFeature == null) {
+        budgetFeature = license.getFeatures().get("maxAllowedPartitions");
+      }
+      if (budgetFeature != null) {
+        int val = budgetFeature.getInt();
+        // 0 means unlimited in the license tool convention
+        budget = (val == 0) ? Integer.MAX_VALUE : val;
       }
     }
     return budget;
@@ -445,14 +462,28 @@ public class DefaultLicenseManager implements LicenseManager {
   }
 
   @Override
+  public boolean isCommandAuthorizationAllowed() {
+    PushedLicense pushed = pushedLicense.get();
+    if (pushed != null) {
+      return pushed.commandAuthorization;
+    }
+    // No pushed license — fall back to false (command authorization is an enterprise feature).
+    return false;
+  }
+
+  @Override
   public void updateFromLicensePush(
-      String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
-    PushedLicense updated = new PushedLicense(licenseType, maxKafkaPartitions, eventSigning);
+      String licenseType,
+      Integer partitionBudget,
+      boolean eventSigning,
+      boolean commandAuthorization) {
+    DefaultLicenseManager.PushedLicense updated =
+        new PushedLicense(licenseType, partitionBudget, eventSigning, commandAuthorization);
     pushedLicense.set(updated);
     log.info(
         "License updated from configuration topic: type={} maxPartitions={}",
         licenseType,
-        maxKafkaPartitions != null ? maxKafkaPartitions : "unlimited");
+        partitionBudget != null ? partitionBudget : "unlimited");
   }
 
   /**
@@ -466,6 +497,7 @@ public class DefaultLicenseManager implements LicenseManager {
    *
    * @param licenseText raw License3j plain-text content (UTF-8)
    */
+  @Override
   public void parsePushedLicense(String licenseText) {
     if (licenseText == null || licenseText.isBlank()) {
       log.warn("Received empty license text via configuration topic — ignoring");
@@ -494,12 +526,15 @@ public class DefaultLicenseManager implements LicenseManager {
 
       // Extract fields — all optional; null means unlimited / not present
       String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
-      Integer maxKafkaPartitions =
-          getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_MAX_KAFKA_PARTITIONS);
+      // The license tool uses 0 to mean "unlimited" — map that to null.
+      Integer rawBudget = getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      Integer partitionBudget = (rawBudget != null && rawBudget == 0) ? null : rawBudget;
       boolean eventSigning =
           getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
+      boolean commandAuthorization =
+          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_COMMAND_AUTHORIZATION);
 
-      updateFromLicensePush(licenseType, maxKafkaPartitions, eventSigning);
+      updateFromLicensePush(licenseType, partitionBudget, eventSigning, commandAuthorization);
     } catch (IOException e) {
       log.warn("Failed to read pushed license text: {}", e.getMessage());
     } catch (Exception e) {
@@ -520,7 +555,7 @@ public class DefaultLicenseManager implements LicenseManager {
     } catch (Exception _) {
       try {
         return Integer.parseInt(f.getString().trim());
-      } catch (Exception __) {
+      } catch (Exception _) {
         return null;
       }
     }

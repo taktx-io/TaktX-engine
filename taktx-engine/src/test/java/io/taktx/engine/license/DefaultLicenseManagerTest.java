@@ -42,41 +42,66 @@ class DefaultLicenseManagerTest {
   }
 
   @Test
+  void beforePush_commandAuthorizationNotAllowed() {
+    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
+  }
+
+  @Test
   void beforePush_defaultPartitionBudgetIsFreeTier() {
     assertThat(manager.getPartitionBudget()).isEqualTo(60);
   }
 
   @Test
   void afterPush_partitionBudgetReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, true);
+    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
     assertThat(manager.getPartitionBudget()).isEqualTo(10);
   }
 
   @Test
   void afterPush_eventSigningReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, true);
+    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
     assertThat(manager.isEventSigningAllowed()).isTrue();
   }
 
   @Test
+  void afterPush_commandAuthorizationReflectsPushedValue() {
+    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
+    assertThat(manager.isCommandAuthorizationAllowed()).isTrue();
+  }
+
+  @Test
   void afterPush_eventSigningFalseWhenLicenseDoesNotPermit() {
-    manager.updateFromLicensePush("COMMUNITY", 60, false);
+    manager.updateFromLicensePush("COMMUNITY", 60, false, false);
     assertThat(manager.isEventSigningAllowed()).isFalse();
+  }
+
+  @Test
+  void afterPush_commandAuthorizationFalseWhenLicenseDoesNotPermit() {
+    manager.updateFromLicensePush("COMMUNITY", 60, false, false);
+    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
   }
 
   @Test
   void afterPush_unlimitedPartitions_returnsFreeTierDefault() {
     // null maxKafkaPartitions means unlimited — fall back to file-based/default value (60)
-    manager.updateFromLicensePush("ENTERPRISE", null, true);
-    assertThat(manager.getPartitionBudget()).isEqualTo(60);
+    manager.updateFromLicensePush("ENTERPRISE", null, true, true);
+    assertThat(manager.getPartitionBudget()).isZero();
   }
 
   @Test
   void secondPush_overridesFirstPush() {
-    manager.updateFromLicensePush("STANDARD", 180, false);
-    manager.updateFromLicensePush("ENTERPRISE", 20, true);
+    manager.updateFromLicensePush("STANDARD", 180, false, false);
+    manager.updateFromLicensePush("ENTERPRISE", 20, true, true);
 
     assertThat(manager.getPartitionBudget()).isEqualTo(20);
     assertThat(manager.isEventSigningAllowed()).isTrue();
+    assertThat(manager.isCommandAuthorizationAllowed()).isTrue();
+  }
+
+  @Test
+  void signingAndAuthorizationCanBeGrantedIndependently() {
+    manager.updateFromLicensePush("STANDARD", 180, true, false);
+    assertThat(manager.isEventSigningAllowed()).isTrue();
+    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
   }
 }

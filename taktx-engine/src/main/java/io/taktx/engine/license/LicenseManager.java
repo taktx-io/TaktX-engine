@@ -25,6 +25,16 @@ public interface LicenseManager {
   boolean isEventSigningAllowed();
 
   /**
+   * Returns {@code true} when the active license permits command authorization (RS256 JWT
+   * validation on inbound commands).
+   *
+   * <p>The {@code taktx.security.authorization.enabled} environment property is the operator's
+   * request; this method is the license gate. Authorization is only active when both are {@code
+   * true}.
+   */
+  boolean isCommandAuthorizationAllowed();
+
+  /**
    * Updates the in-memory license state from a license record pushed via the {@code
    * taktx-configuration} topic (key {@code "license"}).
    *
@@ -34,8 +44,13 @@ public interface LicenseManager {
    * @param licenseType e.g. {@code "COMMUNITY"}, {@code "STANDARD"}, {@code "ENTERPRISE"}
    * @param maxKafkaPartitions {@code null} means unlimited
    * @param eventSigning whether event signing is permitted by this license
+   * @param commandAuthorization whether command authorization is permitted by this license
    */
-  void updateFromLicensePush(String licenseType, Integer maxKafkaPartitions, boolean eventSigning);
+  void updateFromLicensePush(
+      String licenseType,
+      Integer maxKafkaPartitions,
+      boolean eventSigning,
+      boolean commandAuthorization);
 
   /**
    * Parses, verifies and applies a raw License3j plain-text string pushed via the {@code

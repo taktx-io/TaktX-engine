@@ -24,12 +24,16 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
 
 /**
  * This class is responsible for managing the subscription to external tasks for all process
  * definitions.
  */
 public class ProcessInstanceUpdateConsumer {
+
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(ProcessInstanceUpdateConsumer.class);
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
@@ -103,18 +107,34 @@ public class ProcessInstanceUpdateConsumer {
   }
 
   private void consumeRecords(KafkaConsumer<UUID, InstanceUpdateDTO> consumer) {
-    ConsumerRecords<UUID, InstanceUpdateDTO> poll = consumer.poll(Duration.ofMillis(100));
+    ConsumerRecords<UUID, InstanceUpdateDTO> poll;
+    try {
+      poll = consumer.poll(Duration.ofMillis(100));
+    } catch (org.apache.kafka.common.errors.RecordDeserializationException e) {
+      log.error(
+          "Failed to deserialise InstanceUpdateDTO on topic={} partition={} offset={} — seeking past poison record: {}",
+          e.topicPartition().topic(),
+          e.topicPartition().partition(),
+          e.offset(),
+          e.getMessage());
+      consumer.seek(e.topicPartition(), e.offset() + 1);
+      return;
+    }
 
     List<InstanceUpdateRecord> records = new ArrayList<>();
-    poll.forEach(
-        instanceUpdateConsumerRecord ->
-            records.add(
-                new InstanceUpdateRecord(
-                    instanceUpdateConsumerRecord.timestamp(),
-                    instanceUpdateConsumerRecord.key(),
-                    instanceUpdateConsumerRecord.value(),
-                    instanceUpdateConsumerRecord.partition(),
-                    instanceUpdateConsumerRecord.offset())));
+    for (var rec : poll) {
+      if (rec.value() == null) {
+        log.error(
+            "Null InstanceUpdateDTO value on topic={} partition={} offset={} — skipping record",
+            rec.topic(),
+            rec.partition(),
+            rec.offset());
+        continue;
+      }
+      records.add(
+          new InstanceUpdateRecord(
+              rec.timestamp(), rec.key(), rec.value(), rec.partition(), rec.offset()));
+    }
 
     if (!records.isEmpty()) {
       instanceUpdateConsumers.forEach(

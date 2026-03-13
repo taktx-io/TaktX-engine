@@ -8,6 +8,8 @@
 
 package io.taktx.engine.config;
 
+import io.taktx.util.TopicSegmentValidator;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,6 +22,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class TaktConfiguration {
   private static final Path LICENSE_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "license.lic");
+
+  @ConfigProperty(name = "taktx.engine.tenant-id")
+  String tenantId;
 
   @ConfigProperty(name = "taktx.engine.namespace")
   String namespace;
@@ -76,8 +81,15 @@ public class TaktConfiguration {
     return Boolean.parseBoolean(isTest);
   }
 
+  @PostConstruct
+  void validateSegments() {
+    TopicSegmentValidator.validate("tenant-id", tenantId);
+    TopicSegmentValidator.validate("namespace", namespace);
+  }
+
+  /** Returns the fully-qualified topic/store name. Format: {@code <tenantId>.<namespace>.<name>} */
   public String getPrefixed(String name) {
-    String prefixedName = namespace + "." + name;
+    String prefixedName = tenantId + "." + namespace + "." + name;
     if (prefixedName.length() > 254) {
       throw new IllegalArgumentException("Topic name is too long: " + prefixedName);
     }

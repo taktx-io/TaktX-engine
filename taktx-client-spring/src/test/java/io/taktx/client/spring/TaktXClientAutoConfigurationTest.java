@@ -33,7 +33,8 @@ class TaktXClientAutoConfigurationTest {
   @BeforeEach
   void setUp() {
     Properties properties = new Properties();
-    properties.setProperty("taktx.namespace", "test");
+    properties.setProperty("taktx.engine.namespace", "test");
+    properties.setProperty("taktx.engine.tenant-id", "acme");
     properties.setProperty("kafka.bootstrap.servers", "localhost:9092");
     properties.setProperty("taktx.client.enabled", "false"); // Disable for tests
 

@@ -12,9 +12,10 @@ import static java.util.Collections.singletonMap;
 
 import io.taktx.client.annotation.AckStrategy;
 import io.taktx.client.annotation.ThreadingStrategy;
-import io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializer;
+import io.taktx.client.serdes.FaultTolerantExternalTaskTriggerDeserializer;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.serdes.DeserializationResult;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
 import java.time.Duration;
@@ -36,7 +37,12 @@ import org.slf4j.Logger;
 
 /**
  * A Kafka consumer that subscribes to external task trigger topics and processes incoming messages
- * using the provided ExternalTaskTriggerConsumer.
+ * using the provided {@link ExternalTaskTriggerConsumer}.
+ *
+ * <p>Uses {@link FaultTolerantExternalTaskTriggerDeserializer} so that signature-verification
+ * failures do not stop the consumer. When a record cannot be verified the decoded payload is still
+ * available; the consumer uses the {@code processInstanceId} and {@code elementInstanceIdPath} from
+ * the payload to report a BPMN incident back to the engine, then acknowledges and moves on.
  */
 public class ExternalTaskTriggerTopicConsumer {
 
@@ -47,8 +53,10 @@ public class ExternalTaskTriggerTopicConsumer {
   private final int consumerThreads;
   private final int maxPollRecords;
   private final int pollTimeoutMs;
-  private List<KafkaConsumer<UUID, ExternalTaskTriggerDTO>> externalTaskTriggerKafkaConsumers;
-  private final Object consumerLock = new Object(); // Lock for synchronization
+  private final ProcessInstanceResponder processInstanceResponder;
+  private List<KafkaConsumer<UUID, DeserializationResult<ExternalTaskTriggerDTO>>>
+      externalTaskTriggerKafkaConsumers;
+  private final Object consumerLock = new Object();
   private final List<CompletableFuture<Void>> consumerFutures = new ArrayList<>();
   private volatile boolean running = false;
 
@@ -61,9 +69,13 @@ public class ExternalTaskTriggerTopicConsumer {
    * @param taktPropertiesHelper The TaktPropertiesHelper for configuration.
    * @param executor The executor for running consumer threads.
    */
-  ExternalTaskTriggerTopicConsumer(TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
+  ExternalTaskTriggerTopicConsumer(
+      TaktPropertiesHelper taktPropertiesHelper,
+      Executor executor,
+      ProcessInstanceResponder processInstanceResponder) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
+    this.processInstanceResponder = processInstanceResponder;
     this.consumerThreads = taktPropertiesHelper.getExternalTaskConsumerThreads();
     this.maxPollRecords = taktPropertiesHelper.getExternalTaskConsumerMaxPollRecords();
     this.pollTimeoutMs = taktPropertiesHelper.getExternalTaskConsumerPollTimeoutMs();
@@ -117,47 +129,123 @@ public class ExternalTaskTriggerTopicConsumer {
       CompletableFuture<Void> consumerFuture =
           CompletableFuture.runAsync(
               () -> {
-                KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer = createConsumer(groupId);
+                KafkaConsumer<UUID, DeserializationResult<ExternalTaskTriggerDTO>> consumer =
+                    createConsumer(groupId);
                 try {
                   externalTaskTriggerKafkaConsumers.add(consumer);
                   consumer.subscribe(topics);
 
                   do {
-                    if (!running) {
-                      break;
-                    }
+                    if (!running) break;
 
-                    ConsumerRecords<UUID, ExternalTaskTriggerDTO> records;
+                    ConsumerRecords<UUID, DeserializationResult<ExternalTaskTriggerDTO>> records;
                     try {
                       records = consumer.poll(Duration.ofMillis(pollTimeoutMs));
                     } catch (org.apache.kafka.common.errors.WakeupException e) {
-                      // wakeup() was called by stop() — exit the loop cleanly
                       break;
                     } catch (Exception e) {
-                      // Kafka infrastructure error - fatal, need to stop consumer
                       log.error("Fatal Kafka polling error, stopping consumer", e);
                       running = false;
                       break;
                     }
 
-                    if (records.isEmpty()) {
-                      continue;
+                    if (records.isEmpty()) continue;
+
+                    // ── Separate successfully-decoded records from failures ──────────────
+                    List<ConsumerRecord<UUID, DeserializationResult<ExternalTaskTriggerDTO>>>
+                        failedRecords = new ArrayList<>();
+                    List<ConsumerRecord<UUID, DeserializationResult<ExternalTaskTriggerDTO>>>
+                        goodRecords = new ArrayList<>();
+
+                    for (var rec : records) {
+                      DeserializationResult<ExternalTaskTriggerDTO> result = rec.value();
+                      if (result == null || !result.isSuccess()) {
+                        failedRecords.add(rec);
+                      } else {
+                        goodRecords.add(rec);
+                      }
                     }
 
-                    // Group records by topic/jobId
+                    // ── Report incidents for failed records ──────────────────────────────
+                    for (var rec : failedRecords) {
+                      DeserializationResult<ExternalTaskTriggerDTO> result = rec.value();
+                      String error =
+                          result != null ? result.getError() : "null deserialization result";
+                      log.error(
+                          "Deserialization/verification failed for record on topic={} partition={} offset={}: {}",
+                          rec.topic(),
+                          rec.partition(),
+                          rec.offset(),
+                          error);
+
+                      if (result != null && result.hasValue()) {
+                        // Body was decoded — we have processInstanceId and elementInstanceIdPath.
+                        ExternalTaskTriggerDTO dto = result.getValue();
+                        try {
+                          processInstanceResponder
+                              .responderForExternalTask(
+                                  dto.getProcessInstanceId(), dto.getElementInstanceIdPath())
+                              .respondIncident(
+                                  "External task trigger failed verification: " + error,
+                                  new String[0]);
+                          log.warn(
+                              "Reported incident for processInstanceId={} elementPath={} due to: {}",
+                              dto.getProcessInstanceId(),
+                              dto.getElementInstanceIdPath(),
+                              error);
+                        } catch (Exception reportEx) {
+                          log.warn(
+                              "Failed to report incident for processInstanceId={}",
+                              dto.getProcessInstanceId(),
+                              reportEx);
+                        }
+                      } else {
+                        // Body could not be decoded at all — we have no routing info.
+                        log.error(
+                            "Cannot report incident: body could not be decoded for record at"
+                                + " topic={} partition={} offset={}. Record will be skipped.",
+                            rec.topic(),
+                            rec.partition(),
+                            rec.offset());
+                      }
+                      // Acknowledge the failed record so we don't re-process it forever.
+                      try {
+                        consumer.commitSync(
+                            singletonMap(
+                                new TopicPartition(rec.topic(), rec.partition()),
+                                new OffsetAndMetadata(rec.offset() + 1)));
+                      } catch (Exception commitEx) {
+                        log.warn("Failed to commit offset for failed record", commitEx);
+                      }
+                    }
+
+                    // ── Process good records grouped by jobId ────────────────────────────
+                    if (goodRecords.isEmpty()) continue;
+
                     Map<String, List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>>> recordsByJobId =
                         new java.util.HashMap<>();
-                    for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> consumerRecord : records) {
+                    for (var rec : goodRecords) {
                       String jobId =
-                          consumerRecord
-                              .topic()
+                          rec.topic()
                               .replace(
                                   taktPropertiesHelper.getPrefixedTopicName(
                                       Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX),
                                   "");
-                      recordsByJobId
-                          .computeIfAbsent(jobId, k -> new ArrayList<>())
-                          .add(consumerRecord);
+                      // Unwrap the result into a plain ConsumerRecord<UUID, ExternalTaskTriggerDTO>
+                      ConsumerRecord<UUID, ExternalTaskTriggerDTO> unwrapped =
+                          new ConsumerRecord<>(
+                              rec.topic(),
+                              rec.partition(),
+                              rec.offset(),
+                              rec.timestamp(),
+                              rec.timestampType(),
+                              rec.serializedKeySize(),
+                              rec.serializedValueSize(),
+                              rec.key(),
+                              rec.value().getValue(),
+                              rec.headers(),
+                              rec.leaderEpoch());
+                      recordsByJobId.computeIfAbsent(jobId, k -> new ArrayList<>()).add(unwrapped);
                     }
 
                     for (String jobId : recordsByJobId.keySet()) {
@@ -197,8 +285,7 @@ public class ExternalTaskTriggerTopicConsumer {
                         // For IMPLICIT strategy, seek back to avoid auto-commit
                         if (ackStrategy == AckStrategy.IMPLICIT) {
                           try {
-                            for (ConsumerRecord<UUID, ExternalTaskTriggerDTO> consumerRecord :
-                                jobRecords) {
+                            for (var consumerRecord : jobRecords) {
                               consumer.seek(
                                   new TopicPartition(
                                       consumerRecord.topic(), consumerRecord.partition()),
@@ -268,7 +355,7 @@ public class ExternalTaskTriggerTopicConsumer {
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId,
             TaktUUIDDeserializer.class,
-            ExternalTaskTriggerJsonDeserializer.class,
+            FaultTolerantExternalTaskTriggerDeserializer.class,
             "latest");
 
     // Override max poll records with our configured value
@@ -378,7 +465,7 @@ public class ExternalTaskTriggerTopicConsumer {
 
   /** Acknowledge records based on the ack strategy. Only called if processing was successful. */
   private void acknowledgeRecords(
-      KafkaConsumer<UUID, ExternalTaskTriggerDTO> consumer,
+      KafkaConsumer<UUID, DeserializationResult<ExternalTaskTriggerDTO>> consumer,
       List<ConsumerRecord<UUID, ExternalTaskTriggerDTO>> jobRecords,
       AckStrategy ackStrategy) {
 

@@ -36,8 +36,16 @@ public class TestLicenseManager implements LicenseManager {
   }
 
   @Override
+  public boolean isCommandAuthorizationAllowed() {
+    return true;
+  }
+
+  @Override
   public void updateFromLicensePush(
-      String licenseType, Integer maxKafkaPartitions, boolean eventSigning) {
+      String licenseType,
+      Integer partitionBudget,
+      boolean eventSigning,
+      boolean commandAuthorization) {
     // no-op in test — test profile uses fixed values above
   }
 }

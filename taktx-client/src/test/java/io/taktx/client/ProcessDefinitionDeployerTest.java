@@ -28,7 +28,10 @@ class ProcessDefinitionDeployerTest {
   @Test
   void testDeployResourceClasspathAndFile() throws IOException {
     // No need to provide bootstrap.servers because we inject a mock producer
-    TaktPropertiesHelper helper = new TaktPropertiesHelper(new Properties());
+    Properties props = new Properties();
+    props.put("taktx.engine.tenant-id", "test-tenant");
+    props.put("taktx.engine.namespace", "default");
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(props);
 
     AtomicInteger calls = new AtomicInteger(0);
 

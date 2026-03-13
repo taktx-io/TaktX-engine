@@ -7,7 +7,9 @@
  */
 package io.taktx.engine.pi.integration;
 
+import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import io.taktx.engine.license.LicenseManager;
 import io.taktx.security.SigningKeyGenerator;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -76,6 +78,23 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
           "taktx.signing.public-key", ed25519PublicKeyBase64);
     } catch (Exception e) {
       throw new RuntimeException("Failed to generate test keys", e);
+    }
+  }
+
+  /**
+   * Called after Quarkus has started. Uses the Arc CDI container to look up the {@link
+   * LicenseManager} bean and grant both security features, so that {@link
+   * io.taktx.engine.license.DefaultLicenseManager} enforces authorization and signing without
+   * requiring a real signed License3j file in tests.
+   */
+  @Override
+  public void inject(TestInjector testInjector) {
+    try (var handle = Arc.container().instance(LicenseManager.class)) {
+      LicenseManager licenseManager = handle.get();
+      if (licenseManager != null) {
+        licenseManager.updateFromLicensePush(
+            "TEST", null, /* eventSigning= */ true, /* commandAuthorization= */ true);
+      }
     }
   }
 

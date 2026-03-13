@@ -12,6 +12,7 @@ import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.engine.generic.TopologyProducer;
+import io.taktx.util.TaktPropertiesHelper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,11 @@ final class SecurityEndToEndHelper {
 
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
+    props.put("taktx.engine.tenant-id", "test-tenant");
+    props.put("taktx.engine.namespace", namespace);
+
+    TaktPropertiesHelper helper = new TaktPropertiesHelper(props);
+    String configTopic = helper.getPrefixedTopicName(Topics.CONFIGURATION_TOPIC.getTopicName());
 
     List<String> allTrusted = new ArrayList<>();
     allTrusted.add(engineKeyId);
@@ -71,9 +77,7 @@ final class SecurityEndToEndHelper {
               .timestamp(Instant.now())
               .build();
 
-      producer.send(
-          new ProducerRecord<>(
-              namespace + "." + Topics.CONFIGURATION_TOPIC.getTopicName(), "config", event));
+      producer.send(new ProducerRecord<>(configTopic, "config", event));
       producer.flush();
     }
   }
