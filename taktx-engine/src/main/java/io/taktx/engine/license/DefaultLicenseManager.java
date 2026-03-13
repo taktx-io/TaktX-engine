@@ -418,20 +418,20 @@ public class DefaultLicenseManager implements LicenseManager {
   }
 
   @Override
-  public int getMaxAllowedPartitions() {
+  public int getPartitionBudget() {
     // Pushed license takes precedence over the file-based license.
     PushedLicense pushed = pushedLicense.get();
     if (pushed != null && pushed.maxKafkaPartitions != null) {
       return pushed.maxKafkaPartitions;
     }
-    int maxAllowed = 3; // default free tier
+    int budget = 60; // default free tier — total partition budget across all topics
     if (license != null && licenseState == LicenseState.VALID) {
       Feature maxAllowedPartitions = license.getFeatures().get("maxAllowedPartitions");
       if (maxAllowedPartitions != null) {
-        maxAllowed = maxAllowedPartitions.getInt();
+        budget = maxAllowedPartitions.getInt();
       }
     }
-    return maxAllowed;
+    return budget;
   }
 
   @Override

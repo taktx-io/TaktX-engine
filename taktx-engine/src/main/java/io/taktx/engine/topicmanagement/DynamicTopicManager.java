@@ -35,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
+import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -146,7 +147,10 @@ public class DynamicTopicManager {
                   log.info("Processing topic meta request record {}", entry.getKey());
                   var topicMeta = entry.getValue();
                   cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
-                  if (topicMeta.getNrPartitions() <= licenseManager.getMaxAllowedPartitions()) {
+                  int budget = licenseManager.getPartitionBudget();
+                  int currentTotal = computeCurrentTotal();
+                  int requested = topicMeta.getNrPartitions();
+                  if (budget == 0 || currentTotal + requested <= budget) {
                     if (createTopicIfNotExists(
                         topicMeta.getTopicName(),
                         topicMeta.getNrPartitions(),
@@ -154,15 +158,17 @@ public class DynamicTopicManager {
                         topicMeta.getReplicationFactor())) {
                       publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
                     }
-
                     cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
                   } else {
                     log.warn(
-                        "Topic {} requests {} partitions, which exceeds the licensed maximum of {} partitions. Halting the process.",
+                        "Partition budget exceeded — topic '{}' requesting {} partition(s) rejected. "
+                            + "Current total: {}, budget: {}. Upgrade license or reduce partition counts.",
                         topicMeta.getTopicName(),
-                        topicMeta.getNrPartitions(),
-                        licenseManager.getMaxAllowedPartitions());
-                    Runtime.getRuntime().halt(1);
+                        requested,
+                        currentTotal,
+                        budget);
+                    // Publish a tombstone so any watcher knows the request was rejected.
+                    publishTopicMetaActual(topicMeta.getTopicName(), null);
                   }
                 }
                 collectedTopics.clear();
@@ -270,15 +276,65 @@ public class DynamicTopicManager {
       actualTopicMeta.setCleanupPolicy(cachedRequestTopicMeta.getCleanupPolicy());
       actualTopicMeta.setNrPartitions(actualTopicDescription.partitions().size());
 
-      // Check with license manager if this is allowed and stop the process if not
-      if (actualTopicMeta.getNrPartitions() > licenseManager.getMaxAllowedPartitions()) {
+      // Check the total partition budget
+      int budget = licenseManager.getPartitionBudget();
+      int currentTotal = computeCurrentTotal();
+      if (budget == 0 || currentTotal > budget) {
         log.warn(
-            "Topic {} has {} partitions, which exceeds the licensed maximum of {} partitions. Skipping update.",
-            prefixedTopicName,
-            actualTopicMeta.getNrPartitions(),
-            licenseManager.getMaxAllowedPartitions());
-        Runtime.getRuntime().halt(1);
-        return;
+            "Total partition count ({}) exceeds license budget ({}). "
+                + "New topic requests will be rejected until the total is within budget.",
+            currentTotal,
+            budget);
+        // Do not halt — existing topics continue to function.
+      }
+
+      // Fixed managed topics must never be repartitioned at runtime.
+      if (!isWorkerTopic(prefixedTopicName)) {
+        if (actualTopicMeta.getNrPartitions() != cachedRequestTopicMeta.getNrPartitions()) {
+          log.warn(
+              "Fixed managed topic '{}' has {} partition(s) on the broker but {} configured. "
+                  + "Repartitioning fixed topics requires a full state store rebuild. "
+                  + "To change: drain the engine, delete the topic and all changelog topics, "
+                  + "update taktx.engine.partitions, then restart.",
+              prefixedTopicName,
+              actualTopicMeta.getNrPartitions(),
+              cachedRequestTopicMeta.getNrPartitions());
+        }
+        // Fall through to the normal diff-publish logic for non-partition differences.
+      } else {
+        // Worker topic — safe to increase partition count.
+        int actualPartitions = actualTopicMeta.getNrPartitions();
+        int requestedPartitions = cachedRequestTopicMeta.getNrPartitions();
+        if (actualPartitions < requestedPartitions) {
+          int remaining =
+              budget == Integer.MAX_VALUE
+                  ? Integer.MAX_VALUE
+                  : budget - currentTotal + actualPartitions;
+          int newCount = Math.min(requestedPartitions, actualPartitions + remaining);
+          if (newCount > actualPartitions) {
+            try {
+              adminClient
+                  .createPartitions(Map.of(prefixedTopicName, NewPartitions.increaseTo(newCount)))
+                  .all()
+                  .get();
+              log.info(
+                  "Increased partition count for worker topic '{}': {} → {}",
+                  prefixedTopicName,
+                  actualPartitions,
+                  newCount);
+              actualTopicMeta.setNrPartitions(newCount);
+            } catch (Exception e) {
+              log.warn(
+                  "Failed to increase partitions for '{}': {}", prefixedTopicName, e.getMessage());
+            }
+          } else {
+            log.warn(
+                "Cannot increase partitions for worker topic '{}' from {} to {} — budget exhausted.",
+                prefixedTopicName,
+                actualPartitions,
+                requestedPartitions);
+          }
+        }
       }
 
       TopicMetaDTO cachedActualTopicMeta = cachedActualTopicMetaMap.get(prefixedTopicName);
@@ -372,6 +428,33 @@ public class DynamicTopicManager {
         props,
         TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
         TopologyProducer.TOPIC_META_SERDE.deserializer());
+  }
+
+  /**
+   * The 4 initial fixed topics ({@code topic-meta-requested}, {@code topic-meta-actual}, {@code
+   * taktx-configuration}, {@code taktx-signing-keys}) are always created with exactly 1 partition
+   * each and are never published to {@code topic-meta-actual}, so they never appear in {@code
+   * cachedActualTopicMetaMap}. This constant accounts for their fixed partition cost.
+   */
+  static final int INITIAL_FIXED_TOPIC_PARTITION_COST = 4;
+
+  /**
+   * Returns the current total number of managed partitions: the sum of all partitions in {@code
+   * cachedActualTopicMetaMap} plus the constant cost of the initial fixed topics.
+   */
+  private int computeCurrentTotal() {
+    int mapTotal =
+        cachedActualTopicMetaMap.values().stream().mapToInt(TopicMetaDTO::getNrPartitions).sum();
+    return mapTotal + INITIAL_FIXED_TOPIC_PARTITION_COST;
+  }
+
+  /**
+   * Returns {@code true} if the given topic name matches the worker topic prefix ({@code
+   * external-task-trigger-*}), meaning it is safe to increase its partition count at runtime. Fixed
+   * managed topics must never be repartitioned.
+   */
+  private boolean isWorkerTopic(String topicName) {
+    return topicName.contains(io.taktx.dto.Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX);
   }
 
   public boolean topicExists(String topicName) {

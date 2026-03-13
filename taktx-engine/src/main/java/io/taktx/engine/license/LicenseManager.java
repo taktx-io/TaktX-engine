@@ -14,7 +14,7 @@ public interface LicenseManager {
 
   String getLicenseInfo();
 
-  int getMaxAllowedPartitions();
+  int getPartitionBudget();
 
   /**
    * Returns {@code true} when the active license permits event signing.

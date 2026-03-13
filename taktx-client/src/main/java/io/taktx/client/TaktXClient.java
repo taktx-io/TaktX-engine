@@ -287,13 +287,34 @@ public class TaktXClient {
   }
 
   /**
-   * Requests the creation of a Kafka topic for an external task.
+   * Requests creation of a Kafka topic for a worker with default settings (3 partitions, DELETE
+   * cleanup policy, replication factor 1).
    *
-   * @param externalTaskId The ID of the external task.
-   * @param partitions The number of partitions for the topic.
-   * @param cleanupPolicy The cleanup policy for the topic.
-   * @param replicationFactor The replication factor for the topic.
-   * @return The name of the created topic.
+   * <p>The 3-partition default keeps worker topics consistent with the managed fixed topics and
+   * leaves room for throughput scaling within the deployment's partition budget. Use the full
+   * overload to specify a different count — lower for budget-constrained deployments, higher for
+   * high-throughput workers.
+   *
+   * @param externalTaskId the task type identifier (e.g. {@code "invoice-processor"})
+   * @return the prefixed Kafka topic name that was requested
+   */
+  public String requestExternalTaskTopic(String externalTaskId) {
+    return this.externalTaskTopicRequester.requestExternalTaskTopic(externalTaskId);
+  }
+
+  /**
+   * Requests the creation of a Kafka topic for an external task with explicit settings.
+   *
+   * <p>The engine enforces a total partition budget across all managed topics. If the requested
+   * partitions would push the total above the licensed budget, the request is rejected gracefully
+   * (a warning is logged and no topic is created). The worker should handle a missing topic by
+   * retrying or falling back to a lower partition count.
+   *
+   * @param externalTaskId the task type identifier (e.g. {@code "invoice-processor"})
+   * @param partitions desired partition count — subject to the deployment's partition budget
+   * @param cleanupPolicy the Kafka cleanup policy for the topic
+   * @param replicationFactor the replication factor for the topic
+   * @return the prefixed Kafka topic name that was requested
    */
   public String requestExternalTaskTopic(
       String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor) {

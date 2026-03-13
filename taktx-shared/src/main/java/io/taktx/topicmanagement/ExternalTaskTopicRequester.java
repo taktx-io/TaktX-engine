@@ -32,6 +32,15 @@ public class ExternalTaskTopicRequester {
             new ExternalTaskMetaSerializer());
   }
 
+  /**
+   * Requests a worker topic with the default settings: 3 partitions, DELETE cleanup policy,
+   * replication factor 1. Use the full overload to tune the partition count against the
+   * deployment's partition budget.
+   */
+  public String requestExternalTaskTopic(String externalTaskId) {
+    return requestExternalTaskTopic(externalTaskId, 3, CleanupPolicy.DELETE, (short) 1);
+  }
+
   public String requestExternalTaskTopic(
       String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
     String topicName =

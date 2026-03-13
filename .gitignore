@@ -18,3 +18,5 @@
 private-key.asc
 public-key.asc
 /env.jreleaser
+/public.pem
+/private.pem

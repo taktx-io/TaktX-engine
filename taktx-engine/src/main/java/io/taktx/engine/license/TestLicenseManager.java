@@ -26,8 +26,8 @@ public class TestLicenseManager implements LicenseManager {
   }
 
   @Override
-  public int getMaxAllowedPartitions() {
-    return 5;
+  public int getPartitionBudget() {
+    return 0; // no budget cap in tests
   }
 
   @Override

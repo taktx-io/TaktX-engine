@@ -98,11 +98,16 @@ public class TopicBootstrapper {
   }
 
   private void bootstrapManagedTopics() {
-    if (taktConfiguration.getPartitions() > licenseManager.getMaxAllowedPartitions()) {
+    int fixedCost =
+        Topics.managedFixedTopics().size() * taktConfiguration.getPartitions()
+            + DynamicTopicManager.INITIAL_FIXED_TOPIC_PARTITION_COST;
+    int budget = licenseManager.getPartitionBudget();
+    if (budget > 0 && fixedCost > budget) {
       log.error(
-          "License limit of {} partitions exceeded: {}",
-          licenseManager.getMaxAllowedPartitions(),
-          taktConfiguration.getPartitions());
+          "Fixed topic partition cost ({}) exceeds license partition budget ({}). "
+              + "Reduce taktx.engine.partitions or upgrade your license.",
+          fixedCost,
+          budget);
       Runtime.getRuntime().halt(1);
     }
     List<NewTopic> newTopics =
