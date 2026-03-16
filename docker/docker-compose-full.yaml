@@ -48,14 +48,14 @@ services:
       - kafka
     environment:
         - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-        # Both TAKTX_TENANT_ID and TAKTX_NAMESPACE are required.
+        # Both TAKTX_ENGINE_TENANT_ID and TAKTX_ENGINE_NAMESPACE are required.
         # Topics are named: <tenantId>.<namespace>.<topic>
-        - TAKTX_TENANT_ID=acme
-        - TAKTX_NAMESPACE=default
+        - TAKTX_ENGINE_TENANT_ID=acme
+        - TAKTX_ENGINE_NAMESPACE=default
         # All topic names (including Kafka Streams changelogs) are derived automatically:
-        #   regular topics : <TAKTX_TENANT_ID>.<TAKTX_NAMESPACE>.<topic>
-        #   changelog topics: <TAKTX_TENANT_ID>.<TAKTX_NAMESPACE>.taktx-engine-...-changelog
-        # Both sets fall under the same ACL prefix <TAKTX_TENANT_ID>.<TAKTX_NAMESPACE>.*
+        #   regular topics : <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.<topic>
+        #   changelog topics: <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.taktx-engine-...-changelog
+        # Both sets fall under the same ACL prefix <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.*
         - TAKTX_LICENSE_FILE_LOCATION=/opt/taktx/licence.lic
 
         # ── Command Authorization (RS256 JWT) ──────────────────────────────
