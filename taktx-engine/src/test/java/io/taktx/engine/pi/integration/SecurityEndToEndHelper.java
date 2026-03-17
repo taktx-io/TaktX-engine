@@ -7,11 +7,13 @@
  */
 package io.taktx.engine.pi.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.Topics;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
 import io.taktx.dto.GlobalConfigurationDTO;
-import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.util.TaktPropertiesHelper;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -20,29 +22,34 @@ import java.util.List;
 import java.util.Properties;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
  * Shared test helper for security integration and end-to-end tests.
  *
  * <p>Publishes a {@link ConfigurationEventDTO} to the namespaced {@code taktx-configuration} topic
- * so the engine's global config store has signing enabled with the given keys trusted.
+ * so the engine's global config store enables signing/authorization with the given keys trusted.
  */
 final class SecurityEndToEndHelper {
+
+  private static final ObjectMapper OBJECT_MAPPER =
+      new ObjectMapper()
+          .registerModule(new JavaTimeModule())
+          .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private SecurityEndToEndHelper() {}
 
   /**
-   * Publishes a signing-enabled {@link GlobalConfigurationDTO} to the engine's configuration topic
-   * so that the engine trusts both the engine key and all provided worker keys.
+   * Publishes a security-enabled {@link GlobalConfigurationDTO} to the engine's configuration
+   * topic.
    *
    * @param bootstrapServers Kafka bootstrap.servers value
    * @param namespace topic namespace prefix, e.g. {@code "default"}
-   * @param engineKeyId the engine's own signing key id, e.g. {@code "test-key-1"}
    * @param extraTrustedKeyIds additional key ids to trust (worker keys, etc.)
    */
   static void publishSigningConfiguration(
-      String bootstrapServers, String namespace, String engineKeyId, String... extraTrustedKeyIds) {
+      String bootstrapServers, String namespace, String... extraTrustedKeyIds) {
 
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
@@ -53,20 +60,16 @@ final class SecurityEndToEndHelper {
     String configTopic = helper.getPrefixedTopicName(Topics.CONFIGURATION_TOPIC.getTopicName());
 
     List<String> allTrusted = new ArrayList<>();
-    allTrusted.add(engineKeyId);
     allTrusted.addAll(Arrays.asList(extraTrustedKeyIds));
 
-    try (KafkaProducer<String, ConfigurationEventDTO> producer =
-        new KafkaProducer<>(
-            props,
-            new StringSerializer(),
-            TopologyProducer.CONFIGURATION_EVENT_SERDE.serializer())) {
+    try (KafkaProducer<String, byte[]> producer =
+        new KafkaProducer<>(props, new StringSerializer(), new ByteArraySerializer())) {
 
       GlobalConfigurationDTO config =
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
+              .authorizationEnabled(true)
               .rbacEnabled(false)
-              .signingKeyId(engineKeyId)
               .trustedKeyIds(allTrusted)
               .build();
 
@@ -77,8 +80,11 @@ final class SecurityEndToEndHelper {
               .timestamp(Instant.now())
               .build();
 
-      producer.send(new ProducerRecord<>(configTopic, "config", event));
+      producer.send(
+          new ProducerRecord<>(configTopic, "config", OBJECT_MAPPER.writeValueAsBytes(event)));
       producer.flush();
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to publish security configuration", e);
     }
   }
 }

@@ -21,12 +21,7 @@ public class SecurityTestProfile implements QuarkusTestProfile {
 
   @Override
   public Map<String, String> getConfigOverrides() {
-    // Actual security config values (RSA key, Ed25519 key) are injected at runtime by
-    // SecurityTestConfigResource.start() because they require key generation.
-    // We only declare the feature flags here so the profile is distinguishable.
-    return Map.of(
-        "taktx.security.authorization.enabled", "true",
-        "taktx.security.signing.enabled", "true");
+    return Map.of();
   }
 
   @Override

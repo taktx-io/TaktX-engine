@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SigningKeyRegistrar {
 
+  private static final String DEFAULT_ED25519_ALGORITHM = "Ed25519";
   private static final Logger log = LoggerFactory.getLogger(SigningKeyRegistrar.class);
   private static final ObjectMapper CBOR =
       new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
@@ -61,13 +62,19 @@ public class SigningKeyRegistrar {
    * properties from the {@link TaktPropertiesHelper} supplied at construction time.
    *
    * @param keyId unique identifier for this key, e.g. {@code "engine-2026-001"}
-   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the Ed25519 public key
+   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the public key
    * @param owner human-readable label, e.g. {@code "engine"} or {@code "worker-billing"}
    */
   public void publishPublicKey(String keyId, String publicKeyBase64, String owner) {
+    publishPublicKey(keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
+  }
+
+  /** Publishes the given public key with an explicit algorithm label. */
+  public void publishPublicKey(
+      String keyId, String publicKeyBase64, String owner, String algorithm) {
     String topic =
         taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
-    publishPublicKey(taktPropertiesHelper, topic, keyId, publicKeyBase64, owner);
+    publishPublicKey(taktPropertiesHelper, topic, keyId, publicKeyBase64, owner, algorithm);
   }
 
   // ── Static helpers (kept for backward-compat and for callers without a running client) ──
@@ -82,11 +89,25 @@ public class SigningKeyRegistrar {
    * @param bootstrapServers Kafka bootstrap.servers value
    * @param topic fully-qualified (namespaced) topic name
    * @param keyId unique identifier for this key, e.g. {@code "engine-2026-001"}
-   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the Ed25519 public key
+   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the public key
    * @param owner human-readable label, e.g. {@code "engine"} or {@code "worker-billing"}
    */
   public static void publishPublicKey(
       String bootstrapServers, String topic, String keyId, String publicKeyBase64, String owner) {
+    publishPublicKey(
+        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
+  }
+
+  /**
+   * Publishes the given public key to the {@code taktx-signing-keys} topic with an algorithm label.
+   */
+  public static void publishPublicKey(
+      String bootstrapServers,
+      String topic,
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm) {
 
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
@@ -103,9 +124,13 @@ public class SigningKeyRegistrar {
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
-        keyId,
-        publicKeyBase64,
-        owner);
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64(publicKeyBase64)
+            .algorithm(algorithm)
+            .status(KeyStatus.ACTIVE)
+            .owner(owner)
+            .build());
   }
 
   /**
@@ -117,16 +142,21 @@ public class SigningKeyRegistrar {
       String topic,
       String keyId,
       String publicKeyBase64,
-      String owner) {
+      String owner,
+      String algorithm) {
 
     doPublish(
         taktPropertiesHelper.getKafkaProducerProperties(),
         new StringSerializer(),
         new ByteArraySerializer(),
         topic,
-        keyId,
-        publicKeyBase64,
-        owner);
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64(publicKeyBase64)
+            .algorithm(algorithm)
+            .status(KeyStatus.ACTIVE)
+            .owner(owner)
+            .build());
   }
 
   private static void doPublish(
@@ -134,26 +164,29 @@ public class SigningKeyRegistrar {
       StringSerializer keySerializer,
       ByteArraySerializer valueSerializer,
       String topic,
-      String keyId,
-      String publicKeyBase64,
-      String owner) {
-
-    SigningKeyDTO dto =
+      SigningKeyDTO dto) {
+    String keyId = dto.getKeyId();
+    SigningKeyDTO keyToPublish =
         SigningKeyDTO.builder()
-            .keyId(keyId)
-            .publicKeyBase64(publicKeyBase64)
-            .algorithm("Ed25519")
+            .keyId(dto.getKeyId())
+            .publicKeyBase64(dto.getPublicKeyBase64())
+            .algorithm(dto.getAlgorithm())
             .createdAt(Instant.now())
-            .status(KeyStatus.ACTIVE)
-            .owner(owner)
+            .status(dto.getStatus() != null ? dto.getStatus() : KeyStatus.ACTIVE)
+            .owner(dto.getOwner())
             .build();
 
     try (KafkaProducer<String, byte[]> producer =
         new KafkaProducer<>(producerProps, keySerializer, valueSerializer)) {
-      byte[] valueBytes = CBOR.writeValueAsBytes(dto);
+      byte[] valueBytes = CBOR.writeValueAsBytes(keyToPublish);
       producer.send(new ProducerRecord<>(topic, keyId, valueBytes));
       producer.flush();
-      log.info("✅ Published signing key: keyId={} owner={} topic={}", keyId, owner, topic);
+      log.info(
+          "✅ Published signing key: keyId={} owner={} algorithm={} topic={}",
+          keyId,
+          keyToPublish.getOwner(),
+          keyToPublish.getAlgorithm(),
+          topic);
     } catch (Exception e) {
       log.error(
           "Failed to publish signing key keyId={} to {}: {}", keyId, topic, e.getMessage(), e);
@@ -168,7 +201,8 @@ public class SigningKeyRegistrar {
   public static String publishFromKeyPair(
       String bootstrapServers, String topic, String keyId, KeyPair keyPair, String owner) {
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
-    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, owner);
+    publishPublicKey(
+        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
     return publicKeyBase64;
   }
 }

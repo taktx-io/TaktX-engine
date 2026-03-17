@@ -15,7 +15,6 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.license.LicenseManager;
-import io.taktx.engine.security.EngineSigningKeyPublisher;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
@@ -37,7 +36,6 @@ public class TopicBootstrapper {
   private final KafkaClientsConfig kafkaClientsConfig;
   private final DynamicTopicManager topicManager;
   private final LicenseManager licenseManager;
-  private final EngineSigningKeyPublisher signingKeyPublisher;
 
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
 
@@ -56,8 +54,6 @@ public class TopicBootstrapper {
       }
     }
     topicManager.start(topicMetaProducer);
-    // Publish engine Ed25519 public key after topics are available (idempotent on restart)
-    signingKeyPublisher.publishIfEnabled();
   }
 
   private boolean bootstrapFixedTopics() {

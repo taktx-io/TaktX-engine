@@ -10,10 +10,12 @@ package io.taktx.engine.security;
 import io.quarkus.runtime.Startup;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.Constants;
+import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
+import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.license.LicenseState;
@@ -43,13 +45,13 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
  *   <li>{@code X-TaktX-Authorization} (RS256 JWT) — used by Console/Platform for start-process and
  *       abort commands; validates claims, expiry, and replay via {@link NonceStore}.
  *   <li>{@code X-TaktX-Signature} (Ed25519) — used by worker processes for task responses and by
- *       the engine itself for internal sub-process/call-activity triggers. Worker keys are looked
- *       up in the {@code taktx-signing-keys} KTable; {@code REVOKED} or unknown keys are rejected
- *       here. Engine-internal keys (matching {@code taktx.signing.key-id}) are trusted as-is.
+ *       the engine itself for internal sub-process/call-activity triggers. All keys are looked up
+ *       in the {@code taktx-signing-keys} KTable; {@code REVOKED} or unknown keys are rejected
+ *       here.
  * </ul>
  *
- * <p>When authorization is disabled ({@code taktx.security.authorization.enabled=false}), returns
- * {@code null} without validating anything.
+ * <p>When authorization is disabled in the latest {@link GlobalConfigurationDTO}, returns {@code
+ * null} without validating anything.
  */
 @ApplicationScoped
 @Startup
@@ -60,6 +62,7 @@ public class EngineAuthorizationService {
   static final String SIG_HEADER = Constants.HEADER_ENGINE_SIGNATURE;
 
   private final TaktConfiguration config;
+  private final GlobalConfigStore globalConfigStore;
   private final NonceStore nonceStore;
   private final AuthorizationTokenValidator validator;
   private final KafkaStreams kafkaStreams;
@@ -70,11 +73,13 @@ public class EngineAuthorizationService {
   @Inject
   public EngineAuthorizationService(
       TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
       KafkaStreams kafkaStreams,
       LicenseManager licenseManager) {
     this.config = config;
+    this.globalConfigStore = globalConfigStore;
     this.nonceStore = nonceStore;
     this.kafkaStreams = kafkaStreams;
     this.licenseManager = licenseManager;
@@ -84,10 +89,17 @@ public class EngineAuthorizationService {
   /** Test constructor — no CDI, license check always permits authorization. */
   EngineAuthorizationService(
       TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
       KafkaStreams kafkaStreams) {
-    this(config, publicKeyProvider, nonceStore, kafkaStreams, new AlwaysAllowLicenseManager());
+    this(
+        config,
+        globalConfigStore,
+        publicKeyProvider,
+        nonceStore,
+        kafkaStreams,
+        new AlwaysAllowLicenseManager());
   }
 
   /** Minimal LicenseManager used only by the no-CDI test constructor above. */
@@ -166,12 +178,12 @@ public class EngineAuthorizationService {
    * @throws AuthorizationTokenException if validation fails — record must be dropped
    */
   public String authorize(Headers headers, ProcessInstanceTriggerDTO trigger) {
-    if (!config.isAuthorizationEnabled()) {
+    if (!effectiveConfig().isAuthorizationEnabled()) {
       return null;
     }
     if (!licenseManager.isCommandAuthorizationAllowed()) {
       log.warn(
-          "taktx.security.authorization.enabled=true but the active license does not permit"
+          "authorizationEnabled=true in runtime config but the active license does not permit"
               + " command authorization — command accepted without validation");
       return null;
     }
@@ -202,7 +214,7 @@ public class EngineAuthorizationService {
     String rawJwt = new String(authHeader.value(), StandardCharsets.UTF_8);
     TokenClaims claims = validator.validate(rawJwt);
     validateClaimsMatchCommand(claims, trigger);
-    if (config.isNonceCheckEnabled() && !nonceStore.checkAndRecord(claims.getAuditId())) {
+    if (!nonceStore.checkAndRecord(claims.getAuditId())) {
       throw new AuthorizationTokenException("Replayed auditId detected: " + claims.getAuditId());
     }
     log.info(
@@ -218,29 +230,15 @@ public class EngineAuthorizationService {
   /**
    * Enforces Ed25519 authorization for worker responses and engine-internal commands.
    *
-   * <ul>
-   *   <li>Engine-internal key (matches {@code taktx.signing.key-id}) — trusted without a KTable
-   *       lookup; the deserializer has already verified the signature cryptographically.
-   *   <li>Worker key — must be present in the {@code taktx-signing-keys} KTable with status {@code
-   *       TRUSTED}. {@code REVOKED} or unknown keys cause an {@link AuthorizationTokenException}
-   *       which drops the record.
-   * </ul>
+   * <p>The deserializer has already verified the signature cryptographically. This method enforces
+   * that the referenced key still exists in the {@code taktx-signing-keys} KTable and is not
+   * revoked.
    */
   private void authorizeViaEd25519(Header sigHeader, ProcessInstanceTriggerDTO trigger) {
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     String keyId = dot >= 0 ? headerValue.substring(0, dot) : headerValue;
 
-    boolean isEngineKey = config.getSigningKeyId().map(kid -> kid.equals(keyId)).orElse(false);
-    if (isEngineKey) {
-      log.trace(
-          "✅ Authorised (engine-internal Ed25519) command={} keyId={}",
-          trigger.getClass().getSimpleName(),
-          keyId);
-      return;
-    }
-
-    // Worker key — look up and enforce status
     SigningKeyDTO entry = lookupSigningKey(keyId);
     if (entry == null) {
       throw new AuthorizationTokenException(
@@ -257,10 +255,17 @@ public class EngineAuthorizationService {
               + trigger.getClass().getSimpleName());
     }
     log.info(
-        "✅ Authorised (worker Ed25519) command={} keyId={} owner={}",
+        "✅ Authorised (Ed25519) command={} keyId={} owner={}",
         trigger.getClass().getSimpleName(),
         keyId,
         entry.getOwner());
+  }
+
+  private GlobalConfigurationDTO effectiveConfig() {
+    if (globalConfigStore == null || globalConfigStore.get() == null) {
+      return GlobalConfigurationDTO.builder().build();
+    }
+    return globalConfigStore.get();
   }
 
   private SigningKeyDTO lookupSigningKey(String keyId) {

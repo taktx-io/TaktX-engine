@@ -19,8 +19,8 @@ public interface LicenseManager {
   /**
    * Returns {@code true} when the active license permits event signing.
    *
-   * <p>The {@code taktx.security.signing.enabled} environment property is the operator's request;
-   * this method is the license gate. Signing is only active when both are {@code true}.
+   * <p>The runtime configuration topic provides the operator's request; this method is the license
+   * gate. Signing is only active when both permit it.
    */
   boolean isEventSigningAllowed();
 
@@ -28,9 +28,8 @@ public interface LicenseManager {
    * Returns {@code true} when the active license permits command authorization (RS256 JWT
    * validation on inbound commands).
    *
-   * <p>The {@code taktx.security.authorization.enabled} environment property is the operator's
-   * request; this method is the license gate. Authorization is only active when both are {@code
-   * true}.
+   * <p>The runtime configuration topic provides the operator's request; this method is the license
+   * gate. Authorization is only active when both permit it.
    */
   boolean isCommandAuthorizationAllowed();
 

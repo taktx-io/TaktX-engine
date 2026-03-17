@@ -13,6 +13,7 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.Constants;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
+import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningException;
 import io.taktx.security.SigningKeysStore;
 import io.taktx.security.SigningKeysStoreHolder;
@@ -56,17 +57,16 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
   public static final String ENGINE_PUBLIC_KEY_CONFIG = "taktx.engine.public.key";
 
   /**
-   * Consumer / TaktX properties key that mirrors the engine's {@code
-   * taktx.security.signing.enabled} flag. When {@code "true"}, inbound records that carry
-   * <em>no</em> {@code X-TaktX-Signature} header are rejected with an {@link IllegalStateException}
-   * — i.e. unsigned records are treated as a security violation even when they have no header at
-   * all.
+   * Consumer / TaktX properties key that enables strict inbound signature enforcement for this
+   * consumer. When {@code "true"}, inbound records that carry <em>no</em> {@code X-TaktX-Signature}
+   * header are rejected with an {@link IllegalStateException} — i.e. unsigned records are treated
+   * as a security violation even when they have no header at all.
    *
    * <p>When {@code false} (the default) unsigned records pass through silently, preserving
    * backward-compatibility with deployments where signing is disabled on the engine.
    *
-   * <p>Reuses the same property name as the engine's {@code taktx.security.signing.enabled} so a
-   * worker can share the same {@code Properties} / env-var set without extra configuration.
+   * <p>The property name is kept stable so workers, ingesters, and test consumers can opt into
+   * strict verification with a single local configuration key.
    */
   public static final String SIGNING_REQUIRED_CONFIG = "taktx.security.signing.enabled";
 
@@ -87,7 +87,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
    * When {@code true}, records arriving without an {@code X-TaktX-Signature} header are rejected.
    * Set via {@link #SIGNING_REQUIRED_CONFIG} / {@code taktx.security.signing.enabled}.
    */
-  private boolean signingRequired;
+  private boolean localSigningRequired;
 
   protected JsonDeserializer(Class<T> clazz, boolean shouldValidateSignature) {
     this.shouldValidateSignature = shouldValidateSignature;
@@ -106,11 +106,11 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
 
   @Override
   public void configure(Map<String, ?> configs, boolean isKey) {
-    // Mirror the engine's taktx.security.signing.enabled flag: when true, unsigned inbound
-    // records are rejected even if they simply have no signature header.
+    // Local strict-verification flag: when true, unsigned inbound records are rejected even if they
+    // simply have no signature header.
     Object signingEnabledFlag = configs.get(SIGNING_REQUIRED_CONFIG);
-    signingRequired = "true".equalsIgnoreCase(String.valueOf(signingEnabledFlag));
-    if (signingRequired && shouldValidateSignature) {
+    localSigningRequired = "true".equalsIgnoreCase(String.valueOf(signingEnabledFlag));
+    if (localSigningRequired && shouldValidateSignature) {
       log.info(
           "{}: inbound signature enforcement enabled ({}=true)",
           getClass().getSimpleName(),
@@ -159,7 +159,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
       Header sigHeader = headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE);
       if (sigHeader != null && sigHeader.value() != null) {
         verifySignature(data, sigHeader);
-      } else if (signingRequired) {
+      } else if (isSigningRequired()) {
         throw new IllegalStateException(
             "Inbound record on topic='"
                 + topic
@@ -176,6 +176,10 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
         || signingKeysStore != null
         || SigningKeysStoreHolder.get() != null
         || enginePublicKeyBase64 != null;
+  }
+
+  private boolean isSigningRequired() {
+    return localSigningRequired || RuntimeConfigurationHolder.isSigningEnabled();
   }
 
   /**

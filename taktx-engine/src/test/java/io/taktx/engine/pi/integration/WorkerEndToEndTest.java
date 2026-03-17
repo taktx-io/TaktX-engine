@@ -46,7 +46,7 @@ import org.junit.jupiter.api.Test;
  * <ol>
  *   <li>A BPMN process is deployed containing one {@code ServiceTask}.
  *   <li>The process is started via a RS256 JWT (the normal "platform / console" path).
- *   <li>The engine publishes an external-task trigger signed with its own {@code test-key-1}.
+ *   <li>The engine publishes an external-task trigger signed with its own runtime-generated key.
  *   <li>A {@link WorkerResponder} (isolated KafkaProducer) receives the trigger from the {@code
  *       workerClient}'s consumer, then sends an Ed25519-signed response back to the engine using
  *       the worker's private key.
@@ -108,6 +108,7 @@ class WorkerEndToEndTest {
   static void setUpEngineAndWorker() {
     String bootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    SecurityTestConfigResource.refreshEngineSigningMetadata();
 
     // ── Generate a fresh Ed25519 worker key pair ──────────────────────────────
     KeyPair workerKp = SigningKeyGenerator.generate();
@@ -129,13 +130,17 @@ class WorkerEndToEndTest {
     // still has the OLD RSA public key in its KTable, so JWTs signed with the new private key would
     // be rejected. Re-publishing here forces the KTable to update before any JWT is sent.
     TaktXClient.publishSigningKey(
-        signingKeyProps, PLATFORM_KID, SecurityTestConfigResource.rsaPublicKeyBase64, "platform");
+        signingKeyProps,
+        PLATFORM_KID,
+        SecurityTestConfigResource.rsaPublicKeyBase64,
+        "platform",
+        "RSA");
 
     // ── BpmnTestEngine — observation only, signing disabled ──────────────────
     engine = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
     // Pass the engine public key so the BpmnTestEngine's JsonDeserializer can verify
     // engine-signed instance-update records.
-    engine.init(SecurityTestConfigResource.ed25519PublicKeyBase64);
+    engine.init(SecurityTestConfigResource.enginePublicKeyBase64);
 
     // ── Worker TaktXClient — signing DISABLED ─────────────────────────────────
     // taktx.signing.disabled=true prevents TaktXClientBuilder from calling
@@ -151,7 +156,7 @@ class WorkerEndToEndTest {
     // the engine's Ed25519 signature on incoming trigger records.
     workerProps.put(
         io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG,
-        SecurityTestConfigResource.ed25519PublicKeyBase64);
+        SecurityTestConfigResource.enginePublicKeyBase64);
 
     workerClient = TaktXClient.newClientBuilder().withProperties(workerProps).build();
 
@@ -176,9 +181,8 @@ class WorkerEndToEndTest {
     workerResponder =
         new WorkerResponder(bootstrapServers, NAMESPACE, WORKER_KEY_ID, workerPrivateKeyBase64);
 
-    // Publish global config: signing enabled, both engine key and worker key trusted
-    SecurityEndToEndHelper.publishSigningConfiguration(
-        bootstrapServers, NAMESPACE, "test-key-1", WORKER_KEY_ID);
+    // Publish global config: signing and authorization enabled.
+    SecurityEndToEndHelper.publishSigningConfiguration(bootstrapServers, NAMESPACE, WORKER_KEY_ID);
   }
 
   @AfterAll

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.Constants;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
+import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningException;
 import io.taktx.security.SigningKeysStore;
 import io.taktx.security.SigningKeysStoreHolder;
@@ -41,6 +42,11 @@ public abstract class FaultTolerantJsonDeserializer<T>
     implements Deserializer<DeserializationResult<T>> {
 
   public static final String ENGINE_PUBLIC_KEY_CONFIG = "taktx.engine.public.key";
+
+  /**
+   * Local consumer property that enables strict inbound signature enforcement for this
+   * deserializer.
+   */
   public static final String SIGNING_REQUIRED_CONFIG = "taktx.security.signing.enabled";
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
@@ -51,7 +57,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
 
   private String enginePublicKeyBase64;
   private SigningKeysStore signingKeysStore;
-  private boolean signingRequired;
+  private boolean localSigningRequired;
 
   protected FaultTolerantJsonDeserializer(Class<T> clazz, boolean shouldValidateSignature) {
     this.clazz = clazz;
@@ -66,7 +72,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
   @Override
   public void configure(Map<String, ?> configs, boolean isKey) {
     Object signingEnabledFlag = configs.get(SIGNING_REQUIRED_CONFIG);
-    signingRequired = "true".equalsIgnoreCase(String.valueOf(signingEnabledFlag));
+    localSigningRequired = "true".equalsIgnoreCase(String.valueOf(signingEnabledFlag));
     Object key = configs.get(ENGINE_PUBLIC_KEY_CONFIG);
     if (key instanceof String s && !s.isBlank()) {
       enginePublicKeyBase64 = s;
@@ -110,7 +116,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
               sigError);
           return DeserializationResult.bodyDecodedWithError(bodyResult.getValue(), sigError);
         }
-      } else if (signingRequired) {
+      } else if (isSigningRequired()) {
         String error =
             "Inbound record on topic='"
                 + topic
@@ -143,6 +149,10 @@ public abstract class FaultTolerantJsonDeserializer<T>
         || signingKeysStore != null
         || SigningKeysStoreHolder.get() != null
         || enginePublicKeyBase64 != null;
+  }
+
+  private boolean isSigningRequired() {
+    return localSigningRequired || RuntimeConfigurationHolder.isSigningEnabled();
   }
 
   private String resolvePublicKey(String keyId) {

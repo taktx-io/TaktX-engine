@@ -10,6 +10,9 @@ package io.taktx.engine.pi.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.Jwts;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -52,6 +55,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -101,6 +105,11 @@ import org.junit.jupiter.api.Test;
 @TestProfile(SecurityTestProfile.class)
 @QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
 class SecurityIntegrationTest {
+
+  private static final ObjectMapper OBJECT_MAPPER =
+      new ObjectMapper()
+          .registerModule(new JavaTimeModule())
+          .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private static final String TASK_SINGLE_PROCESS_ID = "task-single";
   private static final String SERVICE_TASK_PROCESS_ID = "service-task-single";
@@ -173,6 +182,7 @@ class SecurityIntegrationTest {
   static void setupEngineAndConfig() {
     String bootstrapServers =
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    SecurityTestConfigResource.refreshEngineSigningMetadata();
 
     // ── Generate worker key pairs ─────────────────────────────────────────────
     KeyPair workerKp = SigningKeyGenerator.generate();
@@ -193,7 +203,11 @@ class SecurityIntegrationTest {
     // Publish the platform RSA public key under PLATFORM_KID so the engine can resolve it
     // from the KTable when validating JWTs (the kid header in every JWT points to this entry)
     TaktXClient.publishSigningKey(
-        signingKeyProps, PLATFORM_KID, SecurityTestConfigResource.rsaPublicKeyBase64, "platform");
+        signingKeyProps,
+        PLATFORM_KID,
+        SecurityTestConfigResource.rsaPublicKeyBase64,
+        "platform",
+        "RSA");
 
     // Publish the revoked key — status REVOKED so the engine rejects messages signed with it
     publishRevokedSigningKey(
@@ -204,7 +218,7 @@ class SecurityIntegrationTest {
 
     // ── Create main BpmnTestEngine ────────────────────────────────────────────
     engine = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
-    engine.init(SecurityTestConfigResource.ed25519PublicKeyBase64);
+    engine.init(SecurityTestConfigResource.enginePublicKeyBase64);
 
     // ── Create workerClient with signing DISABLED ─────────────────────────────
     // taktx.signing.disabled=true prevents TaktXClientBuilder from calling
@@ -529,8 +543,7 @@ class SecurityIntegrationTest {
     assertThat(dot).as("Signature header must contain a dot separator").isGreaterThan(0);
     byte[] sigBytes = Base64.getDecoder().decode(headerValue.substring(dot + 1));
 
-    String enginePublicKeyBase64 =
-        SigningKeyGenerator.encodePublicKey(SecurityTestConfigResource.ed25519PublicKey);
+    String enginePublicKeyBase64 = SecurityTestConfigResource.enginePublicKeyBase64;
     byte[] payloadBytes =
         TopologyProducer.EXTERNAL_TASK_TRIGGER_SERDE.serializer().serialize(null, signed.value());
     assertThat(Ed25519Service.verify(payloadBytes, sigBytes, enginePublicKeyBase64))
@@ -581,8 +594,7 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
     engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
-    String enginePublicKeyBase64 =
-        SigningKeyGenerator.encodePublicKey(SecurityTestConfigResource.ed25519PublicKey);
+    String enginePublicKeyBase64 = SecurityTestConfigResource.enginePublicKeyBase64;
 
     AtomicReference<ConsumerRecord<UUID, InstanceUpdateDTO>> signedRecord = new AtomicReference<>();
 
@@ -613,7 +625,7 @@ class SecurityIntegrationTest {
     byte[] payloadBytes =
         TopologyProducer.INSTANCE_UPDATE_SERDE.serializer().serialize(null, consumerRecord.value());
 
-    assertThat(keyId).isEqualTo("test-key-1");
+    assertThat(keyId).isEqualTo(SecurityTestConfigResource.engineKeyId);
     assertThat(Ed25519Service.verify(payloadBytes, signatureBytes, enginePublicKeyBase64))
         .as("Ed25519 signature must be valid")
         .isTrue();
@@ -655,18 +667,15 @@ class SecurityIntegrationTest {
     java.util.Properties props = new java.util.Properties();
     props.put("bootstrap.servers", bootstrapServers);
 
-    try (KafkaProducer<String, ConfigurationEventDTO> producer =
-        new KafkaProducer<>(
-            props,
-            new StringSerializer(),
-            TopologyProducer.CONFIGURATION_EVENT_SERDE.serializer())) {
+    try (KafkaProducer<String, byte[]> producer =
+        new KafkaProducer<>(props, new StringSerializer(), new ByteArraySerializer())) {
 
       GlobalConfigurationDTO config =
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
+              .authorizationEnabled(true)
               .rbacEnabled(false)
-              .signingKeyId("test-key-1")
-              .trustedKeyIds(List.of("test-key-1", WORKER_KEY_ID))
+              .trustedKeyIds(List.of(WORKER_KEY_ID))
               .build();
 
       ConfigurationEventDTO event =
@@ -678,8 +687,12 @@ class SecurityIntegrationTest {
 
       producer.send(
           new ProducerRecord<>(
-              prefixed(Topics.CONFIGURATION_TOPIC.getTopicName()), "config", event));
+              prefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
+              "config",
+              OBJECT_MAPPER.writeValueAsBytes(event)));
       producer.flush();
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to publish signing configuration", e);
     }
   }
 

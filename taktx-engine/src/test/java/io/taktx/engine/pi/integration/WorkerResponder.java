@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This isolation is critical: in-process tests share the JVM with the engine. Any call to {@code
  * SigningServiceHolder.set(...)} would replace the engine's signing key, causing all subsequent
- * outbound engine records to carry the worker key-id instead of {@code test-key-1}, breaking
+ * outbound engine records to carry the worker key-id instead of the engine's own key, breaking
  * signature verification on the consumer side.
  */
 class WorkerResponder implements AutoCloseable {

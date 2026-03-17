@@ -13,18 +13,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.Constants;
+import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.security.Ed25519Service;
+import io.taktx.security.RuntimeConfigurationHolder;
 import io.taktx.security.SigningKeyGenerator;
 import java.security.KeyPair;
 import java.util.Base64;
 import java.util.Map;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class JsonDeserializerTest {
 
   private static final ObjectMapper CBOR = new ObjectMapper(new CBORFactory());
+
+  @AfterEach
+  void tearDown() {
+    RuntimeConfigurationHolder.clear();
+  }
 
   // Concrete subclass for testing
   static class NoSignValidatingDeserializer extends JsonDeserializer<ProcessDefinitionKey> {
@@ -167,5 +175,27 @@ class JsonDeserializerTest {
     // Key deserializer must never enforce the signature header
     ProcessDefinitionKey result = deser.deserialize("test-topic", new RecordHeaders(), keyBytes);
     assertThat(result.getProcessDefinitionId()).isEqualTo("my-proc");
+  }
+
+  @Test
+  void valueDeserializer_runtimeSigningFlagCanToggleWithoutReconfigure() throws Exception {
+    KeyPair kp = SigningKeyGenerator.generate();
+    String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(kp.getPublic());
+
+    ProcessDefinitionKey value = new ProcessDefinitionKey("my-proc", 1);
+    byte[] valueBytes = cbor(value);
+
+    SignValidatingDeserializer deser = new SignValidatingDeserializer();
+    deser.configure(Map.of(JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64), false);
+
+    RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(false).build());
+    ProcessDefinitionKey unsignedOk =
+        deser.deserialize("test-topic", new RecordHeaders(), valueBytes);
+    assertThat(unsignedOk.getProcessDefinitionId()).isEqualTo("my-proc");
+
+    RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
+    assertThatThrownBy(() -> deser.deserialize("test-topic", new RecordHeaders(), valueBytes))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("no X-TaktX-Signature header");
   }
 }

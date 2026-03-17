@@ -1,4 +1,16 @@
 version: "3.9"
+x-taktx-engine-signing-file-env: &taktx-engine-signing-file-env
+  TAKTX_SIGNING_IDENTITY_SOURCE: file
+  TAKTX_SIGNING_FILE_KEY_ID_PATH: /opt/taktx/signing/engine/key-id
+  TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH: /opt/taktx/signing/engine/private-key.b64
+  TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH: /opt/taktx/signing/engine/public-key.b64
+
+x-taktx-worker-signing-file-env: &taktx-worker-signing-file-env
+  TAKTX_SIGNING_IDENTITY_SOURCE: file
+  TAKTX_SIGNING_FILE_KEY_ID_PATH: /opt/taktx/signing/worker/key-id
+  TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH: /opt/taktx/signing/worker/private-key.b64
+  TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH: /opt/taktx/signing/worker/public-key.b64
+
 services:
   kafka:
     image: 'bitnami/kafka:latest'
@@ -47,41 +59,41 @@ services:
     depends_on:
       - kafka
     environment:
-        - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-        # Both TAKTX_ENGINE_TENANT_ID and TAKTX_ENGINE_NAMESPACE are required.
-        # Topics are named: <tenantId>.<namespace>.<topic>
-        - TAKTX_ENGINE_TENANT_ID=acme
-        - TAKTX_ENGINE_NAMESPACE=default
-        # All topic names (including Kafka Streams changelogs) are derived automatically:
-        #   regular topics : <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.<topic>
-        #   changelog topics: <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.taktx-engine-...-changelog
-        # Both sets fall under the same ACL prefix <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.*
-        - TAKTX_LICENSE_FILE_LOCATION=/opt/taktx/licence.lic
+      <<: *taktx-engine-signing-file-env
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      # Both TAKTX_ENGINE_TENANT_ID and TAKTX_ENGINE_NAMESPACE are required.
+      # Topics are named: <tenantId>.<namespace>.<topic>
+      TAKTX_ENGINE_TENANT_ID: acme
+      TAKTX_ENGINE_NAMESPACE: default
+      # All topic names (including Kafka Streams changelogs) are derived automatically:
+      #   regular topics : <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.<topic>
+      #   changelog topics: <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.taktx-engine-...-changelog
+      # Both sets fall under the same ACL prefix <TAKTX_ENGINE_TENANT_ID>.<TAKTX_ENGINE_NAMESPACE>.*
+      TAKTX_LICENSE_FILE_LOCATION: /opt/taktx/licence.lic
 
-        # ── Command Authorization (RS256 JWT) ──────────────────────────────
-        # Enable when running alongside the TaktX Console / Platform Service.
-        # Set TAKTX_PLATFORM_PUBLIC_KEY to the base64-DER RSA public key from:
-        #   GET http://<platform-service>/api/public-key
-        - TAKTX_SECURITY_AUTHORIZATION_ENABLED=false
-        - TAKTX_SECURITY_REJECT_EXPIRED=true
-        - TAKTX_SECURITY_NONCE_CHECK=true
-        # - TAKTX_PLATFORM_PUBLIC_KEY=<base64-DER RSA public key from platform service>
-
-        # ── Engine Message Signing (Ed25519) ───────────────────────────────
-        # When enabled the engine signs every instance-update, external-task-trigger
-        # and user-task-trigger record with Ed25519. Workers and the ingester verify
-        # these signatures using the public key published to taktx-signing-keys.
-        - TAKTX_SECURITY_SIGNING_ENABLED=false
-        # Required when signing is enabled — uniquely identifies this engine's key.
-        # Must match the key registered in the global configuration signing event.
-        # - TAKTX_SIGNING_KEY_ID=engine-key-1
-        # The Ed25519 private key (base64-encoded PKCS8 DER). Inject as a Docker secret
-        # or via a secrets manager — never hardcode in production.
-        # Generate with: openssl genpkey -algorithm ed25519 | openssl pkcs8 -topk8 -nocrypt | base64
-        # - TAKTX_SIGNING_PRIVATE_KEY=<base64-encoded Ed25519 private key>
+      # ── Optional trust anchor for JWT authorization ─────────────────────
+      # Runtime signing/authorization flags come from taktx-configuration.
+      # Set this only when authorizationEnabled=true is pushed via the config topic.
+      # TAKTX_PLATFORM_PUBLIC_KEY: <base64-DER RSA public key from platform service>
 
     volumes:
       - ~/.taktx/license.lic:/opt/taktx/licence.lic:ro
+      - ./signing/engine:/opt/taktx/signing/engine:ro
+
+  # Example worker container wiring for the same file-backed signing mechanism.
+  # Apply this pattern to each real worker service you run in Compose.
+  # worker-example:
+  #   image: your-worker-image:latest
+  #   depends_on:
+  #     - kafka
+  #     - taktx
+  #   environment:
+  #     <<: *taktx-worker-signing-file-env
+  #     KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+  #     TAKTX_ENGINE_TENANT_ID: acme
+  #     TAKTX_ENGINE_NAMESPACE: default
+  #   volumes:
+  #     - ./signing/worker-example:/opt/taktx/signing/worker:ro
 
   prometheus:
     image: prom/prometheus

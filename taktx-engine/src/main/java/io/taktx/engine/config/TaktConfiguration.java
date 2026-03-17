@@ -59,23 +59,20 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "-")
   String licenseFileLocation;
 
-  // ── Security: command authorization ──────────────────────────────────────────
-  @ConfigProperty(name = "taktx.security.authorization.enabled", defaultValue = "false")
-  boolean authorizationEnabled;
+  @ConfigProperty(name = "taktx.signing.identity-source")
+  Optional<String> sharedSigningIdentitySource;
 
-  @ConfigProperty(name = "taktx.security.authorization.reject-expired", defaultValue = "false")
-  boolean rejectExpiredTokens;
+  @ConfigProperty(name = "taktx.signing.file.key-id-path")
+  Optional<String> signingFileKeyIdPath;
 
-  @ConfigProperty(name = "taktx.security.authorization.nonce-check.enabled", defaultValue = "true")
-  boolean nonceCheckEnabled;
+  @ConfigProperty(name = "taktx.signing.file.private-key-path")
+  Optional<String> signingFilePrivateKeyPath;
 
-  // ── Security: engine-internal message signing ────────────────────────────────
-  @ConfigProperty(name = "taktx.security.signing.enabled", defaultValue = "false")
-  boolean signingEnabled;
+  @ConfigProperty(name = "taktx.signing.file.public-key-path")
+  Optional<String> signingFilePublicKeyPath;
 
-  /** The key ID for this engine's Ed25519 signing key — maps to {@code TAKTX_SIGNING_KEY_ID}. */
-  @ConfigProperty(name = "taktx.signing.key-id")
-  Optional<String> signingKeyId;
+  @ConfigProperty(name = "taktx.signing.file.refresh-interval-ms", defaultValue = "1000")
+  long signingFileRefreshIntervalMs;
 
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
@@ -98,6 +95,30 @@ public class TaktConfiguration {
 
   public Path getLicenseFilePath() {
     return "-".equals(licenseFileLocation) ? LICENSE_PATH : Path.of(licenseFileLocation);
+  }
+
+  public String getSigningIdentitySourceType() {
+    String sharedSource = normalized(sharedSigningIdentitySource);
+    if (sharedSource != null) {
+      return sharedSource;
+    }
+    return "generated";
+  }
+
+  public String getSigningFileKeyIdPath() {
+    return normalized(signingFileKeyIdPath);
+  }
+
+  public String getSigningFilePrivateKeyPath() {
+    return normalized(signingFilePrivateKeyPath);
+  }
+
+  public String getSigningFilePublicKeyPath() {
+    return normalized(signingFilePublicKeyPath);
+  }
+
+  private static String normalized(Optional<String> value) {
+    return value.map(String::trim).filter(v -> !v.isBlank()).orElse(null);
   }
 
   public boolean getTopicCreationEnabled() {

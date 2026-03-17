@@ -8,21 +8,25 @@
 package io.taktx.engine.security;
 
 import io.quarkus.runtime.Startup;
+import io.taktx.Topics;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.security.Ed25519Service;
-import io.taktx.security.EnvironmentVariableKeyProvider;
 import io.taktx.security.SigningException;
-import io.taktx.security.SigningKeyProvider;
+import io.taktx.security.SigningIdentity;
+import io.taktx.security.SigningIdentitySource;
 import io.taktx.security.SigningKeyRegistrar;
 import io.taktx.security.SigningServiceHolder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Base64;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -37,59 +41,63 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MessageSigningService {
 
+  private static final long PUBLICATION_RETRY_DELAY_SECONDS = 2L;
+
   private final TaktConfiguration config;
-  private final SigningKeyProvider keyProvider;
   private final GlobalConfigStore globalConfigStore;
   private final LicenseManager licenseManager;
+  private final SigningIdentitySource signingIdentitySource;
+  private final ScheduledExecutorService keyPublicationExecutor;
 
-  /** Cached at startup for self-verification. */
+  private final AtomicBoolean publicKeyPublished = new AtomicBoolean(false);
+
+  /** Cached at startup for self-verification and test access. */
+  private String keyId;
+
+  private String cachedPrivateKeyBase64;
   private String cachedPublicKeyBase64;
 
   @Inject
   public MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      LicenseManager licenseManager) {
-    this.config = config;
-    this.globalConfigStore = globalConfigStore;
-    this.licenseManager = licenseManager;
-    this.keyProvider = new EnvironmentVariableKeyProvider();
+      LicenseManager licenseManager,
+      SigningIdentitySource signingIdentitySource) {
+    this(config, globalConfigStore, licenseManager, signingIdentitySource, true);
   }
 
-  /** Test constructor — no CDI, license check and global config skipped. */
-  MessageSigningService(TaktConfiguration config, SigningKeyProvider keyProvider) {
-    this.config = config;
-    this.keyProvider = keyProvider;
-    this.globalConfigStore = null;
-    this.licenseManager = null;
-  }
-
-  /** Test constructor — full control over all collaborators, no CDI. */
+  /** Test constructor with a pre-built identity source and publication disabled. */
   MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      SigningKeyProvider keyProvider) {
+      LicenseManager licenseManager,
+      SigningIdentitySource signingIdentitySource,
+      boolean startPublicationScheduler) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
-    this.keyProvider = keyProvider;
-    this.licenseManager = null;
+    this.licenseManager = licenseManager;
+    this.signingIdentitySource = signingIdentitySource;
+    this.keyPublicationExecutor =
+        startPublicationScheduler
+            ? Executors.newSingleThreadScheduledExecutor(
+                runnable -> {
+                  Thread thread = new Thread(runnable, "engine-signing-key-publisher");
+                  thread.setDaemon(true);
+                  return thread;
+                })
+            : null;
+    if (!startPublicationScheduler) {
+      refreshActiveIdentity();
+      publicKeyPublished.set(true);
+    }
   }
 
   @PostConstruct
   void registerSigningFunction() {
-    if (!config.isSigningEnabled()) {
-      log.debug("Message signing disabled — skipping SigningServiceHolder registration");
-      return;
-    }
-    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
-      log.warn(
-          "taktx.security.signing.enabled=true but the active license does not permit event"
-              + " signing — SigningServiceHolder registration skipped");
-      return;
-    }
+    refreshActiveIdentity();
     SigningServiceHolder.set(this::signToHeaderValue);
     log.debug("MessageSigningService registered in SigningServiceHolder");
-    publishEnginePublicKey();
+    schedulePublicKeyPublication(0L);
   }
 
   /**
@@ -104,41 +112,46 @@ public class MessageSigningService {
    * from starting. The compacted topic guarantees idempotency — re-publishing on every restart
    * simply overwrites the same key record.
    */
-  private void publishEnginePublicKey() {
-    String keyId = config.getSigningKeyId().filter(s -> !s.isBlank()).orElse(null);
-    if (keyId == null) {
-      log.debug("No signing keyId configured — skipping engine public key publication");
+  private void schedulePublicKeyPublication(long delaySeconds) {
+    if (keyPublicationExecutor == null || publicKeyPublished.get()) {
       return;
     }
-    String privateKey = keyProvider.getPrivateKey(keyId);
-    if (privateKey == null) {
-      log.warn("Cannot publish engine public key — no private key available for keyId={}", keyId);
+    keyPublicationExecutor.schedule(this::publishEnginePublicKey, delaySeconds, TimeUnit.SECONDS);
+  }
+
+  private void publishEnginePublicKey() {
+    SigningIdentity identity = refreshActiveIdentity();
+    if (identity == null || publicKeyPublished.get()) {
       return;
     }
     try {
-      String publicKeyBase64 = keyProvider.getPublicKey(keyId);
-      if (publicKeyBase64 == null) {
-        log.warn(
-            "Cannot publish engine public key — no public key available for keyId={} "
-                + "(set TAKTX_SIGNING_PUBLIC_KEY or taktx.signing.public-key)",
-            keyId);
-        return;
-      }
-      String topic = config.getPrefixed(io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
+      String topic = config.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName());
       SigningKeyRegistrar.publishPublicKey(
-          config.getBootstrapServers(), topic, keyId, publicKeyBase64, "engine");
-      cachedPublicKeyBase64 = publicKeyBase64;
-      log.info("✅ Engine public key published to signing-keys topic: keyId={}", keyId);
+          config.getBootstrapServers(),
+          topic,
+          identity.getKeyId(),
+          identity.getPublicKeyBase64(),
+          "engine",
+          identity.getAlgorithm());
+      publicKeyPublished.set(true);
+      log.info(
+          "✅ Engine public key published to signing-keys topic: keyId={}", identity.getKeyId());
     } catch (Exception e) {
       log.warn(
-          "Failed to publish engine public key (workers may not verify signatures): {}",
+          "Engine public key publication failed for keyId={} — retrying in {}s: {}",
+          keyId,
+          PUBLICATION_RETRY_DELAY_SECONDS,
           e.getMessage());
+      schedulePublicKeyPublication(PUBLICATION_RETRY_DELAY_SECONDS);
     }
   }
 
   @PreDestroy
   void clearSigningFunction() {
     SigningServiceHolder.clear();
+    if (keyPublicationExecutor != null) {
+      keyPublicationExecutor.shutdownNow();
+    }
   }
 
   /**
@@ -147,19 +160,25 @@ public class MessageSigningService {
    * via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
-
-    String keyId = resolveKeyId();
-    if (keyId == null) {
-      log.warn("Signing is enabled but no signingKeyId configured (env or global config)");
+    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
       return null;
     }
-    if (!keyProvider.hasKey(keyId)) {
-      log.error("Signing enabled but no private key available for signingKeyId={}", keyId);
+    if (!effectiveConfig().isSigningEnabled()) {
+      return null;
+    }
+    SigningIdentity identity = refreshActiveIdentity();
+    if (identity == null) {
+      log.debug(
+          "No active signing identity available from source={}",
+          signingIdentitySource.getSourceType());
+      return null;
+    }
+    if (!publicKeyPublished.get()) {
+      log.debug("Signing enabled but engine public key has not been published yet — skipping sign");
       return null;
     }
     try {
-      String privateKey = keyProvider.getPrivateKey(keyId);
-      byte[] signature = Ed25519Service.sign(payloadBytes, privateKey);
+      byte[] signature = Ed25519Service.sign(payloadBytes, identity.getPrivateKeyBase64());
 
       // ── Self-verification (testing only) ──────────────────────────────────
       if (cachedPublicKeyBase64 != null) {
@@ -186,37 +205,56 @@ public class MessageSigningService {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      return keyId + "." + Base64.getEncoder().encodeToString(signature);
+      return identity.toHeaderValue(signature);
     } catch (SigningException e) {
       log.error("Failed to sign message: {}", e.getMessage(), e);
       return null;
     }
   }
 
-  /**
-   * Returns the signing keyId to use. Precedence:
-   *
-   * <ol>
-   *   <li>Global config KTable (runtime reconfiguration via console)
-   *   <li>{@code TAKTX_SIGNING_KEY_ID} env var (startup configuration)
-   * </ol>
-   */
-  private String resolveKeyId() {
-    // License is the gate — the env property is the operator's request.
-    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
-      return null;
-    }
-    GlobalConfigurationDTO globalConfig = getGlobalConfig();
-    if (globalConfig != null && globalConfig.isSigningEnabled()) {
-      String kid = globalConfig.getSigningKeyId();
-      if (kid != null && !kid.isBlank()) return kid;
-    }
-    // Fall back to env/application.properties
-    return config.getSigningKeyId().filter(s -> !s.isBlank()).orElse(null);
+  public String getKeyId() {
+    SigningIdentity identity = refreshActiveIdentity();
+    return identity != null ? identity.getKeyId() : null;
   }
 
-  private GlobalConfigurationDTO getGlobalConfig() {
-    if (globalConfigStore == null) return null;
+  public String getPublicKeyBase64() {
+    refreshActiveIdentity();
+    return cachedPublicKeyBase64;
+  }
+
+  private SigningIdentity refreshActiveIdentity() {
+    SigningIdentity identity = signingIdentitySource.currentIdentity();
+    if (identity == null) {
+      return null;
+    }
+    boolean changed = !identity.getKeyId().equals(keyId);
+    if (!changed) {
+      changed =
+          cachedPublicKeyBase64 == null
+              || !cachedPublicKeyBase64.equals(identity.getPublicKeyBase64())
+              || cachedPrivateKeyBase64 == null
+              || !cachedPrivateKeyBase64.equals(identity.getPrivateKeyBase64());
+    }
+    if (changed) {
+      this.keyId = identity.getKeyId();
+      this.cachedPrivateKeyBase64 = identity.getPrivateKeyBase64();
+      this.cachedPublicKeyBase64 = identity.getPublicKeyBase64();
+      publicKeyPublished.set(!identity.hasPublicKey());
+      log.info(
+          "Active engine signing identity loaded from source={} keyId={}",
+          signingIdentitySource.getSourceType(),
+          keyId);
+      if (identity.hasPublicKey() && keyPublicationExecutor != null) {
+        schedulePublicKeyPublication(0L);
+      }
+    }
+    return identity;
+  }
+
+  private GlobalConfigurationDTO effectiveConfig() {
+    if (globalConfigStore == null || globalConfigStore.get() == null) {
+      return GlobalConfigurationDTO.builder().build();
+    }
     return globalConfigStore.get();
   }
 }

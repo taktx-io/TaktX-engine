@@ -1,15 +1,9 @@
 # TaktX Client Quarkus
 
 ![Coverage](../badges/taktx-client-quarkus-coverage.svg)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
-This module provides Quarkus convenience beans for the TaktX plain Java client.
-
-It exposes a CDI producer `io.taktx.client.quarkus.QuarkusTaktXClientProducer` that creates a
-`io.taktx.client.TaktXClient` using MicroProfile Config properties:
-
-- `taktx.namespace` - the namespace used for topics
-- `kafka.bootstrap.servers` - bootstrap servers for Kafka client
+This module provides Quarkus convenience wiring for the plain Java `taktx-client`.
+It produces a singleton `TaktXClient` from MicroProfile/Quarkus configuration and starts it at application startup.
 
 ## Installation
 
@@ -17,9 +11,9 @@ It exposes a CDI producer `io.taktx.client.quarkus.QuarkusTaktXClientProducer` t
 
 ```xml
 <dependency>
-    <groupId>io.taktx</groupId>
-    <artifactId>taktx-client-quarkus</artifactId>
-    <version>0.0.9-alpha-3-SNAPSHOT</version>
+  <groupId>io.taktx</groupId>
+  <artifactId>taktx-client-quarkus</artifactId>
+  <version>0.0.9-alpha-3-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -29,66 +23,77 @@ It exposes a CDI producer `io.taktx.client.quarkus.QuarkusTaktXClientProducer` t
 implementation("io.taktx:taktx-client-quarkus:0.0.9-alpha-3-SNAPSHOT")
 ```
 
-## Configuration
-
-Add to your `application.properties`:
+## Required configuration
 
 ```properties
-taktx.namespace=your-namespace
+bootstrap.servers=localhost:9092
 kafka.bootstrap.servers=localhost:9092
+taktx.engine.tenant-id=acme
+taktx.engine.namespace=default
+```
+
+Optional:
+
+```properties
+taktx.client.enabled=true
+taktx.client.groupId.instanceupdate=my-instance-update-group
+taktx.engine.topic.partitions=3
+taktx.engine.topic.replicationFactor=1
 ```
 
 ## Usage
 
-Inject the client in your Quarkus application:
-
 ```java
-@Inject
-TaktXClient taktxClient;
+import io.taktx.client.TaktXClient;
+import jakarta.inject.Inject;
 
-public void processExample() {
-    ProcessInstance instance = taktxClient.startProcess("process-key")
-        .variable("data", "value")
-        .start();
+class MyBean {
+  @Inject TaktXClient taktxClient;
 }
 ```
 
-## License
+## Worker signing
 
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+If this Quarkus app is acting as a worker and should sign responses, provide worker key material:
 
----
+```bash
+export TAKTX_SIGNING_PRIVATE_KEY=<base64-pkcs8-ed25519-private-key>
+export TAKTX_SIGNING_PUBLIC_KEY=<base64-x509-ed25519-public-key>
+export TAKTX_SIGNING_KEY_ID=my-worker-key-1
+```
 
-## Implementation
-package io.taktx.client.quarkus;
+Or switch to file-backed signing for mounted secrets:
 
-import io.taktx.client.TaktXClient;
-import io.taktx.util.TaktPropertiesHelper;
-import java.util.Properties;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+```bash
+export TAKTX_SIGNING_IDENTITY_SOURCE=file
+export TAKTX_SIGNING_FILE_KEY_ID_PATH=/opt/taktx/signing/worker/key-id
+export TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH=/opt/taktx/signing/worker/private-key.b64
+export TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH=/opt/taktx/signing/worker/public-key.b64
+```
 
-/**
- * A minimal CDI producer that creates a TaktXClient.Builder using MicroProfile config.
- * This allows Quarkus applications to inject a ready-to-use TaktXClient.
- */
-@ApplicationScoped
-public class QuarkusTaktXClientProducer {
+The client will then:
 
-  @ConfigProperty(name = "taktx.namespace")
-  String namespace;
+- sign outgoing worker responses
+- auto-publish the worker public key on startup
 
-  @ConfigProperty(name = "kafka.bootstrap.servers")
-  String kafkaBootstrap;
+## Consuming signed engine records
 
-  @Produces
-  public TaktXClient produceTaktXClient() {
-    Properties props = new Properties();
-    props.put("bootstrap.servers", kafkaBootstrap);
+If you want locally strict rejection of unsigned inbound records, add:
 
-    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder().withNamespace(namespace).withKafkaProperties(props);
-    return builder.build();
-  }
-}
+```properties
+taktx.security.signing.enabled=true
+```
 
+This is a local consumer-side enforcement flag.
+It does **not** mean the engine is enabled for signing; engine signing is controlled at runtime via the `taktx-configuration` topic.
+
+The underlying `TaktXClient` now watches the configuration topic too, so when the runtime engine
+config flips `signingEnabled`, already-running consumers adapt without a Quarkus restart.
+
+## Platform / ingester note
+
+If you use the plain `TaktXClient` APIs from a Quarkus service to publish JWT verification keys:
+
+- publish the RSA public key under the same JWT `kid`
+- use the algorithm-aware overload with `"RSA"`
+- do not expect any fixed engine `signingKeyId`

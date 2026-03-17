@@ -1,14 +1,9 @@
 # TaktX Client Spring
 
 ![Coverage](../badges/taktx-client-spring-coverage.svg)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
-This module provides Spring Boot convenience beans for the TaktX plain Java client.
-
-It provides auto-configuration that creates a `io.taktx.client.TaktXClient` bean using Spring Boot configuration properties:
-
-- `taktx.namespace` - the namespace used for topics
-- `kafka.bootstrap.servers` - bootstrap servers for Kafka client
+This module provides Spring Boot auto-configuration for the plain Java `taktx-client`.
+A singleton `TaktXClient` bean is created and started automatically when `taktx.client.enabled=true`.
 
 ## Installation
 
@@ -16,75 +11,92 @@ It provides auto-configuration that creates a `io.taktx.client.TaktXClient` bean
 
 ```xml
 <dependency>
-    <groupId>io.taktx</groupId>
-    <artifactId>taktx-client-spring3</artifactId>
-    <version>0.0.9-alpha-3-SNAPSHOT</version>
+  <groupId>io.taktx</groupId>
+  <artifactId>taktx-client-spring</artifactId>
+  <version>0.0.9-alpha-3-SNAPSHOT</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client-spring3:0.0.9-alpha-3-SNAPSHOT")
+implementation("io.taktx:taktx-client-spring:0.0.9-alpha-3-SNAPSHOT")
 ```
 
-## Configuration
-
-Add to your `application.properties` or `application.yml`:
+## Required configuration
 
 ```properties
-taktx.namespace=your-namespace
+bootstrap.servers=localhost:9092
 kafka.bootstrap.servers=localhost:9092
+taktx.engine.tenant-id=acme
+taktx.engine.namespace=default
 ```
 
-Or in YAML format:
+Optional:
 
-```yaml
-taktx:
-  namespace: your-namespace
-kafka:
-  bootstrap:
-    servers: localhost:9092
+```properties
+taktx.client.enabled=true
+taktx.client.instanceupdate.enabled=true
+taktx.client.groupId.instanceupdate=my-instance-update-group
+taktx.engine.topic.partitions=3
+taktx.engine.topic.replicationFactor=1
 ```
 
 ## Usage
 
-Inject the client in your Spring application:
-
 ```java
-@Component
+import io.taktx.client.TaktXClient;
+import org.springframework.stereotype.Service;
+
+@Service
 public class ProcessService {
-    
-    @Autowired
-    private TaktXClient taktxClient;
+  private final TaktXClient taktxClient;
 
-    public void processExample() {
-        ProcessInstance instance = taktxClient.startProcess("process-key")
-            .variable("data", "value")
-            .start();
-    }
+  public ProcessService(TaktXClient taktxClient) {
+    this.taktxClient = taktxClient;
+  }
 }
 ```
 
-## Custom Configuration
+## Worker signing
 
-You can customize the TaktXClient by providing your own bean:
+If the Spring app is acting as a worker and should sign responses:
 
-```java
-@Configuration
-public class TaktXConfiguration {
-    
-    @Bean
-    public TaktXClient customTaktXClient(TaktPropertiesHelper propertiesHelper) {
-        return TaktXClient.newClientBuilder()
-            .withProperties(propertiesHelper.getProperties())
-            .withCustomConfiguration()
-            .build();
-    }
-}
+```bash
+export TAKTX_SIGNING_PRIVATE_KEY=<base64-pkcs8-ed25519-private-key>
+export TAKTX_SIGNING_PUBLIC_KEY=<base64-x509-ed25519-public-key>
+export TAKTX_SIGNING_KEY_ID=my-worker-key-1
 ```
 
-## License
+Or use file-backed signing with mounted secrets:
 
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+```bash
+export TAKTX_SIGNING_IDENTITY_SOURCE=file
+export TAKTX_SIGNING_FILE_KEY_ID_PATH=/opt/taktx/signing/worker/key-id
+export TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH=/opt/taktx/signing/worker/private-key.b64
+export TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH=/opt/taktx/signing/worker/public-key.b64
+```
 
+The client will sign worker responses and auto-publish the worker public key during startup.
+
+## Consuming signed engine records
+
+If this client should reject unsigned inbound records locally, set:
+
+```properties
+taktx.security.signing.enabled=true
+```
+
+This is a local consumer rule, not an engine runtime toggle.
+Engine signing is enabled/disabled through the `taktx-configuration` topic.
+
+The underlying `TaktXClient` now watches that configuration topic as well, so already-running Spring
+clients adapt when `signingEnabled` changes at runtime without requiring an application restart.
+
+## Platform / ingester note
+
+If a Spring-based ingester/platform component publishes JWT verification keys:
+
+- publish the RSA public key under the JWT `kid`
+- use the algorithm-aware `publishSigningKey(..., "RSA")` overload
+- stop assuming there is any configured engine `signingKeyId`
