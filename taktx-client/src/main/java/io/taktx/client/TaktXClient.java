@@ -244,8 +244,8 @@ public class TaktXClient {
   }
 
   /**
-   * Publishes cluster-wide runtime configuration to the {@code taktx-configuration} compacted
-   * topic under key {@code "config"}.
+   * Publishes cluster-wide runtime configuration to the {@code taktx-configuration} compacted topic
+   * under key {@code "config"}.
    */
   public void publishGlobalConfig(GlobalConfigurationDTO configuration) {
     publishGlobalConfig(taktPropertiesHelper.getTaktProperties(), configuration);
@@ -287,6 +287,7 @@ public class TaktXClient {
       throw new IllegalStateException("Failed to publish global configuration", e);
     }
   }
+
   /**
    * Publishes an Ed25519 or RSA public key to the {@code taktx-signing-keys} compacted topic so
    * that all participants (engine, other workers, platform) can verify signatures produced by the
@@ -348,11 +349,7 @@ public class TaktXClient {
    * RSA}.
    */
   public static void publishSigningKey(
-      Properties properties,
-      String keyId,
-      String publicKeyBase64,
-      String owner,
-      String algorithm) {
+      Properties properties, String keyId, String publicKeyBase64, String owner, String algorithm) {
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
     String topic = helper.getPrefixedTopicName(io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
     SigningKeyRegistrar.publishPublicKey(
@@ -371,7 +368,6 @@ public class TaktXClient {
         .timestamp(Instant.now())
         .build();
   }
-
 
   private SigningIdentity currentSigningIdentity() {
     return signingIdentitySource != null ? signingIdentitySource.currentIdentity() : null;
@@ -480,10 +476,7 @@ public class TaktXClient {
    * @return the prefixed Kafka topic name that was requested
    */
   public String requestExternalTaskTopic(
-      String externalTaskId,
-      int partitions,
-      CleanupPolicy cleanupPolicy,
-      short replicationFactor) {
+      String externalTaskId, int partitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
     return this.externalTaskTopicRequester.requestExternalTaskTopic(
         externalTaskId, partitions, cleanupPolicy, replicationFactor);
   }
@@ -496,8 +489,7 @@ public class TaktXClient {
    * @throws IOException If an error occurs while reading the InputStream.
    */
   public ParsedDefinitionsDTO deployProcessDefinition(InputStream inputStream) throws IOException {
-    return this.processDefinitionDeployer.deployInputStream(
-        new String(inputStream.readAllBytes()));
+    return this.processDefinitionDeployer.deployInputStream(new String(inputStream.readAllBytes()));
   }
 
   /**
@@ -645,8 +637,7 @@ public class TaktXClient {
    * @param activeProcessInstanceId The UUID of the active process instance.
    * @param elementInstanceIdPath The path of element instance IDs leading to the element to abort.
    */
-  public void abortElementInstance(
-      UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
+  public void abortElementInstance(UUID activeProcessInstanceId, List<Long> elementInstanceIdPath) {
     processInstanceProducer.abortElementInstance(activeProcessInstanceId, elementInstanceIdPath);
   }
 

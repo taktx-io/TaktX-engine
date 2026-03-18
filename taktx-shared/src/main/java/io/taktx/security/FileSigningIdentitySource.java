@@ -57,7 +57,8 @@ public class FileSigningIdentitySource implements SigningIdentitySource {
   private volatile long nextRefreshAtMs;
 
   public FileSigningIdentitySource() {
-    this(System.getenv(), System.getProperties(), null, null, null, null, System::currentTimeMillis);
+    this(
+        System.getenv(), System.getProperties(), null, null, null, null, System::currentTimeMillis);
   }
 
   public FileSigningIdentitySource(String keyIdPath, String privateKeyPath, String publicKeyPath) {
@@ -201,7 +202,9 @@ public class FileSigningIdentitySource implements SigningIdentitySource {
     String privateKey = readRequiredFile(paths.privateKeyPath(), "private key");
     String keyId = readRequiredFile(paths.keyIdPath(), "key ID");
     String publicKey =
-        paths.publicKeyPath() != null ? readRequiredFile(paths.publicKeyPath(), "public key") : null;
+        paths.publicKeyPath() != null
+            ? readRequiredFile(paths.publicKeyPath(), "public key")
+            : null;
     return SigningIdentity.ed25519(keyId, privateKey, publicKey);
   }
 
@@ -212,7 +215,9 @@ public class FileSigningIdentitySource implements SigningIdentitySource {
         paths.privateKeyPath(),
         fileFingerprint(paths.privateKeyPath(), "private key"),
         paths.publicKeyPath(),
-        paths.publicKeyPath() != null ? fileFingerprint(paths.publicKeyPath(), "public key") : null);
+        paths.publicKeyPath() != null
+            ? fileFingerprint(paths.publicKeyPath(), "public key")
+            : null);
   }
 
   private FileFingerprint fileFingerprint(String rawPath, String label) {
@@ -243,7 +248,10 @@ public class FileSigningIdentitySource implements SigningIdentitySource {
       return requireNonNegative(Long.parseLong(configured.trim()), REFRESH_INTERVAL_SYS_PROP);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(
-          "Invalid signing file refresh interval '" + configured + "' for " + REFRESH_INTERVAL_SYS_PROP,
+          "Invalid signing file refresh interval '"
+              + configured
+              + "' for "
+              + REFRESH_INTERVAL_SYS_PROP,
           e);
     }
   }

@@ -88,6 +88,8 @@ public class BpmnTestEngine {
   private final Map<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceMap =
       new ConcurrentHashMap<>();
   private final Map<UUID, VariablesDTO> variablesMap = new ConcurrentHashMap<>();
+  private final ConcurrentLinkedQueue<InstanceUpdateRecord> consumedInstanceUpdates =
+      new ConcurrentLinkedQueue<>();
   private final Map<String, ConcurrentLinkedQueue<MessageEventDTO>> messageSubscriptionMap =
       new ConcurrentHashMap<>();
   private final Map<String, ConcurrentLinkedQueue<SignalDTO>> signalMap = new ConcurrentHashMap<>();
@@ -279,6 +281,7 @@ public class BpmnTestEngine {
 
   public void consume(List<InstanceUpdateRecord> instanceUpdateRecords) {
     for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
+      consumedInstanceUpdates.add(instanceUpdateRecord);
       if (instanceUpdateRecord.getUpdate()
           instanceof ProcessInstanceUpdateDTO processInstanceUpdate) {
         LOG.info(
@@ -1011,6 +1014,7 @@ public class BpmnTestEngine {
     this.processInstanceMap.clear();
     this.flowNodeInstanceMap.clear();
     this.variablesMap.clear();
+    this.consumedInstanceUpdates.clear();
     // Per-test trigger queues — must be cleared so stale triggers from previous tests
     // do not bleed into waitUntilUserTaskIsWaitingForResponse / waitForExternalTaskTrigger
     this.userTaskTriggerQueueMap.clear();
@@ -1040,6 +1044,10 @@ public class BpmnTestEngine {
 
   public Map<UUID, ProcessInstanceDTO> getProcessInstanceMap() {
     return processInstanceMap;
+  }
+
+  public ConcurrentLinkedQueue<InstanceUpdateRecord> getConsumedInstanceUpdates() {
+    return consumedInstanceUpdates;
   }
 
   public BpmnTestEngine waitForSignalSubscription(String name) {

@@ -55,6 +55,9 @@ import io.taktx.engine.pi.DtoMapper;
 import io.taktx.engine.pi.Forwarder;
 import io.taktx.engine.pi.ProcessInstanceMapper;
 import io.taktx.engine.pi.ProcessInstanceProcessor;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeDeserializer;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeSerializer;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
@@ -120,6 +123,11 @@ public class TopologyProducer {
           return new SigningSerializer<>(super.serializer());
         }
       };
+  public static final Serde<ProcessInstanceTriggerEnvelope>
+      PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE =
+          Serdes.serdeFrom(
+              new ProcessInstanceTriggerEnvelopeSerializer(),
+              new ProcessInstanceTriggerEnvelopeDeserializer());
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
@@ -383,7 +391,7 @@ public class TopologyProducer {
 
     builder.stream(
             taktConfiguration.getPrefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
-            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))
+            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE))
         .process(
             () ->
                 new ProcessInstanceProcessor(

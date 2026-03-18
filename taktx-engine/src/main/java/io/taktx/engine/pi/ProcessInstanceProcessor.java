@@ -12,6 +12,7 @@ import static io.taktx.dto.Constants.MAX_LONG;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
+import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
@@ -70,7 +71,7 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @Slf4j
 @RequiredArgsConstructor
 public class ProcessInstanceProcessor
-    implements Processor<UUID, ProcessInstanceTriggerDTO, Object, Object> {
+    implements Processor<UUID, ProcessInstanceTriggerEnvelope, Object, Object> {
 
   private final DefinitionsCache definitionsCache;
   private final DefinitionMapper definitionMapper;
@@ -98,7 +99,6 @@ public class ProcessInstanceProcessor
       processInstanceProcessingContextThreadLocal = new ThreadLocal<>();
   private final ThreadLocal<ProcessDefinitionKey> processDefinitionKeyThreadLocal =
       new ThreadLocal<>();
-  private final ThreadLocal<String> auditIdThreadLocal = new ThreadLocal<>();
 
   @Override
   public void init(ProcessorContext<Object, Object> context) {
@@ -117,21 +117,23 @@ public class ProcessInstanceProcessor
   }
 
   @Override
-  public void process(Record<UUID, ProcessInstanceTriggerDTO> triggerRecord) {
-    ProcessInstanceTriggerDTO trigger = triggerRecord.value();
+  public void process(Record<UUID, ProcessInstanceTriggerEnvelope> triggerRecord) {
+    ProcessInstanceTriggerEnvelope triggerEnvelope = triggerRecord.value();
+    ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
 
     // Start timing for P99 investigation
     long kafkaTimestamp = triggerRecord.timestamp();
 
     // ── Authorization ─────────────────────────────────────────────────────────
-    String auditId;
+    CommandTrustMetadataDTO commandTrustMetadata;
     try {
-      auditId = engineAuthorizationService.authorize(triggerRecord.headers(), trigger);
+      commandTrustMetadata =
+          engineAuthorizationService.authorize(triggerRecord.headers(), triggerEnvelope);
     } catch (AuthorizationTokenException e) {
       log.error("⛔ Command rejected — authorization failed: {}", e.getMessage());
       return;
     }
-    auditIdThreadLocal.set(auditId);
+    trigger.setCommandTrustMetadata(commandTrustMetadata);
 
     try {
       switch (trigger) {
@@ -180,7 +182,6 @@ public class ProcessInstanceProcessor
       processInstanceThreadLocal.remove();
       variableScopeThreadLocal.remove();
       processInstanceProcessingContextThreadLocal.remove();
-      auditIdThreadLocal.remove();
     }
   }
 
@@ -256,7 +257,8 @@ public class ProcessInstanceProcessor
         startProcessInstanceToUpdate(processInstance, scope, variableScope));
 
     ProcessInstanceProcessingContext processInstanceProcessingContext =
-        createProcessInstanceProcessingContext(processInstance, instanceResult);
+        createProcessInstanceProcessingContext(
+            processInstance, instanceResult, startCommand.getCommandTrustMetadata());
     processInstanceProcessingContextThreadLocal.set(processInstanceProcessingContext);
 
     doWhileCatching(
@@ -274,7 +276,9 @@ public class ProcessInstanceProcessor
   }
 
   private ProcessInstanceProcessingContext createProcessInstanceProcessingContext(
-      ProcessInstance processInstance, InstanceResult instanceResult) {
+      ProcessInstance processInstance,
+      InstanceResult instanceResult,
+      CommandTrustMetadataDTO commandTrustMetadata) {
     ProcessInstanceProcessingContext ctx =
         ProcessInstanceProcessingContext.builder()
             .processInstance(processInstance)
@@ -283,7 +287,7 @@ public class ProcessInstanceProcessor
             .flowNodeInstanceStore(flowNodeInstanceStore)
             .topicManager(topicManager)
             .build();
-    ctx.setAuditId(auditIdThreadLocal.get());
+    ctx.setCommandTrustMetadata(commandTrustMetadata);
     return ctx;
   }
 
@@ -350,7 +354,8 @@ public class ProcessInstanceProcessor
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
       ProcessInstanceProcessingContext processInstanceProcessingContext =
-          createProcessInstanceProcessingContext(processInstance, instanceResult);
+          createProcessInstanceProcessingContext(
+              processInstance, instanceResult, trigger.getCommandTrustMetadata());
       doWhileCatching(
           processInstanceProcessingContext,
           processDefinitionKey,
@@ -377,7 +382,8 @@ public class ProcessInstanceProcessor
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
       variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
       ProcessInstanceProcessingContext processInstanceProcessingContext =
-          createProcessInstanceProcessingContext(processInstance, instanceResult);
+          createProcessInstanceProcessingContext(
+              processInstance, instanceResult, trigger.getCommandTrustMetadata());
 
       doWhileCatching(
           processInstanceProcessingContext,
@@ -409,7 +415,8 @@ public class ProcessInstanceProcessor
         processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
-            createProcessInstanceProcessingContext(processInstance, instanceResult);
+            createProcessInstanceProcessingContext(
+                processInstance, instanceResult, trigger.getCommandTrustMetadata());
         variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
 
         doWhileCatching(
@@ -444,7 +451,8 @@ public class ProcessInstanceProcessor
         processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
-            createProcessInstanceProcessingContext(processInstance, instanceResult);
+            createProcessInstanceProcessingContext(
+                processInstance, instanceResult, trigger.getCommandTrustMetadata());
         variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
 
         doWhileCatching(
@@ -481,7 +489,8 @@ public class ProcessInstanceProcessor
         variableScopeThreadLocal.set(VariableScope.empty(processInstanceId, variablesStore));
 
         ProcessInstanceProcessingContext processInstanceProcessingContext =
-            createProcessInstanceProcessingContext(processInstance, instanceResult);
+            createProcessInstanceProcessingContext(
+                processInstance, instanceResult, trigger.getCommandTrustMetadata());
 
         doWhileCatching(
             processInstanceProcessingContext,
@@ -573,7 +582,11 @@ public class ProcessInstanceProcessor
     }
 
     forwarder.forward(
-        context, instanceResult, processDefinitionKey, processInstance, auditIdThreadLocal.get());
+        context,
+        instanceResult,
+        processDefinitionKey,
+        processInstance,
+        processInstanceProcessingContext.getCommandTrustMetadata());
 
     ScopeDTO scopeDTO = scopeToDTO(scope);
     ProcessInstanceDTO processInstanceDTO =

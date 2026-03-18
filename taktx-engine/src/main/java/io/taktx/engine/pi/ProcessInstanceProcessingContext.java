@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi;
 
+import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.engine.pi.model.ProcessInstance;
@@ -30,8 +31,8 @@ public class ProcessInstanceProcessingContext {
   private final ProcessInstance processInstance;
   private final ProcessingStatistics processingStatistics;
 
-  /** AuditId from the authorisation token — null for internal engine commands. */
-  @Setter @Nullable private String auditId;
+  /** Structured provenance/trust data for the originating command, if any. */
+  @Setter @Nullable private CommandTrustMetadataDTO commandTrustMetadata;
 
   @Builder
   public ProcessInstanceProcessingContext(

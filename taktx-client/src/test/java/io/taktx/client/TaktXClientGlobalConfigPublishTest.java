@@ -37,4 +37,3 @@ class TaktXClientGlobalConfigPublishTest {
         .hasMessageContaining("configuration must not be null");
   }
 }
-

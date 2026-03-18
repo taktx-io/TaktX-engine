@@ -14,6 +14,9 @@ import static org.mockito.Mockito.when;
 
 import io.jsonwebtoken.Jwts;
 import io.taktx.dto.AbortTriggerDTO;
+import io.taktx.dto.CommandAuthMethod;
+import io.taktx.dto.CommandTrustMetadataDTO;
+import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.SigningKeyDTO;
@@ -22,6 +25,7 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
@@ -77,32 +81,46 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void disabled_returnsNull_forAnyCommand() {
-    assertThat(service.authorize(new RecordHeaders(), startCommand("proc", -1))).isNull();
+    assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
   // ── valid JWT token ────────────────────────────────────────────────────────
 
   @Test
-  void validToken_start_returnsAuditId() {
+  void validToken_start_returnsJwtMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String auditId = UUID.randomUUID().toString();
     String jwt = buildJwt("START", "my-proc", -1, auditId, futureExpiry());
 
-    String result = service.authorize(headersWithAuth(jwt), startCommand("my-proc", -1));
-    assertThat(result).isEqualTo(auditId);
+    CommandTrustMetadataDTO result =
+        service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1)));
+    assertThat(result)
+        .isEqualTo(
+            CommandTrustMetadataDTO.builder()
+                .authMethod(CommandAuthMethod.JWT)
+                .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+                .trusted(true)
+                .userId("user-1")
+                .issuer(ISSUER)
+                .build());
   }
 
   @Test
-  void validToken_cancel_returnsAuditId() {
+  void validToken_cancel_returnsJwtMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String auditId = UUID.randomUUID().toString();
     String jwt = buildJwt("CANCEL", null, -1, auditId, futureExpiry());
     AbortTriggerDTO cmd = new AbortTriggerDTO(UUID.randomUUID(), List.of());
 
-    String result = service.authorize(headersWithAuth(jwt), cmd);
-    assertThat(result).isEqualTo(auditId);
+    CommandTrustMetadataDTO result = service.authorize(headersWithAuth(jwt), envelope(cmd));
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getUserId()).isEqualTo("user-1");
+    assertThat(result.getIssuer()).isEqualTo(ISSUER);
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -110,7 +128,8 @@ class EngineAuthorizationServiceTest {
   @Test
   void missingHeader_throwsAuthorizationTokenException() {
     globalConfigStore.update(authorizationConfig(true));
-    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), startCommand("proc", -1)))
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Missing");
   }
@@ -122,7 +141,8 @@ class EngineAuthorizationServiceTest {
     globalConfigStore.update(authorizationConfig(true));
 
     String jwt = buildJwt("CANCEL", "my-proc", -1, UUID.randomUUID().toString(), futureExpiry());
-    assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), startCommand("my-proc", -1)))
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("action");
   }
@@ -132,7 +152,8 @@ class EngineAuthorizationServiceTest {
     globalConfigStore.update(authorizationConfig(true));
 
     String jwt = buildJwt("START", "proc-A", -1, UUID.randomUUID().toString(), futureExpiry());
-    assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), startCommand("proc-B", -1)))
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc-B", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("processDefinitionId");
   }
@@ -142,7 +163,8 @@ class EngineAuthorizationServiceTest {
     globalConfigStore.update(authorizationConfig(true));
 
     String jwt = buildJwt("START", "proc", 2, UUID.randomUUID().toString(), futureExpiry());
-    assertThatThrownBy(() -> service.authorize(headersWithAuth(jwt), startCommand("proc", 3)))
+    assertThatThrownBy(
+            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", 3))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("version");
   }
@@ -157,8 +179,8 @@ class EngineAuthorizationServiceTest {
     String jwt = buildJwt("START", null, -1, auditId, futureExpiry());
     Headers headers = headersWithAuth(jwt);
 
-    service.authorize(headers, startCommand(null, -1));
-    assertThatThrownBy(() -> service.authorize(headers, startCommand(null, -1)))
+    service.authorize(headers, envelope(startCommand(null, -1)));
+    assertThatThrownBy(() -> service.authorize(headers, envelope(startCommand(null, -1))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Replayed");
   }
@@ -166,7 +188,7 @@ class EngineAuthorizationServiceTest {
   // ── Ed25519 passthrough (already verified in deserializer) ─────────────────
 
   @Test
-  void ed25519Header_present_returnsNull_auditId() {
+  void ed25519Header_present_returnsSignerMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String keyId = "worker-test-001";
@@ -183,12 +205,22 @@ class EngineAuthorizationServiceTest {
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     // Ed25519 is already verified in the deserializer — authorize just passes through
-    String result = service.authorize(headers, startCommand("proc", -1));
-    assertThat(result).isNull();
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headers, new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId));
+    assertThat(result)
+        .isEqualTo(
+            CommandTrustMetadataDTO.builder()
+                .authMethod(CommandAuthMethod.ED25519)
+                .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
+                .trusted(true)
+                .signerKeyId(keyId)
+                .signerOwner("worker-billing")
+                .build());
   }
 
   @Test
-  void ed25519Header_knownEngineKeyInStore_returnsNull_auditId() {
+  void ed25519Header_knownEngineKeyInStore_preservesEmbeddedMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String keyId = "engine-test-key-1";
@@ -201,11 +233,53 @@ class EngineAuthorizationServiceTest {
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
+    StartCommandDTO trigger = startCommand("proc", -1);
+    CommandTrustMetadataDTO embeddedMetadata =
+        CommandTrustMetadataDTO.builder()
+            .authMethod(CommandAuthMethod.JWT)
+            .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+            .trusted(true)
+            .userId("user-1")
+            .issuer(ISSUER)
+            .build();
+    trigger.setCommandTrustMetadata(embeddedMetadata);
+
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
-    String result = service.authorize(headers, startCommand("proc", -1));
-    assertThat(result).isNull();
+    CommandTrustMetadataDTO result =
+        service.authorize(headers, new ProcessInstanceTriggerEnvelope(trigger, true, keyId));
+    assertThat(result).isEqualTo(embeddedMetadata);
+  }
+
+  @Test
+  void ed25519Envelope_signatureError_throwsAuthorizationTokenException() {
+    globalConfigStore.update(authorizationConfig(true));
+
+    String keyId = "worker-test-001";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(
+            () ->
+                service.authorize(
+                    headers,
+                    new ProcessInstanceTriggerEnvelope(
+                        startCommand("proc", -1),
+                        false,
+                        keyId,
+                        "Malformed base64 signature for keyId=worker-test-001")))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Malformed base64 signature for keyId=worker-test-001");
   }
 
   private GlobalConfigurationDTO authorizationConfig(boolean authorizationEnabled) {
@@ -239,6 +313,14 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
     return headers;
+  }
+
+  private ProcessInstanceTriggerEnvelope envelope(StartCommandDTO trigger) {
+    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+  }
+
+  private ProcessInstanceTriggerEnvelope envelope(AbortTriggerDTO trigger) {
+    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
   }
 
   private StartCommandDTO startCommand(String processDefinitionId, int version) {

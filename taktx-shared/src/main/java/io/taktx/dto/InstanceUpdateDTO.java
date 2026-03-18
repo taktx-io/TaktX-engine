@@ -33,8 +33,9 @@ import lombok.ToString;
 @RegisterForReflection
 public abstract class InstanceUpdateDTO {
   /**
-   * Unique ID linking this event back to the user action that triggered it. Null for
-   * engine-internal commands (timers, call activities, message starts).
+   * Structured provenance/trust data for the originating command that caused this update. This is
+   * intentionally about the originating command chain, not about transport-level verification of
+   * the outbound instance-update record itself.
    */
-  @Nullable private String auditId;
+  @Nullable private CommandTrustMetadataDTO commandTrustMetadata;
 }

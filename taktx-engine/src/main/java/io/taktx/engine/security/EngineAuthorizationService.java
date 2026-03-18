@@ -9,6 +9,9 @@ package io.taktx.engine.security;
 
 import io.quarkus.runtime.Startup;
 import io.taktx.dto.AbortTriggerDTO;
+import io.taktx.dto.CommandAuthMethod;
+import io.taktx.dto.CommandTrustMetadataDTO;
+import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
@@ -20,6 +23,7 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.license.LicenseState;
 import io.taktx.engine.pd.Stores;
+import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
 import io.taktx.security.EngineSigningKeysHolder;
@@ -161,23 +165,12 @@ public class EngineAuthorizationService {
   }
 
   /**
-   * Authorises an incoming command on {@code process-instance-trigger}.
-   *
-   * <p>Decision tree:
-   *
-   * <ol>
-   *   <li>{@code X-TaktX-Authorization} (RS256 JWT) — external command from console/ingester;
-   *       validated here with full claim and nonce checks.
-   *   <li>{@code X-TaktX-Signature} (Ed25519) — worker response or engine-internal command;
-   *       engine-internal keys are trusted as-is, worker keys are enforced against the {@code
-   *       taktx-signing-keys} KTable (REVOKED/unknown → rejected).
-   *   <li>No header — rejected when authorization is enabled.
-   * </ol>
-   *
-   * @return the {@code auditId} from a JWT token, or {@code null} for Ed25519-signed records
-   * @throws AuthorizationTokenException if validation fails — record must be dropped
+   * Authorises an incoming command on {@code process-instance-trigger} and returns structured trust
+   * metadata to be attached to the command/update chain.
    */
-  public String authorize(Headers headers, ProcessInstanceTriggerDTO trigger) {
+  public CommandTrustMetadataDTO authorize(
+      Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
     if (!effectiveConfig().isAuthorizationEnabled()) {
       return null;
     }
@@ -195,8 +188,7 @@ public class EngineAuthorizationService {
 
     Header sigHeader = headers.lastHeader(SIG_HEADER);
     if (sigHeader != null && sigHeader.value() != null) {
-      authorizeViaEd25519(sigHeader, trigger);
-      return null;
+      return authorizeViaEd25519(sigHeader, triggerEnvelope);
     }
 
     throw new AuthorizationTokenException(
@@ -210,7 +202,8 @@ public class EngineAuthorizationService {
 
   // ── JWT path ────────────────────────────────────────────────────────────────
 
-  private String authorizeViaJwt(Header authHeader, ProcessInstanceTriggerDTO trigger) {
+  private CommandTrustMetadataDTO authorizeViaJwt(
+      Header authHeader, ProcessInstanceTriggerDTO trigger) {
     String rawJwt = new String(authHeader.value(), StandardCharsets.UTF_8);
     TokenClaims claims = validator.validate(rawJwt);
     validateClaimsMatchCommand(claims, trigger);
@@ -222,7 +215,13 @@ public class EngineAuthorizationService {
         trigger.getClass().getSimpleName(),
         claims.getUserId(),
         claims.getAuditId());
-    return claims.getAuditId();
+    return CommandTrustMetadataDTO.builder()
+        .authMethod(CommandAuthMethod.JWT)
+        .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+        .trusted(true)
+        .userId(claims.getUserId())
+        .issuer(claims.getIssuer())
+        .build();
   }
 
   // ── Ed25519 path ──────────────────────────────────────────────────────────────
@@ -234,7 +233,12 @@ public class EngineAuthorizationService {
    * that the referenced key still exists in the {@code taktx-signing-keys} KTable and is not
    * revoked.
    */
-  private void authorizeViaEd25519(Header sigHeader, ProcessInstanceTriggerDTO trigger) {
+  private CommandTrustMetadataDTO authorizeViaEd25519(
+      Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    if (triggerEnvelope.hasSignatureError()) {
+      throw new AuthorizationTokenException(triggerEnvelope.signatureError());
+    }
+
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     String keyId = dot >= 0 ? headerValue.substring(0, dot) : headerValue;
@@ -245,20 +249,39 @@ public class EngineAuthorizationService {
           "Unknown Ed25519 keyId '"
               + keyId
               + "' — rejecting command "
-              + trigger.getClass().getSimpleName());
+              + triggerEnvelope.trigger().getClass().getSimpleName());
     }
     if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
       throw new AuthorizationTokenException(
           "Revoked Ed25519 keyId '"
               + keyId
               + "' — rejecting command "
-              + trigger.getClass().getSimpleName());
+              + triggerEnvelope.trigger().getClass().getSimpleName());
+    }
+    if (!triggerEnvelope.signatureVerified()) {
+      throw new AuthorizationTokenException(
+          "Ed25519 header present for command "
+              + triggerEnvelope.trigger().getClass().getSimpleName()
+              + " but the signature was not verified by the deserializer");
     }
     log.info(
         "✅ Authorised (Ed25519) command={} keyId={} owner={}",
-        trigger.getClass().getSimpleName(),
+        triggerEnvelope.trigger().getClass().getSimpleName(),
         keyId,
         entry.getOwner());
+
+    CommandTrustMetadataDTO embeddedMetadata = triggerEnvelope.trigger().getCommandTrustMetadata();
+    if (embeddedMetadata != null && "engine".equalsIgnoreCase(entry.getOwner())) {
+      return embeddedMetadata;
+    }
+    return CommandTrustMetadataDTO.builder()
+        .authMethod(CommandAuthMethod.ED25519)
+        .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
+        .trusted(true)
+        .signerKeyId(keyId)
+        .signerOwner(entry.getOwner())
+        .signerAlgorithm(entry.getAlgorithm())
+        .build();
   }
 
   private GlobalConfigurationDTO effectiveConfig() {
