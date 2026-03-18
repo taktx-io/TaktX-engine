@@ -136,9 +136,9 @@ final class RuntimeConfigurationStore implements AutoCloseable {
       }
       ready.set(true);
       log.info(
-          "RuntimeConfigurationStore: initial load complete — signingEnabled={} authorizationEnabled={}",
+          "RuntimeConfigurationStore: initial load complete — signingEnabled={} engineRequiresAuthorization={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
-          RuntimeConfigurationHolder.isAuthorizationEnabled());
+          RuntimeConfigurationHolder.isEngineRequiresAuthorization());
     } catch (Exception e) {
       log.warn(
           "RuntimeConfigurationStore: initial load failed — using default config: {}",
@@ -181,9 +181,9 @@ final class RuntimeConfigurationStore implements AutoCloseable {
       if (event != null && event.getConfiguration() != null) {
         RuntimeConfigurationHolder.set(event.getConfiguration());
         log.info(
-            "RuntimeConfigurationStore: updated config signingEnabled={} authorizationEnabled={}",
+            "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={}",
             event.getConfiguration().isSigningEnabled(),
-            event.getConfiguration().isAuthorizationEnabled());
+            event.getConfiguration().isEngineRequiresAuthorization());
       }
     } catch (Exception e) {
       log.warn(

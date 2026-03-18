@@ -99,7 +99,7 @@ The compacted `taktx-configuration` topic (record key `"config"`) carries `Globa
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `signingEnabled` | boolean | `false` | Master switch for outbound engine Ed25519 signing |
-| `authorizationEnabled` | boolean | `false` | Master switch for RS256 JWT command authorization |
+| `engineRequiresAuthorization` | boolean | `false` | Master switch for RS256 JWT command authorization |
 | `rbacEnabled` | boolean | `false` | Reserved for future use |
 | `trustedKeyIds` | `List<String>` | `[]` | Reserved compatibility surface for broader trust/rotation workflows |
 
@@ -114,7 +114,7 @@ The compacted `taktx-configuration` topic (record key `"config"`) carries `Globa
 ### Safe-default behaviour when no config record exists yet
 
 - `signingEnabled = false`
-- `authorizationEnabled = false`
+- `engineRequiresAuthorization = false`
 - `rbacEnabled = false`
 - `trustedKeyIds = []`
 
@@ -130,7 +130,7 @@ So a new deployment with no config record behaves like today: BPMN processing ru
 
 Changes:
 
-- add `authorizationEnabled`
+- add `engineRequiresAuthorization`
 - remove `signingKeyId`
 - do **not** add `rejectExpired`
 - do **not** add `nonceCheckEnabled`
@@ -176,7 +176,7 @@ Otherwise it returns `null` and the record is sent unsigned.
 Changes:
 
 - inject `GlobalConfigStore`
-- use `GlobalConfigurationDTO.authorizationEnabled` as the only runtime authorization toggle
+- use `GlobalConfigurationDTO.engineRequiresAuthorization` as the only runtime authorization toggle
 - remove config/property-based nonce toggle
 - remove config/property-based expiry toggle
 - remove the engine-key special case for Ed25519 authorization
@@ -195,7 +195,7 @@ Changes:
 
 Remove obsolete properties:
 
-- `authorizationEnabled`
+- `engineRequiresAuthorization`
 - `rejectExpiredTokens`
 - `nonceCheckEnabled`
 - `signingEnabled`
@@ -263,7 +263,7 @@ TAKTX_ENGINE_NAMESPACE=default
 1. engine starts and creates/verifies topics
 2. engine resolves its signing identity from the configured source (default: generated `engine-<uuid>` key)
 3. public-key publication retries until `taktx-signing-keys` is available
-4. no config record means `authorizationEnabled=false` and `signingEnabled=false`
+4. no config record means `engineRequiresAuthorization=false` and `signingEnabled=false`
 5. BPMN processing runs normally without JWT enforcement or outbound signing
 
 If a config record is later pushed with `signingEnabled=true`, signing starts live once the key has been published and the license permits it.
@@ -300,9 +300,9 @@ TAKTX_PLATFORM_PUBLIC_KEY=<base64-DER RSA public key>
 | Test area | Update |
 |---|---|
 | `MessageSigningServiceTest` | Use a prebuilt `KeyPair` test constructor instead of env/system-property key injection |
-| `EngineAuthorizationServiceTest` | Drive authorization through `GlobalConfigStore.authorizationEnabled`; remove nonce-disable scenarios |
+| `EngineAuthorizationServiceTest` | Drive authorization through `GlobalConfigStore.engineRequiresAuthorization`; remove nonce-disable scenarios |
 | `SecurityTestConfigResource` | Stop injecting engine Ed25519 keys; read runtime-generated key ID/public key from `MessageSigningService` |
-| `SecurityIntegrationTest` | Publish `authorizationEnabled=true` and `signingEnabled=true` through config topic; assert against runtime engine key ID |
+| `SecurityIntegrationTest` | Publish `engineRequiresAuthorization=true` and `signingEnabled=true` through config topic; assert against runtime engine key ID |
 | `WorkerEndToEndTest` | Use the runtime-generated engine public key from the test resource |
 | `SecurityEndToEndHelper` | Stop writing removed DTO fields |
 
@@ -344,7 +344,7 @@ Reason:
 `GlobalConfigurationDTO` now only needs:
 
 - `signingEnabled`
-- `authorizationEnabled`
+- `engineRequiresAuthorization`
 - `rbacEnabled`
 - `trustedKeyIds`
 

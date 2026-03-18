@@ -68,7 +68,7 @@ final class SecurityEndToEndHelper {
       GlobalConfigurationDTO config =
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
-              .authorizationEnabled(true)
+              .engineRequiresAuthorization(true)
               .trustedKeyIds(allTrusted)
               .build();
 

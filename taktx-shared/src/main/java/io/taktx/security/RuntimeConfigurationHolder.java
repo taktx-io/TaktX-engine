@@ -39,8 +39,8 @@ public final class RuntimeConfigurationHolder {
     return get().isSigningEnabled();
   }
 
-  public static boolean isAuthorizationEnabled() {
-    return get().isAuthorizationEnabled();
+  public static boolean isEngineRequiresAuthorization() {
+    return get().isEngineRequiresAuthorization();
   }
 
   public static void clear() {

@@ -36,7 +36,7 @@ public class TestLicenseManager implements LicenseManager {
   }
 
   @Override
-  public boolean isCommandAuthorizationAllowed() {
+  public boolean isEngineRequiresAuthorization() {
     return true;
   }
 

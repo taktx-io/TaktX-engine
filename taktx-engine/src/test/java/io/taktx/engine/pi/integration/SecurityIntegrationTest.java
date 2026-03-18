@@ -359,14 +359,17 @@ class SecurityIntegrationTest {
   }
 
   @Test
-  void malformedSignedStartCommand_rejected_streamContinuesForNextValidCommand() throws IOException {
+  void malformedSignedStartCommand_rejected_streamContinuesForNextValidCommand()
+      throws IOException {
     engine.deployProcessDefinitionAndWait("/bpmn/task-single.bpmn");
 
-    UUID malformedId = sendStartCommandWithSignatureHeader(TASK_SINGLE_PROCESS_ID, "malformed-header");
+    UUID malformedId =
+        sendStartCommandWithSignatureHeader(TASK_SINGLE_PROCESS_ID, "malformed-header");
     await()
         .during(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(3))
-        .untilAsserted(() -> assertThat(engine.getProcessInstanceMap()).doesNotContainKey(malformedId));
+        .untilAsserted(
+            () -> assertThat(engine.getProcessInstanceMap()).doesNotContainKey(malformedId));
 
     String jwt =
         buildJwt(
@@ -805,7 +808,7 @@ class SecurityIntegrationTest {
       GlobalConfigurationDTO config =
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
-              .authorizationEnabled(true)
+              .engineRequiresAuthorization(true)
               .trustedKeyIds(List.of(WORKER_KEY_ID))
               .build();
 

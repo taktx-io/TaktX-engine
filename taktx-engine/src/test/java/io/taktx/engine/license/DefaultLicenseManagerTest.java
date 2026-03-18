@@ -12,7 +12,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.taktx.engine.config.TaktConfiguration;
+import java.util.HashMap;
+import java.util.Map;
 import java.nio.file.Path;
+import javax0.license3j.Feature;
+import javax0.license3j.License;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +47,7 @@ class DefaultLicenseManagerTest {
 
   @Test
   void beforePush_commandAuthorizationNotAllowed() {
-    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
+    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
   }
 
   @Test
@@ -66,7 +70,7 @@ class DefaultLicenseManagerTest {
   @Test
   void afterPush_commandAuthorizationReflectsPushedValue() {
     manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
-    assertThat(manager.isCommandAuthorizationAllowed()).isTrue();
+    assertThat(manager.isEngineRequiresAuthorization()).isTrue();
   }
 
   @Test
@@ -78,7 +82,7 @@ class DefaultLicenseManagerTest {
   @Test
   void afterPush_commandAuthorizationFalseWhenLicenseDoesNotPermit() {
     manager.updateFromLicensePush("COMMUNITY", 60, false, false);
-    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
+    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
   }
 
   @Test
@@ -95,13 +99,31 @@ class DefaultLicenseManagerTest {
 
     assertThat(manager.getPartitionBudget()).isEqualTo(20);
     assertThat(manager.isEventSigningAllowed()).isTrue();
-    assertThat(manager.isCommandAuthorizationAllowed()).isTrue();
+    assertThat(manager.isEngineRequiresAuthorization()).isTrue();
   }
 
   @Test
   void signingAndAuthorizationCanBeGrantedIndependently() {
     manager.updateFromLicensePush("STANDARD", 180, true, false);
     assertThat(manager.isEventSigningAllowed()).isTrue();
-    assertThat(manager.isCommandAuthorizationAllowed()).isFalse();
+    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
+  }
+
+  @Test
+  void featureBoolean_acceptsEngineRequiresAuthorizationAlias() {
+    License license = mock(License.class);
+    Feature feature = mock(Feature.class);
+    Map<String, Feature> features = new HashMap<>();
+    features.put(LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION, feature);
+
+    when(license.getFeatures()).thenReturn(features);
+    when(feature.getString()).thenReturn(" true ");
+
+    assertThat(
+            DefaultLicenseManager.getFeatureBoolean(
+                license,
+                LicenseFeatures.LICENSE_FEATURE_COMMAND_AUTHORIZATION,
+                LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION))
+        .isTrue();
   }
 }

@@ -19,7 +19,10 @@ class TaktXClientGlobalConfigPublishTest {
   @Test
   void buildConfigurationEvent_wrapsGlobalConfigurationUsingConfigUpdateType() {
     GlobalConfigurationDTO configuration =
-        GlobalConfigurationDTO.builder().signingEnabled(true).authorizationEnabled(true).build();
+        GlobalConfigurationDTO.builder()
+            .signingEnabled(true)
+            .engineRequiresAuthorization(true)
+            .build();
 
     ConfigurationEventDTO event = TaktXClient.buildConfigurationEvent(configuration);
 

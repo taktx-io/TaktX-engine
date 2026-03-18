@@ -73,7 +73,7 @@ services:
 
       # ── Optional trust anchor for JWT authorization ─────────────────────
       # Runtime signing/authorization flags come from taktx-configuration.
-      # Set this only when authorizationEnabled=true is pushed via the config topic.
+      # Set this only when engineRequiresAuthorization=true is pushed via the config topic.
       # TAKTX_PLATFORM_PUBLIC_KEY: <base64-DER RSA public key from platform service>
 
     volumes:

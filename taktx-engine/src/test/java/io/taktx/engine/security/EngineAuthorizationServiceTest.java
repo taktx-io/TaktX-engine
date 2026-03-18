@@ -282,8 +282,10 @@ class EngineAuthorizationServiceTest {
         .hasMessageContaining("Malformed base64 signature for keyId=worker-test-001");
   }
 
-  private GlobalConfigurationDTO authorizationConfig(boolean authorizationEnabled) {
-    return GlobalConfigurationDTO.builder().authorizationEnabled(authorizationEnabled).build();
+  private GlobalConfigurationDTO authorizationConfig(boolean engineRequiresAuthorization) {
+    return GlobalConfigurationDTO.builder()
+        .engineRequiresAuthorization(engineRequiresAuthorization)
+        .build();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────

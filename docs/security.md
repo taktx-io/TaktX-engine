@@ -23,7 +23,7 @@ TaktX has two separate security mechanisms:
 
 1. **RS256 JWT command authorization**
    - Used for external commands such as process start and abort.
-   - Guarded at runtime by `GlobalConfigurationDTO.authorizationEnabled`.
+   - Guarded at runtime by `GlobalConfigurationDTO.engineRequiresAuthorization`.
    - JWT expiry is always enforced.
    - JWT replay protection via `auditId` nonce tracking is always enforced.
 
@@ -45,7 +45,7 @@ External commands are authorized through the `X-TaktX-Authorization` header.
 
 ### Validation steps
 
-When `authorizationEnabled=true` in the latest config-topic record, the engine validates:
+When `engineRequiresAuthorization=true` in the latest config-topic record, the engine validates:
 
 1. JWT signature
 2. required claims
@@ -124,7 +124,7 @@ The current `GlobalConfigurationDTO` fields are:
 | Field | Meaning |
 |---|---|
 | `signingEnabled` | Enables outbound engine Ed25519 signing |
-| `authorizationEnabled` | Enables JWT command authorization |
+| `engineRequiresAuthorization` | Enables JWT command authorization |
 | `rbacEnabled` | Reserved for future use |
 | `trustedKeyIds` | Reserved compatibility surface |
 
@@ -220,7 +220,7 @@ These are consumed by worker/client-side signing identity sources.
 If no `"config"` record has been received yet, the engine defaults to:
 
 - `signingEnabled = false`
-- `authorizationEnabled = false`
+- `engineRequiresAuthorization = false`
 - `rbacEnabled = false`
 - `trustedKeyIds = []`
 
@@ -244,7 +244,7 @@ These rules are not configurable:
 The platform team should treat these as the stable runtime config fields:
 
 - `signingEnabled`
-- `authorizationEnabled`
+- `engineRequiresAuthorization`
 - `rbacEnabled`
 - `trustedKeyIds`
 

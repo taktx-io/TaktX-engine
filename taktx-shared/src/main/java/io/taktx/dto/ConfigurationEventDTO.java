@@ -31,7 +31,6 @@ public class ConfigurationEventDTO {
 
   private ConfigurationEventType eventType;
   private GlobalConfigurationDTO configuration;
-  private LicenseDTO license;
   private Instant timestamp;
   private String publishedByInstance;
 }

@@ -60,7 +60,8 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
     String keyId = "worker-key";
     KeyPair keyPair = SigningKeyGenerator.generate();
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
-    EngineSigningKeysHolder.set(resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
+    EngineSigningKeysHolder.set(
+        resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
 
     RecordHeaders headers = new RecordHeaders();
     headers.add(
@@ -90,7 +91,8 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
     assertThat(envelope.signatureVerified()).isFalse();
     assertThat(envelope.signatureKeyId()).isEqualTo("missing-key");
     assertThat(envelope.hasSignatureError()).isTrue();
-    assertThat(envelope.signatureError()).contains("Unknown or revoked signing keyId='missing-key'");
+    assertThat(envelope.signatureError())
+        .contains("Unknown or revoked signing keyId='missing-key'");
   }
 
   @Test
@@ -100,7 +102,8 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
     String keyId = "worker-key";
     KeyPair keyPair = SigningKeyGenerator.generate();
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
-    EngineSigningKeysHolder.set(resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
+    EngineSigningKeysHolder.set(
+        resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
 
     byte[] bogusSignature = new byte[64];
     RecordHeaders headers = new RecordHeaders();
@@ -127,7 +130,8 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
     KeyPair keyPair = SigningKeyGenerator.generate();
     String privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
-    EngineSigningKeysHolder.set(resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
+    EngineSigningKeysHolder.set(
+        resolvedKeyId -> keyId.equals(resolvedKeyId) ? publicKeyBase64 : null);
 
     byte[] signature = Ed25519Service.sign(payload, privateKeyBase64);
     RecordHeaders headers = new RecordHeaders();
@@ -153,11 +157,6 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
 
   private StartCommandDTO startCommand() {
     return new StartCommandDTO(
-        UUID.randomUUID(),
-        null,
-        null,
-        new ProcessDefinitionKey("proc", -1),
-        VariablesDTO.empty());
+        UUID.randomUUID(), null, null, new ProcessDefinitionKey("proc", -1), VariablesDTO.empty());
   }
 }
-

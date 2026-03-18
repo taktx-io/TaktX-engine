@@ -349,17 +349,17 @@ public class DefaultLicenseManager implements LicenseManager {
     final String licenseType;
     final Integer partitionBudget;
     final boolean eventSigning;
-    final boolean commandAuthorization;
+    final boolean engineRequiresAuthorization;
 
     PushedLicense(
         String licenseType,
         Integer partitionBudget,
         boolean eventSigning,
-        boolean commandAuthorization) {
+        boolean engineRequiresAuthorization) {
       this.licenseType = licenseType;
       this.partitionBudget = partitionBudget;
       this.eventSigning = eventSigning;
-      this.commandAuthorization = commandAuthorization;
+      this.engineRequiresAuthorization = engineRequiresAuthorization;
     }
   }
 
@@ -436,14 +436,11 @@ public class DefaultLicenseManager implements LicenseManager {
     }
     int budget = 60; // default free tier — total partition budget across all topics
     if (license != null && licenseState == LicenseState.VALID) {
-      // Try canonical name first, then legacy alias used in older file-based licenses.
-      Feature budgetFeature =
-          license.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
-      if (budgetFeature == null) {
-        budgetFeature = license.getFeatures().get("maxAllowedPartitions");
-      }
-      if (budgetFeature != null) {
-        int val = budgetFeature.getInt();
+      Integer val =
+          getFeatureInt(
+              license,
+              LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      if (val != null) {
         // 0 means unlimited in the license tool convention
         budget = (val == 0) ? Integer.MAX_VALUE : val;
       }
@@ -462,10 +459,10 @@ public class DefaultLicenseManager implements LicenseManager {
   }
 
   @Override
-  public boolean isCommandAuthorizationAllowed() {
+  public boolean isEngineRequiresAuthorization() {
     PushedLicense pushed = pushedLicense.get();
     if (pushed != null) {
-      return pushed.commandAuthorization;
+      return pushed.engineRequiresAuthorization;
     }
     // No pushed license — fall back to false (command authorization is an enterprise feature).
     return false;
@@ -476,9 +473,9 @@ public class DefaultLicenseManager implements LicenseManager {
       String licenseType,
       Integer partitionBudget,
       boolean eventSigning,
-      boolean commandAuthorization) {
+      boolean engineRequiresAuthorization) {
     DefaultLicenseManager.PushedLicense updated =
-        new PushedLicense(licenseType, partitionBudget, eventSigning, commandAuthorization);
+        new PushedLicense(licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
     pushedLicense.set(updated);
     log.info(
         "License updated from configuration topic: type={} maxPartitions={}",
@@ -526,15 +523,21 @@ public class DefaultLicenseManager implements LicenseManager {
 
       // Extract fields — all optional; null means unlimited / not present
       String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
+      // Accept both the canonical feature name and the legacy file-license alias.
       // The license tool uses 0 to mean "unlimited" — map that to null.
-      Integer rawBudget = getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      Integer rawBudget =
+          getFeatureInt(
+              pushed,
+              LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
       Integer partitionBudget = (rawBudget != null && rawBudget == 0) ? null : rawBudget;
       boolean eventSigning =
           getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
-      boolean commandAuthorization =
-          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_COMMAND_AUTHORIZATION);
+      boolean engineRequiresAuthorization =
+          getFeatureBoolean(
+              pushed,
+              LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION);
 
-      updateFromLicensePush(licenseType, partitionBudget, eventSigning, commandAuthorization);
+      updateFromLicensePush(licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
     } catch (IOException e) {
       log.warn("Failed to read pushed license text: {}", e.getMessage());
     } catch (Exception e) {
@@ -542,13 +545,13 @@ public class DefaultLicenseManager implements LicenseManager {
     }
   }
 
-  private static String getFeatureString(License lic, String name) {
-    Feature f = lic.getFeatures().get(name);
+  static String getFeatureString(License lic, String... names) {
+    Feature f = getFirstFeature(lic, names);
     return f != null ? f.getString() : null;
   }
 
-  private static Integer getFeatureInt(License lic, String name) {
-    Feature f = lic.getFeatures().get(name);
+  static Integer getFeatureInt(License lic, String... names) {
+    Feature f = getFirstFeature(lic, names);
     if (f == null) return null;
     try {
       return f.getInt();
@@ -561,13 +564,29 @@ public class DefaultLicenseManager implements LicenseManager {
     }
   }
 
-  private static boolean getFeatureBoolean(License lic, String name) {
-    Feature f = lic.getFeatures().get(name);
+  static boolean getFeatureBoolean(License lic, String... names) {
+    Feature f = getFirstFeature(lic, names);
     if (f == null) return false;
     try {
       return Boolean.parseBoolean(f.getString().trim());
     } catch (Exception _) {
       return false;
     }
+  }
+
+  private static Feature getFirstFeature(License lic, String... names) {
+    if (lic == null || names == null) {
+      return null;
+    }
+    for (String name : names) {
+      if (name == null || name.isBlank()) {
+        continue;
+      }
+      Feature feature = lic.getFeatures().get(name);
+      if (feature != null) {
+        return feature;
+      }
+    }
+    return null;
   }
 }

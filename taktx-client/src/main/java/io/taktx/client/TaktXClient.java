@@ -159,9 +159,9 @@ public class TaktXClient {
       runtimeConfigurationStore = new RuntimeConfigurationStore(consumerProps, topic);
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
-          "✅ RuntimeConfigurationStore ready — signingEnabled={} authorizationEnabled={}",
+          "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
-          RuntimeConfigurationHolder.isAuthorizationEnabled());
+          RuntimeConfigurationHolder.isEngineRequiresAuthorization());
     } catch (Exception e) {
       RuntimeConfigurationHolder.clear();
       log.warn(

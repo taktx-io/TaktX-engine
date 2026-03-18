@@ -137,7 +137,7 @@ client.startProcess("invoice-process", -1, VariablesDTO.empty(), jwt);
 
 ### JWT requirements for engine authorization
 
-If engine-side `authorizationEnabled=true` is active in the configuration topic, the JWT must:
+If engine-side `engineRequiresAuthorization=true` is active in the configuration topic, the JWT must:
 
 - have a `kid` header matching a published RSA public key in `taktx-signing-keys`
 - include a valid `exp`

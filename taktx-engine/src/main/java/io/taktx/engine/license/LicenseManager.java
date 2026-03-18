@@ -31,7 +31,7 @@ public interface LicenseManager {
    * <p>The runtime configuration topic provides the operator's request; this method is the license
    * gate. Authorization is only active when both permit it.
    */
-  boolean isCommandAuthorizationAllowed();
+  boolean isEngineRequiresAuthorization();
 
   /**
    * Updates the in-memory license state from a license record pushed via the {@code

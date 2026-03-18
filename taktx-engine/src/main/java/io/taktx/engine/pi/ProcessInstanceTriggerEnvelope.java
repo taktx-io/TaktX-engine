@@ -18,7 +18,9 @@ public record ProcessInstanceTriggerEnvelope(
     @Nullable String signatureError) {
 
   public ProcessInstanceTriggerEnvelope(
-      ProcessInstanceTriggerDTO trigger, boolean signatureVerified, @Nullable String signatureKeyId) {
+      ProcessInstanceTriggerDTO trigger,
+      boolean signatureVerified,
+      @Nullable String signatureKeyId) {
     this(trigger, signatureVerified, signatureKeyId, null);
   }
 

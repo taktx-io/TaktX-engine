@@ -35,7 +35,8 @@ class StandaloneSecurityDisabledTest {
   void startProcess_withoutAuthorizationOrSigning_emitsUpdatesWithoutTrustMetadata()
       throws IOException {
     BpmnTestEngine engine =
-        SingletonBpmnTestEngine.getInstance().deployProcessDefinitionAndWait("/bpmn/task-single.bpmn");
+        SingletonBpmnTestEngine.getInstance()
+            .deployProcessDefinitionAndWait("/bpmn/task-single.bpmn");
 
     engine.startProcessInstance(VariablesDTO.empty());
 

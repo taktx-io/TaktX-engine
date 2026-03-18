@@ -129,7 +129,7 @@ public class EngineAuthorizationService {
     }
 
     @Override
-    public boolean isCommandAuthorizationAllowed() {
+    public boolean isEngineRequiresAuthorization() {
       return true;
     }
 
@@ -171,12 +171,12 @@ public class EngineAuthorizationService {
   public CommandTrustMetadataDTO authorize(
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
-    if (!effectiveConfig().isAuthorizationEnabled()) {
+    if (!effectiveConfig().isEngineRequiresAuthorization()) {
       return null;
     }
-    if (!licenseManager.isCommandAuthorizationAllowed()) {
+    if (!licenseManager.isEngineRequiresAuthorization()) {
       log.warn(
-          "authorizationEnabled=true in runtime config but the active license does not permit"
+          "engineRequiresAuthorization=true in runtime config but the active license does not permit"
               + " command authorization — command accepted without validation");
       return null;
     }
