@@ -69,7 +69,6 @@ final class SecurityEndToEndHelper {
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
               .authorizationEnabled(true)
-              .rbacEnabled(false)
               .trustedKeyIds(allTrusted)
               .build();
 

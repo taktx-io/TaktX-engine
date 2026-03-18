@@ -806,7 +806,6 @@ class SecurityIntegrationTest {
           GlobalConfigurationDTO.builder()
               .signingEnabled(true)
               .authorizationEnabled(true)
-              .rbacEnabled(false)
               .trustedKeyIds(List.of(WORKER_KEY_ID))
               .build();
 
