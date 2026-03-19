@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,24 @@ class ExternalTaskInstanceResponderTest {
     responder =
         new ExternalTaskInstanceResponder(
             mockProducer, topicName, processInstanceId, elementInstanceIdPath);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void respondSuccess_runsBeforeSendHook() {
+    AtomicBoolean beforeSendCalled = new AtomicBoolean(false);
+    responder =
+        new ExternalTaskInstanceResponder(
+            mockProducer,
+            topicName,
+            processInstanceId,
+            elementInstanceIdPath,
+            () -> beforeSendCalled.set(true));
+
+    responder.respondSuccess();
+
+    assertThat(beforeSendCalled).isTrue();
+    verify(mockProducer).send(org.mockito.ArgumentMatchers.any(ProducerRecord.class));
   }
 
   @SuppressWarnings("unchecked")

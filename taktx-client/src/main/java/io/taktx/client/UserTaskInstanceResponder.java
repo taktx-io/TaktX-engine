@@ -36,16 +36,27 @@ public class UserTaskInstanceResponder {
   private final String topicName;
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
+  private final Runnable beforeSendHook;
 
   public UserTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
       UUID processInstanceId,
       List<Long> elementInstanceIdPath) {
+    this(responseEmitter, topicName, processInstanceId, elementInstanceIdPath, () -> {});
+  }
+
+  UserTaskInstanceResponder(
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
+      String topicName,
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      Runnable beforeSendHook) {
     this.responseEmitter = responseEmitter;
     this.topicName = topicName;
     this.processInstanceId = processInstanceId;
     this.elementInstanceIdPath = elementInstanceIdPath;
+    this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
   }
 
   /** Sends a success response with no variables. */
@@ -141,6 +152,7 @@ public class UserTaskInstanceResponder {
   }
 
   private void sendSigned(UserTaskResponseTriggerDTO trigger) {
+    beforeSendHook.run();
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> record =
         new ProducerRecord<>(topicName, trigger.getProcessInstanceId(), trigger);
     responseEmitter.send(record);

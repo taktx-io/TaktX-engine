@@ -14,7 +14,7 @@
     <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
         <text x="68.0" y="15" fill="#010101" fill-opacity=".3">taktx-client coverage</text>
         <text x="68.0" y="14">taktx-client coverage</text>
-        <text x="156.0" y="15" fill="#010101" fill-opacity=".3">14.2%</text>
-        <text x="156.0" y="14">14.2%</text>
+        <text x="156.0" y="15" fill="#010101" fill-opacity=".3">32.2%</text>
+        <text x="156.0" y="14">32.2%</text>
     </g>
 </svg>

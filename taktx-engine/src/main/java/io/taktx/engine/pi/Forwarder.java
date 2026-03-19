@@ -80,7 +80,7 @@ public class Forwarder {
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
       ProcessInstance processInstance) {
-    forward(context, instanceResult, definitionKey, processInstance, null);
+    forward(context, instanceResult, definitionKey, processInstance, null, null);
   }
 
   public void forward(
@@ -88,19 +88,20 @@ public class Forwarder {
       InstanceResult instanceResult,
       ProcessDefinitionKey definitionKey,
       ProcessInstance processInstance,
-      CommandTrustMetadataDTO commandTrustMetadata) {
-    forwardInstanceUpdates(context, instanceResult, commandTrustMetadata);
+      CommandTrustMetadataDTO currentTrustMetadata,
+      CommandTrustMetadataDTO originTrustMetadata) {
+    forwardInstanceUpdates(context, instanceResult, currentTrustMetadata, originTrustMetadata);
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
     forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstance);
-    forwardNewStartCommands(context, instanceResult, processInstance, commandTrustMetadata);
-    forwardContinuations(context, instanceResult, commandTrustMetadata);
+    forwardNewStartCommands(context, instanceResult, processInstance, originTrustMetadata);
+    forwardContinuations(context, instanceResult, originTrustMetadata);
     forwardCancelSchedules(context, instanceResult);
-    forwardScheduledEvents(context, instanceResult, processInstance, commandTrustMetadata);
+    forwardScheduledEvents(context, instanceResult, processInstance, originTrustMetadata);
     forwardScheduledExternalTaskTriggerTimeouts(
-        context, instanceResult, processInstance, commandTrustMetadata);
-    forwardTerminateCommands(context, instanceResult, commandTrustMetadata);
+        context, instanceResult, processInstance, originTrustMetadata);
+    forwardTerminateCommands(context, instanceResult, originTrustMetadata);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
-    forwardEventSignalTriggers(context, instanceResult, commandTrustMetadata);
+    forwardEventSignalTriggers(context, instanceResult, originTrustMetadata);
     forwardSignals(context, instanceResult);
     forwardSignalSubscriptions(context, instanceResult, processInstance);
   }
@@ -147,12 +148,12 @@ public class Forwarder {
   private void forwardEventSignalTriggers(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<EventSignalTriggerDTO> eventSignalTriggerList =
         instanceResult.getEventSignalTriggerList();
     while (!eventSignalTriggerList.isEmpty()) {
       EventSignalTriggerDTO eventSignalTriggerDTO = eventSignalTriggerList.poll();
-      applyCommandTrustMetadata(eventSignalTriggerDTO, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(eventSignalTriggerDTO, originTrustMetadata);
       context.forward(
           new Record<>(
               eventSignalTriggerDTO.getProcessInstanceId(), eventSignalTriggerDTO, clock.millis()));
@@ -162,14 +163,14 @@ public class Forwarder {
   private void forwardInstanceUpdates(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO currentTrustMetadata,
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<InstanceUpdate> instanceUpdates = instanceResult.getInstanceUpdates();
     if (Boolean.parseBoolean(taktConfiguration.getBroadcastInstanceUpdates())) {
       while (!instanceUpdates.isEmpty()) {
         InstanceUpdate instanceUpdate = instanceUpdates.poll();
-        if (commandTrustMetadata != null) {
-          instanceUpdate.update().setCommandTrustMetadata(commandTrustMetadata);
-        }
+        instanceUpdate.update().setCurrentTrustMetadata(currentTrustMetadata);
+        instanceUpdate.update().setOriginTrustMetadata(originTrustMetadata);
         InstanceUpdateDTO updateDTO = instanceUpdate.update();
         context.forward(
             new Record<>(instanceUpdate.processInstanceId(), updateDTO, clock.millis()));
@@ -193,7 +194,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessInstance processInstance,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<ScheduledEventInfo> scheduledEventInfos = instanceResult.getScheduledEventInfos();
     while (!scheduledEventInfos.isEmpty()) {
       ScheduledEventInfo info = scheduledEventInfos.poll();
@@ -204,7 +205,7 @@ public class Forwarder {
       eventDto.setElementInstanceIdPath(elementInstanceIdPath);
       EventSignalTriggerDTO eventSignalTriggerDTO =
           new EventSignalTriggerDTO(processInstance.getProcessInstanceId(), eventDto);
-      applyCommandTrustMetadata(eventSignalTriggerDTO, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(eventSignalTriggerDTO, originTrustMetadata);
 
       long now = clock.millis();
 
@@ -232,7 +233,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessInstance processInstance,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
         instanceResult.getScheduledExternalTaskTriggerTimeouts();
     while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {
@@ -250,7 +251,7 @@ public class Forwarder {
               instancePath,
               externalTaskResponseResult,
               VariablesDTO.empty());
-      applyCommandTrustMetadata(externalTaskResponseResultDTO, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(externalTaskResponseResultDTO, originTrustMetadata);
 
       TimerEventDefinitionDTO timerEventDefinition = new TimerEventDefinitionDTO();
       String duration = Duration.ofMillis(info.timeoutMs()).toString();
@@ -323,11 +324,11 @@ public class Forwarder {
   private void forwardTerminateCommands(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<AbortTriggerDTO> newTerminateCommands = instanceResult.getNewTerminateCommands();
     while (!newTerminateCommands.isEmpty()) {
       AbortTriggerDTO terminateTrigger = newTerminateCommands.poll();
-      applyCommandTrustMetadata(terminateTrigger, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(terminateTrigger, originTrustMetadata);
       context.forward(
           new Record<>(terminateTrigger.getProcessInstanceId(), terminateTrigger, clock.millis()));
     }
@@ -336,11 +337,11 @@ public class Forwarder {
   private void forwardContinuations(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<ContinueFlowElementTriggerDTO> continuations = instanceResult.getContinuations();
     while (!continuations.isEmpty()) {
       ContinueFlowElementTriggerDTO continuation = continuations.poll();
-      applyCommandTrustMetadata(continuation, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(continuation, originTrustMetadata);
       context.forward(
           new Record<>(continuation.getProcessInstanceId(), continuation, clock.millis()));
     }
@@ -350,7 +351,7 @@ public class Forwarder {
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
       ProcessInstance processInstance,
-      CommandTrustMetadataDTO commandTrustMetadata) {
+      CommandTrustMetadataDTO originTrustMetadata) {
     Queue<NewStartCommand> newStartCommands = instanceResult.getNewStartCommands();
     while (!newStartCommands.isEmpty()) {
       NewStartCommand newStartCommand = newStartCommands.poll();
@@ -366,7 +367,7 @@ public class Forwarder {
               newStartCommand.variables(),
               newStartCommand.propagateAllToParent(),
               outputMappings);
-      applyCommandTrustMetadata(startCommand, commandTrustMetadata);
+      applyDerivedCommandTrustMetadata(startCommand, originTrustMetadata);
 
       context.forward(
           new Record<>(newStartCommand.processInstanceId(), startCommand, clock.millis()));
@@ -457,10 +458,11 @@ public class Forwarder {
         userTaskInfo.variables().scopeAndParentsToDto());
   }
 
-  private void applyCommandTrustMetadata(
-      ProcessInstanceTriggerDTO trigger, CommandTrustMetadataDTO commandTrustMetadata) {
+  private void applyDerivedCommandTrustMetadata(
+      ProcessInstanceTriggerDTO trigger, CommandTrustMetadataDTO originTrustMetadata) {
     if (trigger != null) {
-      trigger.setCommandTrustMetadata(commandTrustMetadata);
+      trigger.setCurrentTrustMetadata(null);
+      trigger.setOriginTrustMetadata(originTrustMetadata);
     }
   }
 }

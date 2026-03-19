@@ -62,9 +62,9 @@ import org.junit.jupiter.api.Test;
  * trigger) to be stamped with the worker keyId. Consumers that verify the signature will then fail
  * because the worker public key does not match the engine's signing bytes.
  *
- * <p>The solution mirrors {@link SecurityIntegrationTest}: the worker {@link TaktXClient} has
- * {@code taktx.signing.disabled=true} (so it never touches {@code SigningServiceHolder}), and a
- * separate {@link WorkerResponder} owns its own {@link
+ * <p>The solution mirrors {@link SecurityIntegrationTest}: the worker {@link TaktXClient} is built
+ * with a signing identity source that returns {@code null} (so it never touches {@code
+ * SigningServiceHolder}), and a separate {@link WorkerResponder} owns its own {@link
  * org.apache.kafka.clients.producer.KafkaProducer} with an {@code IsolatedSigningSerializer} that
  * captures the worker key at construction time.
  */
@@ -80,11 +80,11 @@ class WorkerEndToEndTest {
   private static final String ISSUER = "taktx-platform-service";
   private static final String PLATFORM_KID = SecurityTestConfigResource.PLATFORM_KID;
 
-  /** Observer/assertion helper — signing disabled, never touches SigningServiceHolder. */
+  /** Observer/assertion helper — no worker signing identity, never touches SigningServiceHolder. */
   private static BpmnTestEngine engine;
 
   /**
-   * Worker client with {@code taktx.signing.disabled=true}. Used only for:
+   * Worker client with no signing identity. Used only for:
    *
    * <ul>
    *   <li>Subscribing to the external-task trigger topic (receives engine-signed triggers).
@@ -142,8 +142,8 @@ class WorkerEndToEndTest {
     // engine-signed instance-update records.
     engine.init(SecurityTestConfigResource.enginePublicKeyBase64);
 
-    // ── Worker TaktXClient — signing DISABLED ─────────────────────────────────
-    // taktx.signing.disabled=true prevents TaktXClientBuilder from calling
+    // ── Worker TaktXClient — no signing identity ──────────────────────────────
+    // A null-returning signing identity source prevents TaktXClientBuilder from calling
     // SigningServiceHolder.set(), which would overwrite MessageSigningService's registration
     // and cause every outbound engine record to carry the worker keyId.
     Properties workerProps = new Properties();
@@ -151,14 +151,17 @@ class WorkerEndToEndTest {
     workerProps.put("taktx.engine.tenant-id", "test-tenant");
     workerProps.put("taktx.engine.namespace", NAMESPACE);
     workerProps.put("taktx.external.task.consumer.threads", "1");
-    workerProps.put("taktx.signing.disabled", "true");
     // Give the ExternalTaskTriggerJsonDeserializer the engine public key so it can verify
     // the engine's Ed25519 signature on incoming trigger records.
     workerProps.put(
         io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG,
         SecurityTestConfigResource.enginePublicKeyBase64);
 
-    workerClient = TaktXClient.newClientBuilder().withProperties(workerProps).build();
+    workerClient =
+        TaktXClient.newClientBuilder()
+            .withProperties(workerProps)
+            .withSigningIdentitySource(() -> null)
+            .build();
 
     // Register consumer before start() so the subscription is in place immediately
     workerClient.registerExternalTaskConsumer(

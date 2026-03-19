@@ -49,6 +49,9 @@ class StandaloneSecurityDisabledTest {
 
     assertThat(engine.getConsumedInstanceUpdates())
         .extracting(InstanceUpdateRecord::getUpdate)
-        .allMatch(update -> update.getCommandTrustMetadata() == null);
+        .allMatch(
+            update ->
+                update.getCurrentTrustMetadata() == null
+                    && update.getOriginTrustMetadata() == null);
   }
 }

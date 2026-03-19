@@ -19,6 +19,7 @@ import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
@@ -134,6 +135,54 @@ class EngineAuthorizationServiceTest {
         .hasMessageContaining("Missing");
   }
 
+  @Test
+  void nonJwtTrigger_withoutHeaders_isAcceptedWhenSigningDisabled() {
+    globalConfigStore.update(config(true, false));
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(setVariableTrigger()))).isNull();
+  }
+
+  @Test
+  void nonJwtTrigger_withoutHeaders_preservesEmbeddedMetadataWhenSigningDisabled() {
+    globalConfigStore.update(config(true, false));
+
+    SetVariableTriggerDTO trigger = setVariableTrigger();
+    CommandTrustMetadataDTO embeddedMetadata =
+        CommandTrustMetadataDTO.builder()
+            .authMethod(CommandAuthMethod.JWT)
+            .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+            .trusted(true)
+            .userId("service-account-1")
+            .issuer(ISSUER)
+            .build();
+    trigger.setCurrentTrustMetadata(embeddedMetadata);
+    trigger.setOriginTrustMetadata(embeddedMetadata);
+
+    assertThat(service.authorize(new RecordHeaders(), envelope(trigger)))
+        .isEqualTo(embeddedMetadata);
+  }
+
+  @Test
+  void nonJwtTrigger_withoutHeaders_throwsWhenSigningEnabled() {
+    globalConfigStore.update(config(true, true));
+
+    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(setVariableTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
+  }
+
+  @Test
+  void startCommand_withOnlySignatureStillRequiresJwt() {
+    globalConfigStore.update(config(true, true));
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", "worker-test-001.AABB".getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(() -> service.authorize(headers, envelope(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Authorization");
+  }
+
   // ── claim mismatch ─────────────────────────────────────────────────────────
 
   @Test
@@ -207,7 +256,7 @@ class EngineAuthorizationServiceTest {
     // Ed25519 is already verified in the deserializer — authorize just passes through
     CommandTrustMetadataDTO result =
         service.authorize(
-            headers, new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId));
+            headers, new ProcessInstanceTriggerEnvelope(setVariableTrigger(), true, keyId));
     assertThat(result)
         .isEqualTo(
             CommandTrustMetadataDTO.builder()
@@ -220,7 +269,7 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void ed25519Header_knownEngineKeyInStore_preservesEmbeddedMetadata() {
+  void ed25519Header_knownEngineKeyInStore_returnsEngineSignerMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String keyId = "engine-test-key-1";
@@ -233,7 +282,7 @@ class EngineAuthorizationServiceTest {
             .build();
     when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
-    StartCommandDTO trigger = startCommand("proc", -1);
+    SetVariableTriggerDTO trigger = setVariableTrigger();
     CommandTrustMetadataDTO embeddedMetadata =
         CommandTrustMetadataDTO.builder()
             .authMethod(CommandAuthMethod.JWT)
@@ -242,14 +291,22 @@ class EngineAuthorizationServiceTest {
             .userId("user-1")
             .issuer(ISSUER)
             .build();
-    trigger.setCommandTrustMetadata(embeddedMetadata);
+    trigger.setOriginTrustMetadata(embeddedMetadata);
 
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
     CommandTrustMetadataDTO result =
         service.authorize(headers, new ProcessInstanceTriggerEnvelope(trigger, true, keyId));
-    assertThat(result).isEqualTo(embeddedMetadata);
+    assertThat(result)
+        .isEqualTo(
+            CommandTrustMetadataDTO.builder()
+                .authMethod(CommandAuthMethod.ED25519)
+                .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
+                .trusted(true)
+                .signerKeyId(keyId)
+                .signerOwner("engine")
+                .build());
   }
 
   @Test
@@ -274,7 +331,7 @@ class EngineAuthorizationServiceTest {
                 service.authorize(
                     headers,
                     new ProcessInstanceTriggerEnvelope(
-                        startCommand("proc", -1),
+                        setVariableTrigger(),
                         false,
                         keyId,
                         "Malformed base64 signature for keyId=worker-test-001")))
@@ -283,8 +340,14 @@ class EngineAuthorizationServiceTest {
   }
 
   private GlobalConfigurationDTO authorizationConfig(boolean engineRequiresAuthorization) {
+    return config(engineRequiresAuthorization, false);
+  }
+
+  private GlobalConfigurationDTO config(
+      boolean engineRequiresAuthorization, boolean signingEnabled) {
     return GlobalConfigurationDTO.builder()
         .engineRequiresAuthorization(engineRequiresAuthorization)
+        .signingEnabled(signingEnabled)
         .build();
   }
 
@@ -325,6 +388,10 @@ class EngineAuthorizationServiceTest {
     return new ProcessInstanceTriggerEnvelope(trigger, false, null);
   }
 
+  private ProcessInstanceTriggerEnvelope envelope(SetVariableTriggerDTO trigger) {
+    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+  }
+
   private StartCommandDTO startCommand(String processDefinitionId, int version) {
     return new StartCommandDTO(
         UUID.randomUUID(),
@@ -332,6 +399,10 @@ class EngineAuthorizationServiceTest {
         null,
         processDefinitionId != null ? new ProcessDefinitionKey(processDefinitionId, version) : null,
         VariablesDTO.empty());
+  }
+
+  private SetVariableTriggerDTO setVariableTrigger() {
+    return new SetVariableTriggerDTO(UUID.randomUUID(), List.of(1L), VariablesDTO.empty());
   }
 
   private Date futureExpiry() {

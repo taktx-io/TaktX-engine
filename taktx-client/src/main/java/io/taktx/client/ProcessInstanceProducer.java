@@ -9,7 +9,10 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
+import io.taktx.client.auth.AuthorizationTokenProvider;
+import io.taktx.client.auth.CommandAuthorizationRequest;
 import io.taktx.dto.AbortTriggerDTO;
+import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
@@ -31,6 +34,7 @@ public class ProcessInstanceProducer {
 
   private final TaktPropertiesHelper kafkaPropertiesHelper;
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter;
+  private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
 
   /**
    * Constructor for ProcessInstanceProducer.
@@ -40,9 +44,16 @@ public class ProcessInstanceProducer {
   public ProcessInstanceProducer(
       TaktPropertiesHelper kafkaPropertiesHelper,
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter) {
-    this.kafkaPropertiesHelper = kafkaPropertiesHelper;
+    this(kafkaPropertiesHelper, processInstanceTriggerEmitter, null);
+  }
 
+  public ProcessInstanceProducer(
+      TaktPropertiesHelper kafkaPropertiesHelper,
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter,
+      @Nullable AuthorizationTokenProvider authorizationTokenProvider) {
+    this.kafkaPropertiesHelper = kafkaPropertiesHelper;
     this.processInstanceTriggerEmitter = processInstanceTriggerEmitter;
+    this.authorizationTokenProvider = authorizationTokenProvider;
   }
 
   /**
@@ -85,11 +96,10 @@ public class ProcessInstanceProducer {
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceId,
             startCommand);
-    if (authorizationToken != null && !authorizationToken.isBlank()) {
-      processInstanceTriggerRecord
-          .headers()
-          .add("X-TaktX-Authorization", authorizationToken.getBytes(StandardCharsets.UTF_8));
-    }
+    attachAuthorizationHeader(
+        processInstanceTriggerRecord,
+        authorizationToken,
+        CommandAuthorizationRequest.startProcess(processDefinitionId, version, processInstanceId));
     processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
     return processInstanceId;
   }
@@ -136,11 +146,39 @@ public class ProcessInstanceProducer {
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceId,
             terminateTrigger);
-    if (authorizationToken != null && !authorizationToken.isBlank()) {
-      processInstanceTriggerRecord
-          .headers()
-          .add("X-TaktX-Authorization", authorizationToken.getBytes(StandardCharsets.UTF_8));
-    }
+    attachAuthorizationHeader(
+        processInstanceTriggerRecord,
+        authorizationToken,
+        CommandAuthorizationRequest.abortProcessInstance(processInstanceId, elementInstanceIdPath));
     processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
+  }
+
+  private void attachAuthorizationHeader(
+      ProducerRecord<UUID, ProcessInstanceTriggerDTO> record,
+      @Nullable String explicitAuthorizationToken,
+      CommandAuthorizationRequest authorizationRequest) {
+    String authorizationToken = explicitAuthorizationToken;
+    if (authorizationToken == null || authorizationToken.isBlank()) {
+      authorizationToken = resolveAuthorizationToken(authorizationRequest);
+    }
+    if (authorizationToken != null && !authorizationToken.isBlank()) {
+      record
+          .headers()
+          .add(Constants.HEADER_AUTHORIZATION, authorizationToken.getBytes(StandardCharsets.UTF_8));
+    }
+  }
+
+  private @Nullable String resolveAuthorizationToken(
+      CommandAuthorizationRequest authorizationRequest) {
+    if (authorizationTokenProvider == null) {
+      return null;
+    }
+    String authorizationToken =
+        authorizationTokenProvider.getAuthorizationToken(authorizationRequest);
+    if (authorizationToken == null || authorizationToken.isBlank()) {
+      throw new IllegalStateException(
+          "AuthorizationTokenProvider returned no token for " + authorizationRequest.scope());
+    }
+    return authorizationToken;
   }
 }

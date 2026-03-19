@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * Watches the compacted {@code taktx-configuration} topic and keeps {@link
  * RuntimeConfigurationHolder} up to date for client-side runtime decisions.
  */
-final class RuntimeConfigurationStore implements AutoCloseable {
+public final class RuntimeConfigurationStore implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(RuntimeConfigurationStore.class);
   private static final ObjectMapper OBJECT_MAPPER =
@@ -43,6 +43,7 @@ final class RuntimeConfigurationStore implements AutoCloseable {
 
   private final KafkaConsumer<String, byte[]> consumer;
   private final String topic;
+  private final Runnable onRuntimeConfigurationChanged;
   private final AtomicBoolean ready = new AtomicBoolean(false);
   private final ScheduledExecutorService scheduler =
       Executors.newSingleThreadScheduledExecutor(
@@ -52,8 +53,11 @@ final class RuntimeConfigurationStore implements AutoCloseable {
             return thread;
           });
 
-  RuntimeConfigurationStore(Properties consumerProperties, String topic) {
+  RuntimeConfigurationStore(
+      Properties consumerProperties, String topic, Runnable onRuntimeConfigurationChanged) {
     this.topic = topic;
+    this.onRuntimeConfigurationChanged =
+        onRuntimeConfigurationChanged != null ? onRuntimeConfigurationChanged : () -> {};
 
     Properties props = new Properties();
     props.putAll(consumerProperties);
@@ -172,6 +176,7 @@ final class RuntimeConfigurationStore implements AutoCloseable {
     }
     if (configRecord.value() == null) {
       RuntimeConfigurationHolder.clear();
+      notifyRuntimeConfigurationChanged();
       log.info("RuntimeConfigurationStore: cleared runtime configuration from tombstone");
       return;
     }
@@ -180,6 +185,7 @@ final class RuntimeConfigurationStore implements AutoCloseable {
           OBJECT_MAPPER.readValue(configRecord.value(), ConfigurationEventDTO.class);
       if (event != null && event.getConfiguration() != null) {
         RuntimeConfigurationHolder.set(event.getConfiguration());
+        notifyRuntimeConfigurationChanged();
         log.info(
             "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={}",
             event.getConfiguration().isSigningEnabled(),
@@ -190,6 +196,15 @@ final class RuntimeConfigurationStore implements AutoCloseable {
           "RuntimeConfigurationStore: failed to deserialize config record key={}: {}",
           configRecord.key(),
           e.getMessage());
+    }
+  }
+
+  private void notifyRuntimeConfigurationChanged() {
+    try {
+      onRuntimeConfigurationChanged.run();
+    } catch (Exception e) {
+      log.warn(
+          "RuntimeConfigurationStore: runtime-configuration callback failed: {}", e.getMessage());
     }
   }
 }

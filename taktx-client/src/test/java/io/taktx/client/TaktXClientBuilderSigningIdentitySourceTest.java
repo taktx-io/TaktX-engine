@@ -25,12 +25,52 @@ class TaktXClientBuilderSigningIdentitySourceTest {
   @TempDir Path tempDir;
 
   @Test
-  void resolveSigningIdentitySource_defaultsToEnvironmentSource() {
+  void resolveSigningIdentitySource_defaultsToGeneratedSourceWhenNoIdentityIsConfigured() {
     TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
 
     SigningIdentitySource source = builder.resolveSigningIdentitySource(new Properties());
 
+    assertThat(source).isInstanceOf(GeneratedSigningIdentitySource.class);
+    assertThat(source.currentIdentity().getKeyId()).startsWith("client-");
+  }
+
+  @Test
+  void resolveSigningIdentitySource_prefersExplicitSigningIdentitySource() {
+    SigningIdentitySource explicitSource = () -> null;
+
+    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
+    builder.withSigningIdentitySource(explicitSource);
+
+    SigningIdentitySource source = builder.resolveSigningIdentitySource(new Properties());
+
+    assertThat(source).isSameAs(explicitSource);
+  }
+
+  @Test
+  void resolveSigningIdentitySource_defaultsToEnvironmentSourceWhenIdentityIsConfigured() {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.private-key", "private-123");
+    props.setProperty("taktx.signing.public-key", "public-123");
+    props.setProperty("taktx.signing.key-id", "env-worker-key");
+
+    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
+
+    SigningIdentitySource source = builder.resolveSigningIdentitySource(props);
+
     assertThat(source).isInstanceOf(EnvironmentWorkerSigningIdentitySource.class);
+    assertThat(source.currentIdentity().getKeyId()).isEqualTo("env-worker-key");
+  }
+
+  @Test
+  void resolveSigningIdentitySource_defaultSourceStillFailsFastOnMalformedEnvironmentConfig() {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.private-key", "private-123");
+
+    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
+
+    assertThatThrownBy(() -> builder.resolveSigningIdentitySource(props))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("TAKTX_SIGNING_PRIVATE_KEY");
   }
 
   @Test
@@ -65,7 +105,20 @@ class TaktXClientBuilderSigningIdentitySourceTest {
     SigningIdentitySource source = builder.resolveSigningIdentitySource(props);
 
     assertThat(source).isInstanceOf(GeneratedSigningIdentitySource.class);
-    assertThat(source.currentIdentity().getKeyId()).startsWith("worker-");
+    assertThat(source.currentIdentity().getKeyId()).startsWith("client-");
+  }
+
+  @Test
+  void resolveSigningIdentitySource_explicitEnvironmentSourceDoesNotFallBackToGenerated() {
+    Properties props = new Properties();
+    props.setProperty("taktx.signing.identity-source", "env");
+
+    TaktXClient.TaktXClientBuilder builder = TaktXClient.newClientBuilder();
+
+    SigningIdentitySource source = builder.resolveSigningIdentitySource(props);
+
+    assertThat(source).isInstanceOf(EnvironmentWorkerSigningIdentitySource.class);
+    assertThat(source.currentIdentity()).isNull();
   }
 
   @Test

@@ -436,10 +436,7 @@ public class DefaultLicenseManager implements LicenseManager {
     }
     int budget = 60; // default free tier — total partition budget across all topics
     if (license != null && licenseState == LicenseState.VALID) {
-      Integer val =
-          getFeatureInt(
-              license,
-              LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      Integer val = getFeatureInt(license, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
       if (val != null) {
         // 0 means unlimited in the license tool convention
         budget = (val == 0) ? Integer.MAX_VALUE : val;
@@ -525,19 +522,15 @@ public class DefaultLicenseManager implements LicenseManager {
       String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
       // Accept both the canonical feature name and the legacy file-license alias.
       // The license tool uses 0 to mean "unlimited" — map that to null.
-      Integer rawBudget =
-          getFeatureInt(
-              pushed,
-              LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      Integer rawBudget = getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
       Integer partitionBudget = (rawBudget != null && rawBudget == 0) ? null : rawBudget;
       boolean eventSigning =
           getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
       boolean engineRequiresAuthorization =
-          getFeatureBoolean(
-              pushed,
-              LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION);
+          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION);
 
-      updateFromLicensePush(licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
+      updateFromLicensePush(
+          licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
     } catch (IOException e) {
       log.warn("Failed to read pushed license text: {}", e.getMessage());
     } catch (Exception e) {

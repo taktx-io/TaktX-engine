@@ -10,7 +10,7 @@ package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -27,7 +27,6 @@ import lombok.ToString;
 @JsonTypeInfo(use = Id.CUSTOM, property = "c")
 @JsonTypeIdResolver(ProcessInstanceTriggerTypeIdResolver.class)
 @JsonFormat(shape = Shape.ARRAY)
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @ToString
 @Getter
 @Setter
@@ -38,9 +37,23 @@ public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO
 
   private UUID processInstanceId;
 
-  @Nullable private CommandTrustMetadataDTO commandTrustMetadata;
+  @Nullable private CommandTrustMetadataDTO currentTrustMetadata;
+
+  @Nullable private CommandTrustMetadataDTO originTrustMetadata;
 
   protected ProcessInstanceTriggerDTO(UUID processInstanceId) {
     this.processInstanceId = processInstanceId;
+  }
+
+  @Deprecated
+  @JsonIgnore
+  public CommandTrustMetadataDTO getCommandTrustMetadata() {
+    return currentTrustMetadata;
+  }
+
+  @Deprecated
+  @JsonIgnore
+  public void setCommandTrustMetadata(CommandTrustMetadataDTO commandTrustMetadata) {
+    this.currentTrustMetadata = commandTrustMetadata;
   }
 }

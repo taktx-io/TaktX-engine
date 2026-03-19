@@ -37,16 +37,27 @@ public class ExternalTaskInstanceResponder {
   private final String topicName;
   private final UUID processInstanceId;
   private final List<Long> elementInstanceIdPath;
+  private final Runnable beforeSendHook;
 
   public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,
       UUID processInstanceId,
       List<Long> elementInstanceIdPath) {
+    this(responseEmitter, topicName, processInstanceId, elementInstanceIdPath, () -> {});
+  }
+
+  ExternalTaskInstanceResponder(
+      KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
+      String topicName,
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      Runnable beforeSendHook) {
     this.responseEmitter = responseEmitter;
     this.topicName = topicName;
     this.processInstanceId = processInstanceId;
     this.elementInstanceIdPath = elementInstanceIdPath;
+    this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
   }
 
   /** Responds with a success message without any variables. */
@@ -192,6 +203,7 @@ public class ExternalTaskInstanceResponder {
   }
 
   private void sendSigned(ExternalTaskResponseTriggerDTO trigger) {
+    beforeSendHook.run();
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> producerRecord =
         new ProducerRecord<>(
             topicName, null, System.currentTimeMillis(), trigger.getProcessInstanceId(), trigger);

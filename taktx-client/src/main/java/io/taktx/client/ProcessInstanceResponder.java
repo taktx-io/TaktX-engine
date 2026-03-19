@@ -28,6 +28,7 @@ public class ProcessInstanceResponder {
 
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
+  private volatile Runnable beforeSendHook = () -> {};
 
   /**
    * Constructor for ProcessInstanceResponder.
@@ -60,6 +61,10 @@ public class ProcessInstanceResponder {
                 new SigningSerializer<>(new ProcessInstanceTriggerSerializer()));
   }
 
+  void setBeforeSendHook(Runnable beforeSendHook) {
+    this.beforeSendHook = beforeSendHook != null ? beforeSendHook : () -> {};
+  }
+
   /**
    * Creates an ExternalTaskInstanceResponder for the given ExternalTaskTriggerDTO.
    *
@@ -72,7 +77,8 @@ public class ProcessInstanceResponder {
         responseEmitter,
         topicName,
         externalTaskTriggerDTO.getProcessInstanceId(),
-        externalTaskTriggerDTO.getElementInstanceIdPath());
+        externalTaskTriggerDTO.getElementInstanceIdPath(),
+        beforeSendHook);
   }
 
   /**
@@ -85,7 +91,7 @@ public class ProcessInstanceResponder {
   public ExternalTaskInstanceResponder responderForExternalTask(
       UUID processInstanceId, List<Long> elementInstanceIdPath) {
     return new ExternalTaskInstanceResponder(
-        responseEmitter, topicName, processInstanceId, elementInstanceIdPath);
+        responseEmitter, topicName, processInstanceId, elementInstanceIdPath, beforeSendHook);
   }
 
   /**
@@ -100,6 +106,7 @@ public class ProcessInstanceResponder {
         responseEmitter,
         topicName,
         userTaskTriggerDTO.getProcessInstanceId(),
-        userTaskTriggerDTO.getElementInstanceIdPath());
+        userTaskTriggerDTO.getElementInstanceIdPath(),
+        beforeSendHook);
   }
 }

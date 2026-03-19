@@ -31,8 +31,11 @@ public class ProcessInstanceProcessingContext {
   private final ProcessInstance processInstance;
   private final ProcessingStatistics processingStatistics;
 
-  /** Structured provenance/trust data for the originating command, if any. */
-  @Setter @Nullable private CommandTrustMetadataDTO commandTrustMetadata;
+  /** Structured trust data for the command currently being processed, if any. */
+  @Setter @Nullable private CommandTrustMetadataDTO currentTrustMetadata;
+
+  /** Structured provenance/trust data for the original command chain, if any. */
+  @Setter @Nullable private CommandTrustMetadataDTO originTrustMetadata;
 
   @Builder
   public ProcessInstanceProcessingContext(

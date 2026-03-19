@@ -171,7 +171,8 @@ public class EngineAuthorizationService {
   public CommandTrustMetadataDTO authorize(
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
-    if (!effectiveConfig().isEngineRequiresAuthorization()) {
+    GlobalConfigurationDTO config = effectiveConfig();
+    if (!config.isEngineRequiresAuthorization()) {
       return null;
     }
     if (!licenseManager.isEngineRequiresAuthorization()) {
@@ -181,23 +182,33 @@ public class EngineAuthorizationService {
       return null;
     }
 
-    Header authHeader = headers.lastHeader(AUTH_HEADER);
-    if (authHeader != null && authHeader.value() != null) {
+    Header authHeader = lastHeader(headers, AUTH_HEADER);
+    Header sigHeader = lastHeader(headers, SIG_HEADER);
+
+    if (requiresJwtAuthorization(trigger)) {
+      if (authHeader == null || authHeader.value() == null) {
+        throw new AuthorizationTokenException(
+            "Missing required "
+                + AUTH_HEADER
+                + " header on command "
+                + trigger.getClass().getSimpleName());
+      }
       return authorizeViaJwt(authHeader, trigger);
     }
 
-    Header sigHeader = headers.lastHeader(SIG_HEADER);
     if (sigHeader != null && sigHeader.value() != null) {
       return authorizeViaEd25519(sigHeader, triggerEnvelope);
     }
 
-    throw new AuthorizationTokenException(
-        "Missing required "
-            + AUTH_HEADER
-            + " or "
-            + SIG_HEADER
-            + " header on command "
-            + trigger.getClass().getSimpleName());
+    if (config.isSigningEnabled()) {
+      throw new AuthorizationTokenException(
+          "Missing required "
+              + SIG_HEADER
+              + " header on command "
+              + trigger.getClass().getSimpleName());
+    }
+
+    return trigger.getCurrentTrustMetadata();
   }
 
   // ── JWT path ────────────────────────────────────────────────────────────────
@@ -270,10 +281,6 @@ public class EngineAuthorizationService {
         keyId,
         entry.getOwner());
 
-    CommandTrustMetadataDTO embeddedMetadata = triggerEnvelope.trigger().getCommandTrustMetadata();
-    if (embeddedMetadata != null && "engine".equalsIgnoreCase(entry.getOwner())) {
-      return embeddedMetadata;
-    }
     return CommandTrustMetadataDTO.builder()
         .authMethod(CommandAuthMethod.ED25519)
         .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
@@ -305,6 +312,14 @@ public class EngineAuthorizationService {
       log.warn("Could not read signing-keys store for keyId={}: {}", keyId, e.getMessage());
       return null;
     }
+  }
+
+  private static Header lastHeader(Headers headers, String headerName) {
+    return headers != null ? headers.lastHeader(headerName) : null;
+  }
+
+  private static boolean requiresJwtAuthorization(ProcessInstanceTriggerDTO trigger) {
+    return trigger instanceof StartCommandDTO || trigger instanceof AbortTriggerDTO;
   }
 
   private void validateClaimsMatchCommand(TokenClaims claims, ProcessInstanceTriggerDTO trigger) {

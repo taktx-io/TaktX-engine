@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.Deployment;
+import io.taktx.client.auth.AuthorizationTokenProvider;
+import io.taktx.client.auth.OpenIdClientCredentialsTokenProvider;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
@@ -82,9 +84,11 @@ public class TaktXClient {
   private final ResultProcessorFactory resultProcessorFactory;
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SigningIdentitySource signingIdentitySource;
+  private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
   private SigningKeysStore signingKeysStore;
   private RuntimeConfigurationStore runtimeConfigurationStore;
   private volatile String publishedWorkerKeyId;
+  private volatile String workerSigningRegistrationState = "uninitialized";
 
   private TaktXClient(
       TaktPropertiesHelper taktPropertiesHelper,
@@ -92,11 +96,13 @@ public class TaktXClient {
       ProcessInstanceResponder processInstanceResponder,
       ParameterResolverFactory parameterResolverFactory,
       ResultProcessorFactory resultProcessorFactory,
-      SigningIdentitySource signingIdentitySource) {
+      SigningIdentitySource signingIdentitySource,
+      @Nullable AuthorizationTokenProvider authorizationTokenProvider) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.signingIdentitySource = signingIdentitySource;
+    this.authorizationTokenProvider = authorizationTokenProvider;
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.resultProcessorFactory = resultProcessorFactory;
@@ -105,7 +111,8 @@ public class TaktXClient {
         new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer =
-        new ProcessInstanceProducer(taktPropertiesHelper, processInstanceTriggerEmitter);
+        new ProcessInstanceProducer(
+            taktPropertiesHelper, processInstanceTriggerEmitter, authorizationTokenProvider);
     this.messageEventSender = new MessageEventSender(taktPropertiesHelper);
     this.signalSender = new SignalSender(taktPropertiesHelper);
     this.processInstanceUpdateConsumer =
@@ -133,6 +140,7 @@ public class TaktXClient {
    */
   public void start() {
     initRuntimeConfigurationStore();
+    refreshWorkerSigningFunctionRegistration();
     initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
@@ -156,7 +164,9 @@ public class TaktXClient {
               org.apache.kafka.common.serialization.StringDeserializer.class,
               org.apache.kafka.common.serialization.ByteArrayDeserializer.class,
               "earliest");
-      runtimeConfigurationStore = new RuntimeConfigurationStore(consumerProps, topic);
+      runtimeConfigurationStore =
+          new RuntimeConfigurationStore(
+              consumerProps, topic, this::refreshWorkerSigningFunctionRegistration);
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
           "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={}",
@@ -373,6 +383,41 @@ public class TaktXClient {
     return signingIdentitySource != null ? signingIdentitySource.currentIdentity() : null;
   }
 
+  void refreshWorkerSigningFunctionRegistration() {
+    if (!RuntimeConfigurationHolder.isSigningEnabled()) {
+      logWorkerSigningRegistrationState(
+          "runtime-disabled",
+          "Worker response signing inactive — runtime configuration signingEnabled=false");
+      return;
+    }
+
+    SigningIdentity identity = currentSigningIdentity();
+    if (identity == null) {
+      String sourceType =
+          signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
+      logWorkerSigningRegistrationState(
+          "waiting-for-identity:" + sourceType,
+          "Worker response signing enabled by runtime configuration but no signing identity is available yet from source={}",
+          sourceType);
+      return;
+    }
+
+    SigningServiceHolder.set(this::signWorkerPayload);
+    logWorkerSigningRegistrationState(
+        "active:" + identity.getKeyId(),
+        "Worker response signing active — runtime configuration enabled, source={} keyId={}",
+        signingIdentitySource.getSourceType(),
+        identity.getKeyId());
+  }
+
+  private void logWorkerSigningRegistrationState(String newState, String message, Object... args) {
+    if (newState.equals(workerSigningRegistrationState)) {
+      return;
+    }
+    workerSigningRegistrationState = newState;
+    log.info(message, args);
+  }
+
   private boolean ensureWorkerKeyPublished(SigningIdentity identity) {
     if (identity == null) {
       return false;
@@ -388,7 +433,10 @@ public class TaktXClient {
     }
     try {
       publishSigningKey(
-          identity.getKeyId(), identity.getPublicKeyBase64(), "worker", identity.getAlgorithm());
+          identity.getKeyId(),
+          identity.getPublicKeyBase64(),
+          resolveWorkerSigningOwner(identity),
+          identity.getAlgorithm());
       publishedWorkerKeyId = identity.getKeyId();
       return true;
     } catch (Exception e) {
@@ -397,7 +445,27 @@ public class TaktXClient {
     }
   }
 
+  private String resolveWorkerSigningOwner(SigningIdentity identity) {
+    if (identity == null) {
+      return "worker";
+    }
+    String configuredOwner =
+        TaktXClientBuilder.firstNonBlank(
+            taktPropertiesHelper.getTaktProperties().getProperty("taktx.signing.owner"),
+            System.getProperty("taktx.signing.owner"),
+            System.getenv("TAKTX_SIGNING_OWNER"),
+            taktPropertiesHelper.getTaktProperties().getProperty("quarkus.application.name"),
+            taktPropertiesHelper.getTaktProperties().getProperty("spring.application.name"),
+            taktPropertiesHelper.getTaktProperties().getProperty("application.name"));
+    return configuredOwner != null && !configuredOwner.isBlank()
+        ? configuredOwner
+        : identity.getKeyId();
+  }
+
   private String signWorkerPayload(byte[] payload) {
+    if (!RuntimeConfigurationHolder.isSigningEnabled()) {
+      return null;
+    }
     SigningIdentity identity = currentSigningIdentity();
     if (identity == null) {
       return null;
@@ -441,6 +509,7 @@ public class TaktXClient {
       runtimeConfigurationStore = null;
     }
     publishedWorkerKeyId = null;
+    workerSigningRegistrationState = "uninitialized";
     RuntimeConfigurationHolder.clear();
     SigningServiceHolder.clear();
   }
@@ -751,6 +820,7 @@ public class TaktXClient {
     private ParameterResolverFactory parameterResolverFactory;
     private ResultProcessorFactory resultProcessorFactory;
     private SigningIdentitySource signingIdentitySource;
+    private AuthorizationTokenProvider authorizationTokenProvider;
 
     private TaktXClientBuilder() {}
 
@@ -769,6 +839,8 @@ public class TaktXClient {
 
       SigningIdentitySource effectiveSigningIdentitySource =
           resolveSigningIdentitySource(properties);
+      AuthorizationTokenProvider effectiveAuthorizationTokenProvider =
+          resolveAuthorizationTokenProvider(properties);
 
       // Wrap the value serializer with SigningSerializer so signing happens in one pass
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
@@ -795,16 +867,32 @@ public class TaktXClient {
               externalTaskResponder,
               clientParameterResolverFactory,
               clientResultProcessorFactory,
-              effectiveSigningIdentitySource);
+              effectiveSigningIdentitySource,
+              effectiveAuthorizationTokenProvider);
+      externalTaskResponder.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
       SigningIdentity identity = client.currentSigningIdentity();
       if (identity != null) {
         log.info(
-            "Worker response signing enabled from source={} (keyId={})",
+            "Worker response signing configured from source={} (keyId={})",
             effectiveSigningIdentitySource.getSourceType(),
             identity.getKeyId());
-        SigningServiceHolder.set(client::signWorkerPayload);
+      }
+      if (effectiveAuthorizationTokenProvider != null) {
+        log.info(
+            "Client command authorization configured via provider={} for start/abort commands",
+            effectiveAuthorizationTokenProvider.getClass().getSimpleName());
       }
       return client;
+    }
+
+    AuthorizationTokenProvider resolveAuthorizationTokenProvider(Properties properties) {
+      if (authorizationTokenProvider != null) {
+        return authorizationTokenProvider;
+      }
+      if (!OpenIdClientCredentialsTokenProvider.hasConfiguration(properties)) {
+        return null;
+      }
+      return OpenIdClientCredentialsTokenProvider.fromProperties(properties);
     }
 
     SigningIdentitySource resolveSigningIdentitySource(Properties properties) {
@@ -820,7 +908,15 @@ public class TaktXClient {
       String keyIdOverride = properties.getProperty("taktx.signing.key-id");
 
       if (sourceType == null || sourceType.isBlank()) {
-        return new EnvironmentWorkerSigningIdentitySource(properties, keyIdOverride);
+        EnvironmentWorkerSigningIdentitySource environmentSource =
+            new EnvironmentWorkerSigningIdentitySource(properties, keyIdOverride);
+        SigningIdentity identity = environmentSource.currentIdentity();
+        if (identity != null) {
+          return environmentSource;
+        }
+        log.info(
+            "No worker signing identity configured via environment/system properties — falling back to generated keypair");
+        return new GeneratedSigningIdentitySource("client-");
       }
       if ("env".equalsIgnoreCase(sourceType) || "environment".equalsIgnoreCase(sourceType)) {
         return new EnvironmentWorkerSigningIdentitySource(properties, keyIdOverride);
@@ -829,7 +925,7 @@ public class TaktXClient {
         return new FileSigningIdentitySource(properties);
       }
       if ("generated".equalsIgnoreCase(sourceType)) {
-        return new GeneratedSigningIdentitySource("worker-");
+        return new GeneratedSigningIdentitySource("client-");
       }
       throw new IllegalArgumentException(
           "Unsupported taktx.signing.identity-source='"
@@ -878,6 +974,12 @@ public class TaktXClient {
     public TaktXClientBuilder withSigningIdentitySource(
         SigningIdentitySource signingIdentitySource) {
       this.signingIdentitySource = signingIdentitySource;
+      return this;
+    }
+
+    public TaktXClientBuilder withAuthorizationTokenProvider(
+        AuthorizationTokenProvider authorizationTokenProvider) {
+      this.authorizationTokenProvider = authorizationTokenProvider;
       return this;
     }
   }

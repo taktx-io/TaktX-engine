@@ -22,13 +22,13 @@
 TaktX has two separate security mechanisms:
 
 1. **RS256 JWT command authorization**
-   - Used for external commands such as process start and abort.
+   - Used for external entry commands: `StartCommandDTO` and `AbortTriggerDTO`.
    - Guarded at runtime by `GlobalConfigurationDTO.engineRequiresAuthorization`.
    - JWT expiry is always enforced.
    - JWT replay protection via `auditId` nonce tracking is always enforced.
 
 2. **Ed25519 message signing**
-   - Used for engine outbound records and worker responses.
+   - Used for engine outbound records and signed non-entry process-instance commands such as worker responses and engine-internal continuations.
    - Guarded at runtime by `GlobalConfigurationDTO.signingEnabled`.
    - The engine uses a configurable signing-identity source; default is a generated in-memory key.
    - Workers use a configurable signing-identity source; default is env-based.
@@ -41,11 +41,16 @@ The shared trust registry is the compacted Kafka topic `taktx-signing-keys`.
 
 ### Header
 
-External commands are authorized through the `X-TaktX-Authorization` header.
+External entry commands are authorized through the `X-TaktX-Authorization` header.
+
+This applies to:
+
+- `StartCommandDTO`
+- `AbortTriggerDTO`
 
 ### Validation steps
 
-When `engineRequiresAuthorization=true` in the latest config-topic record, the engine validates:
+When `engineRequiresAuthorization=true` in the latest config-topic record, the engine validates JWTs for `StartCommandDTO` and `AbortTriggerDTO` only:
 
 1. JWT signature
 2. required claims
@@ -55,9 +60,53 @@ When `engineRequiresAuthorization=true` in the latest config-topic record, the e
 
 If authorization is disabled in the config topic, the engine accepts commands without JWT validation.
 
+### Non-entry process-instance commands
+
+Other `ProcessInstanceTriggerDTO` subclasses do **not** require JWT just because `engineRequiresAuthorization=true`.
+
+Examples include:
+
+- `SetVariableTriggerDTO`
+- `ContinueFlowElementTriggerDTO`
+- `ExternalTaskResponseTriggerDTO`
+- engine-internal `StartCommandDTO` follow-ups that already carry embedded trust metadata and/or signatures
+
+Their handling is:
+
+1. if `X-TaktX-Signature` is present, the engine verifies the Ed25519 signature and key status
+2. if `signingEnabled=true`, unsigned non-entry commands are rejected
+3. if `signingEnabled=false`, signed and unsigned non-entry commands are both accepted
+
+This means worker responses remain valid in JWT-only deployments where signing is disabled.
+
+When the engine later re-emits scheduled work such as timer firings or external-task timeout events,
+those follow-up commands are treated as newly engine-originated commands. They are therefore signed
+and attributed to the engine on re-entry instead of retaining the original worker signer metadata.
+
+### Current vs origin trust metadata
+
+`ProcessInstanceTriggerDTO` and `InstanceUpdateDTO` now expose two trust fields:
+
+- `currentTrustMetadata` — who is trusted for the command currently being processed
+- `originTrustMetadata` — who originally initiated the command chain
+
+Examples:
+
+- external JWT start command → `current=JWT`, `origin=JWT`
+- worker-signed external task response → `current=worker`, `origin=worker`
+- timer continuation after that worker response → `current=engine`, `origin=worker`
+
+This split avoids the old ambiguity where engine-rescheduled work could appear to still be owned by
+the previous worker simply because that provenance had been copied into the next command.
+
+For compatibility, the old `commandTrustMetadata` accessor still resolves to `currentTrustMetadata`,
+but new consumers should prefer the explicit current/origin fields.
+
 ### Key lookup
 
 JWT public keys are resolved by `kid` from the `taktx-signing-keys` KTable.
+The engine first reads the JWT `kid` header, loads the matching RSA public key from Kafka state, then verifies the JWT signature and claims. The `kid` value is therefore only a lookup key, not proof by itself.
+
 The engine therefore follows key rotation through Kafka state rather than a restart-time toggle.
 
 ---
@@ -71,6 +120,8 @@ When `signingEnabled=true` in the latest config-topic record, the engine signs o
 - `instance-update`
 - external-task trigger records
 - engine-internal process-instance trigger records
+
+The same key registry is also used to verify signed inbound non-entry commands such as worker responses.
 
 ### Engine key lifecycle
 
@@ -112,6 +163,8 @@ All Ed25519 key IDs are resolved uniformly from the signing-keys KTable.
 ### Worker behaviour
 
 Workers still publish their own public key to `taktx-signing-keys` and sign responses with their configured private key.
+
+If `signingEnabled=false`, worker responses may still be accepted unsigned. If `signingEnabled=true`, unsigned worker responses are rejected.
 
 ---
 
@@ -202,7 +255,7 @@ Worker-side signing still uses explicit key material because workers are not gen
 |---|---|
 | `TAKTX_SIGNING_IDENTITY_SOURCE` | Worker signing source: `env` (default), `file`, or `generated` |
 | `TAKTX_SIGNING_KEY_ID` | Worker signing key ID for `env` |
-| `TAKTX_SIGNING_PRIVATE_KEY` | Worker Ed25519 private key for `env` |
+| `TAKTX_SIGNING_OWNER` | Optional human-readable owner label published alongside the worker public key; falls back to app name or key ID |
 | `TAKTX_SIGNING_PUBLIC_KEY` | Worker Ed25519 public key for `env` |
 | `TAKTX_SIGNING_FILE_KEY_ID_PATH` | Worker signing key ID file path for `file` |
 | `TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH` | Worker private key file path for `file` |
@@ -210,8 +263,9 @@ Worker-side signing still uses explicit key material because workers are not gen
 | `TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS` | File refresh interval in milliseconds for `file`; default `1000` |
 
 These are consumed by worker/client-side signing identity sources.
-
 ---
+
+If `TAKTX_SIGNING_OWNER` is not provided, the client falls back to framework app name (`quarkus.application.name`, `spring.application.name`, or `application.name`) and finally to the signing `keyId`.
 
 ## Operational notes
 
@@ -236,6 +290,8 @@ These rules are not configurable:
 
 - expired JWTs are always rejected
 - replayed `auditId` values are always rejected
+- when `engineRequiresAuthorization=true`, JWT is required for external start/abort entry commands
+- when `signingEnabled=true`, unsigned non-entry process-instance commands are rejected
 - engine signing defaults to generated keys but can be switched to env/file sources
 - engine public-key publication retries until the signing-keys topic is available
 

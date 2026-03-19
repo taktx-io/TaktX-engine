@@ -12,9 +12,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.taktx.engine.config.TaktConfiguration;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.nio.file.Path;
 import javax0.license3j.Feature;
 import javax0.license3j.License;
 import org.junit.jupiter.api.BeforeEach;
