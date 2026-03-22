@@ -18,6 +18,7 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
@@ -132,7 +133,7 @@ class EngineAuthorizationServiceTest {
     assertThatThrownBy(
             () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Missing");
+        .hasMessageContaining("Entry command");
   }
 
   @Test
@@ -172,15 +173,125 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void startCommand_withOnlySignatureStillRequiresJwt() {
+  void startCommand_workerSignedEntryCommand_rejected() {
     globalConfigStore.update(config(true, true));
 
-    RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", "worker-test-001.AABB".getBytes(StandardCharsets.UTF_8));
+    String keyId = "worker-test-001";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
 
-    assertThatThrownBy(() -> service.authorize(headers, envelope(startCommand("proc", -1))))
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(
+            () ->
+                service.authorize(
+                    headers,
+                    new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("X-TaktX-Authorization");
+        .hasMessageContaining("not trusted for entry commands");
+  }
+
+  @Test
+  void startCommand_engineSignedEntryCommand_accepted() {
+    globalConfigStore.update(config(true, true));
+
+    String keyId = "engine-test-key-1";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("engine")
+            .role(KeyRole.ENGINE)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    CommandTrustMetadataDTO result =
+        service.authorize(
+            headers, new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId));
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(keyId);
+    assertThat(result.getSignerOwner()).isEqualTo("engine");
+  }
+
+  @Test
+  void startCommand_nullRoleSignedEntryCommand_rejected() {
+    globalConfigStore.update(config(true, true));
+
+    String keyId = "legacy-key-001";
+    // No role set → defaults to null in builder → effectiveRole() returns CLIENT
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("legacy-worker")
+            .build();
+    // Force role to null by bypassing the @Builder.Default
+    SigningKeyDTO nullRoleKey =
+        new SigningKeyDTO(keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, "legacy-worker", null);
+    when(signingKeysStore.get(keyId)).thenReturn(nullRoleKey);
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(
+            () ->
+                service.authorize(
+                    headers,
+                    new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted for entry commands");
+  }
+
+  @Test
+  void abortTrigger_engineSignedEntryCommand_accepted() {
+    globalConfigStore.update(config(true, true));
+
+    String keyId = "engine-test-key-2";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .status(KeyStatus.ACTIVE)
+            .owner("engine")
+            .role(KeyRole.ENGINE)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    AbortTriggerDTO cmd = new AbortTriggerDTO(java.util.UUID.randomUUID(), List.of());
+    CommandTrustMetadataDTO result =
+        service.authorize(headers, new ProcessInstanceTriggerEnvelope(cmd, true, keyId));
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
+    assertThat(result.getTrusted()).isTrue();
+  }
+
+  @Test
+  void startCommand_noHeadersWithAuthRequired_throwsMissingError() {
+    globalConfigStore.update(config(true, true));
+
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Entry command");
   }
 
   // ── claim mismatch ─────────────────────────────────────────────────────────

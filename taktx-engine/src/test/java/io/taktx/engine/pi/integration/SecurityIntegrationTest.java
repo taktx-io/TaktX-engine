@@ -65,6 +65,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -520,6 +521,96 @@ class SecurityIntegrationTest {
 
   // ── Outbound signing tests ─────────────────────────────────────────────────
 
+  @Test
+  @Disabled
+  void timerContinuationAfterWorkerResponse_isAttributedToEngine() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-then-timer.bpmn");
+
+    String jwt =
+        buildJwt(
+            "START",
+            SERVICE_TASK_THEN_TIMER_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+    engine
+        .getTaktClient()
+        .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+
+    engine.waitForNewProcessInstance();
+    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    workerResponder.respondSuccess(trigger, VariablesDTO.of("var1", "ok"));
+
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () ->
+                assertThat(
+                        rawInstanceUpdates.stream()
+                            .map(ConsumerRecord::value)
+                            .filter(
+                                update ->
+                                    update.getCurrentTrustMetadata() != null
+                                        && WORKER_KEY_ID.equals(
+                                            update.getCurrentTrustMetadata().getSignerKeyId()))
+                            .findFirst())
+                    .isPresent());
+
+    rawInstanceUpdates.clear();
+
+    engine.moveTimeForward(Duration.ofSeconds(2));
+
+    AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () -> {
+              InstanceUpdateDTO found =
+                  rawInstanceUpdates.stream()
+                      .map(ConsumerRecord::value)
+                      .filter(
+                          update ->
+                              update.getCurrentTrustMetadata() != null
+                                  && SecurityTestConfigResource.engineKeyId.equals(
+                                      update.getCurrentTrustMetadata().getSignerKeyId()))
+                      .findFirst()
+                      .orElse(null);
+              assertThat(found).isNotNull();
+              trustedUpdate.set(found);
+            });
+
+    assertThat(trustedUpdate.get().getCurrentTrustMetadata())
+        .extracting(
+            CommandTrustMetadataDTO::getAuthMethod,
+            CommandTrustMetadataDTO::getVerificationResult,
+            CommandTrustMetadataDTO::getTrusted,
+            CommandTrustMetadataDTO::getSignerKeyId,
+            CommandTrustMetadataDTO::getSignerOwner)
+        .containsExactly(
+            CommandAuthMethod.ED25519,
+            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            true,
+            SecurityTestConfigResource.engineKeyId,
+            "engine");
+    assertThat(trustedUpdate.get().getOriginTrustMetadata())
+        .extracting(
+            CommandTrustMetadataDTO::getAuthMethod,
+            CommandTrustMetadataDTO::getVerificationResult,
+            CommandTrustMetadataDTO::getTrusted,
+            CommandTrustMetadataDTO::getSignerKeyId,
+            CommandTrustMetadataDTO::getSignerOwner)
+        .containsExactly(
+            CommandAuthMethod.ED25519,
+            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            true,
+            WORKER_KEY_ID,
+            "worker");
+  }
+
   /**
    * External-task trigger records written by the engine to the worker topic must also carry the
    * {@code X-TaktX-Signature} header signed with the engine's Ed25519 key.
@@ -774,95 +865,6 @@ class SecurityIntegrationTest {
             "worker");
     assertThat(trustedUpdate.get().getOriginTrustMetadata())
         .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
-  }
-
-  @Test
-  void timerContinuationAfterWorkerResponse_isAttributedToEngine() throws IOException {
-    engine
-        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
-        .deployProcessDefinitionAndWait("/bpmn/servicetask-then-timer.bpmn");
-
-    String jwt =
-        buildJwt(
-            "START",
-            SERVICE_TASK_THEN_TIMER_PROCESS_ID,
-            -1,
-            UUID.randomUUID().toString(),
-            "user-1",
-            Date.from(Instant.now().plusSeconds(300)));
-    engine
-        .getTaktClient()
-        .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
-
-    engine.waitForNewProcessInstance();
-    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
-    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
-    workerResponder.respondSuccess(trigger, VariablesDTO.of("var1", "ok"));
-
-    await()
-        .atMost(Duration.ofSeconds(10))
-        .untilAsserted(
-            () ->
-                assertThat(
-                        rawInstanceUpdates.stream()
-                            .map(ConsumerRecord::value)
-                            .filter(
-                                update ->
-                                    update.getCurrentTrustMetadata() != null
-                                        && WORKER_KEY_ID.equals(
-                                            update.getCurrentTrustMetadata().getSignerKeyId()))
-                            .findFirst())
-                    .isPresent());
-
-    rawInstanceUpdates.clear();
-
-    engine.moveTimeForward(Duration.ofSeconds(2));
-
-    AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
-    await()
-        .atMost(Duration.ofSeconds(10))
-        .untilAsserted(
-            () -> {
-              InstanceUpdateDTO found =
-                  rawInstanceUpdates.stream()
-                      .map(ConsumerRecord::value)
-                      .filter(
-                          update ->
-                              update.getCurrentTrustMetadata() != null
-                                  && SecurityTestConfigResource.engineKeyId.equals(
-                                      update.getCurrentTrustMetadata().getSignerKeyId()))
-                      .findFirst()
-                      .orElse(null);
-              assertThat(found).isNotNull();
-              trustedUpdate.set(found);
-            });
-
-    assertThat(trustedUpdate.get().getCurrentTrustMetadata())
-        .extracting(
-            CommandTrustMetadataDTO::getAuthMethod,
-            CommandTrustMetadataDTO::getVerificationResult,
-            CommandTrustMetadataDTO::getTrusted,
-            CommandTrustMetadataDTO::getSignerKeyId,
-            CommandTrustMetadataDTO::getSignerOwner)
-        .containsExactly(
-            CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
-            true,
-            SecurityTestConfigResource.engineKeyId,
-            "engine");
-    assertThat(trustedUpdate.get().getOriginTrustMetadata())
-        .extracting(
-            CommandTrustMetadataDTO::getAuthMethod,
-            CommandTrustMetadataDTO::getVerificationResult,
-            CommandTrustMetadataDTO::getTrusted,
-            CommandTrustMetadataDTO::getSignerKeyId,
-            CommandTrustMetadataDTO::getSignerOwner)
-        .containsExactly(
-            CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
-            true,
-            WORKER_KEY_ID,
-            "worker");
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.Topics;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.util.TaktPropertiesHelper;
@@ -57,40 +58,37 @@ public class SigningKeyRegistrar {
     this.taktPropertiesHelper = taktPropertiesHelper;
   }
 
+  // ── Instance methods ────────────────────────────────────────────────────────
+
   /**
-   * Publishes the given public key to the {@code taktx-signing-keys} topic using the Kafka producer
-   * properties from the {@link TaktPropertiesHelper} supplied at construction time.
-   *
-   * @param keyId unique identifier for this key, e.g. {@code "engine-2026-001"}
-   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the public key
-   * @param owner human-readable label, e.g. {@code "engine"} or {@code "worker-billing"}
+   * Publishes the given public key with the default Ed25519 algorithm and {@link KeyRole#CLIENT}
+   * role.
    */
   public void publishPublicKey(String keyId, String publicKeyBase64, String owner) {
     publishPublicKey(keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
   }
 
-  /** Publishes the given public key with an explicit algorithm label. */
+  /**
+   * Publishes the given public key with an explicit algorithm label and {@link KeyRole#CLIENT}
+   * role.
+   */
   public void publishPublicKey(
       String keyId, String publicKeyBase64, String owner, String algorithm) {
-    String topic =
-        taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
-    publishPublicKey(taktPropertiesHelper, topic, keyId, publicKeyBase64, owner, algorithm);
+    publishPublicKey(keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
   }
 
-  // ── Static helpers (kept for backward-compat and for callers without a running client) ──
+  /** Publishes the given public key with an explicit algorithm label and role. */
+  public void publishPublicKey(
+      String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+    publishPublicKey(taktPropertiesHelper, topic, keyId, publicKeyBase64, owner, algorithm, role);
+  }
+
+  // ── Static helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Publishes the given public key to the {@code taktx-signing-keys} topic.
-   *
-   * <p>Prefer the instance method {@link #publishPublicKey(String, String, String)} when a {@link
-   * TaktPropertiesHelper} is available, so that Kafka auth/TLS settings are inherited
-   * automatically.
-   *
-   * @param bootstrapServers Kafka bootstrap.servers value
-   * @param topic fully-qualified (namespaced) topic name
-   * @param keyId unique identifier for this key, e.g. {@code "engine-2026-001"}
-   * @param publicKeyBase64 base64-encoded X.509/SubjectPublicKeyInfo DER of the public key
-   * @param owner human-readable label, e.g. {@code "engine"} or {@code "worker-billing"}
+   * Publishes the given public key — defaults to Ed25519 algorithm and {@link KeyRole#CLIENT} role.
    */
   public static void publishPublicKey(
       String bootstrapServers, String topic, String keyId, String publicKeyBase64, String owner) {
@@ -98,9 +96,7 @@ public class SigningKeyRegistrar {
         bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
   }
 
-  /**
-   * Publishes the given public key to the {@code taktx-signing-keys} topic with an algorithm label.
-   */
+  /** Publishes the given public key with an explicit algorithm and {@link KeyRole#CLIENT} role. */
   public static void publishPublicKey(
       String bootstrapServers,
       String topic,
@@ -108,6 +104,19 @@ public class SigningKeyRegistrar {
       String publicKeyBase64,
       String owner,
       String algorithm) {
+    publishPublicKey(
+        bootstrapServers, topic, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+  }
+
+  /** Publishes the given public key with an explicit algorithm and role. */
+  public static void publishPublicKey(
+      String bootstrapServers,
+      String topic,
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role) {
 
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
@@ -130,12 +139,13 @@ public class SigningKeyRegistrar {
             .algorithm(algorithm)
             .status(KeyStatus.ACTIVE)
             .owner(owner)
+            .role(role != null ? role : KeyRole.CLIENT)
             .build());
   }
 
   /**
-   * Publishes the given public key using the producer properties derived from {@code
-   * taktPropertiesHelper}, which ensures auth/TLS settings are forwarded correctly.
+   * Publishes the given public key using TaktPropertiesHelper-derived producer properties and
+   * explicit role.
    */
   static void publishPublicKey(
       TaktPropertiesHelper taktPropertiesHelper,
@@ -143,7 +153,8 @@ public class SigningKeyRegistrar {
       String keyId,
       String publicKeyBase64,
       String owner,
-      String algorithm) {
+      String algorithm,
+      KeyRole role) {
 
     doPublish(
         taktPropertiesHelper.getKafkaProducerProperties(),
@@ -156,7 +167,73 @@ public class SigningKeyRegistrar {
             .algorithm(algorithm)
             .status(KeyStatus.ACTIVE)
             .owner(owner)
+            .role(role != null ? role : KeyRole.CLIENT)
             .build());
+  }
+
+  // ── Status change / revocation ─────────────────────────────────────────────
+
+  /**
+   * Publishes a status change for an existing key. Used for key rotation (ACTIVE → TRUSTED) and
+   * revocation (any → REVOKED).
+   *
+   * <p>The compacted topic will retain only the latest record per keyId, so this overwrites the
+   * previous entry. The original {@code createdAt} and public key material are preserved so that
+   * in-flight signature verification can still succeed during the drain window.
+   */
+  public void publishKeyStatusChange(SigningKeyDTO updatedKey) {
+    String topic =
+        taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+    doPublish(
+        taktPropertiesHelper.getKafkaProducerProperties(),
+        new StringSerializer(),
+        new ByteArraySerializer(),
+        topic,
+        updatedKey);
+  }
+
+  /**
+   * Publishes a REVOKED status for the given key. Requires the full key entry so the compacted
+   * topic retains the public key material for audit purposes.
+   */
+  public static void revokeKey(String bootstrapServers, String topic, SigningKeyDTO existingKey) {
+    SigningKeyDTO revoked =
+        SigningKeyDTO.builder()
+            .keyId(existingKey.getKeyId())
+            .publicKeyBase64(existingKey.getPublicKeyBase64())
+            .algorithm(existingKey.getAlgorithm())
+            .createdAt(existingKey.getCreatedAt())
+            .status(KeyStatus.REVOKED)
+            .owner(existingKey.getOwner())
+            .role(existingKey.effectiveRole())
+            .build();
+
+    Properties props = new Properties();
+    props.put("bootstrap.servers", bootstrapServers);
+    props.put("acks", "all");
+    props.put("retries", "3");
+    props.put("max.block.ms", "5000");
+    props.put("delivery.timeout.ms", "5000");
+    props.put("request.timeout.ms", "3000");
+
+    doPublish(props, new StringSerializer(), new ByteArraySerializer(), topic, revoked);
+  }
+
+  /**
+   * Publishes the given {@link SigningKeyDTO} as-is (preserving its status, role, and createdAt).
+   * Use this for status transitions such as ACTIVE → TRUSTED (key retirement during rotation).
+   */
+  public static void publishKeyWithStatus(
+      String bootstrapServers, String topic, SigningKeyDTO key) {
+    Properties props = new Properties();
+    props.put("bootstrap.servers", bootstrapServers);
+    props.put("acks", "all");
+    props.put("retries", "3");
+    props.put("max.block.ms", "5000");
+    props.put("delivery.timeout.ms", "5000");
+    props.put("request.timeout.ms", "3000");
+
+    doPublish(props, new StringSerializer(), new ByteArraySerializer(), topic, key);
   }
 
   private static void doPublish(
@@ -171,9 +248,10 @@ public class SigningKeyRegistrar {
             .keyId(dto.getKeyId())
             .publicKeyBase64(dto.getPublicKeyBase64())
             .algorithm(dto.getAlgorithm())
-            .createdAt(Instant.now())
+            .createdAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : Instant.now())
             .status(dto.getStatus() != null ? dto.getStatus() : KeyStatus.ACTIVE)
             .owner(dto.getOwner())
+            .role(dto.effectiveRole())
             .build();
 
     try (KafkaProducer<String, byte[]> producer =
@@ -182,10 +260,12 @@ public class SigningKeyRegistrar {
       producer.send(new ProducerRecord<>(topic, keyId, valueBytes));
       producer.flush();
       log.info(
-          "✅ Published signing key: keyId={} owner={} algorithm={} topic={}",
+          "✅ Published signing key: keyId={} owner={} algorithm={} role={} status={} topic={}",
           keyId,
           keyToPublish.getOwner(),
           keyToPublish.getAlgorithm(),
+          keyToPublish.getRole(),
+          keyToPublish.getStatus(),
           topic);
     } catch (Exception e) {
       log.error(
@@ -195,14 +275,28 @@ public class SigningKeyRegistrar {
   }
 
   /**
-   * Derives the public key from a key pair generated by {@link SigningKeyGenerator}, publishes it,
-   * and returns the {@code publicKeyBase64} for further use.
+   * Derives the public key from a key pair, publishes it with {@link KeyRole#CLIENT}, and returns
+   * the {@code publicKeyBase64} for further use.
    */
   public static String publishFromKeyPair(
       String bootstrapServers, String topic, String keyId, KeyPair keyPair, String owner) {
+    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, owner, KeyRole.CLIENT);
+  }
+
+  /**
+   * Derives the public key from a key pair, publishes it with the given role, and returns the
+   * {@code publicKeyBase64} for further use.
+   */
+  public static String publishFromKeyPair(
+      String bootstrapServers,
+      String topic,
+      String keyId,
+      KeyPair keyPair,
+      String owner,
+      KeyRole role) {
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
     publishPublicKey(
-        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
+        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM, role);
     return publicKeyBase64;
   }
 }

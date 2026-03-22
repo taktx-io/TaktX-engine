@@ -58,4 +58,20 @@ public class SigningKeyDTO {
    * "platform"}.
    */
   private String owner;
+
+  /**
+   * Actor role of this key — determines what operations the key is trusted to authorize.
+   *
+   * <p>Field is declared last to preserve CBOR array order for backward compatibility. Pre-role
+   * keys (without this field) deserialize to {@code null}; use {@link #effectiveRole()} to get the
+   * safe default.
+   */
+  @Builder.Default private KeyRole role = KeyRole.CLIENT;
+
+  /**
+   * Returns the effective role, treating {@code null} (pre-role keys) as {@link KeyRole#CLIENT}.
+   */
+  public KeyRole effectiveRole() {
+    return role != null ? role : KeyRole.CLIENT;
+  }
 }

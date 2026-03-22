@@ -19,6 +19,7 @@ import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
@@ -325,14 +326,31 @@ public class TaktXClient {
 
   /**
    * Publishes a public key with an explicit algorithm label such as {@code Ed25519} or {@code RSA}.
+   * /** Publishes a public key with an explicit algorithm label such as {@code Ed25519} or {@code
+   * RSA}.
    */
   public void publishSigningKey(
       String keyId, String publicKeyBase64, String owner, String algorithm) {
+    publishSigningKey(keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+  }
+
+  /**
+   * Publishes a public key with an explicit algorithm label and role. Use {@link KeyRole#CLIENT}
+   * for worker/client keys (the default). Reserved overload for platform tooling that publishes
+   * platform-level keys.
+   */
+  public void publishSigningKey(
+      String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
     // Use the instance-based SigningKeyRegistrar so auth/TLS properties flow through automatically,
     // following the same pattern as ProcessDefinitionDeployer and MessageEventSender.
     new SigningKeyRegistrar(taktPropertiesHelper)
-        .publishPublicKey(keyId, publicKeyBase64, owner, algorithm);
-    log.info("✅ Signing key published: keyId={} owner={} algorithm={}", keyId, owner, algorithm);
+        .publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role);
+    log.info(
+        "✅ Signing key published: keyId={} owner={} algorithm={} role={}",
+        keyId,
+        owner,
+        algorithm,
+        role);
   }
 
   /**
@@ -360,11 +378,27 @@ public class TaktXClient {
    */
   public static void publishSigningKey(
       Properties properties, String keyId, String publicKeyBase64, String owner, String algorithm) {
+    publishSigningKey(properties, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
+  }
+
+  /** Static convenience overload with an explicit algorithm and role. */
+  public static void publishSigningKey(
+      Properties properties,
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role) {
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
     String topic = helper.getPrefixedTopicName(io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
     SigningKeyRegistrar.publishPublicKey(
-        helper.getBootstrapServers(), topic, keyId, publicKeyBase64, owner, algorithm);
-    log.info("✅ Signing key published: keyId={} owner={} algorithm={}", keyId, owner, algorithm);
+        helper.getBootstrapServers(), topic, keyId, publicKeyBase64, owner, algorithm, role);
+    log.info(
+        "✅ Signing key published: keyId={} owner={} algorithm={} role={}",
+        keyId,
+        owner,
+        algorithm,
+        role);
   }
 
   private void publishWorkerSigningKeyIfConfigured() {

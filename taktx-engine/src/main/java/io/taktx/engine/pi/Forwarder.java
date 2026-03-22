@@ -205,7 +205,10 @@ public class Forwarder {
       eventDto.setElementInstanceIdPath(elementInstanceIdPath);
       EventSignalTriggerDTO eventSignalTriggerDTO =
           new EventSignalTriggerDTO(processInstance.getProcessInstanceId(), eventDto);
-      applyDerivedCommandTrustMetadata(eventSignalTriggerDTO, originTrustMetadata);
+      // Timer fires are autonomous engine actions: do NOT carry the scheduling-time origin into the
+      // stored schedule. Passing null lets ProcessInstanceProcessor re-assign origin = engine when
+      // the timer actually fires, instead of replaying the caller's identity from scheduling time.
+      applyDerivedCommandTrustMetadata(eventSignalTriggerDTO, null);
 
       long now = clock.millis();
 
@@ -251,7 +254,9 @@ public class Forwarder {
               instancePath,
               externalTaskResponseResult,
               VariablesDTO.empty());
-      applyDerivedCommandTrustMetadata(externalTaskResponseResultDTO, originTrustMetadata);
+      // External task timeouts are autonomous engine actions: do NOT carry the scheduling-time
+      // origin. Passing null lets ProcessInstanceProcessor re-assign origin = engine at fire time.
+      applyDerivedCommandTrustMetadata(externalTaskResponseResultDTO, null);
 
       TimerEventDefinitionDTO timerEventDefinition = new TimerEventDefinitionDTO();
       String duration = Duration.ofMillis(info.timeoutMs()).toString();

@@ -10,7 +10,6 @@ package io.taktx.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -44,16 +43,4 @@ public abstract class InstanceUpdateDTO {
    * of the outbound instance-update record itself.
    */
   @Nullable private CommandTrustMetadataDTO originTrustMetadata;
-
-  @Deprecated
-  @JsonIgnore
-  public CommandTrustMetadataDTO getCommandTrustMetadata() {
-    return currentTrustMetadata;
-  }
-
-  @Deprecated
-  @JsonIgnore
-  public void setCommandTrustMetadata(CommandTrustMetadataDTO commandTrustMetadata) {
-    this.currentTrustMetadata = commandTrustMetadata;
-  }
 }

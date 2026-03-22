@@ -14,6 +14,7 @@ import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
@@ -27,6 +28,8 @@ import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
 import io.taktx.security.EngineSigningKeysHolder;
+import io.taktx.security.KeyTrustPolicy;
+import io.taktx.security.OpenKeyTrustPolicy;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -71,6 +74,7 @@ public class EngineAuthorizationService {
   private final AuthorizationTokenValidator validator;
   private final KafkaStreams kafkaStreams;
   private final LicenseManager licenseManager;
+  private final KeyTrustPolicy keyTrustPolicy;
 
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
 
@@ -81,12 +85,14 @@ public class EngineAuthorizationService {
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
       KafkaStreams kafkaStreams,
-      LicenseManager licenseManager) {
+      LicenseManager licenseManager,
+      KeyTrustPolicy keyTrustPolicy) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
     this.nonceStore = nonceStore;
     this.kafkaStreams = kafkaStreams;
     this.licenseManager = licenseManager;
+    this.keyTrustPolicy = keyTrustPolicy;
     this.validator = new AuthorizationTokenValidator(publicKeyProvider);
   }
 
@@ -103,7 +109,8 @@ public class EngineAuthorizationService {
         publicKeyProvider,
         nonceStore,
         kafkaStreams,
-        new AlwaysAllowLicenseManager());
+        new AlwaysAllowLicenseManager(),
+        new OpenKeyTrustPolicy());
   }
 
   /** Minimal LicenseManager used only by the no-CDI test constructor above. */
@@ -185,17 +192,30 @@ public class EngineAuthorizationService {
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
-    if (requiresJwtAuthorization(trigger)) {
-      if (authHeader == null || authHeader.value() == null) {
-        throw new AuthorizationTokenException(
-            "Missing required "
-                + AUTH_HEADER
-                + " header on command "
-                + trigger.getClass().getSimpleName());
+    boolean isEntryCommand =
+        trigger instanceof StartCommandDTO || trigger instanceof AbortTriggerDTO;
+
+    if (isEntryCommand) {
+      // Path A: JWT present → validate JWT (external client path)
+      if (authHeader != null && authHeader.value() != null) {
+        return authorizeViaJwt(authHeader, trigger);
       }
-      return authorizeViaJwt(authHeader, trigger);
+      // Path B: Ed25519 signature present → check key role
+      if (sigHeader != null && sigHeader.value() != null) {
+        return authorizeEntryCommandViaEd25519(sigHeader, triggerEnvelope);
+      }
+      // Path C: neither JWT nor signature → reject
+      throw new AuthorizationTokenException(
+          "Entry command "
+              + trigger.getClass().getSimpleName()
+              + " requires "
+              + AUTH_HEADER
+              + " (JWT) or "
+              + SIG_HEADER
+              + " from an ENGINE-role key");
     }
 
+    // Non-entry commands: existing Ed25519/signing flow (unchanged)
     if (sigHeader != null && sigHeader.value() != null) {
       return authorizeViaEd25519(sigHeader, triggerEnvelope);
     }
@@ -209,6 +229,68 @@ public class EngineAuthorizationService {
     }
 
     return trigger.getCurrentTrustMetadata();
+  }
+
+  // ── Entry command via Ed25519 ─────────────────────────────────────────────
+
+  /**
+   * Authorizes an entry command (StartCommandDTO / AbortTriggerDTO) via Ed25519 signature when the
+   * signing key has a role that is trusted for ENGINE operations.
+   */
+  private CommandTrustMetadataDTO authorizeEntryCommandViaEd25519(
+      Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    if (triggerEnvelope.hasSignatureError()) {
+      throw new AuthorizationTokenException(triggerEnvelope.signatureError());
+    }
+
+    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
+    int dot = headerValue.indexOf('.');
+    String keyId = dot >= 0 ? headerValue.substring(0, dot) : headerValue;
+
+    SigningKeyDTO entry = lookupSigningKey(keyId);
+    if (entry == null) {
+      throw new AuthorizationTokenException(
+          "Unknown Ed25519 keyId '"
+              + keyId
+              + "' — rejecting entry command "
+              + triggerEnvelope.trigger().getClass().getSimpleName());
+    }
+    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
+      throw new AuthorizationTokenException(
+          "Revoked Ed25519 keyId '"
+              + keyId
+              + "' — rejecting entry command "
+              + triggerEnvelope.trigger().getClass().getSimpleName());
+    }
+    if (!triggerEnvelope.signatureVerified()) {
+      throw new AuthorizationTokenException(
+          "Ed25519 header present for entry command "
+              + triggerEnvelope.trigger().getClass().getSimpleName()
+              + " but the signature was not verified by the deserializer");
+    }
+    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE)) {
+      throw new AuthorizationTokenException(
+          "Ed25519 keyId '"
+              + keyId
+              + "' has role "
+              + entry.effectiveRole()
+              + " which is not trusted for entry commands (requires ENGINE or PLATFORM)");
+    }
+
+    log.info(
+        "✅ Authorised (Ed25519/ENGINE) command={} keyId={} owner={}",
+        triggerEnvelope.trigger().getClass().getSimpleName(),
+        keyId,
+        entry.getOwner());
+
+    return CommandTrustMetadataDTO.builder()
+        .authMethod(CommandAuthMethod.ED25519)
+        .verificationResult(CommandTrustVerificationResult.ENGINE_SIGNED)
+        .trusted(true)
+        .signerKeyId(keyId)
+        .signerOwner(entry.getOwner())
+        .signerAlgorithm(entry.getAlgorithm())
+        .build();
   }
 
   // ── JWT path ────────────────────────────────────────────────────────────────
@@ -316,10 +398,6 @@ public class EngineAuthorizationService {
 
   private static Header lastHeader(Headers headers, String headerName) {
     return headers != null ? headers.lastHeader(headerName) : null;
-  }
-
-  private static boolean requiresJwtAuthorization(ProcessInstanceTriggerDTO trigger) {
-    return trigger instanceof StartCommandDTO || trigger instanceof AbortTriggerDTO;
   }
 
   private void validateClaimsMatchCommand(TokenClaims claims, ProcessInstanceTriggerDTO trigger) {

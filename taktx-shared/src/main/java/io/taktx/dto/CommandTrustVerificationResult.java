@@ -13,6 +13,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 public enum CommandTrustVerificationResult {
   JWT_AUTHORIZED,
   SIGNATURE_VERIFIED,
+  ENGINE_SIGNED,
   AUTHORIZATION_DISABLED,
   LICENSE_BYPASSED
 }

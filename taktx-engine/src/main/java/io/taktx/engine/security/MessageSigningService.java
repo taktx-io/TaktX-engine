@@ -10,6 +10,9 @@ package io.taktx.engine.security;
 import io.quarkus.runtime.Startup;
 import io.taktx.Topics;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.KeyRole;
+import io.taktx.dto.SigningKeyDTO;
+import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.license.LicenseManager;
@@ -56,6 +59,9 @@ public class MessageSigningService {
 
   private String cachedPrivateKeyBase64;
   private String cachedPublicKeyBase64;
+
+  /** Captured before a key rotation so the previous key can be retired to TRUSTED. */
+  private volatile SigningIdentity previousIdentity;
 
   @Inject
   public MessageSigningService(
@@ -132,7 +138,8 @@ public class MessageSigningService {
           identity.getKeyId(),
           identity.getPublicKeyBase64(),
           "engine",
-          identity.getAlgorithm());
+          identity.getAlgorithm(),
+          KeyRole.ENGINE);
       publicKeyPublished.set(true);
       log.info(
           "✅ Engine public key published to signing-keys topic: keyId={}", identity.getKeyId());
@@ -236,6 +243,13 @@ public class MessageSigningService {
               || !cachedPrivateKeyBase64.equals(identity.getPrivateKeyBase64());
     }
     if (changed) {
+      // Capture previous identity before overwriting so we can retire it
+      if (this.keyId != null
+          && !this.keyId.equals(identity.getKeyId())
+          && cachedPublicKeyBase64 != null) {
+        previousIdentity =
+            SigningIdentity.ed25519(this.keyId, cachedPrivateKeyBase64, cachedPublicKeyBase64);
+      }
       this.keyId = identity.getKeyId();
       this.cachedPrivateKeyBase64 = identity.getPrivateKeyBase64();
       this.cachedPublicKeyBase64 = identity.getPublicKeyBase64();
@@ -246,9 +260,50 @@ public class MessageSigningService {
           keyId);
       if (identity.hasPublicKey() && keyPublicationExecutor != null) {
         schedulePublicKeyPublication(0L);
+        // Retire the previous key if one existed
+        if (previousIdentity != null) {
+          retirePreviousKey();
+        }
       }
     }
     return identity;
+  }
+
+  /**
+   * Publishes the previous engine key with {@code status=TRUSTED} so it is still accepted for
+   * in-flight verification but no longer the active signing key.
+   *
+   * <p>Full revocation (TRUSTED → REVOKED) is left to operational tooling or a future scheduled
+   * task, since the drain window depends on consumer lag.
+   */
+  private void retirePreviousKey() {
+    SigningIdentity prev = previousIdentity;
+    if (prev == null || keyPublicationExecutor == null) return;
+    keyPublicationExecutor.schedule(
+        () -> {
+          try {
+            String topic = config.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+            SigningKeyDTO trustedKey =
+                SigningKeyDTO.builder()
+                    .keyId(prev.getKeyId())
+                    .publicKeyBase64(prev.getPublicKeyBase64())
+                    .algorithm(prev.getAlgorithm())
+                    .status(KeyStatus.TRUSTED)
+                    .owner("engine")
+                    .role(KeyRole.ENGINE)
+                    .build();
+            SigningKeyRegistrar.publishKeyWithStatus(
+                config.getBootstrapServers(), topic, trustedKey);
+            log.info("Previous engine key retired to TRUSTED: keyId={}", prev.getKeyId());
+          } catch (Exception e) {
+            log.warn(
+                "Failed to retire previous engine key keyId={}: {}",
+                prev.getKeyId(),
+                e.getMessage());
+          }
+        },
+        PUBLICATION_RETRY_DELAY_SECONDS,
+        TimeUnit.SECONDS);
   }
 
   private GlobalConfigurationDTO effectiveConfig() {
