@@ -190,13 +190,14 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
+    // CLIENT-role key satisfies the signing gate but NOT the auth gate (no JWT, not ENGINE-role).
     assertThatThrownBy(
             () ->
                 service.authorize(
                     headers,
                     new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for entry commands");
+        .hasMessageContaining("JWT");
   }
 
   @Test
@@ -234,14 +235,6 @@ class EngineAuthorizationServiceTest {
 
     String keyId = "legacy-key-001";
     // No role set → defaults to null in builder → effectiveRole() returns CLIENT
-    SigningKeyDTO keyEntry =
-        SigningKeyDTO.builder()
-            .keyId(keyId)
-            .publicKeyBase64("dummy")
-            .status(KeyStatus.ACTIVE)
-            .owner("legacy-worker")
-            .build();
-    // Force role to null by bypassing the @Builder.Default
     SigningKeyDTO nullRoleKey =
         new SigningKeyDTO(keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, "legacy-worker", null);
     when(signingKeysStore.get(keyId)).thenReturn(nullRoleKey);
@@ -249,13 +242,14 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
 
+    // Null-role → effectiveRole()=CLIENT. Satisfies signing gate but not auth gate (no JWT).
     assertThatThrownBy(
             () ->
                 service.authorize(
                     headers,
                     new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for entry commands");
+        .hasMessageContaining("JWT");
   }
 
   @Test

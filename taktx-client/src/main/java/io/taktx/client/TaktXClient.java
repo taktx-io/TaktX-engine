@@ -418,10 +418,28 @@ public class TaktXClient {
   }
 
   void refreshWorkerSigningFunctionRegistration() {
-    if (!RuntimeConfigurationHolder.isSigningEnabled()) {
+    boolean signingEnabled = RuntimeConfigurationHolder.isSigningEnabled();
+    boolean authRequired = RuntimeConfigurationHolder.isEngineRequiresAuthorization();
+
+    // ── Auth gate check ───────────────────────────────────────────────────
+    if (authRequired && authorizationTokenProvider == null) {
+      log.warn(
+          "engineRequiresAuthorization=true in runtime config but no AuthorizationTokenProvider"
+              + " is configured — entry commands (startProcess / abortElementInstance) sent"
+              + " without an explicit JWT token will be rejected by the engine."
+              + " Configure taktx.oidc.* or supply an AuthorizationTokenProvider.");
+    }
+
+    // ── Signing gate check ────────────────────────────────────────────────
+    if (!signingEnabled) {
       logWorkerSigningRegistrationState(
           "runtime-disabled",
           "Worker response signing inactive — runtime configuration signingEnabled=false");
+      if (authRequired) {
+        log.info(
+            "engineRequiresAuthorization=true — entry commands require JWT"
+                + " (X-TaktX-Authorization); non-entry commands are accepted without Ed25519");
+      }
       return;
     }
 
@@ -431,17 +449,30 @@ public class TaktXClient {
           signingIdentitySource != null ? signingIdentitySource.getSourceType() : "none";
       logWorkerSigningRegistrationState(
           "waiting-for-identity:" + sourceType,
-          "Worker response signing enabled by runtime configuration but no signing identity is available yet from source={}",
+          "Worker response signing enabled by runtime configuration but no signing identity is"
+              + " available yet from source={}",
           sourceType);
       return;
     }
 
     SigningServiceHolder.set(this::signWorkerPayload);
-    logWorkerSigningRegistrationState(
-        "active:" + identity.getKeyId(),
-        "Worker response signing active — runtime configuration enabled, source={} keyId={}",
-        signingIdentitySource.getSourceType(),
-        identity.getKeyId());
+    if (authRequired) {
+      // AND mode: entry commands need BOTH JWT (auth gate) AND Ed25519 (signing gate).
+      // ENGINE-role keys satisfy both gates without JWT.
+      logWorkerSigningRegistrationState(
+          "active-and:" + identity.getKeyId(),
+          "AND security mode active (engineRequiresAuthorization=true AND signingEnabled=true)"
+              + " — entry commands require JWT + Ed25519; ENGINE-role keys satisfy both gates."
+              + " source={} keyId={}",
+          signingIdentitySource.getSourceType(),
+          identity.getKeyId());
+    } else {
+      logWorkerSigningRegistrationState(
+          "active:" + identity.getKeyId(),
+          "Worker response signing active — runtime configuration enabled, source={} keyId={}",
+          signingIdentitySource.getSourceType(),
+          identity.getKeyId());
+    }
   }
 
   private void logWorkerSigningRegistrationState(String newState, String message, Object... args) {

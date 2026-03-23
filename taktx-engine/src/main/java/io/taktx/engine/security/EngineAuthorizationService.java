@@ -174,20 +174,27 @@ public class EngineAuthorizationService {
   /**
    * Authorises an incoming command on {@code process-instance-trigger} and returns structured trust
    * metadata to be attached to the command/update chain.
+   *
+   * <p>Two independent security gates are evaluated and both must pass when both are active:
+   *
+   * <ul>
+   *   <li><b>Authorization gate</b> ({@code engineRequiresAuthorization} config + license): applies
+   *       to entry commands; satisfied by a valid JWT <em>or</em> an ENGINE-role Ed25519 key.
+   *       ENGINE-role keys implicitly carry authorization because only the engine itself generates
+   *       them (e.g. sub-process / call-activity triggers).
+   *   <li><b>Signing gate</b> ({@code signingEnabled} config + {@code isEventSigningAllowed}
+   *       license): applies to <em>all</em> commands including entry; satisfied by any valid
+   *       Ed25519 signature (CLIENT or ENGINE role).
+   * </ul>
+   *
+   * <p>When both gates are active an external entry command must carry <em>both</em> a JWT
+   * (authorization) and an Ed25519 signature (authenticity). An ENGINE-role Ed25519 alone satisfies
+   * both gates, so engine-internal entry commands continue to work without a JWT.
    */
   public CommandTrustMetadataDTO authorize(
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
-    GlobalConfigurationDTO config = effectiveConfig();
-    if (!config.isEngineRequiresAuthorization()) {
-      return null;
-    }
-    if (!licenseManager.isEngineRequiresAuthorization()) {
-      log.warn(
-          "engineRequiresAuthorization=true in runtime config but the active license does not permit"
-              + " command authorization — command accepted without validation");
-      return null;
-    }
+    GlobalConfigurationDTO cfg = effectiveConfig();
 
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
@@ -195,32 +202,109 @@ public class EngineAuthorizationService {
     boolean isEntryCommand =
         trigger instanceof StartCommandDTO || trigger instanceof AbortTriggerDTO;
 
+    // ── Entry commands: AND-logic across both gates
+    // ───────────────────────────────────────────────
     if (isEntryCommand) {
-      // Path A: JWT present → validate JWT (external client path)
+      boolean authActive = cfg.isEngineRequiresAuthorization();
+      if (authActive && !licenseManager.isEngineRequiresAuthorization()) {
+        log.warn(
+            "engineRequiresAuthorization=true in runtime config but the active license does not"
+                + " permit command authorization — command accepted without validation");
+        authActive = false;
+      }
+
+      boolean signingActive = cfg.isSigningEnabled();
+      if (signingActive && !licenseManager.isEventSigningAllowed()) {
+        log.warn(
+            "signingEnabled=true in runtime config but the active license does not permit event"
+                + " signing — command accepted without signature verification");
+        signingActive = false;
+      }
+
+      if (!authActive && !signingActive) {
+        return null;
+      }
+
+      // Verify JWT if present (throws on invalid token; a presented JWT must always be valid)
+      CommandTrustMetadataDTO jwtMeta = null;
       if (authHeader != null && authHeader.value() != null) {
-        return authorizeViaJwt(authHeader, trigger);
+        jwtMeta = authorizeViaJwt(authHeader, trigger);
       }
-      // Path B: Ed25519 signature present → check key role
+
+      // Verify Ed25519 if present; accepts CLIENT- and ENGINE-role keys
+      CommandTrustMetadataDTO sigMeta = null;
+      boolean sigIsEngine = false;
       if (sigHeader != null && sigHeader.value() != null) {
-        return authorizeEntryCommandViaEd25519(sigHeader, triggerEnvelope);
+        sigMeta = resolveEntrySigTrust(sigHeader, triggerEnvelope);
+        sigIsEngine =
+            CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
       }
-      // Path C: neither JWT nor signature → reject
-      throw new AuthorizationTokenException(
-          "Entry command "
-              + trigger.getClass().getSimpleName()
-              + " requires "
-              + AUTH_HEADER
-              + " (JWT) or "
-              + SIG_HEADER
-              + " from an ENGINE-role key");
+
+      // Auth gate: JWT or ENGINE-role Ed25519 satisfies it
+      if (authActive && jwtMeta == null && !sigIsEngine) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires "
+                + AUTH_HEADER
+                + " (JWT) or "
+                + SIG_HEADER
+                + " from an ENGINE-role key");
+      }
+
+      // Signing gate: any valid Ed25519 satisfies it
+      if (signingActive && sigMeta == null) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires "
+                + SIG_HEADER
+                + " (signingEnabled=true)");
+      }
+
+      // Both JWT and Ed25519 verified — combine: JWT provides auth context, enrich with signer info
+      if (jwtMeta != null && sigMeta != null) {
+        return CommandTrustMetadataDTO.builder()
+            .authMethod(CommandAuthMethod.JWT_AND_ED25519)
+            .verificationResult(jwtMeta.getVerificationResult())
+            .trusted(true)
+            .userId(jwtMeta.getUserId())
+            .issuer(jwtMeta.getIssuer())
+            .signerKeyId(sigMeta.getSignerKeyId())
+            .signerOwner(sigMeta.getSignerOwner())
+            .signerAlgorithm(sigMeta.getSignerAlgorithm())
+            .build();
+      }
+      return jwtMeta != null ? jwtMeta : sigMeta;
     }
 
-    // Non-entry commands: existing Ed25519/signing flow (unchanged)
+    // ── Gate 2: Non-entry command Ed25519 signing
+    // ─────────────────────────────────────────────────
+    // Auth active when both config and license agree.
+    boolean authActive = cfg.isEngineRequiresAuthorization();
+    if (authActive && !licenseManager.isEngineRequiresAuthorization()) {
+      log.warn(
+          "engineRequiresAuthorization=true in runtime config but the active license does not"
+              + " permit command authorization — command accepted without validation");
+      authActive = false;
+    }
+
+    // Signing active when both config and license agree (independent of auth gate).
+    boolean signingActive = cfg.isSigningEnabled();
+    if (signingActive && !licenseManager.isEventSigningAllowed()) {
+      log.warn(
+          "signingEnabled=true in runtime config but the active license does not permit event"
+              + " signing — command accepted without signature verification");
+      signingActive = false;
+    }
+
     if (sigHeader != null && sigHeader.value() != null) {
-      return authorizeViaEd25519(sigHeader, triggerEnvelope);
+      if (authActive || signingActive) {
+        return authorizeViaEd25519(sigHeader, triggerEnvelope);
+      }
     }
 
-    if (config.isSigningEnabled()) {
+    if (signingActive) {
       throw new AuthorizationTokenException(
           "Missing required "
               + SIG_HEADER
@@ -228,16 +312,24 @@ public class EngineAuthorizationService {
               + trigger.getClass().getSimpleName());
     }
 
+    if (!authActive && !signingActive) {
+      return null;
+    }
+
     return trigger.getCurrentTrustMetadata();
   }
 
-  // ── Entry command via Ed25519 ─────────────────────────────────────────────
+  // ── Entry command Ed25519 verification ───────────────────────────────────
 
   /**
-   * Authorizes an entry command (StartCommandDTO / AbortTriggerDTO) via Ed25519 signature when the
-   * signing key has a role that is trusted for ENGINE operations.
+   * Verifies the Ed25519 signature on an entry command and returns role-appropriate trust metadata.
+   *
+   * <p>Accepts both CLIENT- and ENGINE-role keys. Returns {@link
+   * CommandTrustVerificationResult#ENGINE_SIGNED} for ENGINE-role keys and {@link
+   * CommandTrustVerificationResult#SIGNATURE_VERIFIED} for CLIENT-role keys. Auth-gate role
+   * enforcement (ENGINE-only when {@code authActive}) is the caller's responsibility.
    */
-  private CommandTrustMetadataDTO authorizeEntryCommandViaEd25519(
+  private CommandTrustMetadataDTO resolveEntrySigTrust(
       Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     if (triggerEnvelope.hasSignatureError()) {
       throw new AuthorizationTokenException(triggerEnvelope.signatureError());
@@ -268,24 +360,21 @@ public class EngineAuthorizationService {
               + triggerEnvelope.trigger().getClass().getSimpleName()
               + " but the signature was not verified by the deserializer");
     }
-    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE)) {
-      throw new AuthorizationTokenException(
-          "Ed25519 keyId '"
-              + keyId
-              + "' has role "
-              + entry.effectiveRole()
-              + " which is not trusted for entry commands (requires ENGINE or PLATFORM)");
-    }
 
+    boolean isEngine = keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE);
     log.info(
-        "✅ Authorised (Ed25519/ENGINE) command={} keyId={} owner={}",
+        "✅ Ed25519 verified on entry command={} keyId={} owner={} role={}",
         triggerEnvelope.trigger().getClass().getSimpleName(),
         keyId,
-        entry.getOwner());
+        entry.getOwner(),
+        entry.effectiveRole());
 
     return CommandTrustMetadataDTO.builder()
         .authMethod(CommandAuthMethod.ED25519)
-        .verificationResult(CommandTrustVerificationResult.ENGINE_SIGNED)
+        .verificationResult(
+            isEngine
+                ? CommandTrustVerificationResult.ENGINE_SIGNED
+                : CommandTrustVerificationResult.SIGNATURE_VERIFIED)
         .trusted(true)
         .signerKeyId(keyId)
         .signerOwner(entry.getOwner())
