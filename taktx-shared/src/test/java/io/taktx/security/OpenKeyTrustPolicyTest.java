@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
-import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class OpenKeyTrustPolicyTest {
@@ -104,16 +103,28 @@ class OpenKeyTrustPolicyTest {
   void nullRole_treatedAsClient_trustedForClient() {
     // A key with role=null has effectiveRole()=CLIENT
     SigningKeyDTO nullRoleKey =
-        new SigningKeyDTO(
-            "key-1", "pubkey", "Ed25519", Instant.now(), KeyStatus.ACTIVE, "owner", null);
+        SigningKeyDTO.builder()
+            .keyId("key-1")
+            .publicKeyBase64("pubkey")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("owner")
+            .role(null)
+            .build();
     assertThat(policy.isTrustedForRole(nullRoleKey, KeyRole.CLIENT)).isTrue();
   }
 
   @Test
   void nullRole_treatedAsClient_notTrustedForEngine() {
     SigningKeyDTO nullRoleKey =
-        new SigningKeyDTO(
-            "key-1", "pubkey", "Ed25519", Instant.now(), KeyStatus.ACTIVE, "owner", null);
+        SigningKeyDTO.builder()
+            .keyId("key-1")
+            .publicKeyBase64("pubkey")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("owner")
+            .role(null)
+            .build();
     assertThat(policy.isTrustedForRole(nullRoleKey, KeyRole.ENGINE)).isFalse();
   }
 

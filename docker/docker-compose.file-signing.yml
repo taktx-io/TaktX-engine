@@ -1,0 +1,42 @@
+# ============================================================================
+# TaktX — Level 3 overlay: File-based signing (persistent key)
+# ============================================================================
+# Switches the engine from an in-memory generated key to a stable Ed25519 key
+# stored in docker/signing/engine/. The key survives container restarts.
+#
+# Prerequisites — generate the key files once:
+#
+#   # Option A: use the helper script
+#   scripts/generate_trust_anchor.sh --init-engine
+#
+#   # Option B: generate manually with openssl
+#   openssl genpkey -algorithm Ed25519 -outform DER | base64 | tr -d '\n' \
+#     > docker/signing/engine/private-key.b64
+#   openssl pkey \
+#     -in <(base64 -d docker/signing/engine/private-key.b64) \
+#     -pubout -outform DER | base64 | tr -d '\n' \
+#     > docker/signing/engine/public-key.b64
+#   echo "engine-local-1" > docker/signing/engine/key-id
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.file-signing.yml up
+#
+# With monitoring:
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.monitoring.yml \
+#     -f docker-compose.file-signing.yml up
+# ============================================================================
+
+services:
+  taktx:
+    environment:
+      TAKTX_SIGNING_IDENTITY_SOURCE: file
+      TAKTX_SIGNING_FILE_KEY_ID_PATH: /opt/taktx/signing/engine/key-id
+      TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH: /opt/taktx/signing/engine/private-key.b64
+      TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH: /opt/taktx/signing/engine/public-key.b64
+      # How often (ms) the engine re-checks key files for live rotation (default: 1000):
+      # TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS: 1000
+    volumes:
+      - ./signing/engine:/opt/taktx/signing/engine:ro
+

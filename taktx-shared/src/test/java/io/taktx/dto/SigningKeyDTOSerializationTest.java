@@ -55,17 +55,19 @@ class SigningKeyDTOSerializationTest {
    */
   @Test
   void deserialize_oldFormatWithoutRole_yieldsNullRole() throws Exception {
-    // Serialize a "legacy" DTO using a separate ObjectMapper that only knows about the OLD fields.
-    // We do this by serializing a DTO where role is explicitly null via the all-args constructor.
+    // Serialize a "legacy" DTO with role=null via the builder.
+    // Using builder with .role(null) overrides the @Builder.Default so the serialized
+    // CBOR will contain a null in the role slot — simulating a pre-role record.
     SigningKeyDTO legacyKey =
-        new SigningKeyDTO(
-            "worker-legacy-001",
-            "dGVzdA==",
-            "Ed25519",
-            Instant.parse("2025-06-01T00:00:00Z"),
-            SigningKeyDTO.KeyStatus.ACTIVE,
-            "worker-legacy",
-            null /* role = null, simulating pre-role serialization */);
+        SigningKeyDTO.builder()
+            .keyId("worker-legacy-001")
+            .publicKeyBase64("dGVzdA==")
+            .algorithm("Ed25519")
+            .createdAt(Instant.parse("2025-06-01T00:00:00Z"))
+            .status(SigningKeyDTO.KeyStatus.ACTIVE)
+            .owner("worker-legacy")
+            .role(null) // simulates pre-role serialization
+            .build();
 
     // Serialize with the current mapper (7 fields, role=null)
     byte[] bytes = CBOR.writeValueAsBytes(legacyKey);

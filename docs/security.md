@@ -1,6 +1,6 @@
 # TaktX Engine — Security Overview
 
-**Last updated:** March 2026  
+**Last updated:** March 24, 2026  
 **Status:** Implemented — all features described here are live in the current codebase
 
 ---
@@ -11,9 +11,10 @@
 2. [Command authorization](#command-authorization)
 3. [Engine event signing](#engine-event-signing)
 4. [Signing keys topic](#signing-keys-topic)
-5. [Configuration topic](#configuration-topic)
-6. [Environment variables](#environment-variables)
-7. [Operational notes](#operational-notes)
+5. [Root trust chain (anchored mode)](#root-trust-chain-anchored-mode)
+6. [Configuration topic](#configuration-topic)
+7. [Environment variables](#environment-variables)
+8. [Operational notes](#operational-notes)
 
 ---
 
@@ -165,6 +166,108 @@ All Ed25519 key IDs are resolved uniformly from the signing-keys KTable.
 Workers still publish their own public key to `taktx-signing-keys` and sign responses with their configured private key.
 
 If `signingEnabled=false`, worker responses may still be accepted unsigned. If `signingEnabled=true`, unsigned worker responses are rejected.
+
+---
+
+## Root trust chain (anchored mode)
+
+### Overview
+
+By default, TaktX operates in **community mode**: the declared role on a key in
+`taktx-signing-keys` is accepted at face value (`OpenKeyTrustPolicy`). Security in this mode
+depends entirely on Kafka ACLs preventing unauthorized writes to `taktx-signing-keys`.
+
+**Anchored mode** closes this gap. When `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine, the
+engine switches to `AnchoredKeyTrustPolicy`. Every key entry in `taktx-signing-keys` — both
+`ENGINE`-role (engine) and `CLIENT`-role (worker) — must carry a cryptographic countersignature
+from the platform root private key. A key without a valid countersignature is rejected at the
+authorization gate, even if the declared role looks correct.
+
+| Mode | `TAKTX_PLATFORM_PUBLIC_KEY` | Policy | Enforcement |
+|---|---|---|---|
+| Community | Not set | `OpenKeyTrustPolicy` | Declared role is trusted. Kafka ACLs are the security boundary. |
+| Anchored | Set | `AnchoredKeyTrustPolicy` | Every key must be countersigned by the platform root key. |
+
+### Canonical payload and signature format
+
+The registration signature is `SHA256withRSA` (PKCS#1 v1.5) over the pipe-delimited UTF-8 string:
+
+```
+keyId|publicKeyBase64|algorithm|owner|role
+```
+
+Produced by the platform root private key. Stored as `SigningKeyDTO.registrationSignature`
+(base64-encoded). The Java reference implementation is
+`SigningKeyRegistrar.computeCanonicalPayload(SigningKeyDTO)`.
+
+Shell equivalent:
+
+```bash
+PAYLOAD=$(printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "Ed25519" "$OWNER" "$ROLE")
+REGISTRATION_SIGNATURE=$(printf '%s' "$PAYLOAD" \
+  | openssl dgst -sha256 -sign platform-private.pem \
+  | base64)
+```
+
+### New environment variables
+
+| Env var | Set on | Purpose |
+|---|---|---|
+| `TAKTX_PLATFORM_PUBLIC_KEY` | Engine | Activates anchored mode. Base64 DER X.509 RSA public key (minimum 2048-bit). |
+| `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | Engine | Countersignature for the engine's Ed25519 key. Required in anchored mode when using `file` or `env` signing source. |
+| `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | Worker / Client | Countersignature for the worker's Ed25519 key. Required in anchored mode. Read from `taktx.signing.registration-signature` property or the env var. |
+
+### Deployment shapes
+
+#### Standalone / Docker Compose (community mode)
+
+No additional configuration needed. Omit `TAKTX_PLATFORM_PUBLIC_KEY`. Use the `generated`,
+`env`, or `file` signing source for the engine. Workers sign their responses; the engine
+accepts any non-revoked key at face value.
+
+#### Docker Compose (anchored mode)
+
+1. Run `scripts/generate_trust_anchor.sh --init` to generate the platform RSA root key pair.
+2. Run `scripts/generate_trust_anchor.sh --sign` for each engine and worker key to produce
+   their registration signatures.
+3. Set the environment variables in `docker-compose-full.yaml` using the `x-taktx-anchored-*`
+   YAML anchors. See `docker/signing/README.md` for the complete step-by-step workflow.
+
+#### Cloud / Kubernetes
+
+The same environment variables apply. Typical setup:
+
+```yaml
+# Kubernetes Secret (base64 the values below before storing)
+TAKTX_PLATFORM_PUBLIC_KEY: <base64 DER RSA public key>
+TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE: <base64 RSA/SHA-256 signature>
+
+# Worker Deployment
+TAKTX_SIGNING_REGISTRATION_SIGNATURE: <base64 RSA/SHA-256 signature>
+```
+
+Use a secrets manager (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, Kubernetes
+Secrets) to manage `TAKTX_PLATFORM_PUBLIC_KEY` and all registration signatures. The platform
+root private key (`platform-private.pem`) must never leave the secure signing workstation or
+secrets manager — it only needs to be accessible when generating new registration signatures.
+
+#### Platform service integration
+
+When a Platform Service issues JWTs, it publishes its RSA public key to `taktx-signing-keys`
+under its `kid`. In anchored mode, this RSA key entry also needs a `registrationSignature`.
+The Platform Service must call `TaktXClient.publishSigningKey(..., registrationSignature)` with
+its own countersignature, or be pre-registered by the deployment tooling.
+
+### Key rotation in anchored mode
+
+When rotating an engine or worker key (new Ed25519 key files):
+
+1. Generate new key files.
+2. Run `scripts/generate_trust_anchor.sh --sign` for the new key to get a new
+   `REGISTRATION_SIGNATURE`.
+3. Update the environment variable in the container/deployment.
+4. Restart the process. The old key is automatically retired to `TRUSTED` status by
+   `MessageSigningService.retirePreviousKey()`.
 
 ---
 

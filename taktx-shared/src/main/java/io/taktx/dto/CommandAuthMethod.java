@@ -19,8 +19,8 @@ public enum CommandAuthMethod {
   /**
    * Both JWT authorization and Ed25519 signing were verified on the same command.
    *
-   * <p>The JWT provides the identity/authorization context ({@code userId}, {@code issuer});
-   * the Ed25519 signature provides message authenticity ({@code signerKeyId}, {@code signerOwner}).
+   * <p>The JWT provides the identity/authorization context ({@code userId}, {@code issuer}); the
+   * Ed25519 signature provides message authenticity ({@code signerKeyId}, {@code signerOwner}).
    * Both must have passed for this value to be set.
    */
   JWT_AND_ED25519,

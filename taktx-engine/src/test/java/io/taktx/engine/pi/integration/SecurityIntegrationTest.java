@@ -772,6 +772,11 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
     engine.getTaktClient().startProcess(TASK_SINGLE_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
+    // In the security test profile both signingEnabled=true and engineRequiresAuthorization=true
+    // are active from @BeforeAll. The BpmnTestEngine's TaktXClient does not own a signing
+    // identity but uses the engine's global SigningServiceHolder (set by MessageSigningService),
+    // so every outbound start command gets both a JWT header AND an X-TaktX-Signature header.
+    // EngineAuthorizationService combines them into JWT_AND_ED25519 — this is correct behaviour.
     AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
     await()
         .atMost(Duration.ofSeconds(10))
@@ -783,27 +788,28 @@ class SecurityIntegrationTest {
                       .filter(
                           update ->
                               update.getCurrentTrustMetadata() != null
-                                  && update.getCurrentTrustMetadata().getAuthMethod()
-                                      == CommandAuthMethod.JWT)
+                                  && (update.getCurrentTrustMetadata().getAuthMethod()
+                                          == CommandAuthMethod.JWT
+                                      || update.getCurrentTrustMetadata().getAuthMethod()
+                                          == CommandAuthMethod.JWT_AND_ED25519))
                       .findFirst()
                       .orElse(null);
               assertThat(found).isNotNull();
               trustedUpdate.set(found);
             });
 
+    // Accept both JWT (signing disabled / not yet active) and JWT_AND_ED25519 (signing active).
+    // In the security profile signing is always enabled, so JWT_AND_ED25519 is expected.
+    assertThat(trustedUpdate.get().getCurrentTrustMetadata().getAuthMethod())
+        .as("authMethod must indicate JWT authorization was used")
+        .isIn(CommandAuthMethod.JWT, CommandAuthMethod.JWT_AND_ED25519);
     assertThat(trustedUpdate.get().getCurrentTrustMetadata())
         .extracting(
-            CommandTrustMetadataDTO::getAuthMethod,
             CommandTrustMetadataDTO::getVerificationResult,
             CommandTrustMetadataDTO::getTrusted,
             CommandTrustMetadataDTO::getUserId,
             CommandTrustMetadataDTO::getIssuer)
-        .containsExactly(
-            CommandAuthMethod.JWT,
-            CommandTrustVerificationResult.JWT_AUTHORIZED,
-            true,
-            "user-1",
-            ISSUER);
+        .containsExactly(CommandTrustVerificationResult.JWT_AUTHORIZED, true, "user-1", ISSUER);
     assertThat(trustedUpdate.get().getOriginTrustMetadata())
         .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
   }

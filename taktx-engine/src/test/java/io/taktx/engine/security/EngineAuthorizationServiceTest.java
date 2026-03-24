@@ -236,7 +236,8 @@ class EngineAuthorizationServiceTest {
     String keyId = "legacy-key-001";
     // No role set → defaults to null in builder → effectiveRole() returns CLIENT
     SigningKeyDTO nullRoleKey =
-        new SigningKeyDTO(keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, "legacy-worker", null);
+        new SigningKeyDTO(
+            keyId, "dummy", "Ed25519", null, KeyStatus.ACTIVE, "legacy-worker", null, null);
     when(signingKeysStore.get(keyId)).thenReturn(nullRoleKey);
 
     RecordHeaders headers = new RecordHeaders();

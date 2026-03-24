@@ -86,6 +86,25 @@ public class TaktXClient {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SigningIdentitySource signingIdentitySource;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
+
+  /**
+   * Optional base64-encoded RSA/SHA-256 registration signature for this worker's signing key.
+   *
+   * <p>Required when the engine operates in <em>anchored mode</em> ({@code
+   * TAKTX_PLATFORM_PUBLIC_KEY} is set on the engine). Without it, the worker key published to
+   * {@code taktx-signing-keys} will be rejected by {@link
+   * io.taktx.security.AnchoredKeyTrustPolicy}.
+   *
+   * <p>Set via the {@code taktx.signing.registration-signature} property or the {@code
+   * TAKTX_SIGNING_REGISTRATION_SIGNATURE} environment variable. The value is produced by the
+   * platform root private key signing the canonical payload of the worker key:
+   *
+   * <pre>{@code keyId|publicKeyBase64|Ed25519|owner|CLIENT}</pre>
+   *
+   * See {@code scripts/generate_trust_anchor.sh --worker} for the complete workflow.
+   */
+  private final @Nullable String workerKeyRegistrationSignature;
+
   private SigningKeysStore signingKeysStore;
   private RuntimeConfigurationStore runtimeConfigurationStore;
   private volatile String publishedWorkerKeyId;
@@ -98,12 +117,14 @@ public class TaktXClient {
       ParameterResolverFactory parameterResolverFactory,
       ResultProcessorFactory resultProcessorFactory,
       SigningIdentitySource signingIdentitySource,
-      @Nullable AuthorizationTokenProvider authorizationTokenProvider) {
+      @Nullable AuthorizationTokenProvider authorizationTokenProvider,
+      @Nullable String workerKeyRegistrationSignature) {
     Executor executor = Executors.newVirtualThreadPerTaskExecutor();
 
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.signingIdentitySource = signingIdentitySource;
     this.authorizationTokenProvider = authorizationTokenProvider;
+    this.workerKeyRegistrationSignature = workerKeyRegistrationSignature;
     this.externalTaskTopicRequester = new ExternalTaskTopicRequester(taktPropertiesHelper);
     this.parameterResolverFactory = parameterResolverFactory;
     this.resultProcessorFactory = resultProcessorFactory;
@@ -341,16 +362,41 @@ public class TaktXClient {
    */
   public void publishSigningKey(
       String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
-    // Use the instance-based SigningKeyRegistrar so auth/TLS properties flow through automatically,
-    // following the same pattern as ProcessDefinitionDeployer and MessageEventSender.
+    publishSigningKey(keyId, publicKeyBase64, owner, algorithm, role, null);
+  }
+
+  /**
+   * Publishes a public key with an explicit algorithm, role, and platform countersignature.
+   *
+   * <p>Use this overload in <em>anchored mode</em> ({@code TAKTX_PLATFORM_PUBLIC_KEY} is set on the
+   * engine). The {@code registrationSignature} must be the base64-encoded RSA/SHA-256 signature
+   * produced by the platform root private key over the key's canonical payload:
+   *
+   * <pre>{@code keyId|publicKeyBase64|algorithm|owner|role}</pre>
+   *
+   * <p>Generate with {@code scripts/generate_trust_anchor.sh --worker}. Without a valid
+   * countersignature, the engine will reject all commands signed by this worker key when anchored
+   * mode is active.
+   *
+   * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
+   *     community mode
+   */
+  public void publishSigningKey(
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role,
+      @Nullable String registrationSignature) {
     new SigningKeyRegistrar(taktPropertiesHelper)
-        .publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role);
+        .publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role, registrationSignature);
     log.info(
-        "✅ Signing key published: keyId={} owner={} algorithm={} role={}",
+        "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned={}",
         keyId,
         owner,
         algorithm,
-        role);
+        role,
+        registrationSignature != null);
   }
 
   /**
@@ -389,16 +435,42 @@ public class TaktXClient {
       String owner,
       String algorithm,
       KeyRole role) {
+    publishSigningKey(properties, keyId, publicKeyBase64, owner, algorithm, role, null);
+  }
+
+  /**
+   * Static convenience overload with an explicit algorithm, role, and platform countersignature.
+   *
+   * <p>Use this overload in anchored mode. The {@code registrationSignature} must be the
+   * base64-encoded RSA/SHA-256 signature produced by the platform root private key over {@code
+   * keyId|publicKeyBase64|algorithm|owner|role}. Pass {@code null} in community mode.
+   */
+  public static void publishSigningKey(
+      Properties properties,
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role,
+      @Nullable String registrationSignature) {
     TaktPropertiesHelper helper = new TaktPropertiesHelper(properties);
     String topic = helper.getPrefixedTopicName(io.taktx.Topics.SIGNING_KEYS_TOPIC.getTopicName());
     SigningKeyRegistrar.publishPublicKey(
-        helper.getBootstrapServers(), topic, keyId, publicKeyBase64, owner, algorithm, role);
+        helper.getBootstrapServers(),
+        topic,
+        keyId,
+        publicKeyBase64,
+        owner,
+        algorithm,
+        role,
+        registrationSignature);
     log.info(
-        "✅ Signing key published: keyId={} owner={} algorithm={} role={}",
+        "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned={}",
         keyId,
         owner,
         algorithm,
-        role);
+        role,
+        registrationSignature != null);
   }
 
   private void publishWorkerSigningKeyIfConfigured() {
@@ -501,7 +573,9 @@ public class TaktXClient {
           identity.getKeyId(),
           identity.getPublicKeyBase64(),
           resolveWorkerSigningOwner(identity),
-          identity.getAlgorithm());
+          identity.getAlgorithm(),
+          KeyRole.CLIENT,
+          workerKeyRegistrationSignature);
       publishedWorkerKeyId = identity.getKeyId();
       return true;
     } catch (Exception e) {
@@ -886,6 +960,7 @@ public class TaktXClient {
     private ResultProcessorFactory resultProcessorFactory;
     private SigningIdentitySource signingIdentitySource;
     private AuthorizationTokenProvider authorizationTokenProvider;
+    private String workerKeyRegistrationSignature;
 
     private TaktXClientBuilder() {}
 
@@ -906,6 +981,7 @@ public class TaktXClient {
           resolveSigningIdentitySource(properties);
       AuthorizationTokenProvider effectiveAuthorizationTokenProvider =
           resolveAuthorizationTokenProvider(properties);
+      String effectiveRegistrationSignature = resolveWorkerKeyRegistrationSignature(properties);
 
       // Wrap the value serializer with SigningSerializer so signing happens in one pass
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
@@ -933,7 +1009,8 @@ public class TaktXClient {
               clientParameterResolverFactory,
               clientResultProcessorFactory,
               effectiveSigningIdentitySource,
-              effectiveAuthorizationTokenProvider);
+              effectiveAuthorizationTokenProvider,
+              effectiveRegistrationSignature);
       externalTaskResponder.setBeforeSendHook(client::refreshWorkerSigningFunctionRegistration);
       SigningIdentity identity = client.currentSigningIdentity();
       if (identity != null) {
@@ -1040,6 +1117,38 @@ public class TaktXClient {
         SigningIdentitySource signingIdentitySource) {
       this.signingIdentitySource = signingIdentitySource;
       return this;
+    }
+
+    /**
+     * Sets the platform countersignature for this worker's signing key.
+     *
+     * <p>Required when the engine operates in <em>anchored mode</em> ({@code
+     * TAKTX_PLATFORM_PUBLIC_KEY} is configured). The value is the base64-encoded RSA/SHA-256
+     * signature produced by the platform root private key over:
+     *
+     * <pre>{@code keyId|publicKeyBase64|Ed25519|owner|CLIENT}</pre>
+     *
+     * <p>Generate with {@code scripts/generate_trust_anchor.sh --worker}. Alternatively, set the
+     * {@code taktx.signing.registration-signature} property or the {@code
+     * TAKTX_SIGNING_REGISTRATION_SIGNATURE} environment variable — the builder reads these
+     * automatically if this method is not called.
+     *
+     * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
+     *     community mode
+     */
+    public TaktXClientBuilder withSigningRegistrationSignature(String registrationSignature) {
+      this.workerKeyRegistrationSignature = registrationSignature;
+      return this;
+    }
+
+    String resolveWorkerKeyRegistrationSignature(Properties properties) {
+      if (workerKeyRegistrationSignature != null) {
+        return workerKeyRegistrationSignature;
+      }
+      return firstNonBlank(
+          properties.getProperty("taktx.signing.registration-signature"),
+          System.getProperty("taktx.signing.registration-signature"),
+          System.getenv("TAKTX_SIGNING_REGISTRATION_SIGNATURE"));
     }
 
     public TaktXClientBuilder withAuthorizationTokenProvider(

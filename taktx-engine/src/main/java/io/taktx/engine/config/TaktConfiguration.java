@@ -74,6 +74,40 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.signing.file.refresh-interval-ms", defaultValue = "1000")
   long signingFileRefreshIntervalMs;
 
+  /**
+   * Optional platform RSA public key (base64-encoded DER X.509) used as the root-of-trust anchor in
+   * <em>anchored mode</em>.
+   *
+   * <p>Set via {@code TAKTX_PLATFORM_PUBLIC_KEY} environment variable. When present, {@link
+   * io.taktx.engine.security.KeyTrustPolicyProducer} activates {@link
+   * io.taktx.security.AnchoredKeyTrustPolicy}, which requires every key in {@code
+   * taktx-signing-keys} to carry a valid RSA countersignature from the platform.
+   *
+   * <p>When absent, {@link io.taktx.security.OpenKeyTrustPolicy} is used (community mode).
+   */
+  @ConfigProperty(name = "taktx.platform.public-key")
+  Optional<String> platformPublicKey;
+
+  /**
+   * Optional base64-encoded RSA/SHA-256 registration signature for the engine's own signing key.
+   *
+   * <p>Set via {@code TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE} environment variable. Required when
+   * {@code TAKTX_PLATFORM_PUBLIC_KEY} is set and the engine uses a stable key source ({@code env}
+   * or {@code file}). Injected into the {@link io.taktx.dto.SigningKeyDTO} published to {@code
+   * taktx-signing-keys} so the engine's own key passes {@link
+   * io.taktx.security.AnchoredKeyTrustPolicy} verification.
+   *
+   * <p>Generate this value with {@code scripts/generate_trust_anchor.sh}. The canonical payload
+   * format is: {@code keyId|publicKeyBase64|algorithm|owner|role} (pipe-delimited UTF-8), signed
+   * with the platform root private key using {@code SHA256withRSA}, then base64-encoded.
+   *
+   * <p><strong>Note:</strong> When using the {@code generated} signing source, the engine key
+   * changes on every restart, making pre-signing impossible. Anchored mode therefore requires the
+   * engine to use {@code file} or {@code env} source so the key is stable.
+   */
+  @ConfigProperty(name = "taktx.engine.key-registration-signature")
+  Optional<String> engineKeyRegistrationSignature;
+
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }
@@ -115,6 +149,19 @@ public class TaktConfiguration {
 
   public String getSigningFilePublicKeyPath() {
     return normalized(signingFilePublicKeyPath);
+  }
+
+  /** Returns the platform RSA public key (base64 DER), or {@code null} if not configured. */
+  public String getPlatformPublicKey() {
+    return normalized(platformPublicKey);
+  }
+
+  /**
+   * Returns the engine key registration signature (base64 RSA/SHA-256), or {@code null} if not
+   * configured.
+   */
+  public String getEngineKeyRegistrationSignature() {
+    return normalized(engineKeyRegistrationSignature);
   }
 
   private static String normalized(Optional<String> value) {

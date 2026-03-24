@@ -69,6 +69,31 @@ public class SigningKeyDTO {
   @Builder.Default private KeyRole role = KeyRole.CLIENT;
 
   /**
+   * Optional RSA/SHA-256 countersignature produced by the platform's root private key over the
+   * canonical payload of this key entry (see {@link
+   * io.taktx.security.SigningKeyRegistrar#computeCanonicalPayload(SigningKeyDTO)}).
+   *
+   * <p>In <em>anchored mode</em> ({@code TAKTX_PLATFORM_PUBLIC_KEY} is configured on the engine),
+   * {@code AnchoredKeyTrustPolicy} requires this field to be present and cryptographically valid on
+   * <strong>all</strong> key roles — both {@link KeyRole#ENGINE} and {@link KeyRole#CLIENT}. Keys
+   * without a valid countersignature are rejected.
+   *
+   * <p>In <em>community mode</em> ({@code TAKTX_PLATFORM_PUBLIC_KEY} is absent) this field is
+   * ignored and may be {@code null}; {@code OpenKeyTrustPolicy} applies instead.
+   *
+   * <p>The value is the base64-encoded result of:
+   *
+   * <pre>{@code
+   * printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_B64" "$ALGORITHM" "$OWNER" "$ROLE" \
+   *   | openssl dgst -sha256 -sign platform-private.pem \
+   *   | base64
+   * }</pre>
+   *
+   * See {@code scripts/generate_trust_anchor.sh} for the complete operator workflow.
+   */
+  private String registrationSignature;
+
+  /**
    * Returns the effective role, treating {@code null} (pre-role keys) as {@link KeyRole#CLIENT}.
    */
   public KeyRole effectiveRole() {

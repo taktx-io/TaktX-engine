@@ -15,6 +15,7 @@ import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.util.TaktPropertiesHelper;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.time.Instant;
 import java.util.Properties;
@@ -46,6 +47,49 @@ public class SigningKeyRegistrar {
   private static final ObjectMapper CBOR =
       new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
 
+  /**
+   * Returns the canonical payload bytes that the platform root key signs when countersigning a key
+   * registration.
+   *
+   * <p>Format: {@code keyId|publicKeyBase64|algorithm|owner|role} — pipe-delimited UTF-8. The
+   * {@code role} token is the {@link KeyRole#name()} string (e.g. {@code "ENGINE"}, {@code
+   * "CLIENT"}).
+   *
+   * <p>Reproducible in a shell script:
+   *
+   * <pre>{@code
+   * printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$OWNER" "$ROLE"
+   * }</pre>
+   *
+   * <p>To sign and base64-encode (for {@code TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE} / {@code
+   * TAKTX_SIGNING_REGISTRATION_SIGNATURE}):
+   *
+   * <pre>{@code
+   * printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "$ALGORITHM" "$OWNER" "$ROLE" \
+   *   | openssl dgst -sha256 -sign platform-private.pem \
+   *   | base64
+   * }</pre>
+   *
+   * See {@code scripts/generate_trust_anchor.sh} for the complete operator workflow.
+   *
+   * @param key a fully-populated {@link SigningKeyDTO} (keyId, publicKeyBase64, algorithm, owner,
+   *     and role must all be non-null)
+   * @return UTF-8 bytes of the pipe-delimited canonical payload
+   */
+  public static byte[] computeCanonicalPayload(SigningKeyDTO key) {
+    String payload =
+        key.getKeyId()
+            + "|"
+            + key.getPublicKeyBase64()
+            + "|"
+            + key.getAlgorithm()
+            + "|"
+            + key.getOwner()
+            + "|"
+            + key.effectiveRole().name();
+    return payload.getBytes(StandardCharsets.UTF_8);
+  }
+
   private final TaktPropertiesHelper taktPropertiesHelper;
 
   /**
@@ -61,34 +105,62 @@ public class SigningKeyRegistrar {
   // ── Instance methods ────────────────────────────────────────────────────────
 
   /**
-   * Publishes the given public key with the default Ed25519 algorithm and {@link KeyRole#CLIENT}
-   * role.
+   * Publishes the given public key with the default Ed25519 algorithm, {@link KeyRole#CLIENT} role,
+   * and no registration signature (community mode).
    */
   public void publishPublicKey(String keyId, String publicKeyBase64, String owner) {
     publishPublicKey(keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM);
   }
 
   /**
-   * Publishes the given public key with an explicit algorithm label and {@link KeyRole#CLIENT}
-   * role.
+   * Publishes the given public key with an explicit algorithm label, {@link KeyRole#CLIENT} role,
+   * and no registration signature (community mode).
    */
   public void publishPublicKey(
       String keyId, String publicKeyBase64, String owner, String algorithm) {
     publishPublicKey(keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
   }
 
-  /** Publishes the given public key with an explicit algorithm label and role. */
+  /** Publishes the given public key with an explicit algorithm label and role (community mode). */
   public void publishPublicKey(
       String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
+    publishPublicKey(keyId, publicKeyBase64, owner, algorithm, role, null);
+  }
+
+  /**
+   * Publishes the given public key with an explicit algorithm label, role, and platform
+   * countersignature.
+   *
+   * <p>Use this overload in anchored mode. The {@code registrationSignature} must be the
+   * base64-encoded RSA/SHA-256 signature produced by the platform root private key over {@link
+   * #computeCanonicalPayload(SigningKeyDTO)} for this key. When {@code null}, the key is published
+   * without a countersignature — valid only in community mode.
+   */
+  public void publishPublicKey(
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role,
+      String registrationSignature) {
     String topic =
         taktPropertiesHelper.getPrefixedTopicName(Topics.SIGNING_KEYS_TOPIC.getTopicName());
-    publishPublicKey(taktPropertiesHelper, topic, keyId, publicKeyBase64, owner, algorithm, role);
+    publishPublicKey(
+        taktPropertiesHelper,
+        topic,
+        keyId,
+        publicKeyBase64,
+        owner,
+        algorithm,
+        role,
+        registrationSignature);
   }
 
   // ── Static helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Publishes the given public key — defaults to Ed25519 algorithm and {@link KeyRole#CLIENT} role.
+   * Publishes the given public key — defaults to Ed25519 algorithm, {@link KeyRole#CLIENT} role,
+   * and no registration signature (community mode).
    */
   public static void publishPublicKey(
       String bootstrapServers, String topic, String keyId, String publicKeyBase64, String owner) {
@@ -108,7 +180,7 @@ public class SigningKeyRegistrar {
         bootstrapServers, topic, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
   }
 
-  /** Publishes the given public key with an explicit algorithm and role. */
+  /** Publishes the given public key with an explicit algorithm and role (community mode). */
   public static void publishPublicKey(
       String bootstrapServers,
       String topic,
@@ -117,6 +189,26 @@ public class SigningKeyRegistrar {
       String owner,
       String algorithm,
       KeyRole role) {
+    publishPublicKey(bootstrapServers, topic, keyId, publicKeyBase64, owner, algorithm, role, null);
+  }
+
+  /**
+   * Publishes the given public key with an explicit algorithm, role, and platform countersignature.
+   *
+   * <p>In anchored mode, {@code registrationSignature} must be the base64-encoded RSA/SHA-256
+   * signature produced by the platform root private key over {@link
+   * #computeCanonicalPayload(SigningKeyDTO)} for this key. Pass {@code null} in community mode (no
+   * platform root key configured).
+   */
+  public static void publishPublicKey(
+      String bootstrapServers,
+      String topic,
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role,
+      String registrationSignature) {
 
     Properties props = new Properties();
     props.put("bootstrap.servers", bootstrapServers);
@@ -140,12 +232,13 @@ public class SigningKeyRegistrar {
             .status(KeyStatus.ACTIVE)
             .owner(owner)
             .role(role != null ? role : KeyRole.CLIENT)
+            .registrationSignature(registrationSignature)
             .build());
   }
 
   /**
-   * Publishes the given public key using TaktPropertiesHelper-derived producer properties and
-   * explicit role.
+   * Publishes the given public key using TaktPropertiesHelper-derived producer properties, explicit
+   * role, and optional registration signature.
    */
   static void publishPublicKey(
       TaktPropertiesHelper taktPropertiesHelper,
@@ -154,7 +247,8 @@ public class SigningKeyRegistrar {
       String publicKeyBase64,
       String owner,
       String algorithm,
-      KeyRole role) {
+      KeyRole role,
+      String registrationSignature) {
 
     doPublish(
         taktPropertiesHelper.getKafkaProducerProperties(),
@@ -168,7 +262,32 @@ public class SigningKeyRegistrar {
             .status(KeyStatus.ACTIVE)
             .owner(owner)
             .role(role != null ? role : KeyRole.CLIENT)
+            .registrationSignature(registrationSignature)
             .build());
+  }
+
+  // ── Package-private DTO builder (for testing) ──────────────────────────────
+
+  /**
+   * Constructs the {@link SigningKeyDTO} that {@link #publishPublicKey} would publish, without
+   * connecting to Kafka. Visible for unit tests in the same package.
+   */
+  static SigningKeyDTO buildSigningKeyDto(
+      String keyId,
+      String publicKeyBase64,
+      String owner,
+      String algorithm,
+      KeyRole role,
+      String registrationSignature) {
+    return SigningKeyDTO.builder()
+        .keyId(keyId)
+        .publicKeyBase64(publicKeyBase64)
+        .algorithm(algorithm != null ? algorithm : DEFAULT_ED25519_ALGORITHM)
+        .status(KeyStatus.ACTIVE)
+        .owner(owner)
+        .role(role != null ? role : KeyRole.CLIENT)
+        .registrationSignature(registrationSignature)
+        .build();
   }
 
   // ── Status change / revocation ─────────────────────────────────────────────
@@ -206,6 +325,7 @@ public class SigningKeyRegistrar {
             .status(KeyStatus.REVOKED)
             .owner(existingKey.getOwner())
             .role(existingKey.effectiveRole())
+            .registrationSignature(existingKey.getRegistrationSignature())
             .build();
 
     Properties props = new Properties();
@@ -252,6 +372,7 @@ public class SigningKeyRegistrar {
             .status(dto.getStatus() != null ? dto.getStatus() : KeyStatus.ACTIVE)
             .owner(dto.getOwner())
             .role(dto.effectiveRole())
+            .registrationSignature(dto.getRegistrationSignature())
             .build();
 
     try (KafkaProducer<String, byte[]> producer =
@@ -294,9 +415,31 @@ public class SigningKeyRegistrar {
       KeyPair keyPair,
       String owner,
       KeyRole role) {
+    return publishFromKeyPair(bootstrapServers, topic, keyId, keyPair, owner, role, null);
+  }
+
+  /**
+   * Derives the public key from a key pair, publishes it with the given role and platform
+   * countersignature, and returns the {@code publicKeyBase64} for further use.
+   */
+  public static String publishFromKeyPair(
+      String bootstrapServers,
+      String topic,
+      String keyId,
+      KeyPair keyPair,
+      String owner,
+      KeyRole role,
+      String registrationSignature) {
     String publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
     publishPublicKey(
-        bootstrapServers, topic, keyId, publicKeyBase64, owner, DEFAULT_ED25519_ALGORITHM, role);
+        bootstrapServers,
+        topic,
+        keyId,
+        publicKeyBase64,
+        owner,
+        DEFAULT_ED25519_ALGORITHM,
+        role,
+        registrationSignature);
     return publicKeyBase64;
   }
 }
