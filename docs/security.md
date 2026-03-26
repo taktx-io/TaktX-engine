@@ -1,414 +1,626 @@
-# TaktX Engine — Security Overview
+# TaktX — Security & Trust Chain Reference
 
-**Last updated:** March 24, 2026  
-**Status:** Implemented — all features described here are live in the current codebase
+**Last updated:** March 26, 2026
+**Status:** Fully implemented — all features described here are live in the current codebase
 
 ---
 
 ## Contents
 
-1. [High-level model](#high-level-model)
-2. [Command authorization](#command-authorization)
-3. [Engine event signing](#engine-event-signing)
+1. [Architecture overview](#architecture-overview)
+2. [Ed25519 message signing](#ed25519-message-signing)
+3. [RS256 JWT command authorization](#rs256-jwt-command-authorization)
 4. [Signing keys topic](#signing-keys-topic)
-5. [Root trust chain (anchored mode)](#root-trust-chain-anchored-mode)
+5. [Root trust chain — anchored mode](#root-trust-chain--anchored-mode)
 6. [Configuration topic](#configuration-topic)
-7. [Environment variables](#environment-variables)
-8. [Operational notes](#operational-notes)
+7. [Trust metadata on instance updates](#trust-metadata-on-instance-updates)
+8. [Environment variable reference](#environment-variable-reference)
+9. [Key generation quick reference](#key-generation-quick-reference)
+10. [Operational runbook](#operational-runbook)
+11. [Migration notes](#migration-notes)
 
 ---
 
-## High-level model
+## Architecture overview
 
-TaktX has two separate security mechanisms:
+TaktX has **two orthogonal security mechanisms** that can be enabled or disabled independently at runtime via the `taktx-configuration` topic:
 
-1. **RS256 JWT command authorization**
-   - Used for external entry commands: `StartCommandDTO` and `AbortTriggerDTO`.
-   - Guarded at runtime by `GlobalConfigurationDTO.engineRequiresAuthorization`.
-   - JWT expiry is always enforced.
-   - JWT replay protection via `auditId` nonce tracking is always enforced.
+| Mechanism | Controlled by | Applies to | Always enforced? |
+|---|---|---|---|
+| **Ed25519 message signing** | `signingEnabled` | Engine outbound records, worker responses, engine-internal continuations | No — opt-in per config topic |
+| **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO` only (entry commands) | No — opt-in per config topic |
 
-2. **Ed25519 message signing**
-   - Used for engine outbound records and signed non-entry process-instance commands such as worker responses and engine-internal continuations.
-   - Guarded at runtime by `GlobalConfigurationDTO.signingEnabled`.
-   - The engine uses a configurable signing-identity source; default is a generated in-memory key.
-   - Workers use a configurable signing-identity source; default is env-based.
+Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
 
-The shared trust registry is the compacted Kafka topic `taktx-signing-keys`.
+Two trust enforcement policies are available and are selected automatically at engine startup:
+
+| Policy | Activated when | Enforcement |
+|---|---|---|
+| `OpenKeyTrustPolicy` | `TAKTX_PLATFORM_PUBLIC_KEY` is absent | Declared key role accepted at face value. Security boundary is Kafka ACLs. |
+| `AnchoredKeyTrustPolicy` | `TAKTX_PLATFORM_PUBLIC_KEY` is set | Every key in `taktx-signing-keys` must carry a cryptographic countersignature from the platform root RSA key. |
+
+These two policies are referred to throughout this document as **community mode** and **anchored mode** respectively.
+
+### Safe defaults
+
+When no `"config"` record has been received yet from the configuration topic, the engine defaults to:
+
+```
+signingEnabled              = false
+engineRequiresAuthorization = false
+```
+
+BPMN processing runs normally on a fresh deployment with no configuration record. Both mechanisms must be explicitly enabled by publishing a `GlobalConfigurationDTO`.
 
 ---
 
-## Command authorization
+## Ed25519 message signing
 
-### Header
+### What is signed
 
-External entry commands are authorized through the `X-TaktX-Authorization` header.
+When `signingEnabled=true`, the engine signs its outbound records:
 
-This applies to:
+- `instance-update` records
+- external-task trigger records
+- engine-internal `process-instance` trigger records (continuations, timer wake-ups, etc.)
+
+Inbound non-entry `ProcessInstanceTriggerDTO` records (worker responses, engine-internal continuations) are **verified** against the signing-keys topic when a matching key is found.
+
+### Engine signing identity sources
+
+The engine resolves its active signing identity from the configured source, set via `TAKTX_SIGNING_IDENTITY_SOURCE`:
+
+| Value | Behaviour | Suitable for |
+|---|---|---|
+| `generated` (default when unset) | Generates a fresh Ed25519 key pair at startup; key ID is `engine-<uuid>` | Local development, CI |
+| `env` | Reads from `TAKTX_SIGNING_PRIVATE_KEY` / `TAKTX_SIGNING_PUBLIC_KEY` / `TAKTX_SIGNING_KEY_ID` | Kubernetes Secrets, environment-injected secrets |
+| `file` | Reads from files at paths in `TAKTX_SIGNING_FILE_*_PATH`; re-reads on each poll cycle (default: 1 s) | Docker Compose bind mounts, live key rotation |
+
+Once an identity is available the engine publishes its public key to `taktx-signing-keys` and retries until the topic is available.
+
+> **Note:** In **anchored mode**, `generated` is incompatible because the key changes on every restart and cannot be pre-signed. Use `file` or `env` instead.
+
+### Worker signing identity sources
+
+Workers (client applications) use the same source types. The client builder auto-detects the source:
+
+1. If `taktx.signing.identity-source` (or `TAKTX_SIGNING_IDENTITY_SOURCE`) is set, that source is used explicitly.
+2. Otherwise the builder checks `TAKTX_SIGNING_PRIVATE_KEY` in the environment; if found, `env` is used.
+3. If no key material is found anywhere, the client falls back to a `generated` key.
+
+### File-based signing — live key rotation
+
+The `file` source polls the key files at the configured interval (default: 1 000 ms). Write key updates atomically (write to a temp file, then `mv`) to avoid partial reads:
+
+```bash
+cp new-private-key.b64 /opt/taktx/signing/engine/private-key.b64.tmp
+mv -f /opt/taktx/signing/engine/private-key.b64.tmp /opt/taktx/signing/engine/private-key.b64
+# same for public-key.b64 and key-id
+```
+
+The engine detects the change within one poll interval and publishes the new public key to `taktx-signing-keys`. The old key is retired (set to `TRUSTED` status) by `MessageSigningService.retirePreviousKey()` automatically.
+
+### Signing gate
+
+The engine only signs a record when **all** of the following are true:
+
+1. The active license allows event signing.
+2. `GlobalConfigurationDTO.signingEnabled == true`.
+3. The engine public key has already been successfully published to `taktx-signing-keys`.
+
+If any condition is false, the record is produced without a signature. Unsigned records are always accepted when `signingEnabled=false`.
+
+### Signature format
+
+The `X-TaktX-Signature` header value is a compound string:
+
+```
+<keyId>.<base64-Ed25519-signature>
+```
+
+The signature is over the raw serialized record bytes (CBOR). The algorithm is always Ed25519.
+
+---
+
+## RS256 JWT command authorization
+
+### Scope
+
+JWT authorization applies **only** to entry commands:
 
 - `StartCommandDTO`
 - `AbortTriggerDTO`
 
-### Validation steps
+It is **not** required for non-entry commands (`ExternalTaskResponseTriggerDTO`, `SetVariableTriggerDTO`, `ContinueFlowElementTriggerDTO`, etc.). Those are governed by the Ed25519 signing gate instead.
 
-When `engineRequiresAuthorization=true` in the latest config-topic record, the engine validates JWTs for `StartCommandDTO` and `AbortTriggerDTO` only:
+### JWT transport
 
-1. JWT signature
-2. required claims
-3. token expiry (`exp`) — **always enforced**
-4. command-to-claim match
-5. replay protection using `auditId` — **always enforced**
+The JWT is attached in the `X-TaktX-Authorization` Kafka record header as a compact JWT string.
 
-If authorization is disabled in the config topic, the engine accepts commands without JWT validation.
+### Validation steps (when `engineRequiresAuthorization=true`)
 
-### Non-entry process-instance commands
-
-Other `ProcessInstanceTriggerDTO` subclasses do **not** require JWT just because `engineRequiresAuthorization=true`.
-
-Examples include:
-
-- `SetVariableTriggerDTO`
-- `ContinueFlowElementTriggerDTO`
-- `ExternalTaskResponseTriggerDTO`
-- engine-internal `StartCommandDTO` follow-ups that already carry embedded trust metadata and/or signatures
-
-Their handling is:
-
-1. if `X-TaktX-Signature` is present, the engine verifies the Ed25519 signature and key status
-2. if `signingEnabled=true`, unsigned non-entry commands are rejected
-3. if `signingEnabled=false`, signed and unsigned non-entry commands are both accepted
-
-This means worker responses remain valid in JWT-only deployments where signing is disabled.
-
-When the engine later re-emits scheduled work such as timer firings or external-task timeout events,
-those follow-up commands are treated as newly engine-originated commands. They are therefore signed
-and attributed to the engine on re-entry instead of retaining the original worker signer metadata.
-
-### Current vs origin trust metadata
-
-`ProcessInstanceTriggerDTO` and `InstanceUpdateDTO` now expose two trust fields:
-
-- `currentTrustMetadata` — who is trusted for the command currently being processed
-- `originTrustMetadata` — who originally initiated the command chain
-
-Examples:
-
-- external JWT start command → `current=JWT`, `origin=JWT`
-- worker-signed external task response → `current=worker`, `origin=worker`
-- timer continuation after that worker response → `current=engine`, `origin=worker`
-
-This split avoids the old ambiguity where engine-rescheduled work could appear to still be owned by
-the previous worker simply because that provenance had been copied into the next command.
-
-For compatibility, the old `commandTrustMetadata` accessor still resolves to `currentTrustMetadata`,
-but new consumers should prefer the explicit current/origin fields.
+1. JWT signature — verified against the RSA public key fetched from `taktx-signing-keys` by `kid`
+2. Required claims — `sub`, `exp`, `auditId`, and command-specific action/scope claims
+3. Token expiry (`exp`) — **always enforced**, even if authorization is disabled
+4. Command-to-claim match — the JWT's declared action must match the inbound command
+5. Replay protection via `auditId` nonce — **always enforced**
 
 ### Key lookup
 
-JWT public keys are resolved by `kid` from the `taktx-signing-keys` KTable.
-The engine first reads the JWT `kid` header, loads the matching RSA public key from Kafka state, then verifies the JWT signature and claims. The `kid` value is therefore only a lookup key, not proof by itself.
+The JWT `kid` header is used as a lookup key in the `taktx-signing-keys` KTable to retrieve the RSA public key. The engine does not maintain a static configured `signingKeyId`; all RSA keys are looked up dynamically from Kafka state.
 
-The engine therefore follows key rotation through Kafka state rather than a restart-time toggle.
+### Publishing a JWT verification key (platform / ingester)
 
----
+```java
+// Publish once; compaction keeps the latest entry. Re-publish on rotation.
+TaktXClient.publishSigningKey(
+    props,
+    "platform-key-2026-03",  // must match JWT kid exactly
+    rsaPublicKeyBase64,       // X.509 DER, base64-encoded
+    "platform",
+    "RSA");
+```
 
-## Engine event signing
+In anchored mode, include the countersignature:
 
-### What the engine signs
+```java
+TaktXClient.publishSigningKey(
+    props,
+    "platform-key-2026-03",
+    rsaPublicKeyBase64,
+    "platform",
+    "RSA",
+    KeyRole.PLATFORM,
+    registrationSignature);
+```
 
-When `signingEnabled=true` in the latest config-topic record, the engine signs outbound records such as:
+### JWT requirements summary
 
-- `instance-update`
-- external-task trigger records
-- engine-internal process-instance trigger records
-
-The same key registry is also used to verify signed inbound non-entry commands such as worker responses.
-
-### Engine key lifecycle
-
-Each engine node resolves its active signing identity from the configured source:
-
-- `generated` (default) — generate an Ed25519 key pair at startup with key ID `engine-<uuid>`
-- `env` — read key material from `TAKTX_SIGNING_*`
-- `file` — read key material from mounted files via `TAKTX_SIGNING_FILE_*_PATH`
-
-Once an identity is available, the engine publishes the public key to `taktx-signing-keys` and retries until the topic is available.
-
-### Signing gate
-
-The engine only signs when all of the following are true:
-
-1. the active license allows event signing
-2. `GlobalConfigurationDTO.signingEnabled == true`
-3. the engine public key has already been published successfully
-
-If any condition is false, the record is produced unsigned.
+| Field | Requirement |
+|---|---|
+| `kid` header | Must match a published RSA key in `taktx-signing-keys` |
+| `exp` | Must be in the future — **always enforced** |
+| `auditId` | Must be unique across all received commands — **always enforced** |
+| Algorithm | RS256 |
+| Action claims | Must match the inbound command type |
 
 ---
 
 ## Signing keys topic
 
-`SigningKeyDTO` records are stored in the compacted topic `taktx-signing-keys`.
+The compacted Kafka topic `<tenantId>.<namespace>.taktx-signing-keys` stores `SigningKeyDTO` records serialized as CBOR.
 
-### Uses
+### Record format
 
-- JWT `kid` lookup for command authorization
-- Ed25519 public-key lookup for worker response verification
-- Ed25519 public-key lookup for engine-signed record verification
+| Field | Type | Description |
+|---|---|---|
+| `keyId` | `String` | Unique identifier. Kafka record key. |
+| `publicKeyBase64` | `String` | Base64-encoded X.509 DER public key |
+| `algorithm` | `String` | `Ed25519` or `RSA` |
+| `owner` | `String` | Human-readable label (e.g. `"engine"`, `"billing-worker"`, `"platform"`) |
+| `role` | `KeyRole` | `CLIENT`, `ENGINE`, or `PLATFORM` |
+| `status` | `KeyStatus` | `TRUSTED` or `REVOKED` |
+| `registrationSignature` | `String?` | Base64-encoded RSA/SHA-256 countersignature (anchored mode only) |
+| `publishedAt` | `Instant` | Timestamp of last publish |
 
-### Engine behaviour
+### Role hierarchy
 
-Engine authorization no longer has a special-case shortcut for an injected engine signing key ID.
-All Ed25519 key IDs are resolved uniformly from the signing-keys KTable.
+```
+PLATFORM ⊇ ENGINE ⊇ CLIENT
+```
 
-### Worker behaviour
+A key with `PLATFORM` role can satisfy any required role. `ENGINE` satisfies `ENGINE` and `CLIENT`. `CLIENT` only satisfies `CLIENT`.
 
-Workers still publish their own public key to `taktx-signing-keys` and sign responses with their configured private key.
+### Key revocation
 
-If `signingEnabled=false`, worker responses may still be accepted unsigned. If `signingEnabled=true`, unsigned worker responses are rejected.
+Publish a new record with the same `keyId` and `status=REVOKED`. The engine and all watching clients pick up the change within one poll cycle (≤ 1 s).
+
+### Workers and the signing-keys store
+
+When `TaktXClient.start()` is called, a `SigningKeysStore` is initialised that reads the entire `taktx-signing-keys` topic to end-of-topic before accepting signed trigger records. This guarantees the engine key is present before the first trigger arrives. A missing key ID after that point is always a security violation, never a race condition.
 
 ---
 
-## Root trust chain (anchored mode)
+## Root trust chain — anchored mode
 
 ### Overview
 
-By default, TaktX operates in **community mode**: the declared role on a key in
-`taktx-signing-keys` is accepted at face value (`OpenKeyTrustPolicy`). Security in this mode
-depends entirely on Kafka ACLs preventing unauthorized writes to `taktx-signing-keys`.
+In **community mode** (default), any non-revoked key whose declared role is sufficient is trusted. The security perimeter is entirely Kafka ACLs.
 
-**Anchored mode** closes this gap. When `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine, the
-engine switches to `AnchoredKeyTrustPolicy`. Every key entry in `taktx-signing-keys` — both
-`ENGINE`-role (engine) and `CLIENT`-role (worker) — must carry a cryptographic countersignature
-from the platform root private key. A key without a valid countersignature is rejected at the
-authorization gate, even if the declared role looks correct.
+In **anchored mode**, every key entry in `taktx-signing-keys` — regardless of role — must carry a `registrationSignature` that is an RSA/SHA-256 (PKCS#1 v1.5) signature produced by the platform root private key. A key without a valid countersignature is rejected at the trust gate even if its declared role is correct.
 
-| Mode | `TAKTX_PLATFORM_PUBLIC_KEY` | Policy | Enforcement |
-|---|---|---|---|
-| Community | Not set | `OpenKeyTrustPolicy` | Declared role is trusted. Kafka ACLs are the security boundary. |
-| Anchored | Set | `AnchoredKeyTrustPolicy` | Every key must be countersigned by the platform root key. |
+Anchored mode is activated automatically when `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine.
 
-### Canonical payload and signature format
+### Canonical payload
 
-The registration signature is `SHA256withRSA` (PKCS#1 v1.5) over the pipe-delimited UTF-8 string:
+The payload that the platform root key signs is a pipe-delimited UTF-8 string:
 
 ```
 keyId|publicKeyBase64|algorithm|owner|role
 ```
 
-Produced by the platform root private key. Stored as `SigningKeyDTO.registrationSignature`
-(base64-encoded). The Java reference implementation is
-`SigningKeyRegistrar.computeCanonicalPayload(SigningKeyDTO)`.
+Java reference: `SigningKeyRegistrar.computeCanonicalPayload(SigningKeyDTO)`
 
 Shell equivalent:
 
 ```bash
-PAYLOAD=$(printf '%s|%s|%s|%s|%s' "$KEY_ID" "$PUBLIC_KEY_BASE64" "Ed25519" "$OWNER" "$ROLE")
+PAYLOAD=$(printf '%s|%s|%s|%s|%s' \
+  "$KEY_ID" "$PUBLIC_KEY_B64" "Ed25519" "$OWNER" "$ROLE")
+
 REGISTRATION_SIGNATURE=$(printf '%s' "$PAYLOAD" \
-  | openssl dgst -sha256 -sign platform-private.pem \
-  | base64)
+  | openssl dgst -sha256 -sign docker/signing/platform-private.pem \
+  | base64 | tr -d '\n')
 ```
 
-### New environment variables
+Where `$ROLE` is the `KeyRole` enum name: `ENGINE`, `CLIENT`, or `PLATFORM`.
 
-| Env var | Set on | Purpose |
-|---|---|---|
-| `TAKTX_PLATFORM_PUBLIC_KEY` | Engine | Activates anchored mode. Base64 DER X.509 RSA public key (minimum 2048-bit). |
-| `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | Engine | Countersignature for the engine's Ed25519 key. Required in anchored mode when using `file` or `env` signing source. |
-| `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | Worker / Client | Countersignature for the worker's Ed25519 key. Required in anchored mode. Read from `taktx.signing.registration-signature` property or the env var. |
+### Platform root key format
 
-### Deployment shapes
+The platform root key is an RSA 2048-bit key pair. The public key is distributed as a base64-encoded DER X.509 `SubjectPublicKeyInfo` — the value of `TAKTX_PLATFORM_PUBLIC_KEY`.
 
-#### Standalone / Docker Compose (community mode)
+The private key (`platform-private.pem`) is only needed when generating new registration signatures. It must **never** be committed to version control or mounted into any container.
 
-No additional configuration needed. Omit `TAKTX_PLATFORM_PUBLIC_KEY`. Use the `generated`,
-`env`, or `file` signing source for the engine. Workers sign their responses; the engine
-accepts any non-revoked key at face value.
+### Registration signatures per participant
 
-#### Docker Compose (anchored mode)
+| Participant | Env var carrying signature | Role | Who generates |
+|---|---|---|---|
+| Engine | `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | `ENGINE` | Operator, via `generate_trust_anchor.sh --sign` |
+| Worker / client | `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | `CLIENT` | Operator or CI, via `generate_trust_anchor.sh --sign` |
+| Platform JWT key | passed to `publishSigningKey(...)` | `PLATFORM` or `CLIENT` | Platform team |
 
-1. Run `scripts/generate_trust_anchor.sh --init` to generate the platform RSA root key pair.
-2. Run `scripts/generate_trust_anchor.sh --sign` for each engine and worker key to produce
-   their registration signatures.
-3. Set the environment variables in `docker-compose-full.yaml` using the `x-taktx-anchored-*`
-   YAML anchors. See `docker/signing/README.md` for the complete step-by-step workflow.
+### Enforcement rules (`AnchoredKeyTrustPolicy`)
 
-#### Cloud / Kubernetes
+A key is trusted if and only if **all** of the following are true:
 
-The same environment variables apply. Typical setup:
+1. Key is not `null`
+2. Key status is not `REVOKED`
+3. `registrationSignature` is non-null and non-blank
+4. The signature verifies with `SHA256withRSA` against the canonical payload using the platform root public key
+5. The key's declared role satisfies the required role (same as `OpenKeyTrustPolicy`)
 
-```yaml
-# Kubernetes Secret (base64 the values below before storing)
-TAKTX_PLATFORM_PUBLIC_KEY: <base64 DER RSA public key>
-TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE: <base64 RSA/SHA-256 signature>
+### Incompatibility with `generated` signing source
 
-# Worker Deployment
-TAKTX_SIGNING_REGISTRATION_SIGNATURE: <base64 RSA/SHA-256 signature>
+When anchored mode is active and `TAKTX_SIGNING_IDENTITY_SOURCE=generated`, the engine logs a startup warning because the engine's own key will fail the countersignature check — a generated key changes on every restart and cannot be pre-signed.
+
+```
+⚠️  Anchored mode is active (TAKTX_PLATFORM_PUBLIC_KEY is set) but
+    TAKTX_SIGNING_IDENTITY_SOURCE=generated and
+    TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE is blank.
 ```
 
-Use a secrets manager (AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault, Kubernetes
-Secrets) to manage `TAKTX_PLATFORM_PUBLIC_KEY` and all registration signatures. The platform
-root private key (`platform-private.pem`) must never leave the secure signing workstation or
-secrets manager — it only needs to be accessible when generating new registration signatures.
+Switch to `file` or `env` and supply `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE`.
 
-#### Platform service integration
+### Step-by-step: activating anchored mode
 
-When a Platform Service issues JWTs, it publishes its RSA public key to `taktx-signing-keys`
-under its `kid`. In anchored mode, this RSA key entry also needs a `registrationSignature`.
-The Platform Service must call `TaktXClient.publishSigningKey(..., registrationSignature)` with
-its own countersignature, or be pre-registered by the deployment tooling.
+```bash
+# Step 1 — Generate the platform root key pair (once per deployment)
+scripts/generate_trust_anchor.sh --init
+# Outputs:
+#   docker/signing/platform-private.pem   ← KEEP SECRET — never commit or mount
+#   docker/signing/platform-public.b64    ← TAKTX_PLATFORM_PUBLIC_KEY
+
+# Step 2 — Generate engine Ed25519 key files (if not done yet)
+openssl genpkey -algorithm Ed25519 -out /tmp/engine-key.pem
+openssl pkey -in /tmp/engine-key.pem -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/private-key.b64
+openssl pkey -in /tmp/engine-key.pem -pubout -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/public-key.b64
+echo "engine-prod-1" > docker/signing/engine/key-id
+rm /tmp/engine-key.pem
+
+# Step 3 — Sign the engine key
+scripts/generate_trust_anchor.sh --sign \
+  --key-dir docker/signing/engine \
+  --owner engine \
+  --role ENGINE
+# → copy TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE=... into engine environment
+
+# Step 4 — Sign each worker key (repeat per worker)
+scripts/generate_trust_anchor.sh --sign \
+  --key-dir docker/signing/worker-billing \
+  --owner billing-worker \
+  --role CLIENT
+# → copy TAKTX_SIGNING_REGISTRATION_SIGNATURE=... into worker environment
+
+# Step 5 — Set TAKTX_PLATFORM_PUBLIC_KEY on the engine
+TAKTX_PLATFORM_PUBLIC_KEY=$(cat docker/signing/platform-public.b64)
+```
 
 ### Key rotation in anchored mode
 
-When rotating an engine or worker key (new Ed25519 key files):
+1. Generate new key files (same openssl commands as above, new key ID).
+2. Re-sign with `generate_trust_anchor.sh --sign`.
+3. Update `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` or `TAKTX_SIGNING_REGISTRATION_SIGNATURE`.
+4. Restart the engine or worker. The old key is retired automatically.
 
-1. Generate new key files.
-2. Run `scripts/generate_trust_anchor.sh --sign` for the new key to get a new
-   `REGISTRATION_SIGNATURE`.
-3. Update the environment variable in the container/deployment.
-4. Restart the process. The old key is automatically retired to `TRUSTED` status by
-   `MessageSigningService.retirePreviousKey()`.
+### Deploying to Kubernetes
+
+```yaml
+# engine-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: taktx-engine-secrets
+stringData:
+  TAKTX_PLATFORM_PUBLIC_KEY: "<base64 DER RSA public key from platform-public.b64>"
+  TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE: "<signature from generate_trust_anchor.sh --sign>"
+  TAKTX_SIGNING_FILE_KEY_ID_PATH: "/opt/taktx/signing/engine/key-id"
+  TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH: "/opt/taktx/signing/engine/private-key.b64"
+  TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH: "/opt/taktx/signing/engine/public-key.b64"
+
+# worker-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: taktx-worker-secrets
+stringData:
+  TAKTX_SIGNING_REGISTRATION_SIGNATURE: "<worker signature from generate_trust_anchor.sh --sign>"
+  TAKTX_SIGNING_PRIVATE_KEY: "<base64 Ed25519 PKCS#8 private key>"
+  TAKTX_SIGNING_PUBLIC_KEY: "<base64 Ed25519 X.509 public key>"
+  TAKTX_SIGNING_KEY_ID: "billing-worker-prod-1"
+```
+
+Mount the engine key files via a `Secret` volume and set the path env vars accordingly.
 
 ---
 
 ## Configuration topic
 
-The compacted topic `taktx-configuration` carries `ConfigurationEventDTO` records under key `"config"`.
+The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `ConfigurationEventDTO` records under Kafka key `"config"`.
 
-The current `GlobalConfigurationDTO` fields are:
+### `GlobalConfigurationDTO` fields
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `signingEnabled` | `boolean` | `false` | Enables Ed25519 signing of outbound engine records and verification of inbound non-entry commands |
+| `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for entry commands (`StartCommandDTO`, `AbortTriggerDTO`) |
+| `rbacEnabled` | `boolean` | `false` | Reserved for future use |
+| `trustedKeyIds` | `List<String>` | `[]` | Reserved compatibility surface |
+
+### Publishing runtime configuration
+
+```java
+GlobalConfigurationDTO cfg = GlobalConfigurationDTO.builder()
+    .signingEnabled(true)
+    .engineRequiresAuthorization(true)
+    .build();
+
+client.publishGlobalConfig(cfg);
+// Or statically (no running client needed):
+TaktXClient.publishGlobalConfig(props, cfg);
+```
+
+### Runtime behaviour
+
+- The engine and all running clients watch this topic continuously.
+- A change to `signingEnabled` takes effect within one Kafka poll cycle — no restart needed.
+- Workers adapt: when `signingEnabled` is toggled on, the worker re-registers its signing function and (re-)publishes its public key if not already published.
+
+### Intentionally removed runtime toggles
+
+These are **not** configurable at runtime (they were removed):
+
+| Removed field | Rationale |
+|---|---|
+| `signingKeyId` | Engine key IDs are generated per node and resolved dynamically |
+| `rejectExpired` | Expired JWT rejection is always enforced |
+| `nonceCheckEnabled` | Replay protection is always enforced |
+
+---
+
+## Trust metadata on instance updates
+
+`InstanceUpdateDTO` (and `ProcessInstanceTriggerDTO`) expose two trust provenance fields:
 
 | Field | Meaning |
 |---|---|
-| `signingEnabled` | Enables outbound engine Ed25519 signing |
-| `engineRequiresAuthorization` | Enables JWT command authorization |
-| `rbacEnabled` | Reserved for future use |
-| `trustedKeyIds` | Reserved compatibility surface |
+| `currentTrustMetadata` | Trust data for the command currently being processed |
+| `originTrustMetadata` | Trust data for the original command that started the chain |
 
-### Fields removed from the engine config model
+### Examples
 
-These are intentionally no longer runtime-configurable for the engine:
+| Event | `current` | `origin` |
+|---|---|---|
+| External JWT start command | `JWT` | `JWT` |
+| Worker-signed external task response | `worker` | `worker` |
+| Timer continuation after worker response | `engine` | `worker` |
+| Engine-internal follow-up after JWT start | `engine` | `JWT` |
 
-- `signingKeyId`
-- `rejectExpired`
-- `nonceCheckEnabled`
+The `origin` field makes it possible to show in a console/audit log who originally triggered a chain, even after engine-internal rescheduling has taken over.
 
-Rationale:
-
-- engine key IDs are generated per node
-- expired JWT rejection must always happen
-- replay protection must always happen
+> The legacy accessor `commandTrustMetadata` resolves to `currentTrustMetadata` for compatibility. New consumers should prefer the explicit `current`/`origin` fields.
 
 ---
 
-## Environment variables
+## Environment variable reference
 
-## Engine
+### Engine — required
 
-### Required bootstrap settings
-
-| Env var | Purpose |
+| Variable | Purpose |
 |---|---|
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap connection |
-| `TAKTX_ENGINE_TENANT_ID` | Tenant prefix for topics and application IDs |
-| `TAKTX_ENGINE_NAMESPACE` | Namespace prefix for topics and application IDs |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap connection string |
+| `TAKTX_ENGINE_TENANT_ID` | Tenant prefix for topics and Kafka Streams application IDs |
+| `TAKTX_ENGINE_NAMESPACE` | Namespace prefix for topics and Kafka Streams application IDs |
 
-### Optional trust material
+### Engine — signing identity source
 
-| Env var | Purpose |
+| Variable | Purpose | Default |
+|---|---|---|
+| `TAKTX_SIGNING_IDENTITY_SOURCE` | `generated`, `env`, or `file` | `generated` |
+| `TAKTX_SIGNING_KEY_ID` | Key ID when source is `env` | — |
+| `TAKTX_SIGNING_PRIVATE_KEY` | Base64 PKCS#8 DER Ed25519 private key when source is `env` | — |
+| `TAKTX_SIGNING_PUBLIC_KEY` | Base64 X.509 DER Ed25519 public key when source is `env` | — |
+| `TAKTX_SIGNING_FILE_KEY_ID_PATH` | Path to `key-id` file when source is `file` | — |
+| `TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH` | Path to `private-key.b64` file when source is `file` | — |
+| `TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH` | Path to `public-key.b64` file when source is `file` | — |
+| `TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS` | How often to re-read key files in ms | `1000` |
+
+### Engine — anchored mode
+
+| Variable | Purpose |
 |---|---|
-| `TAKTX_PLATFORM_PUBLIC_KEY` | Optional deployment trust anchor for authorization-related setups |
+| `TAKTX_PLATFORM_PUBLIC_KEY` | Base64 X.509 DER RSA public key. Setting this activates anchored mode. |
+| `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | Base64 RSA/SHA-256 countersignature for the engine's own key. Required in anchored mode when using `file` or `env` source. |
 
-### Optional engine signing source selection
+### Worker / client — signing
 
-| Env var | Purpose |
+| Variable | Purpose | Default |
+|---|---|---|
+| `TAKTX_SIGNING_IDENTITY_SOURCE` | `env`, `file`, or `generated` | `env` (if key material present) |
+| `TAKTX_SIGNING_KEY_ID` | Key ID when source is `env` | — |
+| `TAKTX_SIGNING_PRIVATE_KEY` | Base64 PKCS#8 DER Ed25519 private key | — |
+| `TAKTX_SIGNING_PUBLIC_KEY` | Base64 X.509 DER Ed25519 public key | — |
+| `TAKTX_SIGNING_OWNER` | Human-readable owner label for the published key. Falls back to app name then key ID. | — |
+| `TAKTX_SIGNING_FILE_KEY_ID_PATH` | Path to `key-id` file | — |
+| `TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH` | Path to `private-key.b64` file | — |
+| `TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH` | Path to `public-key.b64` file | — |
+| `TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS` | File refresh interval in ms | `1000` |
+| `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | Base64 RSA/SHA-256 countersignature for the worker key. Required in anchored mode. | — |
+
+### Kafka auth / TLS (engine and workers)
+
+| Variable | Purpose |
 |---|---|
-| `TAKTX_SIGNING_IDENTITY_SOURCE` | Signing source for this process: engine defaults to `generated`, workers default to `env`; explicit values are `generated`, `env`, or `file` |
-| `TAKTX_SIGNING_FILE_KEY_ID_PATH` | File-backed key ID path when `file` is selected |
-| `TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH` | File-backed private key path when `file` is selected |
-| `TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH` | File-backed public key path when `file` is selected |
-| `TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS` | How often the process re-checks signing files for changes; default `1000` ms |
+| `KAFKA_SECURITY_PROTOCOL` | e.g. `SASL_SSL`, `PLAINTEXT` |
+| `KAFKA_SASL_MECHANISM` | e.g. `SCRAM-SHA-512` |
+| `KAFKA_SASL_JAAS_CONFIG` | Full JAAS config string |
+| `KAFKA_SSL_TRUSTSTORE_LOCATION` | Path to JKS/PKCS12 truststore |
+| `KAFKA_SSL_TRUSTSTORE_PASSWORD` | Truststore password |
+| `KAFKA_SSL_TRUSTSTORE_TYPE` | `JKS` or `PKCS12` |
+| `KAFKA_SSL_ENDPOINT_IDENTIFICATION` | Set to empty to disable hostname verification |
 
-### Kafka auth / TLS
-
-These remain environment-driven:
-
-- `KAFKA_SECURITY_PROTOCOL`
-- `KAFKA_SASL_MECHANISM`
-- `KAFKA_SASL_JAAS_CONFIG`
-- `KAFKA_SSL_TRUSTSTORE_LOCATION`
-- `KAFKA_SSL_TRUSTSTORE_PASSWORD`
-- related broker credentials
-
-### Removed engine runtime toggles
-
-These old runtime toggle env vars are removed:
-
-- `TAKTX_SECURITY_SIGNING_ENABLED`
-- `TAKTX_SECURITY_AUTHORIZATION_ENABLED`
-- `TAKTX_SECURITY_REJECT_EXPIRED`
-- `TAKTX_SECURITY_NONCE_CHECK`
-
-Runtime signing and authorization now come from `taktx-configuration` updates.
-
-## Worker / client signing
-
-Worker-side signing still uses explicit key material because workers are not generating engine-managed keys.
-
-| Env var | Purpose |
-|---|---|
-| `TAKTX_SIGNING_IDENTITY_SOURCE` | Worker signing source: `env` (default), `file`, or `generated` |
-| `TAKTX_SIGNING_KEY_ID` | Worker signing key ID for `env` |
-| `TAKTX_SIGNING_OWNER` | Optional human-readable owner label published alongside the worker public key; falls back to app name or key ID |
-| `TAKTX_SIGNING_PUBLIC_KEY` | Worker Ed25519 public key for `env` |
-| `TAKTX_SIGNING_FILE_KEY_ID_PATH` | Worker signing key ID file path for `file` |
-| `TAKTX_SIGNING_FILE_PRIVATE_KEY_PATH` | Worker private key file path for `file` |
-| `TAKTX_SIGNING_FILE_PUBLIC_KEY_PATH` | Worker public key file path for `file` |
-| `TAKTX_SIGNING_FILE_REFRESH_INTERVAL_MS` | File refresh interval in milliseconds for `file`; default `1000` |
-
-These are consumed by worker/client-side signing identity sources.
 ---
 
-If `TAKTX_SIGNING_OWNER` is not provided, the client falls back to framework app name (`quarkus.application.name`, `spring.application.name`, or `application.name`) and finally to the signing `keyId`.
+## Key generation quick reference
 
-## Operational notes
+### Ed25519 key pair (engine or worker)
 
-### Safe defaults
+```bash
+# Generate via temporary PEM — works on macOS and Linux
+openssl genpkey -algorithm Ed25519 -out /tmp/taktx-key.pem
 
-If no `"config"` record has been received yet, the engine defaults to:
+# Export private key (PKCS#8 DER, base64)
+openssl pkey -in /tmp/taktx-key.pem -outform DER \
+  | base64 | tr -d '\n' > private-key.b64
 
-- `signingEnabled = false`
-- `engineRequiresAuthorization = false`
-- `rbacEnabled = false`
-- `trustedKeyIds = []`
+# Export public key (X.509 DER, base64)
+openssl pkey -in /tmp/taktx-key.pem -pubout -outform DER \
+  | base64 | tr -d '\n' > public-key.b64
 
-This means BPMN processing still runs normally on a fresh deployment with no config-topic record.
+echo "my-key-id-1" > key-id
 
-### Runtime toggling
+rm /tmp/taktx-key.pem
+```
 
-Because signing and authorization are driven by the config topic, operators can enable or disable them without restarting the engine.
+### Platform RSA root key pair
 
-### Fixed security rules
+```bash
+scripts/generate_trust_anchor.sh --init
+# Outputs:
+#   docker/signing/platform-private.pem  ← KEEP SECRET
+#   docker/signing/platform-public.b64   ← TAKTX_PLATFORM_PUBLIC_KEY value
+```
 
-These rules are not configurable:
+### Registration signature for a key
 
-- expired JWTs are always rejected
-- replayed `auditId` values are always rejected
-- when `engineRequiresAuthorization=true`, JWT is required for external start/abort entry commands
-- when `signingEnabled=true`, unsigned non-entry process-instance commands are rejected
-- engine signing defaults to generated keys but can be switched to env/file sources
-- engine public-key publication retries until the signing-keys topic is available
+```bash
+scripts/generate_trust_anchor.sh --sign \
+  --key-dir <path-to-key-dir> \
+  --owner <owner-name> \
+  --role <ENGINE|CLIENT>
+# Prints the env var name and value to copy
+```
 
-### Suggested platform-team contract
+### Show the platform public key
 
-The platform team should treat these as the stable runtime config fields:
+```bash
+scripts/generate_trust_anchor.sh --show-pubkey
+```
 
-- `signingEnabled`
-- `engineRequiresAuthorization`
-- `rbacEnabled`
-- `trustedKeyIds`
+---
 
-And should no longer send or expect:
+## Operational runbook
 
-- `signingKeyId`
-- `rejectExpired`
-- `nonceCheckEnabled`
+### Enable signing and authorization on a running cluster
+
+```java
+TaktXClient.publishGlobalConfig(props,
+    GlobalConfigurationDTO.builder()
+        .signingEnabled(true)
+        .engineRequiresAuthorization(true)
+        .build());
+```
+
+No engine restart needed. Workers adapt within one Kafka poll cycle.
+
+### Disable signing temporarily
+
+```java
+TaktXClient.publishGlobalConfig(props,
+    GlobalConfigurationDTO.builder()
+        .signingEnabled(false)
+        .engineRequiresAuthorization(false)
+        .build());
+```
+
+### Revoke a compromised key
+
+```java
+client.publishSigningKey(
+    compromisedKeyId,
+    existingPublicKeyBase64,
+    owner,
+    "Ed25519",
+    KeyRole.CLIENT,
+    null);
+// Then immediately publish the replacement key
+```
+
+Or publish a `SigningKeyDTO` with `status=REVOKED` directly.
+
+### Rotate the engine signing key (file source)
+
+1. Generate new key files (new `key-id` value).
+2. In anchored mode: run `generate_trust_anchor.sh --sign` for the new key and update `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE`.
+3. Write new files atomically (`cp` + `mv`).
+4. The engine picks up the change within the refresh interval and retires the old key automatically.
+5. No restart required.
+
+### Rotate the platform root key
+
+1. Run `generate_trust_anchor.sh --init` (confirm the overwrite prompt).
+2. Re-sign **all** engine and worker keys with the new platform private key.
+3. Update `TAKTX_PLATFORM_PUBLIC_KEY` and all `*_REGISTRATION_SIGNATURE` environment variables.
+4. Rolling-restart the engine and all workers.
+
+---
+
+## Migration notes
+
+### From the old engine model
+
+Platform teams and ingester owners should note the following changes:
+
+| Old behaviour | New behaviour |
+|---|---|
+| Engine `signingKeyId` was a required env var | Engine key ID is generated automatically (`engine-<uuid>`) or read from `file`/`env` source |
+| `TAKTX_SECURITY_SIGNING_ENABLED` env var | Removed. Use `taktx-configuration` topic (`signingEnabled`) |
+| `TAKTX_SECURITY_AUTHORIZATION_ENABLED` env var | Removed. Use `taktx-configuration` topic (`engineRequiresAuthorization`) |
+| `TAKTX_SECURITY_REJECT_EXPIRED` | Removed. Expired JWT rejection is always on. |
+| `TAKTX_SECURITY_NONCE_CHECK` | Removed. Replay protection is always on. |
+| JWT keys looked up by a fixed `signingKeyId` | JWT `kid` header drives key lookup directly from `taktx-signing-keys` |
+| `commandTrustMetadata` on `InstanceUpdateDTO` | Still works (resolves to `currentTrustMetadata`). Prefer `currentTrustMetadata` + `originTrustMetadata`. |
+
+### Stable platform contract
+
+These are the runtime-configurable fields the platform team should send:
+
+```java
+GlobalConfigurationDTO.builder()
+    .signingEnabled(true)          // ← use this
+    .engineRequiresAuthorization(true) // ← use this
+    // .signingKeyId(...)          ← removed, do not send
+    // .rejectExpired(...)         ← removed, always enforced
+    // .nonceCheckEnabled(...)     ← removed, always enforced
+    .build();
+```
