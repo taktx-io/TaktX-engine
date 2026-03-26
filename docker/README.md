@@ -48,19 +48,18 @@ The key survives container restarts, so workers stay in sync.
 ### Generate key files (once)
 
 ```sh
-# Option A — helper script
-scripts/generate_trust_anchor.sh --init-engine
+# Generate a temporary PEM, then export both keys as base64 DER — works on macOS and Linux
+openssl genpkey -algorithm Ed25519 -out /tmp/taktx-engine-key.pem
 
-# Option B — openssl manually
-openssl genpkey -algorithm Ed25519 -outform DER | base64 | tr -d '\n' \
-  > docker/signing/engine/private-key.b64
+openssl pkey -in /tmp/taktx-engine-key.pem -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/private-key.b64
 
-openssl pkey \
-  -in <(base64 -d docker/signing/engine/private-key.b64) \
-  -pubout -outform DER | base64 | tr -d '\n' \
-  > docker/signing/engine/public-key.b64
+openssl pkey -in /tmp/taktx-engine-key.pem -pubout -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/public-key.b64
 
 echo "engine-local-1" > docker/signing/engine/key-id
+
+rm /tmp/taktx-engine-key.pem
 ```
 
 ### Start
@@ -88,19 +87,23 @@ Workers without a valid registration signature are rejected.
 ### Setup
 
 ```sh
-# 1. Generate the platform root key (once per platform, keep the private key safe)
-scripts/generate_trust_anchor.sh --init-platform
+# 1. Generate the platform root RSA key pair (once per deployment, keep the private key safe)
+#    Output: docker/signing/platform-private.pem  ← never commit this
+#            docker/signing/platform-public.b64   ← value for TAKTX_PLATFORM_PUBLIC_KEY
+scripts/generate_trust_anchor.sh --init
 
-# 2. Sign the engine key against the platform root
+# 2. Generate engine Ed25519 key files (see Level 3 above if not done yet)
+
+# 3. Sign the engine key against the platform root
 scripts/generate_trust_anchor.sh \
   --sign \
   --key-dir docker/signing/engine \
   --owner acme-engine \
   --role ENGINE
 
-# 3. Paste the printed values into docker-compose.anchored.yml:
-#    TAKTX_PLATFORM_PUBLIC_KEY
-#    TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE
+# 4. Paste the printed values into docker-compose.anchored.yml:
+#    TAKTX_PLATFORM_PUBLIC_KEY              ← from docker/signing/platform-public.b64
+#    TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE ← printed by --sign above
 ```
 
 ### Start

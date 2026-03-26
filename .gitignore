@@ -20,3 +20,8 @@ public-key.asc
 /env.jreleaser
 /public.pem
 /private.pem
+/docker/signing/platform-private.pem
+/docker/signing/platform-public.b64
+/docker/signing/engine/key-id
+/docker/signing/engine/private-key.b64
+/docker/signing/engine/public-key.b64

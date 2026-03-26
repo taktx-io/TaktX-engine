@@ -6,17 +6,13 @@
 #
 # Prerequisites — generate the key files once:
 #
-#   # Option A: use the helper script
-#   scripts/generate_trust_anchor.sh --init-engine
-#
-#   # Option B: generate manually with openssl
-#   openssl genpkey -algorithm Ed25519 -outform DER | base64 | tr -d '\n' \
-#     > docker/signing/engine/private-key.b64
-#   openssl pkey \
-#     -in <(base64 -d docker/signing/engine/private-key.b64) \
-#     -pubout -outform DER | base64 | tr -d '\n' \
-#     > docker/signing/engine/public-key.b64
+#   openssl genpkey -algorithm Ed25519 -out /tmp/taktx-engine-key.pem
+#   openssl pkey -in /tmp/taktx-engine-key.pem -outform DER \
+#     | base64 | tr -d '\n' > docker/signing/engine/private-key.b64
+#   openssl pkey -in /tmp/taktx-engine-key.pem -pubout -outform DER \
+#     | base64 | tr -d '\n' > docker/signing/engine/public-key.b64
 #   echo "engine-local-1" > docker/signing/engine/key-id
+#   rm /tmp/taktx-engine-key.pem
 #
 # Usage:
 #   docker compose -f docker-compose.yaml -f docker-compose.file-signing.yml up

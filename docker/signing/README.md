@@ -20,17 +20,20 @@ Create these files before starting Compose:
 Generate with openssl:
 
 ```bash
-# Private key (PKCS#8 DER, base64)
-openssl genpkey -algorithm Ed25519 -outform DER | base64 | tr -d '\n' \
-  > docker/signing/engine/private-key.b64
+# Generate via a temporary PEM — works on macOS and Linux
+openssl genpkey -algorithm Ed25519 -out /tmp/taktx-engine-key.pem
 
-# Public key (X.509 DER, base64) — derived from the private key
-openssl pkey \
-  -in <(base64 -d docker/signing/engine/private-key.b64) \
-  -pubout -outform DER | base64 | tr -d '\n' \
-  > docker/signing/engine/public-key.b64
+# Private key (PKCS#8 DER, base64)
+openssl pkey -in /tmp/taktx-engine-key.pem -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/private-key.b64
+
+# Public key (X.509 DER, base64)
+openssl pkey -in /tmp/taktx-engine-key.pem -pubout -outform DER \
+  | base64 | tr -d '\n' > docker/signing/engine/public-key.b64
 
 echo "engine-prod-1" > docker/signing/engine/key-id
+
+rm /tmp/taktx-engine-key.pem
 ```
 
 ### Worker key files

@@ -10,13 +10,17 @@
 #
 # Prerequisites:
 #   1. Generate engine key files (see docker-compose.file-signing.yml)
-#   2. Generate platform root key + registration signature:
+#   2. Generate platform root RSA key pair (once per deployment):
+#        scripts/generate_trust_anchor.sh --init
+#        # Output: docker/signing/platform-private.pem (keep secret!)
+#        #         docker/signing/platform-public.b64  (→ TAKTX_PLATFORM_PUBLIC_KEY)
+#   3. Sign the engine key against the platform root:
 #        scripts/generate_trust_anchor.sh \
 #          --sign \
 #          --key-dir docker/signing/engine \
 #          --owner acme-engine \
 #          --role ENGINE
-#   3. Copy the printed values into the environment variables below.
+#   4. Paste the printed values into the environment variables below.
 #
 # Usage:
 #   docker compose \
