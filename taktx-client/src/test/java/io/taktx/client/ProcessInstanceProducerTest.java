@@ -154,8 +154,7 @@ class ProcessInstanceProducerTest {
         new ProcessInstanceProducer(propertiesHelper, producer, null);
     UUID processInstanceId = UUID.randomUUID();
 
-    processInstanceProducer.setVariable(
-        processInstanceId, List.of(1L), VariablesDTO.of("x", 1));
+    processInstanceProducer.setVariable(processInstanceId, List.of(1L), VariablesDTO.of("x", 1));
 
     ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
