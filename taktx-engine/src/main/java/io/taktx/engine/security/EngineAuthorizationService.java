@@ -16,6 +16,7 @@ import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
@@ -158,7 +159,9 @@ public class EngineAuthorizationService {
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
     boolean isEntryCommand =
-        trigger instanceof StartCommandDTO || trigger instanceof AbortTriggerDTO;
+        trigger instanceof StartCommandDTO
+            || trigger instanceof AbortTriggerDTO
+            || trigger instanceof SetVariableTriggerDTO;
 
     // ── Entry commands: AND-logic across both gates
     // ───────────────────────────────────────────────
@@ -453,6 +456,11 @@ public class EngineAuthorizationService {
       if (!"CANCEL".equals(claims.getAction())) {
         throw new AuthorizationTokenException(
             "Token action '" + claims.getAction() + "' does not match CANCEL command");
+      }
+    } else if (trigger instanceof SetVariableTriggerDTO) {
+      if (!"SET_VARIABLE".equals(claims.getAction())) {
+        throw new AuthorizationTokenException(
+            "Token action '" + claims.getAction() + "' does not match SET_VARIABLE command");
       }
     } else {
       log.debug("No claim matching defined for {}, allowing", trigger.getClass().getSimpleName());

@@ -278,12 +278,12 @@ taktx.authorization.token-provider=openid-client-credentials
 taktx.authorization.openid.token-endpoint=https://issuer.example.com/oauth/token
 taktx.authorization.openid.client-id=taktx-service-account
 taktx.authorization.openid.client-secret=super-secret
-taktx.authorization.openid.scope=taktx.start taktx.abort
+taktx.authorization.openid.scope=taktx.start taktx.abort taktx.set_variable
 taktx.authorization.openid.audience=taktx-engine
 taktx.authorization.openid.client-auth-method=client_secret_basic
 ```
 
-The token is fetched, cached, and refreshed automatically. `startProcess` and `abortElementInstance` attach it without any extra code.
+The token is fetched, cached, and refreshed automatically. `startProcess`, `abortElementInstance`, and `setVariable` attach it without any extra code.
 
 | Property | Description | Default |
 |---|---|---|
@@ -301,6 +301,8 @@ The token is fetched, cached, and refreshed automatically. `startProcess` and `a
 
 ```java
 taktxClient.startProcess("invoice-process", -1, VariablesDTO.empty(), jwt);
+taktxClient.abortElementInstance(instanceId, List.of(), jwt);
+taktxClient.setVariable(instanceId, List.of(), VariablesDTO.of("approved", true), jwt);
 ```
 
 ---

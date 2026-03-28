@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import io.taktx.client.auth.AuthorizationTokenProvider;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.util.TaktPropertiesHelper;
@@ -105,6 +106,64 @@ class ProcessInstanceProducerTest {
     verify(producer).send(captor.capture());
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = captor.getValue();
 
+    assertThat(record.headers().lastHeader(Constants.HEADER_AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void setVariable_usesAuthorizationTokenProviderWhenExplicitTokenIsMissing() {
+    AuthorizationTokenProvider tokenProvider = request -> "jwt-from-provider";
+    ProcessInstanceProducer processInstanceProducer =
+        new ProcessInstanceProducer(propertiesHelper, producer, tokenProvider);
+    UUID processInstanceId = UUID.randomUUID();
+
+    processInstanceProducer.setVariable(
+        processInstanceId, List.of(1L, 2L), VariablesDTO.of("x", 1), null);
+
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
+        ArgumentCaptor.forClass(ProducerRecord.class);
+    verify(producer).send(captor.capture());
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = captor.getValue();
+
+    assertThat(record.key()).isEqualTo(processInstanceId);
+    assertThat(record.value()).isInstanceOf(SetVariableTriggerDTO.class);
+    assertThat(headerValue(record, Constants.HEADER_AUTHORIZATION)).isEqualTo("jwt-from-provider");
+  }
+
+  @Test
+  void setVariable_explicitTokenOverridesAuthorizationTokenProvider() {
+    AuthorizationTokenProvider tokenProvider = request -> "jwt-from-provider";
+    ProcessInstanceProducer processInstanceProducer =
+        new ProcessInstanceProducer(propertiesHelper, producer, tokenProvider);
+    UUID processInstanceId = UUID.randomUUID();
+
+    processInstanceProducer.setVariable(
+        processInstanceId, List.of(1L), VariablesDTO.of("x", 1), "jwt-explicit");
+
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
+        ArgumentCaptor.forClass(ProducerRecord.class);
+    verify(producer).send(captor.capture());
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = captor.getValue();
+
+    assertThat(record.key()).isEqualTo(processInstanceId);
+    assertThat(headerValue(record, Constants.HEADER_AUTHORIZATION)).isEqualTo("jwt-explicit");
+  }
+
+  @Test
+  void setVariable_withoutExplicitTokenOrProvider_sendsNoAuthorizationHeader() {
+    ProcessInstanceProducer processInstanceProducer =
+        new ProcessInstanceProducer(propertiesHelper, producer, null);
+    UUID processInstanceId = UUID.randomUUID();
+
+    processInstanceProducer.setVariable(
+        processInstanceId, List.of(1L), VariablesDTO.of("x", 1));
+
+    ArgumentCaptor<ProducerRecord<UUID, ProcessInstanceTriggerDTO>> captor =
+        ArgumentCaptor.forClass(ProducerRecord.class);
+    verify(producer).send(captor.capture());
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record = captor.getValue();
+
+    assertThat(record.key()).isEqualTo(processInstanceId);
+    assertThat(record.value()).isInstanceOf(SetVariableTriggerDTO.class);
     assertThat(record.headers().lastHeader(Constants.HEADER_AUTHORIZATION)).isNull();
   }
 

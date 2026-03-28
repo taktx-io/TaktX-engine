@@ -21,15 +21,16 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 @RegisterForReflection
 public enum KeyRole {
   /**
-   * Engine key — trusted to authorize entry commands (StartCommandDTO, AbortTriggerDTO) via Ed25519
-   * without JWT. Used for engine-internal operations such as call-activity child starts,
-   * signal/timer-triggered starts, and child aborts.
+   * Engine key — trusted to authorize entry commands (StartCommandDTO, AbortTriggerDTO,
+   * SetVariableTriggerDTO) via Ed25519 without JWT. Used for engine-internal operations such as
+   * call-activity child starts, signal/timer-triggered starts, and child aborts.
    */
   ENGINE,
   /**
-   * Client key — trusted to authorize non-entry commands (task responses, set-variable) via
-   * Ed25519. Entry commands from clients require JWT authorization regardless of the key role. This
-   * is the default role for keys published by TaktXClient.
+   * Client key — trusted to authorize non-entry commands (task responses, etc.) via Ed25519. Entry
+   * commands from clients (startProcess, abortElementInstance, setVariable) require JWT
+   * authorization regardless of the key role. This is the default role for keys published by
+   * TaktXClient.
    */
   CLIENT,
   /**

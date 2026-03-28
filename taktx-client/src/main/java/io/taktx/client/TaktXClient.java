@@ -496,7 +496,7 @@ public class TaktXClient {
     if (authRequired && authorizationTokenProvider == null) {
       log.warn(
           "engineRequiresAuthorization=true in runtime config but no AuthorizationTokenProvider"
-              + " is configured — entry commands (startProcess / abortElementInstance) sent"
+              + " is configured — entry commands (startProcess / abortElementInstance / setVariable) sent"
               + " without an explicit JWT token will be rejected by the engine."
               + " Configure taktx.oidc.* or supply an AuthorizationTokenProvider.");
     }
@@ -827,6 +827,24 @@ public class TaktXClient {
   public void setVariable(
       UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
     processInstanceProducer.setVariable(processInstanceId, elementInstanceIdPath, variables);
+  }
+
+  /**
+   * Set variables in a scope, attaching a Platform Service authorization token.
+   *
+   * @param processInstanceId The UUID of the process instance.
+   * @param elementInstanceIdPath The path of element instance IDs leading to the scope.
+   * @param variables The variables to set.
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
+   *     unauthenticated deployments
+   */
+  public void setVariable(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
+    processInstanceProducer.setVariable(
+        processInstanceId, elementInstanceIdPath, variables, authorizationToken);
   }
 
   /**

@@ -42,4 +42,14 @@ public record CommandAuthorizationRequest(
         -1,
         elementInstanceIdPath);
   }
+
+  public static CommandAuthorizationRequest setVariable(
+      UUID processInstanceId, List<Long> elementInstanceIdPath) {
+    return new CommandAuthorizationRequest(
+        CommandAuthorizationScope.SET_VARIABLE,
+        processInstanceId,
+        null,
+        -1,
+        elementInstanceIdPath);
+  }
 }

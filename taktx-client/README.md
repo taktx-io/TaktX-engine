@@ -355,13 +355,15 @@ See [docs/security.md](../docs/security.md) for the complete anchored mode refer
 
 ## Command authorization (JWT)
 
-When `engineRequiresAuthorization=true` in the engine runtime configuration, entry commands (`startProcess`, `abortElementInstance`) require a JWT.
+When `engineRequiresAuthorization=true` in the engine runtime configuration, entry commands (`startProcess`, `abortElementInstance`, `setVariable`) require a JWT.
 
 ### Attaching a JWT explicitly
 
 ```java
 String jwt = myAuthService.getToken();
 client.startProcess("invoice-process", -1, VariablesDTO.empty(), jwt);
+client.abortElementInstance(instanceId, List.of(), jwt);
+client.setVariable(instanceId, List.of(), VariablesDTO.of("approved", true), jwt);
 ```
 
 ### Automatic JWT via OpenID client-credentials
@@ -373,7 +375,7 @@ taktx.authorization.token-provider=openid-client-credentials
 taktx.authorization.openid.token-endpoint=https://issuer.example.com/oauth/token
 taktx.authorization.openid.client-id=taktx-service-account
 taktx.authorization.openid.client-secret=super-secret
-taktx.authorization.openid.scope=taktx.start taktx.abort
+taktx.authorization.openid.scope=taktx.start taktx.abort taktx.set_variable
 taktx.authorization.openid.audience=taktx-engine
 taktx.authorization.openid.client-auth-method=client_secret_basic
 ```

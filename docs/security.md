@@ -28,7 +28,7 @@ TaktX has **two orthogonal security mechanisms** that can be enabled or disabled
 | Mechanism | Controlled by | Applies to | Always enforced? |
 |---|---|---|---|
 | **Ed25519 message signing** | `signingEnabled` | Engine outbound records, worker responses, engine-internal continuations | No — opt-in per config topic |
-| **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO` only (entry commands) | No — opt-in per config topic |
+| **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO` (entry commands) | No — opt-in per config topic |
 
 Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
 
@@ -129,8 +129,9 @@ JWT authorization applies **only** to entry commands:
 
 - `StartCommandDTO`
 - `AbortTriggerDTO`
+- `SetVariableTriggerDTO`
 
-It is **not** required for non-entry commands (`ExternalTaskResponseTriggerDTO`, `SetVariableTriggerDTO`, `ContinueFlowElementTriggerDTO`, etc.). Those are governed by the Ed25519 signing gate instead.
+It is **not** required for non-entry commands (`ExternalTaskResponseTriggerDTO`, `ContinueFlowElementTriggerDTO`, etc.). Those are governed by the Ed25519 signing gate instead.
 
 ### JWT transport
 
@@ -372,7 +373,7 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `signingEnabled` | `boolean` | `false` | Enables Ed25519 signing of outbound engine records and verification of inbound non-entry commands |
-| `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for entry commands (`StartCommandDTO`, `AbortTriggerDTO`) |
+| `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for entry commands (`StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`) |
 | `rbacEnabled` | `boolean` | `false` | Reserved for future use |
 | `trustedKeyIds` | `List<String>` | `[]` | Reserved compatibility surface |
 

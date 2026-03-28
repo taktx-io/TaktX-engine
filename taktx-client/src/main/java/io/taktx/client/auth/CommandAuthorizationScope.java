@@ -10,7 +10,8 @@ package io.taktx.client.auth;
 /** Identifies the outbound command scope for which a JWT is requested. */
 public enum CommandAuthorizationScope {
   START_PROCESS("START"),
-  ABORT_PROCESS_INSTANCE("CANCEL");
+  ABORT_PROCESS_INSTANCE("CANCEL"),
+  SET_VARIABLE("SET_VARIABLE");
   private final String tokenAction;
 
   CommandAuthorizationScope(String tokenAction) {

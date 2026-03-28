@@ -74,8 +74,9 @@ import org.junit.jupiter.api.Test;
  * <p>Two signing paths exist in the engine:
  *
  * <ul>
- *   <li><b>JWT / RS256</b> ({@code X-TaktX-Authorization}) — used by Console, Platform, and
- *       Ingester for {@code StartCommandDTO} and {@code AbortTriggerDTO}.
+   *   <li><b>JWT / RS256</b> ({@code X-TaktX-Authorization}) — used by Console, Platform, and
+ *       Ingester for {@code StartCommandDTO}, {@code AbortTriggerDTO}, and {@code
+ *       SetVariableTriggerDTO}.
  *   <li><b>Ed25519</b> ({@code X-TaktX-Signature}) — used by workers, user-task handlers, and
  *       engine-internal commands (sub-process / call-activity starts). The deserializer verifies
  *       the signature; {@link io.taktx.engine.security.EngineAuthorizationService} only logs and

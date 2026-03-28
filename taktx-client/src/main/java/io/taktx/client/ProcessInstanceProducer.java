@@ -114,14 +114,33 @@ public class ProcessInstanceProducer {
 
   public void setVariable(
       UUID processInstanceId, List<Long> elementInstanceIdPath, VariablesDTO variables) {
+    setVariable(processInstanceId, elementInstanceIdPath, variables, null);
+  }
+
+  /**
+   * Sets variables in a scope, optionally attaching a Platform Service authorization token.
+   *
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
+   *     unauthenticated deployments
+   */
+  public void setVariable(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      VariablesDTO variables,
+      @Nullable String authorizationToken) {
     SetVariableTriggerDTO setVariableTrigger =
         new SetVariableTriggerDTO(processInstanceId, elementInstanceIdPath, variables);
-    processInstanceTriggerEmitter.send(
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             processInstanceId,
-            setVariableTrigger));
+            setVariableTrigger);
+    attachAuthorizationHeader(
+        processInstanceTriggerRecord,
+        authorizationToken,
+        CommandAuthorizationRequest.setVariable(processInstanceId, elementInstanceIdPath));
+    processInstanceTriggerEmitter.send(processInstanceTriggerRecord);
   }
 
   public void abortElementInstance(UUID processInstanceId, List<Long> elementInstanceIdPath) {
