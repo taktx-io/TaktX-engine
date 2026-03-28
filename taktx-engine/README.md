@@ -1,26 +1,57 @@
-# Takt BPMN Engine
+# TaktX Engine
 
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 ![Coverage](../badges/taktx-engine-coverage.svg)
 
-The TaktX Engine is the core BPMN process automation engine with **87% test coverage**, including comprehensive integration tests with Testcontainers.
+The core BPMN 2.0 process execution engine. Built on Quarkus and Apache Kafka Streams, it uses
+RocksDB-backed state stores for durable process state with no external database dependency.
 
-## Building Docker Image
+## Features
+
+- Full BPMN 2.0 execution (service tasks, user tasks, gateways, timers, message events, signals, and more)
+- Kafka Streams topology — horizontally scalable, fault-tolerant, replayable from the Kafka log
+- Ed25519 message signing — cryptographic authentication of every worker interaction
+- RS256 JWT command authorization — token-based, fine-grained command control
+- Multi-tenant and multi-namespace support via topic prefixing
+- Native image support (GraalVM/Mandrel)
+
+## Quick Start
+
+### Docker (recommended)
+
+```bash
+docker run -p 8080:8080 \
+  -e TAKTX_ENGINE_TENANT_ID=acme \
+  -e TAKTX_ENGINE_NAMESPACE=default \
+  -e KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092 \
+  ghcr.io/taktx-io/taktx-engine:latest
+```
+
+### From source
+
+```bash
+# Requires a running Kafka broker
+./gradlew :taktx-engine:quarkusDev
+```
+
+## Building Docker Images
 
 ### Multi-platform Build (Recommended)
 
-Build for both linux/amd64 and linux/arm64 (Apple Silicon):
+Build for both `linux/amd64` and `linux/arm64` (Apple Silicon):
 
 ```bash
 # Using the convenience script
-../scripts/build-docker-multiarch.sh 1.0.0
+../scripts/build-docker-multiarch.sh 0.3.0-beta-1
 
-# Or using docker buildx directly
+# Or using docker buildx directly (macOS / Linux compatible)
+CHANGE_DATE=$(date -v+4y +%Y-%m-%d 2>/dev/null || date -d "+4 years" +%Y-%m-%d)
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg VERSION=1.0.0 \
-  --build-arg CHANGE_DATE=$(date -d "+4 years" +%Y-%m-%d) \
+  --build-arg VERSION=0.3.0-beta-1 \
+  --build-arg CHANGE_DATE=${CHANGE_DATE} \
   -f taktx-engine/Dockerfile.jvm \
-  -t ghcr.io/taktx-io/taktx-engine:1.0.0 \
+  -t ghcr.io/taktx-io/taktx-engine:0.3.0-beta-1 \
   -t ghcr.io/taktx-io/taktx-engine:latest \
   --push \
   .
@@ -28,40 +59,36 @@ docker buildx build \
 
 ### Local Development Build
 
-Build for your current platform only (faster):
-
 ```bash
+CHANGE_DATE=$(date -v+4y +%Y-%m-%d 2>/dev/null || date -d "+4 years" +%Y-%m-%d)
 docker buildx build \
   --platform linux/amd64 \
   --build-arg VERSION=dev \
-  --build-arg CHANGE_DATE=$(date -d "+4 years" +%Y-%m-%d) \
+  --build-arg CHANGE_DATE=${CHANGE_DATE} \
   -f taktx-engine/Dockerfile.jvm \
   -t ghcr.io/taktx-io/taktx-engine:dev \
   --load \
   .
 ```
 
-### Features
+### Build features
 
-- **Multi-stage build**: Optimized layer caching and minimal runtime image
+- **Multi-stage build**: Optimised layer caching and minimal runtime image
 - **BuildKit cache mounts**: Fast rebuilds by caching Gradle dependencies
 - **Multi-platform**: Single command builds for AMD64 and ARM64
-- **Self-contained**: No need for local Java/Gradle installation
 
-
-## Build native executable on mac for mac
-QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" quarkus build --native --no-tests
-## Build native executable on mac for Linux
-QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" quarkus build --native --no-tests -Dquarkus.native.container-build=true
-
-## Running container
+## Native Executable
 
 ```bash
-docker run -d \
-    -e "injectedhost=host.docker.internal" \
-    -e "injectedport=8081" \
-    -e "quarkus.profile=dockerlocal" \
-    -e "namespace=[namespace]" \
-    -p 8081:8080 \
-    -it ghcr.io/qunit/bpmnmeister:1.0.0
+# Build native executable for the current platform (macOS)
+QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" \
+  quarkus build --native --no-tests
+
+# Build native executable for Linux (cross-compile in container)
+QUARKUS_NATIVE_ADDITIONAL_BUILD_ARGS="--initialize-at-run-time=scala.util.Random$" \
+  quarkus build --native --no-tests -Dquarkus.native.container-build=true
 ```
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).

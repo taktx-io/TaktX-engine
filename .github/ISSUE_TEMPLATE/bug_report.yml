@@ -1,0 +1,91 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour in TaktX Engine
+title: "[bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill in as much detail as possible.
+        For **security vulnerabilities**, please use [private reporting](../security/advisories/new) instead.
+
+  - type: input
+    id: taktx-version
+    attributes:
+      label: TaktX Engine Version
+      description: Run `./gradlew properties | grep version` or check the container image tag.
+      placeholder: "e.g. 0.3.0-beta-1"
+    validations:
+      required: true
+
+  - type: input
+    id: java-version
+    attributes:
+      label: Java Version
+      description: Output of `java -version`
+      placeholder: "e.g. OpenJDK 23.0.1 Temurin"
+    validations:
+      required: true
+
+  - type: input
+    id: kafka-version
+    attributes:
+      label: Kafka Version
+      placeholder: "e.g. Apache Kafka 3.7.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g. macOS 15.3, Ubuntu 24.04, Windows 11"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Provide a minimal, complete, and reproducible example.
+        If the issue involves a BPMN process, please attach the `.bpmn` file.
+      placeholder: |
+        1. Configure client with ...
+        2. Deploy process '...'
+        3. Call `client.startProcess(...)` with variables `...`
+        4. Observe error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      description: Include the full stack trace or error output.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, logs, screenshots, or configuration that might help.
+    validations:
+      required: false
+

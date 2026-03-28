@@ -38,14 +38,14 @@ jobs:
       packages: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for Git-based versioning
           token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use the token for authentication
           ref: ${{ github.event.repository.default_branch }}  # Explicitly checkout the default branch
 
       - name: Set up JDK 23
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '23'
           distribution: 'temurin'
@@ -111,8 +111,23 @@ jobs:
           sed -i "s/Version:       .*/Version:       ${{ steps.extract_version.outputs.VERSION }}/g" VERSION.txt
           sed -i "s/Release Date:  .*/Release Date:  $RELEASE_DATE/g" VERSION.txt
           
+          # Update version badge in root README.md
+          # Converts e.g. 0.3.0-beta-1 → 0.3.0--beta--1 (shields.io requires double-dash for literal dash)
+          BADGE_VERSION=$(echo "${{ steps.extract_version.outputs.VERSION }}" | sed 's/-/--/g')
+          sed -i "s|version-[^-]*--[^)]*|version-${BADGE_VERSION}|g" README.md
+          
+          # Update Maven/Gradle install snippets in all module READMEs
+          for README in taktx-client/README.md taktx-client-quarkus/README.md taktx-client-spring/README.md taktx-shared/README.md; do
+            if [ -f "$README" ]; then
+              # Maven <version> tag (indented)
+              sed -i "s|<version>[0-9][^<]*</version>|<version>${{ steps.extract_version.outputs.VERSION }}</version>|g" "$README"
+              # Gradle implementation string
+              sed -i 's|implementation("io\.taktx:\([^:]*\):[^"]*")|implementation("io.taktx:\1:${{ steps.extract_version.outputs.VERSION }}")|g' "$README"
+            fi
+          done
+          
           # Commit and push changes directly to the default branch
-          git add build.gradle.kts */build.gradle.kts gradle/libs.versions.toml VERSION.txt
+          git add build.gradle.kts */build.gradle.kts gradle/libs.versions.toml VERSION.txt README.md taktx-*/README.md
           
           # Only attempt to commit if there are changes
           if git diff --staged --quiet; then
@@ -137,6 +152,7 @@ jobs:
       - name: Generate license change date
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
+          # date -d is GNU/Linux syntax (valid on ubuntu-latest runners)
           CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
           echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
           echo "License change date: $CHANGE_DATE"

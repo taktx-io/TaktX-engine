@@ -1,0 +1,34 @@
+# CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# Owners are automatically requested for review when someone opens a pull request
+# that modifies matching files.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything not matched by a more specific rule
+*                                   @taktx-io/maintainers
+
+# Core engine — highest scrutiny
+taktx-engine/                       @taktx-io/maintainers
+
+# Security-sensitive paths — require maintainer review on every change
+taktx-engine/src/main/java/io/taktx/engine/security/     @taktx-io/maintainers
+taktx-engine/src/main/java/io/taktx/engine/license/      @taktx-io/maintainers
+taktx-shared/src/main/java/io/taktx/security/            @taktx-io/maintainers
+
+# Build & release infrastructure
+build.gradle.kts                    @taktx-io/maintainers
+settings.gradle.kts                 @taktx-io/maintainers
+gradle/libs.versions.toml           @taktx-io/maintainers
+.github/workflows/                  @taktx-io/maintainers
+.github/dependabot.yml              @taktx-io/maintainers
+
+# License & legal
+LICENSE                             @taktx-io/maintainers
+LICENSE.md                          @taktx-io/maintainers
+NOTICE                              @taktx-io/maintainers
+taktx-*/LICENSE                     @taktx-io/maintainers
+
+# Docs
+docs/                               @taktx-io/maintainers
+SECURITY.md                         @taktx-io/maintainers
+

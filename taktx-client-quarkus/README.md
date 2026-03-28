@@ -42,14 +42,14 @@ The Quarkus wrapper does all of that for you.
 <dependency>
   <groupId>io.taktx</groupId>
   <artifactId>taktx-client-quarkus</artifactId>
-  <version>0.0.9-alpha-3-SNAPSHOT</version>
+  <version>0.3.0-beta-1</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client-quarkus:0.0.9-alpha-3-SNAPSHOT")
+implementation("io.taktx:taktx-client-quarkus:0.3.0-beta-1")
 ```
 
 ---

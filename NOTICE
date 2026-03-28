@@ -2,9 +2,11 @@
 
 ## TaktX Engine
 
-Copyright 2025 Eric Hendriks
+Copyright 2025-2026 Eric Hendriks
 
-This product includes software developed by Eric Hendriks (https://taktx.io)
+This product includes software developed by Eric Hendriks (https://taktx.io).
+This NOTICE covers all modules in this repository: taktx-engine, taktx-client,
+taktx-client-quarkus, taktx-client-spring, and taktx-shared.
 
 ---
 
