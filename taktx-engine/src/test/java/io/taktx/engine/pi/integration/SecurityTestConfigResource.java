@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.pi.integration;
 
@@ -63,17 +63,15 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
 
   /**
    * Called after Quarkus has started. Uses the Arc CDI container to look up the {@link
-   * LicenseManager} bean and grant both security features, so that {@link
-   * io.taktx.engine.license.DefaultLicenseManager} enforces authorization and signing without
-   * requiring a real signed License3j file in tests.
+   * LicenseManager} bean and push a test license so partition-budget enforcement uses unlimited
+   * partitions in tests.
    */
   @Override
   public void inject(TestInjector testInjector) {
     try (var handle = Arc.container().instance(LicenseManager.class)) {
       LicenseManager licenseManager = handle.get();
       if (licenseManager != null) {
-        licenseManager.updateFromLicensePush(
-            "TEST", null, /* eventSigning= */ true, /* commandAuthorization= */ true);
+        licenseManager.updateFromLicensePush("TEST", null);
       }
     }
 

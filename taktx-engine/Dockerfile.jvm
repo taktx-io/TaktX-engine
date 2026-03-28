@@ -37,7 +37,6 @@ FROM amazoncorretto:23 AS builder
 RUN yum install -y findutils java-21-amazon-corretto-devel && yum clean all
 
 ARG VERSION=dev
-ARG CHANGE_DATE=unknown
 
 WORKDIR /workspace
 
@@ -57,9 +56,6 @@ COPY taktx-client/ taktx-client/
 COPY taktx-client-quarkus/ taktx-client-quarkus/
 COPY taktx-engine/ taktx-engine/
 
-# Inject license change date into source
-RUN mkdir -p taktx-engine/src/main/resources/META-INF/ && \
-    echo "${CHANGE_DATE}" > taktx-engine/src/main/resources/META-INF/LICENSE_CHANGE_DATE.txt
 
 # Build the application (regular JAR for Docker image)
 RUN --mount=type=cache,target=/root/.gradle/caches \
@@ -80,13 +76,11 @@ FROM amazoncorretto:23
 
 # Define build arguments for metadata
 ARG VERSION=dev
-ARG CHANGE_DATE=unknown
 
 # Set labels for better metadata
 LABEL org.opencontainers.image.version=${VERSION}
-LABEL com.taktx.license.change-date=${CHANGE_DATE}
 LABEL org.opencontainers.image.description="TaktX Engine - A high-performance BPMN engine"
-LABEL org.opencontainers.image.licenses="TaktX Business Source License 1.0"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/taktx-io/TaktX-engine"
 
 # Set the working directory in the container
@@ -99,10 +93,6 @@ COPY --from=builder /workspace/taktx-engine/build/quarkus-app/ /app/
 COPY LICENSE.md /app/LICENSE.md
 COPY NOTICE /app/NOTICE
 
-# Add license change date file
-RUN echo "${CHANGE_DATE}" > /app/LICENSE_CHANGE_DATE.txt
-
-# Expose the port the application runs on
 EXPOSE 8080
 
 

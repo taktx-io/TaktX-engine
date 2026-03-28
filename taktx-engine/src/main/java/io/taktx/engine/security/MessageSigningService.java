@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.security;
 
@@ -15,7 +15,6 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.license.LicenseManager;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.SigningException;
 import io.taktx.security.SigningIdentity;
@@ -48,7 +47,6 @@ public class MessageSigningService {
 
   private final TaktConfiguration config;
   private final GlobalConfigStore globalConfigStore;
-  private final LicenseManager licenseManager;
   private final SigningIdentitySource signingIdentitySource;
   private final ScheduledExecutorService keyPublicationExecutor;
 
@@ -67,21 +65,18 @@ public class MessageSigningService {
   public MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      LicenseManager licenseManager,
       SigningIdentitySource signingIdentitySource) {
-    this(config, globalConfigStore, licenseManager, signingIdentitySource, true);
+    this(config, globalConfigStore, signingIdentitySource, true);
   }
 
   /** Test constructor with a pre-built identity source and publication disabled. */
   MessageSigningService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
-      LicenseManager licenseManager,
       SigningIdentitySource signingIdentitySource,
       boolean startPublicationScheduler) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
-    this.licenseManager = licenseManager;
     this.signingIdentitySource = signingIdentitySource;
     this.keyPublicationExecutor =
         startPublicationScheduler
@@ -168,9 +163,6 @@ public class MessageSigningService {
    * via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
-    if (licenseManager != null && !licenseManager.isEventSigningAllowed()) {
-      return null;
-    }
     if (!effectiveConfig().isSigningEnabled()) {
       return null;
     }

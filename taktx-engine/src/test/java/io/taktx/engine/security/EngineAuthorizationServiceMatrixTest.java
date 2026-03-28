@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.security;
 
@@ -27,8 +27,6 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.license.LicenseManager;
-import io.taktx.engine.license.LicenseState;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.OpenKeyTrustPolicy;
@@ -154,61 +152,20 @@ class EngineAuthorizationServiceMatrixTest {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  /** Builds a service with explicit config and license flags. */
-  private EngineAuthorizationService service(
-      boolean cEra, boolean cSe, boolean lEra, boolean lEsa) {
+  /** Builds a service with explicit config flags. */
+  private EngineAuthorizationService service(boolean cEra, boolean cSe) {
     globalConfigStore.update(
         GlobalConfigurationDTO.builder()
             .engineRequiresAuthorization(cEra)
             .signingEnabled(cSe)
             .build());
-    LicenseManager license = licenseMock(lEra, lEsa);
     return new EngineAuthorizationService(
         taktConfig,
         globalConfigStore,
         publicKeyProvider,
         nonceStore,
         kafkaStreams,
-        license,
         new OpenKeyTrustPolicy());
-  }
-
-  private static LicenseManager licenseMock(boolean era, boolean esa) {
-    return new LicenseManager() {
-      @Override
-      public LicenseState getLicenseState() {
-        return LicenseState.VALID;
-      }
-
-      @Override
-      public String getLicenseInfo() {
-        return "matrix-test";
-      }
-
-      @Override
-      public int getPartitionBudget() {
-        return Integer.MAX_VALUE;
-      }
-
-      @Override
-      public boolean isEventSigningAllowed() {
-        return esa;
-      }
-
-      @Override
-      public boolean isEngineRequiresAuthorization() {
-        return era;
-      }
-
-      @Override
-      public void updateFromLicensePush(
-          String licenseType,
-          Integer partitionBudget,
-          boolean eventSigning,
-          boolean commandAuthorization) {
-        // No-op: test stub — license state is fixed at construction time
-      }
-    };
   }
 
   private ProcessInstanceTriggerEnvelope nonEntryEnvelope(boolean sigVerified, String keyId) {
@@ -278,7 +235,7 @@ class EngineAuthorizationServiceMatrixTest {
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row1_bothDisabled_nonEntry_noSig_returnsNull() {
-    EngineAuthorizationService svc = service(false, false, true, true);
+    EngineAuthorizationService svc = service(false, false);
     assertThat(svc.authorize(noHeaders(), nonEntryEnvelope(false, null))).isNull();
   }
 
@@ -287,7 +244,7 @@ class EngineAuthorizationServiceMatrixTest {
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row2_bothDisabled_nonEntry_sigPresent_sigIgnored_returnsNull() {
-    EngineAuthorizationService svc = service(false, false, true, true);
+    EngineAuthorizationService svc = service(false, false);
     assertThat(svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID)))
         .isNull();
   }
@@ -297,7 +254,7 @@ class EngineAuthorizationServiceMatrixTest {
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row3_bothDisabled_entry_noSig_returnsNull() {
-    EngineAuthorizationService svc = service(false, false, true, true);
+    EngineAuthorizationService svc = service(false, false);
     assertThat(
             svc.authorize(
                 noHeaders(), new ProcessInstanceTriggerEnvelope(startCommand(), false, null)))
@@ -305,48 +262,24 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 4 — C-ERA=F, C-SE=T, L-ESA=F → signing blocked by license
-  //         non-entry, no sig → null (signing disabled by license)
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row4_signingEnabled_licenseBlocksSigning_nonEntry_noSig_returnsNull() {
-    EngineAuthorizationService svc = service(false, true, true, false /* L-ESA=false */);
-    assertThat(svc.authorize(noHeaders(), nonEntryEnvelope(false, null))).isNull();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 5 — C-ERA=F, C-SE=T, L-ESA=F → signing blocked by license
-  //         non-entry, sig present → null (signing disabled by license, sig ignored)
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row5_signingEnabled_licenseBlocksSigning_nonEntry_sigPresent_returnsNull() {
-    EngineAuthorizationService svc = service(false, true, true, false /* L-ESA=false */);
-    // Even though sig is present it is not verified when signing is blocked by license
-    assertThat(svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID)))
-        .isNull();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 6 — C-ERA=F, C-SE=T, L-ESA=T → signing is independently active
+  // Row 6 — C-ERA=F, C-SE=T → signing is independently active
   //         non-entry, NO sig → THROW (missing required signature)
-  // BUG that was fixed: previously returned null because C-ERA=false caused early exit
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row6_signingOnly_nonEntry_noSig_throws_missingSignatureHeader() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 7 — C-ERA=F, C-SE=T, L-ESA=T → signing is independently active
+  // Row 7 — C-ERA=F, C-SE=T → signing is independently active
   //         non-entry, sig present → verify Ed25519 and return trust metadata
-  // BUG that was fixed: previously returned null because C-ERA=false caused early exit
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row7_signingOnly_nonEntry_sigPresent_verifies_ed25519() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     CommandTrustMetadataDTO result =
         svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result).isNotNull();
@@ -359,26 +292,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 8 — C-ERA=F, C-SE=T, L-ESA=F → signing blocked by license
-  //         entry, no headers → null
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row8_signingLicenseBlocked_entry_noHeaders_returnsNull() {
-    EngineAuthorizationService svc = service(false, true, true, false /* L-ESA=false */);
-    assertThat(
-            svc.authorize(
-                noHeaders(), new ProcessInstanceTriggerEnvelope(startCommand(), false, null)))
-        .isNull();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 8a — C-ERA=F, C-SE=T, L-ESA=T → signing active
+  // Row 8a — C-ERA=F, C-SE=T → signing active
   //          entry, NO sig → throw (signing gate applies to entry commands too)
-  //          External clients must sign their start commands when signingEnabled=true.
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row8a_signingOnly_entry_noSig_throws() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -388,13 +307,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 8b — C-ERA=F, C-SE=T, L-ESA=T → signing active
+  // Row 8b — C-ERA=F, C-SE=T → signing active
   //          entry, ENGINE-role sig present → verify (ENGINE-role path)
-  //          NEW: engine-internal entry commands are verified even without C-ERA
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row8b_signingOnly_entry_engineSig_verifiedViaEngineRole() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(ENGINE_KEY_ID),
@@ -408,13 +326,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 8c — C-ERA=F, C-SE=T, L-ESA=T → signing active, auth gate off
+  // Row 8c — C-ERA=F, C-SE=T → signing active, auth gate off
   //          entry, CLIENT-role sig → verify / SIGNATURE_VERIFIED
-  //          When auth is off, any valid Ed25519 key (including CLIENT) satisfies the signing gate.
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row8c_signingOnly_entry_workerSig_accepted_signatureVerified() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(WORKER_KEY_ID),
@@ -427,22 +344,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 9 — C-ERA=T, C-SE=F, L-ERA=F → auth blocked by license
-  //         non-entry, no sig → null (warn + pass)
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row9_authEnabled_licenseBlocksAuth_nonEntry_noSig_returnsNull() {
-    EngineAuthorizationService svc = service(true, false, false /* L-ERA=false */, true);
-    assertThat(svc.authorize(noHeaders(), nonEntryEnvelope(false, null))).isNull();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 10 — C-ERA=T, C-SE=F, L-ERA=T → auth active, signing off
+  // Row 10 — C-ERA=T, C-SE=F → auth active, signing off
   //          non-entry, no sig → return embedded trust metadata
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row10_authOnly_nonEntry_noSig_returnsCurrentTrustMetadata() {
-    EngineAuthorizationService svc = service(true, false, true, true);
+    EngineAuthorizationService svc = service(true, false);
 
     CommandTrustMetadataDTO embedded =
         CommandTrustMetadataDTO.builder()
@@ -461,12 +368,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 11 — C-ERA=T, C-SE=F, L-ERA=T → auth active, signing off
+  // Row 11 — C-ERA=T, C-SE=F → auth active, signing off
   //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row11_authOnly_nonEntry_sigPresent_verifiesEd25519() {
-    EngineAuthorizationService svc = service(true, false, true, false /* L-ESA doesn't matter */);
+    EngineAuthorizationService svc = service(true, false);
     CommandTrustMetadataDTO result =
         svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -476,24 +383,24 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 12 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T → both active
+  // Row 12 — C-ERA=T, C-SE=T → both active
   //          non-entry, no sig → throw (missing required sig)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row12_bothActive_nonEntry_noSig_throws() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 13 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T → both active
+  // Row 13 — C-ERA=T, C-SE=T → both active
   //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row13_bothActive_nonEntry_sigPresent_verifiesEd25519() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
         svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -503,24 +410,24 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 14 — C-ERA=T, C-SE=T, L-ERA=F, L-ESA=T → auth blocked by license, signing still active
-  //          non-entry, no sig → throw (signing enforced by C-SE + L-ESA)
+  // Row 14 — C-ERA=T, C-SE=T → both active
+  //          non-entry, no sig → throw (signing enforced)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row14_authLicenseBlocked_signingActive_nonEntry_noSig_throws() {
-    EngineAuthorizationService svc = service(true, true, false /* L-ERA=false */, true);
+  void row14_bothActive_nonEntry_noSig_throws() {
+    EngineAuthorizationService svc = service(true, true);
     assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 15 — C-ERA=T, C-SE=T, L-ERA=F, L-ESA=T → auth blocked by license, signing still active
-  //          non-entry, sig present → verify Ed25519 (signing gate handles it)
+  // Row 15 — C-ERA=T, C-SE=T → both active
+  //          non-entry, sig present → verify Ed25519
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row15_authLicenseBlocked_signingActive_nonEntry_sigPresent_verifiesEd25519() {
-    EngineAuthorizationService svc = service(true, true, false /* L-ERA=false */, true);
+  void row15_bothActive_nonEntry_sigPresent_verifiesEd25519() {
+    EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
         svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -530,49 +437,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 16 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=F → signing blocked by license, auth active
-  //          non-entry, no sig → auth active, signing off → return current trust metadata
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row16_signingLicenseBlocked_authActive_nonEntry_noSig_returnsCurrentTrustMetadata() {
-    EngineAuthorizationService svc = service(true, true, true, false /* L-ESA=false */);
-
-    CommandTrustMetadataDTO embedded =
-        CommandTrustMetadataDTO.builder()
-            .authMethod(CommandAuthMethod.JWT)
-            .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
-            .trusted(true)
-            .userId("user-x")
-            .issuer("taktx-platform")
-            .build();
-    SetVariableTriggerDTO trigger = setVariableTrigger();
-    trigger.setCurrentTrustMetadata(embedded);
-
-    CommandTrustMetadataDTO result =
-        svc.authorize(noHeaders(), new ProcessInstanceTriggerEnvelope(trigger, false, null));
-    assertThat(result).isEqualTo(embedded);
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 17 — C-ERA=T, C-SE=F, L-ERA=F → entry auth blocked by license
-  //          entry, no headers → null (warn + accept)
-  // ══════════════════════════════════════════════════════════════════════════
-  @Test
-  void row17_entryAuth_licenseBlocksAuth_entry_noHeaders_returnsNull() {
-    EngineAuthorizationService svc = service(true, false, false /* L-ERA=false */, true);
-    assertThat(
-            svc.authorize(
-                noHeaders(), new ProcessInstanceTriggerEnvelope(startCommand(), false, null)))
-        .isNull();
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Row 18 — C-ERA=T, C-SE=F, L-ERA=T → auth active
+  // Row 18 — C-ERA=T, C-SE=F → auth active
   //          entry, no headers → throw (neither JWT nor ENGINE-sig present)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row18_authActive_entry_noHeaders_throws_missingAuthOrSig() {
-    EngineAuthorizationService svc = service(true, false, true, true);
+    EngineAuthorizationService svc = service(true, false);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -582,12 +452,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 19 — C-ERA=T, L-ERA=T → auth active
+  // Row 19 — C-ERA=T → auth active
   //          entry, ENGINE-role Ed25519 sig → verify and accept
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row19_authActive_entry_engineSig_accepted() {
-    EngineAuthorizationService svc = service(true, false, true, true);
+    EngineAuthorizationService svc = service(true, false);
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(ENGINE_KEY_ID),
@@ -600,12 +470,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Row 20 — C-ERA=T, C-SE=F, L-ERA=T → auth active, signing off
+  // Row 20 — C-ERA=T, C-SE=F → auth active, signing off
   //          entry, CLIENT-role sig, no JWT → throw (CLIENT satisfies signing but not auth gate)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void row20_authActive_entry_workerSig_rejected_jwtRequired() {
-    EngineAuthorizationService svc = service(true, false, true, true);
+    EngineAuthorizationService svc = service(true, false);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -620,8 +490,7 @@ class EngineAuthorizationServiceMatrixTest {
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void abort_signingOnly_entry_noSig_throws() {
-    // signingEnabled=true requires Ed25519 on entry commands; no sig → throw
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -632,7 +501,7 @@ class EngineAuthorizationServiceMatrixTest {
 
   @Test
   void abort_authActive_entry_noHeaders_throws() {
-    EngineAuthorizationService svc = service(true, false, true, true);
+    EngineAuthorizationService svc = service(true, false);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -645,11 +514,11 @@ class EngineAuthorizationServiceMatrixTest {
   // Rows 21-24: AND logic — both auth and signing active for entry commands
   // ══════════════════════════════════════════════════════════════════════════
 
-  // Row 21 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T
+  // Row 21 — C-ERA=T, C-SE=T
   //          entry, JWT present, sig ABSENT → throw (signing gate: sig required)
   @Test
   void row21_bothActive_entry_jwtOnly_throws_missingSignature() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     String jwt = buildJwt("START", "my-proc");
     assertThatThrownBy(
             () ->
@@ -660,11 +529,11 @@ class EngineAuthorizationServiceMatrixTest {
         .hasMessageContaining("X-TaktX-Signature");
   }
 
-  // Row 22 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T
+  // Row 22 — C-ERA=T, C-SE=T
   //          entry, JWT + CLIENT sig → BOTH verified; JWT_AND_ED25519 with signer info
   @Test
   void row22_bothActive_entry_jwtAndClientSig_bothVerified_combinedMetadata() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     String jwt = buildJwt("START", "my-proc");
     CommandTrustMetadataDTO result =
         svc.authorize(
@@ -676,16 +545,15 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getUserId()).isEqualTo("user-matrix");
     assertThat(result.getIssuer()).isEqualTo(ISSUER);
-    // Ed25519 signer info is also present
     assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
     assertThat(result.getSignerOwner()).isEqualTo("billing-worker");
   }
 
-  // Row 23 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T
+  // Row 23 — C-ERA=T, C-SE=T
   //          entry, ENGINE sig only → ENGINE_SIGNED (satisfies BOTH auth and signing gates)
   @Test
   void row23_bothActive_entry_engineSigOnly_satisfiesBothGates_engineSigned() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(ENGINE_KEY_ID),
@@ -697,11 +565,11 @@ class EngineAuthorizationServiceMatrixTest {
     assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
   }
 
-  // Row 24 — C-ERA=T, C-SE=T, L-ERA=T, L-ESA=T
+  // Row 24 — C-ERA=T, C-SE=T
   //          entry, CLIENT sig only → throw (satisfies signing gate but not auth gate; JWT missing)
   @Test
   void row24_bothActive_entry_clientSigOnly_throws_jwtRequired() {
-    EngineAuthorizationService svc = service(true, true, true, true);
+    EngineAuthorizationService svc = service(true, true);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -727,7 +595,7 @@ class EngineAuthorizationServiceMatrixTest {
                 .role(KeyRole.CLIENT)
                 .build());
 
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(
             () ->
                 svc.authorize(
@@ -742,7 +610,7 @@ class EngineAuthorizationServiceMatrixTest {
   // ══════════════════════════════════════════════════════════════════════════
   @Test
   void signatureError_nonEntry_signingActive_throws_signatureError() {
-    EngineAuthorizationService svc = service(false, true, true, true);
+    EngineAuthorizationService svc = service(false, true);
     assertThatThrownBy(
             () ->
                 svc.authorize(

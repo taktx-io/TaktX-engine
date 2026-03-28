@@ -1,8 +1,8 @@
-This repository contains multiple components licensed under different terms.
+All components in this repository are licensed under the Apache License, Version 2.0.
 
-- The TaktX Engine (located in /engine) is licensed under the TaktX Business Source License 1.0.
-- Supporting libraries and utilities (located in /libs and other directories) are licensed under the Apache License 2.0.
+- The TaktX Engine (located in /taktx-engine) is licensed under the Apache License 2.0.
+- Client SDKs and utilities (located in /taktx-client, /taktx-client-quarkus, /taktx-client-spring, /taktx-shared) are licensed under the Apache License 2.0.
 
-Each component directory contains its own LICENSE file that governs the use of the code in that directory.
+Each component directory contains its own LICENSE file. All LICENSE files contain the full Apache License 2.0 text.
 
-If you are unsure which license applies, please consult the LICENSE file in the relevant subdirectory.
+A full copy of the Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0

@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.security;
 
@@ -21,8 +21,6 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.license.LicenseManager;
-import io.taktx.engine.license.LicenseState;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
@@ -73,7 +71,6 @@ public class EngineAuthorizationService {
   private final NonceStore nonceStore;
   private final AuthorizationTokenValidator validator;
   private final KafkaStreams kafkaStreams;
-  private final LicenseManager licenseManager;
   private final KeyTrustPolicy keyTrustPolicy;
 
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
@@ -85,18 +82,16 @@ public class EngineAuthorizationService {
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
       KafkaStreams kafkaStreams,
-      LicenseManager licenseManager,
       KeyTrustPolicy keyTrustPolicy) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
     this.nonceStore = nonceStore;
     this.kafkaStreams = kafkaStreams;
-    this.licenseManager = licenseManager;
     this.keyTrustPolicy = keyTrustPolicy;
     this.validator = new AuthorizationTokenValidator(publicKeyProvider);
   }
 
-  /** Test constructor — no CDI, license check always permits authorization. */
+  /** Test constructor — no CDI. */
   EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
@@ -109,43 +104,7 @@ public class EngineAuthorizationService {
         publicKeyProvider,
         nonceStore,
         kafkaStreams,
-        new AlwaysAllowLicenseManager(),
         new OpenKeyTrustPolicy());
-  }
-
-  /** Minimal LicenseManager used only by the no-CDI test constructor above. */
-  private static final class AlwaysAllowLicenseManager implements LicenseManager {
-    @Override
-    public LicenseState getLicenseState() {
-      return LicenseState.VALID;
-    }
-
-    @Override
-    public String getLicenseInfo() {
-      return "test";
-    }
-
-    @Override
-    public int getPartitionBudget() {
-      return Integer.MAX_VALUE;
-    }
-
-    @Override
-    public boolean isEventSigningAllowed() {
-      return true;
-    }
-
-    @Override
-    public boolean isEngineRequiresAuthorization() {
-      return true;
-    }
-
-    @Override
-    public void updateFromLicensePush(
-        String licenseType,
-        Integer partitionBudget,
-        boolean eventSigning,
-        boolean commandAuthorization) {}
   }
 
   @PostConstruct
@@ -178,13 +137,12 @@ public class EngineAuthorizationService {
    * <p>Two independent security gates are evaluated and both must pass when both are active:
    *
    * <ul>
-   *   <li><b>Authorization gate</b> ({@code engineRequiresAuthorization} config + license): applies
-   *       to entry commands; satisfied by a valid JWT <em>or</em> an ENGINE-role Ed25519 key.
-   *       ENGINE-role keys implicitly carry authorization because only the engine itself generates
-   *       them (e.g. sub-process / call-activity triggers).
-   *   <li><b>Signing gate</b> ({@code signingEnabled} config + {@code isEventSigningAllowed}
-   *       license): applies to <em>all</em> commands including entry; satisfied by any valid
-   *       Ed25519 signature (CLIENT or ENGINE role).
+   *   <li><b>Authorization gate</b> ({@code engineRequiresAuthorization} config): applies to entry
+   *       commands; satisfied by a valid JWT <em>or</em> an ENGINE-role Ed25519 key. ENGINE-role
+   *       keys implicitly carry authorization because only the engine itself generates them (e.g.
+   *       sub-process / call-activity triggers).
+   *   <li><b>Signing gate</b> ({@code signingEnabled} config): applies to <em>all</em> commands
+   *       including entry; satisfied by any valid Ed25519 signature (CLIENT or ENGINE role).
    * </ul>
    *
    * <p>When both gates are active an external entry command must carry <em>both</em> a JWT
@@ -206,20 +164,7 @@ public class EngineAuthorizationService {
     // ───────────────────────────────────────────────
     if (isEntryCommand) {
       boolean authActive = cfg.isEngineRequiresAuthorization();
-      if (authActive && !licenseManager.isEngineRequiresAuthorization()) {
-        log.warn(
-            "engineRequiresAuthorization=true in runtime config but the active license does not"
-                + " permit command authorization — command accepted without validation");
-        authActive = false;
-      }
-
       boolean signingActive = cfg.isSigningEnabled();
-      if (signingActive && !licenseManager.isEventSigningAllowed()) {
-        log.warn(
-            "signingEnabled=true in runtime config but the active license does not permit event"
-                + " signing — command accepted without signature verification");
-        signingActive = false;
-      }
 
       if (!authActive && !signingActive) {
         return null;
@@ -280,23 +225,8 @@ public class EngineAuthorizationService {
 
     // ── Gate 2: Non-entry command Ed25519 signing
     // ─────────────────────────────────────────────────
-    // Auth active when both config and license agree.
     boolean authActive = cfg.isEngineRequiresAuthorization();
-    if (authActive && !licenseManager.isEngineRequiresAuthorization()) {
-      log.warn(
-          "engineRequiresAuthorization=true in runtime config but the active license does not"
-              + " permit command authorization — command accepted without validation");
-      authActive = false;
-    }
-
-    // Signing active when both config and license agree (independent of auth gate).
     boolean signingActive = cfg.isSigningEnabled();
-    if (signingActive && !licenseManager.isEventSigningAllowed()) {
-      log.warn(
-          "signingEnabled=true in runtime config but the active license does not permit event"
-              + " signing — command accepted without signature verification");
-      signingActive = false;
-    }
 
     if (sigHeader != null && sigHeader.value() != null) {
       if (authActive || signingActive) {

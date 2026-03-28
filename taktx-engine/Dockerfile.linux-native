@@ -3,13 +3,11 @@ FROM ibm-semeru-runtimes:open-25-jre
 
 # Define build arguments
 ARG VERSION=dev
-ARG CHANGE_DATE=unknown
 
 # Set labels for better metadata
 LABEL org.opencontainers.image.version=${VERSION}
-LABEL com.taktx.license.change-date=${CHANGE_DATE}
 LABEL org.opencontainers.image.description="TaktX Engine - A high-performance BPMN engine"
-LABEL org.opencontainers.image.licenses="TaktX Business Source License 1.0"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Set the working directory in the container
 WORKDIR /app

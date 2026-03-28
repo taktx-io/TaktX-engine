@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
 package io.taktx.engine.license;
@@ -348,18 +348,10 @@ public class DefaultLicenseManager implements LicenseManager {
   private static final class PushedLicense {
     final String licenseType;
     final Integer partitionBudget;
-    final boolean eventSigning;
-    final boolean engineRequiresAuthorization;
 
-    PushedLicense(
-        String licenseType,
-        Integer partitionBudget,
-        boolean eventSigning,
-        boolean engineRequiresAuthorization) {
+    PushedLicense(String licenseType, Integer partitionBudget) {
       this.licenseType = licenseType;
       this.partitionBudget = partitionBudget;
-      this.eventSigning = eventSigning;
-      this.engineRequiresAuthorization = engineRequiresAuthorization;
     }
   }
 
@@ -385,12 +377,18 @@ public class DefaultLicenseManager implements LicenseManager {
     File licenseFile = licenseFilePath.toFile();
     log.info("Checking for license file at " + licenseFile.getAbsolutePath());
     if (!licenseFile.exists()) {
-      // Exit the application
       licenseState = LicenseState.NOT_FOUND;
       return;
-    } else {
-      log.info("License file found at " + licenseFile.getAbsolutePath());
     }
+    if (licenseFile.isDirectory()) {
+      log.warn(
+          "License path '{}' resolves to a directory, not a file. "
+              + "A Docker volume may be mounted there. Treating as NOT_FOUND.",
+          licenseFile.getAbsolutePath());
+      licenseState = LicenseState.NOT_FOUND;
+      return;
+    }
+    log.info("License file found at " + licenseFile.getAbsolutePath());
 
     try (var reader = new LicenseReader(licenseFile)) {
       license = reader.read(IOFormat.STRING);
@@ -446,34 +444,8 @@ public class DefaultLicenseManager implements LicenseManager {
   }
 
   @Override
-  public boolean isEventSigningAllowed() {
-    PushedLicense pushed = pushedLicense.get();
-    if (pushed != null) {
-      return pushed.eventSigning;
-    }
-    // No pushed license — fall back to false (signing is an enterprise feature).
-    return false;
-  }
-
-  @Override
-  public boolean isEngineRequiresAuthorization() {
-    PushedLicense pushed = pushedLicense.get();
-    if (pushed != null) {
-      return pushed.engineRequiresAuthorization;
-    }
-    // No pushed license — fall back to false (command authorization is an enterprise feature).
-    return false;
-  }
-
-  @Override
-  public void updateFromLicensePush(
-      String licenseType,
-      Integer partitionBudget,
-      boolean eventSigning,
-      boolean engineRequiresAuthorization) {
-    DefaultLicenseManager.PushedLicense updated =
-        new PushedLicense(licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
-    pushedLicense.set(updated);
+  public void updateFromLicensePush(String licenseType, Integer partitionBudget) {
+    pushedLicense.set(new PushedLicense(licenseType, partitionBudget));
     log.info(
         "License updated from configuration topic: type={} maxPartitions={}",
         licenseType,
@@ -518,19 +490,13 @@ public class DefaultLicenseManager implements LicenseManager {
         }
       }
 
-      // Extract fields — all optional; null means unlimited / not present
-      String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
-      // Accept both the canonical feature name and the legacy file-license alias.
+      // Extract fields — only partition budget is enforced as a license gate.
       // The license tool uses 0 to mean "unlimited" — map that to null.
+      String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
       Integer rawBudget = getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
       Integer partitionBudget = (rawBudget != null && rawBudget == 0) ? null : rawBudget;
-      boolean eventSigning =
-          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_EVENT_SIGNING);
-      boolean engineRequiresAuthorization =
-          getFeatureBoolean(pushed, LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION);
 
-      updateFromLicensePush(
-          licenseType, partitionBudget, eventSigning, engineRequiresAuthorization);
+      updateFromLicensePush(licenseType, partitionBudget);
     } catch (IOException e) {
       log.warn("Failed to read pushed license text: {}", e.getMessage());
     } catch (Exception e) {
@@ -554,16 +520,6 @@ public class DefaultLicenseManager implements LicenseManager {
       } catch (Exception _) {
         return null;
       }
-    }
-  }
-
-  static boolean getFeatureBoolean(License lic, String... names) {
-    Feature f = getFirstFeature(lic, names);
-    if (f == null) return false;
-    try {
-      return Boolean.parseBoolean(f.getString().trim());
-    } catch (Exception _) {
-      return false;
     }
   }
 

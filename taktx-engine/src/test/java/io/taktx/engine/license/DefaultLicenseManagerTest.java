@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.license;
 
@@ -13,10 +13,6 @@ import static org.mockito.Mockito.when;
 
 import io.taktx.engine.config.TaktConfiguration;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import javax0.license3j.Feature;
-import javax0.license3j.License;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +22,8 @@ import org.junit.jupiter.api.Test;
  * <p>The License3j signature verification path ({@link DefaultLicenseManager#parsePushedLicense})
  * is exercised in integration only (requires a real signed license binary). These unit tests cover
  * the in-memory state machine via {@link DefaultLicenseManager#updateFromLicensePush}.
+ *
+ * <p>Signing and authorization are no longer license-gated; only the partition budget is enforced.
  */
 class DefaultLicenseManagerTest {
 
@@ -41,89 +39,33 @@ class DefaultLicenseManagerTest {
   }
 
   @Test
-  void beforePush_eventSigningNotAllowed() {
-    assertThat(manager.isEventSigningAllowed()).isFalse();
-  }
-
-  @Test
-  void beforePush_commandAuthorizationNotAllowed() {
-    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
-  }
-
-  @Test
   void beforePush_defaultPartitionBudgetIsFreeTier() {
     assertThat(manager.getPartitionBudget()).isEqualTo(60);
   }
 
   @Test
   void afterPush_partitionBudgetReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
+    manager.updateFromLicensePush("ENTERPRISE", 10);
     assertThat(manager.getPartitionBudget()).isEqualTo(10);
   }
 
   @Test
-  void afterPush_eventSigningReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
-    assertThat(manager.isEventSigningAllowed()).isTrue();
-  }
-
-  @Test
-  void afterPush_commandAuthorizationReflectsPushedValue() {
-    manager.updateFromLicensePush("ENTERPRISE", 10, true, true);
-    assertThat(manager.isEngineRequiresAuthorization()).isTrue();
-  }
-
-  @Test
-  void afterPush_eventSigningFalseWhenLicenseDoesNotPermit() {
-    manager.updateFromLicensePush("COMMUNITY", 60, false, false);
-    assertThat(manager.isEventSigningAllowed()).isFalse();
-  }
-
-  @Test
-  void afterPush_commandAuthorizationFalseWhenLicenseDoesNotPermit() {
-    manager.updateFromLicensePush("COMMUNITY", 60, false, false);
-    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
-  }
-
-  @Test
-  void afterPush_unlimitedPartitions_returnsFreeTierDefault() {
-    // null maxKafkaPartitions means unlimited — fall back to file-based/default value (60)
-    manager.updateFromLicensePush("ENTERPRISE", null, true, true);
+  void afterPush_unlimitedPartitions_returnsSentinelZero() {
+    // null maxKafkaPartitions means unlimited — pushedLicense is set but partitionBudget is null
+    manager.updateFromLicensePush("ENTERPRISE", null);
     assertThat(manager.getPartitionBudget()).isZero();
   }
 
   @Test
   void secondPush_overridesFirstPush() {
-    manager.updateFromLicensePush("STANDARD", 180, false, false);
-    manager.updateFromLicensePush("ENTERPRISE", 20, true, true);
-
+    manager.updateFromLicensePush("STANDARD", 180);
+    manager.updateFromLicensePush("ENTERPRISE", 20);
     assertThat(manager.getPartitionBudget()).isEqualTo(20);
-    assertThat(manager.isEventSigningAllowed()).isTrue();
-    assertThat(manager.isEngineRequiresAuthorization()).isTrue();
   }
 
   @Test
-  void signingAndAuthorizationCanBeGrantedIndependently() {
-    manager.updateFromLicensePush("STANDARD", 180, true, false);
-    assertThat(manager.isEventSigningAllowed()).isTrue();
-    assertThat(manager.isEngineRequiresAuthorization()).isFalse();
-  }
-
-  @Test
-  void featureBoolean_acceptsEngineRequiresAuthorizationAlias() {
-    License license = mock(License.class);
-    Feature feature = mock(Feature.class);
-    Map<String, Feature> features = new HashMap<>();
-    features.put(LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION, feature);
-
-    when(license.getFeatures()).thenReturn(features);
-    when(feature.getString()).thenReturn(" true ");
-
-    assertThat(
-            DefaultLicenseManager.getFeatureBoolean(
-                license,
-                LicenseFeatures.LICENSE_FEATURE_COMMAND_AUTHORIZATION,
-                LicenseFeatures.LICENSE_FEATURE_ENGINE_REQUIRES_AUTHORIZATION))
-        .isTrue();
+  void getPartitionBudget_returnsFileBasedDefaultWhenNoPushAndNoLicense() {
+    // No push, no license file → default free-tier budget of 60
+    assertThat(manager.getPartitionBudget()).isEqualTo(60);
   }
 }

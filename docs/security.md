@@ -104,9 +104,8 @@ The engine detects the change within one poll interval and publishes the new pub
 
 The engine only signs a record when **all** of the following are true:
 
-1. The active license allows event signing.
-2. `GlobalConfigurationDTO.signingEnabled == true`.
-3. The engine public key has already been successfully published to `taktx-signing-keys`.
+1. `GlobalConfigurationDTO.signingEnabled == true`.
+2. The engine public key has already been successfully published to `taktx-signing-keys`.
 
 If any condition is false, the record is produced without a signature. Unsigned records are always accepted when `signingEnabled=false`.
 

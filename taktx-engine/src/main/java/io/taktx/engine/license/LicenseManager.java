@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
 package io.taktx.engine.license;
@@ -17,39 +17,17 @@ public interface LicenseManager {
   int getPartitionBudget();
 
   /**
-   * Returns {@code true} when the active license permits event signing.
-   *
-   * <p>The runtime configuration topic provides the operator's request; this method is the license
-   * gate. Signing is only active when both permit it.
-   */
-  boolean isEventSigningAllowed();
-
-  /**
-   * Returns {@code true} when the active license permits command authorization (RS256 JWT
-   * validation on inbound commands).
-   *
-   * <p>The runtime configuration topic provides the operator's request; this method is the license
-   * gate. Authorization is only active when both permit it.
-   */
-  boolean isEngineRequiresAuthorization();
-
-  /**
    * Updates the in-memory license state from a license record pushed via the {@code
    * taktx-configuration} topic (key {@code "license"}).
    *
    * <p>Called by the topology's global-store processor on the Kafka Streams GlobalStreamThread, so
-   * must be thread-safe. Pushed values take precedence over file-based values.
+   * must be thread-safe. Pushed values take precedence over file-based values. Only the partition
+   * budget is read from a pushed license; signing and authorization are no longer license-gated.
    *
    * @param licenseType e.g. {@code "COMMUNITY"}, {@code "STANDARD"}, {@code "ENTERPRISE"}
    * @param maxKafkaPartitions {@code null} means unlimited
-   * @param eventSigning whether event signing is permitted by this license
-   * @param commandAuthorization whether command authorization is permitted by this license
    */
-  void updateFromLicensePush(
-      String licenseType,
-      Integer maxKafkaPartitions,
-      boolean eventSigning,
-      boolean commandAuthorization);
+  void updateFromLicensePush(String licenseType, Integer maxKafkaPartitions);
 
   /**
    * Parses, verifies and applies a raw License3j plain-text string pushed via the {@code

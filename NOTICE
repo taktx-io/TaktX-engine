@@ -10,11 +10,11 @@ This product includes software developed by Eric Hendriks (https://taktx.io)
 
 ## License Information
 
-The TaktX Engine is licensed under the TaktX Business Source License 1.0 (BSL).
-See the LICENSE.md file for the complete license text.
+The TaktX Engine is licensed under the Apache License, Version 2.0.
+The TaktX Client SDKs (taktx-client, taktx-client-quarkus, taktx-client-spring, taktx-shared) are licensed
+under the Apache License, Version 2.0.
 
-The TaktX Client SDKs (taktx-client, taktx-client-quarkus, taktx-shared) are licensed
-under the Apache License 2.0.
+See the LICENSE file in each module directory for the complete license text.
 
 ---
 
@@ -89,8 +89,6 @@ This software also includes components licensed under:
 - BSD 3-Clause License
 - Creative Commons CC0 (Public Domain)
 
-These are fully compatible with the Business Source License and allow free use,
-modification, and distribution.
 
 ---
 
@@ -110,9 +108,7 @@ https://www.gnu.org/licenses/lgpl-3.0.html
 
 ## Questions?
 
-For questions about licensing, including commercial licensing options, please visit:
+For questions about licensing or enterprise support, please visit:
 https://taktx.io/contact
 
-For commercial licenses with increased partition limits and additional features:
-https://taktx.io/pricing
 

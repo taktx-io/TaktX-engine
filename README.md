@@ -13,8 +13,7 @@
 <!-- Security -->
 
 <!-- License & Version -->
-[![License: TaktX BSL 1.0](https://img.shields.io/badge/License-TaktX%20BSL%201.0-blue.svg)](LICENSE.md)
-[![SDK License: Apache 2.0](https://img.shields.io/badge/SDK%20License-Apache%202.0-green.svg)](taktx-client/LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE.md)
 [![Version](https://img.shields.io/badge/version-0.1.0--beta--1-orange.svg)](VERSION.txt)
 
 - Java 23+
@@ -96,22 +95,18 @@ taktx.engine.host=localhost
 taktx.engine.tenant-id=my-tenant
 taktx.engine.namespace=default
 # Partition count for all fixed managed topics.
-# The total partition budget across all managed topics is enforced by your license tier
-# (Community: 60 total, Standard: 180 total, Enterprise: unlimited).
+# The total partition budget across all managed topics is enforced by the active license.
+# The default community budget is 60 total partitions. A license pushed via the
+# taktx-configuration topic can extend this limit.
 taktx.engine.topic.partitions=3
 ```
 
 ## Licensing
 
-The repository contains components under two different licenses:
+All components in this repository are licensed under the **[Apache License 2.0](LICENSE.md)**.
 
-- **TaktX Engine** (`taktx-engine/`) — licensed under the [TaktX Business Source License 1.0](taktx-engine/LICENSE).
-  - Free use (Community tier) is permitted within a **total partition budget of 60** across all engine-managed topics. See [`docs/partition-budget.md`](docs/partition-budget.md) for how the budget is allocated.
-  - **Engine message signing** (Ed25519 signatures on outbound `instance-update` events) and **command authorization** (RS256 JWT validation on inbound commands) are **not available** in the Community tier. See [`docs/security.md`](docs/security.md) for details.
-  - Each release automatically converts to **Apache License 2.0** four years after its release date (see `VERSION.txt` for the exact Change Date of the current release).
-  - For commercial use beyond the free-tier limits, contact [https://taktx.io/contact](https://taktx.io/contact).
-
-- **Client SDKs** (`taktx-client/`, `taktx-client-quarkus/`, `taktx-client-spring/`) — licensed under the [Apache License 2.0](taktx-client/LICENSE). Free to use, modify, and distribute without restriction.
+- **TaktX Engine** (`taktx-engine/`) — Apache License 2.0. All features including Ed25519 message signing and RS256 JWT command authorization are fully enabled. A default partition budget applies to community deployments; a license file pushed via the `taktx-configuration` topic can extend this limit.
+- **Client SDKs** (`taktx-client/`, `taktx-client-quarkus/`, `taktx-client-spring/`, `taktx-shared/`) — Apache License 2.0.
 
 For full license terms see the `LICENSE` file in each module directory.
 
@@ -144,4 +139,4 @@ cd TaktX-engine
 
 ## License
 
-TaktX Engine is licensed under the [TaktX Business Source License 1.0](LICENSE.md).
+TaktX Engine is licensed under the [Apache License 2.0](LICENSE.md).

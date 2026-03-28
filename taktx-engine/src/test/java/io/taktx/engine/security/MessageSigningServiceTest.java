@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 package io.taktx.engine.security;
 
@@ -50,14 +50,14 @@ class MessageSigningServiceTest {
 
     config = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
-    service = new MessageSigningService(config, null, null, signingIdentitySource, false);
+    service = new MessageSigningService(config, null, signingIdentitySource, false);
   }
 
   /**
    * Helper: build a service that reads from globalConfigStore and uses the static identity source.
    */
   private MessageSigningService serviceWithConfigStore(GlobalConfigStore store) {
-    return new MessageSigningService(config, store, null, signingIdentitySource, false);
+    return new MessageSigningService(config, store, signingIdentitySource, false);
   }
 
   @Test
@@ -145,7 +145,7 @@ class MessageSigningServiceTest {
                 newPublicKeyBase64));
 
     MessageSigningService rotatedSvc =
-        new MessageSigningService(config, globalConfigStore, null, newSource, false);
+        new MessageSigningService(config, globalConfigStore, newSource, false);
 
     String headerAfter = rotatedSvc.signToHeaderValue(PAYLOAD);
     assertThat(headerAfter).isNotNull();
@@ -173,7 +173,7 @@ class MessageSigningServiceTest {
                 key1Id, SigningKeyGenerator.encodePrivateKey(key1.getPrivate()), key1Pub));
 
     MessageSigningService svc =
-        new MessageSigningService(config, globalConfigStore, null, srcKey1, false);
+        new MessageSigningService(config, globalConfigStore, srcKey1, false);
 
     globalConfigStore.update(globalConfig(true));
 
@@ -188,7 +188,7 @@ class MessageSigningServiceTest {
                 key2Id, SigningKeyGenerator.encodePrivateKey(key2.getPrivate()), key2Pub));
 
     MessageSigningService svc2 =
-        new MessageSigningService(config, globalConfigStore, null, srcKey2, false);
+        new MessageSigningService(config, globalConfigStore, srcKey2, false);
 
     // New service immediately uses key2
     String h2 = svc2.signToHeaderValue(PAYLOAD);

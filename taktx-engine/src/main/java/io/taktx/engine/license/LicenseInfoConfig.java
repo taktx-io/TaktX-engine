@@ -1,9 +1,9 @@
 /*
  * TaktX - A high-performance BPMN engine
- * Copyright (c) 2025 Eric Hendriks All rights reserved.
- * This file is part of TaktX, licensed under the TaktX Business Source License v1.0.
- * Free use is permitted with up to 3 Kafka partitions per topic. See LICENSE file for details.
- * For commercial use or more partitions and features, contact [https://www.taktx.io/contact].
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
 package io.taktx.engine.license;
@@ -60,15 +60,20 @@ public class LicenseInfoConfig {
     String licenseInfo =
         String.format(
             """
-        TaktX Engine v%s - Copyright (c) 2025 Eric Hendriks All rights reserved.
+        TaktX Engine v%s - Copyright (c) 2025 Eric Hendriks
+
+        Licensed under the Apache License, Version 2.0.
+        https://www.apache.org/licenses/LICENSE-2.0
 
         TERMS SUMMARY:
-        - Free use for testing and evaluation purposes
-        - Use in production is allowed but features and performance may be limited
+        - Free to use, modify, and distribute under the Apache License 2.0
+        - All features are fully enabled (signing, JWT auth, etc.)
+        - A default partition budget applies; a license pushed via the
+          taktx-configuration topic can extend this limit
         - No warranty or liability (provided "AS IS")
 
-        Full license terms at [https://taktx.io/license]
-        For commercial licensing, contact us at [https://taktx.io/contact]
+        Full license terms at https://taktx.io/license
+        For enterprise features and support, contact https://taktx.io/contact
         """,
             version);
 
@@ -80,8 +85,7 @@ public class LicenseInfoConfig {
           case INVALID ->
               "❌ Error: Your license is invalid, did somebody tamper with it? Engine will not start. Please contact support at https://taktx.io/contact";
           case NOT_FOUND ->
-              "⚠️ Warning: No license file found. Features & performance may be limited.";
-          default -> "";
+              "ℹ️ No license file found. Running with default partition budget. All features are fully enabled.";
         };
 
     // Print to console with clear formatting
