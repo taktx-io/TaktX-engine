@@ -1,6 +1,6 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** March 26, 2026
+**Last updated:** March 29, 2026
 **Status:** Fully implemented — all features described here are live in the current codebase
 
 ---

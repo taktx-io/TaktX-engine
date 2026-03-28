@@ -149,13 +149,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate license change date
-        run: |
-          RELEASE_DATE=$(date +%Y-%m-%d)
-          # date -d is GNU/Linux syntax (valid on ubuntu-latest runners)
-          CHANGE_DATE=$(date -d "$RELEASE_DATE +4 years" +%Y-%m-%d)
-          echo "CHANGE_DATE=$CHANGE_DATE" >> $GITHUB_ENV
-          echo "License change date: $CHANGE_DATE"
 
       - name: Set up Docker Buildx
         if: github.event_name == 'release' || inputs.build_docker_images
@@ -181,7 +174,6 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-amd64
           build-args: |
             VERSION=${{ steps.extract_version.outputs.VERSION }}
-            CHANGE_DATE=${{ env.CHANGE_DATE }}
           cache-from: type=gha,scope=amd64
           cache-to: type=gha,mode=max,scope=amd64
 
@@ -203,7 +195,6 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
           build-args: |
             VERSION=${{ steps.extract_version.outputs.VERSION }}
-            CHANGE_DATE=${{ env.CHANGE_DATE }}
           cache-from: type=gha,scope=arm64
           cache-to: type=gha,mode=max,scope=arm64
 

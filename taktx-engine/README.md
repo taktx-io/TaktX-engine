@@ -44,12 +44,10 @@ Build for both `linux/amd64` and `linux/arm64` (Apple Silicon):
 # Using the convenience script
 ../scripts/build-docker-multiarch.sh 0.3.0-beta-1
 
-# Or using docker buildx directly (macOS / Linux compatible)
-CHANGE_DATE=$(date -v+4y +%Y-%m-%d 2>/dev/null || date -d "+4 years" +%Y-%m-%d)
+# Or using docker buildx directly
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --build-arg VERSION=0.3.0-beta-1 \
-  --build-arg CHANGE_DATE=${CHANGE_DATE} \
   -f taktx-engine/Dockerfile.jvm \
   -t ghcr.io/taktx-io/taktx-engine:0.3.0-beta-1 \
   -t ghcr.io/taktx-io/taktx-engine:latest \
@@ -60,11 +58,9 @@ docker buildx build \
 ### Local Development Build
 
 ```bash
-CHANGE_DATE=$(date -v+4y +%Y-%m-%d 2>/dev/null || date -d "+4 years" +%Y-%m-%d)
 docker buildx build \
   --platform linux/amd64 \
   --build-arg VERSION=dev \
-  --build-arg CHANGE_DATE=${CHANGE_DATE} \
   -f taktx-engine/Dockerfile.jvm \
   -t ghcr.io/taktx-io/taktx-engine:dev \
   --load \
