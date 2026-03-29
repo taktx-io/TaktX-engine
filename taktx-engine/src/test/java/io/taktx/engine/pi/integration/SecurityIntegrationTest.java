@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.Jwts;
+import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -37,10 +38,12 @@ import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.generic.ClockProducer;
 import io.taktx.engine.generic.TopologyProducer;
+import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.pi.testengine.BpmnTestEngine;
 import io.taktx.engine.pi.testengine.ExternalTaskTriggerDeserializer;
 import io.taktx.engine.pi.testengine.KafkaConsumerUtil;
 import io.taktx.security.Ed25519Service;
+import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -258,6 +261,32 @@ class SecurityIntegrationTest {
 
     // Publish a ConfigurationEventDTO to enable signing in the global config store
     publishSigningConfiguration();
+
+    // ── Wait for engine to catch up with the published config and signing keys ─────────────────
+    // On slow CI runners (GitHub Actions) the engine's Kafka Streams GlobalKTable and the
+    // GlobalConfigStore may not have processed the records by the time tests start running.
+    // Both are fire-and-forget Kafka writes above; we poll here until the engine reflects them.
+
+    // 1. Wait for the engine's GlobalConfigStore to have signing enabled
+    try (var configHandle = Arc.container().instance(GlobalConfigStore.class)) {
+      GlobalConfigStore configStore = configHandle.get();
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(
+              () -> configStore.get() != null && configStore.get().isSigningEnabled());
+    }
+
+    // 2. Wait for the worker signing key to appear in the engine's KTable
+    // EngineSigningKeysHolder holds the lambda registered by EngineAuthorizationService that
+    // delegates to the Kafka Streams state store — returning null for unknown keys.
+    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+    if (keyResolver != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(() -> keyResolver.resolvePublicKey(WORKER_KEY_ID) != null);
+    }
   }
 
   @AfterAll
