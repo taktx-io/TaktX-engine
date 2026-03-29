@@ -57,16 +57,19 @@ COPY taktx-client-quarkus/ taktx-client-quarkus/
 COPY taktx-engine/ taktx-engine/
 
 
-# Build the application (regular JAR for Docker image)
+# Build the application (regular JAR for Docker image).
+# Skip the entire `check` lifecycle (test, securityIntegrationTest, spotlessCheck, …) because
+# no Docker socket is available inside the build context — Testcontainers cannot start Kafka.
+# All verification is performed by the CI pipeline before Docker images are built.
 RUN --mount=type=cache,target=/root/.gradle/caches \
     --mount=type=cache,target=/root/.gradle/wrapper \
-    ./gradlew :taktx-engine:build -x test --no-daemon \
+    ./gradlew :taktx-engine:build -x check --no-daemon \
     -Dorg.gradle.java.installations.auto-detect=true
 
 # Build uber-jar for artifact distribution
 RUN --mount=type=cache,target=/root/.gradle/caches \
     --mount=type=cache,target=/root/.gradle/wrapper \
-    ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.jar.type=uber-jar -x test --no-daemon \
+    ./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.jar.type=uber-jar -x check --no-daemon \
     -Dorg.gradle.java.installations.auto-detect=true
 
 # ============================================================================
