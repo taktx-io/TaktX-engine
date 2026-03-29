@@ -143,7 +143,7 @@ For full license terms see the `LICENSE` file in each module directory.
 
 ## Documentation
 
-For full documentation, visit our [documentation site](https://docs.taktx.io).
+For full documentation, visit our [documentation site](https://taktx.io/documentation).
 
 ## Contributing
 

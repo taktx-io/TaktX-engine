@@ -7,6 +7,6 @@ contact_links:
     url: https://github.com/taktx-io/TaktX-engine/security/advisories/new
     about: Please report security vulnerabilities privately — do not open a public issue.
   - name: 📖 Documentation
-    url: https://docs.taktx.io
+    url: https://taktx.io/documentation
     about: Visit the full TaktX documentation site.
 

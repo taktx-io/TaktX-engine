@@ -10,7 +10,7 @@ All modules in this repository are licensed under the Apache License, Version 2.
 See the LICENSE file in each module directory for the full license text.
 
 For more information:
-- Documentation:  https://docs.taktx.io
+- Documentation:  https://taktx.io/documentation
 - License terms:  https://www.apache.org/licenses/LICENSE-2.0
 - Issues & PRs:   https://github.com/taktx-io/TaktX-engine/issues
 
