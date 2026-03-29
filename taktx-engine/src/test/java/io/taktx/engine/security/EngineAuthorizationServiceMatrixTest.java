@@ -17,6 +17,7 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -57,42 +58,40 @@ import org.junit.jupiter.api.Test;
  *
  * <pre>
  * Matrix key:
- *  C-ERA = config.engineRequiresAuthorization
- *  C-SE  = config.signingEnabled
- *  L-ERA = license.isEngineRequiresAuthorization
- *  L-ESA = license.isEventSigningAllowed
+ *  C-ERA    = config.engineRequiresAuthorization
+ *  C-SE     = config.signingEnabled
+ *  non-entry = ContinueFlowElementTriggerDTO (engine-internal continuation)
+ *  entry     = StartCommandDTO | AbortTriggerDTO | SetVariableTriggerDTO (external commands)
  *
- * ┌────┬───────┬──────┬───────┬───────┬───────────┬───────────────┬──────────┬──────────────────────────────────────────────┐
- * │ #  │ C-ERA │ C-SE │ L-ERA │ L-ESA │ Cmd type  │ Sig hdr(role) │ JWT hdr  │ Expected                                     │
- * ├────┼───────┼──────┼───────┼───────┼───────────┼───────────────┼──────────┼──────────────────────────────────────────────┤
- * │  1 │ false │false │  any  │  any  │ non-entry │ absent        │ absent   │ null                                         │
- * │  2 │ false │false │  any  │  any  │ non-entry │ CLIENT        │ absent   │ null (sig ignored)                           │
- * │  3 │ false │false │  any  │  any  │ entry     │ absent        │ absent   │ null (no auth)                               │
- * │  4 │ false │true  │  any  │ false │ non-entry │ absent        │ absent   │ null (signing disabled by license)           │
- * │  5 │ false │true  │  any  │ false │ non-entry │ CLIENT        │ absent   │ null (signing disabled by license)           │
- * │  6 │ false │true  │  any  │ true  │ non-entry │ absent        │ absent   │ throw (missing sig)                ← fixed   │
- * │  7 │ false │true  │  any  │ true  │ non-entry │ CLIENT        │ absent   │ verify Ed25519 / SIGNATURE_VERIFIED← fixed   │
- * │  8 │ false │true  │  any  │ false │ entry     │ absent        │ absent   │ null (signing blocked by license)            │
- * │  8a│ false │true  │  any  │ true  │ entry     │ absent        │ absent   │ throw (signing requires sig on entry too)    │
- * │  8b│ false │true  │  any  │ true  │ entry     │ ENGINE        │ absent   │ verify / ENGINE_SIGNED                       │
- * │  8c│ false │true  │  any  │ true  │ entry     │ CLIENT        │ absent   │ verify / SIGNATURE_VERIFIED (AND: auth off)  │
- * │  9 │ true  │false │ false │  any  │ non-entry │ absent        │ absent   │ null (auth disabled by license)              │
- * │ 10 │ true  │false │ true  │  any  │ non-entry │ absent        │ absent   │ current trust metadata                       │
- * │ 11 │ true  │false │ true  │  any  │ non-entry │ CLIENT        │ absent   │ verify Ed25519                               │
- * │ 12 │ true  │true  │ true  │ true  │ non-entry │ absent        │ absent   │ throw (missing sig)                          │
- * │ 13 │ true  │true  │ true  │ true  │ non-entry │ CLIENT        │ absent   │ verify Ed25519                               │
- * │ 14 │ true  │true  │ false │ true  │ non-entry │ absent        │ absent   │ throw (signing active via C-SE+L-ESA)        │
- * │ 15 │ true  │true  │ false │ true  │ non-entry │ CLIENT        │ absent   │ verify Ed25519                               │
- * │ 16 │ true  │true  │ true  │ false │ non-entry │ absent        │ absent   │ current trust metadata                       │
- * │ 17 │ true  │false │ false │  any  │ entry     │ absent        │ absent   │ null (auth disabled by license)              │
- * │ 18 │ true  │false │ true  │  any  │ entry     │ absent        │ absent   │ throw (missing JWT/sig)                      │
- * │ 19 │ true  │false │ true  │  any  │ entry     │ ENGINE        │ absent   │ ENGINE_SIGNED (ENGINE satisfies auth gate)   │
- * │ 20 │ true  │false │ true  │  any  │ entry     │ CLIENT        │ absent   │ throw (CLIENT ≠ ENGINE, JWT missing)         │
- * │ 21 │ true  │true  │ true  │ true  │ entry     │ absent        │ present  │ throw (signing gate: missing Ed25519)        │
- * │ 22 │ true  │true  │ true  │ true  │ entry     │ CLIENT        │ present  │ JWT_AUTHORIZED + signer info (AND: both pass)│
- * │ 23 │ true  │true  │ true  │ true  │ entry     │ ENGINE        │ absent   │ ENGINE_SIGNED (ENGINE satisfies both gates)  │
- * │ 24 │ true  │true  │ true  │ true  │ entry     │ CLIENT        │ absent   │ throw (CLIENT satisfies signing, not auth)   │
- * └────┴───────┴──────┴───────┴───────┴───────────┴───────────────┴──────────┴──────────────────────────────────────────────┘
+ * ┌────┬───────┬──────┬────────────────┬───────────────┬──────────┬──────────────────────────────────────────────┐
+ * │ #  │ C-ERA │ C-SE │ Cmd type       │ Sig hdr(role) │ JWT hdr  │ Expected                                     │
+ * ├────┼───────┼──────┼────────────────┼───────────────┼──────────┼──────────────────────────────────────────────┤
+ * │  1 │ false │false │ non-entry      │ absent        │ absent   │ null                                         │
+ * │  2 │ false │false │ non-entry      │ CLIENT        │ absent   │ null (sig ignored)                           │
+ * │  3 │ false │false │ entry (start)  │ absent        │ absent   │ null (no auth)                               │
+ * │  6 │ false │true  │ non-entry      │ absent        │ absent   │ throw (missing sig)                          │
+ * │  7 │ false │true  │ non-entry      │ CLIENT        │ absent   │ verify Ed25519 / SIGNATURE_VERIFIED          │
+ * │  8a│ false │true  │ entry (start)  │ absent        │ absent   │ throw (signing requires sig on entry too)    │
+ * │  8b│ false │true  │ entry (start)  │ ENGINE        │ absent   │ verify / ENGINE_SIGNED                       │
+ * │  8c│ false │true  │ entry (start)  │ CLIENT        │ absent   │ verify / SIGNATURE_VERIFIED (auth gate off)  │
+ * │ 10 │ true  │false │ non-entry      │ absent        │ absent   │ current trust metadata                       │
+ * │ 11 │ true  │false │ non-entry      │ CLIENT        │ absent   │ verify Ed25519                               │
+ * │ 12 │ true  │true  │ non-entry      │ absent        │ absent   │ throw (missing sig)                          │
+ * │ 13 │ true  │true  │ non-entry      │ CLIENT        │ absent   │ verify Ed25519                               │
+ * │ 14 │ true  │true  │ non-entry      │ absent        │ absent   │ throw (signing enforced)                     │
+ * │ 15 │ true  │true  │ non-entry      │ CLIENT        │ absent   │ verify Ed25519                               │
+ * │ 18 │ true  │false │ entry (start)  │ absent        │ absent   │ throw (missing JWT/sig)                      │
+ * │ 19 │ true  │false │ entry (start)  │ ENGINE        │ absent   │ ENGINE_SIGNED (ENGINE satisfies auth gate)   │
+ * │ 20 │ true  │false │ entry (start)  │ CLIENT        │ absent   │ throw (CLIENT ≠ ENGINE, JWT missing)         │
+ * │ 21 │ true  │true  │ entry (start)  │ absent        │ present  │ throw (signing gate: missing Ed25519)        │
+ * │ 22 │ true  │true  │ entry (start)  │ CLIENT        │ present  │ JWT_AND_ED25519 (both gates pass)            │
+ * │ 23 │ true  │true  │ entry (start)  │ ENGINE        │ absent   │ ENGINE_SIGNED (satisfies both gates)         │
+ * │ 24 │ true  │true  │ entry (start)  │ CLIENT        │ absent   │ throw (CLIENT satisfies signing, not auth)   │
+ * │ S1 │ false │true  │ entry (setVar) │ absent        │ absent   │ throw (signing gate: entry requires sig)     │
+ * │ S2 │ true  │false │ entry (setVar) │ absent        │ absent   │ throw (auth gate: missing JWT/ENGINE-sig)    │
+ * │ S3 │ true  │false │ entry (setVar) │ ENGINE        │ absent   │ ENGINE_SIGNED                                │
+ * │ S4 │ true  │true  │ entry (setVar) │ CLIENT        │ present  │ JWT_AND_ED25519 (SET_VARIABLE action)        │
+ * └────┴───────┴──────┴────────────────┴───────────────┴──────────┴──────────────────────────────────────────────┘
  * </pre>
  */
 @SuppressWarnings("unchecked")
@@ -169,7 +168,12 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   private ProcessInstanceTriggerEnvelope nonEntryEnvelope(boolean sigVerified, String keyId) {
-    return new ProcessInstanceTriggerEnvelope(setVariableTrigger(), sigVerified, keyId);
+    return new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), sigVerified, keyId);
+  }
+
+  private ContinueFlowElementTriggerDTO continueFlowElementTrigger() {
+    return new ContinueFlowElementTriggerDTO(
+        UUID.randomUUID(), List.of(1L), "flow-1", VariablesDTO.empty());
   }
 
   private SetVariableTriggerDTO setVariableTrigger() {
@@ -359,7 +363,7 @@ class EngineAuthorizationServiceMatrixTest {
             .userId("user-1")
             .issuer("taktx-platform")
             .build();
-    SetVariableTriggerDTO trigger = setVariableTrigger();
+    ContinueFlowElementTriggerDTO trigger = continueFlowElementTrigger();
     trigger.setCurrentTrustMetadata(embedded);
 
     CommandTrustMetadataDTO result =
@@ -600,7 +604,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(revokedKeyId),
-                    new ProcessInstanceTriggerEnvelope(setVariableTrigger(), true, revokedKeyId)))
+                    new ProcessInstanceTriggerEnvelope(
+                        continueFlowElementTrigger(), true, revokedKeyId)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Revoked");
   }
@@ -616,11 +621,82 @@ class EngineAuthorizationServiceMatrixTest {
                 svc.authorize(
                     sigHeaders(WORKER_KEY_ID),
                     new ProcessInstanceTriggerEnvelope(
-                        setVariableTrigger(),
+                        continueFlowElementTrigger(),
                         false,
                         WORKER_KEY_ID,
                         "Malformed base64 signature for keyId=" + WORKER_KEY_ID)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Malformed base64 signature");
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Row S1 — C-ERA=F, C-SE=T → SetVariableTriggerDTO is an entry command
+  //          signing gate active, no sig → throw
+  // ══════════════════════════════════════════════════════════════════════════
+  @Test
+  void rowS1_setVariable_signingOnly_noSig_throws() {
+    EngineAuthorizationService svc = service(false, true);
+    assertThatThrownBy(
+            () ->
+                svc.authorize(
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(setVariableTrigger(), false, null)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Row S2 — C-ERA=T, C-SE=F → SetVariableTriggerDTO is an entry command
+  //          auth gate active, no JWT / no ENGINE-sig → throw
+  // ══════════════════════════════════════════════════════════════════════════
+  @Test
+  void rowS2_setVariable_authActive_noHeaders_throws() {
+    EngineAuthorizationService svc = service(true, false);
+    assertThatThrownBy(
+            () ->
+                svc.authorize(
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(setVariableTrigger(), false, null)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Entry command");
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Row S3 — C-ERA=T, C-SE=F → SetVariableTriggerDTO is an entry command
+  //          auth gate active, ENGINE-role sig → ENGINE_SIGNED (satisfies auth gate)
+  // ══════════════════════════════════════════════════════════════════════════
+  @Test
+  void rowS3_setVariable_authActive_engineSig_accepted() {
+    EngineAuthorizationService svc = service(true, false);
+    CommandTrustMetadataDTO result =
+        svc.authorize(
+            sigHeaders(ENGINE_KEY_ID),
+            new ProcessInstanceTriggerEnvelope(setVariableTrigger(), true, ENGINE_KEY_ID));
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Row S4 — C-ERA=T, C-SE=T → SetVariableTriggerDTO is an entry command
+  //          both gates active; JWT (SET_VARIABLE action) + CLIENT sig → JWT_AND_ED25519
+  // ══════════════════════════════════════════════════════════════════════════
+  @Test
+  void rowS4_setVariable_bothActive_jwtAndClientSig_bothVerified() {
+    EngineAuthorizationService svc = service(true, true);
+    String jwt = buildJwt("SET_VARIABLE", null);
+    CommandTrustMetadataDTO result =
+        svc.authorize(
+            sigAndJwtHeaders(WORKER_KEY_ID, jwt),
+            new ProcessInstanceTriggerEnvelope(setVariableTrigger(), true, WORKER_KEY_ID));
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT_AND_ED25519);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getUserId()).isEqualTo("user-matrix");
+    assertThat(result.getSignerKeyId()).isEqualTo(WORKER_KEY_ID);
+    assertThat(result.getSignerOwner()).isEqualTo("billing-worker");
   }
 }
