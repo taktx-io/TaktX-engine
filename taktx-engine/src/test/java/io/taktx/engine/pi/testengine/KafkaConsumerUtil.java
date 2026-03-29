@@ -87,7 +87,7 @@ public class KafkaConsumerUtil<K, V> {
     t.start();
   }
 
-  void stop() {
+  public void stop() {
     running = false;
     KafkaConsumer<K, V> c = kafkaConsumer;
     if (c != null) {

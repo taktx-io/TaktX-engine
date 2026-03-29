@@ -10,6 +10,7 @@ package io.taktx.engine.pi.integration;
 import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import io.taktx.engine.license.LicenseManager;
+import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.security.MessageSigningService;
 import java.security.KeyPairGenerator;
 import java.util.Base64;
@@ -48,6 +49,14 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
 
   @Override
   public Map<String, String> start() {
+    // Close the shared singleton engine (used by all default-profile tests) BEFORE Quarkus
+    // restarts for the security profile.  Its Kafka consumers would otherwise keep trying to
+    // reconnect to the now-unavailable (restarted) broker and flood the logs throughout the
+    // entire security test run and all subsequent tests.  After this call, instance == null so
+    // the first default-profile test after the security suite creates a fresh instance bound to
+    // the new broker address.
+    SingletonBpmnTestEngine.closeIfRunning();
+
     try {
       // ── RSA key-pair for command authorization ────────────────────────────
       java.security.KeyPair rsaKp = KeyPairGenerator.getInstance("RSA").generateKeyPair();

@@ -36,9 +36,9 @@ import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.generic.ClockProducer;
 import io.taktx.engine.generic.TopologyProducer;
-import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.pi.testengine.BpmnTestEngine;
 import io.taktx.engine.pi.testengine.ExternalTaskTriggerDeserializer;
 import io.taktx.engine.pi.testengine.KafkaConsumerUtil;
@@ -69,6 +69,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -112,6 +113,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @TestProfile(SecurityTestProfile.class)
 @QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
+@Tag("security-integration")
 class SecurityIntegrationTest {
 
   private static final ObjectMapper OBJECT_MAPPER =
@@ -187,6 +189,15 @@ class SecurityIntegrationTest {
   private static final ConcurrentLinkedQueue<ConsumerRecord<String, ExternalTaskTriggerDTO>>
       rawExternalTaskTriggers = new ConcurrentLinkedQueue<>();
 
+  /**
+   * KafkaConsumerUtil instances created in @BeforeAll / inside test methods. Stored so they can be
+   * stopped in @AfterAll — without explicit cleanup the background consumer threads keep trying to
+   * reconnect to the (now-restarted) broker, flooding logs throughout all subsequent tests.
+   */
+  private static KafkaConsumerUtil<UUID, InstanceUpdateDTO> rawInstanceUpdatesConsumer;
+
+  private static KafkaConsumerUtil<String, ExternalTaskTriggerDTO> rawExternalTaskTriggersConsumer;
+
   @BeforeAll
   static void setupEngineAndConfig() {
     String bootstrapServers =
@@ -252,12 +263,13 @@ class SecurityIntegrationTest {
         new WorkerResponder(bootstrapServers, NAMESPACE, WORKER_KEY_ID, workerPrivateKeyBase64);
 
     // ── Subscribe to raw topics for header assertions ─────────────────────────
-    new KafkaConsumerUtil<>(
-        "security-test-raw-group",
-        prefixed(Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
-        io.taktx.util.TaktUUIDDeserializer.class.getName(),
-        io.taktx.engine.pi.testengine.InstanceUpdateDeserializer.class.getName(),
-        rawInstanceUpdates::add);
+    rawInstanceUpdatesConsumer =
+        new KafkaConsumerUtil<>(
+            "security-test-raw-group",
+            prefixed(Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
+            io.taktx.util.TaktUUIDDeserializer.class.getName(),
+            io.taktx.engine.pi.testengine.InstanceUpdateDeserializer.class.getName(),
+            rawInstanceUpdates::add);
 
     // Publish a ConfigurationEventDTO to enable signing in the global config store
     publishSigningConfiguration();
@@ -273,8 +285,7 @@ class SecurityIntegrationTest {
       await()
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(200))
-          .until(
-              () -> configStore.get() != null && configStore.get().isSigningEnabled());
+          .until(() -> configStore.get() != null && configStore.get().isSigningEnabled());
     }
 
     // 2. Wait for the worker signing key to appear in the engine's KTable
@@ -291,6 +302,14 @@ class SecurityIntegrationTest {
 
   @AfterAll
   static void tearDownEngine() {
+    if (rawInstanceUpdatesConsumer != null) {
+      rawInstanceUpdatesConsumer.stop();
+      rawInstanceUpdatesConsumer = null;
+    }
+    if (rawExternalTaskTriggersConsumer != null) {
+      rawExternalTaskTriggersConsumer.stop();
+      rawExternalTaskTriggersConsumer = null;
+    }
     if (workerResponder != null) {
       workerResponder.close();
       workerResponder = null;
@@ -651,12 +670,13 @@ class SecurityIntegrationTest {
     String externalTaskTopic =
         prefixed(Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + SERVICE_TASK_TYPE);
 
-    new KafkaConsumerUtil<>(
-        "security-test-ext-task-group-" + UUID.randomUUID(),
-        externalTaskTopic,
-        StringDeserializer.class.getName(),
-        ExternalTaskTriggerDeserializer.class.getName(),
-        rawExternalTaskTriggers::add);
+    rawExternalTaskTriggersConsumer =
+        new KafkaConsumerUtil<>(
+            "security-test-ext-task-group-" + UUID.randomUUID(),
+            externalTaskTopic,
+            StringDeserializer.class.getName(),
+            ExternalTaskTriggerDeserializer.class.getName(),
+            rawExternalTaskTriggers::add);
 
     engine
         .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)

@@ -71,17 +71,63 @@ dependencies {
 }
 
 tasks.test {
+    // Exclude the security-integration tests: they use a different Quarkus profile which forces
+    // a Kafka dev-services restart.  Keeping them in the same JVM as the default-profile tests
+    // causes the SingletonBpmnTestEngine's consumers to hammer the old (now-dead) broker with
+    // reconnection errors for the rest of the run.  The dedicated securityIntegrationTest task
+    // below runs them in a fresh JVM after this task completes, completely sidestepping the issue.
+    useJUnitPlatform {
+        excludeTags("security-integration")
+    }
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
     finalizedBy(tasks.jacocoTestReport)
+}
+
+// ── Security integration test task ───────────────────────────────────────────────────────────────
+// Runs SecurityIntegrationTest (and any future @Tag("security-integration") tests) in its own
+// forked JVM, AFTER the main test task has finished and its JVM has exited.
+// Because Gradle forks a separate process for every Test task, the SingletonBpmnTestEngine
+// shutdown hook fires at the end of `test` and all consumers are cleanly closed before
+// this task even starts — no stale connections, no log spam.
+val securityIntegrationTest by tasks.registering(Test::class) {
+    description = "Runs security-profile integration tests (separate Quarkus profile / JVM)"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+    useJUnitPlatform {
+        includeTags("security-integration")
+    }
+
+    // Reuse the same compiled test classes and runtime classpath as the main test task.
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+
+    systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+
+    // Must start only after the main test task is fully done (JVM exited, shutdown hooks run).
+    mustRunAfter(tasks.test)
+
+    // Gradle automatically writes JaCoCo exec data to build/jacoco/{taskName}.exec, so this task
+    // produces build/jacoco/securityIntegrationTest.exec without any additional configuration.
+
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+// Make `check` (and therefore `build`) include the security integration tests.
+tasks.named("check") {
+    dependsOn(securityIntegrationTest)
 }
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
 
-    // Merge both standard test coverage and Quarkus integration test coverage
+    // Merge coverage from all three sources:
+    //  • jacoco/test.exec                       – standard Gradle JaCoCo (unit + default-profile tests)
+    //  • jacoco/securityIntegrationTest.exec    – standard Gradle JaCoCo (security-profile tests)
+    //  • jacoco-quarkus.exec                    – Quarkus in-process JaCoCo agent (both Quarkus tasks)
     executionData.setFrom(
         fileTree(project.layout.buildDirectory) {
             include("jacoco/test.exec")
+            include("jacoco/securityIntegrationTest.exec")
             include("jacoco-quarkus.exec")
         }
     )

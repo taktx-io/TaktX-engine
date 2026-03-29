@@ -12,6 +12,7 @@ import io.taktx.engine.generic.ClockProducer;
 
 public class SingletonBpmnTestEngine {
   private static BpmnTestEngine instance;
+  private static boolean shutdownHookRegistered = false;
 
   private SingletonBpmnTestEngine() {}
 
@@ -19,20 +20,38 @@ public class SingletonBpmnTestEngine {
     if (instance == null) {
       instance = new BpmnTestEngine(ClockProducer.FIXED_CLOCK);
       instance.init();
-      // Ensure all Kafka consumers are closed when the JVM shuts down after tests complete.
-      // Without this the consumer threads keep trying to reconnect to the (now-stopped)
-      // dev-services broker, preventing the Gradle worker process from terminating.
-      Runtime.getRuntime()
-          .addShutdownHook(
-              new Thread(
-                  () -> {
-                    if (instance != null) {
-                      instance.close();
-                      instance = null;
-                    }
-                  },
-                  "singleton-bpmn-engine-shutdown"));
+      // Register the shutdown hook only once, not on every re-initialisation after a profile
+      // switch.  The hook closes whatever instance is current at JVM exit.
+      if (!shutdownHookRegistered) {
+        shutdownHookRegistered = true;
+        Runtime.getRuntime()
+            .addShutdownHook(
+                new Thread(
+                    () -> {
+                      if (instance != null) {
+                        instance.close();
+                        instance = null;
+                      }
+                    },
+                    "singleton-bpmn-engine-shutdown"));
+      }
     }
     return instance;
+  }
+
+  /**
+   * Closes the singleton engine and nulls the reference so that the next call to {@link
+   * #getInstance()} creates a fresh instance against the current Kafka broker.
+   *
+   * <p>Must be called before a Quarkus profile switch (and therefore a Kafka dev-services restart)
+   * so that the existing consumer threads stop trying to reconnect to the old broker address.
+   * {@link io.taktx.engine.pi.integration.SecurityTestConfigResource} calls this from its {@code
+   * start()} method, which runs before the Quarkus application restarts for the security profile.
+   */
+  public static void closeIfRunning() {
+    if (instance != null) {
+      instance.close();
+      instance = null;
+    }
   }
 }
