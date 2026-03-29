@@ -13,7 +13,7 @@
 
 <!-- License & Version -->
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0--beta--1-orange.svg)](VERSION.txt)
+[![Version](https://img.shields.io/badge/version-0.2.0--beta--1)](VERSION.txt)
 
 TaktX Engine is an open-source, high-performance **BPMN 2.0 process automation engine** built on Apache Kafka. Unlike traditional workflow engines that rely on a central database, TaktX uses Kafka topics and RocksDB-backed state stores as its persistence layer — giving you the throughput, fault-tolerance, and horizontal scalability of a streaming platform with the full expressiveness of BPMN 2.0.
 
