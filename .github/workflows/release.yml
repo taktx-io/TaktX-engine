@@ -211,6 +211,37 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-amd64 \
             ghcr.io/${{ github.repository_owner }}/taktx-engine:${{ steps.extract_version.outputs.VERSION }}-arm64
 
+      - name: Set package visibility to public
+        if: github.event_name == 'release' || inputs.build_docker_images
+        run: |
+          # Make the container package publicly accessible so `docker pull` works without authentication.
+          # Try the org endpoint first; fall back to the user endpoint if the owner is not an org.
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/taktx-engine" \
+            -d '{"visibility":"public"}')
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "::notice::Package visibility set to public (org endpoint)."
+          else
+            echo "Org endpoint returned $HTTP_STATUS; trying user endpoint..."
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X PATCH \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/user/packages/container/taktx-engine" \
+              -d '{"visibility":"public"}')
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "::notice::Package visibility set to public (user endpoint)."
+            else
+              echo "::warning::Could not set package visibility to public (HTTP $HTTP_STATUS). Set it manually in the package settings: https://github.com/${{ github.repository_owner }}/taktx-engine/pkgs/container/taktx-engine"
+            fi
+          fi
+
       - name: Build uber-jar for release artifact
         if: github.event_name == 'release' || inputs.build_uber_jar
         run: |
