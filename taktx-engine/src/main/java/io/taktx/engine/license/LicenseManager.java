@@ -21,13 +21,13 @@ public interface LicenseManager {
    * taktx-configuration} topic (key {@code "license"}).
    *
    * <p>Called by the topology's global-store processor on the Kafka Streams GlobalStreamThread, so
-   * must be thread-safe. Pushed values take precedence over file-based values. Only the partition
-   * budget is read from a pushed license; signing and authorization are no longer license-gated.
+   * must be thread-safe. Pushed values overwrite any file-based license. Only the partition budget
+   * is enforced as a license gate; {@link Integer#MAX_VALUE} means unlimited.
    *
    * @param licenseType e.g. {@code "COMMUNITY"}, {@code "STANDARD"}, {@code "ENTERPRISE"}
-   * @param maxKafkaPartitions {@code null} means unlimited
+   * @param partitionBudget maximum total partition count; {@link Integer#MAX_VALUE} means unlimited
    */
-  void updateFromLicensePush(String licenseType, Integer maxKafkaPartitions);
+  void updateFromLicensePush(String licenseType, int partitionBudget);
 
   /**
    * Parses, verifies and applies a raw License3j plain-text string pushed via the {@code

@@ -26,7 +26,6 @@ import javax0.license3j.Feature;
 import javax0.license3j.License;
 import javax0.license3j.io.IOFormat;
 import javax0.license3j.io.LicenseReader;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -338,24 +337,20 @@ public class DefaultLicenseManager implements LicenseManager {
     (byte) 0x01
   };
 
-  private License license;
   private final TaktConfiguration taktConfiguration;
 
-  @Getter private LicenseState licenseState = LicenseState.NOT_FOUND;
+  // ── Single source of truth for all license state ─────────────────────────────────────────────
+  // Replaced atomically at startup (from file) or when a verified license is pushed via the
+  // taktx-configuration topic. Integer.MAX_VALUE means "unlimited" — TaktX is open source and
+  // imposes no partition restrictions by default; SaaS deployments push a license with a budget.
+  private record ResolvedLicense(LicenseState state, int partitionBudget, String info) {}
 
-  // ── Pushed-license state (from taktx-configuration topic, key "license") ─────────────────────
-  // Held in an AtomicReference so the GlobalStreamThread can write while other threads read safely.
-  private static final class PushedLicense {
-    final String licenseType;
-    final Integer partitionBudget;
-
-    PushedLicense(String licenseType, Integer partitionBudget) {
-      this.licenseType = licenseType;
-      this.partitionBudget = partitionBudget;
-    }
-  }
-
-  private final AtomicReference<PushedLicense> pushedLicense = new AtomicReference<>(null);
+  private final AtomicReference<ResolvedLicense> resolved =
+      new AtomicReference<>(
+          new ResolvedLicense(
+              LicenseState.NOT_FOUND,
+              Integer.MAX_VALUE,
+              "No license — running open source with unlimited partitions"));
 
   @PostConstruct
   public void init() {
@@ -367,8 +362,15 @@ public class DefaultLicenseManager implements LicenseManager {
       log.info("Available processors {} threads {} ", i, threadCount);
       loadLicense();
     } catch (Exception e) {
-      log.warn("No valid license found." + e.getMessage());
-      licenseState = LicenseState.INVALID;
+      log.warn("No valid license found: {}", e.getMessage());
+      // loadLicense() sets the resolved state before throwing for known failures (EXPIRED,
+      // INVALID).
+      // Only fall back to INVALID if no specific failure state was recorded yet.
+      if (resolved.get().state() == LicenseState.NOT_FOUND) {
+        resolved.set(
+            new ResolvedLicense(
+                LicenseState.INVALID, Integer.MAX_VALUE, "License error: " + e.getMessage()));
+      }
     }
   }
 
@@ -377,7 +379,7 @@ public class DefaultLicenseManager implements LicenseManager {
     File licenseFile = licenseFilePath.toFile();
     log.info("Checking for license file at " + licenseFile.getAbsolutePath());
     if (!licenseFile.exists()) {
-      licenseState = LicenseState.NOT_FOUND;
+      // resolved already holds NOT_FOUND default — nothing to do
       return;
     }
     if (licenseFile.isDirectory()) {
@@ -385,71 +387,71 @@ public class DefaultLicenseManager implements LicenseManager {
           "License path '{}' resolves to a directory, not a file. "
               + "A Docker volume may be mounted there. Treating as NOT_FOUND.",
           licenseFile.getAbsolutePath());
-      licenseState = LicenseState.NOT_FOUND;
+      // resolved already holds NOT_FOUND default — nothing to do
       return;
     }
     log.info("License file found at " + licenseFile.getAbsolutePath());
 
     try (var reader = new LicenseReader(licenseFile)) {
-      license = reader.read(IOFormat.STRING);
+      License lic = reader.read(IOFormat.STRING);
 
-      if (!license.isOK(PUBLIC_KEY_BYTES)) {
+      if (!lic.isOK(PUBLIC_KEY_BYTES)) {
         System.out.println(
             "❌ License file not valid according key. Has the license file been tampered with?");
-        licenseState = LicenseState.INVALID;
+        resolved.set(
+            new ResolvedLicense(
+                LicenseState.INVALID,
+                Integer.MAX_VALUE,
+                "License signature invalid — file may have been tampered with"));
         // Exit the application
         Runtime.getRuntime().halt(1);
         throw new LicenseException(
             "License file not valid according key. Has the license file been tampered with?");
       }
 
-      Feature feature = license.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_EXPIRY_DATE);
+      Feature feature = lic.getFeatures().get(LicenseFeatures.LICENSE_FEATURE_EXPIRY_DATE);
       Date expirationDate = feature.getDate();
       if (new Date().after(expirationDate)) {
-        licenseState = LicenseState.EXPIRED;
+        resolved.set(
+            new ResolvedLicense(
+                LicenseState.EXPIRED, Integer.MAX_VALUE, lic.getFeatures().toString()));
         throw new LicenseException("License expired on " + expirationDate);
       }
 
-      licenseState = LicenseState.VALID;
+      Integer rawBudget = getFeatureInt(lic, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
+      int budget = (rawBudget == null || rawBudget == 0) ? Integer.MAX_VALUE : rawBudget;
+      resolved.set(new ResolvedLicense(LicenseState.VALID, budget, lic.getFeatures().toString()));
     } catch (IOException e) {
       throw new LicenseException("Error reading license file " + e);
     }
   }
 
   @Override
+  public LicenseState getLicenseState() {
+    return resolved.get().state();
+  }
+
+  @Override
   public String getLicenseInfo() {
-    return license.getFeatures().toString();
+    return resolved.get().info();
   }
 
   @Override
   public int getPartitionBudget() {
-    // Pushed license takes precedence over the file-based license.
-    PushedLicense pushed = pushedLicense.get();
-    if (pushed != null && pushed.partitionBudget != null) {
-      return pushed.partitionBudget;
-    }
-    // Pushed license present but maxKafkaPartitions is null → unlimited (return 0 sentinel)
-    if (pushed != null) {
-      return 0;
-    }
-    int budget = 60; // default free tier — total partition budget across all topics
-    if (license != null && licenseState == LicenseState.VALID) {
-      Integer val = getFeatureInt(license, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
-      if (val != null) {
-        // 0 means unlimited in the license tool convention
-        budget = (val == 0) ? Integer.MAX_VALUE : val;
-      }
-    }
-    return budget;
+    return resolved.get().partitionBudget();
   }
 
   @Override
-  public void updateFromLicensePush(String licenseType, Integer partitionBudget) {
-    pushedLicense.set(new PushedLicense(licenseType, partitionBudget));
+  public void updateFromLicensePush(String licenseType, int partitionBudget) {
+    String info =
+        String.format(
+            "Pushed license: type=%s, partitions=%s",
+            licenseType, partitionBudget == Integer.MAX_VALUE ? "unlimited" : partitionBudget);
+    resolved.set(new ResolvedLicense(LicenseState.VALID, partitionBudget, info));
     log.info(
-        "License updated from configuration topic: type={} maxPartitions={}",
+        "License updated from configuration topic: type={} partitionBudget={}",
         licenseType,
-        partitionBudget != null ? partitionBudget : "unlimited");
+        partitionBudget == Integer.MAX_VALUE ? "unlimited" : partitionBudget);
   }
 
   /**
@@ -491,10 +493,10 @@ public class DefaultLicenseManager implements LicenseManager {
       }
 
       // Extract fields — only partition budget is enforced as a license gate.
-      // The license tool uses 0 to mean "unlimited" — map that to null.
+      // The license tool uses 0 to mean "unlimited" — map that to Integer.MAX_VALUE.
       String licenseType = getFeatureString(pushed, LicenseFeatures.LICENSE_FEATURE_LICENSE_TYPE);
       Integer rawBudget = getFeatureInt(pushed, LicenseFeatures.LICENSE_FEATURE_PARTITION_BUDGET);
-      Integer partitionBudget = (rawBudget != null && rawBudget == 0) ? null : rawBudget;
+      int partitionBudget = (rawBudget == null || rawBudget == 0) ? Integer.MAX_VALUE : rawBudget;
 
       updateFromLicensePush(licenseType, partitionBudget);
     } catch (IOException e) {

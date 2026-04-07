@@ -80,7 +80,7 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
     try (var handle = Arc.container().instance(LicenseManager.class)) {
       LicenseManager licenseManager = handle.get();
       if (licenseManager != null) {
-        licenseManager.updateFromLicensePush("TEST", null);
+        licenseManager.updateFromLicensePush("TEST", Integer.MAX_VALUE);
       }
     }
 

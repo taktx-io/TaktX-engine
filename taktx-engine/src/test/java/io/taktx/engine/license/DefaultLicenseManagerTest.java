@@ -23,7 +23,8 @@ import org.junit.jupiter.api.Test;
  * is exercised in integration only (requires a real signed license binary). These unit tests cover
  * the in-memory state machine via {@link DefaultLicenseManager#updateFromLicensePush}.
  *
- * <p>Signing and authorization are no longer license-gated; only the partition budget is enforced.
+ * <p>Default (no file, no push) is unlimited — TaktX is open source. SaaS deployments push a
+ * license with a specific partition budget enforced.
  */
 class DefaultLicenseManagerTest {
 
@@ -39,8 +40,13 @@ class DefaultLicenseManagerTest {
   }
 
   @Test
-  void beforePush_defaultPartitionBudgetIsFreeTier() {
-    assertThat(manager.getPartitionBudget()).isEqualTo(60);
+  void beforePush_defaultPartitionBudgetIsUnlimited() {
+    assertThat(manager.getPartitionBudget()).isEqualTo(Integer.MAX_VALUE);
+  }
+
+  @Test
+  void beforePush_defaultLicenseStateIsNotFound() {
+    assertThat(manager.getLicenseState()).isEqualTo(LicenseState.NOT_FOUND);
   }
 
   @Test
@@ -50,10 +56,21 @@ class DefaultLicenseManagerTest {
   }
 
   @Test
-  void afterPush_unlimitedPartitions_returnsSentinelZero() {
-    // null maxKafkaPartitions means unlimited — pushedLicense is set but partitionBudget is null
-    manager.updateFromLicensePush("ENTERPRISE", null);
-    assertThat(manager.getPartitionBudget()).isZero();
+  void afterPush_licenseStateIsValid() {
+    manager.updateFromLicensePush("STANDARD", 500);
+    assertThat(manager.getLicenseState()).isEqualTo(LicenseState.VALID);
+  }
+
+  @Test
+  void afterPush_unlimitedPartitions_returnsMaxValue() {
+    manager.updateFromLicensePush("ENTERPRISE", Integer.MAX_VALUE);
+    assertThat(manager.getPartitionBudget()).isEqualTo(Integer.MAX_VALUE);
+  }
+
+  @Test
+  void afterPush_licenseInfoReflectsPushedType() {
+    manager.updateFromLicensePush("ENTERPRISE", Integer.MAX_VALUE);
+    assertThat(manager.getLicenseInfo()).contains("ENTERPRISE").contains("unlimited");
   }
 
   @Test
@@ -64,8 +81,8 @@ class DefaultLicenseManagerTest {
   }
 
   @Test
-  void getPartitionBudget_returnsFileBasedDefaultWhenNoPushAndNoLicense() {
-    // No push, no license file → default free-tier budget of 60
-    assertThat(manager.getPartitionBudget()).isEqualTo(60);
+  void getPartitionBudget_returnsUnlimitedWhenNoPushAndNoLicense() {
+    // No push, no license file → unlimited (open source default)
+    assertThat(manager.getPartitionBudget()).isEqualTo(Integer.MAX_VALUE);
   }
 }

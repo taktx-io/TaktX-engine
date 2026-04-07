@@ -174,7 +174,7 @@ public class DynamicTopicManager {
                   int budget = licenseManager.getPartitionBudget();
                   int currentTotal = computeCurrentTotal();
                   int requested = topicMeta.getNrPartitions();
-                  if (budget == 0 || currentTotal + requested <= budget) {
+                  if (currentTotal + requested <= budget) {
                     if (createTopicIfNotExists(
                         topicMeta.getTopicName(),
                         topicMeta.getNrPartitions(),

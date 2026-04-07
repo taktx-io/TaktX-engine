@@ -27,11 +27,11 @@ public class TestLicenseManager implements LicenseManager {
 
   @Override
   public int getPartitionBudget() {
-    return 0; // no budget cap in tests
+    return Integer.MAX_VALUE; // unlimited in tests — no partition restrictions
   }
 
   @Override
-  public void updateFromLicensePush(String licenseType, Integer partitionBudget) {
+  public void updateFromLicensePush(String licenseType, int partitionBudget) {
     // no-op in test — test profile uses fixed values above
   }
 }
