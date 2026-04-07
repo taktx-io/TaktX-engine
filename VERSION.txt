@@ -1,8 +1,8 @@
 TaktX Engine
 =============
 
-Version:       0.4.0-beta-1
-Release Date:  2026-03-31
+Version:       0.4.0-beta-2
+Release Date:  2026-04-07
 
 This file contains the official version information for TaktX Engine.
 
