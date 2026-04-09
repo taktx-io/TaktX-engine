@@ -1,6 +1,6 @@
 # TaktX Client — Spring Boot 4
 
-![Coverage](../badges/taktx-client-spring-coverage.svg)
+![Coverage](../badges/taktx-client-spring-boot-4-coverage.svg)
 
 Spring Boot 4 auto-configuration wrapper for [`taktx-client`](../taktx-client/README.md). A singleton `TaktXClient` bean is created, started, and wired automatically from your Spring application properties.
 

@@ -11,6 +11,8 @@ This directory contains automatically generated coverage badges for the TaktX pr
 - **TaktX Engine**: ![Engine Coverage](taktx-engine-coverage.svg)
 - **TaktX Client**: ![Client Coverage](taktx-client-coverage.svg)
 - **TaktX Client Quarkus**: ![Client Quarkus Coverage](taktx-client-quarkus-coverage.svg)
+- **TaktX Client Spring Boot 3**: ![Client Spring Boot 3 Coverage](taktx-client-spring-boot-3-coverage.svg)
+- **TaktX Client Spring Boot 4**: ![Client Spring Boot 4 Coverage](taktx-client-spring-boot-4-coverage.svg)
 - **TaktX Shared**: ![Shared Coverage](taktx-shared-coverage.svg)
 
 ## How It Works
@@ -40,6 +42,8 @@ To use these badges in your README or documentation, use **relative paths**:
 ![Engine Coverage](../badges/taktx-engine-coverage.svg)
 ![Client Coverage](../badges/taktx-client-coverage.svg)
 ![Client Quarkus Coverage](../badges/taktx-client-quarkus-coverage.svg)
+![Client Spring Boot 3 Coverage](../badges/taktx-client-spring-boot-3-coverage.svg)
+![Client Spring Boot 4 Coverage](../badges/taktx-client-spring-boot-4-coverage.svg)
 ![Shared Coverage](../badges/taktx-shared-coverage.svg)
 ```
 
