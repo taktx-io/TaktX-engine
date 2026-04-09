@@ -21,14 +21,14 @@ This module provides:
 <dependency>
     <groupId>io.taktx</groupId>
     <artifactId>taktx-shared</artifactId>
-    <version>0.4.0-beta-2</version>
+    <version>0.4.0-beta-3</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-shared:0.4.0-beta-2")
+implementation("io.taktx:taktx-shared:0.4.0-beta-3")
 ```
 
 ## Components
