@@ -263,7 +263,7 @@ public class TopologyProducer {
             new ObjectMapperSerde<>((Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
 
     builder.globalTable(
-        taktConfiguration.getPrefixed(Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+        taktConfiguration.getPrefixed(Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
         Materialized.<DmnDefinitionKey, DmnDefinitionDTO>as(
                 keyValueStoreSupplier.get(Stores.GLOBAL_DMN_DEFINITION))
             .withKeySerde(DMN_DEFINITION_KEY_SERDE)
@@ -293,7 +293,7 @@ public class TopologyProducer {
                                 KeyValue.pair((DmnDefinitionKey) key, (DmnDefinitionDTO) value))
                         .to(
                             taktConfiguration.getPrefixed(
-                                Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+                                Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
                             Produced.with(DMN_DEFINITION_KEY_SERDE, DMN_DEFINITION_SERDE))))
         .branch(
             (key, value) -> key instanceof DmnDefinitionKey && value instanceof String,

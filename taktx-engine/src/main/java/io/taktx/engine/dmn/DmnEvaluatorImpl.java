@@ -25,6 +25,7 @@ import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -52,8 +53,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
   private final FeelEngineApi feelEngineApi;
   private final ObjectMapper objectMapper;
-  /** Cache of parsed FEEL expressions (not thread-safe – same as FeelExpressionHandlerImpl). */
-  private final Map<String, ParsedExpression> expressionCache = new HashMap<>();
+  /** Thread-safe cache of parsed FEEL expressions for performance. */
+  private final Map<String, ParsedExpression> expressionCache = new ConcurrentHashMap<>();
 
   public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
     this.feelEngineApi = feelEngineApi;
@@ -232,8 +233,14 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
     return switch (op) {
       case SUM -> objectMapper.valueToTree(values.stream().mapToDouble(d -> d).sum());
-      case MIN -> objectMapper.valueToTree(values.stream().mapToDouble(d -> d).min().orElse(0));
-      case MAX -> objectMapper.valueToTree(values.stream().mapToDouble(d -> d).max().orElse(0));
+      case MIN -> {
+        var min = values.stream().mapToDouble(d -> d).min();
+        yield min.isPresent() ? objectMapper.valueToTree(min.getAsDouble()) : objectMapper.nullNode();
+      }
+      case MAX -> {
+        var max = values.stream().mapToDouble(d -> d).max();
+        yield max.isPresent() ? objectMapper.valueToTree(max.getAsDouble()) : objectMapper.nullNode();
+      }
       case COUNT -> objectMapper.valueToTree((double) matched.size());
       default -> handleRuleOrder(matched, table);
     };
