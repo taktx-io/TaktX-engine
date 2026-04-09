@@ -25,3 +25,5 @@ public-key.asc
 /docker/signing/engine/key-id
 /docker/signing/engine/private-key.b64
 /docker/signing/engine/public-key.b64
+/taktx-client-spring-boot-4/build/
+/taktx-client-spring-boot-3/build/

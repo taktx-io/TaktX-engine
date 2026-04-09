@@ -1,0 +1,6 @@
+io.taktx.client.spring.TaktXClientAutoConfiguration
+io.taktx.client.spring.TaktPropertiesHelperConfiguration
+io.taktx.client.spring.ProcessInstanceResponderConfiguration
+io.taktx.client.spring.ParameterResolverFactoryConfiguration
+io.taktx.client.spring.ResultProcessorFactoryConfiguration
+

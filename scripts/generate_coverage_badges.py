@@ -108,7 +108,8 @@ def main():
         "taktx-engine": project_root / "taktx-engine/build/reports/jacoco/test/jacocoTestReport.xml",
         "taktx-client": project_root / "taktx-client/build/reports/jacoco/test/jacocoTestReport.xml",
         "taktx-client-quarkus": project_root / "taktx-client-quarkus/build/reports/jacoco/test/jacocoTestReport.xml",
-        "taktx-client-spring": project_root / "taktx-client-spring/build/reports/jacoco/test/jacocoTestReport.xml",
+        "taktx-client-spring-boot-3": project_root / "taktx-client-spring-boot-3/build/reports/jacoco/test/jacocoTestReport.xml",
+        "taktx-client-spring-boot-4": project_root / "taktx-client-spring-boot-4/build/reports/jacoco/test/jacocoTestReport.xml",
         "taktx-shared": project_root / "taktx-shared/build/reports/jacoco/test/jacocoTestReport.xml",
     }
 

@@ -1,0 +1,130 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Amsterdam",
+  "schedule": ["after 9am and before 5pm on saturday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 2,
+
+  "postUpdateOptions": [
+    "gradleLockfileUpdate"
+  ],
+
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "schedule": ["at any time"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Disable major version updates — require explicit manual review",
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+
+    {
+      "description": "Group all Quarkus platform and extension updates",
+      "groupName": "quarkus",
+      "matchPackagePrefixes": ["io.quarkus"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "labels": ["dependencies", "quarkus"]
+    },
+
+    {
+      "description": "Group all Jackson modules and auto-merge minor/patch",
+      "groupName": "jackson",
+      "matchPackagePrefixes": ["com.fasterxml.jackson"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+
+    {
+      "description": "Group all Spring Framework and Spring Boot updates (3.x and 4.x tracked separately in TOML)",
+      "groupName": "spring",
+      "matchPackagePrefixes": ["org.springframework"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "labels": ["dependencies", "spring"]
+    },
+
+    {
+      "description": "Group Apache Kafka client libraries",
+      "groupName": "kafka",
+      "matchPackagePrefixes": ["org.apache.kafka"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "labels": ["dependencies", "kafka"]
+    },
+
+    {
+      "description": "Group JJWT (JSON Web Token) libraries",
+      "groupName": "jjwt",
+      "matchPackagePrefixes": ["io.jsonwebtoken"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+
+    {
+      "description": "Group and auto-merge all testing libraries",
+      "groupName": "testing",
+      "matchPackagePrefixes": [
+        "org.junit",
+        "org.assertj",
+        "org.mockito",
+        "org.testcontainers",
+        "org.awaitility"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+
+    {
+      "description": "Auto-merge patch updates for stable utility libraries",
+      "matchPackageNames": [
+        "org.slf4j:slf4j-api",
+        "org.slf4j:slf4j-simple",
+        "com.github.ben-manes.caffeine:caffeine",
+        "io.github.classgraph:classgraph",
+        "org.reflections:reflections",
+        "com.cronutils:cron-utils",
+        "org.projectlombok:lombok",
+        "org.mapstruct:mapstruct",
+        "org.mapstruct:mapstruct-processor",
+        "org.camunda.feel:feel-engine",
+        "com.javax0.license3j:license3j",
+        "org.glassfish.jaxb:jaxb-runtime",
+        "jakarta.enterprise:jakarta.enterprise.cdi-api",
+        "jakarta.inject:jakarta.inject-api",
+        "jakarta.annotation:jakarta.annotation-api"
+      ],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+
+    {
+      "description": "Group Gradle plugins (spotless, xjc, jreleaser)",
+      "groupName": "gradle-plugins",
+      "matchManagers": ["gradle", "gradleWrapper"],
+      "matchDepTypes": ["plugin"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+
+    {
+      "description": "Group and auto-merge GitHub Actions minor/patch updates",
+      "groupName": "github-actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ]
+}
+
