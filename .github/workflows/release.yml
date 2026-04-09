@@ -2,7 +2,10 @@ name: Release
 
 on:
   release:
-    types: [ published ]
+    types: [ published ]        # triggered when you publish a release via the GitHub UI
+  push:
+    tags:
+      - 'v*'                    # triggered when you push a tag: git tag v0.4.0-beta-3 && git push --tags
   workflow_dispatch:
     inputs:
       version:
@@ -55,13 +58,12 @@ jobs:
         id: extract_version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Manual trigger - use input version
+            # Manual trigger – use input version
             VERSION="${{ inputs.version }}"
           else
-            # Release event - extract from tag
+            # release event OR push-tag event – both put the tag in GITHUB_REF
             TAG=${GITHUB_REF#refs/tags/}
-            # Remove 'v' prefix if present
-            VERSION=${TAG#v}
+            VERSION=${TAG#v}   # strip optional 'v' prefix
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"

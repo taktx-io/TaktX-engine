@@ -1,0 +1,50 @@
+# GitHub auto-generated release notes configuration.
+# When you create a release (via UI or tag push), GitHub will categorise
+# the merged PRs in the release notes automatically based on their labels.
+#
+# How to use:
+#   1. Create a GitHub Release via the UI and click "Generate release notes"
+#   2. OR push a tag: git tag v0.4.0-beta-3 && git push --tags
+#      → the release workflow fires and uses --generate-notes automatically
+#
+# Labelling convention (apply labels to PRs):
+#   breaking  → shows in "⚠️ Breaking Changes"
+#   feat      → shows in "✨ New Features"
+#   fix       → shows in "🐛 Bug Fixes"
+#   perf      → shows in "⚡ Performance"
+#   deps      → shows in "📦 Dependency Updates"
+#   docs      → shows in "📚 Documentation"
+#   (unlabelled PRs end up in "Other Changes")
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+    authors:
+      - dependabot
+  categories:
+    - title: "⚠️ Breaking Changes"
+      labels:
+        - breaking
+    - title: "✨ New Features"
+      labels:
+        - feat
+        - enhancement
+    - title: "🐛 Bug Fixes"
+      labels:
+        - fix
+        - bug
+    - title: "⚡ Performance"
+      labels:
+        - perf
+        - performance
+    - title: "📦 Dependency Updates"
+      labels:
+        - deps
+        - dependencies
+    - title: "📚 Documentation"
+      labels:
+        - docs
+        - documentation
+    - title: "🔧 Other Changes"
+
