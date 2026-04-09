@@ -747,7 +747,8 @@ public class TaktXClient {
   }
 
   /**
-   * Registers a consumer that will be notified of instance update records.
+   * Registers a consumer that will be notified of instance update records, resuming from the last
+   * committed offset for this consumer group.
    *
    * @param groupId The Kafka consumer group ID to use.
    * @param consumer The consumer to register.
@@ -755,6 +756,30 @@ public class TaktXClient {
   public void registerInstanceUpdateConsumer(
       String groupId, Consumer<List<InstanceUpdateRecord>> consumer) {
     this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(groupId, consumer);
+  }
+
+  /**
+   * Registers a consumer that will be notified of instance update records, with explicit control
+   * over where reading begins.
+   *
+   * <p>{@link InstanceUpdateStartStrategy#RESUME} (the default via the 2-arg overload) resumes from
+   * the last committed offset. {@link InstanceUpdateStartStrategy#EARLIEST} seeks to offset 0 on
+   * every assigned partition after the initial rebalance, guaranteeing a full-history replay
+   * regardless of any previously committed offsets for this consumer group. This is the only
+   * reliable way to replay from the beginning — {@code auto.offset.reset=earliest} is ignored by
+   * Kafka once a group has committed offsets.
+   *
+   * @param groupId The Kafka consumer group ID to use.
+   * @param consumer The consumer to register.
+   * @param strategy {@link InstanceUpdateStartStrategy#RESUME} to continue from committed offsets;
+   *     {@link InstanceUpdateStartStrategy#EARLIEST} to seek to the beginning of each partition
+   *     after assignment.
+   */
+  public void registerInstanceUpdateConsumer(
+      String groupId,
+      Consumer<List<InstanceUpdateRecord>> consumer,
+      InstanceUpdateStartStrategy strategy) {
+    this.processInstanceUpdateConsumer.registerInstanceUpdateConsumer(groupId, consumer, strategy);
   }
 
   /**

@@ -54,15 +54,41 @@ public class ProcessInstanceUpdateConsumer {
   }
 
   /**
-   * Registers a consumer that will be notified of instance update records.
+   * Registers a consumer that will be notified of instance update records, resuming from the last
+   * committed offset for this consumer group.
    *
    * @param groupId the Kafka consumer group ID to use
    * @param consumer the consumer to register
    */
   public void registerInstanceUpdateConsumer(
       String groupId, Consumer<List<InstanceUpdateRecord>> consumer) {
+    registerInstanceUpdateConsumer(groupId, consumer, InstanceUpdateStartStrategy.RESUME);
+  }
+
+  /**
+   * Registers a consumer that will be notified of instance update records.
+   *
+   * <p>When {@code strategy} is {@link InstanceUpdateStartStrategy#EARLIEST}, the consumer seeks to
+   * offset 0 on every assigned partition immediately after the initial rebalance, guaranteeing a
+   * full-history replay regardless of any previously committed offsets for this group.
+   *
+   * <p>Note: the Kafka subscription (and therefore the seek) is only initiated on the
+   * <em>first</em> call to this method for a given client instance. Subsequent registrations add
+   * callbacks to the already-running consumer; the {@code strategy} of those later calls is
+   * ignored.
+   *
+   * @param groupId the Kafka consumer group ID to use
+   * @param consumer the consumer to register
+   * @param strategy {@link InstanceUpdateStartStrategy#RESUME} to continue from committed offsets
+   *     (default); {@link InstanceUpdateStartStrategy#EARLIEST} to seek to the beginning of each
+   *     partition after assignment
+   */
+  public void registerInstanceUpdateConsumer(
+      String groupId,
+      Consumer<List<InstanceUpdateRecord>> consumer,
+      InstanceUpdateStartStrategy strategy) {
     if (instanceUpdateConsumers.isEmpty()) {
-      subscribeToTopic(groupId);
+      subscribeToTopic(groupId, strategy);
     }
     instanceUpdateConsumers.add(consumer);
   }
@@ -76,12 +102,13 @@ public class ProcessInstanceUpdateConsumer {
     }
   }
 
-  private void subscribeToTopic(String groupId) {
+  private void subscribeToTopic(String groupId, InstanceUpdateStartStrategy strategy) {
     running = true;
 
     CompletableFuture.runAsync(
         () -> {
-          try (KafkaConsumer<UUID, InstanceUpdateDTO> consumer = createConsumer(groupId)) {
+          try (KafkaConsumer<UUID, InstanceUpdateDTO> consumer =
+              createConsumer(groupId, strategy)) {
             activeConsumer = consumer;
 
             String prefixedTopicName =
@@ -89,6 +116,21 @@ public class ProcessInstanceUpdateConsumer {
                     Topics.INSTANCE_UPDATE_TOPIC.getTopicName());
 
             consumer.subscribe(Collections.singletonList(prefixedTopicName));
+
+            if (strategy == InstanceUpdateStartStrategy.EARLIEST) {
+              // Poll until Kafka assigns partitions (the first poll triggers the rebalance),
+              // then seek every assigned partition to offset 0.  This overrides any previously
+              // committed offsets for this group — auto.offset.reset alone cannot do this.
+              while (consumer.assignment().isEmpty()) {
+                consumer.poll(Duration.ofMillis(100));
+              }
+              consumer.seekToBeginning(consumer.assignment());
+              log.info(
+                  "Seeked to beginning for groupId={} on topic={} partitions={}",
+                  groupId,
+                  prefixedTopicName,
+                  consumer.assignment());
+            }
 
             try {
               while (running) {
@@ -141,10 +183,19 @@ public class ProcessInstanceUpdateConsumer {
     }
   }
 
-  private <K, V> KafkaConsumer<K, V> createConsumer(String groupId) {
+  private <K, V> KafkaConsumer<K, V> createConsumer(
+      String groupId, InstanceUpdateStartStrategy strategy) {
+    // Use "earliest" for EARLIEST strategy so that brand-new groups (no committed offsets yet)
+    // and truly empty topics also start from offset 0.  For RESUME the previous "latest" default
+    // is kept so a freshly created group does not re-read old records unexpectedly.
+    String autoOffsetReset =
+        strategy == InstanceUpdateStartStrategy.EARLIEST ? "earliest" : "latest";
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            groupId, TaktUUIDDeserializer.class, InstanceUpdateJsonDeserializer.class, "latest");
+            groupId,
+            TaktUUIDDeserializer.class,
+            InstanceUpdateJsonDeserializer.class,
+            autoOffsetReset);
     return new KafkaConsumer<>(props);
   }
 }
