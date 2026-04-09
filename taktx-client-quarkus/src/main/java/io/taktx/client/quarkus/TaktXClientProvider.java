@@ -11,6 +11,7 @@ import io.quarkus.runtime.Startup;
 import io.taktx.CleanupPolicy;
 import io.taktx.client.AnnotationScanningExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
+import io.taktx.client.InstanceUpdateStartStrategy;
 import io.taktx.client.ParameterResolverFactory;
 import io.taktx.client.ResultProcessorFactory;
 import io.taktx.client.TaktXClient;
@@ -49,6 +50,20 @@ public class TaktXClientProvider {
 
   @ConfigProperty(name = "taktx.client.groupId.instanceupdate")
   String groupIdInstanceUpdate;
+
+  /**
+   * Controls where the instance-update consumer begins reading.
+   *
+   * <ul>
+   *   <li>{@code RESUME} (default) — continue from the last committed offset for this group.
+   *   <li>{@code EARLIEST} — seek to offset 0 on every assigned partition after the initial
+   *       rebalance, guaranteeing a full-history replay regardless of prior committed offsets.
+   * </ul>
+   *
+   * <p>Property: {@code taktx.client.instanceupdate.start-strategy}
+   */
+  @ConfigProperty(name = "taktx.client.instanceupdate.start-strategy", defaultValue = "RESUME")
+  String instanceUpdateStartStrategy;
 
   /**
    * Constructor injecting the MicroProfile Config.
@@ -126,13 +141,16 @@ public class TaktXClientProvider {
         }
 
         if (observerChecker.hasInstanceUpdateRecordObservers()) {
+          InstanceUpdateStartStrategy strategy =
+              InstanceUpdateStartStrategy.valueOf(instanceUpdateStartStrategy.toUpperCase());
           taktClient.registerInstanceUpdateConsumer(
               groupIdInstanceUpdate,
               instanceUpdateRecords -> {
                 for (InstanceUpdateRecord instanceUpdateRecord : instanceUpdateRecords) {
                   events.fire(instanceUpdateRecord);
                 }
-              });
+              },
+              strategy);
         }
       }
     }
