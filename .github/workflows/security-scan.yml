@@ -1,0 +1,53 @@
+name: Security Vulnerability Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run every Monday at 07:00 UTC to catch newly published CVEs between dependency updates
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  trivy-scan:
+    name: Trivy — filesystem & dependency scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # Required to upload SARIF results to GitHub Security tab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (SARIF)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          # Scan Gradle lock files and build descriptors for CVEs
+          scanners: 'vuln,secret'
+
+      - name: Upload results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-fs'
+
+      - name: Run Trivy in table format (CI log summary)
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          scanners: 'vuln,secret'
+

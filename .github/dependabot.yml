@@ -1,73 +1,36 @@
-# Dependabot configuration optimized for Gradle Version Catalog
-# Documentation: https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# Dependency version updates are managed by Renovate Bot.
+# See renovate.json for the full configuration.
+#
+# Why Renovate instead of Dependabot for Gradle?
+#   - Native support for Gradle Version Catalog (libs.versions.toml)
+#   - Automatically regenerates gradle.lockfile via postUpdateOptions
+#   - Smarter grouping and auto-merge rules
+#   - OSV vulnerability alerts included
+#
+# Renovate setup (one-time): install the free Mend Renovate GitHub App at
+#   https://github.com/apps/renovate
+#
+# Dependabot SECURITY ALERTS remain active independently of this file
+# (configured in: GitHub repo → Settings → Security → Code security).
+# Dependabot will still open security-fix PRs for known CVEs automatically.
 
 version: 2
-updates:
-  # Gradle dependencies (including Version Catalog)
-  - package-ecosystem: "gradle"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "gradle"
-    groups:
-      # Group Quarkus-related dependencies together
-      quarkus:
-        patterns:
-          - "io.quarkus*"
-        update-types:
-          - "minor"
-          - "patch"
-      
-      # Group Jackson dependencies together
-      jackson:
-        patterns:
-          - "com.fasterxml.jackson*"
-        update-types:
-          - "minor"
-          - "patch"
-      
-      # Group testing libraries together
-      testing:
-        patterns:
-          - "org.junit*"
-          - "org.assertj*"
-          - "org.mockito*"
-          - "org.testcontainers*"
-        update-types:
-          - "minor"
-          - "patch"
-      
-      # Group plugins together
-      gradle-plugins:
-        patterns:
-          - "*plugins*"
-        update-types:
-          - "minor"
-          - "patch"
-    
-    # Ignore major version updates for stability unless manually reviewed
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    
-    # Configuration to handle the Version Catalog
-    versioning-strategy: auto
 
-  # GitHub Actions updates
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    labels:
-      - "dependencies"
-      - "github-actions"
-    groups:
-      actions:
-        patterns:
-          - "actions/*"
+# Version updates are fully handled by Renovate Bot (see renovate.json).
+# Having an empty updates list keeps this file valid and ensures that
+# Dependabot security-alert PRs (which are independent of this file) continue to work.
+updates: []
+
+# To revert to Dependabot for version updates, replace the empty array above with:
+#
+# updates:
+#   - package-ecosystem: "gradle"
+#     directory: "/"
+#     schedule:
+#       interval: "weekly"
+#     versioning-strategy: auto
+#
+#   - package-ecosystem: "github-actions"
+#     directory: "/"
+#     schedule:
+#       interval: "weekly"
