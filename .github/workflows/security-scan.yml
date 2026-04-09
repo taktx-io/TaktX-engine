@@ -22,17 +22,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
+          trivy --version
+
       - name: Run Trivy vulnerability scanner (SARIF)
-        uses: aquasecurity/trivy-action@0.30.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
-          # Scan Gradle lock files and build descriptors for CVEs
-          scanners: 'vuln,secret'
+        run: |
+          trivy fs \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --scanners vuln,secret \
+            .
 
       - name: Upload results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -42,12 +46,10 @@ jobs:
           category: 'trivy-fs'
 
       - name: Run Trivy in table format (CI log summary)
-        uses: aquasecurity/trivy-action@0.30.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
-          scanners: 'vuln,secret'
-
+        run: |
+          trivy fs \
+            --format table \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --scanners vuln,secret \
+            .
