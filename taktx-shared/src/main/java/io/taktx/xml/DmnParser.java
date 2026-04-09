@@ -96,6 +96,7 @@ public class DmnParser {
     String id = tableEl.getAttribute("id");
 
     String hitPolicyStr = tableEl.getAttribute("hitPolicy");
+    // DMN 1.3 spec §8.2: default hit policy is UNIQUE when attribute is absent
     DmnHitPolicy hitPolicy =
         hitPolicyStr.isEmpty() ? DmnHitPolicy.UNIQUE : parseHitPolicy(hitPolicyStr);
 
@@ -188,6 +189,7 @@ public class DmnParser {
   }
 
   private static DmnHitPolicy parseHitPolicy(String value) {
+    // DMN 1.3 spec §8.2 uses uppercase names with spaces; underscore variants accepted for convenience
     return switch (value.toUpperCase()) {
       case "UNIQUE" -> DmnHitPolicy.UNIQUE;
       case "FIRST" -> DmnHitPolicy.FIRST;
