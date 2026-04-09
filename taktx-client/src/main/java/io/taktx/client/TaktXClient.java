@@ -73,6 +73,7 @@ public class TaktXClient {
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
   private final ProcessDefinitionDeployer processDefinitionDeployer;
+  private final DmnDefinitionDeployer dmnDefinitionDeployer;
   private final ProcessInstanceProducer processInstanceProducer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final XmlByProcessDefinitionIdConsumer xmlByProcessDefinitionIdConsumer;
@@ -131,6 +132,7 @@ public class TaktXClient {
     this.xmlByProcessDefinitionIdConsumer =
         new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
+    this.dmnDefinitionDeployer = new DmnDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer =
         new ProcessInstanceProducer(
             taktPropertiesHelper, processInstanceTriggerEmitter, authorizationTokenProvider);
@@ -697,6 +699,18 @@ public class TaktXClient {
    */
   public ParsedDefinitionsDTO deployProcessDefinition(InputStream inputStream) throws IOException {
     return this.processDefinitionDeployer.deployInputStream(new String(inputStream.readAllBytes()));
+  }
+
+  /**
+   * Deploys a DMN definition from an InputStream.
+   *
+   * @param inputStream The InputStream containing the DMN XML.
+   * @return The parsed DMN definitions DTO.
+   * @throws IOException If an error occurs while reading the InputStream.
+   */
+  public io.taktx.dto.ParsedDmnDefinitionsDTO deployDmnDefinition(InputStream inputStream)
+      throws IOException {
+    return this.dmnDefinitionDeployer.deployInputStream(new String(inputStream.readAllBytes()));
   }
 
   /**

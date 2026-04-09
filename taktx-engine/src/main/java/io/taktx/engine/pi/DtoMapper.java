@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.BaseElementDTO;
 import io.taktx.dto.BoundaryEventDTO;
+import io.taktx.dto.BusinessRuleTaskDTO;
 import io.taktx.dto.CallActivityDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
@@ -49,6 +50,7 @@ import io.taktx.dto.TimerEventSignalDTO;
 import io.taktx.dto.UserTaskDTO;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
+import io.taktx.engine.pd.model.BusinessRuleTask;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.EndEvent;
 import io.taktx.engine.pd.model.ErrorEventDefinition;
@@ -112,6 +114,7 @@ public interface DtoMapper {
   @SubclassMapping(source = EndEventDTO.class, target = EndEvent.class)
   @SubclassMapping(source = UserTaskDTO.class, target = UserTask.class)
   @SubclassMapping(source = ServiceTaskDTO.class, target = ServiceTask.class)
+  @SubclassMapping(source = BusinessRuleTaskDTO.class, target = BusinessRuleTask.class)
   @SubclassMapping(source = SendTaskDTO.class, target = SendTask.class)
   @SubclassMapping(source = MessageEndEventDTO.class, target = MessageEndEvent.class)
   @SubclassMapping(
@@ -132,6 +135,10 @@ public interface DtoMapper {
   @Mapping(target = "attachedActivity", ignore = true)
   @Mapping(target = "parentElement", ignore = true)
   BoundaryEvent map(BoundaryEventDTO boundaryEventDTO);
+
+  @Mapping(target = "boundaryEvents", ignore = true)
+  @Mapping(target = "parentElement", ignore = true)
+  BusinessRuleTask map(BusinessRuleTaskDTO businessRuleTask);
 
   @Mapping(target = "boundaryEvents", ignore = true)
   @Mapping(target = "parentElement", ignore = true)

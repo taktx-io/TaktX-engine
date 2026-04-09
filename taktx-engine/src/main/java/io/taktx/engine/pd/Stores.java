@@ -33,7 +33,10 @@ public enum Stores {
   INSTANCE_SIGNAL_SUBSCRIPTIONS("instance-signal-subscriptions"),
   DEFINITION_SIGNAL_SUBSCRIPTIONS("definition-signal-subscriptions"),
   GLOBAL_CONFIGURATION(Topics.CONFIGURATION_TOPIC.getTopicName()),
-  SIGNING_KEYS(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+  SIGNING_KEYS(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
+  GLOBAL_DMN_DEFINITION("global-dmn-definition"),
+  DMN_VERSION_BY_HASH("dmn-version-by-hash"),
+  XML_BY_DMN_DEFINITION_ID(Topics.XML_BY_DMN_DEFINITION_ID.getTopicName());
 
   private final String storename;
 

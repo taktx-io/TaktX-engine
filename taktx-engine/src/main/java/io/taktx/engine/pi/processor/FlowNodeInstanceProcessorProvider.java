@@ -12,6 +12,7 @@ import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
+import io.taktx.engine.pd.model.BusinessRuleTask;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.CatchEvent;
 import io.taktx.engine.pd.model.EndEvent;
@@ -60,6 +61,7 @@ public class FlowNodeInstanceProcessorProvider {
   @Inject ScriptTaskInstanceProcessor scriptTaskProcessor;
   @Inject SendTaskInstanceProcessor sendTaskProcessor;
   @Inject MessageEndEventInstanceProcessor messageEndEventInstanceProcessor;
+  @Inject BusinessRuleTaskInstanceProcessor businessRuleTaskProcessor;
 
   @Inject
   MessageIntermediateThrowEventInstanceProcessor messageIntermediateThrowEventInstanceProcessor;
@@ -124,6 +126,8 @@ public class FlowNodeInstanceProcessorProvider {
     ActivityInstanceProcessor<?, ?, ?> processor = null;
     if (element instanceof ServiceTask) {
       processor = serviceTaskProcessor;
+    } else if (element instanceof BusinessRuleTask) {
+      processor = businessRuleTaskProcessor;
     } else if (element instanceof UserTask) {
       processor = userTaskProcessor;
     } else if (element instanceof SendTask) {
