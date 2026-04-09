@@ -10,6 +10,7 @@ package io.taktx.xml;
 import io.taktx.bpmn.TActivity;
 import io.taktx.bpmn.TBaseElement;
 import io.taktx.bpmn.TBoundaryEvent;
+import io.taktx.bpmn.TBusinessRuleTask;
 import io.taktx.bpmn.TCallActivity;
 import io.taktx.bpmn.TCatchEvent;
 import io.taktx.bpmn.TEndEvent;
@@ -240,6 +241,11 @@ public class GenericFlowElementMapper implements FlowElementMapper {
         bpmnMapperFactory.createLoopCharacteristicsMapper().map(activity.getLoopCharacteristics());
     FlowElementDTO activityFlowElement = null;
     switch (activity) {
+      case TBusinessRuleTask businessRuleTask ->
+          activityFlowElement =
+              bpmnMapperFactory
+                  .createBusinessRuleTaskMapper()
+                  .map(businessRuleTask, parentId, loopCharacteristics, ioMapping);
       case TServiceTask serviceTask ->
           activityFlowElement =
               bpmnMapperFactory
