@@ -38,8 +38,9 @@ The DMN implementation mirrors every layer of this stack.
 | `Rule` | One row in the table; pairs input entries with output entries |
 | `InputEntry` / `OutputEntry` | Cell values; FEEL unary tests (input) or FEEL expressions (output) |
 | `LiteralExpression` | Single FEEL expression producing a scalar output |
-| `DecisionRequirementsDiagram` | (optional, later) Dependency graph between decisions |
 | `Hit Policy` | UNIQUE, FIRST, ANY, COLLECT (+/min/max/count), RULE ORDER, OUTPUT ORDER, PRIORITY |
+
+> **Out of scope:** Decision Requirements Diagrams (DRD / decision chaining). Each decision is treated as self-contained in this implementation.
 
 ---
 
@@ -237,7 +238,9 @@ FEEL unary tests and expressions are evaluated via `FeelExpressionHandlerImpl`. 
 
 ### `DmnDecisionResolver`
 
-Resolves a `decisionId` + optional `decisionVersion` to a `DmnDecisionDTO` using `DmnDefinitionsCache`. Throws a `DmnDecisionNotFoundException` if the decision is not found (triggers an incident in the process instance, analogous to an unresolvable expression).
+Resolves a `decisionId` to the **latest active version** of a `DmnDecisionDTO` using `DmnDefinitionsCache`. Always uses the latest version — version pinning for both BPMN (called processes) and DMN will be addressed together in a future iteration.
+
+Throws a `DmnDecisionNotFoundException` if the decision is not found (triggers an incident in the process instance, analogous to an unresolvable expression).
 
 ---
 
@@ -283,13 +286,23 @@ On incident: if the decision is not found or evaluation fails, create an inciden
 
 ### `DmnDefinitionResource` (mirrors `ProcessDefinitionResource`)
 
-Endpoints:
+Definition management endpoints:
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/dmn-definitions` | List all known DMN definition keys |
 | GET | `/dmn-definitions/{key}` | Get a single DMN definition (parsed DTO) |
 | GET | `/dmn-definitions/{key}/xml` | Get raw DMN XML |
+
+### Standalone DMN Evaluation Endpoint
+
+A separate evaluation endpoint allows decisions to be invoked directly outside of a BPMN process instance. This is useful for ad-hoc queries, testing, and integration scenarios where a full process is not required.
+
+| Method | Path | Request body | Description |
+|---|---|---|---|
+| POST | `/dmn-definitions/{key}/evaluate/{decisionId}` | `{ "variables": { ... } }` | Evaluate a named decision from a deployed DMN definition with the supplied variables; returns the decision result as JSON |
+
+The endpoint uses `DmnDecisionResolver` + `DmnEvaluatorImpl` directly, with the supplied variables wrapped in a `VariableScope`. The response is the raw `JsonNode` produced by the evaluator. HTTP 404 is returned when the definition or decision key is not found.
 
 ---
 
@@ -326,26 +339,26 @@ The existing BPMN topology remains entirely unchanged.
 - [ ] **Phase 7** – Add `BusinessRuleTask` model class and `BusinessRuleTaskInstance`
 - [ ] **Phase 7** – Implement `BusinessRuleTaskInstanceProcessor`
 - [ ] **Phase 7** – Register `BusinessRuleTask` in `FlowNodeInstanceProcessorProvider`
-- [ ] **Phase 8** – Implement `DmnDefinitionResource` REST endpoint
+- [ ] **Phase 8** – Implement `DmnDefinitionResource` REST endpoint (list / get / get-xml)
+- [ ] **Phase 8** – Implement standalone evaluation endpoint `POST /dmn-definitions/{key}/evaluate/{decisionId}`
 - [ ] **Phase 9** – Wire DMN streams and stores into `TopologyProducer`
 - [ ] **Testing** – Unit tests for `DmnParser`, `DmnEvaluatorImpl` (one test per hit policy), `BusinessRuleTaskInstanceProcessor`
 - [ ] **Testing** – Integration test: deploy a `.dmn` file, deploy a BPMN with `BusinessRuleTask`, run a process instance, assert output variable
 
 ---
 
-## Open Questions / Design Decisions for Review
+## Design Decisions
 
-1. **DMN deployment channel**: Should DMN files be deployed through the same Kafka topic as BPMN (`definitions`) using a new `XmlDmnDefinitionsDTO` sub-type, or through a dedicated `dmn-definitions` topic? A dedicated topic keeps concerns cleanly separated and is recommended.
+The following questions from the initial review have been resolved:
 
-2. **Decision versioning**: DMN decisions are versioned independently of BPMN processes. A `businessRuleTask` should be able to specify a pinned `decisionVersion` (analogous to calling a specific version of a called process). The `zeebe:calledDecision` element already supports a `bindingType` attribute for this.
-
-3. **Decision Requirements Diagrams (DRD)**: A DRD can chain decisions (the output of one feeds the input of another). Phase 1 implementation can treat each decision as self-contained. DRD chaining can be added in a follow-up once the basic table evaluation is working.
-
-4. **Type coercion**: DMN `typeRef` values (`string`, `integer`, `long`, `double`, `boolean`, `date`, `time`, `date and time`, `duration`) should be coerced to/from FEEL types. This can reuse the FEEL engine's built-in type system.
-
-5. **Standalone DMN evaluation API**: Should there be a REST endpoint to evaluate a decision directly (outside a BPMN process instance)? This would be useful for testing and ad-hoc queries. Recommended as a follow-up.
-
-6. **Expression language negotiation**: DMN 1.3 allows other expression languages (JUEL, Groovy). TaktX will support FEEL only (same constraint as for BPMN script tasks), unless explicitly extended later.
+| # | Topic | Decision |
+|---|---|---|
+| 1 | **DMN deployment channel** | Dedicated `dmn-definitions` Kafka topic. DMN definitions are globally available, the same way BPMN process definitions are. |
+| 2 | **Decision versioning** | Always resolve the **latest active version** (consistent with current BPMN behaviour). Version pinning for both BPMN and DMN will be tackled together in a separate future effort. |
+| 3 | **DRD / decision chaining** | **Out of scope.** Each decision is evaluated as a standalone unit. |
+| 4 | **Standalone DMN evaluation API** | **In scope.** `POST /dmn-definitions/{key}/evaluate/{decisionId}` evaluates a decision outside a process instance (see Phase 8). |
+| 5 | **Type coercion** | DMN `typeRef` coercion handled by the FEEL engine's built-in type system. |
+| 6 | **Expression language** | FEEL only — same constraint as BPMN script tasks. |
 
 ---
 
@@ -395,7 +408,7 @@ taktx-shared/
 taktx-engine/
   src/main/java/io/taktx/engine/
     api/
-      DmnDefinitionResource.java
+      DmnDefinitionResource.java      ← list / get / get-xml + evaluate endpoint
     dmn/
       DmnEvaluator.java
       DmnEvaluatorImpl.java
