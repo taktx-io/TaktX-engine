@@ -150,18 +150,8 @@ jreleaser {
                     stagingRepository("build/staging-deploy")
                 }
             }
-            nexus2 {
-                register("snapshot-deploy") {
-                    active.set(org.jreleaser.model.Active.SNAPSHOT)
-                    url.set("https://s01.oss.sonatype.org/service/local/")
-                    snapshotUrl.set("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-                    applyMavenCentralRules.set(true)
-                    snapshotSupported.set(true)
-                    closeRepository.set(true)
-                    releaseRepository.set(true)
-                    stagingRepository("build/staging-deploy")
-                }
-            }
+            // NOTE: Legacy OSSRH (s01.oss.sonatype.org) was decommissioned in 2024.
+            // Snapshot publishing is not currently configured.
         }
     }
 }
