@@ -16,6 +16,8 @@ import io.taktx.Topics;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
+import io.taktx.dto.DmnDefinitionDTO;
+import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -36,14 +38,17 @@ import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
+import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dmn.DmnDefinitionsCache;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.license.LicenseConfigProcessor;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
+import io.taktx.engine.pd.DmnDefinitionsProcessor;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.ScheduleProcessor;
@@ -128,6 +133,13 @@ public class TopologyProducer {
           Serdes.serdeFrom(
               new ProcessInstanceTriggerEnvelopeSerializer(),
               new ProcessInstanceTriggerEnvelopeDeserializer());
+  public static final ObjectMapperSerde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
+      new ObjectMapperSerde<>(DmnDefinitionKey.class);
+  public static final ObjectMapperSerde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
+      new ObjectMapperSerde<>(DmnDefinitionDTO.class);
+  public static final ObjectMapperSerde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
+      new ObjectMapperSerde<>(XmlDmnDefinitionsDTO.class);
+
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
@@ -186,6 +198,7 @@ public class TopologyProducer {
   private final FeelExpressionHandler feelExpressionHandler;
   private final DynamicTopicManager topicManager;
   private final DefinitionsCache definitionsCache;
+  private final DmnDefinitionsCache dmnDefinitionsCache;
   private final EngineAuthorizationService engineAuthorizationService;
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
@@ -195,6 +208,8 @@ public class TopologyProducer {
     StreamsBuilder builder = new StreamsBuilder();
 
     setupNewDefinitionStream(builder);
+
+    setupDmnDefinitionStream(builder);
 
     setupMessageStream(builder);
 
@@ -238,6 +253,57 @@ public class TopologyProducer {
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+  }
+
+  private void setupDmnDefinitionStream(StreamsBuilder builder) {
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.DMN_VERSION_BY_HASH),
+            Serdes.String(),
+            new ObjectMapperSerde<>(
+                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
+        Materialized.<DmnDefinitionKey, DmnDefinitionDTO>as(
+                keyValueStoreSupplier.get(Stores.GLOBAL_DMN_DEFINITION))
+            .withKeySerde(DMN_DEFINITION_KEY_SERDE)
+            .withValueSerde(DMN_DEFINITION_SERDE));
+
+    builder.globalTable(
+        taktConfiguration.getPrefixed(Topics.XML_BY_DMN_DEFINITION_ID.getTopicName()),
+        Materialized.<DmnDefinitionKey, String>as(
+                keyValueStoreSupplier.get(Stores.XML_BY_DMN_DEFINITION_ID))
+            .withKeySerde(DMN_DEFINITION_KEY_SERDE)
+            .withValueSerde(ZIPPED_STRING_SERDE));
+
+    builder.stream(
+            taktConfiguration.getPrefixed(Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
+            Consumed.with(Serdes.String(), DMN_TRIGGER_SERDE))
+        .process(
+            () -> new DmnDefinitionsProcessor(taktConfiguration, clock, dmnDefinitionsCache),
+            taktConfiguration.getPrefixed(Stores.DMN_VERSION_BY_HASH.getStorename()))
+        .split()
+        .branch(
+            (key, value) -> key instanceof DmnDefinitionKey && value instanceof DmnDefinitionDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair((DmnDefinitionKey) key, (DmnDefinitionDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
+                            Produced.with(DMN_DEFINITION_KEY_SERDE, DMN_DEFINITION_SERDE))))
+        .branch(
+            (key, value) -> key instanceof DmnDefinitionKey && value instanceof String,
+            Branched.withConsumer(
+                ks ->
+                    ks.map((key, value) -> KeyValue.pair((DmnDefinitionKey) key, (String) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.XML_BY_DMN_DEFINITION_ID.getTopicName()),
+                            Produced.with(DMN_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))));
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {

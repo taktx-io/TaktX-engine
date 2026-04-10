@@ -133,4 +133,12 @@ public class BpmnMapperFactory {
   public SignalMapper createSignalMapper() {
     return new GenericSignalMapper();
   }
+
+  public BusinessRuleTaskMapper createBusinessRuleTaskMapper() {
+    if (namespaces.contains(NS_ZEEBE_1_0)) {
+      return new ZeebeBusinessRuleTaskMapper();
+    } else {
+      return new GenericBusinessRuleTaskMapper();
+    }
+  }
 }

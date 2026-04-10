@@ -109,13 +109,9 @@ public class XmlByProcessDefinitionIdConsumer {
       // Create the file path
       Path filePath = namespacePath.resolve(filename);
 
-      // Check if the file already exists
-      if (java.nio.file.Files.exists(filePath)) {
-        log.debug("Process definition file already exists, overwriting: {}", filePath);
-        java.nio.file.Files.delete(filePath);
-      }
-
-      // Write the XML to the file
+      // Always write the file: Files.writeString truncates-and-overwrites atomically.
+      // This handles a fresh engine installation where the state store is wiped and
+      // version numbers restart — the same (id, version) may arrive with different content.
       java.nio.file.Files.writeString(filePath, xml);
       log.info("Wrote process definition to file: {}", filePath);
     } catch (IOException e) {

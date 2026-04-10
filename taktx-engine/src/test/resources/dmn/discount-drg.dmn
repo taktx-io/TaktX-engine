@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" id="Definitions_discount_drg" name="Discount DRG" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.40.1">
+  <decision id="categoryDecision" name="Category Decision">
+    <decisionTable id="categoryTable" hitPolicy="FIRST">
+      <input id="cat_input_1" label="Loyalty Points">
+        <inputExpression id="cat_ie_1" typeRef="integer">
+          <text>loyaltyPoints</text>
+        </inputExpression>
+      </input>
+      <output id="cat_output_1" label="Category" name="category" typeRef="string" />
+      <rule id="cat_rule_1">
+        <inputEntry id="cat_inputEntry_1">
+          <text>&gt;= 1000</text>
+        </inputEntry>
+        <outputEntry id="cat_outputEntry_1">
+          <text>"Premium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="cat_rule_2">
+        <inputEntry id="cat_inputEntry_2">
+          <text>&gt;= 500</text>
+        </inputEntry>
+        <outputEntry id="cat_outputEntry_2">
+          <text>"Standard"</text>
+        </outputEntry>
+      </rule>
+      <rule id="cat_rule_3">
+        <inputEntry id="cat_inputEntry_3">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="cat_outputEntry_3">
+          <text>"Basic"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="discountDecision" name="Discount Decision">
+    <informationRequirement id="ir_1">
+      <requiredDecision href="#categoryDecision" />
+    </informationRequirement>
+    <decisionTable id="discountTable" hitPolicy="FIRST">
+      <input id="disc_input_1" label="Customer Category">
+        <inputExpression id="disc_ie_1" typeRef="string">
+          <text>categoryDecision</text>
+        </inputExpression>
+      </input>
+      <output id="disc_output_1" label="Discount" name="discount" typeRef="double" />
+      <rule id="disc_rule_1">
+        <inputEntry id="disc_inputEntry_1">
+          <text>"Premium"</text>
+        </inputEntry>
+        <outputEntry id="disc_outputEntry_1">
+          <text>0.2</text>
+        </outputEntry>
+      </rule>
+      <rule id="disc_rule_2">
+        <inputEntry id="disc_inputEntry_2">
+          <text>"Standard"</text>
+        </inputEntry>
+        <outputEntry id="disc_outputEntry_2">
+          <text>0.1</text>
+        </outputEntry>
+      </rule>
+      <rule id="disc_rule_3">
+        <inputEntry id="disc_inputEntry_3">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="disc_outputEntry_3">
+          <text>0.05</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_1uxsofv">
+    <dmndi:DMNShape id="DMNShape_categoryDecision" dmnElementRef="categoryDecision">
+      <dc:Bounds height="80" width="180" x="150" y="80" />
+    </dmndi:DMNShape>
+    <dmndi:DMNShape id="DMNShape_discountDecision" dmnElementRef="discountDecision">
+      <dc:Bounds height="80" width="180" x="150" y="230" />
+    </dmndi:DMNShape>
+    <dmndi:DMNEdge id="DMNEdge_ir_1" dmnElementRef="ir_1">
+      <di:waypoint x="240" y="160" />
+      <di:waypoint x="240" y="230" />
+    </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
+
+

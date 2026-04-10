@@ -1,21 +1,27 @@
 {
   "overall": {
-    "coverage": 63.44,
-    "covered": 33678,
-    "total": 53088
+    "coverage": 72.03,
+    "covered": 37995,
+    "total": 52749
   },
   "modules": {
     "taktx-engine": {
       "coverage": 84.17
     },
     "taktx-client": {
-      "coverage": 31.53
+      "coverage": 37.6
     },
     "taktx-client-quarkus": {
       "coverage": 53.93
     },
+    "taktx-client-spring-boot-3": {
+      "coverage": 55.93
+    },
+    "taktx-client-spring-boot-4": {
+      "coverage": 55.93
+    },
     "taktx-shared": {
-      "coverage": 19.52
+      "coverage": 56.59
     }
   }
 }

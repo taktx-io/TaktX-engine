@@ -355,6 +355,28 @@ public class BpmnTestEngine {
     return this;
   }
 
+  public BpmnTestEngine deployDmnDefinition(String filename) throws IOException {
+    LOG.info("Deploying DMN definition: " + filename);
+    taktClient.deployDmnDefinition(BpmnTestEngine.class.getResourceAsStream(filename));
+    return this;
+  }
+
+  public BpmnTestEngine deployDmnDefinitionAndWait(String filename) throws IOException {
+    return deployDmnDefinitionAndWait(filename, DEFAULT_DURATION);
+  }
+
+  public BpmnTestEngine deployDmnDefinitionAndWait(String filename, Duration duration)
+      throws IOException {
+    deployDmnDefinition(filename);
+    // Give the engine time to process the DMN definition before proceeding
+    try {
+      Thread.sleep(duration.toMillis() / 4);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    return this;
+  }
+
   public BpmnTestEngine registerAndSubscribeToExternalTaskIds(String... externalTaskIds) {
     LOG.info(
         "Registering and subscribing to external task ids: " + String.join(", ", externalTaskIds));

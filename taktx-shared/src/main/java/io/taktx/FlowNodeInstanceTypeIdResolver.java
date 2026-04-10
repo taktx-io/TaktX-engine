@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.BoundaryEventInstanceDTO;
+import io.taktx.dto.BusinessRuleTaskInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.EventBasedGatewayInstanceDTO;
@@ -39,6 +40,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
     return switch (value) {
       case StartEventInstanceDTO ignored -> "A";
       case BoundaryEventInstanceDTO ignored -> "B";
+      case BusinessRuleTaskInstanceDTO ignored -> "K";
       case CallActivityInstanceDTO ignored -> "C";
       case SendTaskInstanceDTO ignored -> "D";
       case EndEventInstanceDTO ignored -> "E";
@@ -76,6 +78,7 @@ public class FlowNodeInstanceTypeIdResolver extends TypeIdResolverBase {
     return switch (id) {
       case "A" -> context.constructType(StartEventInstanceDTO.class);
       case "B" -> context.constructType(BoundaryEventInstanceDTO.class);
+      case "K" -> context.constructType(BusinessRuleTaskInstanceDTO.class);
       case "C" -> context.constructType(CallActivityInstanceDTO.class);
       case "D" -> context.constructType(SendTaskInstanceDTO.class);
       case "E" -> context.constructType(EndEventInstanceDTO.class);

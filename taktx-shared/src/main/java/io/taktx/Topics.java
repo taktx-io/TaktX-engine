@@ -28,7 +28,10 @@ public enum Topics {
   PROCESS_DEFINITIONS_TRIGGER_TOPIC("definitions", false, CleanupPolicy.DELETE),
   SIGNAL_TOPIC("signals", false, CleanupPolicy.COMPACT),
   USER_TASK_TRIGGER_TOPIC("usertasks", false, CleanupPolicy.COMPACT),
-  USER_TASK_RESPONSE_TOPIC("usertasks-response", false, CleanupPolicy.DELETE);
+  USER_TASK_RESPONSE_TOPIC("usertasks-response", false, CleanupPolicy.DELETE),
+  DMN_DEFINITIONS_TRIGGER_TOPIC("dmn-definitions", false, CleanupPolicy.DELETE),
+  DMN_DEFINITION_ACTIVATION_TOPIC("dmn-definition-activation", false, CleanupPolicy.COMPACT),
+  XML_BY_DMN_DEFINITION_ID("xml-by-dmn-definition-id", false, CleanupPolicy.COMPACT);
 
   private final String topicName;
   private final boolean initialAvailable;

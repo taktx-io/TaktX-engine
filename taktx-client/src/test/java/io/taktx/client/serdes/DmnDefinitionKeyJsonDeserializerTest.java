@@ -1,0 +1,23 @@
+/*
+ * TaktX - A high-performance BPMN engine
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+package io.taktx.client.serdes;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.taktx.dto.DmnDefinitionKey;
+import org.junit.jupiter.api.Test;
+
+class DmnDefinitionKeyJsonDeserializerTest {
+
+  @Test
+  void testConstruct() {
+    try (DmnDefinitionKeyJsonDeserializer deserializer = new DmnDefinitionKeyJsonDeserializer()) {
+      assertThat(deserializer.getClazz()).isEqualTo(DmnDefinitionKey.class);
+    }
+  }
+}

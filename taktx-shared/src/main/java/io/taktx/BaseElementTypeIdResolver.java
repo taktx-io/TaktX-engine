@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.taktx.dto.BoundaryEventDTO;
+import io.taktx.dto.BusinessRuleTaskDTO;
 import io.taktx.dto.CallActivityDTO;
 import io.taktx.dto.EndEventDTO;
 import io.taktx.dto.ErrorEventDefinitionDTO;
@@ -61,6 +62,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case ServiceTaskDTO ignored -> "SV";
       case MessageEndEventDTO ignored -> "MS";
       case MessageIntermediateThrowEventDTO ignored -> "MI";
+      case BusinessRuleTaskDTO ignored -> "BR";
       case ScriptTaskDTO ignored -> "SC";
       case UserTaskDTO ignored -> "UT";
       case TaskDTO ignored -> "T";
@@ -105,6 +107,7 @@ public class BaseElementTypeIdResolver extends TypeIdResolverBase {
       case "ST" -> context.constructType(SendTaskDTO.class);
       case "MS" -> context.constructType(MessageEndEventDTO.class);
       case "MI" -> context.constructType(MessageIntermediateThrowEventDTO.class);
+      case "BR" -> context.constructType(BusinessRuleTaskDTO.class);
       case "SC" -> context.constructType(ScriptTaskDTO.class);
       case "SV" -> context.constructType(ServiceTaskDTO.class);
       case "UT" -> context.constructType(UserTaskDTO.class);

@@ -9,6 +9,7 @@
 package io.taktx.engine.pi;
 
 import io.taktx.dto.BoundaryEventInstanceDTO;
+import io.taktx.dto.BusinessRuleTaskInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
 import io.taktx.dto.EndEventInstanceDTO;
 import io.taktx.dto.EventBasedGatewayInstanceDTO;
@@ -47,6 +48,7 @@ import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pd.model.SubProcess;
 import io.taktx.engine.pi.model.BoundaryEventInstance;
+import io.taktx.engine.pi.model.BusinessRuleTaskInstance;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.EndEventInstance;
 import io.taktx.engine.pi.model.EventBasedGatewayInstance;
@@ -287,6 +289,21 @@ public interface ProcessInstanceMapper {
   @Mapping(
       target = "flowNode",
       expression =
+          "java((io.taktx.engine.pd.model.BusinessRuleTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
+  @Mapping(target = "parentInstance", ignore = true)
+  @Mapping(target = "dirty", ignore = true)
+  @Mapping(target = "state", ignore = true)
+  @Mapping(target = "stateNoChange", ignore = true)
+  @Mapping(target = "stateChanged", ignore = true)
+  @Mapping(target = "wasWaiting", ignore = true)
+  @Mapping(target = "wasNew", ignore = true)
+  @Mapping(target = "counted", ignore = true)
+  BusinessRuleTaskInstance map(
+      BusinessRuleTaskInstanceDTO source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "flowNode",
+      expression =
           "java((io.taktx.engine.pd.model.ScriptTask)flowElements.getFlowNode(flowElements.getIndex(source.getElementIndex())).orElseThrow())")
   @Mapping(target = "parentInstance", ignore = true)
   @Mapping(target = "dirty", ignore = true)
@@ -395,6 +412,9 @@ public interface ProcessInstanceMapper {
   }
 
   @SubclassMapping(target = BoundaryEventInstance.class, source = BoundaryEventInstanceDTO.class)
+  @SubclassMapping(
+      target = BusinessRuleTaskInstance.class,
+      source = BusinessRuleTaskInstanceDTO.class)
   @SubclassMapping(target = StartEventInstance.class, source = StartEventInstanceDTO.class)
   @SubclassMapping(
       target = IntermediateCatchEventInstance.class,
@@ -616,6 +636,14 @@ public interface ProcessInstanceMapper {
       expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
   @Mapping(target = "parentElementInstanceId", ignore = true)
   @Mapping(target = "elementId", ignore = true)
+  BusinessRuleTaskInstanceDTO map(
+      BusinessRuleTaskInstance source, @Context FlowElements flowElements);
+
+  @Mapping(
+      target = "elementIndex",
+      expression = "java(flowElements.indexOf(source.getFlowNode().getId()))")
+  @Mapping(target = "parentElementInstanceId", ignore = true)
+  @Mapping(target = "elementId", ignore = true)
   ScriptTaskInstanceDTO map(ScriptTaskInstance source, @Context FlowElements flowElements);
 
   @Mapping(
@@ -686,6 +714,9 @@ public interface ProcessInstanceMapper {
       ParallelGatewayInstance source, @Context FlowElements flowElements);
 
   @SubclassMapping(source = BoundaryEventInstance.class, target = BoundaryEventInstanceDTO.class)
+  @SubclassMapping(
+      source = BusinessRuleTaskInstance.class,
+      target = BusinessRuleTaskInstanceDTO.class)
   @SubclassMapping(source = StartEventInstance.class, target = StartEventInstanceDTO.class)
   @SubclassMapping(
       source = IntermediateCatchEventInstance.class,

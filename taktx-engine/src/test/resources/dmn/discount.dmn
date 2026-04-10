@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" id="Definitions_discount" name="Discount Definitions" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.40.1">
+  <decision id="discountDecision" name="Discount Decision">
+    <decisionTable id="decisionTable_1" hitPolicy="FIRST">
+      <input id="input_1" label="Customer Category">
+        <inputExpression id="inputExpression_1" typeRef="string">
+          <text>category</text>
+        </inputExpression>
+      </input>
+      <output id="output_1" label="Discount" name="discount" typeRef="double" />
+      <rule id="rule_1">
+        <inputEntry id="inputEntry_1">
+          <text>"Premium"</text>
+        </inputEntry>
+        <outputEntry id="outputEntry_1">
+          <text>0.2</text>
+        </outputEntry>
+      </rule>
+      <rule id="rule_2">
+        <inputEntry id="inputEntry_2">
+          <text>"Standard"</text>
+        </inputEntry>
+        <outputEntry id="outputEntry_2">
+          <text>0.1</text>
+        </outputEntry>
+      </rule>
+      <rule id="rule_3">
+        <inputEntry id="inputEntry_3">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="outputEntry_3">
+          <text>0.05</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_1lyzdgj">
+      <dmndi:DMNShape id="DMNShape_0s208nu" dmnElementRef="discountDecision">
+        <dc:Bounds height="80" width="180" x="150" y="150" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

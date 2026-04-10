@@ -1,0 +1,30 @@
+/*
+ * TaktX - A high-performance BPMN engine
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+package io.taktx.serdes;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.taktx.dto.TopicMetaDTO;
+import org.junit.jupiter.api.Test;
+
+class ExternalTaskMetaSerdesTest {
+
+  @Test
+  void serializer_hasCorrectClass() {
+    try (ExternalTaskMetaSerializer serializer = new ExternalTaskMetaSerializer()) {
+      assertThat(serializer.getClazz()).isEqualTo(TopicMetaDTO.class);
+    }
+  }
+
+  @Test
+  void deserializer_hasCorrectClass() {
+    try (ExternalTaskMetaDeserializer deserializer = new ExternalTaskMetaDeserializer()) {
+      assertThat(deserializer.getClazz()).isEqualTo(TopicMetaDTO.class);
+    }
+  }
+}

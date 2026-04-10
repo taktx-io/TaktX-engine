@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
 
+    compileOnly(libs.lombok)
     compileOnly(libs.quarkus.core)
 
     testImplementation(libs.junit.jupiter)
@@ -52,7 +53,6 @@ dependencies {
     testImplementation(libs.reflections)
     testImplementation(libs.jaxb.runtime)
 
-    compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 }
 
@@ -67,6 +67,27 @@ tasks.jacocoTestReport {
         xml.required = true
         html.required = true
     }
+    // Exclude classes that carry no testable business logic and would distort the
+    // coverage metric:
+    //  - dto/**          : pure Lombok data-transfer objects (generated getters/equals/hashCode)
+    //  - bpmn/**         : XJC-generated classes from the BPMN XML Schema
+    //  - *TypeIdResolver : Jackson polymorphism configuration wiring (no conditional logic)
+    //  - xml/Generic*    : Generic BPMN element mappers — exercised by engine integration tests
+    //  - xml/Zeebe*      : Zeebe-specific BPMN mappers  — exercised by engine integration tests
+    //  - xml/BpmnMapper* : Mapper interface + factory wiring
+    classDirectories.setFrom(
+        fileTree(layout.buildDirectory.dir("classes/java/main")) {
+            exclude(
+                "io/taktx/dto/**",
+                "io/taktx/bpmn/**",
+                "**/*TypeIdResolver.class",
+                "**/xml/Generic*.class",
+                "**/xml/Zeebe*.class",
+                "**/xml/BpmnMapper.class",
+                "**/xml/BpmnMapperFactory.class"
+            )
+        }
+    )
 }
 
 // Configure javadoc to work with Lombok
