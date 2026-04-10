@@ -39,14 +39,14 @@ The plain Java `taktx-client` library is the core client for interacting with a 
 <dependency>
   <groupId>io.taktx</groupId>
   <artifactId>taktx-client</artifactId>
-  <version>0.5.0-beta-1</version>
+  <version>0.5.0-beta</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client:0.5.0-beta-1")
+implementation("io.taktx:taktx-client:0.5.0-beta")
 ```
 
 ---
