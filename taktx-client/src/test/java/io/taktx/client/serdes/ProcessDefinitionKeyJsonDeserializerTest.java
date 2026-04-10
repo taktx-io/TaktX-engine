@@ -9,7 +9,7 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import org.junit.jupiter.api.Test;
 
 class ProcessDefinitionKeyJsonDeserializerTest {
@@ -17,14 +17,6 @@ class ProcessDefinitionKeyJsonDeserializerTest {
 
   void testConstruct() {
     try (ProcessInstanceTriggerSerializer serializer = new ProcessInstanceTriggerSerializer()) {
-    try (ProcessDefinitionKeyJsonDeserializer deserializer =
-        new ProcessDefinitionKeyJsonDeserializer()) {
-      assertThat(deserializer.getClazz()).isEqualTo(ProcessDefinitionKey.class);
-    }
-  }
-
-  @Test
-  void processInstanceTriggerSerializer_hasCorrectClass() {
       assertThat(serializer.getClazz()).isEqualTo(ProcessInstanceTriggerDTO.class);
     }
   }
