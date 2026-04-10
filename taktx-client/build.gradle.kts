@@ -144,6 +144,10 @@ jreleaser {
                     active.set(org.jreleaser.model.Active.RELEASE)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
+                    // Poll every 30 s, up to 40 times = 20 min max.
+                    // Central Portal typically publishes within 5-15 min.
+                    retryDelay.set(30)
+                    maxRetries.set(40)
                 }
             }
             // NOTE: Legacy OSSRH (s01.oss.sonatype.org) was decommissioned in 2024.

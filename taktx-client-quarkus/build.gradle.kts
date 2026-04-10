@@ -145,6 +145,8 @@ jreleaser {
                     active.set(org.jreleaser.model.Active.RELEASE)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
+                    retryDelay.set(30)
+                    maxRetries.set(40)
                 }
             }
             // NOTE: Legacy OSSRH (s01.oss.sonatype.org) was decommissioned in 2024.
