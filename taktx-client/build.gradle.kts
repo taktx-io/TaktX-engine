@@ -67,6 +67,12 @@ tasks.jacocoTestReport {
         xml.required = true
         html.required = true
     }
+    // Exclude annotation types — they contain no executable code.
+    classDirectories.setFrom(
+        fileTree(layout.buildDirectory.dir("classes/java/main")) {
+            exclude("io/taktx/client/annotation/**")
+        }
+    )
 }
 
 // Adds dependency locking to ensure reproducible builds

@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public class ExtensionElementHelper {
   private ExtensionElementHelper() {
-    throw new UnsupportedOperationException("Utility class");
+    // Utility class, prevent instantiation
   }
 
   public static <T> Optional<T> extractExtensionElement(
