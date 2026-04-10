@@ -8,8 +8,8 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.ProcessDefinitionKeyJsonDeserializer;
-import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.client.serdes.DmnDefinitionKeyJsonDeserializer;
+import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.serdes.ZippedStringDeserializer;
 import io.taktx.util.TaktPropertiesHelper;
 import java.io.IOException;
@@ -24,47 +24,47 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 
 /**
- * This class is responsible for managing the subscription to external tasks for all process
- * definitions.
+ * Subscribes to the {@code xml-by-dmn-definition-id} Kafka topic and persists each DMN definition
+ * XML to the local file system under {@code ~/.taktx/definitions/<namespace>/}.
  */
-public class XmlByProcessDefinitionIdConsumer {
+public class XmlByDmnDefinitionIdConsumer {
 
   private static final Logger log =
-      org.slf4j.LoggerFactory.getLogger(XmlByProcessDefinitionIdConsumer.class);
+      org.slf4j.LoggerFactory.getLogger(XmlByDmnDefinitionIdConsumer.class);
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final Executor executor;
   private volatile boolean running = false;
-  private volatile KafkaConsumer<ProcessDefinitionKey, String> activeConsumer;
+  private volatile KafkaConsumer<DmnDefinitionKey, String> activeConsumer;
   private static final Path DEFINITION_XML_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "definitions");
 
   /**
-   * Constructor for XmlByProcessDefinitionIdConsumer.
+   * Constructor for XmlByDmnDefinitionIdConsumer.
    *
    * @param taktPropertiesHelper the TaktPropertiesHelper to use for configuration
    * @param executor the Executor to use for asynchronous processing
    */
-  public XmlByProcessDefinitionIdConsumer(
+  public XmlByDmnDefinitionIdConsumer(
       TaktPropertiesHelper taktPropertiesHelper, Executor executor) {
     this.taktPropertiesHelper = taktPropertiesHelper;
     this.executor = executor;
   }
 
   /**
-   * Subscribes to the topic for XML by process definition ID and starts consuming messages
+   * Subscribes to the topic for XML by DMN definition ID and starts consuming messages
    * asynchronously.
    */
   public void subscribeToTopic() {
     running = true;
-    log.info("Starting async process to consume XML by process definition id");
+    log.info("Starting async process to consume XML by DMN definition id");
     CompletableFuture.runAsync(
         () -> {
-          try (KafkaConsumer<ProcessDefinitionKey, String> consumer = createConsumer()) {
+          try (KafkaConsumer<DmnDefinitionKey, String> consumer = createConsumer()) {
             activeConsumer = consumer;
 
             String prefixedTopicName =
                 taktPropertiesHelper.getPrefixedTopicName(
-                    Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName());
+                    Topics.XML_BY_DMN_DEFINITION_ID.getTopicName());
 
             log.info("Subscribing to topic {}", prefixedTopicName);
             consumer.subscribe(Collections.singletonList(prefixedTopicName));
@@ -84,14 +84,14 @@ public class XmlByProcessDefinitionIdConsumer {
         executor);
   }
 
-  private void consumeRecords(KafkaConsumer<ProcessDefinitionKey, String> consumer) {
+  private void consumeRecords(KafkaConsumer<DmnDefinitionKey, String> consumer) {
     consumer
         .poll(java.time.Duration.ofMillis(100))
         .forEach(
-            instanceUpdateRecord -> {
-              ProcessDefinitionKey key = instanceUpdateRecord.key();
-              String xml = instanceUpdateRecord.value();
-              String filename = key.getProcessDefinitionId() + "." + key.getVersion() + ".bpmn";
+            dmnRecord -> {
+              DmnDefinitionKey key = dmnRecord.key();
+              String xml = dmnRecord.value();
+              String filename = key.getDmnDefinitionId() + "." + key.getVersion() + ".dmn";
               log.info("Consume XML definition for {} and store to {}", key, filename);
               writeDefinition(taktPropertiesHelper.getNamespace(), filename, xml);
             });
@@ -113,39 +113,35 @@ public class XmlByProcessDefinitionIdConsumer {
       // This handles a fresh engine installation where the state store is wiped and
       // version numbers restart — the same (id, version) may arrive with different content.
       java.nio.file.Files.writeString(filePath, xml);
-      log.info("Wrote process definition to file: {}", filePath);
+      log.info("Wrote DMN definition to file: {}", filePath);
     } catch (IOException e) {
-      log.error("Failed to write process definition file: {}", filename, e);
+      log.error("Failed to write DMN definition file: {}", filename, e);
     }
   }
 
   private <K, V> KafkaConsumer<K, V> createConsumer() {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            "xml-by-process-definition-id-consumer-" + UUID.randomUUID(),
-            ProcessDefinitionKeyJsonDeserializer.class,
+            "xml-by-dmn-definition-id-consumer-" + UUID.randomUUID(),
+            DmnDefinitionKeyJsonDeserializer.class,
             ZippedStringDeserializer.class,
             "earliest");
     return new KafkaConsumer<>(props);
   }
 
   /**
-   * Retrieves the process definition XML for the given process definition key.
+   * Retrieves the DMN definition XML for the given DMN definition key.
    *
-   * @param processDefinitionKey the key of the process definition
+   * @param dmnDefinitionKey the key of the DMN definition
    * @return the XML content as a String, or null if not found
    * @throws IOException if an I/O error occurs reading from the file
    */
-  public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
-      throws IOException {
+  public String getDmnDefinitionXml(DmnDefinitionKey dmnDefinitionKey) throws IOException {
     Path namespacePath =
         Paths.get(DEFINITION_XML_PATH.toString(), taktPropertiesHelper.getNamespace());
     Path filePath =
         namespacePath.resolve(
-            processDefinitionKey.getProcessDefinitionId()
-                + "."
-                + processDefinitionKey.getVersion()
-                + ".bpmn");
+            dmnDefinitionKey.getDmnDefinitionId() + "." + dmnDefinitionKey.getVersion() + ".dmn");
     if (!java.nio.file.Files.exists(filePath)) {
       return null;
     }
@@ -155,7 +151,7 @@ public class XmlByProcessDefinitionIdConsumer {
   /** Stops the consumer from processing further records. */
   public void stop() {
     running = false;
-    KafkaConsumer<ProcessDefinitionKey, String> c = activeConsumer;
+    KafkaConsumer<DmnDefinitionKey, String> c = activeConsumer;
     if (c != null) {
       c.wakeup();
     }

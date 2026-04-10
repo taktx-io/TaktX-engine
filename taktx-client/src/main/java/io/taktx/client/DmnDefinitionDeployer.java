@@ -13,6 +13,12 @@ import io.taktx.dto.ParsedDmnDefinitionsDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.xml.DmnParser;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -61,5 +67,39 @@ class DmnDefinitionDeployer {
             parsed.getDefinitionsKey().getDmnDefinitionId(),
             new XmlDmnDefinitionsDTO(xml)));
     return parsed;
+  }
+
+  /**
+   * Deploys a DMN definition from a resource path (supports {@code classpath:} and {@code file:}
+   * prefixes, including Ant-style wildcards).
+   *
+   * @param resource the resource location, e.g. {@code "classpath:dmn/discount.dmn"} or {@code
+   *     "classpath:dmn/*.dmn"}
+   */
+  public void deployResource(String resource) {
+    String trimmedResource = resource.trim();
+    if (trimmedResource.startsWith("classpath:")) {
+      List<URI> resources = ResourceScanner.getResources(resource);
+      for (URI res : resources) {
+        log.info("Deploying classpath DMN resource: {}", res.getPath());
+        try (InputStream is = res.toURL().openStream()) {
+          deployInputStream(new String(is.readAllBytes()));
+        } catch (IOException e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    } else if (trimmedResource.startsWith("file:")) {
+      try {
+        List<Path> fileSystemResources = ResourceScanner.getFileSystemResources(resource);
+        for (Path fileSystemResource : fileSystemResources) {
+          try (InputStream is = Files.newInputStream(fileSystemResource)) {
+            log.info("Deploying file DMN resource: {}", fileSystemResource);
+            deployInputStream(new String(is.readAllBytes()));
+          }
+        }
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }
   }
 }

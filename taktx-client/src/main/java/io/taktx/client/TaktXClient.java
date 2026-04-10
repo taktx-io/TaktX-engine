@@ -16,6 +16,7 @@ import io.taktx.client.auth.OpenIdClientCredentialsTokenProvider;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
+import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
@@ -77,6 +78,7 @@ public class TaktXClient {
   private final ProcessInstanceProducer processInstanceProducer;
   private final ProcessInstanceUpdateConsumer processInstanceUpdateConsumer;
   private final XmlByProcessDefinitionIdConsumer xmlByProcessDefinitionIdConsumer;
+  private final XmlByDmnDefinitionIdConsumer xmlByDmnDefinitionIdConsumer;
   private final MessageEventSender messageEventSender;
   private final SignalSender signalSender;
   private final ExternalTaskTriggerTopicConsumer externalTaskTriggerTopicConsumer;
@@ -131,6 +133,8 @@ public class TaktXClient {
     this.processDefinitionConsumer = new ProcessDefinitionConsumer(taktPropertiesHelper, executor);
     this.xmlByProcessDefinitionIdConsumer =
         new XmlByProcessDefinitionIdConsumer(taktPropertiesHelper, executor);
+    this.xmlByDmnDefinitionIdConsumer =
+        new XmlByDmnDefinitionIdConsumer(taktPropertiesHelper, executor);
     this.processDefinitionDeployer = new ProcessDefinitionDeployer(taktPropertiesHelper);
     this.dmnDefinitionDeployer = new DmnDefinitionDeployer(taktPropertiesHelper);
     this.processInstanceProducer =
@@ -167,6 +171,7 @@ public class TaktXClient {
     initSigningKeysStore();
     this.processDefinitionConsumer.subscribeToDefinitionRecords();
     this.xmlByProcessDefinitionIdConsumer.subscribeToTopic();
+    this.xmlByDmnDefinitionIdConsumer.subscribeToTopic();
     publishWorkerSigningKeyIfConfigured();
   }
 
@@ -639,6 +644,7 @@ public class TaktXClient {
     this.externalTaskTriggerTopicConsumer.stop();
     this.processInstanceUpdateConsumer.stop();
     this.xmlByProcessDefinitionIdConsumer.stop();
+    this.xmlByDmnDefinitionIdConsumer.stop();
     if (signingKeysStore != null) {
       SigningKeysStoreHolder.clear();
       signingKeysStore.close();
@@ -806,18 +812,17 @@ public class TaktXClient {
     this.processDefinitionConsumer.registerProcessDefinitionUpdateConsumer(consumer);
   }
 
-  /** Deploys all classes annotated with @TaktDeployment found in the classpath. */
+  /** Deploys all classes annotated with @Deployment found in the classpath. */
   public void deployTaktDeploymentAnnotatedClasses() {
     Set<Deployment> deployments = AnnotationScanner.findTaktDeployments();
     for (Deployment annotation : deployments) {
-      String[] resources = annotation.resources();
-
-      String joined = String.join(",", resources);
-      log.info("Deploying process definition from resource {}", joined);
-
-      for (String resource : resources) {
-        // Get the input stream for each resource, support classpath, filesystem and wildcards
+      for (String resource : annotation.resources()) {
+        log.info("Deploying process definition from resource {}", resource);
         processDefinitionDeployer.deployResource(resource);
+      }
+      for (String dmnResource : annotation.dmnResources()) {
+        log.info("Deploying DMN definition from resource {}", dmnResource);
+        dmnDefinitionDeployer.deployResource(dmnResource);
       }
     }
   }
@@ -949,6 +954,17 @@ public class TaktXClient {
   public String getProcessDefinitionXml(ProcessDefinitionKey processDefinitionKey)
       throws IOException {
     return this.xmlByProcessDefinitionIdConsumer.getProcessDefinitionXml(processDefinitionKey);
+  }
+
+  /**
+   * Retrieves the XML of a DMN definition by its key.
+   *
+   * @param dmnDefinitionKey The key of the DMN definition.
+   * @return The XML of the DMN definition, or {@code null} if not yet received.
+   * @throws IOException If an error occurs while retrieving the XML.
+   */
+  public String getDmnDefinitionXml(DmnDefinitionKey dmnDefinitionKey) throws IOException {
+    return this.xmlByDmnDefinitionIdConsumer.getDmnDefinitionXml(dmnDefinitionKey);
   }
 
   /**

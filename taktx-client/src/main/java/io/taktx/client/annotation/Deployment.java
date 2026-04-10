@@ -11,18 +11,26 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Marks a class whose referenced BPMN resources should be deployed automatically at client startup.
+ * Marks a class whose referenced BPMN and/or DMN resources should be deployed automatically at
+ * client startup.
  *
  * <p>Provide one or more resource paths (classpath or filesystem). Example resource values:
- * "classpath:demoProcess.bpmn" or "classpath:processes/*.bpmn".
+ * "classpath:demoProcess.bpmn", "classpath:processes/*.bpmn", "classpath:dmn/discount.dmn".
  */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({java.lang.annotation.ElementType.TYPE})
 public @interface Deployment {
   /**
-   * The resource paths for the deployment. Supports multiple values and classpath wildcards.
+   * The BPMN resource paths for the deployment. Supports multiple values and classpath wildcards.
    *
    * @return one or more resource location strings (for example: "classpath:process.bpmn")
    */
-  String[] resources();
+  String[] resources() default {};
+
+  /**
+   * The DMN resource paths for the deployment. Supports multiple values and classpath wildcards.
+   *
+   * @return one or more DMN resource location strings (for example: "classpath:dmn/discount.dmn")
+   */
+  String[] dmnResources() default {};
 }
