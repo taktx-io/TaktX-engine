@@ -49,4 +49,3 @@ class BpmnParserTest {
     assertThat(result.getRootProcess().getId()).isEqualTo("task-single");
   }
 }
-

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class ProcessDefinitionKeyJsonDeserializerTest {
   @Test
-
   void testConstruct() {
     try (ProcessInstanceTriggerSerializer serializer = new ProcessInstanceTriggerSerializer()) {
       assertThat(serializer.getClazz()).isEqualTo(ProcessInstanceTriggerDTO.class);
