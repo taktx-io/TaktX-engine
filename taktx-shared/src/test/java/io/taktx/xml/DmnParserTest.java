@@ -56,6 +56,31 @@ class DmnParserTest {
       </definitions>
       """;
 
+  private static final String DRG_DMN =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+                   id="drg" name="DRG" namespace="http://camunda.org/schema/1.0/dmn">
+        <decision id="categoryDecision" name="Category Decision">
+          <decisionTable id="catTable" hitPolicy="UNIQUE">
+            <input id="ci1"><inputExpression id="ce1"><text>loyaltyPoints</text></inputExpression></input>
+            <output id="co1" name="category" typeRef="string"/>
+            <rule id="cr1"><inputEntry id="cie1"><text>&gt;= 1000</text></inputEntry><outputEntry id="coe1"><text>"Premium"</text></outputEntry></rule>
+          </decisionTable>
+        </decision>
+        <decision id="discountDecision" name="Discount Decision">
+          <informationRequirement id="ir1">
+            <requiredDecision href="#categoryDecision"/>
+          </informationRequirement>
+          <decisionTable id="discTable" hitPolicy="UNIQUE">
+            <input id="di1"><inputExpression id="de1"><text>categoryDecision</text></inputExpression></input>
+            <output id="do1" name="discount" typeRef="double"/>
+            <rule id="dr1"><inputEntry id="die1"><text>"Premium"</text></inputEntry><outputEntry id="doe1"><text>0.2</text></outputEntry></rule>
+          </decisionTable>
+        </decision>
+      </definitions>
+      """;
+
   @Test
   void parse_simpleDecisionTable() {
     ParsedDmnDefinitionsDTO result = DmnParser.parse(SIMPLE_DMN);
@@ -98,5 +123,20 @@ class DmnParserTest {
     assertThat(decision.getLiteralExpression()).isNotNull();
     assertThat(decision.getDecisionTable()).isNull();
     assertThat(decision.getLiteralExpression().getExpression()).isEqualTo("=0.1");
+  }
+
+  @Test
+  void parse_drgInformationRequirement_populatesRequiredDecisionIds() {
+    ParsedDmnDefinitionsDTO result = DmnParser.parse(DRG_DMN);
+
+    assertThat(result.getDecisions()).hasSize(2);
+
+    DmnDecisionDTO category = result.getDecisions().get(0);
+    assertThat(category.getId()).isEqualTo("categoryDecision");
+    assertThat(category.getRequiredDecisionIds()).isNullOrEmpty();
+
+    DmnDecisionDTO discount = result.getDecisions().get(1);
+    assertThat(discount.getId()).isEqualTo("discountDecision");
+    assertThat(discount.getRequiredDecisionIds()).containsExactly("categoryDecision");
   }
 }

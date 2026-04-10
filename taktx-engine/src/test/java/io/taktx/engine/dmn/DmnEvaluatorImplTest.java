@@ -10,9 +10,12 @@ package io.taktx.engine.dmn;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.DoubleNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.dto.DmnCollectOperator;
@@ -26,6 +29,7 @@ import io.taktx.dto.DmnRuleDTO;
 import io.taktx.engine.feel.FeelEngineProvider;
 import io.taktx.engine.pi.model.VariableScope;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +70,7 @@ class DmnEvaluatorImplTest {
   }
 
   private static DmnDecisionDTO decisionWithTable(DmnDecisionTableDTO dt) {
-    return new DmnDecisionDTO("decision", null, dt, null);
+    return new DmnDecisionDTO("decision", null, dt, null, null);
   }
 
   // ── UNIQUE hit policy ────────────────────────────────────────────────────
@@ -190,7 +194,8 @@ class DmnEvaluatorImplTest {
             DmnCollectOperator.SUM,
             List.of(input("active")),
             List.of(output("amount")),
-            List.of(rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
+            List.of(
+                rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
 
     JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
 
@@ -207,7 +212,8 @@ class DmnEvaluatorImplTest {
             DmnCollectOperator.COUNT,
             List.of(input("active")),
             List.of(output("amount")),
-            List.of(rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
+            List.of(
+                rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
 
     JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
 
@@ -224,7 +230,8 @@ class DmnEvaluatorImplTest {
             DmnCollectOperator.MIN,
             List.of(input("active")),
             List.of(output("amount")),
-            List.of(rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
+            List.of(
+                rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
     JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
 
@@ -241,7 +248,8 @@ class DmnEvaluatorImplTest {
             DmnCollectOperator.MAX,
             List.of(input("active")),
             List.of(output("amount")),
-            List.of(rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
+            List.of(
+                rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
     JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
 
@@ -258,7 +266,8 @@ class DmnEvaluatorImplTest {
             DmnCollectOperator.NONE,
             List.of(input("active")),
             List.of(output("amount")),
-            List.of(rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
+            List.of(
+                rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
     JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
 
@@ -285,6 +294,43 @@ class DmnEvaluatorImplTest {
     assertThat(result.doubleValue()).isEqualTo(0.3);
   }
 
+  // ── OUTPUT_ORDER hit policy ────────────────────────────────────────────────
+
+  @Test
+  void outputOrder_allMatchingRules_returnsArrayInDefinedOrder() {
+    variables.put("n", new IntNode(10));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.OUTPUT_ORDER,
+            List.of(input("n")),
+            List.of(output("label")),
+            List.of(
+                rule(List.of(">5"), List.of("\"big\"")),
+                rule(List.of(">2"), List.of("\"medium\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.isArray()).isTrue();
+    assertThat(result.size()).isEqualTo(2);
+    assertThat(result.get(0).asText()).isEqualTo("big");
+    assertThat(result.get(1).asText()).isEqualTo("medium");
+  }
+
+  @Test
+  void outputOrder_noMatch_returnsNull() {
+    variables.put("n", new IntNode(1));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.OUTPUT_ORDER,
+            List.of(input("n")),
+            List.of(output("label")),
+            List.of(rule(List.of(">5"), List.of("\"big\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
   // ── Multi-output columns ───────────────────────────────────────────────────
 
   @Test
@@ -304,13 +350,128 @@ class DmnEvaluatorImplTest {
     assertThat(result.get("limit").doubleValue()).isEqualTo(1000.0);
   }
 
+  // ── Multiple input columns ─────────────────────────────────────────────────
+
+  @Test
+  void multipleInputColumns_allMatch_returnsOutput() {
+    variables.put("tier", new TextNode("Gold"));
+    variables.put("active", new TextNode("yes"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier"), input("active")),
+            List.of(output("discount")),
+            List.of(rule(List.of("\"Gold\"", "\"yes\""), List.of("0.3"))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.doubleValue()).isEqualTo(0.3);
+  }
+
+  @Test
+  void multipleInputColumns_secondInputDoesNotMatch_returnsNull() {
+    variables.put("tier", new TextNode("Gold"));
+    variables.put("active", new TextNode("no"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier"), input("active")),
+            List.of(output("discount")),
+            List.of(rule(List.of("\"Gold\"", "\"yes\""), List.of("0.3"))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
+  // ── not() unary-test expressions ──────────────────────────────────────────
+
+  @Test
+  void notUnaryTest_excludesSingleValue_matchWhenDifferent() {
+    variables.put("tier", new TextNode("Silver"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier")),
+            List.of(output("result")),
+            List.of(rule(List.of("not(\"Gold\")"), List.of("\"non-gold\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.asText()).isEqualTo("non-gold");
+  }
+
+  @Test
+  void notUnaryTest_excludesTwoValues_matchWhenNeitherExcluded() {
+    variables.put("tier", new TextNode("Bronze"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier")),
+            List.of(output("result")),
+            List.of(rule(List.of("not(\"Gold\",\"Silver\")"), List.of("\"other\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.asText()).isEqualTo("other");
+  }
+
+  @Test
+  void notUnaryTest_excludesTwoValues_noMatchWhenInputIsExcluded() {
+    variables.put("tier", new TextNode("Gold"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier")),
+            List.of(output("result")),
+            List.of(rule(List.of("not(\"Gold\",\"Silver\")"), List.of("\"other\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
+  // ── FEEL expressions in output entries ────────────────────────────────────
+
+  @Test
+  void outputFeelExpression_arithmeticOnVariable_returnsComputedValue() {
+    // Output entry is a FEEL expression referencing an input variable, not a plain literal
+    variables.put("basePrice", new DoubleNode(100.0));
+    variables.put("tier", new TextNode("Gold"));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("tier")),
+            List.of(output("finalPrice")),
+            List.of(rule(List.of("\"Gold\""), List.of("basePrice * 0.7"))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.doubleValue()).isEqualTo(70.0);
+  }
+
+  @Test
+  void outputFeelExpression_conditionalExpression_returnsCorrectBranch() {
+    variables.put("score", new IntNode(85));
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("score")),
+            List.of(output("grade")),
+            List.of(rule(List.of(">= 0"), List.of("if score >= 90 then \"A\" else \"B\""))));
+
+    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+
+    assertThat(result.asText()).isEqualTo("B");
+  }
+
   // ── Literal expression decision ────────────────────────────────────────────
 
   @Test
   void literalExpression_evaluatesFeelExpression() {
     variables.put("x", new IntNode(5));
     DmnLiteralExpressionDTO le = new DmnLiteralExpressionDTO(null, "=x * 2", null);
-    DmnDecisionDTO d = new DmnDecisionDTO("decision", null, null, le);
+    DmnDecisionDTO d = new DmnDecisionDTO("decision", null, null, le, null);
 
     JsonNode result = evaluator.evaluate(d, variables);
 
@@ -321,11 +482,124 @@ class DmnEvaluatorImplTest {
 
   @Test
   void noTableOrLiteral_throws() {
-    DmnDecisionDTO d = new DmnDecisionDTO("decision", null, null, null);
+    DmnDecisionDTO d = new DmnDecisionDTO("decision", null, null, null, null);
 
     assertThatThrownBy(() -> evaluator.evaluate(d, variables))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("decision");
   }
-}
 
+  // ── DRG chaining ───────────────────────────────────────────────────────────
+
+  @Test
+  void drg_requiredDecisionResultIsVisibleToRoot() {
+    // Arrange: categoryDecision (no deps) → "Premium"
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("\"Premium\"")),
+                rule(List.of(">= 500"), List.of("\"Standard\"")),
+                rule(List.of(""), List.of("\"Basic\""))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    // discountDecision requires categoryDecision; reads variable "categoryDecision"
+    DmnDecisionTableDTO discountTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("categoryDecision")),
+            List.of(output("discount")),
+            List.of(
+                rule(List.of("\"Premium\""), List.of("0.2")),
+                rule(List.of("\"Standard\""), List.of("0.1")),
+                rule(List.of(""), List.of("0.05"))));
+    DmnDecisionDTO discountDecision =
+        new DmnDecisionDTO(
+            "discountDecision", null, discountTable, null, List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.2);
+
+    variables.put("loyaltyPoints", new IntNode(750));
+    result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.1);
+
+    variables.put("loyaltyPoints", new IntNode(100));
+    result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.05);
+  }
+
+  @Test
+  void drg_requiredDecisionResultDoesNotLeakIntoProcessScope() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category")),
+            List.of(rule(List.of(""), List.of("\"Gold\""))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionTableDTO discountTable =
+        table(
+            DmnHitPolicy.UNIQUE,
+            List.of(input("categoryDecision")),
+            List.of(output("discount")),
+            List.of(rule(List.of("\"Gold\""), List.of("0.3"))));
+    DmnDecisionDTO discountDecision =
+        new DmnDecisionDTO(
+            "discountDecision", null, discountTable, null, List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(999));
+    drgEvaluator.evaluate(discountDecision, variables);
+
+    // The intermediate DRG result must not have been written into the process variable scope
+    assertThat(variables.get("categoryDecision")).isNull();
+  }
+
+  @Test
+  void drg_circularDependency_throws() {
+    // A requires B, B requires A
+    DmnDecisionDTO decisionA =
+        new DmnDecisionDTO(
+            "A",
+            null,
+            table(DmnHitPolicy.UNIQUE, List.of(), List.of(), List.of()),
+            null,
+            List.of("B"));
+    DmnDecisionDTO decisionB =
+        new DmnDecisionDTO(
+            "B",
+            null,
+            table(DmnHitPolicy.UNIQUE, List.of(), List.of(), List.of()),
+            null,
+            List.of("A"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("B")).thenReturn(Optional.of(decisionB));
+    when(resolver.resolve("A")).thenReturn(Optional.of(decisionA));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    assertThatThrownBy(() -> drgEvaluator.evaluate(decisionA, variables))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Circular dependency");
+  }
+}

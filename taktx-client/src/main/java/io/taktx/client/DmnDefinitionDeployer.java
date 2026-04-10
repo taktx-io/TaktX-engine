@@ -19,13 +19,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 
 /**
- * A deployer for DMN definitions, responsible for parsing DMN XML and sending it to the
- * {@code dmn-definitions} Kafka topic.
+ * A deployer for DMN definitions, responsible for parsing DMN XML and sending it to the {@code
+ * dmn-definitions} Kafka topic.
  */
 class DmnDefinitionDeployer {
 
-  private static final Logger log =
-      org.slf4j.LoggerFactory.getLogger(DmnDefinitionDeployer.class);
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(DmnDefinitionDeployer.class);
 
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final KafkaProducer<String, XmlDmnDefinitionsDTO> xmlEmitter;

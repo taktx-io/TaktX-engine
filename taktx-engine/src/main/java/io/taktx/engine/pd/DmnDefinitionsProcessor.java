@@ -85,7 +85,10 @@ public class DmnDefinitionsProcessor
       // Forward: (DmnDefinitionKey, String xml) → xml-by-dmn-definition-id topic
       context.forward(new Record<>(key, xml, clock.millis()));
     } else {
-      log.info("Version {} of DMN definition {} already exists, no action needed", version, dmnDefinitionId);
+      log.info(
+          "Version {} of DMN definition {} already exists, no action needed",
+          version,
+          dmnDefinitionId);
     }
   }
 

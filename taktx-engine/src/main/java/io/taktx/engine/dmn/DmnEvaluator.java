@@ -19,8 +19,8 @@ public interface DmnEvaluator {
    *
    * @param decision the DMN decision to evaluate
    * @param variables the process-instance variable scope
-   * @return the decision result as a JsonNode (object for single-row policies, array for
-   *     multi-row policies such as COLLECT/RULE_ORDER/OUTPUT_ORDER)
+   * @return the decision result as a JsonNode (object for single-row policies, array for multi-row
+   *     policies such as COLLECT/RULE_ORDER/OUTPUT_ORDER)
    */
   JsonNode evaluate(DmnDecisionDTO decision, VariableScope variables);
 }

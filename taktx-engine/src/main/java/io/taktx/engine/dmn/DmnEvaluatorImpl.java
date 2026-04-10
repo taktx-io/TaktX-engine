@@ -23,11 +23,13 @@ import io.taktx.dto.DmnOutputClauseDTO;
 import io.taktx.dto.DmnRuleDTO;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.feel.FeelEngineClock.SystemClock$;
 import org.camunda.feel.api.EvaluationResult;
@@ -53,25 +55,108 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
   private final FeelEngineApi feelEngineApi;
   private final ObjectMapper objectMapper;
+
+  /**
+   * Optional: resolves required decisions from the deployed store to support DRG chaining. {@code
+   * null} in unit-test contexts where no Kafka store is available.
+   */
+  private final DmnDecisionResolver decisionResolver;
+
   /** Thread-safe cache of parsed FEEL expressions for performance. */
   private final Map<String, ParsedExpression> expressionCache = new ConcurrentHashMap<>();
 
-  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
+  /** CDI constructor used in production. */
+  @Inject
+  public DmnEvaluatorImpl(
+      FeelEngineApi feelEngineApi,
+      ObjectMapper objectMapper,
+      DmnDecisionResolver decisionResolver) {
     this.feelEngineApi = feelEngineApi;
     this.objectMapper = objectMapper;
+    this.decisionResolver = decisionResolver;
+  }
+
+  /** Convenience constructor for unit tests — DRG chaining is disabled (resolver is null). */
+  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
+    this(feelEngineApi, objectMapper, null);
   }
 
   // ── public API ───────────────────────────────────────────────────────────
 
   @Override
   public JsonNode evaluate(DmnDecisionDTO decision, VariableScope variables) {
+    return evaluateDecision(decision, variables, new HashMap<>(), new LinkedHashSet<>());
+  }
+
+  // ── DRG-aware recursive evaluation ───────────────────────────────────────
+
+  /**
+   * Evaluates {@code decision} depth-first: required decisions are evaluated before the root, their
+   * results are memoised in {@code drgResults}, and made visible via a lightweight overlay scope.
+   *
+   * @param inProgress decision IDs currently on the call stack — used for cycle detection
+   */
+  private JsonNode evaluateDecision(
+      DmnDecisionDTO decision,
+      VariableScope variables,
+      Map<String, JsonNode> drgResults,
+      LinkedHashSet<String> inProgress) {
+
+    String decisionId = decision.getId();
+
+    if (inProgress.contains(decisionId)) {
+      throw new IllegalStateException(
+          "Circular dependency detected in DMN decision graph: "
+              + inProgress
+              + " -> "
+              + decisionId);
+    }
+
+    List<String> requiredIds = decision.getRequiredDecisionIds();
+    if (requiredIds != null && !requiredIds.isEmpty() && decisionResolver != null) {
+      inProgress.add(decisionId);
+      try {
+        for (String reqId : requiredIds) {
+          if (!drgResults.containsKey(reqId)) {
+            DmnDecisionDTO reqDecision =
+                decisionResolver
+                    .resolve(reqId)
+                    .orElseThrow(
+                        () ->
+                            new IllegalStateException(
+                                "Required decision '" + reqId + "' not found in any deployed DMN"));
+            drgResults.put(reqId, evaluateDecision(reqDecision, variables, drgResults, inProgress));
+          }
+        }
+      } finally {
+        inProgress.remove(decisionId);
+      }
+    }
+
+    // Build an overlay so required-decision results are readable as variables
+    // without polluting the process-instance scope.
+    VariableScope evalScope =
+        drgResults.isEmpty() ? variables : createDrgOverlayScope(variables, drgResults);
+
     if (decision.getDecisionTable() != null) {
-      return evaluateDecisionTable(decision.getDecisionTable(), variables);
+      return evaluateDecisionTable(decision.getDecisionTable(), evalScope);
     } else if (decision.getLiteralExpression() != null) {
-      return evaluateLiteralExpression(decision.getLiteralExpression(), variables);
+      return evaluateLiteralExpression(decision.getLiteralExpression(), evalScope);
     }
     throw new IllegalArgumentException(
-        "Decision '" + decision.getId() + "' has neither a decisionTable nor a literalExpression");
+        "Decision '" + decisionId + "' has neither a decisionTable nor a literalExpression");
+  }
+
+  /**
+   * Creates a thin read-only overlay scope whose in-memory map contains the DRG intermediate
+   * results. Any variable not found there is delegated to the underlying process {@code base} scope
+   * via the parent-scope chain that {@link VariableScope#get} already follows.
+   */
+  private VariableScope createDrgOverlayScope(
+      VariableScope base, Map<String, JsonNode> drgResults) {
+    VariableScope overlay = new VariableScope(base, null, null, null);
+    drgResults.forEach((k, v) -> overlay.getVariables().put(k, v));
+    return overlay;
   }
 
   // ── literal expression ───────────────────────────────────────────────────
@@ -91,7 +176,18 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     DmnHitPolicy hitPolicy =
         table.getHitPolicy() != null ? table.getHitPolicy() : DmnHitPolicy.UNIQUE;
 
-    List<ObjectNode> matchedRows = evaluateRules(table, variables);
+    // Derive how many matched rows we actually need before we can stop evaluating.
+    // FIRST / ANY / PRIORITY only need the first match.
+    // UNIQUE needs at most 2 so we can still detect (and warn about) a violation.
+    // Everything else must collect all matches.
+    int maxMatches =
+        switch (hitPolicy) {
+          case FIRST, ANY, PRIORITY -> 1;
+          case UNIQUE -> 2;
+          default -> Integer.MAX_VALUE;
+        };
+
+    List<ObjectNode> matchedRows = evaluateRules(table, variables, maxMatches);
 
     return switch (hitPolicy) {
       case UNIQUE -> handleUnique(matchedRows, table);
@@ -105,12 +201,16 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   }
 
   /**
-   * Evaluates all rules and returns the matched output rows as a list of ObjectNodes (each node
-   * maps output-clause name → evaluated output value).
+   * Evaluates rules in order and returns matched output rows. Stops as soon as {@code maxMatches}
+   * rows have been collected, enabling early exit for hit policies that don't need all matches.
    */
-  private List<ObjectNode> evaluateRules(DmnDecisionTableDTO table, VariableScope variables) {
+  private List<ObjectNode> evaluateRules(
+      DmnDecisionTableDTO table, VariableScope variables, int maxMatches) {
     List<ObjectNode> matched = new ArrayList<>();
     for (DmnRuleDTO rule : table.getRules()) {
+      if (matched.size() >= maxMatches) {
+        break;
+      }
       if (inputsMatch(table.getInputs(), rule, variables)) {
         matched.add(buildOutputNode(table.getOutputs(), rule, variables));
       }
@@ -220,8 +320,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     }
 
     // Aggregate operators work on the first output column
-    String outputName =
-        table.getOutputs().isEmpty() ? null : table.getOutputs().get(0).getName();
+    String outputName = table.getOutputs().isEmpty() ? null : table.getOutputs().get(0).getName();
 
     List<Double> values = new ArrayList<>();
     for (ObjectNode row : matched) {
@@ -235,11 +334,15 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       case SUM -> objectMapper.valueToTree(values.stream().mapToDouble(d -> d).sum());
       case MIN -> {
         var min = values.stream().mapToDouble(d -> d).min();
-        yield min.isPresent() ? objectMapper.valueToTree(min.getAsDouble()) : objectMapper.nullNode();
+        yield min.isPresent()
+            ? objectMapper.valueToTree(min.getAsDouble())
+            : objectMapper.nullNode();
       }
       case MAX -> {
         var max = values.stream().mapToDouble(d -> d).max();
-        yield max.isPresent() ? objectMapper.valueToTree(max.getAsDouble()) : objectMapper.nullNode();
+        yield max.isPresent()
+            ? objectMapper.valueToTree(max.getAsDouble())
+            : objectMapper.nullNode();
       }
       case COUNT -> objectMapper.valueToTree((double) matched.size());
       default -> handleRuleOrder(matched, table);
@@ -270,8 +373,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   }
 
   /**
-   * Evaluates a FEEL unary test (e.g. {@code "Fall"}, {@code > 10}, {@code [1..5]}) against a
-   * given input value using the FEEL {@code evaluateWithInput} API.
+   * Evaluates a FEEL unary test (e.g. {@code "Fall"}, {@code > 10}, {@code [1..5]}) against a given
+   * input value using the FEEL {@code evaluateWithInput} API.
    */
   private boolean evaluateUnaryTest(
       String unaryTest, JsonNode inputValue, VariableScope variables) {
@@ -356,8 +459,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   }
 
   /**
-   * For single-output tables, returns the value directly. For multi-output tables, returns the
-   * full output object.
+   * For single-output tables, returns the value directly. For multi-output tables, returns the full
+   * output object.
    */
   private JsonNode flattenSingleOutput(ObjectNode row, DmnDecisionTableDTO table) {
     if (table.getOutputs() != null && table.getOutputs().size() == 1) {

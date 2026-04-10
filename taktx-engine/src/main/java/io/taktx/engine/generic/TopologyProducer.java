@@ -18,7 +18,6 @@ import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
-import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -39,14 +38,17 @@ import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
+import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dmn.DmnDefinitionsCache;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.license.LicenseConfigProcessor;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
+import io.taktx.engine.pd.DmnDefinitionsProcessor;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.ScheduleProcessor;
@@ -54,8 +56,6 @@ import io.taktx.engine.pd.SignalProcessor;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
-import io.taktx.engine.dmn.DmnDefinitionsCache;
-import io.taktx.engine.pd.DmnDefinitionsProcessor;
 import io.taktx.engine.pi.DtoMapper;
 import io.taktx.engine.pi.Forwarder;
 import io.taktx.engine.pi.ProcessInstanceMapper;
@@ -260,7 +260,8 @@ public class TopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.DMN_VERSION_BY_HASH),
             Serdes.String(),
-            new ObjectMapperSerde<>((Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+            new ObjectMapperSerde<>(
+                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
@@ -276,8 +277,7 @@ public class TopologyProducer {
             .withKeySerde(DMN_DEFINITION_KEY_SERDE)
             .withValueSerde(ZIPPED_STRING_SERDE));
 
-    builder
-        .stream(
+    builder.stream(
             taktConfiguration.getPrefixed(Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(Serdes.String(), DMN_TRIGGER_SERDE))
         .process(
@@ -299,9 +299,7 @@ public class TopologyProducer {
             (key, value) -> key instanceof DmnDefinitionKey && value instanceof String,
             Branched.withConsumer(
                 ks ->
-                    ks.map(
-                            (key, value) ->
-                                KeyValue.pair((DmnDefinitionKey) key, (String) value))
+                    ks.map((key, value) -> KeyValue.pair((DmnDefinitionKey) key, (String) value))
                         .to(
                             taktConfiguration.getPrefixed(
                                 Topics.XML_BY_DMN_DEFINITION_ID.getTopicName()),

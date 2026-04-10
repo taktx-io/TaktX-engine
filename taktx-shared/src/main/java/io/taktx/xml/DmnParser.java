@@ -89,7 +89,21 @@ public class DmnParser {
       }
     }
 
-    return new DmnDecisionDTO(id, name, table, literal);
+    // Parse DRG information requirements (edges to required upstream decisions)
+    List<String> requiredDecisionIds = new ArrayList<>();
+    NodeList infoReqNodes = decisionEl.getElementsByTagNameNS(DMN_NS, "informationRequirement");
+    for (int i = 0; i < infoReqNodes.getLength(); i++) {
+      Element infoReqEl = (Element) infoReqNodes.item(i);
+      NodeList reqDecNodes = infoReqEl.getElementsByTagNameNS(DMN_NS, "requiredDecision");
+      for (int j = 0; j < reqDecNodes.getLength(); j++) {
+        String href = ((Element) reqDecNodes.item(j)).getAttribute("href");
+        // href is "#decisionId" — strip the leading #
+        requiredDecisionIds.add(href.startsWith("#") ? href.substring(1) : href);
+      }
+    }
+
+    return new DmnDecisionDTO(
+        id, name, table, literal, requiredDecisionIds.isEmpty() ? null : requiredDecisionIds);
   }
 
   private static DmnDecisionTableDTO parseDecisionTable(Element tableEl) {
@@ -189,7 +203,8 @@ public class DmnParser {
   }
 
   private static DmnHitPolicy parseHitPolicy(String value) {
-    // DMN 1.3 spec §8.2 uses uppercase names with spaces; underscore variants accepted for convenience
+    // DMN 1.3 spec §8.2 uses uppercase names with spaces; underscore variants accepted for
+    // convenience
     return switch (value.toUpperCase()) {
       case "UNIQUE" -> DmnHitPolicy.UNIQUE;
       case "FIRST" -> DmnHitPolicy.FIRST;

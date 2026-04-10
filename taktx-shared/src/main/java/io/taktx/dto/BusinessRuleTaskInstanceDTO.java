@@ -7,28 +7,15 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import java.util.List;
-import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@Getter
-@EqualsAndHashCode
-@ToString
+@Data
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@AllArgsConstructor
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 @RegisterForReflection
-public class DmnRuleDTO {
-  private String id;
-
-  /** FEEL unary test expressions, one per input clause (may be empty string = wildcard). */
-  private List<String> inputEntries;
-
-  /** FEEL expressions, one per output clause. */
-  private List<String> outputEntries;
-}
+public class BusinessRuleTaskInstanceDTO extends TaskInstanceDTO {}
