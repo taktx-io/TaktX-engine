@@ -52,13 +52,13 @@ Add the client dependency to your project:
 
 ```kotlin
 // Gradle
-implementation("io.taktx:taktx-client:0.4.0-beta-3")
+implementation("io.taktx:taktx-client:0.5.0-beta")
 
 // Or for Spring Boot auto-configuration:
-implementation("io.taktx:taktx-client-spring:0.4.0-beta-3")
+implementation("io.taktx:taktx-client-spring:0.5.0-beta")
 
 // Or for Quarkus / CDI auto-configuration:
-implementation("io.taktx:taktx-client-quarkus:0.4.0-beta-3")
+implementation("io.taktx:taktx-client-quarkus:0.5.0-beta")
 ```
 
 Then connect to the engine via Kafka:
