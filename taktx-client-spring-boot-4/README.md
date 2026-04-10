@@ -46,14 +46,14 @@ The auto-configuration does all of that for you.
 <dependency>
   <groupId>io.taktx</groupId>
   <artifactId>taktx-client-spring-boot-4</artifactId>
-  <version>0.4.0-beta-3</version>
+  <version>0.5.0-beta</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("io.taktx:taktx-client-spring-boot-4:0.4.0-beta-3")
+implementation("io.taktx:taktx-client-spring-boot-4:0.5.0-beta")
 ```
 
 ---

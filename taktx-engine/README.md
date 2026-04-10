@@ -42,14 +42,14 @@ Build for both `linux/amd64` and `linux/arm64` (Apple Silicon):
 
 ```bash
 # Using the convenience script
-Upda../scripts/build-docker-multiarch.sh 0.4.0-beta-3
+Upda../scripts/build-docker-multiarch.sh 0.5.0-beta
 
 # Or using docker buildx directly
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg VERSION=0.4.0-beta-3 \
+  --build-arg VERSION=0.5.0-beta \
   -f taktx-engine/Dockerfile.jvm \
-  -t ghcr.io/taktx-io/taktx-engine:0.4.0-beta-3 \
+  -t ghcr.io/taktx-io/taktx-engine:0.5.0-beta \
   -t ghcr.io/taktx-io/taktx-engine:latest \
   --push \
   .

@@ -5,8 +5,8 @@ on:
     types: [ published ]        # triggered when you publish a release via the GitHub UI
   push:
     tags:
-      - 'v*'                    # triggered when you push a tag with v prefix: git tag v0.4.0-beta-3 && git push --tags
-      - '[0-9]*'                # triggered when you push a tag without v prefix: git tag 0.4.0-beta-3 && git push --tags
+      - 'v*'                    # triggered when you push a tag with v prefix: git tag v0.5.0-beta && git push --tags
+      - '[0-9]*'                # triggered when you push a tag without v prefix: git tag 0.5.0-beta && git push --tags
   workflow_dispatch:
     inputs:
       version:

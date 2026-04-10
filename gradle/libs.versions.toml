@@ -104,4 +104,4 @@ spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 xjc = { id = "com.github.bjornvester.xjc", version = "1.8.1" }
 
 [metadata]
-projectVersion = "0.4.0-beta-4"
+projectVersion = "0.5.0-beta"
