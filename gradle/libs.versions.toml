@@ -2,7 +2,7 @@
 quarkus = "3.32.2"
 jackson = "2.21.1"
 cronutils = "9.2.1"
-lombok = "1.18.42"
+lombok = "1.18.44"
 junit = "5.10.1"
 assertj = "3.27.7"
 mapstruct = "1.6.3"
