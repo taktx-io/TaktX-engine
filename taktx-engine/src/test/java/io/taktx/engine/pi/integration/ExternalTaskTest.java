@@ -59,7 +59,10 @@ class ExternalTaskTest {
         .andRespondToExternalTaskWithSuccess("service-task-id", VariablesDTO.of("var1", "value1"))
         .waitUntilDone()
         .assertThatProcess()
-        .hasVariableWithValue("var1", "value1")
+        // var1 is returned by the worker but ServiceTask_1 has an explicit output mapping
+        // (<zeebe:output target="OutputVariable_09h8svf" />, no source). That makes
+        // outputMappings non-empty, so only the declared mapping is propagated and all
+        // other worker variables (var1) are dropped per Zeebe semantics.
         .hasInstantiatedElementWithId("StartEvent_1")
         .hasInstantiatedElementWithId("ServiceTask_1")
         .hasInstantiatedElementWithId("EndEvent_1");

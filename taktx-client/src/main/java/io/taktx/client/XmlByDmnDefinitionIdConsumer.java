@@ -9,16 +9,22 @@ package io.taktx.client;
 
 import io.taktx.Topics;
 import io.taktx.client.serdes.DmnDefinitionKeyJsonDeserializer;
+import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.serdes.ZippedStringDeserializer;
 import io.taktx.util.TaktPropertiesHelper;
+import io.taktx.xml.DmnParser;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
@@ -37,6 +43,13 @@ public class XmlByDmnDefinitionIdConsumer {
   private volatile KafkaConsumer<DmnDefinitionKey, String> activeConsumer;
   private static final Path DEFINITION_XML_PATH =
       Paths.get(System.getProperty("user.home"), ".taktx", "definitions");
+
+  /**
+   * Reverse index: decision ID → the DmnDefinitionKey of the file that contains it. Rebuilt on
+   * every client start by replaying the {@code xml-by-dmn-definition-id} topic from the earliest
+   * offset.
+   */
+  private final Map<String, DmnDefinitionKey> decisionIndex = new ConcurrentHashMap<>();
 
   /**
    * Constructor for XmlByDmnDefinitionIdConsumer.
@@ -94,7 +107,29 @@ public class XmlByDmnDefinitionIdConsumer {
               String filename = key.getDmnDefinitionId() + "." + key.getVersion() + ".dmn";
               log.info("Consume XML definition for {} and store to {}", key, filename);
               writeDefinition(taktPropertiesHelper.getNamespace(), filename, xml);
+              indexDecisions(key, xml);
             });
+  }
+
+  /**
+   * Parses the DMN XML and registers every decision ID it contains in the in-memory index so that
+   * callers can look up which file a decision belongs to.
+   */
+  private void indexDecisions(DmnDefinitionKey key, String xml) {
+    try {
+      List<DmnDecisionDTO> decisions = DmnParser.parse(xml).getDecisions();
+      if (decisions == null) {
+        return;
+      }
+      for (DmnDecisionDTO decision : decisions) {
+        if (decision.getId() != null) {
+          decisionIndex.put(decision.getId(), key);
+          log.debug("Indexed decision '{}' → {}", decision.getId(), key);
+        }
+      }
+    } catch (Exception e) {
+      log.warn("Failed to index decisions from DMN definition {}: {}", key, e.getMessage());
+    }
   }
 
   private void writeDefinition(String namespace, String filename, String xml) {
@@ -127,6 +162,24 @@ public class XmlByDmnDefinitionIdConsumer {
             ZippedStringDeserializer.class,
             "earliest");
     return new KafkaConsumer<>(props);
+  }
+
+  /**
+   * Returns the {@link DmnDefinitionKey} of the DMN file that contains the given decision ID, or
+   * {@link Optional#empty()} if not yet received.
+   *
+   * @param decisionId the decision ID to look up (e.g. {@code "discountDecision"})
+   */
+  public Optional<DmnDefinitionKey> getDefinitionKeyForDecision(String decisionId) {
+    return Optional.ofNullable(decisionIndex.get(decisionId));
+  }
+
+  /**
+   * Returns a read-only snapshot of the full decision → file index. Useful for a console that needs
+   * to list all known decisions.
+   */
+  public Map<String, DmnDefinitionKey> getDecisionIndex() {
+    return Collections.unmodifiableMap(decisionIndex);
   }
 
   /**

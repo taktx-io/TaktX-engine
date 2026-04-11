@@ -63,4 +63,44 @@ class BusinessRuleTaskTest {
         .hasPassedElementWithId("BusinessRuleTask_1", 1)
         .hasVariableWithValue("discount", 0.05);
   }
+
+  /**
+   * Regression test for the "no output mappings → propagate all" bug.
+   *
+   * <p>When a BusinessRuleTask has no explicit {@code zeebe:ioMapping} output mappings the result
+   * variable must still be visible to downstream nodes (Zeebe-like behaviour). Without the fix the
+   * gateway cannot evaluate {@code =discount >= 0.2} because {@code discount} is trapped in the
+   * task's local scope and never copied to the process scope, so the gateway falls through to the
+   * default path instead of the premium path.
+   */
+  @Test
+  void businessRuleTask_withGateway_resultVariablePropagatedToProcessScopeWhenNoOutputMappings()
+      throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task-gateway.bpmn")
+        .startProcessInstance(VariablesDTO.of("category", "Premium"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasPassedElementWithId("Gateway_1", 1)
+        // discount = 0.2, condition "=discount >= 0.2" must be TRUE → premium path taken
+        .hasPassedElementWithId("EndEvent_Premium", 1)
+        .hasNotPassedElementWithId("EndEvent_Default");
+  }
+
+  @Test
+  void businessRuleTask_withGateway_standardCategoryTakesDefaultPath() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task-gateway.bpmn")
+        .startProcessInstance(VariablesDTO.of("category", "Standard"))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasPassedElementWithId("Gateway_1", 1)
+        // discount = 0.1, condition "=discount >= 0.2" must be FALSE → default path taken
+        .hasPassedElementWithId("EndEvent_Default", 1)
+        .hasNotPassedElementWithId("EndEvent_Premium");
+  }
 }

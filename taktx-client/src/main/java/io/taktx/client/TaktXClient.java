@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -965,6 +966,29 @@ public class TaktXClient {
    */
   public String getDmnDefinitionXml(DmnDefinitionKey dmnDefinitionKey) throws IOException {
     return this.xmlByDmnDefinitionIdConsumer.getDmnDefinitionXml(dmnDefinitionKey);
+  }
+
+  /**
+   * Returns the {@link DmnDefinitionKey} of the DMN file that contains the given decision ID.
+   *
+   * <p>The index is built by replaying the {@code xml-by-dmn-definition-id} topic from the earliest
+   * offset on every client start, so it is complete once the initial replay has finished.
+   *
+   * @param decisionId the decision ID to look up (e.g. {@code "discountDecision"})
+   * @return an Optional containing the key, or empty if the decision is not yet known
+   */
+  public Optional<DmnDefinitionKey> getDmnDefinitionKeyForDecision(String decisionId) {
+    return this.xmlByDmnDefinitionIdConsumer.getDefinitionKeyForDecision(decisionId);
+  }
+
+  /**
+   * Returns a read-only snapshot of the full {@code decisionId → DmnDefinitionKey} index. Useful
+   * for console views that list all known decision tables grouped by their DMN file.
+   *
+   * @return unmodifiable map of decision ID to the DMN definition key of its containing file
+   */
+  public Map<String, DmnDefinitionKey> getDmnDecisionIndex() {
+    return this.xmlByDmnDefinitionIdConsumer.getDecisionIndex();
   }
 
   /**

@@ -42,10 +42,55 @@ public class IoMappingProcessor {
     addVariables(variables.getParentScope(), variables, inputMappings);
   }
 
+  /**
+   * Applies output mappings from the element's local scope to its parent scope, then closes the
+   * child scope.
+   *
+   * <p><b>No output mappings defined (Zeebe-compatible behaviour):</b> all dirty (locally written)
+   * variables are propagated to the parent scope so that downstream nodes such as gateways can read
+   * them.
+   *
+   * <p><b>Explicit output mappings defined:</b> only the mapped variables are evaluated and copied
+   * to the parent scope. Unmapped local variables are not accessible to downstream nodes (because
+   * {@code VariableScope.get()} only walks <em>up</em> the scope chain), so they are dropped.
+   *
+   * <p>In both cases the child scope is <em>closed</em> after propagation: both the in-memory
+   * {@code variables} map and the {@code dirtyVariables} set are cleared. This prevents:
+   *
+   * <ul>
+   *   <li>duplicate Kafka writes – {@code persistTree()} would otherwise write the same value at
+   *       the child scope path in addition to the parent scope path; and
+   *   <li>unnecessary heap retention – the child scope object remains in the parent's {@code
+   *       childScopes} map but carries no live variable data.
+   * </ul>
+   *
+   * <p>Note: the calling {@code FlowNodeInstanceProcessor} creates the {@code
+   * FlowNodeInstanceUpdateDTO} <em>after</em> this method returns, so the task-level update will
+   * carry empty variables. The propagated values are visible in the enclosing scope's update
+   * instead, which is consistent with Zeebe's audit model.
+   *
+   * @param element the flow-node that carries the I/O mapping declaration
+   * @param variables the element's local variable scope (child scope)
+   */
   public void processOutputMappings(WithIoMapping element, VariableScope variables) {
     Set<IoVariableMapping> outputMappings = element.getIoMapping().getOutputMappings();
 
-    addVariables(variables, variables.getParentScope(), outputMappings);
+    if (outputMappings.isEmpty()) {
+      // No explicit output mappings → propagate all dirty local variables to the parent scope.
+      VariableScope parent = variables.getParentScope();
+      if (parent != null) {
+        variables
+            .getDirtyVariables()
+            .forEach(key -> parent.put(key, variables.getVariables().get(key)));
+      }
+    } else {
+      // Explicit mappings → evaluate and copy only the declared variables to the parent scope.
+      addVariables(variables, variables.getParentScope(), outputMappings);
+    }
+
+    // Close the child scope: release in-memory state and prevent duplicate Kafka persistence.
+    variables.getDirtyVariables().clear();
+    variables.getVariables().clear();
   }
 
   public void addVariables(
