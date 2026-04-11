@@ -1,6 +1,6 @@
 [versions]
 quarkus = "3.32.2"
-jackson = "2.21.1"
+jackson = "2.21.2"
 cronutils = "9.2.1"
 lombok = "1.18.44"
 junit = "5.10.1"
