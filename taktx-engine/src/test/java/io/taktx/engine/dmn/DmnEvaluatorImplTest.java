@@ -26,6 +26,7 @@ import io.taktx.dto.DmnInputClauseDTO;
 import io.taktx.dto.DmnLiteralExpressionDTO;
 import io.taktx.dto.DmnOutputClauseDTO;
 import io.taktx.dto.DmnRuleDTO;
+import io.taktx.dto.DmnValidationMode;
 import io.taktx.engine.feel.FeelEngineProvider;
 import io.taktx.engine.pi.model.VariableScope;
 import java.util.List;
@@ -537,6 +538,367 @@ class DmnEvaluatorImplTest {
     variables.put("loyaltyPoints", new IntNode(100));
     result = drgEvaluator.evaluate(discountDecision, variables);
     assertThat(result.doubleValue()).isEqualTo(0.05);
+  }
+
+  @Test
+  void drg_multiOutputRequiredDecisionResultIsVisibleViaDecisionIdAndOutputName() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("\"Premium\"", "0.15")),
+                rule(List.of(">= 500"), List.of("\"Standard\"", "0.05")),
+                rule(List.of(""), List.of("\"Basic\"", "0.0"))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionTableDTO discountTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("categoryDecision.category"), input("categoryDecision.baseDiscount")),
+            List.of(output("discount")),
+            List.of(
+                rule(List.of("\"Premium\"", ">= 0.15"), List.of("0.2")),
+                rule(List.of("\"Standard\"", ">= 0.05"), List.of("0.1")),
+                rule(List.of("", ""), List.of("0.05"))));
+    DmnDecisionDTO discountDecision =
+        new DmnDecisionDTO(
+            "discountDecision", null, discountTable, null, List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.2);
+
+    variables.put("loyaltyPoints", new IntNode(750));
+    result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.1);
+
+    variables.put("loyaltyPoints", new IntNode(100));
+    result = drgEvaluator.evaluate(discountDecision, variables);
+    assertThat(result.doubleValue()).isEqualTo(0.05);
+  }
+
+  @Test
+  void drg_multiOutputRequiredDecisionResultIsAlsoVisibleAsFullContext() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("\"Premium\"", "0.15")),
+                rule(List.of(""), List.of("\"Basic\"", "0.0"))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=categoryDecision", null),
+            List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.isObject()).isTrue();
+    assertThat(result.get("category").asText()).isEqualTo("Premium");
+    assertThat(result.get("baseDiscount").doubleValue()).isEqualTo(0.15);
+  }
+
+  @Test
+  void drg_collectRequiredDecisionResultIsVisibleAsListWithExplicitIndexing() {
+    DmnDecisionTableDTO candidatesTable =
+        new DmnDecisionTableDTO(
+            "candidates",
+            DmnHitPolicy.COLLECT,
+            DmnCollectOperator.NONE,
+            List.of(input("loyaltyPoints")),
+            List.of(output("candidate")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("0.2")), rule(List.of(">= 500"), List.of("0.1"))));
+    DmnDecisionDTO candidatesDecision =
+        new DmnDecisionDTO("discountCandidatesDecision", null, candidatesTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=discountCandidatesDecision[1]", null),
+            List.of("discountCandidatesDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("discountCandidatesDecision"))
+        .thenReturn(Optional.of(candidatesDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.doubleValue()).isEqualTo(0.2);
+  }
+
+  @Test
+  void drg_collectMultiOutputRequiredDecisionResultIsVisibleAsListOfContexts() {
+    DmnDecisionTableDTO candidatesTable =
+        new DmnDecisionTableDTO(
+            "candidates",
+            DmnHitPolicy.COLLECT,
+            DmnCollectOperator.NONE,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("\"Premium\"", "0.2")),
+                rule(List.of(">= 500"), List.of("\"Standard\"", "0.1"))));
+    DmnDecisionDTO candidatesDecision =
+        new DmnDecisionDTO("discountCandidatesDecision", null, candidatesTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=discountCandidatesDecision[1].category", null),
+            List.of("discountCandidatesDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("discountCandidatesDecision"))
+        .thenReturn(Optional.of(candidatesDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.asText()).isEqualTo("Premium");
+  }
+
+  @Test
+  void drg_missingOutputFieldAccessReturnsNull() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(rule(List.of(""), List.of("\"Premium\"", "0.15"))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=categoryDecision.unknownField", null),
+            List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
+  @Test
+  void drg_noMatchRequiredDecisionResultPropagatesAsNull() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category")),
+            List.of(rule(List.of("> 1000"), List.of("\"Premium\""))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=categoryDecision", null),
+            List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+
+    variables.put("loyaltyPoints", new IntNode(100));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
+  @Test
+  void strictValidation_invalidMissingFieldReference_throws() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(rule(List.of(""), List.of("\"Premium\"", "0.15"))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=categoryDecision.unknownField", null),
+            List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(
+            FeelEngineProvider.FEEL_ENGINE_API,
+            new ObjectMapper(),
+            resolver,
+            DmnValidationMode.STRICT);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+
+    assertThatThrownBy(() -> drgEvaluator.evaluate(downstreamDecision, variables))
+        .isInstanceOf(DmnValidationException.class)
+        .hasMessageContaining("unknownField");
+  }
+
+  @Test
+  void warnValidation_invalidMissingFieldReference_returnsNull() {
+    DmnDecisionTableDTO categoryTable =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(rule(List.of(""), List.of("\"Premium\"", "0.15"))));
+    DmnDecisionDTO categoryDecision =
+        new DmnDecisionDTO("categoryDecision", null, categoryTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=categoryDecision.unknownField", null),
+            List.of("categoryDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(
+            FeelEngineProvider.FEEL_ENGINE_API,
+            new ObjectMapper(),
+            resolver,
+            DmnValidationMode.WARN);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+
+    assertThat(result.isNull()).isTrue();
+  }
+
+  @Test
+  void strictValidation_typeMismatchOnInputClause_throws() {
+    DmnDecisionTableDTO dt =
+        table(
+            DmnHitPolicy.FIRST,
+            List.of(new DmnInputClauseDTO(null, null, "loyaltyPoints", "integer")),
+            List.of(output("discount")),
+            List.of(rule(List.of(">= 1000"), List.of("0.2"))));
+
+    DmnEvaluatorImpl strictEvaluator =
+        new DmnEvaluatorImpl(
+            FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), null, DmnValidationMode.STRICT);
+
+    variables.put("loyaltyPoints", new TextNode("not-a-number"));
+
+    assertThatThrownBy(() -> strictEvaluator.evaluate(decisionWithTable(dt), variables))
+        .isInstanceOf(DmnValidationException.class)
+        .hasMessageContaining("expected type 'integer'");
+  }
+
+  @Test
+  void strictValidation_listFieldAccessWithoutIndex_throws() {
+    DmnDecisionTableDTO candidatesTable =
+        new DmnDecisionTableDTO(
+            "candidates",
+            DmnHitPolicy.COLLECT,
+            DmnCollectOperator.NONE,
+            List.of(input("loyaltyPoints")),
+            List.of(output("category"), output("baseDiscount")),
+            List.of(
+                rule(List.of(">= 1000"), List.of("\"Premium\"", "0.2")),
+                rule(List.of(">= 500"), List.of("\"Standard\"", "0.1"))));
+    DmnDecisionDTO candidatesDecision =
+        new DmnDecisionDTO("discountCandidatesDecision", null, candidatesTable, null, null);
+
+    DmnDecisionDTO downstreamDecision =
+        new DmnDecisionDTO(
+            "discountDecision",
+            null,
+            null,
+            new DmnLiteralExpressionDTO(null, "=discountCandidatesDecision.category", null),
+            List.of("discountCandidatesDecision"));
+
+    DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
+    when(resolver.resolve("discountCandidatesDecision"))
+        .thenReturn(Optional.of(candidatesDecision));
+
+    DmnEvaluatorImpl drgEvaluator =
+        new DmnEvaluatorImpl(
+            FeelEngineProvider.FEEL_ENGINE_API,
+            new ObjectMapper(),
+            resolver,
+            DmnValidationMode.STRICT);
+
+    variables.put("loyaltyPoints", new IntNode(1500));
+
+    assertThatThrownBy(() -> drgEvaluator.evaluate(downstreamDecision, variables))
+        .isInstanceOf(DmnValidationException.class)
+        .hasMessageContaining("must be indexed before field access");
+  }
+
+  @Test
+  void strictValidation_invalidFeelExpression_throws() {
+    DmnDecisionDTO decision =
+        new DmnDecisionDTO(
+            "decision", null, null, new DmnLiteralExpressionDTO(null, "=if then", null), null);
+
+    DmnEvaluatorImpl strictEvaluator =
+        new DmnEvaluatorImpl(
+            FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), null, DmnValidationMode.STRICT);
+
+    assertThatThrownBy(() -> strictEvaluator.evaluate(decision, variables))
+        .isInstanceOf(DmnValidationException.class)
+        .hasMessageContaining("Failed to parse FEEL expression");
   }
 
   @Test

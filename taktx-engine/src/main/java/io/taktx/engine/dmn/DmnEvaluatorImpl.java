@@ -21,6 +21,9 @@ import io.taktx.dto.DmnInputClauseDTO;
 import io.taktx.dto.DmnLiteralExpressionDTO;
 import io.taktx.dto.DmnOutputClauseDTO;
 import io.taktx.dto.DmnRuleDTO;
+import io.taktx.dto.DmnValidationMode;
+import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.model.VariableScope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -30,6 +33,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.feel.FeelEngineClock.SystemClock$;
 import org.camunda.feel.api.EvaluationResult;
@@ -51,7 +56,10 @@ import scala.jdk.CollectionConverters;
 public class DmnEvaluatorImpl implements DmnEvaluator {
 
   private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(new SystemClock$(), ValueMapper.defaultValueMapper());
+      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
+  private static final Pattern SIMPLE_REFERENCE_PATTERN =
+      Pattern.compile(
+          "^([A-Za-z_][A-Za-z0-9_]*)(?:\\[(\\d+)\\])?(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$");
 
   private final FeelEngineApi feelEngineApi;
   private final ObjectMapper objectMapper;
@@ -62,6 +70,9 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
    */
   private final DmnDecisionResolver decisionResolver;
 
+  private final GlobalConfigStore globalConfigStore;
+  private final DmnValidationMode configuredValidationMode;
+
   /** Thread-safe cache of parsed FEEL expressions for performance. */
   private final Map<String, ParsedExpression> expressionCache = new ConcurrentHashMap<>();
 
@@ -70,15 +81,53 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   public DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
       ObjectMapper objectMapper,
-      DmnDecisionResolver decisionResolver) {
+      DmnDecisionResolver decisionResolver,
+      GlobalConfigStore globalConfigStore,
+      TaktConfiguration taktConfiguration) {
+    this(
+        feelEngineApi,
+        objectMapper,
+        decisionResolver,
+        globalConfigStore,
+        taktConfiguration != null
+            ? taktConfiguration.getDmnValidationMode()
+            : DmnValidationMode.PERMISSIVE);
+  }
+
+  private DmnEvaluatorImpl(
+      FeelEngineApi feelEngineApi,
+      ObjectMapper objectMapper,
+      DmnDecisionResolver decisionResolver,
+      GlobalConfigStore globalConfigStore,
+      DmnValidationMode configuredValidationMode) {
     this.feelEngineApi = feelEngineApi;
     this.objectMapper = objectMapper;
     this.decisionResolver = decisionResolver;
+    this.globalConfigStore = globalConfigStore;
+    this.configuredValidationMode =
+        configuredValidationMode != null ? configuredValidationMode : DmnValidationMode.PERMISSIVE;
   }
 
   /** Convenience constructor for unit tests — DRG chaining is disabled (resolver is null). */
   public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
-    this(feelEngineApi, objectMapper, null);
+    this(feelEngineApi, objectMapper, null, null, DmnValidationMode.PERMISSIVE);
+  }
+
+  /** Convenience constructor for unit tests with DRG chaining support. */
+  public DmnEvaluatorImpl(
+      FeelEngineApi feelEngineApi,
+      ObjectMapper objectMapper,
+      DmnDecisionResolver decisionResolver) {
+    this(feelEngineApi, objectMapper, decisionResolver, null, DmnValidationMode.PERMISSIVE);
+  }
+
+  /** Convenience constructor for unit tests with an explicit validation mode. */
+  public DmnEvaluatorImpl(
+      FeelEngineApi feelEngineApi,
+      ObjectMapper objectMapper,
+      DmnDecisionResolver decisionResolver,
+      DmnValidationMode validationMode) {
+    this(feelEngineApi, objectMapper, decisionResolver, null, validationMode);
   }
 
   // ── public API ───────────────────────────────────────────────────────────
@@ -229,6 +278,16 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       }
       DmnInputClauseDTO clause = inputs.get(i);
       JsonNode inputValue = evaluateFeelOutputExpression(clause.getInputExpression(), variables);
+      if (!validateTypeRef(
+          clause.getTypeRef(),
+          inputValue,
+          "Input expression '"
+              + clause.getInputExpression()
+              + "' in input clause '"
+              + clause.getId()
+              + "'")) {
+        return false;
+      }
       if (!evaluateUnaryTest(entry, inputValue, variables)) {
         return false;
       }
@@ -247,6 +306,10 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
           (entry == null || entry.isBlank())
               ? objectMapper.nullNode()
               : evaluateFeelOutputExpression(entry, variables);
+      validateTypeRef(
+          output.getTypeRef(),
+          value,
+          "Output clause '" + output.getName() + "' in decision table '" + rule.getId() + "'");
       result.set(output.getName(), value == null ? objectMapper.nullNode() : value);
     }
     return result;
@@ -356,20 +419,25 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     if (expression == null || expression.isBlank()) {
       return objectMapper.nullNode();
     }
+    String trimmed = expression.trim();
+    String referenceCandidate = trimmed.startsWith("=") ? trimmed.substring(1).trim() : trimmed;
+    ReferenceResolution directResolution = tryResolveSimpleReference(referenceCandidate, variables);
+    if (directResolution.handled()) {
+      return directResolution.value();
+    }
     // Prefix with '=' to use the full FEEL expression evaluator (same as FeelExpressionHandlerImpl)
-    String feelExpr = expression.startsWith("=") ? expression : "=" + expression;
+    String feelExpr = trimmed.startsWith("=") ? trimmed : "=" + trimmed;
     ParsedExpression parsed = getOrParseExpression(feelExpr);
     if (parsed == null) {
-      log.warn("Failed to parse FEEL expression: {}", expression);
-      return objectMapper.nullNode();
+      return handleExpressionFailure("Failed to parse FEEL expression: " + expression, null);
     }
     EvaluationResult result = feelEngineApi.evaluate(parsed, buildContext(variables));
     if (result.isSuccess()) {
       Object val = ((SuccessfulEvaluationResult) result).productIterator().next();
       return objectMapper.valueToTree(val);
     }
-    log.warn("FEEL expression evaluation failed for '{}': {}", expression, result);
-    return objectMapper.nullNode();
+    return handleExpressionFailure(
+        "FEEL expression evaluation failed for '" + expression + "': " + result, null);
   }
 
   /**
@@ -380,8 +448,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       String unaryTest, JsonNode inputValue, VariableScope variables) {
     ParsedExpression parsed = getOrParseUnaryTest(unaryTest.trim());
     if (parsed == null) {
-      log.warn("Failed to parse FEEL unary test: {}", unaryTest);
-      return false;
+      return handleUnaryFailure("Failed to parse FEEL unary test: " + unaryTest, null);
     }
     try {
       Object inputObj = objectMapper.treeToValue(inputValue, Object.class);
@@ -392,10 +459,10 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
         JsonNode node = objectMapper.valueToTree(val);
         return node.isBoolean() && node.booleanValue();
       }
-      log.warn("FEEL unary test evaluation failed for '{}': {}", unaryTest, result);
-      return false;
+      return handleUnaryFailure(
+          "FEEL unary test evaluation failed for '" + unaryTest + "': " + result, null);
     } catch (JsonProcessingException e) {
-      throw new IllegalStateException("Failed to convert input value for FEEL unary test", e);
+      return handleUnaryFailure("Failed to convert input value for FEEL unary test", e);
     }
   }
 
@@ -467,5 +534,196 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       return row.get(table.getOutputs().get(0).getName());
     }
     return row;
+  }
+
+  private ReferenceResolution tryResolveSimpleReference(
+      String expression, VariableScope variables) {
+    if (expression == null || expression.isBlank()) {
+      return ReferenceResolution.unhandled();
+    }
+    if ("true".equals(expression) || "false".equals(expression) || "null".equals(expression)) {
+      return ReferenceResolution.unhandled();
+    }
+
+    Matcher matcher = SIMPLE_REFERENCE_PATTERN.matcher(expression);
+    if (!matcher.matches()) {
+      return ReferenceResolution.unhandled();
+    }
+
+    String baseName = matcher.group(1);
+    String indexPart = matcher.group(2);
+    String fieldPart = matcher.group(3);
+
+    JsonNode current = variables.get(baseName);
+    if (current == null) {
+      return validationReferenceFailure("Variable '" + baseName + "' was not found");
+    }
+
+    if (indexPart != null) {
+      if (!current.isArray()) {
+        return validationReferenceFailure(
+            "Variable '" + baseName + "' is not a list and cannot be indexed");
+      }
+      int oneBasedIndex = Integer.parseInt(indexPart);
+      int zeroBasedIndex = oneBasedIndex - 1;
+      if (zeroBasedIndex < 0 || zeroBasedIndex >= current.size()) {
+        return validationReferenceFailure(
+            "List variable '"
+                + baseName
+                + "' does not contain index "
+                + oneBasedIndex
+                + " (1-based)");
+      }
+      current = current.get(zeroBasedIndex);
+    }
+
+    if (fieldPart != null) {
+      if (current == null || current.isNull()) {
+        return validationReferenceFailure(
+            "Reference '" + expression + "' points to null before field access");
+      }
+      if (current.isArray()) {
+        return validationReferenceFailure(
+            "Reference '"
+                + expression
+                + "' is invalid because list-valued results must be indexed before field access");
+      }
+      if (!current.isObject()) {
+        return validationReferenceFailure(
+            "Reference '"
+                + expression
+                + "' is invalid because field access requires a context/object");
+      }
+      JsonNode fieldValue = current.get(fieldPart);
+      if (fieldValue == null) {
+        return validationReferenceFailure(
+            "Reference '"
+                + expression
+                + "' is invalid because field '"
+                + fieldPart
+                + "' does not exist");
+      }
+      current = fieldValue;
+    }
+
+    return ReferenceResolution.handled(current == null ? objectMapper.nullNode() : current);
+  }
+
+  private boolean validateTypeRef(String typeRef, JsonNode value, String location) {
+    String normalizedTypeRef = normalizeTypeRef(typeRef);
+    if (normalizedTypeRef == null || value == null || value.isNull()) {
+      return true;
+    }
+
+    boolean valid =
+        switch (normalizedTypeRef) {
+          case "integer", "long" -> value.isIntegralNumber();
+          case "double", "number", "decimal" -> value.isNumber();
+          case "string" -> value.isTextual();
+          case "boolean" -> value.isBoolean();
+          case "context" -> value.isObject();
+          case "list" -> value.isArray();
+          case "any" -> true;
+          default -> true;
+        };
+
+    if (!valid) {
+      String message =
+          location
+              + " expected type '"
+              + normalizedTypeRef
+              + "' but got "
+              + describeNodeType(value);
+      handleValidationIssue(message);
+      return false;
+    }
+    return true;
+  }
+
+  private String normalizeTypeRef(String typeRef) {
+    if (typeRef == null || typeRef.isBlank()) {
+      return null;
+    }
+    String normalized = typeRef.trim().toLowerCase();
+    int namespaceSeparator = normalized.indexOf(':');
+    return namespaceSeparator >= 0 ? normalized.substring(namespaceSeparator + 1) : normalized;
+  }
+
+  private String describeNodeType(JsonNode value) {
+    if (value == null || value.isNull()) {
+      return "null";
+    }
+    if (value.isObject()) {
+      return "context/object";
+    }
+    if (value.isArray()) {
+      return "list";
+    }
+    if (value.isTextual()) {
+      return "string";
+    }
+    if (value.isIntegralNumber()) {
+      return "integer";
+    }
+    if (value.isNumber()) {
+      return "number";
+    }
+    if (value.isBoolean()) {
+      return "boolean";
+    }
+    return value.getNodeType().name().toLowerCase();
+  }
+
+  private ReferenceResolution validationReferenceFailure(String message) {
+    handleValidationIssue(message);
+    return ReferenceResolution.handled(objectMapper.nullNode());
+  }
+
+  private JsonNode handleExpressionFailure(String message, Throwable cause) {
+    return switch (effectiveValidationMode()) {
+      case STRICT -> throw new DmnValidationException(message, cause);
+      case WARN, PERMISSIVE -> {
+        log.warn(message, cause);
+        yield objectMapper.nullNode();
+      }
+    };
+  }
+
+  private boolean handleUnaryFailure(String message, Throwable cause) {
+    return switch (effectiveValidationMode()) {
+      case STRICT -> throw new DmnValidationException(message, cause);
+      case WARN, PERMISSIVE -> {
+        log.warn(message, cause);
+        yield false;
+      }
+    };
+  }
+
+  private void handleValidationIssue(String message) {
+    switch (effectiveValidationMode()) {
+      case PERMISSIVE -> log.debug("DMN validation issue ignored in permissive mode: {}", message);
+      case WARN -> log.warn("DMN validation issue: {}", message);
+      case STRICT -> throw new DmnValidationException(message);
+    }
+  }
+
+  private DmnValidationMode effectiveValidationMode() {
+    if (globalConfigStore != null && globalConfigStore.get() != null) {
+      DmnValidationMode runtimeMode = globalConfigStore.get().getDmnValidationMode();
+      if (runtimeMode != null) {
+        return runtimeMode;
+      }
+    }
+    return configuredValidationMode;
+  }
+
+  private record ReferenceResolution(boolean handled, JsonNode value) {
+    private static ReferenceResolution handled(JsonNode value) {
+      return new ReferenceResolution(true, value);
+    }
+
+    private static ReferenceResolution unhandled() {
+      return new ReferenceResolution(false, null);
+    }
   }
 }

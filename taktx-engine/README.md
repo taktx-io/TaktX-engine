@@ -9,11 +9,17 @@ RocksDB-backed state stores for durable process state with no external database 
 ## Features
 
 - Full BPMN 2.0 execution (service tasks, user tasks, gateways, timers, message events, signals, and more)
+- DMN decision evaluation, including DRG chaining of required decisions
 - Kafka Streams topology — horizontally scalable, fault-tolerant, replayable from the Kafka log
 - Ed25519 message signing — cryptographic authentication of every worker interaction
 - RS256 JWT command authorization — token-based, fine-grained command control
 - Multi-tenant and multi-namespace support via topic prefixing
 - Native image support (GraalVM/Mandrel)
+
+## DMN Notes
+
+- DRG result-reference behaviour is documented in [`../docs/dmn-result-references.md`](../docs/dmn-result-references.md)
+- DMN validation mode is configurable with `taktx.engine.dmn.validation-mode` (`PERMISSIVE`, `WARN`, `STRICT`)
 
 ## Quick Start
 

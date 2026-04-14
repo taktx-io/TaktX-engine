@@ -37,7 +37,7 @@ import scala.jdk.CollectionConverters;
 public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
   private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(new SystemClock$(), ValueMapper.defaultValueMapper());
+      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private final FeelEngineProvider feelEngineProvider;
   private final ObjectMapper objectMapper;
   private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();

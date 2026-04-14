@@ -8,6 +8,7 @@
 
 package io.taktx.engine.config;
 
+import io.taktx.dto.DmnValidationMode;
 import io.taktx.util.TopicSegmentValidator;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -55,6 +56,9 @@ public class TaktConfiguration {
 
   @ConfigProperty(name = "taktx.engine.broadcastInstanceUpdates", defaultValue = "true")
   String broadcastInstanceUpdates;
+
+  @ConfigProperty(name = "taktx.engine.dmn.validation-mode", defaultValue = "PERMISSIVE")
+  String dmnValidationMode;
 
   @ConfigProperty(name = "taktx.engine.licenseFileLocation", defaultValue = "-")
   String licenseFileLocation;
@@ -170,5 +174,22 @@ public class TaktConfiguration {
 
   public boolean getTopicCreationEnabled() {
     return Boolean.parseBoolean(topicCreationEnabled);
+  }
+
+  public DmnValidationMode getDmnValidationMode() {
+    return parseDmnValidationMode(dmnValidationMode);
+  }
+
+  static DmnValidationMode parseDmnValidationMode(String value) {
+    if (value == null || value.isBlank()) {
+      return DmnValidationMode.PERMISSIVE;
+    }
+    try {
+      return DmnValidationMode.valueOf(value.trim().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Unknown DMN validation mode '" + value + "'. Supported values: PERMISSIVE, WARN, STRICT",
+          e);
+    }
   }
 }

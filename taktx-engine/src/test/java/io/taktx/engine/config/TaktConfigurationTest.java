@@ -8,7 +8,9 @@
 package io.taktx.engine.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.taktx.dto.DmnValidationMode;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -48,5 +50,27 @@ class TaktConfigurationTest {
     config.signingFileRefreshIntervalMs = 2500L;
 
     assertThat(config.getSigningFileRefreshIntervalMs()).isEqualTo(2500L);
+  }
+
+  @Test
+  void dmnValidationMode_defaultsToPermissiveWhenUnset() {
+    assertThat(TaktConfiguration.parseDmnValidationMode(null))
+        .isEqualTo(DmnValidationMode.PERMISSIVE);
+    assertThat(TaktConfiguration.parseDmnValidationMode("   "))
+        .isEqualTo(DmnValidationMode.PERMISSIVE);
+  }
+
+  @Test
+  void dmnValidationMode_parsesConfiguredValues() {
+    assertThat(TaktConfiguration.parseDmnValidationMode("warn")).isEqualTo(DmnValidationMode.WARN);
+    assertThat(TaktConfiguration.parseDmnValidationMode(" STRICT "))
+        .isEqualTo(DmnValidationMode.STRICT);
+  }
+
+  @Test
+  void dmnValidationMode_rejectsUnknownValues() {
+    assertThatThrownBy(() -> TaktConfiguration.parseDmnValidationMode("unsafe"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Unknown DMN validation mode");
   }
 }

@@ -71,4 +71,64 @@ class BusinessRuleTaskDrgTest {
         .hasPassedElementWithId("BusinessRuleTask_1", 1)
         .hasVariableWithValue("discount", 0.05);
   }
+
+  @Test
+  void drg_multiOutputPremiumLoyaltyPoints_storesMaxDiscount() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount-drg-multi-output.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task.bpmn")
+        .startProcessInstance(VariablesDTO.of("loyaltyPoints", 1500))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasVariableWithValue("discount", 0.2);
+  }
+
+  @Test
+  void drg_multiOutputStandardLoyaltyPoints_storesStandardDiscount() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount-drg-multi-output.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task.bpmn")
+        .startProcessInstance(VariablesDTO.of("loyaltyPoints", 750))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasVariableWithValue("discount", 0.1);
+  }
+
+  @Test
+  void drg_multiOutputBasicLoyaltyPoints_storesMinimumDiscount() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount-drg-multi-output.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task.bpmn")
+        .startProcessInstance(VariablesDTO.of("loyaltyPoints", 100))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasVariableWithValue("discount", 0.05);
+  }
+
+  @Test
+  void drg_collectRequiredDecisionResultCanBeIndexedExplicitly() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount-drg-collect.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task.bpmn")
+        .startProcessInstance(VariablesDTO.of("loyaltyPoints", 1500))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasVariableWithValue("discount", 0.2);
+  }
+
+  @Test
+  void drg_collectRequiredDecisionSingleMatchCanStillBeIndexedExplicitly() throws IOException {
+    SingletonBpmnTestEngine.getInstance()
+        .deployDmnDefinitionAndWait("/dmn/discount-drg-collect.dmn")
+        .deployProcessDefinitionAndWait("/bpmn/business-rule-task.bpmn")
+        .startProcessInstance(VariablesDTO.of("loyaltyPoints", 750))
+        .waitUntilDone()
+        .assertThatProcess()
+        .hasPassedElementWithId("BusinessRuleTask_1", 1)
+        .hasVariableWithValue("discount", 0.1);
+  }
 }

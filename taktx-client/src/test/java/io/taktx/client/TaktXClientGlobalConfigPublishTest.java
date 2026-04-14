@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.dto.ConfigurationEventDTO;
+import io.taktx.dto.DmnValidationMode;
 import io.taktx.dto.GlobalConfigurationDTO;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,7 @@ class TaktXClientGlobalConfigPublishTest {
         GlobalConfigurationDTO.builder()
             .signingEnabled(true)
             .engineRequiresAuthorization(true)
+            .dmnValidationMode(DmnValidationMode.STRICT)
             .build();
 
     ConfigurationEventDTO event = TaktXClient.buildConfigurationEvent(configuration);
@@ -29,6 +31,7 @@ class TaktXClientGlobalConfigPublishTest {
     assertThat(event.getEventType())
         .isEqualTo(ConfigurationEventDTO.ConfigurationEventType.CONFIGURATION_UPDATE);
     assertThat(event.getConfiguration()).isEqualTo(configuration);
+    assertThat(event.getConfiguration().getDmnValidationMode()).isEqualTo(DmnValidationMode.STRICT);
     assertThat(event.getTimestamp()).isNotNull();
     assertThat(TaktXClient.CONFIGURATION_RECORD_KEY).isEqualTo("config");
   }

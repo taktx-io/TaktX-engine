@@ -31,4 +31,7 @@ public class GlobalConfigurationDTO {
 
   /** All key IDs accepted for signature verification. */
   @Builder.Default private List<String> trustedKeyIds = List.of();
+
+  /** Cluster-wide DMN validation strictness. Defaults to preserving current behaviour. */
+  @Builder.Default private DmnValidationMode dmnValidationMode = DmnValidationMode.PERMISSIVE;
 }

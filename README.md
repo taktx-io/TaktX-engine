@@ -145,6 +145,10 @@ For full license terms see the `LICENSE` file in each module directory.
 
 For full documentation, visit our [documentation site](https://taktx.io/documentation).
 
+Repository notes:
+
+- DMN result-reference behaviour in TaktX: [`docs/dmn-result-references.md`](docs/dmn-result-references.md)
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to TaktX Engine.

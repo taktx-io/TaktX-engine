@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" id="Definitions_discount_drg_collect" name="Discount DRG Collect" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.40.1">
+  <decision id="discountCandidatesDecision" name="Discount Candidates Decision">
+    <decisionTable id="candidatesTable" hitPolicy="COLLECT">
+      <input id="cand_input_1" label="Loyalty Points">
+        <inputExpression id="cand_ie_1" typeRef="integer">
+          <text>loyaltyPoints</text>
+        </inputExpression>
+      </input>
+      <output id="cand_output_1" label="Candidate" name="candidate" typeRef="double" />
+      <rule id="cand_rule_1">
+        <inputEntry id="cand_inputEntry_1">
+          <text>&gt;= 1000</text>
+        </inputEntry>
+        <outputEntry id="cand_outputEntry_1">
+          <text>0.2</text>
+        </outputEntry>
+      </rule>
+      <rule id="cand_rule_2">
+        <inputEntry id="cand_inputEntry_2">
+          <text>&gt;= 500</text>
+        </inputEntry>
+        <outputEntry id="cand_outputEntry_2">
+          <text>0.1</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="discountDecision" name="Discount Decision">
+    <informationRequirement id="ir_1">
+      <requiredDecision href="#discountCandidatesDecision" />
+    </informationRequirement>
+    <literalExpression id="discountLiteral" typeRef="double">
+      <text>discountCandidatesDecision[1]</text>
+    </literalExpression>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_collect">
+      <dmndi:DMNShape id="DMNShape_discountCandidatesDecision" dmnElementRef="discountCandidatesDecision">
+        <dc:Bounds height="80" width="200" x="150" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_discountDecision" dmnElementRef="discountDecision">
+        <dc:Bounds height="80" width="200" x="150" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_ir_1" dmnElementRef="ir_1">
+        <di:waypoint x="250" y="160" />
+        <di:waypoint x="250" y="230" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
+
