@@ -1,5 +1,5 @@
 [versions]
-quarkus = "3.32.2"
+quarkus = "3.34.5"
 jackson = "2.21.2"
 cronutils = "9.2.1"
 lombok = "1.18.44"
@@ -101,7 +101,7 @@ jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb
 [plugins]
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
-xjc = { id = "com.github.bjornvester.xjc", version = "1.8.1" }
+xjc = { id = "com.github.bjornvester.xjc", version = "1.9.0" }
 
 [metadata]
 projectVersion = "0.5.0-beta"
