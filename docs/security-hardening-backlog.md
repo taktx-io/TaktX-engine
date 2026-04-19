@@ -76,7 +76,7 @@ Before implementation, keep these current-code facts in mind:
 | D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | Not started |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | In progress |
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Not started |
-| G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only message types | Not started |
+| G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | In progress |
 | H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Not started |
 | I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Not started |
 | J | Documentation and threat-model cleanup | P2 | Remove docs/code drift and document required Kafka ACL assumptions | Not started |
@@ -92,7 +92,7 @@ Before implementation, keep these current-code facts in mind:
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Not started |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | None |
@@ -228,7 +228,7 @@ Create integration points so existing logic in `EngineAuthorizationService` and 
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, B1 |
@@ -249,6 +249,13 @@ Require verification for inbound `schedule-commands` records.
 - `CLIENT`-signed schedule messages are rejected.
 - Rejections are logged with explicit reason.
 - Existing valid engine-generated schedules continue to work.
+
+**Implementation notes (2026-04-19)**
+
+- `schedule-commands` producers in `TopologyProducer` now use a signed value serde, so engine-generated schedule create/cancel records carry `X-TaktX-Signature` headers.
+- `ScheduleCommandDeserializer` now enforces cryptographic signature verification on inbound `schedule-commands` records, including tombstones signed over an empty payload.
+- `EngineAuthorizationService.authorizeScheduleCommand(...)` now derives signer trust from `taktx-signing-keys` + `KeyTrustPolicy` and enforces trusted `ENGINE` role before schedule handling.
+- `ScheduleProcessor` now rejects unauthorized schedule records before bucket processing and logs topic, schedule key, signer key ID, derived role, outcome, reason, and message type.
 
 ### Task C2 — Secure `topic-meta-requested`
 
@@ -281,7 +288,7 @@ Apply verification before any topic-creation request is processed.
 
 | Field | Value |
 |---|---|
-| Status | Done |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, B2, G1 |
@@ -416,7 +423,7 @@ After entry commands are stable, extend replay protection to schedule/control-pl
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | None |
@@ -570,7 +577,7 @@ Replace the earlier “TRUST_ADMIN-only writes” concept with a model that fits
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, C3 |

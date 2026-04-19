@@ -15,7 +15,9 @@ import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
+import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
@@ -297,6 +299,51 @@ public class EngineAuthorizationService {
     return entry;
   }
 
+  /**
+   * Authorizes a {@code schedule-commands} record after the deserializer has already verified the
+   * Ed25519 signature cryptographically.
+   *
+   * <p>This path requires a valid {@code X-TaktX-Signature} whose signing key resolves to a trusted
+   * {@code ENGINE} role.
+   */
+  public SigningKeyDTO authorizeScheduleCommand(
+      Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
+    Header sigHeader = lastHeader(headers, SIG_HEADER);
+    if (sigHeader == null || sigHeader.value() == null) {
+      throw new AuthorizationTokenException(
+          "Missing required "
+              + SIG_HEADER
+              + " header on schedule-commands for scheduleKey "
+              + scheduleKey);
+    }
+
+    String keyId = extractKeyId(sigHeader);
+    SigningKeyDTO entry = lookupSigningKey(keyId);
+    if (entry == null) {
+      throw new AuthorizationTokenException(
+          "Unknown Ed25519 keyId '" + keyId + "' — rejecting schedule-commands record");
+    }
+    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
+      throw new AuthorizationTokenException(
+          "Revoked Ed25519 keyId '" + keyId + "' — rejecting schedule-commands record");
+    }
+    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE)) {
+      throw new AuthorizationTokenException(
+          "Signing keyId '"
+              + keyId
+              + "' is not trusted for ENGINE schedule commands — rejecting schedule-commands record");
+    }
+
+    log.info(
+        "✅ Authorised schedule-commands scheduleKey={} keyId={} owner={} role={} messageType={}",
+        scheduleKey,
+        keyId,
+        entry.getOwner(),
+        entry.effectiveRole(),
+        scheduleMessageType(schedule));
+    return entry;
+  }
+
   // ── Entry command Ed25519 verification ───────────────────────────────────
 
   /**
@@ -471,6 +518,13 @@ public class EngineAuthorizationService {
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     return dot >= 0 ? headerValue.substring(0, dot) : headerValue;
+  }
+
+  private static String scheduleMessageType(MessageScheduleDTO schedule) {
+    if (schedule == null || schedule.getMessage() == null) {
+      return null;
+    }
+    return schedule.getMessage().getClass().getSimpleName();
   }
 
   private void validateClaimsMatchCommand(TokenClaims claims, ProcessInstanceTriggerDTO trigger) {

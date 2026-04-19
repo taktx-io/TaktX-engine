@@ -18,13 +18,16 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.DefinitionScheduleKeyDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
+import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
@@ -229,6 +232,61 @@ class EngineAuthorizationServiceTest {
             () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for CLIENT topic requests");
+  }
+
+  @Test
+  void scheduleCommand_trustedEngineKeyAccepted() {
+    String keyId = "engine-schedule-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("engine")
+            .role(KeyRole.ENGINE)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    SigningKeyDTO result =
+        service.authorizeScheduleCommand(
+            headersWithSignature(keyId), scheduleKey(), oneTimeSchedule(startCommand("proc", -1)));
+
+    assertThat(result).isEqualTo(keyEntry);
+  }
+
+  @Test
+  void scheduleCommand_missingSignatureRejected() {
+    assertThatThrownBy(
+            () ->
+                service.authorizeScheduleCommand(
+                    new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
+  }
+
+  @Test
+  void scheduleCommand_clientKeyRejected() {
+    String keyId = "client-schedule-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    assertThatThrownBy(
+            () ->
+                service.authorizeScheduleCommand(
+                    headersWithSignature(keyId),
+                    scheduleKey(),
+                    oneTimeSchedule(startCommand("proc", -1))))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted for ENGINE schedule commands");
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -637,6 +695,16 @@ class EngineAuthorizationServiceTest {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
     return headers;
+  }
+
+  private DefinitionScheduleKeyDTO scheduleKey() {
+    return new DefinitionScheduleKeyDTO(
+        new ProcessDefinitionKey("proc", 1), "timer-start", TimeBucket.MINUTE);
+  }
+
+  private OneTimeScheduleDTO oneTimeSchedule(StartCommandDTO command) {
+    return new OneTimeScheduleDTO(
+        command, Instant.now().toEpochMilli(), Instant.now().plusSeconds(60).toEpochMilli());
   }
 
   private ProcessInstanceTriggerEnvelope envelope(StartCommandDTO trigger) {

@@ -51,6 +51,7 @@ import io.taktx.engine.pd.DefinitionsProcessor;
 import io.taktx.engine.pd.DmnDefinitionsProcessor;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
+import io.taktx.engine.pd.ScheduleCommandDeserializer;
 import io.taktx.engine.pd.ScheduleProcessor;
 import io.taktx.engine.pd.SignalProcessor;
 import io.taktx.engine.pd.Stores;
@@ -121,6 +122,12 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
   public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       new ObjectMapperSerde<>(MessageScheduleDTO.class);
+  public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
+      Serdes.serdeFrom(
+          new SigningSerializer<>(MESSAGE_SCHEDULE_SERDE.serializer()),
+          MESSAGE_SCHEDULE_SERDE.deserializer());
+  public static final Serde<MessageScheduleDTO> SCHEDULE_COMMAND_INPUT_SERDE =
+      Serdes.serdeFrom(MESSAGE_SCHEDULE_SERDE.serializer(), new ScheduleCommandDeserializer());
   public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class) {
         @Override
@@ -395,7 +402,7 @@ public class TopologyProducer {
                                 KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
                             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
+                            Produced.with(SCHEDULE_KEY_SERDE, SIGNED_MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> key instanceof ProcessDefinitionKey && value instanceof String,
             Branched.withConsumer(
@@ -538,7 +545,7 @@ public class TopologyProducer {
                                 KeyValue.pair((ScheduleKeyDTO) key, (MessageScheduleDTO) value))
                         .to(
                             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-                            Produced.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE))))
+                            Produced.with(SCHEDULE_KEY_SERDE, SIGNED_MESSAGE_SCHEDULE_SERDE))))
         .branch(
             (key, value) -> value instanceof UserTaskTriggerDTO,
             Branched.withConsumer(
@@ -639,7 +646,7 @@ public class TopologyProducer {
     KStream<ScheduleKeyDTO, MessageScheduleDTO> scheduleCommandStream =
         stateStore.stream(
             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
-            Consumed.with(SCHEDULE_KEY_SERDE, MESSAGE_SCHEDULE_SERDE));
+            Consumed.with(SCHEDULE_KEY_SERDE, SCHEDULE_COMMAND_INPUT_SERDE));
     KStream<Object, SchedulableMessageDTO> processStream =
         scheduleCommandStream.process(
             () ->
@@ -649,7 +656,9 @@ public class TopologyProducer {
                     (context, name) ->
                         context.getStateStore(taktConfiguration.getPrefixed("schedules-" + name)),
                     TimeBucket.values(),
-                    processingStatistics),
+                    processingStatistics,
+                    engineAuthorizationService,
+                    taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName())),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),

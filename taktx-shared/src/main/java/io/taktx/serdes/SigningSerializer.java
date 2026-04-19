@@ -65,7 +65,8 @@ public class SigningSerializer<T> implements Serializer<T> {
     if (headers != null) {
       SigningFunction fn = SigningServiceHolder.get();
       if (fn != null) {
-        String headerValue = fn.sign(bytes);
+        byte[] payloadToSign = bytes != null ? bytes : new byte[0];
+        String headerValue = fn.sign(payloadToSign);
         if (headerValue != null) {
           headers.remove(Constants.HEADER_ENGINE_SIGNATURE);
           headers.add(
