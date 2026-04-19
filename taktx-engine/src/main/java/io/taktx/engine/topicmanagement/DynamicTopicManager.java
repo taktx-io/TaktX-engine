@@ -218,9 +218,16 @@ public class DynamicTopicManager {
               validatedTopicMeta.getNrPartitions(),
               validatedTopicMeta.getCleanupPolicy(),
               validatedTopicMeta.getReplicationFactor());
-      if (creationResult.createdOrExists()) {
+      if (creationResult == TopicCreationResult.CREATED) {
         publishTopicMetaActual(validation.topicName(), validatedTopicMeta);
         cachedActualTopicMetaMap.put(validation.topicName(), validatedTopicMeta);
+      } else if (creationResult == TopicCreationResult.ALREADY_EXISTS) {
+        TopicMetaDTO actualTopicMeta =
+            resolveActualTopicMeta(validation.topicName(), validatedTopicMeta);
+        if (actualTopicMeta != null) {
+          publishTopicMetaActual(validation.topicName(), actualTopicMeta);
+          cachedActualTopicMetaMap.put(validation.topicName(), actualTopicMeta);
+        }
       }
     } else {
       log.warn(
@@ -311,22 +318,11 @@ public class DynamicTopicManager {
       TopicMetaDTO cachedRequestTopicMeta,
       Set<String> prefixedTopicNames) {
     try {
-      // Try to get the actual topic description
-      TopicDescription actualTopicDescription =
-          topicDescriptionFutures.get(prefixedTopicName).get();
-      short actualReplicationFactor =
-          (short) actualTopicDescription.partitions().get(0).replicas().size();
-
-      // Compare actual vs cached values
       TopicMetaDTO actualTopicMeta =
-          new TopicMetaDTO(
+          buildActualTopicMeta(
               prefixedTopicName,
-              actualTopicDescription.partitions().size(),
-              cachedRequestTopicMeta.getCleanupPolicy(),
-              actualReplicationFactor);
-      actualTopicMeta.setTopicName(prefixedTopicName);
-      actualTopicMeta.setCleanupPolicy(cachedRequestTopicMeta.getCleanupPolicy());
-      actualTopicMeta.setNrPartitions(actualTopicDescription.partitions().size());
+              cachedRequestTopicMeta,
+              topicDescriptionFutures.get(prefixedTopicName).get());
 
       // Check the total partition budget
       int budget = licenseManager.getPartitionBudget();
@@ -419,6 +415,45 @@ public class DynamicTopicManager {
     }
   }
 
+  private TopicMetaDTO resolveActualTopicMeta(
+      String prefixedTopicName, TopicMetaDTO requestedTopicMeta) {
+    try {
+      DescribeTopicsResult describeTopicsResult =
+          adminClient.describeTopics(Set.of(prefixedTopicName));
+      KafkaFuture<TopicDescription> future =
+          describeTopicsResult.topicNameValues().get(prefixedTopicName);
+      if (future == null) {
+        log.warn(
+            "Topic {} already existed but broker metadata could not be resolved immediately",
+            prefixedTopicName);
+        return null;
+      }
+      return buildActualTopicMeta(prefixedTopicName, requestedTopicMeta, future.get());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Topic metadata resolution interrupted", e);
+    } catch (Exception e) {
+      log.warn(
+          "Topic {} already existed but describeTopics failed; reconciliation will retry later",
+          prefixedTopicName,
+          e);
+      return null;
+    }
+  }
+
+  private TopicMetaDTO buildActualTopicMeta(
+      String prefixedTopicName,
+      TopicMetaDTO requestedTopicMeta,
+      TopicDescription actualTopicDescription) {
+    short actualReplicationFactor =
+        (short) actualTopicDescription.partitions().get(0).replicas().size();
+    return new TopicMetaDTO(
+        prefixedTopicName,
+        actualTopicDescription.partitions().size(),
+        requestedTopicMeta.getCleanupPolicy(),
+        actualReplicationFactor);
+  }
+
   private void publishTopicMetaActual(String topicName, TopicMetaDTO topicMeta) {
     if (!running.get()) {
       return;
@@ -487,10 +522,6 @@ public class DynamicTopicManager {
     CREATED,
     ALREADY_EXISTS,
     FAILED;
-
-    private boolean createdOrExists() {
-      return this != FAILED;
-    }
   }
 
   private KafkaConsumer<String, TopicMetaDTO> createConsumer(String groupId) {

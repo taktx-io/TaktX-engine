@@ -25,14 +25,19 @@ import io.taktx.engine.license.LicenseManager;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
+import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaFuture;
+import org.apache.kafka.common.Node;
+import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,6 +128,7 @@ class DynamicTopicManagerTest {
     when(createTopicsResult.all()).thenReturn(failedFuture);
     when(failedFuture.get())
         .thenThrow(new ExecutionException(new TopicExistsException("already created elsewhere")));
+    mockDescribeTopics(topicName, 6, (short) 2);
 
     dynamicTopicManager.processRequestedTopic(topicName, topicMeta);
 
@@ -138,7 +144,45 @@ class DynamicTopicManagerTest {
     verify(topicMetaProducer).send(recordCaptor.capture(), any());
     assertThat(recordCaptor.getValue().topic()).isEqualTo(ACTUAL_TOPIC);
     assertThat(recordCaptor.getValue().key()).isEqualTo(topicName);
-    assertThat(recordCaptor.getValue().value()).isEqualTo(topicMeta);
+    assertThat(recordCaptor.getValue().value())
+        .extracting(
+            TopicMetaDTO::getTopicName,
+            TopicMetaDTO::getNrPartitions,
+            TopicMetaDTO::getCleanupPolicy,
+            TopicMetaDTO::getReplicationFactor)
+        .containsExactly(topicName, 6, CleanupPolicy.DELETE, (short) 2);
+  }
+
+  @Test
+  void concurrentCreateRace_describeFailureDefersActualPublication() throws Exception {
+    String topicName =
+        LOCAL_PREFIX + Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + "payment-worker";
+    TopicMetaDTO topicMeta = new TopicMetaDTO(topicName, 3, CleanupPolicy.DELETE, (short) 1);
+
+    CreateTopicsResult createTopicsResult = mock(CreateTopicsResult.class);
+    @SuppressWarnings("unchecked")
+    KafkaFuture<Void> failedFuture = mock(KafkaFuture.class);
+    when(adminClient.createTopics(anyList())).thenReturn(createTopicsResult);
+    when(createTopicsResult.all()).thenReturn(failedFuture);
+    when(failedFuture.get())
+        .thenThrow(new ExecutionException(new TopicExistsException("already created elsewhere")));
+
+    DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
+    @SuppressWarnings("unchecked")
+    KafkaFuture<TopicDescription> describeFuture = mock(KafkaFuture.class);
+    when(adminClient.describeTopics(Set.of(topicName))).thenReturn(describeTopicsResult);
+    when(describeTopicsResult.topicNameValues()).thenReturn(Map.of(topicName, describeFuture));
+    when(describeFuture.get())
+        .thenThrow(new ExecutionException(new IllegalStateException("describe failed")));
+
+    dynamicTopicManager.processRequestedTopic(topicName, topicMeta);
+
+    assertThat(cachedRequestTopicMetaMap()).containsEntry(topicName, topicMeta);
+    assertThat(
+            dynamicTopicManager.topicExists(
+                Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + "payment-worker"))
+        .isFalse();
+    verify(topicMetaProducer, never()).send(anyProducerRecord(), any());
   }
 
   @Test
@@ -192,6 +236,31 @@ class DynamicTopicManagerTest {
   @SuppressWarnings("unchecked")
   private ProducerRecord<String, TopicMetaDTO> anyProducerRecord() {
     return any(ProducerRecord.class);
+  }
+
+  private void mockDescribeTopics(String topicName, int partitionCount, short replicationFactor)
+      throws Exception {
+    DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
+    when(adminClient.describeTopics(Set.of(topicName))).thenReturn(describeTopicsResult);
+    when(describeTopicsResult.topicNameValues())
+        .thenReturn(
+            Map.of(
+                topicName,
+                KafkaFuture.completedFuture(
+                    topicDescription(topicName, partitionCount, replicationFactor))));
+  }
+
+  private TopicDescription topicDescription(
+      String topicName, int partitionCount, short replicationFactor) {
+    List<Node> replicas =
+        java.util.stream.IntStream.range(0, replicationFactor)
+            .mapToObj(index -> new Node(index, "broker-" + index, 9092 + index))
+            .toList();
+    List<TopicPartitionInfo> partitions =
+        java.util.stream.IntStream.range(0, partitionCount)
+            .mapToObj(index -> new TopicPartitionInfo(index, replicas.get(0), replicas, replicas))
+            .toList();
+    return new TopicDescription(topicName, false, partitions);
   }
 
   @SuppressWarnings("unchecked")
