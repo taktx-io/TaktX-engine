@@ -13,6 +13,9 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
+import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.EventSignalTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
@@ -21,8 +24,10 @@ import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
@@ -161,10 +166,7 @@ public class EngineAuthorizationService {
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
-    boolean isEntryCommand =
-        trigger instanceof StartCommandDTO
-            || trigger instanceof AbortTriggerDTO
-            || trigger instanceof SetVariableTriggerDTO;
+    boolean isEntryCommand = isEntryCommand(trigger);
 
     // ── Entry commands: AND-logic across both gates
     // ───────────────────────────────────────────────
@@ -229,6 +231,14 @@ public class EngineAuthorizationService {
       return jwtMeta != null ? jwtMeta : sigMeta;
     }
 
+    KeyRole requiredRole = requiredRoleForSignedProcessInstanceTrigger(trigger);
+    if (requiredRole == null) {
+      throw new AuthorizationTokenException(
+          "Unsupported process-instance trigger type "
+              + trigger.getClass().getSimpleName()
+              + " for authorization policy evaluation");
+    }
+
     // ── Gate 2: Non-entry command Ed25519 signing
     // ─────────────────────────────────────────────────
     boolean authActive = cfg.isEngineRequiresAuthorization();
@@ -236,23 +246,22 @@ public class EngineAuthorizationService {
 
     if (sigHeader != null && sigHeader.value() != null) {
       if (authActive || signingActive) {
-        return authorizeViaEd25519(sigHeader, triggerEnvelope);
+        return authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole);
       }
     }
 
-    if (signingActive) {
+    if (authActive || signingActive) {
       throw new AuthorizationTokenException(
           "Missing required "
               + SIG_HEADER
               + " header on command "
-              + trigger.getClass().getSimpleName());
+              + trigger.getClass().getSimpleName()
+              + " — trusted "
+              + requiredRole
+              + " signature required when process-instance security is active");
     }
 
-    if (!authActive && !signingActive) {
-      return null;
-    }
-
-    return trigger.getCurrentTrustMetadata();
+    return null;
   }
 
   /**
@@ -441,7 +450,7 @@ public class EngineAuthorizationService {
    * revoked.
    */
   private CommandTrustMetadataDTO authorizeViaEd25519(
-      Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+      Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope, KeyRole requiredRole) {
     if (triggerEnvelope.hasSignatureError()) {
       throw new AuthorizationTokenException(triggerEnvelope.signatureError());
     }
@@ -471,20 +480,55 @@ public class EngineAuthorizationService {
               + triggerEnvelope.trigger().getClass().getSimpleName()
               + " but the signature was not verified by the deserializer");
     }
+    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole)) {
+      throw new AuthorizationTokenException(
+          "Signing keyId '"
+              + keyId
+              + "' is not trusted for "
+              + requiredRole
+              + " process-instance command "
+              + triggerEnvelope.trigger().getClass().getSimpleName());
+    }
+    boolean isEngine = keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE);
     log.info(
-        "✅ Authorised (Ed25519) command={} keyId={} owner={}",
+        "✅ Authorised (Ed25519) command={} keyId={} owner={} roleRequired={} derivedRole={}",
         triggerEnvelope.trigger().getClass().getSimpleName(),
         keyId,
-        entry.getOwner());
+        entry.getOwner(),
+        requiredRole,
+        entry.effectiveRole());
 
     return CommandTrustMetadataDTO.builder()
         .authMethod(CommandAuthMethod.ED25519)
-        .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
+        .verificationResult(
+            isEngine
+                ? CommandTrustVerificationResult.ENGINE_SIGNED
+                : CommandTrustVerificationResult.SIGNATURE_VERIFIED)
         .trusted(true)
         .signerKeyId(keyId)
         .signerOwner(entry.getOwner())
         .signerAlgorithm(entry.getAlgorithm())
         .build();
+  }
+
+  private static boolean isEntryCommand(ProcessInstanceTriggerDTO trigger) {
+    return trigger instanceof StartCommandDTO
+        || trigger instanceof AbortTriggerDTO
+        || trigger instanceof SetVariableTriggerDTO;
+  }
+
+  private static KeyRole requiredRoleForSignedProcessInstanceTrigger(
+      ProcessInstanceTriggerDTO trigger) {
+    if (trigger instanceof ExternalTaskResponseTriggerDTO
+        || trigger instanceof UserTaskResponseTriggerDTO) {
+      return KeyRole.CLIENT;
+    }
+    if (trigger instanceof ContinueFlowElementTriggerDTO
+        || trigger instanceof StartFlowElementTriggerDTO
+        || trigger instanceof EventSignalTriggerDTO) {
+      return KeyRole.ENGINE;
+    }
+    return null;
   }
 
   private GlobalConfigurationDTO effectiveConfig() {

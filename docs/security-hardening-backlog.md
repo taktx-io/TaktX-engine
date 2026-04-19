@@ -288,7 +288,7 @@ Apply verification before any topic-creation request is processed.
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, B2, G1 |
@@ -308,6 +308,14 @@ Extend `process-instance` authorization so role restrictions apply per DTO type.
 - Message type is considered alongside topic and role.
 - Disallowed `(role, DTO)` combinations are rejected before processing.
 - Existing engine-internal flows continue to function.
+
+**Implementation notes (2026-04-19)**
+
+- `EngineAuthorizationService.authorize(...)` now evaluates signed `process-instance` commands by DTO subtype, not just entry-vs-non-entry.
+- `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` now require trusted `CLIENT`-or-higher Ed25519 signatures when `engineRequiresAuthorization` or `signingEnabled` is active.
+- Engine-internal `ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, and `EventSignalTriggerDTO` now require trusted `ENGINE`-or-higher signatures; `CLIENT` keys are rejected fail-closed.
+- Unsigned non-entry `process-instance` commands are now rejected whenever either process-instance security gate is active, and `MessageSigningService` signs engine-emitted records in auth-only mode so internal continuations still work.
+- `ProcessInstanceProcessor` now ignores payload-supplied trust metadata by default and only preserves forwarded `originTrustMetadata` when the inbound command itself was verified as engine-signed.
 
 ---
 
@@ -577,7 +585,7 @@ Replace the earlier “TRUST_ADMIN-only writes” concept with a model that fits
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, C3 |
@@ -603,6 +611,12 @@ Restrict what `CLIENT`-trusted messages may emit to `process-instance`.
 - `CLIENT` cannot emit engine/platform-only process-instance messages
 - valid worker/user-task response flows still work
 - role/message mismatches are rejected and logged
+
+**Implementation notes (2026-04-19)**
+
+- The initial allowlist is now enforced in `EngineAuthorizationService`: `CLIENT` keys may emit worker/user-task response DTOs, but not engine-only continuation/start/event commands.
+- Direct `CLIENT` attempts to publish engine-only `process-instance` DTOs are rejected before processing with explicit role/message mismatch errors.
+- Worker-signed payloads can no longer smuggle forged `currentTrustMetadata` / `originTrustMetadata`; downstream updates retain the verified worker signer unless a later engine-signed internal hop legitimately carries origin forward.
 
 ### Task G2 — Evaluate future per-client/per-worker scoping metadata
 

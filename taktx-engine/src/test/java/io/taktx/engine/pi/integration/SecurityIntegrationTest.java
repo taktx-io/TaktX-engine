@@ -33,6 +33,7 @@ import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.InstanceUpdateDTO;
+import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.VariablesDTO;
@@ -181,6 +182,9 @@ class SecurityIntegrationTest {
   /** Base64-encoded private key for the revoked worker (signs but key is marked REVOKED). */
   private static String revokedWorkerPrivateKeyBase64;
 
+  /** Base64-encoded private key for the active worker test signer. */
+  private static String workerPrivateKeyBase64;
+
   /** Captures raw instance-update records (including headers) for signature assertions. */
   private static final ConcurrentLinkedQueue<ConsumerRecord<UUID, InstanceUpdateDTO>>
       rawInstanceUpdates = new ConcurrentLinkedQueue<>();
@@ -206,7 +210,7 @@ class SecurityIntegrationTest {
 
     // ── Generate worker key pairs ─────────────────────────────────────────────
     KeyPair workerKp = SigningKeyGenerator.generate();
-    String workerPrivateKeyBase64 = SigningKeyGenerator.encodePrivateKey(workerKp.getPrivate());
+    workerPrivateKeyBase64 = SigningKeyGenerator.encodePrivateKey(workerKp.getPrivate());
     String workerPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(workerKp.getPublic());
 
     KeyPair revokedKp = SigningKeyGenerator.generate();
@@ -923,6 +927,77 @@ class SecurityIntegrationTest {
         .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
   }
 
+  @Test
+  void workerSignedResponse_withForgedPayloadTrustMetadata_isIgnored() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
+
+    String jwt =
+        buildJwt(
+            "START",
+            SERVICE_TASK_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-1",
+            Date.from(Instant.now().plusSeconds(300)));
+    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+
+    engine.waitForNewProcessInstance();
+    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+
+    CommandTrustMetadataDTO forgedJwtMetadata =
+        CommandTrustMetadataDTO.builder()
+            .authMethod(CommandAuthMethod.JWT)
+            .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
+            .trusted(true)
+            .userId("mallory")
+            .issuer("forged-issuer")
+            .build();
+    sendWorkerResponseWithInjectedTrustMetadata(trigger, forgedJwtMetadata, forgedJwtMetadata);
+
+    AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () -> {
+              InstanceUpdateDTO found =
+                  rawInstanceUpdates.stream()
+                      .map(ConsumerRecord::value)
+                      .filter(
+                          update ->
+                              update.getCurrentTrustMetadata() != null
+                                  && WORKER_KEY_ID.equals(
+                                      update.getCurrentTrustMetadata().getSignerKeyId()))
+                      .findFirst()
+                      .orElse(null);
+              assertThat(found).isNotNull();
+              trustedUpdate.set(found);
+            });
+
+    assertThat(trustedUpdate.get().getCurrentTrustMetadata())
+        .extracting(
+            CommandTrustMetadataDTO::getAuthMethod,
+            CommandTrustMetadataDTO::getVerificationResult,
+            CommandTrustMetadataDTO::getTrusted,
+            CommandTrustMetadataDTO::getSignerKeyId,
+            CommandTrustMetadataDTO::getSignerOwner,
+            CommandTrustMetadataDTO::getUserId,
+            CommandTrustMetadataDTO::getIssuer)
+        .containsExactly(
+            CommandAuthMethod.ED25519,
+            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            true,
+            WORKER_KEY_ID,
+            "worker",
+            null,
+            null);
+    assertThat(trustedUpdate.get().getOriginTrustMetadata())
+        .as("Forged payload trust metadata must not survive worker-signed command processing")
+        .isEqualTo(trustedUpdate.get().getCurrentTrustMetadata());
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   private String buildJwt(
@@ -946,6 +1021,58 @@ class SecurityIntegrationTest {
         .expiration(expiry)
         .signWith(SecurityTestConfigResource.rsaPrivateKey)
         .compact();
+  }
+
+  private void sendWorkerResponseWithInjectedTrustMetadata(
+      ExternalTaskTriggerDTO trigger,
+      CommandTrustMetadataDTO currentTrustMetadata,
+      CommandTrustMetadataDTO originTrustMetadata) {
+    ExternalTaskResponseTriggerDTO response =
+        new ExternalTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.empty());
+    response.setCurrentTrustMetadata(currentTrustMetadata);
+    response.setOriginTrustMetadata(originTrustMetadata);
+    sendSignedProcessInstanceTrigger(response, WORKER_KEY_ID, workerPrivateKeyBase64);
+  }
+
+  private void sendSignedProcessInstanceTrigger(
+      ProcessInstanceTriggerDTO trigger, String keyId, String privateKeyBase64) {
+    String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
+    byte[] payload;
+    try (io.taktx.client.serdes.ProcessInstanceTriggerSerializer rawSerializer =
+        new io.taktx.client.serdes.ProcessInstanceTriggerSerializer()) {
+      payload = rawSerializer.serialize(topic, trigger);
+    }
+
+    byte[] signatureBytes = Ed25519Service.sign(payload, privateKeyBase64);
+    String signatureHeaderValue = keyId + "." + Base64.getEncoder().encodeToString(signatureBytes);
+
+    java.nio.ByteBuffer keyBuffer = java.nio.ByteBuffer.wrap(new byte[16]);
+    keyBuffer.putLong(trigger.getProcessInstanceId().getMostSignificantBits());
+    keyBuffer.putLong(trigger.getProcessInstanceId().getLeastSignificantBits());
+    byte[] keyBytes = keyBuffer.array();
+
+    java.util.Properties props = new java.util.Properties();
+    props.put(
+        "bootstrap.servers",
+        ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class));
+    props.put("acks", "all");
+
+    try (KafkaProducer<byte[], byte[]> producer =
+        new KafkaProducer<>(props, new ByteArraySerializer(), new ByteArraySerializer())) {
+      ProducerRecord<byte[], byte[]> record = new ProducerRecord<>(topic, keyBytes, payload);
+      record
+          .headers()
+          .add(
+              Constants.HEADER_ENGINE_SIGNATURE,
+              signatureHeaderValue.getBytes(StandardCharsets.UTF_8));
+      producer.send(record);
+      producer.flush();
+    }
   }
 
   /**

@@ -74,21 +74,28 @@ class MessageSigningServiceTest {
   @Test
   void signingEnabled_but_globalConfigDisabled_returnsNull() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(false));
+    globalConfigStore.update(globalConfig(false, false));
     assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
   }
 
   @Test
   void signingEnabled_globalConfigPresent_returnsHeaderValue() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
+  }
+
+  @Test
+  void authorizationEnabled_evenWhenSigningDisabled_returnsHeaderValue() {
+    MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
+    globalConfigStore.update(globalConfig(false, true));
     assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
   void headerValue_hasCorrectFormat_keyIdDotBase64() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
 
     String headerValue = svc.signToHeaderValue(PAYLOAD);
 
@@ -100,7 +107,7 @@ class MessageSigningServiceTest {
   @Test
   void headerValue_isVerifiableWithPublicKey() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
 
     String headerValue = svc.signToHeaderValue(PAYLOAD);
     byte[] sigBytes = Base64.getDecoder().decode(headerValue.substring(KEY_ID.length() + 1));
@@ -111,7 +118,7 @@ class MessageSigningServiceTest {
   @Test
   void multipleCallsWithSameKey_eachHasValidSignature() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
 
     for (int i = 0; i < 5; i++) {
       byte[] payload = ("payload-" + i).getBytes();
@@ -127,7 +134,7 @@ class MessageSigningServiceTest {
   @Test
   void keyRotation_switchToNewIdentity_signsWithNewKey() {
     // Start with key-1
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
 
     String headerBefore = svc.signToHeaderValue(PAYLOAD);
@@ -175,7 +182,7 @@ class MessageSigningServiceTest {
     MessageSigningService svc =
         new MessageSigningService(config, globalConfigStore, srcKey1, false);
 
-    globalConfigStore.update(globalConfig(true));
+    globalConfigStore.update(globalConfig(true, false));
 
     // Sign once to establish key1 as the active identity
     String h1 = svc.signToHeaderValue(PAYLOAD);
@@ -216,9 +223,11 @@ class MessageSigningServiceTest {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  private GlobalConfigurationDTO globalConfig(boolean signingEnabled) {
+  private GlobalConfigurationDTO globalConfig(
+      boolean signingEnabled, boolean engineRequiresAuthorization) {
     return GlobalConfigurationDTO.builder()
         .signingEnabled(signingEnabled)
+        .engineRequiresAuthorization(engineRequiresAuthorization)
         .trustedKeyIds(List.of(KEY_ID))
         .build();
   }

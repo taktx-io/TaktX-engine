@@ -18,6 +18,9 @@ import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseResultDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -167,13 +170,21 @@ class EngineAuthorizationServiceMatrixTest {
         new OpenKeyTrustPolicy());
   }
 
-  private ProcessInstanceTriggerEnvelope nonEntryEnvelope(boolean sigVerified, String keyId) {
-    return new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), sigVerified, keyId);
+  private ProcessInstanceTriggerEnvelope clientNonEntryEnvelope(boolean sigVerified, String keyId) {
+    return new ProcessInstanceTriggerEnvelope(externalTaskResponseTrigger(), sigVerified, keyId);
   }
 
   private ContinueFlowElementTriggerDTO continueFlowElementTrigger() {
     return new ContinueFlowElementTriggerDTO(
         UUID.randomUUID(), List.of(1L), "flow-1", VariablesDTO.empty());
+  }
+
+  private ExternalTaskResponseTriggerDTO externalTaskResponseTrigger() {
+    return new ExternalTaskResponseTriggerDTO(
+        UUID.randomUUID(),
+        List.of(1L),
+        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+        VariablesDTO.empty());
   }
 
   private SetVariableTriggerDTO setVariableTrigger() {
@@ -240,7 +251,7 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row1_bothDisabled_nonEntry_noSig_returnsNull() {
     EngineAuthorizationService svc = service(false, false);
-    assertThat(svc.authorize(noHeaders(), nonEntryEnvelope(false, null))).isNull();
+    assertThat(svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null))).isNull();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -249,7 +260,8 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row2_bothDisabled_nonEntry_sigPresent_sigIgnored_returnsNull() {
     EngineAuthorizationService svc = service(false, false);
-    assertThat(svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID)))
+    assertThat(
+            svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID)))
         .isNull();
   }
 
@@ -272,7 +284,7 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row6_signingOnly_nonEntry_noSig_throws_missingSignatureHeader() {
     EngineAuthorizationService svc = service(false, true);
-    assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
+    assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -285,7 +297,7 @@ class EngineAuthorizationServiceMatrixTest {
   void row7_signingOnly_nonEntry_sigPresent_verifies_ed25519() {
     EngineAuthorizationService svc = service(false, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result).isNotNull();
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
@@ -349,26 +361,14 @@ class EngineAuthorizationServiceMatrixTest {
 
   // ══════════════════════════════════════════════════════════════════════════
   // Row 10 — C-ERA=T, C-SE=F → auth active, signing off
-  //          non-entry, no sig → return embedded trust metadata
+  //          non-entry, no sig → throw (signed non-entry required)
   // ══════════════════════════════════════════════════════════════════════════
   @Test
-  void row10_authOnly_nonEntry_noSig_returnsCurrentTrustMetadata() {
+  void row10_authOnly_nonEntry_noSig_throws() {
     EngineAuthorizationService svc = service(true, false);
-
-    CommandTrustMetadataDTO embedded =
-        CommandTrustMetadataDTO.builder()
-            .authMethod(CommandAuthMethod.JWT)
-            .verificationResult(CommandTrustVerificationResult.JWT_AUTHORIZED)
-            .trusted(true)
-            .userId("user-1")
-            .issuer("taktx-platform")
-            .build();
-    ContinueFlowElementTriggerDTO trigger = continueFlowElementTrigger();
-    trigger.setCurrentTrustMetadata(embedded);
-
-    CommandTrustMetadataDTO result =
-        svc.authorize(noHeaders(), new ProcessInstanceTriggerEnvelope(trigger, false, null));
-    assertThat(result).isEqualTo(embedded);
+    assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -379,7 +379,7 @@ class EngineAuthorizationServiceMatrixTest {
   void row11_authOnly_nonEntry_sigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, false);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
@@ -393,7 +393,7 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row12_bothActive_nonEntry_noSig_throws() {
     EngineAuthorizationService svc = service(true, true);
-    assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
+    assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -406,7 +406,7 @@ class EngineAuthorizationServiceMatrixTest {
   void row13_bothActive_nonEntry_sigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
@@ -420,7 +420,7 @@ class EngineAuthorizationServiceMatrixTest {
   @Test
   void row14_bothActive_nonEntry_noSig_throws() {
     EngineAuthorizationService svc = service(true, true);
-    assertThatThrownBy(() -> svc.authorize(noHeaders(), nonEntryEnvelope(false, null)))
+    assertThatThrownBy(() -> svc.authorize(noHeaders(), clientNonEntryEnvelope(false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -433,11 +433,41 @@ class EngineAuthorizationServiceMatrixTest {
   void row15_bothActive_nonEntry_sigPresent_verifiesEd25519() {
     EngineAuthorizationService svc = service(true, true);
     CommandTrustMetadataDTO result =
-        svc.authorize(sigHeaders(WORKER_KEY_ID), nonEntryEnvelope(true, WORKER_KEY_ID));
+        svc.authorize(sigHeaders(WORKER_KEY_ID), clientNonEntryEnvelope(true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.SIGNATURE_VERIFIED);
     assertThat(result.getTrusted()).isTrue();
+  }
+
+  @Test
+  void engineOnlyContinuation_clientSignatureRejected() {
+    EngineAuthorizationService svc = service(true, true);
+
+    assertThatThrownBy(
+            () ->
+                svc.authorize(
+                    sigHeaders(WORKER_KEY_ID),
+                    new ProcessInstanceTriggerEnvelope(
+                        continueFlowElementTrigger(), true, WORKER_KEY_ID)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted for ENGINE process-instance command");
+  }
+
+  @Test
+  void engineOnlyContinuation_engineSignatureAccepted() {
+    EngineAuthorizationService svc = service(true, true);
+
+    CommandTrustMetadataDTO result =
+        svc.authorize(
+            sigHeaders(ENGINE_KEY_ID),
+            new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, ENGINE_KEY_ID));
+
+    assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
+    assertThat(result.getVerificationResult())
+        .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
+    assertThat(result.getTrusted()).isTrue();
+    assertThat(result.getSignerKeyId()).isEqualTo(ENGINE_KEY_ID);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

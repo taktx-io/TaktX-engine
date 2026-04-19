@@ -19,6 +19,9 @@ import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DefinitionScheduleKeyDTO;
+import io.taktx.dto.ExternalTaskResponseResultDTO;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
+import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.OneTimeScheduleDTO;
@@ -471,7 +474,7 @@ class EngineAuthorizationServiceTest {
   // ── Ed25519 passthrough — non-entry (engine-internal continuations) ───────
 
   @Test
-  void nonEntryTrigger_clientSignedContinuation_returnsSignerMetadata() {
+  void nonEntryTrigger_clientSignedExternalTaskResponse_returnsSignerMetadata() {
     globalConfigStore.update(authorizationConfig(true));
 
     String keyId = "worker-test-001";
@@ -482,6 +485,7 @@ class EngineAuthorizationServiceTest {
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
                 .owner("worker-billing")
+                .role(KeyRole.CLIENT)
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
@@ -489,7 +493,8 @@ class EngineAuthorizationServiceTest {
 
     CommandTrustMetadataDTO result =
         service.authorize(
-            headers, new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, keyId));
+            headers,
+            new ProcessInstanceTriggerEnvelope(externalTaskResponseTrigger(), true, keyId));
     assertThat(result)
         .isEqualTo(
             CommandTrustMetadataDTO.builder()
@@ -513,6 +518,7 @@ class EngineAuthorizationServiceTest {
                 .publicKeyBase64("dummy")
                 .status(KeyStatus.ACTIVE)
                 .owner("engine")
+                .role(KeyRole.ENGINE)
                 .build());
 
     RecordHeaders headers = new RecordHeaders();
@@ -525,7 +531,7 @@ class EngineAuthorizationServiceTest {
         .isEqualTo(
             CommandTrustMetadataDTO.builder()
                 .authMethod(CommandAuthMethod.ED25519)
-                .verificationResult(CommandTrustVerificationResult.SIGNATURE_VERIFIED)
+                .verificationResult(CommandTrustVerificationResult.ENGINE_SIGNED)
                 .trusted(true)
                 .signerKeyId(keyId)
                 .signerOwner("engine")
@@ -533,15 +539,44 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void nonEntryTrigger_withoutHeaders_authOnlyConfig_returnsNull() {
-    globalConfigStore.update(config(true, false));
+  void nonEntryTrigger_clientSignedContinuation_rejectedForEngineOnlyMessageType() {
+    globalConfigStore.update(authorizationConfig(true));
 
-    assertThat(service.authorize(new RecordHeaders(), envelope(continueFlowElementTrigger())))
-        .isNull();
+    String keyId = "worker-test-002";
+    when(signingKeysStore.get(keyId))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(keyId)
+                .publicKeyBase64("dummy")
+                .status(KeyStatus.ACTIVE)
+                .owner("worker-billing")
+                .role(KeyRole.CLIENT)
+                .build());
+
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
+
+    assertThatThrownBy(
+            () ->
+                service.authorize(
+                    headers,
+                    new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, keyId)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted for ENGINE process-instance command");
   }
 
   @Test
-  void nonEntryTrigger_withEmbeddedTrust_authOnlyConfig_returnsEmbeddedMetadata() {
+  void nonEntryTrigger_withoutHeaders_authOnlyConfig_throws() {
+    globalConfigStore.update(config(true, false));
+
+    assertThatThrownBy(
+            () -> service.authorize(new RecordHeaders(), envelope(continueFlowElementTrigger())))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
+  }
+
+  @Test
+  void nonEntryTrigger_withEmbeddedTrust_authOnlyConfig_throws() {
     globalConfigStore.update(config(true, false));
 
     ContinueFlowElementTriggerDTO trigger = continueFlowElementTrigger();
@@ -556,8 +591,9 @@ class EngineAuthorizationServiceTest {
     trigger.setCurrentTrustMetadata(embeddedMetadata);
     trigger.setOriginTrustMetadata(embeddedMetadata);
 
-    assertThat(service.authorize(new RecordHeaders(), envelope(trigger)))
-        .isEqualTo(embeddedMetadata);
+    assertThatThrownBy(() -> service.authorize(new RecordHeaders(), envelope(trigger)))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
   }
 
   @Test
@@ -735,6 +771,14 @@ class EngineAuthorizationServiceTest {
   private ContinueFlowElementTriggerDTO continueFlowElementTrigger() {
     return new ContinueFlowElementTriggerDTO(
         UUID.randomUUID(), List.of(1L), "flow-1", VariablesDTO.empty());
+  }
+
+  private ExternalTaskResponseTriggerDTO externalTaskResponseTrigger() {
+    return new ExternalTaskResponseTriggerDTO(
+        UUID.randomUUID(),
+        List.of(1L),
+        new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+        VariablesDTO.empty());
   }
 
   private SetVariableTriggerDTO setVariableTrigger() {

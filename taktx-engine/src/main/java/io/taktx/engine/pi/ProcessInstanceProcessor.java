@@ -13,6 +13,7 @@ import static io.taktx.dto.Constants.MAX_LONG;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
+import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
@@ -134,9 +135,7 @@ public class ProcessInstanceProcessor
       return;
     }
     trigger.setCurrentTrustMetadata(currentTrustMetadata);
-    if (trigger.getOriginTrustMetadata() == null) {
-      trigger.setOriginTrustMetadata(currentTrustMetadata);
-    }
+    trigger.setOriginTrustMetadata(resolveOriginTrustMetadata(trigger, currentTrustMetadata));
 
     try {
       switch (trigger) {
@@ -788,5 +787,20 @@ public class ProcessInstanceProcessor
           scope,
           variableScopeThreadLocal.get());
     }
+  }
+
+  private CommandTrustMetadataDTO resolveOriginTrustMetadata(
+      ProcessInstanceTriggerDTO trigger, CommandTrustMetadataDTO currentTrustMetadata) {
+    if (isVerifiedInternalCommand(currentTrustMetadata)
+        && trigger.getOriginTrustMetadata() != null) {
+      return trigger.getOriginTrustMetadata();
+    }
+    return currentTrustMetadata;
+  }
+
+  private static boolean isVerifiedInternalCommand(CommandTrustMetadataDTO trustMetadata) {
+    return trustMetadata != null
+        && Boolean.TRUE.equals(trustMetadata.getTrusted())
+        && trustMetadata.getVerificationResult() == CommandTrustVerificationResult.ENGINE_SIGNED;
   }
 }

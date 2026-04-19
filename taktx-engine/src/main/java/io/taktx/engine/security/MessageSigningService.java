@@ -163,7 +163,8 @@ public class MessageSigningService {
    * via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
-    if (!effectiveConfig().isSigningEnabled()) {
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    if (!cfg.isSigningEnabled() && !cfg.isEngineRequiresAuthorization()) {
       return null;
     }
     SigningIdentity identity = refreshActiveIdentity();
