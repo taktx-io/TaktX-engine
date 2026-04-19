@@ -17,6 +17,10 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.license.LicenseManager;
+import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.security.AuthorizationTokenException;
+import io.taktx.serdes.ExternalTaskMetaDeserializer;
+import io.taktx.serdes.JsonDeserializer;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Duration;
@@ -40,6 +44,7 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -47,6 +52,8 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.serialization.Deserializer;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -58,6 +65,7 @@ public class DynamicTopicManager {
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
   private final LicenseManager licenseManager;
+  private final EngineAuthorizationService engineAuthorizationService;
   private final RequestedTopicValidator requestedTopicValidator;
   private final ExecutorService executor =
       Executors.newCachedThreadPool(
@@ -147,7 +155,7 @@ public class DynamicTopicManager {
     executor.submit(
         () -> {
           try (KafkaConsumer<String, TopicMetaDTO> requestConsumer =
-              createConsumer("taktx-topicmanager-request-consumer")) {
+              createRequestConsumer("taktx-topicmanager-request-consumer")) {
             requestConsumer.subscribe(
                 List.of(cachedRequestedTopicName),
                 getConsumerRebalanceListener(cachedRequestedTopicName));
@@ -176,16 +184,39 @@ public class DynamicTopicManager {
                 continue;
               }
               records.forEach(
-                  topicRecord -> {
-                    if (topicRecord.value() == null) {
-                      collectedTopics.remove(topicRecord.key());
-                    } else {
-                      collectedTopics.put(topicRecord.key(), topicRecord.value());
-                    }
-                  });
+                  topicRecord -> handleRequestedTopicRecord(collectedTopics, topicRecord));
             }
           }
         });
+  }
+
+  void handleRequestedTopicRecord(
+      Map<String, TopicMetaDTO> collectedTopics, ConsumerRecord<String, TopicMetaDTO> topicRecord) {
+    TopicMetaDTO topicMeta = topicRecord.value();
+    if (topicMeta == null) {
+      collectedTopics.remove(topicRecord.key());
+      return;
+    }
+
+    try {
+      var trustedSigner =
+          engineAuthorizationService.authorizeTopicMetaRequest(topicRecord.headers(), topicMeta);
+      log.info(
+          "Accepted topic meta request key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
+          topicRecord.key(),
+          topicMeta.getTopicName(),
+          trustedSigner.getKeyId(),
+          trustedSigner.effectiveRole());
+      collectedTopics.put(topicRecord.key(), topicMeta);
+    } catch (AuthorizationTokenException e) {
+      log.warn(
+          "Rejected topic meta request key='{}' topicName='{}' signerKeyId='{}' outcome='rejected' reason='{}'",
+          topicRecord.key(),
+          topicMeta.getTopicName(),
+          extractSignerKeyId(topicRecord.headers()),
+          e.getMessage());
+      publishRejectedRequestedTopic(topicMeta.getTopicName());
+    }
   }
 
   void processRequestedTopic(String recordKey, TopicMetaDTO topicMeta) {
@@ -535,6 +566,32 @@ public class DynamicTopicManager {
         props,
         TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
         TopologyProducer.TOPIC_META_SERDE.deserializer());
+  }
+
+  private KafkaConsumer<String, TopicMetaDTO> createRequestConsumer(String groupId) {
+    log.info("Creating signed request consumer for group id {}", groupId);
+    Properties props = new Properties();
+    props.putAll(kafkaClientsConfig.getConfig());
+    props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    props.put(JsonDeserializer.SIGNING_REQUIRED_CONFIG, "true");
+
+    Deserializer<TopicMetaDTO> valueDeserializer = new ExternalTaskMetaDeserializer();
+    return new KafkaConsumer<>(
+        props, TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(), valueDeserializer);
+  }
+
+  private String extractSignerKeyId(Headers headers) {
+    if (headers == null) {
+      return null;
+    }
+    var header = headers.lastHeader(io.taktx.dto.Constants.HEADER_ENGINE_SIGNATURE);
+    if (header == null || header.value() == null) {
+      return null;
+    }
+    String headerValue = new String(header.value(), java.nio.charset.StandardCharsets.UTF_8);
+    int dotIndex = headerValue.indexOf('.');
+    return dotIndex >= 0 ? headerValue.substring(0, dotIndex) : headerValue;
   }
 
   /**

@@ -20,6 +20,7 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TokenClaims;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
@@ -252,6 +253,50 @@ public class EngineAuthorizationService {
     return trigger.getCurrentTrustMetadata();
   }
 
+  /**
+   * Authorizes a `topic-meta-requested` record after the deserializer has already verified the
+   * Ed25519 signature cryptographically.
+   *
+   * <p>This path derives trust exclusively from the signing-key KTable and active trust policy. A
+   * request must carry a valid `X-TaktX-Signature` whose key resolves to a trusted `CLIENT`-or-
+   * higher role.
+   */
+  public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
+    Header sigHeader = lastHeader(headers, SIG_HEADER);
+    if (sigHeader == null || sigHeader.value() == null) {
+      throw new AuthorizationTokenException(
+          "Missing required "
+              + SIG_HEADER
+              + " header on topic-meta-requested for topic "
+              + (request == null ? null : request.getTopicName()));
+    }
+
+    String keyId = extractKeyId(sigHeader);
+    SigningKeyDTO entry = lookupSigningKey(keyId);
+    if (entry == null) {
+      throw new AuthorizationTokenException(
+          "Unknown Ed25519 keyId '" + keyId + "' — rejecting topic-meta-requested record");
+    }
+    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
+      throw new AuthorizationTokenException(
+          "Revoked Ed25519 keyId '" + keyId + "' — rejecting topic-meta-requested record");
+    }
+    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.CLIENT)) {
+      throw new AuthorizationTokenException(
+          "Signing keyId '"
+              + keyId
+              + "' is not trusted for CLIENT topic requests — rejecting topic-meta-requested record");
+    }
+
+    log.info(
+        "✅ Authorised topic-meta-requested topic={} keyId={} owner={} role={}",
+        request == null ? null : request.getTopicName(),
+        keyId,
+        entry.getOwner(),
+        entry.effectiveRole());
+    return entry;
+  }
+
   // ── Entry command Ed25519 verification ───────────────────────────────────
 
   /**
@@ -420,6 +465,12 @@ public class EngineAuthorizationService {
 
   private static Header lastHeader(Headers headers, String headerName) {
     return headers != null ? headers.lastHeader(headerName) : null;
+  }
+
+  private static String extractKeyId(Header sigHeader) {
+    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
+    int dot = headerValue.indexOf('.');
+    return dot >= 0 ? headerValue.substring(0, dot) : headerValue;
   }
 
   private void validateClaimsMatchCommand(TokenClaims claims, ProcessInstanceTriggerDTO trigger) {

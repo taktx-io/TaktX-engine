@@ -18,10 +18,14 @@ import static org.mockito.Mockito.when;
 
 import io.taktx.CleanupPolicy;
 import io.taktx.dto.Constants;
+import io.taktx.dto.KeyRole;
+import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.license.LicenseManager;
+import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.security.AuthorizationTokenException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +37,7 @@ import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaFuture;
@@ -51,6 +56,7 @@ class DynamicTopicManagerTest {
   private AdminClient adminClient;
   private TaktConfiguration taktConfiguration;
   private LicenseManager licenseManager;
+  private EngineAuthorizationService engineAuthorizationService;
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
   private DynamicTopicManager dynamicTopicManager;
 
@@ -60,6 +66,7 @@ class DynamicTopicManagerTest {
     taktConfiguration = mock(TaktConfiguration.class);
     KafkaClientsConfig kafkaClientsConfig = mock(KafkaClientsConfig.class);
     licenseManager = mock(LicenseManager.class);
+    engineAuthorizationService = mock(EngineAuthorizationService.class);
     topicMetaProducer = mock(KafkaProducer.class);
 
     when(taktConfiguration.getPrefixed(anyString()))
@@ -74,6 +81,7 @@ class DynamicTopicManagerTest {
             taktConfiguration,
             kafkaClientsConfig,
             licenseManager,
+            engineAuthorizationService,
             requestedTopicValidator);
 
     setPrivateField(dynamicTopicManager, "topicMetaProducer", topicMetaProducer);
@@ -89,6 +97,8 @@ class DynamicTopicManagerTest {
     CreateTopicsResult createTopicsResult = mock(CreateTopicsResult.class);
     when(adminClient.createTopics(anyList())).thenReturn(createTopicsResult);
     when(createTopicsResult.all()).thenReturn(KafkaFuture.completedFuture(null));
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     dynamicTopicManager.processRequestedTopic(topicName, topicMeta);
 
@@ -129,6 +139,8 @@ class DynamicTopicManagerTest {
     when(failedFuture.get())
         .thenThrow(new ExecutionException(new TopicExistsException("already created elsewhere")));
     mockDescribeTopics(topicName, 6, (short) 2);
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     dynamicTopicManager.processRequestedTopic(topicName, topicMeta);
 
@@ -166,6 +178,8 @@ class DynamicTopicManagerTest {
     when(createTopicsResult.all()).thenReturn(failedFuture);
     when(failedFuture.get())
         .thenThrow(new ExecutionException(new TopicExistsException("already created elsewhere")));
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
     @SuppressWarnings("unchecked")
@@ -198,6 +212,8 @@ class DynamicTopicManagerTest {
     when(createTopicsResult.all()).thenReturn(failedFuture);
     when(failedFuture.get())
         .thenThrow(new ExecutionException(new IllegalStateException("broker unavailable")));
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
 
     dynamicTopicManager.processRequestedTopic(topicName, topicMeta);
 
@@ -233,9 +249,54 @@ class DynamicTopicManagerTest {
     verify(topicMetaProducer, never()).send(anyProducerRecord(), any());
   }
 
+  @Test
+  void handleRequestedTopicRecord_authorizedRequestIsCollected() {
+    String topicName =
+        LOCAL_PREFIX + Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + "payment-worker";
+    TopicMetaDTO topicMeta = new TopicMetaDTO(topicName, 3, CleanupPolicy.DELETE, (short) 1);
+    Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
+    ConsumerRecord<String, TopicMetaDTO> topicRecord =
+        new ConsumerRecord<>(ACTUAL_TOPIC, 0, 0L, topicName, topicMeta);
+    topicRecord.headers().add(Constants.HEADER_ENGINE_SIGNATURE, "client-key-1.AABB".getBytes());
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenReturn(activeKey("client-key-1", KeyRole.CLIENT));
+
+    dynamicTopicManager.handleRequestedTopicRecord(collectedTopics, topicRecord);
+
+    assertThat(collectedTopics).containsEntry(topicName, topicMeta);
+  }
+
+  @Test
+  void handleRequestedTopicRecord_unauthorizedRequestIsRejected() {
+    String topicName =
+        LOCAL_PREFIX + Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + "payment-worker";
+    TopicMetaDTO topicMeta = new TopicMetaDTO(topicName, 3, CleanupPolicy.DELETE, (short) 1);
+    Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
+    ConsumerRecord<String, TopicMetaDTO> topicRecord =
+        new ConsumerRecord<>(ACTUAL_TOPIC, 0, 0L, topicName, topicMeta);
+    topicRecord.headers().add(Constants.HEADER_ENGINE_SIGNATURE, "client-key-1.AABB".getBytes());
+    when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
+        .thenThrow(new AuthorizationTokenException("untrusted signer"));
+
+    dynamicTopicManager.handleRequestedTopicRecord(collectedTopics, topicRecord);
+
+    assertThat(collectedTopics).isEmpty();
+    verify(topicMetaProducer).send(anyProducerRecord(), any());
+  }
+
   @SuppressWarnings("unchecked")
   private ProducerRecord<String, TopicMetaDTO> anyProducerRecord() {
     return any(ProducerRecord.class);
+  }
+
+  private SigningKeyDTO activeKey(String keyId, KeyRole role) {
+    return SigningKeyDTO.builder()
+        .keyId(keyId)
+        .publicKeyBase64("dummy")
+        .algorithm("Ed25519")
+        .owner("worker")
+        .role(role)
+        .build();
   }
 
   private void mockDescribeTopics(String topicName, int partitionCount, short replicationFactor)

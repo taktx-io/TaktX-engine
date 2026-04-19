@@ -12,6 +12,7 @@ import io.taktx.Topics;
 import io.taktx.dto.Constants;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.serdes.ExternalTaskMetaSerializer;
+import io.taktx.serdes.SigningSerializer;
 import io.taktx.util.TaktPropertiesHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -28,7 +29,7 @@ public class ExternalTaskTopicRequester {
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(),
             new StringSerializer(),
-            new ExternalTaskMetaSerializer());
+            new SigningSerializer<>(new ExternalTaskMetaSerializer()));
   }
 
   /**

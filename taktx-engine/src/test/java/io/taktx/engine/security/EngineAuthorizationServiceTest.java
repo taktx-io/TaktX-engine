@@ -25,6 +25,7 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.TopicMetaDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
@@ -141,6 +142,93 @@ class EngineAuthorizationServiceTest {
     assertThat(result.getTrusted()).isTrue();
     assertThat(result.getUserId()).isEqualTo("user-1");
     assertThat(result.getIssuer()).isEqualTo(ISSUER);
+  }
+
+  @Test
+  void topicMetaRequest_trustedClientKeyAccepted() {
+    String keyId = "worker-topic-request-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    SigningKeyDTO result = service.authorizeTopicMetaRequest(headersWithSignature(keyId), request);
+
+    assertThat(result).isEqualTo(keyEntry);
+  }
+
+  @Test
+  void topicMetaRequest_missingSignatureRejected() {
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    assertThatThrownBy(() -> service.authorizeTopicMetaRequest(new RecordHeaders(), request))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("X-TaktX-Signature");
+  }
+
+  @Test
+  void topicMetaRequest_revokedKeyRejected() {
+    String keyId = "revoked-topic-request-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.REVOKED)
+            .owner("worker-billing")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    assertThatThrownBy(
+            () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("Revoked Ed25519 keyId");
+  }
+
+  @Test
+  void topicMetaRequest_untrustedKeyRejected() {
+    service =
+        new EngineAuthorizationService(
+            config,
+            globalConfigStore,
+            publicKeyProvider,
+            nonceStore,
+            kafkaStreams,
+            (key, requiredRole) -> false);
+
+    String keyId = "untrusted-topic-request-key";
+    SigningKeyDTO keyEntry =
+        SigningKeyDTO.builder()
+            .keyId(keyId)
+            .publicKeyBase64("dummy")
+            .algorithm("Ed25519")
+            .status(KeyStatus.ACTIVE)
+            .owner("worker-billing")
+            .role(KeyRole.CLIENT)
+            .build();
+    when(signingKeysStore.get(keyId)).thenReturn(keyEntry);
+
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    assertThatThrownBy(
+            () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted for CLIENT topic requests");
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -542,6 +630,12 @@ class EngineAuthorizationServiceTest {
   private Headers headersWithAuth(String jwt) {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-TaktX-Authorization", jwt.getBytes(StandardCharsets.UTF_8));
+    return headers;
+  }
+
+  private Headers headersWithSignature(String keyId) {
+    RecordHeaders headers = new RecordHeaders();
+    headers.add("X-TaktX-Signature", (keyId + ".AABB").getBytes(StandardCharsets.UTF_8));
     return headers;
   }
 

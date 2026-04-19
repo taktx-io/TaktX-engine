@@ -272,8 +272,10 @@ Apply verification before any topic-creation request is processed.
 **Implementation notes (2026-04-19)**
 
 - Strict structural validation now runs before topic creation handling in `DynamicTopicManager.processRequestedTopic(...)`.
-- Invalid topic requests are rejected and logged with reason/topic/outcome before any create attempt.
-- Full signer verification and trusted-role enforcement are still pending under this task.
+- `topic-meta-requested` consumers now require `X-TaktX-Signature` and reject unsigned request records before handling.
+- `EngineAuthorizationService.authorizeTopicMetaRequest(...)` now derives signer trust from `taktx-signing-keys` + `KeyTrustPolicy` and enforces trusted `CLIENT`-or-higher role before requests are accepted.
+- Accepted/rejected topic requests are now logged with topic, signer key ID, derived role, outcome, and rejection reason.
+- Remaining gap: this path still reuses existing signing/trust plumbing rather than a dedicated shared `VerificationCore` from Epic B.
 
 ### Task C3 — Add message-type enforcement on `process-instance`
 
@@ -311,7 +313,7 @@ Extend `process-instance` authorization so role restrictions apply per DTO type.
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | None |
@@ -466,7 +468,8 @@ Integrate strict request validation into topic creation flow.
 - `DynamicTopicManager` now validates requested topics before caching or broker creation.
 - `TopicBootstrapper` no longer routes managed fixed topics back through `topic-meta-requested`; managed topics are seeded directly via `registerManagedTopic(...)`.
 - Dynamic topic creation now uses a create-first, `TopicExistsException`-tolerant path so concurrent engine starts/races are treated idempotently.
-- Remaining gap: logs do not yet include signer key ID / derived trusted role because message verification for `topic-meta-requested` is still pending in `C2`.
+- When a requested topic already exists, the manager now resolves broker metadata before publishing to `topic-meta-actual`, instead of echoing the requested DTO as actual state.
+- Topic request logging/verification details now live primarily under `C2`; the remaining E2 dependency is broader control-plane verification reuse, not structural validation.
 
 ### Task E3 — Add focused tests for dynamic topic hardening
 
