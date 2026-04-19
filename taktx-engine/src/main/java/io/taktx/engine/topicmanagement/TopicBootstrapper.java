@@ -151,15 +151,11 @@ public class TopicBootstrapper {
                       topic.getCleanupPolicy(),
                       taktConfiguration.getReplicationFactor());
 
+              topicManager.registerManagedTopic(topicMetaDTO);
+
               topicMetaProducer.send(
                   new ProducerRecord<>(
                       taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),
-                      prefixedTopicName,
-                      topicMetaDTO));
-              topicMetaProducer.send(
-                  new ProducerRecord<>(
-                      taktConfiguration.getPrefixed(
-                          Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
                       prefixedTopicName,
                       topicMetaDTO));
             });

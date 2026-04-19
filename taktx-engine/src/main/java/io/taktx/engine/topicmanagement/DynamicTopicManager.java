@@ -45,6 +45,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 
 @Slf4j
@@ -57,6 +58,7 @@ public class DynamicTopicManager {
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
   private final LicenseManager licenseManager;
+  private final RequestedTopicValidator requestedTopicValidator;
   private final ExecutorService executor =
       Executors.newCachedThreadPool(
           r -> {
@@ -168,32 +170,7 @@ public class DynamicTopicManager {
               }
               if (records.isEmpty() && !collectedTopics.isEmpty()) {
                 for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
-                  log.info("Processing topic meta request record {}", entry.getKey());
-                  var topicMeta = entry.getValue();
-                  cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
-                  int budget = licenseManager.getPartitionBudget();
-                  int currentTotal = computeCurrentTotal();
-                  int requested = topicMeta.getNrPartitions();
-                  if (currentTotal + requested <= budget) {
-                    if (createTopicIfNotExists(
-                        topicMeta.getTopicName(),
-                        topicMeta.getNrPartitions(),
-                        topicMeta.getCleanupPolicy(),
-                        topicMeta.getReplicationFactor())) {
-                      publishTopicMetaActual(topicMeta.getTopicName(), topicMeta);
-                    }
-                    cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
-                  } else {
-                    log.warn(
-                        "Partition budget exceeded — topic '{}' requesting {} partition(s) rejected. "
-                            + "Current total: {}, budget: {}. Upgrade license or reduce partition counts.",
-                        topicMeta.getTopicName(),
-                        requested,
-                        currentTotal,
-                        budget);
-                    // Publish a tombstone so any watcher knows the request was rejected.
-                    publishTopicMetaActual(topicMeta.getTopicName(), null);
-                  }
+                  processRequestedTopic(entry.getKey(), entry.getValue());
                 }
                 collectedTopics.clear();
                 continue;
@@ -209,6 +186,57 @@ public class DynamicTopicManager {
             }
           }
         });
+  }
+
+  void processRequestedTopic(String recordKey, TopicMetaDTO topicMeta) {
+    log.info(
+        "Processing topic meta request record key='{}' topicName='{}'",
+        recordKey,
+        topicMeta == null ? null : topicMeta.getTopicName());
+
+    RequestedTopicValidationResult validation =
+        requestedTopicValidator.validate(recordKey, topicMeta);
+    if (!validation.valid()) {
+      log.warn(
+          "Rejected topic meta request key='{}' topicName='{}' reason='{}'",
+          recordKey,
+          topicMeta == null ? null : topicMeta.getTopicName(),
+          validation.rejectionReason());
+      publishRejectedRequestedTopic(validation.topicName());
+      return;
+    }
+
+    TopicMetaDTO validatedTopicMeta = java.util.Objects.requireNonNull(topicMeta);
+    cachedRequestTopicMetaMap.put(validation.topicName(), validatedTopicMeta);
+    int budget = licenseManager.getPartitionBudget();
+    int currentTotal = computeCurrentTotal();
+    int requested = validatedTopicMeta.getNrPartitions();
+    if (currentTotal + requested <= budget) {
+      TopicCreationResult creationResult =
+          createTopicIfNotExists(
+              validation.topicName(),
+              validatedTopicMeta.getNrPartitions(),
+              validatedTopicMeta.getCleanupPolicy(),
+              validatedTopicMeta.getReplicationFactor());
+      if (creationResult.createdOrExists()) {
+        publishTopicMetaActual(validation.topicName(), validatedTopicMeta);
+        cachedActualTopicMetaMap.put(validation.topicName(), validatedTopicMeta);
+      }
+    } else {
+      log.warn(
+          "Partition budget exceeded — topic '{}' requesting {} partition(s) rejected. "
+              + "Current total: {}, budget: {}. Upgrade license or reduce partition counts.",
+          validation.topicName(),
+          requested,
+          currentTotal,
+          budget);
+      publishTopicMetaActual(validation.topicName(), null);
+    }
+  }
+
+  void registerManagedTopic(TopicMetaDTO topicMeta) {
+    cachedRequestTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
+    cachedActualTopicMetaMap.put(topicMeta.getTopicName(), topicMeta);
   }
 
   private ConsumerRebalanceListener getConsumerRebalanceListener(String prefixedActualTopicName) {
@@ -411,33 +439,57 @@ public class DynamicTopicManager {
     }
   }
 
-  private boolean createTopicIfNotExists(
+  private void publishRejectedRequestedTopic(String topicName) {
+    if (requestedTopicValidator.isAllowedRequestedTopicName(topicName)) {
+      publishTopicMetaActual(topicName, null);
+    }
+  }
+
+  private TopicCreationResult createTopicIfNotExists(
       String prefixedTopicName,
       int numPartitions,
       CleanupPolicy cleanupPolicy,
       short replicationFactor) {
     try {
-      // First check if the topic exists
-      boolean topicExists = adminClient.listTopics().names().get().contains(prefixedTopicName);
+      NewTopic newTopic = new NewTopic(prefixedTopicName, numPartitions, replicationFactor);
+      newTopic.configs(java.util.Map.of("cleanup.policy", cleanupPolicy.getKafkaPolicyValue()));
 
-      if (!topicExists) {
-        // Create new topic if it doesn't exist
-        NewTopic newTopic = new NewTopic(prefixedTopicName, numPartitions, replicationFactor);
-        // Apply cleanup policy configuration
-        newTopic.configs(java.util.Map.of("cleanup.policy", cleanupPolicy.getKafkaPolicyValue()));
-
-        adminClient.createTopics(List.of(newTopic)).all().get();
-        log.info(
-            "Topic {} created successfully with {} partitions", prefixedTopicName, numPartitions);
-        return true;
-      }
-      return false;
+      adminClient.createTopics(List.of(newTopic)).all().get();
+      log.info(
+          "Topic {} created successfully with {} partitions", prefixedTopicName, numPartitions);
+      return TopicCreationResult.CREATED;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt(); // Restore the interrupted status
       throw new IllegalStateException("Topic bootstrap interrupted", e);
     } catch (Exception e) {
+      if (causedByTopicExists(e)) {
+        log.info(
+            "Topic {} already exists — treating create request as idempotent", prefixedTopicName);
+        return TopicCreationResult.ALREADY_EXISTS;
+      }
       log.error("Failed to create or update topic {}", prefixedTopicName, e);
-      return false;
+      return TopicCreationResult.FAILED;
+    }
+  }
+
+  private boolean causedByTopicExists(Throwable throwable) {
+    Throwable current = throwable;
+    while (current != null) {
+      if (current instanceof TopicExistsException) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
+
+  private enum TopicCreationResult {
+    CREATED,
+    ALREADY_EXISTS,
+    FAILED;
+
+    private boolean createdOrExists() {
+      return this != FAILED;
     }
   }
 
@@ -478,7 +530,7 @@ public class DynamicTopicManager {
    * managed topics must never be repartitioned.
    */
   private boolean isWorkerTopic(String topicName) {
-    return topicName.contains(io.taktx.dto.Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX);
+    return requestedTopicValidator.isAllowedRequestedTopicName(topicName);
   }
 
   public boolean topicExists(String topicName) {
