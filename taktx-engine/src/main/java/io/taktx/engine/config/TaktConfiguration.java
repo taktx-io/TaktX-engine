@@ -112,6 +112,9 @@ public class TaktConfiguration {
   @ConfigProperty(name = "taktx.engine.key-registration-signature")
   Optional<String> engineKeyRegistrationSignature;
 
+  @ConfigProperty(name = "taktx.security.production-mode", defaultValue = "false")
+  String securityProductionMode;
+
   public boolean inTestMode() {
     return Boolean.parseBoolean(isTest);
   }
@@ -166,6 +169,10 @@ public class TaktConfiguration {
    */
   public String getEngineKeyRegistrationSignature() {
     return normalized(engineKeyRegistrationSignature);
+  }
+
+  public boolean isSecurityProductionMode() {
+    return Boolean.parseBoolean(securityProductionMode);
   }
 
   private static String normalized(Optional<String> value) {

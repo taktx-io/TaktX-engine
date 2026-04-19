@@ -75,7 +75,7 @@ Before implementation, keep these current-code facts in mind:
 | C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | In progress |
 | D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | Not started |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | In progress |
-| F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Not started |
+| F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | In progress |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | In progress |
 | H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Not started |
 | I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Not started |
@@ -517,7 +517,7 @@ Integrate strict request validation into topic creation flow.
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | None |
@@ -536,11 +536,18 @@ Add a production-mode switch, e.g. `taktx.security.production-mode=true`, that f
 - engine cannot start in insecure community/open mode when production mode is enabled
 - failure mode is explicit and documented
 
+**Implementation notes (2026-04-19)**
+
+- Added `taktx.security.production-mode` / `TAKTX_SECURITY_PRODUCTION_MODE`; default remains `false` for local/community use.
+- `KeyTrustPolicyProducer` now fails startup when production mode is enabled but `TAKTX_PLATFORM_PUBLIC_KEY` is missing, instead of silently selecting `OpenKeyTrustPolicy`.
+- `EngineSigningIdentitySourceProducer` now fails startup in production mode when the engine still uses `generated` signing identity or lacks `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE`.
+- `docs/security.md` now documents the fail-closed startup requirements for anchored production deployments.
+
 ### Task F2 — Ensure role derivation comes only from trusted key metadata
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | B1 |
@@ -550,6 +557,12 @@ Add a production-mode switch, e.g. `taktx.security.production-mode=true`, that f
 - role is never accepted from payload/header/application claim shortcuts
 - all role checks use trusted key metadata after trust validation
 - tests cover mismatched/untrusted key scenarios
+
+**Implementation notes (2026-04-19)**
+
+- `EngineAuthorizationService` already derived Ed25519 signer authority from trusted `taktx-signing-keys` metadata plus `KeyTrustPolicy`, not from headers or payload fields.
+- `PublicKeyProvider.getKey(...)` now applies the same trust model to JWT `kid` resolution: the key must resolve from `taktx-signing-keys`, remain non-revoked, be trusted for `PLATFORM`, and use RSA before JWT verification proceeds.
+- JWT issuer trust is therefore now rooted in trusted key metadata as well; a random published `CLIENT` key or mismatched algorithm can no longer satisfy the JWT key lookup path.
 
 ### Task F3 — Clarify and enforce signing-key topic expectations
 

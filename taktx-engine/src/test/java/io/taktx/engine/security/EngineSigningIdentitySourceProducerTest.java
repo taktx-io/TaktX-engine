@@ -39,8 +39,10 @@ class EngineSigningIdentitySourceProducerTest {
 
   @Test
   void signingIdentitySource_canUseEnvironmentBackedSource() {
-    EngineSigningIdentitySourceProducer producer =
-        new EngineSigningIdentitySourceProducer(mock(TaktConfiguration.class));
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(false);
+
+    EngineSigningIdentitySourceProducer producer = new EngineSigningIdentitySourceProducer(config);
 
     assertThat(producer.create("env")).isInstanceOf(EnvironmentWorkerSigningIdentitySource.class);
     assertThat(producer.create("environment"))
@@ -54,6 +56,7 @@ class EngineSigningIdentitySourceProducerTest {
     Path publicKey = Files.writeString(tempDir.resolve("public-key.b64"), "public-key");
 
     TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(false);
     when(config.getSigningFileKeyIdPath()).thenReturn(keyId.toString());
     when(config.getSigningFilePrivateKeyPath()).thenReturn(privateKey.toString());
     when(config.getSigningFilePublicKeyPath()).thenReturn(publicKey.toString());
@@ -66,12 +69,51 @@ class EngineSigningIdentitySourceProducerTest {
 
   @Test
   void signingIdentitySource_rejectsUnsupportedValues() {
-    EngineSigningIdentitySourceProducer producer =
-        new EngineSigningIdentitySourceProducer(mock(TaktConfiguration.class));
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(false);
+    EngineSigningIdentitySourceProducer producer = new EngineSigningIdentitySourceProducer(config);
 
     assertThatThrownBy(() -> producer.create("vault"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("taktx.signing.identity-source")
         .hasMessageContaining("generated, env, file");
+  }
+
+  @Test
+  void productionMode_rejectsGeneratedSigningSource() {
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(true);
+
+    EngineSigningIdentitySourceProducer producer = new EngineSigningIdentitySourceProducer(config);
+
+    assertThatThrownBy(() -> producer.create("generated"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("production-mode=true")
+        .hasMessageContaining("identity-source=file or env");
+  }
+
+  @Test
+  void productionMode_rejectsMissingRegistrationSignature() {
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(true);
+    when(config.getEngineKeyRegistrationSignature()).thenReturn(null);
+
+    EngineSigningIdentitySourceProducer producer = new EngineSigningIdentitySourceProducer(config);
+
+    assertThatThrownBy(() -> producer.create("env"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("production-mode=true")
+        .hasMessageContaining("TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE");
+  }
+
+  @Test
+  void productionMode_allowsStableRegisteredSigningSource() {
+    TaktConfiguration config = mock(TaktConfiguration.class);
+    when(config.isSecurityProductionMode()).thenReturn(true);
+    when(config.getEngineKeyRegistrationSignature()).thenReturn("registration-signature");
+
+    EngineSigningIdentitySourceProducer producer = new EngineSigningIdentitySourceProducer(config);
+
+    assertThat(producer.create("env")).isInstanceOf(EnvironmentWorkerSigningIdentitySource.class);
   }
 }

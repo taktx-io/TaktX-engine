@@ -178,7 +178,7 @@ TaktXClient.publishSigningKey(
 
 | Field | Requirement |
 |---|---|
-| `kid` header | Must match a published RSA key in `taktx-signing-keys` |
+| `kid` header | Must match a trusted `PLATFORM` RSA key in `taktx-signing-keys` |
 | `exp` | Must be in the future — **always enforced** |
 | `auditId` | Must be unique across all received commands — **always enforced** |
 | Algorithm | RS256 |
@@ -231,6 +231,12 @@ In **anchored mode**, every key entry in `taktx-signing-keys` — regardless of 
 
 Anchored mode is activated automatically when `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine.
 
+When `TAKTX_SECURITY_PRODUCTION_MODE=true`, the engine fails startup unless anchored trust is fully configured. Production mode refuses to start if:
+
+- `TAKTX_PLATFORM_PUBLIC_KEY` is missing (which would otherwise fall back to community mode)
+- `TAKTX_SIGNING_IDENTITY_SOURCE` is unset/`generated`
+- `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` is missing
+
 ### Canonical payload
 
 The payload that the platform root key signs is a pipe-delimited UTF-8 string:
@@ -266,7 +272,7 @@ The private key (`platform-private.pem`) is only needed when generating new regi
 |---|---|---|---|
 | Engine | `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | `ENGINE` | Operator, via `generate_trust_anchor.sh --sign` |
 | Worker / client | `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | `CLIENT` | Operator or CI, via `generate_trust_anchor.sh --sign` |
-| Platform JWT key | passed to `publishSigningKey(...)` | `PLATFORM` or `CLIENT` | Platform team |
+| Platform JWT key | passed to `publishSigningKey(...)` | `PLATFORM` | Platform team |
 
 ### Enforcement rules (`AnchoredKeyTrustPolicy`)
 
@@ -280,7 +286,10 @@ A key is trusted if and only if **all** of the following are true:
 
 ### Incompatibility with `generated` signing source
 
-When anchored mode is active and `TAKTX_SIGNING_IDENTITY_SOURCE=generated`, the engine logs a startup warning because the engine's own key will fail the countersignature check — a generated key changes on every restart and cannot be pre-signed.
+When anchored mode is active and `TAKTX_SIGNING_IDENTITY_SOURCE=generated`, the engine cannot publish a stable pre-signed engine key because the key changes on every restart.
+
+- In normal/non-production mode, the engine logs a startup warning so local development can continue.
+- In `TAKTX_SECURITY_PRODUCTION_MODE=true`, startup fails fast instead.
 
 ```
 ⚠️  Anchored mode is active (TAKTX_PLATFORM_PUBLIC_KEY is set) but
@@ -459,8 +468,9 @@ The `origin` field makes it possible to show in a console/audit log who original
 
 | Variable | Purpose |
 |---|---|
+| `TAKTX_SECURITY_PRODUCTION_MODE` | When `true`, fail startup unless anchored trust is fully configured (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing source, and engine registration signature). |
 | `TAKTX_PLATFORM_PUBLIC_KEY` | Base64 X.509 DER RSA public key. Setting this activates anchored mode. |
-| `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | Base64 RSA/SHA-256 countersignature for the engine's own key. Required in anchored mode when using `file` or `env` source. |
+| `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | Base64 RSA/SHA-256 countersignature for the engine's own key. Required in production mode and in anchored mode when using `file` or `env` source. |
 
 ### Worker / client — signing
 

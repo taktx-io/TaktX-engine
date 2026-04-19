@@ -65,6 +65,11 @@ public class KeyTrustPolicyProducer {
     String platformKeyBase64 = config.getPlatformPublicKey();
 
     if (platformKeyBase64 == null || platformKeyBase64.isBlank()) {
+      if (config.isSecurityProductionMode()) {
+        throw new IllegalStateException(
+            "taktx.security.production-mode=true requires taktx.platform.public-key "
+                + "(TAKTX_PLATFORM_PUBLIC_KEY); refusing to start in community mode");
+      }
       log.info(
           "TAKTX_PLATFORM_PUBLIC_KEY not configured — operating in community mode"
               + " (OpenKeyTrustPolicy: declared key roles are accepted at face value)");
@@ -76,19 +81,21 @@ public class KeyTrustPolicyProducer {
       PublicKey rootKey =
           KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
 
-      // Warn if the engine's own signing key cannot be pre-signed in anchored mode.
-      String sourceType = config.getSigningIdentitySourceType();
-      String engineRegistrationSig = config.getEngineKeyRegistrationSignature();
-      if ("generated".equalsIgnoreCase(sourceType)
-          && (engineRegistrationSig == null || engineRegistrationSig.isBlank())) {
-        log.warn(
-            "⚠️  Anchored mode is active (TAKTX_PLATFORM_PUBLIC_KEY is set) but"
-                + " TAKTX_SIGNING_IDENTITY_SOURCE=generated and"
-                + " TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE is blank."
-                + " The engine's own signing key will be rejected by AnchoredKeyTrustPolicy"
-                + " because a generated key changes on every restart and cannot be pre-signed."
-                + " Switch to TAKTX_SIGNING_IDENTITY_SOURCE=file or =env and provide"
-                + " TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE (see scripts/generate_trust_anchor.sh).");
+      if (!config.isSecurityProductionMode()) {
+        // Warn if the engine's own signing key cannot be pre-signed in anchored mode.
+        String sourceType = config.getSigningIdentitySourceType();
+        String engineRegistrationSig = config.getEngineKeyRegistrationSignature();
+        if ("generated".equalsIgnoreCase(sourceType)
+            && (engineRegistrationSig == null || engineRegistrationSig.isBlank())) {
+          log.warn(
+              "⚠️  Anchored mode is active (TAKTX_PLATFORM_PUBLIC_KEY is set) but"
+                  + " TAKTX_SIGNING_IDENTITY_SOURCE=generated and"
+                  + " TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE is blank."
+                  + " The engine's own signing key will be rejected by AnchoredKeyTrustPolicy"
+                  + " because a generated key changes on every restart and cannot be pre-signed."
+                  + " Switch to TAKTX_SIGNING_IDENTITY_SOURCE=file or =env and provide"
+                  + " TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE (see scripts/generate_trust_anchor.sh).");
+        }
       }
 
       log.info(

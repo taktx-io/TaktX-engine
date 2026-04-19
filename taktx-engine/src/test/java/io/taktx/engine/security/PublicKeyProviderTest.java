@@ -12,9 +12,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
+import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.security.KeyTrustPolicy;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.util.Base64;
@@ -30,38 +33,50 @@ class PublicKeyProviderTest {
 
   private TaktConfiguration config;
   private KafkaStreams kafkaStreams;
+  private KeyTrustPolicy keyTrustPolicy;
 
-  @SuppressWarnings("unchecked")
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> store;
 
   @BeforeEach
-  @SuppressWarnings("unchecked")
   void setUp() {
     config = mock(TaktConfiguration.class);
     kafkaStreams = mock(KafkaStreams.class);
-    store = mock(ReadOnlyKeyValueStore.class);
-    when(kafkaStreams.store(org.mockito.ArgumentMatchers.any(StoreQueryParameters.class)))
+    keyTrustPolicy = mock(KeyTrustPolicy.class);
+    @SuppressWarnings("unchecked")
+    ReadOnlyKeyValueStore<String, SigningKeyDTO> mockedStore =
+        (ReadOnlyKeyValueStore<String, SigningKeyDTO>) mock(ReadOnlyKeyValueStore.class);
+    store = mockedStore;
+    when(kafkaStreams.store(
+            org.mockito.ArgumentMatchers
+                .<StoreQueryParameters<ReadOnlyKeyValueStore<String, SigningKeyDTO>>>any()))
         .thenReturn(store);
     when(config.getPrefixed(org.mockito.ArgumentMatchers.anyString()))
         .thenReturn("default.taktx-signing-keys");
+    when(keyTrustPolicy.isTrustedForRole(
+            org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(KeyRole.PLATFORM)))
+        .thenReturn(true);
   }
 
   private PublicKeyProvider provider() {
-    return new PublicKeyProvider(config, kafkaStreams);
+    return new PublicKeyProvider(config, kafkaStreams, keyTrustPolicy);
   }
 
   // ── getKey — null / blank kid ─────────────────────────────────────────────
 
   @Test
   void getKey_nullKid_throws() {
-    assertThatThrownBy(() -> provider().getKey(null))
+    PublicKeyProvider provider = provider();
+
+    assertThatThrownBy(() -> provider.getKey(null))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("kid");
   }
 
   @Test
   void getKey_blankKid_throws() {
-    assertThatThrownBy(() -> provider().getKey("  "))
+    PublicKeyProvider provider = provider();
+
+    assertThatThrownBy(() -> provider.getKey("  "))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("kid");
   }
@@ -71,8 +86,9 @@ class PublicKeyProviderTest {
   @Test
   void getKey_noKTableEntry_throws() {
     when(store.get(KID)).thenReturn(null);
+    PublicKeyProvider provider = provider();
 
-    assertThatThrownBy(() -> provider().getKey(KID))
+    assertThatThrownBy(() -> provider.getKey(KID))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("No signing key found")
         .hasMessageContaining(KID);
@@ -90,12 +106,14 @@ class PublicKeyProviderTest {
             .publicKeyBase64(base64)
             .algorithm("RSA")
             .owner("platform")
+            .role(KeyRole.PLATFORM)
             .status(SigningKeyDTO.KeyStatus.REVOKED)
             .build();
 
     when(store.get(KID)).thenReturn(revoked);
+    PublicKeyProvider provider = provider();
 
-    assertThatThrownBy(() -> provider().getKey(KID))
+    assertThatThrownBy(() -> provider.getKey(KID))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("revoked")
         .hasMessageContaining(KID);
@@ -113,6 +131,7 @@ class PublicKeyProviderTest {
             .publicKeyBase64(base64)
             .algorithm("RSA")
             .owner("platform")
+            .role(KeyRole.PLATFORM)
             .status(SigningKeyDTO.KeyStatus.ACTIVE)
             .build();
 
@@ -140,6 +159,7 @@ class PublicKeyProviderTest {
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp1.getPublic().getEncoded()))
                 .algorithm("RSA")
                 .owner("platform")
+                .role(KeyRole.PLATFORM)
                 .status(SigningKeyDTO.KeyStatus.ACTIVE)
                 .build());
     when(store.get(kid2))
@@ -149,11 +169,79 @@ class PublicKeyProviderTest {
                 .publicKeyBase64(Base64.getEncoder().encodeToString(kp2.getPublic().getEncoded()))
                 .algorithm("RSA")
                 .owner("platform")
+                .role(KeyRole.PLATFORM)
                 .status(SigningKeyDTO.KeyStatus.ACTIVE)
                 .build());
 
     PublicKeyProvider p = provider();
     assertThat(p.getKey(kid1)).isEqualTo(kp1.getPublic());
     assertThat(p.getKey(kid2)).isEqualTo(kp2.getPublic());
+  }
+
+  @Test
+  void getKey_clientRoleEntry_throws() throws Exception {
+    KeyPair kp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    when(store.get(KID))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(KID)
+                .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
+                .algorithm("RSA")
+                .owner("platform")
+                .role(KeyRole.CLIENT)
+                .status(KeyStatus.ACTIVE)
+                .build());
+    when(keyTrustPolicy.isTrustedForRole(
+            org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(KeyRole.PLATFORM)))
+        .thenReturn(false);
+    PublicKeyProvider provider = provider();
+
+    assertThatThrownBy(() -> provider.getKey(KID))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted as a PLATFORM JWT issuer key");
+  }
+
+  @Test
+  void getKey_untrustedPlatformEntry_throws() throws Exception {
+    KeyPair kp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    when(store.get(KID))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(KID)
+                .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
+                .algorithm("RSA")
+                .owner("platform")
+                .role(KeyRole.PLATFORM)
+                .status(KeyStatus.ACTIVE)
+                .build());
+    when(keyTrustPolicy.isTrustedForRole(
+            org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(KeyRole.PLATFORM)))
+        .thenReturn(false);
+    PublicKeyProvider provider = provider();
+
+    assertThatThrownBy(() -> provider.getKey(KID))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not trusted as a PLATFORM JWT issuer key");
+  }
+
+  @Test
+  void getKey_nonRsaPlatformEntry_throws() throws Exception {
+    KeyPair kp = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    when(store.get(KID))
+        .thenReturn(
+            SigningKeyDTO.builder()
+                .keyId(KID)
+                .publicKeyBase64(Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()))
+                .algorithm("Ed25519")
+                .owner("platform")
+                .role(KeyRole.PLATFORM)
+                .status(KeyStatus.ACTIVE)
+                .build());
+    PublicKeyProvider provider = provider();
+
+    assertThatThrownBy(() -> provider.getKey(KID))
+        .isInstanceOf(AuthorizationTokenException.class)
+        .hasMessageContaining("not an RSA JWT issuer key")
+        .hasMessageContaining("Ed25519");
   }
 }

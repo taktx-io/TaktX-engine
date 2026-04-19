@@ -7,13 +7,17 @@
  */
 package io.taktx.engine.security;
 
+import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.security.KeyTrustPolicy;
+import io.taktx.security.OpenKeyTrustPolicy;
 import io.taktx.security.PublicKeySource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
@@ -42,16 +46,26 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 @Slf4j
 public class PublicKeyProvider implements PublicKeySource {
 
+  private static final String RSA_ALGORITHM = "RSA";
+
   private final TaktConfiguration config;
   private final KafkaStreams kafkaStreams;
+  private final KeyTrustPolicy keyTrustPolicy;
 
   /** Lazy-initialised KTable store — null until first lookup. */
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
 
   @Inject
-  public PublicKeyProvider(TaktConfiguration config, KafkaStreams kafkaStreams) {
+  public PublicKeyProvider(
+      TaktConfiguration config, KafkaStreams kafkaStreams, KeyTrustPolicy keyTrustPolicy) {
     this.config = config;
     this.kafkaStreams = kafkaStreams;
+    this.keyTrustPolicy = keyTrustPolicy;
+  }
+
+  /** Test constructor — no CDI. */
+  PublicKeyProvider(TaktConfiguration config, KafkaStreams kafkaStreams) {
+    this(config, kafkaStreams, new OpenKeyTrustPolicy());
   }
 
   /**
@@ -72,6 +86,18 @@ public class PublicKeyProvider implements PublicKeySource {
     }
     if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
       throw new AuthorizationTokenException("Signing key kid='" + kid + "' has been revoked");
+    }
+    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.PLATFORM)) {
+      throw new AuthorizationTokenException(
+          "Signing key kid='" + kid + "' is not trusted as a PLATFORM JWT issuer key");
+    }
+    if (!RSA_ALGORITHM.equalsIgnoreCase(entry.getAlgorithm())) {
+      throw new AuthorizationTokenException(
+          "Signing key kid='"
+              + kid
+              + "' is not an RSA JWT issuer key (algorithm="
+              + entry.getAlgorithm()
+              + ")");
     }
     try {
       return parseRsaPublicKey(entry.getPublicKeyBase64());
@@ -99,7 +125,7 @@ public class PublicKeyProvider implements PublicKeySource {
     }
   }
 
-  private static PublicKey parseRsaPublicKey(String base64) throws Exception {
+  private static PublicKey parseRsaPublicKey(String base64) throws GeneralSecurityException {
     byte[] keyBytes = Base64.getDecoder().decode(base64);
     return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
   }

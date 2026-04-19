@@ -19,6 +19,8 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class EngineSigningIdentitySourceProducer {
 
+  private static final String GENERATED_SOURCE = "generated";
+
   private final TaktConfiguration config;
 
   @Inject
@@ -33,8 +35,10 @@ public class EngineSigningIdentitySourceProducer {
   }
 
   SigningIdentitySource create(String configuredSourceType) {
-    String sourceType = configuredSourceType == null ? "generated" : configuredSourceType.trim();
-    if (sourceType.isEmpty() || "generated".equalsIgnoreCase(sourceType)) {
+    String sourceType =
+        configuredSourceType == null ? GENERATED_SOURCE : configuredSourceType.trim();
+    validateProductionMode(sourceType);
+    if (sourceType.isEmpty() || GENERATED_SOURCE.equalsIgnoreCase(sourceType)) {
       return new GeneratedEngineSigningIdentitySource();
     }
     if ("env".equalsIgnoreCase(sourceType) || "environment".equalsIgnoreCase(sourceType)) {
@@ -51,5 +55,21 @@ public class EngineSigningIdentitySourceProducer {
         "Unsupported taktx.signing.identity-source='"
             + configuredSourceType
             + "'. Supported values: generated, env, file");
+  }
+
+  private void validateProductionMode(String sourceType) {
+    if (!config.isSecurityProductionMode()) {
+      return;
+    }
+    if (sourceType.isEmpty() || GENERATED_SOURCE.equalsIgnoreCase(sourceType)) {
+      throw new IllegalStateException(
+          "taktx.security.production-mode=true requires taktx.signing.identity-source=file or env; "
+              + "generated engine signing keys are not allowed in anchored production mode");
+    }
+    if (config.getEngineKeyRegistrationSignature() == null) {
+      throw new IllegalStateException(
+          "taktx.security.production-mode=true requires taktx.engine.key-registration-signature "
+              + "(TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE) so the engine key is trusted in anchored mode");
+    }
   }
 }

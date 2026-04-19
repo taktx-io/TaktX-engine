@@ -53,6 +53,22 @@ class TaktConfigurationTest {
   }
 
   @Test
+  void securityProductionMode_defaultsToFalse() {
+    TaktConfiguration config = new TaktConfiguration();
+    config.securityProductionMode = "false";
+
+    assertThat(config.isSecurityProductionMode()).isFalse();
+  }
+
+  @Test
+  void securityProductionMode_parsesConfiguredValue() {
+    TaktConfiguration config = new TaktConfiguration();
+    config.securityProductionMode = "true";
+
+    assertThat(config.isSecurityProductionMode()).isTrue();
+  }
+
+  @Test
   void dmnValidationMode_defaultsToPermissiveWhenUnset() {
     assertThat(TaktConfiguration.parseDmnValidationMode(null))
         .isEqualTo(DmnValidationMode.PERMISSIVE);
