@@ -8,6 +8,7 @@ This directory is bind-mounted into containers when using `docker/docker-compose
 
 No platform root key is required. Key roles are accepted at face value (`OpenKeyTrustPolicy`).
 Security relies on Kafka ACLs preventing unauthorized writes to `taktx-signing-keys`.
+Use this mode for local/community development only — not for production.
 
 ### Engine key files
 
@@ -65,6 +66,9 @@ Anchored mode activates `AnchoredKeyTrustPolicy` on the engine. **Every** key pu
 `taktx-signing-keys` — both ENGINE-role (engine) and CLIENT-role (worker) keys — must carry
 a valid RSA countersignature from the platform root private key. Without it, the engine rejects
 all commands signed by that key.
+
+Anchored mode is the recommended production posture, but Kafka ACLs should still restrict who may
+write `taktx-signing-keys`.
 
 Enabled by setting `TAKTX_PLATFORM_PUBLIC_KEY` on the engine container.
 

@@ -70,9 +70,11 @@ public class KeyTrustPolicyProducer {
             "taktx.security.production-mode=true requires taktx.platform.public-key "
                 + "(TAKTX_PLATFORM_PUBLIC_KEY); refusing to start in community mode");
       }
-      log.info(
+      log.warn(
           "TAKTX_PLATFORM_PUBLIC_KEY not configured — operating in community mode"
-              + " (OpenKeyTrustPolicy: declared key roles are accepted at face value)");
+              + " (OpenKeyTrustPolicy: declared key roles are accepted at face value)."
+              + " This mode relies on Kafka ACLs to protect taktx-signing-keys and is intended"
+              + " for local/community use, not production.");
       return new OpenKeyTrustPolicy();
     }
 
@@ -100,7 +102,9 @@ public class KeyTrustPolicyProducer {
 
       log.info(
           "✅ TAKTX_PLATFORM_PUBLIC_KEY configured — operating in anchored mode"
-              + " (AnchoredKeyTrustPolicy: all keys require a valid platform countersignature)");
+              + " (AnchoredKeyTrustPolicy: all keys on taktx-signing-keys require a valid"
+              + " platform countersignature; Kafka ACLs should still restrict who may write"
+              + " that topic)");
       return new AnchoredKeyTrustPolicy(rootKey);
 
     } catch (Exception e) {

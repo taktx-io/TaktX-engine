@@ -225,9 +225,9 @@ When `TaktXClient.start()` is called, a `SigningKeysStore` is initialised that r
 
 ### Overview
 
-In **community mode** (default), any non-revoked key whose declared role is sufficient is trusted. The security perimeter is entirely Kafka ACLs.
+In **community mode** (default), any non-revoked key whose declared role is sufficient is trusted. The security perimeter is entirely Kafka ACLs. This mode is intended for local/community deployments and should be treated as insecure for production.
 
-In **anchored mode**, every key entry in `taktx-signing-keys` — regardless of role — must carry a `registrationSignature` that is an RSA/SHA-256 (PKCS#1 v1.5) signature produced by the platform root private key. A key without a valid countersignature is rejected at the trust gate even if its declared role is correct.
+In **anchored mode**, every key entry in `taktx-signing-keys` — regardless of role — must carry a `registrationSignature` that is an RSA/SHA-256 (PKCS#1 v1.5) signature produced by the platform root private key. A key without a valid countersignature is rejected at the trust gate even if its declared role is correct. Kafka ACLs must still restrict who may write `taktx-signing-keys`; anchored mode validates the contents of keys, but it does not replace broker authorization.
 
 Anchored mode is activated automatically when `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine.
 
@@ -273,6 +273,8 @@ The private key (`platform-private.pem`) is only needed when generating new regi
 | Engine | `TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE` | `ENGINE` | Operator, via `generate_trust_anchor.sh --sign` |
 | Worker / client | `TAKTX_SIGNING_REGISTRATION_SIGNATURE` | `CLIENT` | Operator or CI, via `generate_trust_anchor.sh --sign` |
 | Platform JWT key | passed to `publishSigningKey(...)` | `PLATFORM` | Platform team |
+
+Unsigned key publication is only appropriate for community mode. A signing key published without a registration signature is visible in the topic, but anchored engines reject it at trust evaluation time.
 
 ### Enforcement rules (`AnchoredKeyTrustPolicy`)
 

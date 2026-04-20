@@ -8,7 +8,8 @@
 ![Engine Coverage](./badges/taktx-engine-coverage.svg)
 ![Client Coverage](./badges/taktx-client-coverage.svg)
 ![Client Quarkus Coverage](./badges/taktx-client-quarkus-coverage.svg)
-![Client Spring Coverage](./badges/taktx-client-spring-coverage.svg)
+![Client Spring 3 Coverage](./badges/taktx-client-spring-boot-3-coverage.svg)
+![Client Spring 4 Coverage](./badges/taktx-client-spring-boot-4-coverage.svg)
 ![Shared Coverage](./badges/taktx-shared-coverage.svg)
 
 <!-- License & Version -->
@@ -120,6 +121,8 @@ Coverage badges are automatically generated from JaCoCo test reports and include
 ## Configuration
 
 TaktX Engine can be configured using application properties or environment variables:
+
+> **Security note:** the default/community trust mode is intended for local development. Production deployments should enable anchored trust (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing identities, and registration signatures) and restrict writes to `taktx-signing-keys` with Kafka ACLs.
 
 ```properties
 # Core Engine Configuration

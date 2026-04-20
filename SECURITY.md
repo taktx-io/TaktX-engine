@@ -57,3 +57,11 @@ Alternatively you can reach us at **security@taktx.io**.
 
 For a detailed description of TaktX's cryptographic design (Ed25519 signing, RS256 JWT command authorization, trust anchors, and key distribution), see [`docs/security.md`](docs/security.md).
 
+Operationally, production deployments are expected to:
+
+- enable anchored trust instead of relying on community/open trust mode
+- publish countersigned signing keys for engine, workers, and platform JWT issuers
+- restrict writes to `taktx-signing-keys` with Kafka ACLs even when anchored mode is enabled
+
+Community mode remains useful for local development, but it should be treated as insecure for production.
+

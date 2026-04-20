@@ -35,11 +35,10 @@ class MessageSigningServiceTest {
   private SigningIdentitySource signingIdentitySource;
 
   private String publicKeyBase64;
-  private KeyPair keyPair;
 
   @BeforeEach
   void setUp() {
-    keyPair = SigningKeyGenerator.generate();
+    KeyPair keyPair = SigningKeyGenerator.generate();
     publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
     signingIdentitySource =
         new StaticSigningIdentitySource(
@@ -61,21 +60,21 @@ class MessageSigningServiceTest {
   }
 
   @Test
-  void signingDisabled_locally_returnsNull() {
-    assertThat(service.signToHeaderValue(PAYLOAD)).isNull();
+  void engineSigningWithIdentity_returnsHeaderValueWithoutRuntimeConfig() {
+    assertThat(service.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
-  void signingEnabled_but_globalConfigNull_returnsNull() {
+  void globalConfigNull_stillReturnsHeaderValueForEngineMessages() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
-  void signingEnabled_but_globalConfigDisabled_returnsNull() {
+  void globalConfigDisabled_stillReturnsHeaderValueForEngineMessages() {
     MessageSigningService svc = serviceWithConfigStore(globalConfigStore);
     globalConfigStore.update(globalConfig(false, false));
-    assertThat(svc.signToHeaderValue(PAYLOAD)).isNull();
+    assertThat(svc.signToHeaderValue(PAYLOAD)).isNotNull();
   }
 
   @Test
@@ -155,8 +154,7 @@ class MessageSigningServiceTest {
         new MessageSigningService(config, globalConfigStore, newSource, false);
 
     String headerAfter = rotatedSvc.signToHeaderValue(PAYLOAD);
-    assertThat(headerAfter).isNotNull();
-    assertThat(headerAfter).startsWith(newKeyId + ".");
+    assertThat(headerAfter).isNotNull().startsWith(newKeyId + ".");
 
     // Verify the new signature with the new public key
     byte[] newSig = Base64.getDecoder().decode(headerAfter.substring(newKeyId.length() + 1));
@@ -199,8 +197,7 @@ class MessageSigningServiceTest {
 
     // New service immediately uses key2
     String h2 = svc2.signToHeaderValue(PAYLOAD);
-    assertThat(h2).isNotNull();
-    assertThat(h2).startsWith(key2Id + ".");
+    assertThat(h2).isNotNull().startsWith(key2Id + ".");
 
     // key2 signature verifies with key2 public key
     byte[] sig2 = Base64.getDecoder().decode(h2.substring(key2Id.length() + 1));

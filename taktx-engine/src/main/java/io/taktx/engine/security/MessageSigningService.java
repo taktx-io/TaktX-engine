@@ -125,6 +125,9 @@ public class MessageSigningService {
     if (identity == null || publicKeyPublished.get()) {
       return;
     }
+    boolean countersigned =
+        config.getEngineKeyRegistrationSignature() != null
+            && !config.getEngineKeyRegistrationSignature().isBlank();
     try {
       String topic = config.getPrefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName());
       SigningKeyRegistrar.publishPublicKey(
@@ -137,8 +140,20 @@ public class MessageSigningService {
           KeyRole.ENGINE,
           config.getEngineKeyRegistrationSignature()); // null in community mode → omitted from DTO
       publicKeyPublished.set(true);
-      log.info(
-          "✅ Engine public key published to signing-keys topic: keyId={}", identity.getKeyId());
+      if (countersigned) {
+        log.info(
+            "✅ Engine public key published to signing-keys topic: keyId={} countersigned=true"
+                + " trustMode=anchored-ready",
+            identity.getKeyId());
+      } else {
+        log.warn(
+            "Engine public key published to signing-keys topic without a registration signature:"
+                + " keyId={} countersigned=false trustMode=community-only."
+                + " Anchored engines will reject this key; production deployments should use"
+                + " TAKTX_PLATFORM_PUBLIC_KEY + TAKTX_ENGINE_KEY_REGISTRATION_SIGNATURE and"
+                + " restrict taktx-signing-keys writes with Kafka ACLs.",
+            identity.getKeyId());
+      }
     } catch (Exception e) {
       log.warn(
           "Engine public key publication failed for keyId={} — retrying in {}s: {}",
@@ -159,14 +174,15 @@ public class MessageSigningService {
 
   /**
    * Returns the {@code X-TaktX-Signature} header value for the given payload bytes, or {@code null}
-   * if signing is disabled or not configured. Called by {@link io.taktx.serdes.SigningSerializer}
-   * via {@link SigningServiceHolder}.
+   * if no active engine signing identity is available yet.
+   *
+   * <p>Engine-emitted Kafka records are signed independently of runtime authorization toggles once
+   * the engine key has been published. This keeps internal control-plane topics such as {@code
+   * schedule-commands} compatible with strict consumers that always require an engine signature,
+   * while still delaying outbound signatures until the public key is resolvable by consumers.
+   * Called by {@link io.taktx.serdes.SigningSerializer} via {@link SigningServiceHolder}.
    */
   public String signToHeaderValue(byte[] payloadBytes) {
-    GlobalConfigurationDTO cfg = effectiveConfig();
-    if (!cfg.isSigningEnabled() && !cfg.isEngineRequiresAuthorization()) {
-      return null;
-    }
     SigningIdentity identity = refreshActiveIdentity();
     if (identity == null) {
       log.debug(

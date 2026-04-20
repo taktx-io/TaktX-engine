@@ -277,7 +277,6 @@ public class TaktXClient {
       producer.flush();
       log.info("✅ License published to configuration topic: topic={}", topic);
     } catch (Exception e) {
-      log.error("Failed to publish license to {}: {}", topic, e.getMessage(), e);
       throw new IllegalStateException("Failed to publish license", e);
     }
   }
@@ -322,7 +321,6 @@ public class TaktXClient {
       producer.flush();
       log.info("✅ Global configuration published to configuration topic: topic={}", topic);
     } catch (Exception e) {
-      log.error("Failed to publish global configuration to {}: {}", topic, e.getMessage(), e);
       throw new IllegalStateException("Failed to publish global configuration", e);
     }
   }
@@ -471,13 +469,25 @@ public class TaktXClient {
         algorithm,
         role,
         registrationSignature);
-    log.info(
-        "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned={}",
-        keyId,
-        owner,
-        algorithm,
-        role,
-        registrationSignature != null);
+    boolean countersigned = registrationSignature != null && !registrationSignature.isBlank();
+    if (countersigned) {
+      log.info(
+          "✅ Signing key published: keyId={} owner={} algorithm={} role={} countersigned=true"
+              + " trustMode=anchored-ready",
+          keyId,
+          owner,
+          algorithm,
+          role);
+    } else {
+      log.warn(
+          "Signing key published without a registration signature: keyId={} owner={} algorithm={}"
+              + " role={} countersigned=false trustMode=community-only. Anchored engines will"
+              + " reject this key; Kafka ACLs must protect taktx-signing-keys in community mode.",
+          keyId,
+          owner,
+          algorithm,
+          role);
+    }
   }
 
   private void publishWorkerSigningKeyIfConfigured() {

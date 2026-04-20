@@ -8,14 +8,12 @@
 package io.taktx.engine.security;
 
 import io.quarkus.runtime.Startup;
+import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.Constants;
-import io.taktx.dto.ContinueFlowElementTriggerDTO;
-import io.taktx.dto.EventSignalTriggerDTO;
-import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
@@ -24,10 +22,8 @@ import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
-import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.Stores;
@@ -81,6 +77,7 @@ public class EngineAuthorizationService {
   private final AuthorizationTokenValidator validator;
   private final KafkaStreams kafkaStreams;
   private final KeyTrustPolicy keyTrustPolicy;
+  private final MessageSecurityPolicyRegistry messageSecurityPolicyRegistry;
 
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
 
@@ -91,13 +88,33 @@ public class EngineAuthorizationService {
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
       KafkaStreams kafkaStreams,
-      KeyTrustPolicy keyTrustPolicy) {
+      KeyTrustPolicy keyTrustPolicy,
+      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
     this.nonceStore = nonceStore;
     this.kafkaStreams = kafkaStreams;
     this.keyTrustPolicy = keyTrustPolicy;
+    this.messageSecurityPolicyRegistry = messageSecurityPolicyRegistry;
     this.validator = new AuthorizationTokenValidator(publicKeyProvider);
+  }
+
+  /** Test constructor — no CDI. */
+  EngineAuthorizationService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      PublicKeyProvider publicKeyProvider,
+      NonceStore nonceStore,
+      KafkaStreams kafkaStreams,
+      KeyTrustPolicy keyTrustPolicy) {
+    this(
+        config,
+        globalConfigStore,
+        publicKeyProvider,
+        nonceStore,
+        kafkaStreams,
+        keyTrustPolicy,
+        new MessageSecurityPolicyRegistry());
   }
 
   /** Test constructor — no CDI. */
@@ -113,7 +130,8 @@ public class EngineAuthorizationService {
         publicKeyProvider,
         nonceStore,
         kafkaStreams,
-        new OpenKeyTrustPolicy());
+        new OpenKeyTrustPolicy(),
+        new MessageSecurityPolicyRegistry());
   }
 
   @PostConstruct
@@ -162,11 +180,12 @@ public class EngineAuthorizationService {
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
     GlobalConfigurationDTO cfg = effectiveConfig();
+    MessageSecurityPolicy policy = resolveProcessInstancePolicy(trigger);
 
     Header authHeader = lastHeader(headers, AUTH_HEADER);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
 
-    boolean isEntryCommand = isEntryCommand(trigger);
+    boolean isEntryCommand = policy.requireJwt();
 
     // ── Entry commands: AND-logic across both gates
     // ───────────────────────────────────────────────
@@ -188,13 +207,16 @@ public class EngineAuthorizationService {
       CommandTrustMetadataDTO sigMeta = null;
       boolean sigIsEngine = false;
       if (sigHeader != null && sigHeader.value() != null) {
-        sigMeta = resolveEntrySigTrust(sigHeader, triggerEnvelope);
+        sigMeta = authorizeViaEd25519(sigHeader, triggerEnvelope, requiredRole(policy));
         sigIsEngine =
             CommandTrustVerificationResult.ENGINE_SIGNED == sigMeta.getVerificationResult();
       }
 
       // Auth gate: JWT or ENGINE-role Ed25519 satisfies it
-      if (authActive && jwtMeta == null && !sigIsEngine) {
+      if (authActive
+          && policy.allowEngineSignatureAsJwtEquivalent()
+          && jwtMeta == null
+          && !sigIsEngine) {
         throw new AuthorizationTokenException(
             "Entry command "
                 + trigger.getClass().getSimpleName()
@@ -206,7 +228,7 @@ public class EngineAuthorizationService {
       }
 
       // Signing gate: any valid Ed25519 satisfies it
-      if (signingActive && sigMeta == null) {
+      if (signingActive && policy.requireSignature() && sigMeta == null) {
         throw new AuthorizationTokenException(
             "Entry command "
                 + trigger.getClass().getSimpleName()
@@ -231,13 +253,7 @@ public class EngineAuthorizationService {
       return jwtMeta != null ? jwtMeta : sigMeta;
     }
 
-    KeyRole requiredRole = requiredRoleForSignedProcessInstanceTrigger(trigger);
-    if (requiredRole == null) {
-      throw new AuthorizationTokenException(
-          "Unsupported process-instance trigger type "
-              + trigger.getClass().getSimpleName()
-              + " for authorization policy evaluation");
-    }
+    KeyRole requiredRole = requiredRole(policy);
 
     // ── Gate 2: Non-entry command Ed25519 signing
     // ─────────────────────────────────────────────────
@@ -273,6 +289,9 @@ public class EngineAuthorizationService {
    * higher role.
    */
   public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
+    MessageSecurityPolicy policy =
+        messageSecurityPolicyRegistry.resolve(
+            Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName(), TopicMetaDTO.class);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
     if (sigHeader == null || sigHeader.value() == null) {
       throw new AuthorizationTokenException(
@@ -292,7 +311,7 @@ public class EngineAuthorizationService {
       throw new AuthorizationTokenException(
           "Revoked Ed25519 keyId '" + keyId + "' — rejecting topic-meta-requested record");
     }
-    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.CLIENT)) {
+    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole(policy))) {
       throw new AuthorizationTokenException(
           "Signing keyId '"
               + keyId
@@ -317,6 +336,9 @@ public class EngineAuthorizationService {
    */
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
+    MessageSecurityPolicy policy =
+        messageSecurityPolicyRegistry.resolve(
+            Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
     Header sigHeader = lastHeader(headers, SIG_HEADER);
     if (sigHeader == null || sigHeader.value() == null) {
       throw new AuthorizationTokenException(
@@ -336,7 +358,7 @@ public class EngineAuthorizationService {
       throw new AuthorizationTokenException(
           "Revoked Ed25519 keyId '" + keyId + "' — rejecting schedule-commands record");
     }
-    if (!keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE)) {
+    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole(policy))) {
       throw new AuthorizationTokenException(
           "Signing keyId '"
               + keyId
@@ -351,69 +373,6 @@ public class EngineAuthorizationService {
         entry.effectiveRole(),
         scheduleMessageType(schedule));
     return entry;
-  }
-
-  // ── Entry command Ed25519 verification ───────────────────────────────────
-
-  /**
-   * Verifies the Ed25519 signature on an entry command and returns role-appropriate trust metadata.
-   *
-   * <p>Accepts both CLIENT- and ENGINE-role keys. Returns {@link
-   * CommandTrustVerificationResult#ENGINE_SIGNED} for ENGINE-role keys and {@link
-   * CommandTrustVerificationResult#SIGNATURE_VERIFIED} for CLIENT-role keys. Auth-gate role
-   * enforcement (ENGINE-only when {@code authActive}) is the caller's responsibility.
-   */
-  private CommandTrustMetadataDTO resolveEntrySigTrust(
-      Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
-    if (triggerEnvelope.hasSignatureError()) {
-      throw new AuthorizationTokenException(triggerEnvelope.signatureError());
-    }
-
-    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
-    int dot = headerValue.indexOf('.');
-    String keyId = dot >= 0 ? headerValue.substring(0, dot) : headerValue;
-
-    SigningKeyDTO entry = lookupSigningKey(keyId);
-    if (entry == null) {
-      throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '"
-              + keyId
-              + "' — rejecting entry command "
-              + triggerEnvelope.trigger().getClass().getSimpleName());
-    }
-    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
-      throw new AuthorizationTokenException(
-          "Revoked Ed25519 keyId '"
-              + keyId
-              + "' — rejecting entry command "
-              + triggerEnvelope.trigger().getClass().getSimpleName());
-    }
-    if (!triggerEnvelope.signatureVerified()) {
-      throw new AuthorizationTokenException(
-          "Ed25519 header present for entry command "
-              + triggerEnvelope.trigger().getClass().getSimpleName()
-              + " but the signature was not verified by the deserializer");
-    }
-
-    boolean isEngine = keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE);
-    log.info(
-        "✅ Ed25519 verified on entry command={} keyId={} owner={} role={}",
-        triggerEnvelope.trigger().getClass().getSimpleName(),
-        keyId,
-        entry.getOwner(),
-        entry.effectiveRole());
-
-    return CommandTrustMetadataDTO.builder()
-        .authMethod(CommandAuthMethod.ED25519)
-        .verificationResult(
-            isEngine
-                ? CommandTrustVerificationResult.ENGINE_SIGNED
-                : CommandTrustVerificationResult.SIGNATURE_VERIFIED)
-        .trusted(true)
-        .signerKeyId(keyId)
-        .signerOwner(entry.getOwner())
-        .signerAlgorithm(entry.getAlgorithm())
-        .build();
   }
 
   // ── JWT path ────────────────────────────────────────────────────────────────
@@ -511,24 +470,30 @@ public class EngineAuthorizationService {
         .build();
   }
 
-  private static boolean isEntryCommand(ProcessInstanceTriggerDTO trigger) {
-    return trigger instanceof StartCommandDTO
-        || trigger instanceof AbortTriggerDTO
-        || trigger instanceof SetVariableTriggerDTO;
+  private MessageSecurityPolicy resolveProcessInstancePolicy(ProcessInstanceTriggerDTO trigger) {
+    try {
+      return messageSecurityPolicyRegistry.resolve(
+          Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName(), trigger.getClass());
+    } catch (IllegalStateException e) {
+      throw new AuthorizationTokenException(
+          "Unsupported process-instance trigger type "
+              + trigger.getClass().getSimpleName()
+              + " for authorization policy evaluation",
+          e);
+    }
   }
 
-  private static KeyRole requiredRoleForSignedProcessInstanceTrigger(
-      ProcessInstanceTriggerDTO trigger) {
-    if (trigger instanceof ExternalTaskResponseTriggerDTO
-        || trigger instanceof UserTaskResponseTriggerDTO) {
-      return KeyRole.CLIENT;
+  private static KeyRole requiredRole(MessageSecurityPolicy policy) {
+    KeyRole requiredRole = policy.minimumAllowedRole();
+    if (requiredRole == null) {
+      throw new AuthorizationTokenException(
+          "Message security policy has no allowed signed roles for topic='"
+              + policy.topicName()
+              + "' messageClass='"
+              + policy.messageClass().getSimpleName()
+              + "'");
     }
-    if (trigger instanceof ContinueFlowElementTriggerDTO
-        || trigger instanceof StartFlowElementTriggerDTO
-        || trigger instanceof EventSignalTriggerDTO) {
-      return KeyRole.ENGINE;
-    }
-    return null;
+    return requiredRole;
   }
 
   private GlobalConfigurationDTO effectiveConfig() {
@@ -572,47 +537,48 @@ public class EngineAuthorizationService {
   }
 
   private void validateClaimsMatchCommand(TokenClaims claims, ProcessInstanceTriggerDTO trigger) {
-    if (trigger instanceof StartCommandDTO start) {
-      if (!"START".equals(claims.getAction())) {
-        throw new AuthorizationTokenException(
-            "Token action '" + claims.getAction() + "' does not match START command");
+    switch (trigger) {
+      case StartCommandDTO start -> {
+        if (!"START".equals(claims.getAction())) {
+          throw new AuthorizationTokenException(
+              "Token action '" + claims.getAction() + "' does not match START command");
+        }
+        String defId =
+            start.getProcessDefinitionKey() != null
+                ? start.getProcessDefinitionKey().getProcessDefinitionId()
+                : null;
+        Integer defVersion =
+            start.getProcessDefinitionKey() != null
+                ? start.getProcessDefinitionKey().getVersion()
+                : null;
+        if (claims.getProcessDefinitionId() != null
+            && !claims.getProcessDefinitionId().equals(defId)) {
+          throw new AuthorizationTokenException(
+              "Token processDefinitionId '"
+                  + claims.getProcessDefinitionId()
+                  + "' does not match command '"
+                  + defId
+                  + "'");
+        }
+        if (claims.getVersion() > 0 && defVersion != null && claims.getVersion() != defVersion) {
+          throw new AuthorizationTokenException(
+              "Token version "
+                  + claims.getVersion()
+                  + " does not match command version "
+                  + defVersion);
+        }
       }
-      String defId =
-          start.getProcessDefinitionKey() != null
-              ? start.getProcessDefinitionKey().getProcessDefinitionId()
-              : null;
-      Integer defVersion =
-          start.getProcessDefinitionKey() != null
-              ? start.getProcessDefinitionKey().getVersion()
-              : null;
-      if (claims.getProcessDefinitionId() != null
-          && !claims.getProcessDefinitionId().equals(defId)) {
-        throw new AuthorizationTokenException(
-            "Token processDefinitionId '"
-                + claims.getProcessDefinitionId()
-                + "' does not match command '"
-                + defId
-                + "'");
-      }
-      if (claims.getVersion() > 0 && defVersion != null && claims.getVersion() != defVersion) {
-        throw new AuthorizationTokenException(
-            "Token version "
-                + claims.getVersion()
-                + " does not match command version "
-                + defVersion);
-      }
-    } else if (trigger instanceof AbortTriggerDTO) {
-      if (!"CANCEL".equals(claims.getAction())) {
+      case AbortTriggerDTO _ when !"CANCEL".equals(claims.getAction()) -> {
         throw new AuthorizationTokenException(
             "Token action '" + claims.getAction() + "' does not match CANCEL command");
       }
-    } else if (trigger instanceof SetVariableTriggerDTO) {
-      if (!"SET_VARIABLE".equals(claims.getAction())) {
+      case SetVariableTriggerDTO _ when !"SET_VARIABLE".equals(claims.getAction()) -> {
         throw new AuthorizationTokenException(
             "Token action '" + claims.getAction() + "' does not match SET_VARIABLE command");
       }
-    } else {
-      log.debug("No claim matching defined for {}, allowing", trigger.getClass().getSimpleName());
+      default ->
+          log.debug(
+              "No claim matching defined for {}, allowing", trigger.getClass().getSimpleName());
     }
   }
 }

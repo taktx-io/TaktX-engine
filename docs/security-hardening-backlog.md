@@ -75,7 +75,7 @@ Before implementation, keep these current-code facts in mind:
 | C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | In progress |
 | D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | Not started |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | In progress |
-| F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | In progress |
+| F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | In progress |
 | H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Not started |
 | I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Not started |
@@ -568,7 +568,7 @@ Add a production-mode switch, e.g. `taktx.security.production-mode=true`, that f
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | F1 |
@@ -586,6 +586,12 @@ Replace the earlier “TRUST_ADMIN-only writes” concept with a model that fits
 - production guidance clearly states anchored mode requirement
 - root-countersignature expectations are enforced/documented consistently
 - community mode is clearly flagged as development-only / insecure for production
+
+**Implementation notes (2026-04-19)**
+
+- `KeyTrustPolicyProducer` startup logs now explicitly describe community mode as Kafka-ACL-dependent and unsuitable for production, while anchored mode logs call out both root countersignature requirements and the continuing need to restrict `taktx-signing-keys` writers.
+- `MessageSigningService` and `TaktXClient.publishSigningKey(...)` now log whether published signing keys are countersigned (`anchored-ready`) or unsigned (`community-only`), so operators can immediately spot when a key will be rejected by anchored engines.
+- `docs/security.md`, `README.md`, `SECURITY.md`, and `docker/signing/README.md` now consistently describe the current model: anchored mode for production, Kafka ACLs still required for `taktx-signing-keys`, and community mode as development/local-use only.
 
 ---
 

@@ -18,6 +18,7 @@ import io.taktx.client.TaktXClient;
 import io.taktx.client.UserTaskTriggerConsumer;
 import io.taktx.client.serdes.TopicMetaJsonDeserializer;
 import io.taktx.dto.ActivityInstanceDTO;
+import io.taktx.dto.Constants;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DefinitionMessageEventTriggerDTO;
@@ -45,13 +46,21 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.generic.MutableClock;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.pi.testengine.AdminClientHelper.ConsumerLagInfo;
+import io.taktx.security.Ed25519Service;
+import io.taktx.security.EngineSigningKeysHolder;
+import io.taktx.security.SigningIdentity;
+import io.taktx.security.SigningKeyGenerator;
+import io.taktx.serdes.ExternalTaskMetaSerializer;
+import io.taktx.util.TaktPropertiesHelper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -67,7 +76,12 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
@@ -110,6 +124,7 @@ public class BpmnTestEngine {
   private final Map<String, List<String>> elementIdIndexMap = new HashMap<>();
   private final Map<String, TopicMetaDTO> topicMetaCache = new ConcurrentHashMap<>();
   private AdminClientHelper adminClientHelper;
+  private SignedExternalTaskTopicRequester signedExternalTaskTopicRequester;
 
   public BpmnTestEngine(Clock clock) {
     this.originalClock = Clock.fixed(clock.instant(), clock.getZone());
@@ -139,6 +154,10 @@ public class BpmnTestEngine {
 
   public void close() {
     LOG.info("Closing bpmn test engine");
+    if (signedExternalTaskTopicRequester != null) {
+      signedExternalTaskTopicRequester.close();
+      signedExternalTaskTopicRequester = null;
+    }
     taktClient.stop();
     taktClient = null;
     processInstanceTriggerConsumer.stop();
@@ -170,6 +189,16 @@ public class BpmnTestEngine {
       kakaProperties.put(
           io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
     }
+
+    SigningIdentity topicRequestSigningIdentity = createTopicRequestSigningIdentity();
+    TaktXClient.publishSigningKey(
+        kakaProperties,
+        topicRequestSigningIdentity.getKeyId(),
+        topicRequestSigningIdentity.getPublicKeyBase64(),
+        "bpmn-test-engine");
+    waitUntilTopicRequestSigningKeyIsResolvable(topicRequestSigningIdentity);
+    signedExternalTaskTopicRequester =
+        new SignedExternalTaskTopicRequester(kakaProperties, topicRequestSigningIdentity);
 
     taktClient =
         TaktXClient.newClientBuilder()
@@ -371,7 +400,7 @@ public class BpmnTestEngine {
     // Give the engine time to process the DMN definition before proceeding
     try {
       Thread.sleep(duration.toMillis() / 4);
-    } catch (InterruptedException e) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
     }
     return this;
@@ -472,22 +501,59 @@ public class BpmnTestEngine {
   }
 
   private void registerTopicsForExternalTasks(String... externalTaskIds) {
-    List<String> topics = new ArrayList<>();
+    Map<String, String> requestedTopicsByTaskId = new LinkedHashMap<>();
 
     for (String externalTaskId : externalTaskIds) {
-      topics.add(
-          taktClient.requestExternalTaskTopic(externalTaskId, 3, CleanupPolicy.COMPACT, (short) 1));
+      requestedTopicsByTaskId.put(
+          externalTaskId,
+          signedExternalTaskTopicRequester.requestExternalTaskTopic(
+              externalTaskId, 3, CleanupPolicy.COMPACT, (short) 1));
     }
     Awaitility.await()
         .atMost(DEFAULT_DURATION)
         .pollInterval(Duration.ofMillis(100))
         .until(
             () -> {
+              List<String> missingTaskIds =
+                  requestedTopicsByTaskId.entrySet().stream()
+                      .filter(entry -> !topicMetaCache.containsKey(entry.getValue()))
+                      .map(Entry::getKey)
+                      .toList();
+              if (!missingTaskIds.isEmpty()) {
+                missingTaskIds.forEach(
+                    taskId ->
+                        signedExternalTaskTopicRequester.requestExternalTaskTopic(
+                            taskId, 3, CleanupPolicy.COMPACT, (short) 1));
+              }
               log.info(
                   "Waiting for external task topics {} to be available in cache {}",
-                  topics,
+                  requestedTopicsByTaskId.values(),
                   topicMetaCache);
-              return topicMetaCache.keySet().containsAll(topics);
+              return topicMetaCache.keySet().containsAll(requestedTopicsByTaskId.values());
+            });
+  }
+
+  private static SigningIdentity createTopicRequestSigningIdentity() {
+    var keyPair = SigningKeyGenerator.generate();
+    return SigningIdentity.ed25519(
+        "bpmn-test-engine-" + UUID.randomUUID(),
+        SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate()),
+        SigningKeyGenerator.encodePublicKey(keyPair.getPublic()));
+  }
+
+  private static void waitUntilTopicRequestSigningKeyIsResolvable(SigningIdentity signingIdentity) {
+    Awaitility.await()
+        .atMost(DEFAULT_DURATION)
+        .pollInterval(Duration.ofMillis(100))
+        .until(
+            () -> {
+              EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+              if (keyResolver == null) {
+                return false;
+              }
+              return Objects.equals(
+                  signingIdentity.getPublicKeyBase64(),
+                  keyResolver.resolvePublicKey(signingIdentity.getKeyId()));
             });
   }
 
@@ -1133,5 +1199,85 @@ public class BpmnTestEngine {
         scopeWithElementId.stream().map(FlowNodeInstanceDTO::getElementInstanceId).toList();
     taktClient.setVariable(activeProcessInstanceId, idList, vars);
     return this;
+  }
+
+  private static final class SignedExternalTaskTopicRequester implements AutoCloseable {
+
+    private final TaktPropertiesHelper taktPropertiesHelper;
+    private final KafkaProducer<String, TopicMetaDTO> producer;
+
+    private SignedExternalTaskTopicRequester(
+        Properties properties, SigningIdentity signingIdentity) {
+      this.taktPropertiesHelper = new TaktPropertiesHelper(properties);
+      this.producer =
+          new KafkaProducer<>(
+              taktPropertiesHelper.getKafkaProducerProperties(),
+              new StringSerializer(),
+              new IsolatedSigningSerializer<>(new ExternalTaskMetaSerializer(), signingIdentity));
+    }
+
+    private String requestExternalTaskTopic(
+        String externalTaskId,
+        int partitions,
+        CleanupPolicy cleanupPolicy,
+        short replicationFactor) {
+      String topicName =
+          taktPropertiesHelper.getPrefixedTopicName(
+              Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId);
+      TopicMetaDTO topicMetaDTO =
+          new TopicMetaDTO(topicName, partitions, cleanupPolicy, replicationFactor);
+      producer.send(
+          new ProducerRecord<>(
+              taktPropertiesHelper.getPrefixedTopicName(
+                  Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+              topicName,
+              topicMetaDTO));
+      producer.flush();
+      return topicName;
+    }
+
+    @Override
+    public void close() {
+      producer.close();
+    }
+  }
+
+  private static final class IsolatedSigningSerializer<T> implements Serializer<T> {
+
+    private final Serializer<T> delegate;
+    private final SigningIdentity signingIdentity;
+
+    private IsolatedSigningSerializer(Serializer<T> delegate, SigningIdentity signingIdentity) {
+      this.delegate = delegate;
+      this.signingIdentity = signingIdentity;
+    }
+
+    @Override
+    public void configure(Map<String, ?> configs, boolean isKey) {
+      delegate.configure(configs, isKey);
+    }
+
+    @Override
+    public byte[] serialize(String topic, T data) {
+      return delegate.serialize(topic, data);
+    }
+
+    @Override
+    public byte[] serialize(String topic, Headers headers, T data) {
+      byte[] bytes = delegate.serialize(topic, data);
+      if (headers != null && signingIdentity != null) {
+        byte[] signature = Ed25519Service.sign(bytes, signingIdentity.getPrivateKeyBase64());
+        headers.remove(Constants.HEADER_ENGINE_SIGNATURE);
+        headers.add(
+            Constants.HEADER_ENGINE_SIGNATURE,
+            signingIdentity.toHeaderValue(signature).getBytes(StandardCharsets.UTF_8));
+      }
+      return bytes;
+    }
+
+    @Override
+    public void close() {
+      delegate.close();
+    }
   }
 }
