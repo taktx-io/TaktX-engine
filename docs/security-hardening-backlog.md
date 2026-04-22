@@ -2,6 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-19
+**Last updated:** 2026-04-20
 **Purpose:** Track agreed security hardening work derived from `docs/security-questionnaire-response.md`. This backlog is intentionally aligned to the current TaktX architecture rather than the original external proposal.
 
 ---
@@ -72,11 +73,11 @@ Before implementation, keep these current-code facts in mind:
 |---|---|---:|---|---|
 | A | Message-aware security policy model | P0 | Make authorization decisions based on topic + DTO type + trusted role | Not started |
 | B | Shared verification core | P0 | Extract reusable trust/signature/key verification without destabilizing all flows at once | Not started |
-| C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | In progress |
-| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | Not started |
-| E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | In progress |
+| C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | Done |
+| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | In progress |
+| E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | Done |
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
-| G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | In progress |
+| G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | Done |
 | H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Not started |
 | I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Not started |
 | J | Documentation and threat-model cleanup | P2 | Remove docs/code drift and document required Kafka ACL assumptions | Not started |
@@ -92,7 +93,7 @@ Before implementation, keep these current-code facts in mind:
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | None |
@@ -250,18 +251,20 @@ Require verification for inbound `schedule-commands` records.
 - Rejections are logged with explicit reason.
 - Existing valid engine-generated schedules continue to work.
 
-**Implementation notes (2026-04-19)**
+**Implementation notes (2026-04-20)**
 
 - `schedule-commands` producers in `TopologyProducer` now use a signed value serde, so engine-generated schedule create/cancel records carry `X-TaktX-Signature` headers.
+- `MessageSigningService` now signs engine-emitted records whenever an engine signing identity is available and the public key has been published, even when runtime `signingEnabled` / `engineRequiresAuthorization` toggles are both off; this keeps internal `schedule-commands` compatible with strict consumers in default integration-test mode as well as hardened modes.
 - `ScheduleCommandDeserializer` now enforces cryptographic signature verification on inbound `schedule-commands` records, including tombstones signed over an empty payload.
 - `EngineAuthorizationService.authorizeScheduleCommand(...)` now derives signer trust from `taktx-signing-keys` + `KeyTrustPolicy` and enforces trusted `ENGINE` role before schedule handling.
 - `ScheduleProcessor` now rejects unauthorized schedule records before bucket processing and logs topic, schedule key, signer key ID, derived role, outcome, reason, and message type.
+- Relevant schedule integration coverage is green again, including `ProcessInstanceProcessorTest.testScheduledStart_R5` and `testScheduledStart_R60`.
 
 ### Task C2 — Secure `topic-meta-requested`
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1, B1, E1 |
@@ -276,13 +279,14 @@ Apply verification before any topic-creation request is processed.
 - Trusted role is evaluated before request handling.
 - Logs include reason, topic, signer key ID, and outcome.
 
-**Implementation notes (2026-04-19)**
+**Implementation notes (2026-04-20)**
 
 - Strict structural validation now runs before topic creation handling in `DynamicTopicManager.processRequestedTopic(...)`.
 - `topic-meta-requested` consumers now require `X-TaktX-Signature` and reject unsigned request records before handling.
 - `EngineAuthorizationService.authorizeTopicMetaRequest(...)` now derives signer trust from `taktx-signing-keys` + `KeyTrustPolicy` and enforces trusted `CLIENT`-or-higher role before requests are accepted.
 - Accepted/rejected topic requests are now logged with topic, signer key ID, derived role, outcome, and rejection reason.
-- Remaining gap: this path still reuses existing signing/trust plumbing rather than a dedicated shared `VerificationCore` from Epic B.
+- `BpmnTestEngine` now publishes signed `topic-meta-requested` records using an isolated test `CLIENT` key and waits until the engine signing-key resolver can read that key before requesting topics, so default integration tests exercise the hardened contract instead of relying on unsigned control-plane traffic.
+- This path still reuses existing signing/trust plumbing rather than a dedicated shared `VerificationCore` from Epic B, but the task acceptance criteria are now met and verified by passing integration tests.
 
 ### Task C3 — Add message-type enforcement on `process-instance`
 
@@ -309,12 +313,12 @@ Extend `process-instance` authorization so role restrictions apply per DTO type.
 - Disallowed `(role, DTO)` combinations are rejected before processing.
 - Existing engine-internal flows continue to function.
 
-**Implementation notes (2026-04-19)**
+**Implementation notes (2026-04-20)**
 
 - `EngineAuthorizationService.authorize(...)` now evaluates signed `process-instance` commands by DTO subtype, not just entry-vs-non-entry.
 - `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` now require trusted `CLIENT`-or-higher Ed25519 signatures when `engineRequiresAuthorization` or `signingEnabled` is active.
 - Engine-internal `ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, and `EventSignalTriggerDTO` now require trusted `ENGINE`-or-higher signatures; `CLIENT` keys are rejected fail-closed.
-- Unsigned non-entry `process-instance` commands are now rejected whenever either process-instance security gate is active, and `MessageSigningService` signs engine-emitted records in auth-only mode so internal continuations still work.
+- Unsigned non-entry `process-instance` commands are now rejected whenever either process-instance security gate is active, and `MessageSigningService` signs engine-emitted records once an engine signing identity is available and published so internal continuations remain compatible across default, auth-only, and signing-enabled modes.
 - `ProcessInstanceProcessor` now ignores payload-supplied trust metadata by default and only preserves forwarded `originTrustMetadata` when the inbound command itself was verified as engine-signed.
 
 ---
@@ -379,11 +383,21 @@ rather than raw `auditId` alone.
 - Performance is acceptable for hot command paths.
 - Unit/integration tests cover restart and duplicate scenarios.
 
+**Implementation notes (2026-04-20)**
+
+- Added runtime-configurable replay controls to `GlobalConfigurationDTO`: `replayProtectionMode` (`OFF`, `COMPAT`, `STRICT`) and `replayProtectionRetentionMs`.
+- Added canonical replay key construction in `EngineAuthorizationService` using scoped identity `<tenant>:<namespace>:<issuer>:<auditId>`.
+- Added durable replay state store `replay-protection` to the Kafka Streams topology and a new `ReplayProtectionProcessor` ahead of `ProcessInstanceProcessor`.
+- JWT-bearing entry commands are now re-keyed by replay-routing hint before replay evaluation so duplicate `auditId` checks are not tied to process-instance UUID partitioning.
+- `ProcessInstanceTriggerEnvelope` now carries replay-routing hints and replay-prevalidated JWT claims through the topology.
+- `EngineAuthorizationService` now treats JWT validation as reusable claim validation and keeps `NonceStore` only as a fallback for direct/unit-call paths that do not pass through the durable replay topology.
+- Remaining gap for full completion: explicit restart/failover restoration coverage is still pending in tests/docs.
+
 ### Task D3 — Enforce durable replay on entry commands first
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | D2, A1 |
@@ -401,6 +415,14 @@ Apply durable replay protection to:
 - Duplicate entry commands are rejected after restart as well as within a single JVM lifetime.
 - Blank/noncompliant replay identity is rejected if policy requires it.
 - Existing JWT-based auth semantics are preserved.
+
+**Implementation notes (2026-04-20)**
+
+- `OFF`, `COMPAT`, and `STRICT` runtime semantics are now implemented for JWT-bearing entry commands.
+- `COMPAT` rejects duplicate non-blank `auditId` values while still allowing blank/missing `auditId`.
+- `STRICT` rejects blank/missing `auditId` and duplicate `auditId` values.
+- Existing ENGINE-signed entry-command behavior remains separate from JWT replay enforcement to preserve current engine-internal authorization semantics.
+- Focused unit/integration coverage is now green for duplicate JWT rejection, retention expiry, strict blank-`auditId` rejection, and the existing `SecurityIntegrationTest.replayedAuditId_secondCommandRejected` path.
 
 ### Task D4 — Evaluate replay extension to timer/control topics
 
@@ -463,7 +485,7 @@ Validate all inbound `topic-meta-requested` messages.
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | E1, C2 |
@@ -478,13 +500,13 @@ Integrate strict request validation into topic creation flow.
 - invalid requests do not trigger fallback sanitization
 - logs show accepted/rejected topic requests with key ID / role / topic / result
 
-**Implementation notes (2026-04-19)**
+**Implementation notes (2026-04-20)**
 
 - `DynamicTopicManager` now validates requested topics before caching or broker creation.
 - `TopicBootstrapper` no longer routes managed fixed topics back through `topic-meta-requested`; managed topics are seeded directly via `registerManagedTopic(...)`.
 - Dynamic topic creation now uses a create-first, `TopicExistsException`-tolerant path so concurrent engine starts/races are treated idempotently.
 - When a requested topic already exists, the manager now resolves broker metadata before publishing to `topic-meta-actual`, instead of echoing the requested DTO as actual state.
-- Topic request logging/verification details now live primarily under `C2`; the remaining E2 dependency is broader control-plane verification reuse, not structural validation.
+- Topic request logging/verification details now live primarily under `C2`; broader verification-core reuse remains future work under Epic B, but E2's validation/integration acceptance criteria are now met.
 
 ### Task E3 — Add focused tests for dynamic topic hardening
 

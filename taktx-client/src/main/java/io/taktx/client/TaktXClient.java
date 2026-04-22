@@ -198,9 +198,11 @@ public class TaktXClient {
               consumerProps, topic, this::refreshWorkerSigningFunctionRegistration);
       runtimeConfigurationStore.awaitReady(java.time.Duration.ofSeconds(10));
       log.info(
-          "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={}",
+          "✅ RuntimeConfigurationStore ready — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
-          RuntimeConfigurationHolder.isEngineRequiresAuthorization());
+          RuntimeConfigurationHolder.isEngineRequiresAuthorization(),
+          RuntimeConfigurationHolder.getReplayProtectionMode(),
+          RuntimeConfigurationHolder.getReplayProtectionRetentionMs());
     } catch (Exception e) {
       RuntimeConfigurationHolder.clear();
       log.warn(

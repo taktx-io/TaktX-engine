@@ -77,7 +77,12 @@ public class LicenseConfigProcessor implements Processor<String, byte[], Void, V
             OBJECT_MAPPER.readValue(rec.value(), ConfigurationEventDTO.class);
         if (event != null && event.getConfiguration() != null) {
           globalConfigStore.update(event.getConfiguration());
-          log.debug("Global configuration updated from taktx-configuration topic");
+          log.info(
+              "Global configuration updated from taktx-configuration topic — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
+              event.getConfiguration().isSigningEnabled(),
+              event.getConfiguration().isEngineRequiresAuthorization(),
+              event.getConfiguration().getReplayProtectionMode(),
+              event.getConfiguration().getReplayProtectionRetentionMs());
         }
       } catch (Exception e) {
         log.warn(

@@ -13,7 +13,7 @@ import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
-import io.taktx.dto.ConfigurationEventDTO;
+import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DmnDefinitionDTO;
@@ -31,6 +31,7 @@ import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.ScheduleKeyDTO;
+import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
@@ -68,6 +69,7 @@ import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.ZippedStringSerde;
@@ -90,6 +92,7 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Repartitioned;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -186,8 +189,6 @@ public class TopologyProducer {
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
-  public static final ObjectMapperSerde<ConfigurationEventDTO> CONFIGURATION_EVENT_SERDE =
-      new ObjectMapperSerde<>(ConfigurationEventDTO.class);
   public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
       new ObjectMapperSerde<>(SigningKeyDTO.class);
 
@@ -249,7 +250,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Stores.DEFINITION_SIGNAL_SUBSCRIPTIONS.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -370,7 +371,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Stores.VERSION_BY_HASH.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof ProcessDefinitionDTO,
+            (_, value) -> value instanceof ProcessDefinitionDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -382,7 +383,7 @@ public class TopologyProducer {
                                 Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, PROCESS_DEFINITION_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -394,7 +395,7 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> key instanceof ScheduleKeyDTO,
+            (key, _) -> key instanceof ScheduleKeyDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -415,7 +416,7 @@ public class TopologyProducer {
                                 Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName()),
                             Produced.with(PROCESS_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))))
         .branch(
-            (key, value) -> key instanceof MessageEventKeyDTO,
+            (key, _) -> key instanceof MessageEventKeyDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -426,7 +427,7 @@ public class TopologyProducer {
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))))
         .branch(
-            (key, value) -> value instanceof SignalDTO,
+            (_, value) -> value instanceof SignalDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((String) key, (SignalDTO) value))
@@ -461,10 +462,38 @@ public class TopologyProducer {
     builder.addStateStore(
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.VARIABLES), VARIABLES_KEY_SERDE, VARIABLES_SERDE));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.REPLAY_PROTECTION), Serdes.String(), Serdes.Long()));
 
-    builder.stream(
+    KStream<UUID, ProcessInstanceTriggerEnvelope> processInstanceTriggerStream =
+        builder.stream(
             taktConfiguration.getPrefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
-            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE))
+            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
+
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayBypassStream =
+        processInstanceTriggerStream.filter(
+            (_, envelope) -> !isReplayProtectedEntryCommand(envelope));
+
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
+        processInstanceTriggerStream
+            .filter((_, envelope) -> isReplayProtectedEntryCommand(envelope))
+            .selectKey((_, envelope) -> envelope.replayRoutingKeyHint())
+            .repartition(
+                Repartitioned.<String, ProcessInstanceTriggerEnvelope>as(
+                        taktConfiguration.getPrefixed("process-instance-replay-repartition"))
+                    .withKeySerde(Serdes.String())
+                    .withValueSerde(PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE))
+            .process(
+                () ->
+                    new ReplayProtectionProcessor(
+                        clock,
+                        engineAuthorizationService,
+                        taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename())),
+                taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename()));
+
+    replayBypassStream
+        .merge(replayProtectedEntryStream)
         .process(
             () ->
                 new ProcessInstanceProcessor(
@@ -485,7 +514,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Stores.VARIABLES.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof SignalDTO,
+            (_, value) -> value instanceof SignalDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((String) key, (SignalDTO) value))
@@ -493,7 +522,7 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), SIGNAL_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -505,7 +534,7 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> value instanceof InstanceUpdateDTO,
+            (_, value) -> value instanceof InstanceUpdateDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((UUID) key, (InstanceUpdateDTO) value))
@@ -514,21 +543,21 @@ public class TopologyProducer {
                                 Topics.INSTANCE_UPDATE_TOPIC.getTopicName()),
                             Produced.with(PROCESS_INSTANCE_KEY_SERDE, INSTANCE_UPDATE_SERDE))))
         .branch(
-            (key, value) -> value instanceof ExternalTaskTriggerDTO,
+            (_, value) -> value instanceof ExternalTaskTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
-                            (key, value, recordContext) ->
+                            (_, value, _) ->
                                 taktConfiguration.getPrefixed(
                                         Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX)
                                     + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> value instanceof StartCommandDTO,
+            (_, value) -> value instanceof StartCommandDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
@@ -537,7 +566,7 @@ public class TopologyProducer {
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
-            (key, value) -> key instanceof ScheduleKeyDTO,
+            (key, _) -> key instanceof ScheduleKeyDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -547,7 +576,7 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
                             Produced.with(SCHEDULE_KEY_SERDE, SIGNED_MESSAGE_SCHEDULE_SERDE))))
         .branch(
-            (key, value) -> value instanceof UserTaskTriggerDTO,
+            (_, value) -> value instanceof UserTaskTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map((key, value) -> KeyValue.pair((UUID) key, (UserTaskTriggerDTO) value))
@@ -556,7 +585,7 @@ public class TopologyProducer {
                                 Topics.USER_TASK_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(PROCESS_INSTANCE_KEY_SERDE, USER_TASK_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> value instanceof MessageEventDTO,
+            (_, value) -> value instanceof MessageEventDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -566,6 +595,15 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))));
+  }
+
+  private static boolean isReplayProtectedEntryCommand(ProcessInstanceTriggerEnvelope envelope) {
+    return envelope != null
+        && envelope.trigger() != null
+        && envelope.replayRoutingKeyHint() != null
+        && (envelope.trigger() instanceof StartCommandDTO
+            || envelope.trigger() instanceof AbortTriggerDTO
+            || envelope.trigger() instanceof SetVariableTriggerDTO);
   }
 
   private void setupMessageStream(StreamsBuilder builder) {
@@ -589,7 +627,7 @@ public class TopologyProducer {
             taktConfiguration.getPrefixed(Stores.CORRELATION_MESSAGE_SUBSCRIPTION.getStorename()))
         .split()
         .branch(
-            (key, value) -> value instanceof DefinitionsTriggerDTO,
+            (_, value) -> value instanceof DefinitionsTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -600,7 +638,7 @@ public class TopologyProducer {
                                 Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), DEFINITIONS_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> value instanceof ProcessInstanceTriggerDTO,
+            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
@@ -667,21 +705,21 @@ public class TopologyProducer {
     processStream
         .split()
         .branch(
-            (k, v) -> v instanceof ExternalTaskTriggerDTO,
+            (_, v) -> v instanceof ExternalTaskTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
                             (key, value) ->
                                 KeyValue.pair((UUID) key, (ExternalTaskTriggerDTO) value))
                         .to(
-                            (key, value, recordContext) ->
+                            (_, value, _) ->
                                 taktConfiguration.getPrefixed(
                                         Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX)
                                     + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
         .branch(
-            (k, v) -> v instanceof ProcessInstanceTriggerDTO,
+            (_, v) -> v instanceof ProcessInstanceTriggerDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(

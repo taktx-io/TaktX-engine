@@ -18,6 +18,7 @@ import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.SigningKeyDTO;
@@ -200,7 +201,7 @@ public class EngineAuthorizationService {
       // Verify JWT if present (throws on invalid token; a presented JWT must always be valid)
       CommandTrustMetadataDTO jwtMeta = null;
       if (authHeader != null && authHeader.value() != null) {
-        jwtMeta = authorizeViaJwt(authHeader, trigger);
+        jwtMeta = authorizeViaJwt(authHeader, triggerEnvelope);
       }
 
       // Verify Ed25519 if present; accepts CLIENT- and ENGINE-role keys
@@ -377,13 +378,55 @@ public class EngineAuthorizationService {
 
   // ── JWT path ────────────────────────────────────────────────────────────────
 
-  private CommandTrustMetadataDTO authorizeViaJwt(
-      Header authHeader, ProcessInstanceTriggerDTO trigger) {
+  public TokenClaims validateJwtClaims(Header authHeader, ProcessInstanceTriggerDTO trigger) {
     String rawJwt = new String(authHeader.value(), StandardCharsets.UTF_8);
     TokenClaims claims = validator.validate(rawJwt);
     validateClaimsMatchCommand(claims, trigger);
-    if (!nonceStore.checkAndRecord(claims.getAuditId())) {
-      throw new AuthorizationTokenException("Replayed auditId detected: " + claims.getAuditId());
+    return claims;
+  }
+
+  public ReplayProtectionMode replayProtectionMode() {
+    ReplayProtectionMode mode = effectiveConfig().getReplayProtectionMode();
+    return mode != null ? mode : ReplayProtectionMode.COMPAT;
+  }
+
+  public long replayProtectionRetentionMs() {
+    long retentionMs = effectiveConfig().getReplayProtectionRetentionMs();
+    return retentionMs > 0 ? retentionMs : 600_000L;
+  }
+
+  public boolean isReplayProtectionActive() {
+    return replayProtectionMode() != ReplayProtectionMode.OFF;
+  }
+
+  public boolean isEntryAuthorizationGateActive() {
+    return effectiveConfig().isEngineRequiresAuthorization();
+  }
+
+  public String canonicalReplayKey(TokenClaims claims) {
+    if (claims == null || claims.getAuditId() == null || claims.getAuditId().isBlank()) {
+      return null;
+    }
+    String issuer =
+        claims.getIssuer() == null || claims.getIssuer().isBlank() ? "unknown" : claims.getIssuer();
+    return config.getTenantId()
+        + ":"
+        + config.getNamespace()
+        + ":"
+        + issuer
+        + ":"
+        + claims.getAuditId();
+  }
+
+  private CommandTrustMetadataDTO authorizeViaJwt(
+      Header authHeader, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
+    TokenClaims claims =
+        triggerEnvelope.validatedJwtClaims() != null
+            ? triggerEnvelope.validatedJwtClaims()
+            : validateJwtClaims(authHeader, trigger);
+    if (triggerEnvelope.validatedJwtClaims() == null) {
+      enforceReplayProtectionFallback(claims, trigger);
     }
     log.info(
         "✅ Authorised (JWT) command={} user={} auditId={}",
@@ -397,6 +440,30 @@ public class EngineAuthorizationService {
         .userId(claims.getUserId())
         .issuer(claims.getIssuer())
         .build();
+  }
+
+  private void enforceReplayProtectionFallback(
+      TokenClaims claims, ProcessInstanceTriggerDTO trigger) {
+    ReplayProtectionMode mode = replayProtectionMode();
+    if (mode == ReplayProtectionMode.OFF) {
+      return;
+    }
+
+    String auditId = claims.getAuditId();
+    if (auditId == null || auditId.isBlank()) {
+      if (mode == ReplayProtectionMode.STRICT) {
+        throw new AuthorizationTokenException(
+            "Entry command "
+                + trigger.getClass().getSimpleName()
+                + " requires non-blank auditId when replayProtectionMode=STRICT");
+      }
+      return;
+    }
+
+    String replayKey = canonicalReplayKey(claims);
+    if (!nonceStore.checkAndRecord(replayKey)) {
+      throw new AuthorizationTokenException("Replayed auditId detected: " + auditId);
+    }
   }
 
   // ── Ed25519 path ──────────────────────────────────────────────────────────────
@@ -568,14 +635,12 @@ public class EngineAuthorizationService {
                   + defVersion);
         }
       }
-      case AbortTriggerDTO _ when !"CANCEL".equals(claims.getAction()) -> {
-        throw new AuthorizationTokenException(
-            "Token action '" + claims.getAction() + "' does not match CANCEL command");
-      }
-      case SetVariableTriggerDTO _ when !"SET_VARIABLE".equals(claims.getAction()) -> {
-        throw new AuthorizationTokenException(
-            "Token action '" + claims.getAction() + "' does not match SET_VARIABLE command");
-      }
+      case AbortTriggerDTO _ when !"CANCEL".equals(claims.getAction()) ->
+          throw new AuthorizationTokenException(
+              "Token action '" + claims.getAction() + "' does not match CANCEL command");
+      case SetVariableTriggerDTO _ when !"SET_VARIABLE".equals(claims.getAction()) ->
+          throw new AuthorizationTokenException(
+              "Token action '" + claims.getAction() + "' does not match SET_VARIABLE command");
       default ->
           log.debug(
               "No claim matching defined for {}, allowing", trigger.getClass().getSimpleName());

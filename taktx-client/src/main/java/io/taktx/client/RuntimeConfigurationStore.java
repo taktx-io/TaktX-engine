@@ -140,9 +140,11 @@ public final class RuntimeConfigurationStore implements AutoCloseable {
       }
       ready.set(true);
       log.info(
-          "RuntimeConfigurationStore: initial load complete — signingEnabled={} engineRequiresAuthorization={}",
+          "RuntimeConfigurationStore: initial load complete — signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
           RuntimeConfigurationHolder.isSigningEnabled(),
-          RuntimeConfigurationHolder.isEngineRequiresAuthorization());
+          RuntimeConfigurationHolder.isEngineRequiresAuthorization(),
+          RuntimeConfigurationHolder.getReplayProtectionMode(),
+          RuntimeConfigurationHolder.getReplayProtectionRetentionMs());
     } catch (Exception e) {
       log.warn(
           "RuntimeConfigurationStore: initial load failed — using default config: {}",
@@ -187,9 +189,11 @@ public final class RuntimeConfigurationStore implements AutoCloseable {
         RuntimeConfigurationHolder.set(event.getConfiguration());
         notifyRuntimeConfigurationChanged();
         log.info(
-            "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={}",
+            "RuntimeConfigurationStore: updated config signingEnabled={} engineRequiresAuthorization={} replayProtectionMode={} replayProtectionRetentionMs={}",
             event.getConfiguration().isSigningEnabled(),
-            event.getConfiguration().isEngineRequiresAuthorization());
+            event.getConfiguration().isEngineRequiresAuthorization(),
+            event.getConfiguration().getReplayProtectionMode(),
+            event.getConfiguration().getReplayProtectionRetentionMs());
       }
     } catch (Exception e) {
       log.warn(

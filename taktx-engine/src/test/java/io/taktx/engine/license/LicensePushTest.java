@@ -13,8 +13,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.taktx.dto.ConfigurationEventDTO;
+import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.engine.config.GlobalConfigStore;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -40,14 +46,18 @@ class LicensePushTest {
 
   private static final String CONFIGURATION_TOPIC = "default.taktx-configuration";
   private static final String STORE_NAME = "license-processor-store";
+  private static final ObjectMapper OBJECT_MAPPER =
+      new ObjectMapper().registerModule(new JavaTimeModule());
 
   private TopologyTestDriver driver;
   private TestInputTopic<String, byte[]> configTopic;
   private LicenseManager licenseManager;
+  private GlobalConfigStore globalConfigStore;
 
   @BeforeEach
   void setUp() {
     licenseManager = mock(LicenseManager.class);
+    globalConfigStore = new GlobalConfigStore();
 
     StreamsBuilder builder = new StreamsBuilder();
     builder.addGlobalStore(
@@ -56,7 +66,7 @@ class LicensePushTest {
             .withLoggingDisabled(),
         CONFIGURATION_TOPIC,
         Consumed.with(Serdes.String(), Serdes.ByteArray()),
-        () -> new LicenseConfigProcessor(licenseManager, new GlobalConfigStore()));
+        () -> new LicenseConfigProcessor(licenseManager, globalConfigStore));
 
     Topology topology = builder.build();
 
@@ -91,14 +101,35 @@ class LicensePushTest {
   @Test
   void otherKey_doesNotDelegateToLicenseManager() {
     String configJson = "{\"signingEnabled\":false}";
-    configTopic.pipeInput("config", configJson.getBytes(StandardCharsets.UTF_8));
+    configTopic.pipeInput("other", configJson.getBytes(StandardCharsets.UTF_8));
 
     verifyNoInteractions(licenseManager);
   }
 
   @Test
+  void configKey_updatesGlobalConfigStoreIncludingReplayFields() throws Exception {
+    GlobalConfigurationDTO configuration =
+        GlobalConfigurationDTO.builder()
+            .signingEnabled(true)
+            .engineRequiresAuthorization(true)
+            .replayProtectionMode(ReplayProtectionMode.STRICT)
+            .replayProtectionRetentionMs(900_000L)
+            .build();
+    ConfigurationEventDTO event =
+        ConfigurationEventDTO.builder()
+            .eventType(ConfigurationEventDTO.ConfigurationEventType.CONFIGURATION_UPDATE)
+            .configuration(configuration)
+            .timestamp(Instant.now())
+            .build();
+
+    configTopic.pipeInput("config", OBJECT_MAPPER.writeValueAsBytes(event));
+
+    assertThat(globalConfigStore.get()).isEqualTo(configuration);
+  }
+
+  @Test
   void tombstone_doesNotDelegateToLicenseManager() {
-    configTopic.pipeInput("license", (byte[]) null);
+    configTopic.pipeInput("license", null);
 
     verifyNoInteractions(licenseManager);
   }

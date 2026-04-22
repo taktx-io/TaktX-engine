@@ -9,19 +9,52 @@
 package io.taktx.engine.pi;
 
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.dto.TokenClaims;
 import jakarta.annotation.Nullable;
 
 public record ProcessInstanceTriggerEnvelope(
     ProcessInstanceTriggerDTO trigger,
     boolean signatureVerified,
     @Nullable String signatureKeyId,
-    @Nullable String signatureError) {
+    @Nullable String signatureError,
+    @Nullable String replayRoutingKeyHint,
+    @Nullable TokenClaims validatedJwtClaims) {
 
   public ProcessInstanceTriggerEnvelope(
       ProcessInstanceTriggerDTO trigger,
       boolean signatureVerified,
       @Nullable String signatureKeyId) {
-    this(trigger, signatureVerified, signatureKeyId, null);
+    this(trigger, signatureVerified, signatureKeyId, null, null, null);
+  }
+
+  public ProcessInstanceTriggerEnvelope(
+      ProcessInstanceTriggerDTO trigger,
+      boolean signatureVerified,
+      @Nullable String signatureKeyId,
+      @Nullable String signatureError) {
+    this(trigger, signatureVerified, signatureKeyId, signatureError, null, null);
+  }
+
+  public ProcessInstanceTriggerEnvelope withReplayRoutingKeyHint(
+      @Nullable String replayRoutingKeyHint) {
+    return new ProcessInstanceTriggerEnvelope(
+        trigger,
+        signatureVerified,
+        signatureKeyId,
+        signatureError,
+        replayRoutingKeyHint,
+        validatedJwtClaims);
+  }
+
+  public ProcessInstanceTriggerEnvelope withValidatedJwtClaims(
+      @Nullable TokenClaims validatedJwtClaims) {
+    return new ProcessInstanceTriggerEnvelope(
+        trigger,
+        signatureVerified,
+        signatureKeyId,
+        signatureError,
+        replayRoutingKeyHint,
+        validatedJwtClaims);
   }
 
   public boolean hasSignatureError() {

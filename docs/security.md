@@ -143,7 +143,7 @@ The JWT is attached in the `X-TaktX-Authorization` Kafka record header as a comp
 2. Required claims — `sub`, `exp`, `auditId`, and command-specific action/scope claims
 3. Token expiry (`exp`) — **always enforced**, even if authorization is disabled
 4. Command-to-claim match — the JWT's declared action must match the inbound command
-5. Replay protection via `auditId` nonce — **always enforced**
+5. Replay protection via `auditId` — enforced according to `replayProtectionMode`
 
 ### Key lookup
 
@@ -180,7 +180,7 @@ TaktXClient.publishSigningKey(
 |---|---|
 | `kid` header | Must match a trusted `PLATFORM` RSA key in `taktx-signing-keys` |
 | `exp` | Must be in the future — **always enforced** |
-| `auditId` | Must be unique across all received commands — **always enforced** |
+| `auditId` | Replay identity for entry-command JWTs; enforcement depends on `replayProtectionMode` |
 | Algorithm | RS256 |
 | Action claims | Must match the inbound command type |
 
@@ -385,8 +385,18 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 |---|---|---|---|
 | `signingEnabled` | `boolean` | `false` | Enables Ed25519 signing of outbound engine records and verification of inbound non-entry commands |
 | `engineRequiresAuthorization` | `boolean` | `false` | Enables RS256 JWT authorization for entry commands (`StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`) |
-| `rbacEnabled` | `boolean` | `false` | Reserved for future use |
 | `trustedKeyIds` | `List<String>` | `[]` | Reserved compatibility surface |
+| `dmnValidationMode` | `DmnValidationMode` | `PERMISSIVE` | Cluster-wide DMN validation strictness |
+| `replayProtectionMode` | `ReplayProtectionMode` | `COMPAT` | Entry-command replay enforcement mode: `OFF`, `COMPAT`, or `STRICT` |
+| `replayProtectionRetentionMs` | `long` | `600000` | Replay retention window in milliseconds for entry-command `auditId` tracking |
+
+### Replay protection modes
+
+| Mode | Blank `auditId` | Duplicate `auditId` | Notes |
+|---|---|---|---|
+| `OFF` | allowed | allowed | disables replay enforcement |
+| `COMPAT` | allowed | rejected when `auditId` is non-blank | staged rollout default |
+| `STRICT` | rejected | rejected | fail-closed mode for compliant issuers |
 
 ### Publishing runtime configuration
 
@@ -415,7 +425,7 @@ These are **not** configurable at runtime (they were removed):
 |---|---|
 | `signingKeyId` | Engine key IDs are generated per node and resolved dynamically |
 | `rejectExpired` | Expired JWT rejection is always enforced |
-| `nonceCheckEnabled` | Replay protection is always enforced |
+| `nonceCheckEnabled` | Removed. Use `replayProtectionMode` + `replayProtectionRetentionMs`. |
 
 ---
 
@@ -619,7 +629,7 @@ Platform teams and ingester owners should note the following changes:
 | `TAKTX_SECURITY_SIGNING_ENABLED` env var | Removed. Use `taktx-configuration` topic (`signingEnabled`) |
 | `TAKTX_SECURITY_AUTHORIZATION_ENABLED` env var | Removed. Use `taktx-configuration` topic (`engineRequiresAuthorization`) |
 | `TAKTX_SECURITY_REJECT_EXPIRED` | Removed. Expired JWT rejection is always on. |
-| `TAKTX_SECURITY_NONCE_CHECK` | Removed. Replay protection is always on. |
+| `TAKTX_SECURITY_NONCE_CHECK` | Removed. Use `replayProtectionMode` in `GlobalConfigurationDTO`. |
 | JWT keys looked up by a fixed `signingKeyId` | JWT `kid` header drives key lookup directly from `taktx-signing-keys` |
 | `commandTrustMetadata` on `InstanceUpdateDTO` | Still works (resolves to `currentTrustMetadata`). Prefer `currentTrustMetadata` + `originTrustMetadata`. |
 
@@ -631,8 +641,10 @@ These are the runtime-configurable fields the platform team should send:
 GlobalConfigurationDTO.builder()
     .signingEnabled(true)          // ← use this
     .engineRequiresAuthorization(true) // ← use this
+    .replayProtectionMode(ReplayProtectionMode.COMPAT) // ← staged rollout default
+    .replayProtectionRetentionMs(600_000L) // ← configurable retention window
     // .signingKeyId(...)          ← removed, do not send
     // .rejectExpired(...)         ← removed, always enforced
-    // .nonceCheckEnabled(...)     ← removed, always enforced
+    // .nonceCheckEnabled(...)     ← removed, replaced by replayProtectionMode
     .build();
 ```

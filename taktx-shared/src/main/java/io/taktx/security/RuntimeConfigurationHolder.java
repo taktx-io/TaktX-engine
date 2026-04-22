@@ -8,6 +8,7 @@
 package io.taktx.security;
 
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.dto.ReplayProtectionMode;
 
 /**
  * Process-wide holder for the latest runtime {@link GlobalConfigurationDTO} seen by a client.
@@ -41,6 +42,14 @@ public final class RuntimeConfigurationHolder {
 
   public static boolean isEngineRequiresAuthorization() {
     return get().isEngineRequiresAuthorization();
+  }
+
+  public static ReplayProtectionMode getReplayProtectionMode() {
+    return get().getReplayProtectionMode();
+  }
+
+  public static long getReplayProtectionRetentionMs() {
+    return get().getReplayProtectionRetentionMs();
   }
 
   public static void clear() {
