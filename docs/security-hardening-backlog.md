@@ -2,7 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-19
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-22
 **Purpose:** Track agreed security hardening work derived from `docs/security-questionnaire-response.md`. This backlog is intentionally aligned to the current TaktX architecture rather than the original external proposal.
 
 ---
@@ -74,7 +74,7 @@ Before implementation, keep these current-code facts in mind:
 | A | Message-aware security policy model | P0 | Make authorization decisions based on topic + DTO type + trusted role | Not started |
 | B | Shared verification core | P0 | Extract reusable trust/signature/key verification without destabilizing all flows at once | Not started |
 | C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | Done |
-| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` | In progress |
+| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` and validated restart restore coverage | In progress |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | Done |
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | Done |
@@ -141,7 +141,7 @@ At minimum, define policies for:
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | A1 |
@@ -391,7 +391,8 @@ rather than raw `auditId` alone.
 - JWT-bearing entry commands are now re-keyed by replay-routing hint before replay evaluation so duplicate `auditId` checks are not tied to process-instance UUID partitioning.
 - `ProcessInstanceTriggerEnvelope` now carries replay-routing hints and replay-prevalidated JWT claims through the topology.
 - `EngineAuthorizationService` now treats JWT validation as reusable claim validation and keeps `NonceStore` only as a fallback for direct/unit-call paths that do not pass through the durable replay topology.
-- Remaining gap for full completion: explicit restart/failover restoration coverage is still pending in tests/docs.
+- Added `ReplayProtectionRestorationIntegrationTest.replayStateRestoresAfterRestartWithFreshLocalState`, which proves replay-protection state restores from the Kafka Streams changelog after a full shutdown and restart with a fresh local state directory.
+- Remaining gap for full completion: explicit cross-node reassignment/failover coverage is still pending in tests/docs.
 
 ### Task D3 — Enforce durable replay on entry commands first
 
@@ -423,6 +424,7 @@ Apply durable replay protection to:
 - `STRICT` rejects blank/missing `auditId` and duplicate `auditId` values.
 - Existing ENGINE-signed entry-command behavior remains separate from JWT replay enforcement to preserve current engine-internal authorization semantics.
 - Focused unit/integration coverage is now green for duplicate JWT rejection, retention expiry, strict blank-`auditId` rejection, and the existing `SecurityIntegrationTest.replayedAuditId_secondCommandRejected` path.
+- Restart restoration coverage is now green via `ReplayProtectionRestorationIntegrationTest`, but multi-node failover/reassignment behavior is still an open hardening item under Epic D.
 
 ### Task D4 — Evaluate replay extension to timer/control topics
 

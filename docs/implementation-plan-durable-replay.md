@@ -2,7 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-20
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-22
 **Status:** In progress
 
 ---
@@ -67,6 +67,8 @@ This feature must support:
 - `taktx-shared/src/test/java/io/taktx/security/RuntimeConfigurationHolderTest.java`
 - `taktx-engine/src/test/java/io/taktx/engine/security/EngineAuthorizationServiceTest.java`
 - `taktx-engine/src/test/java/io/taktx/engine/security/EngineAuthorizationServiceMatrixTest.java`
+- `taktx-engine/src/test/java/io/taktx/engine/security/ReplayProtectionProcessorTest.java`
+- `taktx-engine/src/test/java/io/taktx/engine/security/ReplayProtectionRestorationIntegrationTest.java`
 - `taktx-engine/src/test/java/io/taktx/engine/pi/integration/SecurityIntegrationTest.java`
 
 ---
@@ -102,7 +104,8 @@ This feature must support:
 - [x] Add durable replay state store to the topology
 - [x] Re-key protected entry commands by canonical replay identity hint before replay checking
 - [x] Add replay guard processor before `ProcessInstanceProcessor`
-- [ ] Ensure replay survives restart/failover via Kafka Streams state/changelog
+- [x] Ensure replay survives restart with fresh local state via Kafka Streams state/changelog restore
+- [ ] Add explicit reassignment/failover coverage beyond single-instance restart restore
 
 ### 5. Runtime toggle semantics
 
@@ -117,7 +120,7 @@ This feature must support:
 - [x] Add/extend tests for config publishing defaults and replay fields
 - [x] Add/extend tests for runtime-holder defaults and replay getters
 - [x] Add unit tests for replay mode enforcement semantics
-- [ ] Add integration tests for duplicate rejection after restart
+- [x] Add integration tests for duplicate rejection after restart with fresh local state restore
 - [x] Add focused integration coverage for replayed JWT duplicate rejection on `process-instance`
 - [ ] Add integration tests for `OFF → COMPAT → STRICT` rollout
 - [ ] Add integration tests for `STRICT → OFF → STRICT` toggle semantics
@@ -181,11 +184,11 @@ This implementation now delivers:
 - replay routing hints on `ProcessInstanceTriggerEnvelope`
 - durable replay store and replay guard processor in the process-instance topology
 - `OFF` / `COMPAT` / `STRICT` enforcement for JWT-bearing entry commands
-- focused unit + integration coverage for duplicate rejection and retention expiry
+- focused unit + integration coverage for duplicate rejection, retention expiry, and changelog-backed restart restore
 
 Still pending:
 
-- explicit restart/failover restoration coverage
+- explicit multi-node reassignment/failover restoration coverage beyond the restart-with-fresh-state test
 - broader rollout-toggle integration scenarios
 - documentation updates in `docs/security.md` and the main hardening backlog
 
