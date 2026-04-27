@@ -1,5 +1,16 @@
 # Security Policy
 
+**Last updated:** 2026-04-27
+**Status:** Active policy
+**Audience:** Security researchers, operators, and maintainers
+
+This document defines how to report vulnerabilities and the repository security support policy.
+
+## Related Security Documents
+
+- Implemented architecture and controls: [`docs/security.md`](docs/security.md)
+- Planned follow-up roadmap (DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
+
 ## Supported Versions
 
 TaktX Engine is currently in **beta**. Security fixes are applied to the **latest release only**. Pre-1.0.0 versions do not receive backported security patches.
@@ -33,7 +44,7 @@ Alternatively you can reach us at **security@taktx.io**.
 - We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure).
 - Once a patch is released, the advisory will be published publicly.
 - We credit reporters in the advisory unless you prefer to remain anonymous.
-- We do not operate a bug bounty programme at this time.
+- We do not operate a bug bounty program at this time.
 
 ---
 
@@ -42,7 +53,7 @@ Alternatively you can reach us at **security@taktx.io**.
 **In scope:**
 - Remote code execution, authentication bypass, or privilege escalation in `taktx-engine`
 - Cryptographic weaknesses in the Ed25519 signing or RS256 JWT verification paths
-- Unauthorised access to process state via the Kafka topic ACL design
+- Unauthorized access to process state via the Kafka topic ACL design
 - Dependency vulnerabilities with a direct exploit path (not merely theoretical)
 
 **Out of scope:**

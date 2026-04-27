@@ -1,8 +1,16 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** April 27, 2026
+**Last updated:** 2026-04-27
 **Status:** Fully implemented — all features described here are live in the current codebase
-**Attack surface:** The engine exposes **no custom REST endpoints**. The only HTTP surface is the Quarkus health/readiness/liveness endpoint group (`/q/health`, `/q/health/live`, `/q/health/ready`). All interaction with the engine goes through signed Kafka messages.
+**Audience:** Platform and security engineers operating or integrating TaktX
+
+This document describes the security controls that are implemented and active in the current codebase.
+
+**Attack surface:** The engine exposes **no custom REST endpoints**; only Quarkus health/readiness/liveness endpoints are exposed (`/q/health`, `/q/health/live`, `/q/health/ready`).
+
+**Related security documents:**
+- Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
+- Planned follow-up work (DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 
 ---
 
@@ -19,6 +27,7 @@
 9. [Key generation quick reference](#key-generation-quick-reference)
 10. [Operational runbook](#operational-runbook)
 11. [Migration notes](#migration-notes)
+12. [Future security roadmap](#future-security-roadmap)
 
 ---
 
@@ -684,3 +693,16 @@ GlobalConfigurationDTO.builder()
     // .nonceCheckEnabled(...)     ← removed, replaced by replayProtectionMode
     .build();
 ```
+
+---
+
+## Future security roadmap
+
+The current security controls described in this document are implemented and active.
+
+Planned future work is tracked in:
+
+- [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+
+That roadmap covers DLQ architecture for security rejections, structured telemetry, and publication of a formal threat model.
+
