@@ -40,8 +40,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
-      - name: Build with Gradle Wrapper
-        run: ./gradlew build
+      - name: Build and run all tests with Gradle Wrapper
+        # `check` covers unit tests across modules plus taktx-engine's custom
+        # `securityIntegrationTest`; quarkusIntTest is invoked explicitly.
+        run: ./gradlew check :taktx-engine:quarkusIntTest
 
       - name: Upload test results
         if: always()
@@ -59,7 +61,7 @@ jobs:
         uses: dorny/test-reporter@v1
         with:
           name: Gradle Tests
-          path: '**/build/test-results/test/TEST-*.xml,**/build/test-results/securityIntegrationTest/TEST-*.xml'
+          path: '**/build/test-results/test/TEST-*.xml,**/build/test-results/securityIntegrationTest/TEST-*.xml,**/build/test-results/quarkusIntTest/TEST-*.xml'
           reporter: java-junit
           fail-on-error: false
 
