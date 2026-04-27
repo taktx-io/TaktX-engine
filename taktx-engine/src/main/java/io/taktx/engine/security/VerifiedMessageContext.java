@@ -42,4 +42,3 @@ public record VerifiedMessageContext(
      * passed. Included for use by future structured logging / Epic H metric hooks.
      */
     boolean signatureValid) {}
-

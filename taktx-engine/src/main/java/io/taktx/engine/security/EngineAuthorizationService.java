@@ -520,7 +520,6 @@ public class EngineAuthorizationService {
     return headers != null ? headers.lastHeader(headerName) : null;
   }
 
-
   private static String scheduleMessageType(MessageScheduleDTO schedule) {
     if (schedule == null || schedule.getMessage() == null) {
       return null;

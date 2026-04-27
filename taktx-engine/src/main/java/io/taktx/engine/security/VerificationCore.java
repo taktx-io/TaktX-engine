@@ -133,9 +133,7 @@ public class VerificationCore {
 
     if (entry == null) {
       throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '"
-              + keyId
-              + "' — signer not found in taktx-signing-keys KTable");
+          "Unknown Ed25519 keyId '" + keyId + "' — signer not found in taktx-signing-keys KTable");
     }
     if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
       throw new AuthorizationTokenException(
@@ -169,4 +167,3 @@ public class VerificationCore {
     return dot >= 0 ? headerValue.substring(0, dot) : headerValue;
   }
 }
-

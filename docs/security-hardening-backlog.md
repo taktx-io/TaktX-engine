@@ -2,7 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-19
-**Last updated:** 2026-04-27 (Epic A closed, Epic B done)
+**Last updated:** 2026-04-27 (Epic A closed, Epic B done, Epic D done)
 **Purpose:** Track agreed security hardening work derived from `docs/security-questionnaire-response.md`. This backlog is intentionally aligned to the current TaktX architecture rather than the original external proposal.
 
 ---
@@ -74,7 +74,7 @@ Before implementation, keep these current-code facts in mind:
 | A | Message-aware security policy model | P0 | Make authorization decisions based on topic + DTO type + trusted role | Done |
 | B | Shared verification core | P0 | Extract reusable trust/signature/key verification without destabilizing all flows at once | Done |
 | C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | Done |
-| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` and validated restart restore coverage | In progress |
+| D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` and validated restart restore coverage | Done |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | Done |
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | Done |
@@ -408,7 +408,7 @@ Define replay semantics around existing `auditId` rather than adding a competing
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | L |
 | Dependencies | D1 |
@@ -433,7 +433,7 @@ rather than raw `auditId` alone.
 - Performance is acceptable for hot command paths.
 - Unit/integration tests cover restart and duplicate scenarios.
 
-**Implementation notes (2026-04-20)**
+**Implementation notes (2026-04-27)**
 
 - Added runtime-configurable replay controls to `GlobalConfigurationDTO`: `replayProtectionMode` (`OFF`, `COMPAT`, `STRICT`) and `replayProtectionRetentionMs`.
 - Added canonical replay key construction in `EngineAuthorizationService` using scoped identity `<tenant>:<namespace>:<issuer>:<auditId>`.
@@ -442,13 +442,14 @@ rather than raw `auditId` alone.
 - `ProcessInstanceTriggerEnvelope` now carries replay-routing hints and replay-prevalidated JWT claims through the topology.
 - `EngineAuthorizationService` now treats JWT validation as reusable claim validation and keeps `NonceStore` only as a fallback for direct/unit-call paths that do not pass through the durable replay topology.
 - Added `ReplayProtectionRestorationIntegrationTest.replayStateRestoresAfterRestartWithFreshLocalState`, which proves replay-protection state restores from the Kafka Streams changelog after a full shutdown and restart with a fresh local state directory.
-- Remaining gap for full completion: explicit cross-node reassignment/failover coverage is still pending in tests/docs.
+- Added `ReplayProtectionRestorationIntegrationTest.replayStateSurvivesPartitionReassignmentBetweenInstances`, which starts two Kafka Streams instances with the same `application.id`, records a replay key on the active owner, closes that owner to force partition reassignment, waits for replay-store availability on the survivor, and verifies that a duplicate JWT command with the same `auditId` is still rejected after ownership transfer.
+- Durable replay coverage now explicitly spans both restart restoration and cross-instance reassignment/failover scenarios.
 
 ### Task D3 — Enforce durable replay on entry commands first
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | D2, A1 |
@@ -467,20 +468,21 @@ Apply durable replay protection to:
 - Blank/noncompliant replay identity is rejected if policy requires it.
 - Existing JWT-based auth semantics are preserved.
 
-**Implementation notes (2026-04-20)**
+**Implementation notes (2026-04-27)**
 
 - `OFF`, `COMPAT`, and `STRICT` runtime semantics are now implemented for JWT-bearing entry commands.
 - `COMPAT` rejects duplicate non-blank `auditId` values while still allowing blank/missing `auditId`.
 - `STRICT` rejects blank/missing `auditId` and duplicate `auditId` values.
 - Existing ENGINE-signed entry-command behavior remains separate from JWT replay enforcement to preserve current engine-internal authorization semantics.
 - Focused unit/integration coverage is now green for duplicate JWT rejection, retention expiry, strict blank-`auditId` rejection, and the existing `SecurityIntegrationTest.replayedAuditId_secondCommandRejected` path.
-- Restart restoration coverage is now green via `ReplayProtectionRestorationIntegrationTest`, but multi-node failover/reassignment behavior is still an open hardening item under Epic D.
+- Restart restoration coverage is green via `ReplayProtectionRestorationIntegrationTest.replayStateRestoresAfterRestartWithFreshLocalState`.
+- Cross-instance failover/reassignment coverage is now green via `ReplayProtectionRestorationIntegrationTest.replayStateSurvivesPartitionReassignmentBetweenInstances`, verifying that duplicate entry commands remain rejected after the replay store migrates to a surviving Streams instance.
 
 ### Task D4 — Evaluate replay extension to timer/control topics
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P1 |
 | Estimate | M |
 | Dependencies | C1, D2 |
@@ -493,6 +495,15 @@ After entry commands are stable, extend replay protection to schedule/control-pl
 
 - Decision recorded for each sensitive topic: required / not required / deferred.
 - Replay-sensitive topics use the durable service, not ad hoc local caches.
+
+**Implementation notes (2026-04-27)**
+
+- Recorded replay-scope decision: durable replay protection remains required for JWT-bearing entry commands only.
+- `schedule-commands` + `MessageScheduleDTO` — **not required**. The topic is already engine-signed, trusted-`ENGINE` only, and validated before schedule handling; replay adds limited security value relative to the existing control boundary.
+- `topic-meta-requested` + `TopicMetaDTO` — **not required**. Requests are signed, structurally validated, and duplicate valid requests are operationally idempotent under the hardened topic-creation flow.
+- Engine-internal non-entry `process-instance` messages (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) — **not required**. These are trusted engine continuations/recovery messages; adding replay at this layer risks interfering with valid internal recovery semantics without a clear security gain.
+- Worker/user-task response DTOs on `process-instance` (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`) — **not required**. Once a valid response is processed, the corresponding flow node instance completes and subsequent replayed responses are ignored, making duplicate delivery operationally inert.
+- No additional control-plane topic currently requires durable replay beyond entry commands, so Epic D closes with replay enforcement scoped to canonical `auditId`-based entry-command protection.
 
 ---
 

@@ -276,4 +276,3 @@ class VerificationCoreTest {
     return new RecordHeader(VerificationCore.SIG_HEADER, value.getBytes(StandardCharsets.UTF_8));
   }
 }
-

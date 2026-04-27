@@ -1,6 +1,6 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** March 29, 2026
+**Last updated:** April 27, 2026
 **Status:** Fully implemented — all features described here are live in the current codebase
 
 ---
@@ -29,6 +29,8 @@ TaktX has **two orthogonal security mechanisms** that can be enabled or disabled
 |---|---|---|---|
 | **Ed25519 message signing** | `signingEnabled` | Engine outbound records, worker responses, engine-internal continuations | No — opt-in per config topic |
 | **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO` (entry commands) | No — opt-in per config topic |
+
+Replay protection is layered on top of the JWT entry-command path and is intentionally scoped to the canonical `auditId` on those entry commands only. Control-plane topics and non-entry `process-instance` messages are not currently replay-protected; see [Replay protection scope](#replay-protection-scope).
 
 Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
 
@@ -144,6 +146,23 @@ The JWT is attached in the `X-TaktX-Authorization` Kafka record header as a comp
 3. Token expiry (`exp`) — **always enforced**, even if authorization is disabled
 4. Command-to-claim match — the JWT's declared action must match the inbound command
 5. Replay protection via `auditId` — enforced according to `replayProtectionMode`
+
+### Replay protection scope
+
+Durable replay protection is currently required for **JWT-bearing entry commands only**:
+
+- `StartCommandDTO`
+- `AbortTriggerDTO`
+- `SetVariableTriggerDTO`
+
+It is intentionally **not** applied to the following paths at this stage:
+
+- `schedule-commands` (`MessageScheduleDTO`) — already engine-signed, trusted-`ENGINE` only, and validated before schedule handling
+- `topic-meta-requested` (`TopicMetaDTO`) — signed, structurally validated, and operationally idempotent on duplicate valid requests
+- engine-internal non-entry `process-instance` messages (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) — trusted internal continuations/recovery messages
+- worker / user-task response DTOs (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`) — once a valid response is processed, the corresponding flow node instance completes and replayed responses are ignored
+
+This means the durable replay store is an `auditId`-based control for externally authorized entry commands, not a blanket duplicate-message filter across all topics.
 
 ### Key lookup
 
@@ -397,6 +416,8 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | `OFF` | allowed | allowed | disables replay enforcement |
 | `COMPAT` | allowed | rejected when `auditId` is non-blank | staged rollout default |
 | `STRICT` | rejected | rejected | fail-closed mode for compliant issuers |
+
+These modes apply to JWT-bearing entry commands only. They do not apply to `schedule-commands`, `topic-meta-requested`, engine-internal non-entry continuations, or worker/user-task response DTOs.
 
 ### Publishing runtime configuration
 

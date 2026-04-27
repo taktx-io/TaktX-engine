@@ -136,6 +136,70 @@ class ReplayProtectionRestorationIntegrationTest {
     }
   }
 
+  @Test
+  void replayStateSurvivesPartitionReassignmentBetweenInstances() throws Exception {
+    String bootstrapServers =
+        ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    String uniqueSuffix = UUID.randomUUID().toString();
+    String inputTopic = TENANT + "." + NAMESPACE + ".replay-failover-input-" + uniqueSuffix;
+    String outputTopic = TENANT + "." + NAMESPACE + ".replay-failover-output-" + uniqueSuffix;
+    String applicationId = TENANT + "." + NAMESPACE + ".replay-failover-" + uniqueSuffix;
+    String auditId = "audit-" + uniqueSuffix;
+    String replayKey = TENANT + ":" + NAMESPACE + ":" + ISSUER + ":" + auditId;
+    KeyPair rsaKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    Path firstStateDir = Files.createTempDirectory("replay-failover-first-");
+    Path secondStateDir = Files.createTempDirectory("replay-failover-second-");
+
+    createTopics(bootstrapServers, inputTopic, outputTopic);
+
+    try (KafkaProducer<String, ProcessInstanceTriggerEnvelope> producer = createProducer(bootstrapServers);
+        KafkaConsumer<UUID, ProcessInstanceTriggerEnvelope> outputConsumer =
+            createConsumer(bootstrapServers, outputTopic);
+        ManagedStreams firstInstance =
+            startStreams(
+                bootstrapServers,
+                applicationId,
+                firstStateDir,
+                inputTopic,
+                outputTopic,
+                createAuthorizationService(rsaKeyPair));
+        ManagedStreams secondInstance =
+            startStreams(
+                bootstrapServers,
+                applicationId,
+                secondStateDir,
+                inputTopic,
+                outputTopic,
+                createAuthorizationService(rsaKeyPair))) {
+      awaitConsumerAssignment(outputConsumer);
+
+      UUID firstProcessInstanceId = UUID.randomUUID();
+      String jwt = buildJwt(rsaKeyPair, auditId);
+      producer.send(replayProtectedRecord(inputTopic, firstProcessInstanceId, jwt, replayKey)).get();
+
+      ConsumerRecord<UUID, ProcessInstanceTriggerEnvelope> forwardedRecord =
+          awaitForwardedRecord(outputConsumer);
+      assertThat(forwardedRecord.key()).isEqualTo(firstProcessInstanceId);
+
+      ManagedStreams ownerBeforeFailover =
+          awaitReplayStateOwner(firstInstance, secondInstance, replayKey);
+      ManagedStreams survivor = ownerBeforeFailover == firstInstance ? secondInstance : firstInstance;
+
+      ownerBeforeFailover.close();
+      awaitReplayStatePresent(survivor.streams(), replayKey);
+
+      UUID duplicateProcessInstanceId = UUID.randomUUID();
+      producer
+          .send(replayProtectedRecord(inputTopic, duplicateProcessInstanceId, jwt, replayKey))
+          .get();
+
+      assertNoForwardedRecords(outputConsumer);
+    } finally {
+      deleteRecursively(firstStateDir);
+      deleteRecursively(secondStateDir);
+    }
+  }
+
   private static ManagedStreams startStreams(
       String bootstrapServers,
       String applicationId,
@@ -332,6 +396,40 @@ class ReplayProtectionRestorationIntegrationTest {
                           REPLAY_STORE_NAME, QueryableStoreTypes.keyValueStore()));
               assertThat(store.get(replayKey)).isNotNull();
             });
+  }
+
+  private static void awaitReplayStatePresent(KafkaStreams streams, String replayKey) {
+    assertReplayStatePresent(streams, replayKey);
+  }
+
+  private static ManagedStreams awaitReplayStateOwner(
+      ManagedStreams firstInstance, ManagedStreams secondInstance, String replayKey) {
+    return await()
+        .atMost(Duration.ofSeconds(20))
+        .pollInterval(Duration.ofMillis(100))
+        .until(
+            () -> {
+              if (hasReplayState(firstInstance.streams(), replayKey)) {
+                return firstInstance;
+              }
+              if (hasReplayState(secondInstance.streams(), replayKey)) {
+                return secondInstance;
+              }
+              return null;
+            },
+            java.util.Objects::nonNull);
+  }
+
+  private static boolean hasReplayState(KafkaStreams streams, String replayKey) {
+    try {
+      ReadOnlyKeyValueStore<String, Long> store =
+          streams.store(
+              org.apache.kafka.streams.StoreQueryParameters.fromNameAndType(
+                  REPLAY_STORE_NAME, QueryableStoreTypes.keyValueStore()));
+      return store.get(replayKey) != null;
+    } catch (Exception ignored) {
+      return false;
+    }
   }
 
   private static void createTopics(String bootstrapServers, String... topicNames) throws Exception {
