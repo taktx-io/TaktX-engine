@@ -26,33 +26,33 @@ def get_color(coverage: float) -> str:
         return "red"
 
 
-def parse_jacoco_xml(xml_path: Path) -> Tuple[float, int, int]:
+def parse_jacoco_xml(xml_path: Path) -> Tuple[float, int, int, int]:
     """
     Parse JaCoCo XML report and extract coverage percentage.
-    Returns (coverage_percentage, covered_lines, total_lines)
+    Returns (coverage_percentage, covered_lines, missed_lines, total_lines)
     """
     try:
         tree = ET.parse(xml_path)
         root = tree.getroot()
 
-        # Find all counter elements (LINE type gives us line coverage)
-        covered = 0
-        missed = 0
+        # Prefer the report-level LINE counter to avoid double counting package/class counters.
+        counter = root.find("./counter[@type='LINE']")
+        if counter is None:
+            return 0.0, 0, 0, 0
 
-        for counter in root.findall(".//counter[@type='LINE']"):
-            covered += int(counter.get('covered', 0))
-            missed += int(counter.get('missed', 0))
+        covered = int(counter.get('covered', 0))
+        missed = int(counter.get('missed', 0))
 
         total = covered + missed
         if total == 0:
-            return 0.0, 0, 0
+            return 0.0, 0, 0, 0
 
         coverage = (covered / total) * 100
-        return round(coverage, 2), covered, total
+        return round(coverage, 2), covered, missed, total
 
     except Exception as e:
         print(f"Error parsing {xml_path}: {e}", file=sys.stderr)
-        return 0.0, 0, 0
+        return 0.0, 0, 0, 0
 
 
 def create_badge_svg(label: str, value: str, color: str) -> str:
@@ -115,6 +115,7 @@ def main():
 
     coverage_results = {}
     total_covered = 0
+    total_missed = 0
     total_lines = 0
 
     print("Generating coverage badges...")
@@ -124,9 +125,15 @@ def main():
             print(f"⚠️  Warning: {xml_path} not found, skipping {module_name}")
             continue
 
-        coverage, covered, total = parse_jacoco_xml(xml_path)
-        coverage_results[module_name] = coverage
+        coverage, covered, missed, total = parse_jacoco_xml(xml_path)
+        coverage_results[module_name] = {
+            "coverage": coverage,
+            "covered": covered,
+            "missed": missed,
+            "total": total,
+        }
         total_covered += covered
+        total_missed += missed
         total_lines += total
 
         # Generate badge for this module
@@ -159,15 +166,14 @@ def main():
             "overall": {
                 "coverage": round(overall_coverage, 2),
                 "covered": total_covered,
+                "missed": total_missed,
                 "total": total_lines
             },
             "modules": {}
         }
 
-        for module_name, coverage in coverage_results.items():
-            summary["modules"][module_name] = {
-                "coverage": coverage
-            }
+        for module_name, module_stats in coverage_results.items():
+            summary["modules"][module_name] = module_stats
 
         summary_path = badges_dir / "coverage-summary.json"
         summary_path.write_text(json.dumps(summary, indent=2))

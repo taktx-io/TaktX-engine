@@ -19,8 +19,8 @@ This directory contains automatically generated coverage badges for the TaktX pr
 
 These badges are generated from JaCoCo XML coverage reports:
 
-1. **Local Generation**: Run `./gradlew generateCoverageBadges` to create badges locally
-2. **CI Generation**: Badges are automatically generated on every push to `main` via GitHub Actions
+1. **Local Generation**: Run `./gradlew testWithBadges` to execute the full test suite and refresh badges
+2. **CI Generation**: The same command is used in GitHub Actions to avoid local/CI drift
 3. **Auto-Commit**: The `update-badges.yml` workflow commits updated badges back to the repository
 
 ## Using Badges in README
@@ -67,13 +67,7 @@ A JSON summary is also generated (`coverage-summary.json`) containing detailed c
 To manually regenerate badges:
 
 ```bash
-# Run tests and generate reports
-./gradlew test jacocoTestReport
-
-# Generate badges from reports
-./gradlew generateCoverageBadges
-
-# Or do both in one command
+# Run full test matrix and regenerate badges in one command
 ./gradlew testWithBadges
 ```
 

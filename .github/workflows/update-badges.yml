@@ -28,11 +28,8 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Run tests and generate coverage reports
-        run: ./gradlew test jacocoTestReport
-
-      - name: Generate coverage badges
-        run: ./gradlew generateCoverageBadges
+      - name: Run full test suite and refresh coverage badges
+        run: ./gradlew testWithBadges
 
       - name: Display coverage summary
         run: |

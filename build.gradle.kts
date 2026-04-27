@@ -98,12 +98,33 @@ tasks.register<Exec>("generateCoverageBadges") {
     }
 }
 
-// Automatically generate badges after all JaCoCo reports are created
-subprojects {
-    plugins.withId("jacoco") {
-        tasks.named("jacocoTestReport") {
-            finalizedBy(rootProject.tasks.named("generateCoverageBadges"))
-        }
-    }
+val allSubprojectChecks = subprojects.map { "${it.path}:check" }
+
+val allJacocoReports = subprojects.map { "${it.path}:jacocoTestReport" }
+
+val runAllTests by tasks.registering {
+    group = "verification"
+    description = "Runs all module checks plus engine Quarkus integration tests"
+    dependsOn(allSubprojectChecks)
+    dependsOn(":taktx-engine:quarkusIntTest")
+}
+
+val refreshCoverageReports by tasks.registering {
+    group = "verification"
+    description = "Regenerates all JaCoCo XML reports after tests"
+    dependsOn(allJacocoReports)
+    mustRunAfter(runAllTests)
+}
+
+tasks.named("generateCoverageBadges") {
+    mustRunAfter(refreshCoverageReports)
+}
+
+tasks.register("testWithBadges") {
+    group = "verification"
+    description = "Runs the full test suite and updates coverage badges from fresh reports"
+    dependsOn(runAllTests)
+    dependsOn(refreshCoverageReports)
+    dependsOn(tasks.named("generateCoverageBadges"))
 }
 

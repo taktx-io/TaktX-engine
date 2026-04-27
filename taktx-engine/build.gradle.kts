@@ -117,15 +117,15 @@ tasks.named("check") {
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
 
-    // Merge coverage from all three sources:
-    //  • jacoco/test.exec                       – standard Gradle JaCoCo (unit + default-profile tests)
-    //  • jacoco/securityIntegrationTest.exec    – standard Gradle JaCoCo (security-profile tests)
-    //  • jacoco-quarkus.exec                    – Quarkus in-process JaCoCo agent (both Quarkus tasks)
+    // Merge coverage from all engine test tasks:
+    //  • jacoco/test.exec                    – standard Gradle JaCoCo (unit + default-profile tests)
+    //  • jacoco/securityIntegrationTest.exec – standard Gradle JaCoCo (security-profile tests)
+    //  • jacoco/quarkusIntTest.exec          – standard Gradle JaCoCo (Quarkus integration tests)
     executionData.setFrom(
         fileTree(project.layout.buildDirectory) {
             include("jacoco/test.exec")
             include("jacoco/securityIntegrationTest.exec")
-            include("jacoco-quarkus.exec")
+            include("jacoco/quarkusIntTest.exec")
         }
     )
 
