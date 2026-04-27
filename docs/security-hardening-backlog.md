@@ -2,7 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-19
-**Last updated:** 2026-04-27 (Epic A closed, Epic B done, Epic D done)
+**Last updated:** 2026-04-27 (Epic A closed, Epic B done, Epic D done, Epic I done — REST endpoints removed)
 **Purpose:** Track agreed security hardening work derived from `docs/security-questionnaire-response.md`. This backlog is intentionally aligned to the current TaktX architecture rather than the original external proposal.
 
 ---
@@ -79,7 +79,7 @@ Before implementation, keep these current-code facts in mind:
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | Done |
 | H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Deferred |
-| I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Deferred |
+| I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Done |
 | J | Documentation and threat-model cleanup | P2 | Remove docs/code drift and document required Kafka ACL assumptions | Not started |
 
 ---
@@ -800,13 +800,13 @@ Optional later hardening:
 
 **Priority:** `P1`
 **Goal:** Prevent accidental production exposure of read/query endpoints.
-**Status:** `Deferred` — the appropriate control model (application-level auth annotations, network-gateway restriction, or a hybrid) has not been decided yet. Revisit with product/ops before starting I1.
+**Status:** `Done` — all three debug REST resource classes have been removed. The engine exposes no custom REST endpoints. The only HTTP surface remaining is the Quarkus health/readiness/liveness group.
 
 ### Task I1 — Audit REST endpoint exposure
 
 | Field | Value |
 |---|---|
-| Status | Deferred |
+| Status | Done |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | None |
@@ -825,11 +825,21 @@ Classify all REST endpoints as:
 - endpoint inventory exists in docs
 - each endpoint has an intended exposure classification
 
+**Implementation notes (2026-04-27)**
+
+- Audit confirmed three GET-only resource classes in `taktx-engine/src/main/java/io/taktx/engine/api/`:
+  - `ProcessDefinitionResource` — 3 endpoints reading from `GLOBAL_PROCESS_DEFINITION` and `XML_BY_PROCESS_DEFINITION_ID` stores
+  - `DmnDefinitionResource` — 3 endpoints reading from `GLOBAL_DMN_DEFINITION` and `XML_BY_DMN_DEFINITION_ID` stores
+  - `ProcessInstanceResource` — 3 endpoints reading live runtime state including process variables; contained `System.out.println`, busy-wait loops, and cross-node redirect logic via `KafkaStreams.queryMetadataForKey`
+- None of the three resource classes had any in-repo callers outside themselves.
+- `quarkus.swagger-ui.always-include=true` was present in `application.properties`, making all endpoints discoverable in production via SwaggerUI.
+- All three resources were classified as **debug-only / no production value** and recommended for removal.
+
 ### Task I2 — Add explicit auth guards or production exposure controls
 
 | Field | Value |
 |---|---|
-| Status | Deferred |
+| Status | Done |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | I1 |
@@ -838,6 +848,16 @@ Classify all REST endpoints as:
 
 - no unintentionally unsecured endpoints remain in production mode
 - either application-level guards or documented gateway restrictions are in place
+
+**Implementation notes (2026-04-27)**
+
+- Control chosen: **full removal** — the most effective production exposure control.
+- `ProcessDefinitionResource`, `DmnDefinitionResource`, `ProcessInstanceResource` deleted.
+- `ClientProducer` (JAX-RS `Client` producer injected only by `ProcessInstanceResource`) deleted.
+- `ObjectMapperContextResolver` (JAX-RS context resolver in the `api` package, no longer needed) deleted.
+- `RestObjectMapper` (Jackson config used only by the resource layer) deleted.
+- `quarkus.swagger-ui.always-include=true` removed from `application.properties`.
+- The engine HTTP surface is now limited to Quarkus built-in health endpoints only: `/q/health`, `/q/health/live`, `/q/health/ready`.
 
 ---
 
@@ -906,6 +926,7 @@ The system is materially improved when the following are true:
 - replay protection for entry commands survives restart/failover
 - production deployments cannot silently run in insecure community mode
 - key role comes only from trusted key metadata
+- the engine HTTP surface is limited to health/readiness endpoints — no custom REST surface exists
 - rejection/security events are visible in logs and metrics
 
 ---

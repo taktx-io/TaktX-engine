@@ -10,7 +10,6 @@ package io.taktx.engine.generic;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
@@ -65,15 +64,5 @@ public class CustomObjectMapperProvider {
     public MyObjectMapper() {
       super(new CBORFactory());
     }
-  }
-
-  @Singleton
-  @Produces
-  @RestObjectMapper
-  public ObjectMapper restObjectMapper() {
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    // Add any other custom configurations here
-    return objectMapper;
   }
 }

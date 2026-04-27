@@ -2,6 +2,7 @@
 
 **Last updated:** April 27, 2026
 **Status:** Fully implemented — all features described here are live in the current codebase
+**Attack surface:** The engine exposes **no custom REST endpoints**. The only HTTP surface is the Quarkus health/readiness/liveness endpoint group (`/q/health`, `/q/health/live`, `/q/health/ready`). All interaction with the engine goes through signed Kafka messages.
 
 ---
 
@@ -33,6 +34,20 @@ TaktX has **two orthogonal security mechanisms** that can be enabled or disabled
 Replay protection is layered on top of the JWT entry-command path and is intentionally scoped to the canonical `auditId` on those entry commands only. Control-plane topics and non-entry `process-instance` messages are not currently replay-protected; see [Replay protection scope](#replay-protection-scope).
 
 Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
+
+### HTTP attack surface
+
+The engine exposes **no custom REST endpoints**. The only inbound HTTP surface is the standard Quarkus health endpoint group:
+
+| Endpoint | Purpose |
+|---|---|
+| `/q/health` | Combined health status |
+| `/q/health/live` | Liveness probe |
+| `/q/health/ready` | Readiness probe |
+
+> The three debug read-only resource classes (`ProcessDefinitionResource`, `DmnDefinitionResource`, `ProcessInstanceResource`) that previously existed for local troubleshooting have been removed. All interaction with the engine is through signed Kafka messages.
+
+Swagger UI (`quarkus.swagger-ui.always-include`) has been removed from `application.properties` along with the resources it was documenting.
 
 Two trust enforcement policies are available and are selected automatically at engine startup:
 

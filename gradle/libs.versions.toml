@@ -44,6 +44,7 @@ quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler", version.ref = "qu
 quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi", version.ref = "quarkus" }
 quarkus-swagger-ui = { module = "io.quarkus:quarkus-swagger-ui", version.ref = "quarkus" }
 quarkus-resteasy-jackson = { module = "io.quarkus:quarkus-resteasy-jackson", version.ref = "quarkus" }
+quarkus-smallrye-health = { module = "io.quarkus:quarkus-smallrye-health", version.ref = "quarkus" }
 quarkus-jackson = { module = "io.quarkus:quarkus-jackson", version.ref = "quarkus" }
 
 # Jackson
