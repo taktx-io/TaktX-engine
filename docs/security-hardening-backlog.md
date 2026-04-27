@@ -2,7 +2,7 @@
 
 **Repository:** `TaktX-engine2`
 **Created:** 2026-04-19
-**Last updated:** 2026-04-22
+**Last updated:** 2026-04-27 (Epic A closed, Epic B done)
 **Purpose:** Track agreed security hardening work derived from `docs/security-questionnaire-response.md`. This backlog is intentionally aligned to the current TaktX architecture rather than the original external proposal.
 
 ---
@@ -71,15 +71,15 @@ Before implementation, keep these current-code facts in mind:
 
 | Epic | Title | Priority | Goal | Status |
 |---|---|---:|---|---|
-| A | Message-aware security policy model | P0 | Make authorization decisions based on topic + DTO type + trusted role | Not started |
-| B | Shared verification core | P0 | Extract reusable trust/signature/key verification without destabilizing all flows at once | Not started |
+| A | Message-aware security policy model | P0 | Make authorization decisions based on topic + DTO type + trusted role | Done |
+| B | Shared verification core | P0 | Extract reusable trust/signature/key verification without destabilizing all flows at once | Done |
 | C | Secure control-plane topics | P0 | Close bypass paths on `schedule-commands`, `topic-meta-requested`, and sensitive `process-instance` message types | Done |
 | D | Durable replay protection | P0 | Replace per-JVM replay checks with durable replay tracking using canonical `auditId` and validated restart restore coverage | In progress |
 | E | Topic creation hardening | P0 | Prevent arbitrary dynamic topic creation and strictly validate requested topics | Done |
 | F | Trust model hardening | P0 | Enforce anchored mode in production and ensure role derives only from trusted key metadata | Done |
 | G | Client message-type restrictions | P0 | Prevent `CLIENT` keys from emitting engine/platform-only command types | Done |
-| H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Not started |
-| I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Not started |
+| H | Observability and security telemetry | P1 | Make rejections, replay attempts, and signature failures visible in logs and metrics | Deferred |
+| I | REST endpoint security review | P1 | Classify and guard read APIs before production exposure | Deferred |
 | J | Documentation and threat-model cleanup | P2 | Remove docs/code drift and document required Kafka ACL assumptions | Not started |
 
 ---
@@ -93,7 +93,7 @@ Before implementation, keep these current-code facts in mind:
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | None |
@@ -137,11 +137,23 @@ At minimum, define policies for:
 
 - Do **not** reduce entry-command security to a role-only rule. JWT requirements remain part of the model.
 
+**Implementation notes (2026-04-27)**
+
+- `MessageSecurityPolicy` record implemented in `taktx-engine/src/main/java/io/taktx/engine/security/MessageSecurityPolicy.java` with all five policy fields: `allowedRoles`, `requireSignature`, `requireReplay`, `requireJwt`, `allowEngineSignatureAsJwtEquivalent`.
+- `MessageSecurityPolicyRegistry` in `taktx-engine/src/main/java/io/taktx/engine/security/MessageSecurityPolicyRegistry.java` registers all 9 required `(topic, DTO)` combinations using `Map.ofEntries`.
+- Entry commands (`StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO`) carry `requireJwt=true`, `requireReplay=true`, `requireSignature=true`, `allowEngineSignatureAsJwtEquivalent=true`, minimum role `CLIENT`.
+- Worker-response commands (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`) carry `requireSignature=true`, minimum role `CLIENT`.
+- Engine-internal commands (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) carry `requireSignature=true`, minimum role `ENGINE`.
+- `schedule-commands` + `MessageScheduleDTO` carries `requireSignature=true`, minimum role `ENGINE`.
+- `topic-meta-requested` + `TopicMetaDTO` carries `requireSignature=true`, minimum role `CLIENT`.
+- `resolve(topic, class)` throws `IllegalStateException` fail-closed on any unregistered combination.
+- `MessageSecurityPolicyRegistryTest` verifies all 9 policies deterministically, entry-command JWT/replay flags, control-plane role requirements, and fail-closed unknown-combo behaviour.
+
 ### Task A2 — Enumerate current DTO/message taxonomy used on sensitive topics
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Done |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | A1 |
@@ -156,6 +168,25 @@ Document the current DTO classes and type IDs already used in polymorphic trigge
 - No task uses placeholder DTO names that do not exist in the codebase.
 - Policy registry references only real current classes.
 
+**Implementation notes (2026-04-27)**
+
+- `ProcessInstanceTriggerTypeIdResolver` in `taktx-shared` defines the canonical DTO ↔ type-ID mapping. All 9 types registered in `MessageSecurityPolicyRegistry` map 1-to-1 with resolver entries — no placeholders:
+
+| Type ID | DTO class |
+|---|---|
+| `A` | `StartCommandDTO` |
+| `T` | `AbortTriggerDTO` |
+| `F` | `SetVariableTriggerDTO` |
+| `R` | `ExternalTaskResponseTriggerDTO` |
+| `U` | `UserTaskResponseTriggerDTO` |
+| `C` | `ContinueFlowElementTriggerDTO` |
+| `V` | `EventSignalTriggerDTO` |
+| `S` | `StartFlowElementTriggerDTO` |
+| `E` | `ExternalTaskTriggerDTO` *(outbound only — no inbound policy needed)* |
+
+- `ExternalTaskTriggerDTO` (type `E`) is engine-emitted outbound only and correctly has no inbound security policy registered.
+- `MessageSecurityPolicyRegistryTest` references only the real classes above, confirming no drift.
+
 ---
 
 ## EPIC B — Shared verification core
@@ -167,7 +198,7 @@ Document the current DTO classes and type IDs already used in polymorphic trigge
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | M |
 | Dependencies | A1 |
@@ -200,11 +231,23 @@ class VerifiedMessageContext {
 - Clear error reasons are returned for logging/counters.
 - Unit tests cover: unknown key, revoked key, bad signature, trusted key, role derivation.
 
+**Implementation notes (2026-04-27)**
+
+- `VerifiedMessageContext` record implemented in `taktx-engine/src/main/java/io/taktx/engine/security/VerifiedMessageContext.java` with fields `keyId`, `key` (`SigningKeyDTO`), `role` (`KeyRole`), `signatureValid` (`boolean`). Role is always sourced from `SigningKeyDTO#effectiveRole()` — never from headers or payload fields.
+- `VerificationCore` `@ApplicationScoped` bean implemented in `taktx-engine/src/main/java/io/taktx/engine/security/VerificationCore.java` with:
+  - `resolveKey(String keyId): SigningKeyDTO` — unified KTable accessor (replaces the identical private `lookupSigningKey()` in `EngineAuthorizationService` and `lookupKeyEntry()` in `PublicKeyProvider`).
+  - `verify(Header sigHeader, KeyRole requiredRole): VerifiedMessageContext` — full Ed25519 trust path: header parse → key lookup → revoke check → `KeyTrustPolicy.isTrustedForRole()` → role derivation. Throws `AuthorizationTokenException` with a descriptive reason on any failure.
+  - `extractKeyId(Header): String` — static helper, extracts key ID from `keyId.base64sig` header format.
+- `EngineAuthorizationService` refactored: the three near-identical Ed25519 authorization blocks (`authorizeViaEd25519`, `authorizeScheduleCommand`, `authorizeTopicMetaRequest`) now delegate to `VerificationCore.verify()`. The private `lookupSigningKey()` and `extractKeyId()` helpers are removed. `resolvePublicKeyFromKTable()` now calls `VerificationCore.resolveKey()`. `KafkaStreams` and `ReadOnlyKeyValueStore` fields removed from `EngineAuthorizationService`. Test constructors updated to build `VerificationCore` internally from the passed `KafkaStreams` mock so existing tests remain compatible.
+- `PublicKeyProvider` refactored: CDI constructor now accepts `(VerificationCore, KeyTrustPolicy)`; the private `lookupKeyEntry()` method is replaced by `verificationCore.resolveKey()`. Test constructors maintain the same `(TaktConfiguration, KafkaStreams, KeyTrustPolicy)` signature, internally constructing `VerificationCore`.
+- `VerificationCoreTest` added with 14 unit tests covering: null header, header with null value, unknown key, revoked key, role-mismatch (CLIENT key rejected for ENGINE requirement), valid CLIENT key, ENGINE key satisfying CLIENT requirement (role derivation includes hierarchy), ENGINE key for ENGINE requirement, `extractKeyId` with dotted value, `extractKeyId` without dot, dotted sig header end-to-end, `resolveKey` null on unknown, `resolveKey` returns REVOKED entry without filtering, `resolveKey` null on store exception.
+- All 130 existing engine unit tests pass unchanged. Four test assertions updated to use the new unified rejection message format (`"not trusted for required role <ROLE>"`) that `VerificationCore` now produces consistently across all three protected topic paths.
+
 ### Task B2 — Define gradual-adoption seam between existing auth and new verification core
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Done |
 | Priority | P0 |
 | Estimate | S |
 | Dependencies | B1 |
@@ -217,6 +260,13 @@ Create integration points so existing logic in `EngineAuthorizationService` and 
 
 - Existing `process-instance` behavior can be preserved while internally using shared verification functions.
 - Adoption plan identifies highest-risk next consumers: `schedule-commands`, `topic-meta-requested`.
+
+**Implementation notes (2026-04-27)**
+
+- Seam is `VerificationCore.verify(Header, KeyRole)`. Callers receive a `VerifiedMessageContext` and map it to `CommandTrustMetadataDTO` or `SigningKeyDTO` as required — no rewrite of callers is needed.
+- `EngineAuthorizationService.authorize()` (process-instance path) now delegates the Ed25519 sub-path to `VerificationCore.verify()` while preserving all existing JWT + dual-gate semantics. Existing behavior is unchanged.
+- `EngineAuthorizationService.authorizeScheduleCommand()` and `authorizeTopicMetaRequest()` delegate fully to `VerificationCore.verify()` replacing the inline patterns from Epics C1/C2.
+- Adoption pattern for future consumers (e.g. Epic D4 replay extension): inject `VerificationCore`, call `verify(sigHeader, requiredRole)`, and build a `CommandTrustMetadataDTO` or throw `AuthorizationTokenException` as appropriate. The `VerificationCore` Javadoc documents this seam explicitly.
 
 ---
 
@@ -358,7 +408,7 @@ Define replay semantics around existing `auditId` rather than adding a competing
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | In progress |
 | Priority | P0 |
 | Estimate | L |
 | Dependencies | D1 |
@@ -688,12 +738,13 @@ Optional later hardening:
 
 **Priority:** `P1`
 **Goal:** Make security-relevant failures visible and measurable.
+**Status:** `Deferred` — before implementing structured security logs and metrics counters, the team needs to decide on a **dead letter queue (DLQ)** architecture for rejected messages. Log-only telemetry without a DLQ could cause silent discard of important security events (e.g. replayed commands, unauthorised topic requests) with no recovery path. Revisit after the DLQ design is agreed.
 
 ### Task H1 — Add structured security logs
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Deferred |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | B1, C1, C2, C3 |
@@ -715,7 +766,7 @@ Optional later hardening:
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Deferred |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | H1 |
@@ -738,12 +789,13 @@ Optional later hardening:
 
 **Priority:** `P1`
 **Goal:** Prevent accidental production exposure of read/query endpoints.
+**Status:** `Deferred` — the appropriate control model (application-level auth annotations, network-gateway restriction, or a hybrid) has not been decided yet. Revisit with product/ops before starting I1.
 
 ### Task I1 — Audit REST endpoint exposure
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Deferred |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | None |
@@ -766,7 +818,7 @@ Classify all REST endpoints as:
 
 | Field | Value |
 |---|---|
-| Status | Not started |
+| Status | Deferred |
 | Priority | P1 |
 | Estimate | S |
 | Dependencies | I1 |
