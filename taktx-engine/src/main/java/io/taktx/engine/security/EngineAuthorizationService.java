@@ -27,7 +27,6 @@ import io.taktx.dto.TokenClaims;
 import io.taktx.dto.TopicMetaDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.AuthorizationTokenValidator;
@@ -43,9 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 /**
  * Validates incoming Kafka commands and worker responses.
@@ -56,9 +52,8 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
  *   <li>{@code X-TaktX-Authorization} (RS256 JWT) — used by Console/Platform for start-process and
  *       abort commands; validates claims, expiry, and replay via {@link NonceStore}.
  *   <li>{@code X-TaktX-Signature} (Ed25519) — used by worker processes for task responses and by
- *       the engine itself for internal sub-process/call-activity triggers. All keys are looked up
- *       in the {@code taktx-signing-keys} KTable; {@code REVOKED} or unknown keys are rejected
- *       here.
+ *       the engine itself for internal sub-process/call-activity triggers. Key resolution, revoke
+ *       checks, and trust-policy evaluation are delegated to {@link VerificationCore}.
  * </ul>
  *
  * <p>When authorization is disabled in the latest {@link GlobalConfigurationDTO}, returns {@code
@@ -76,11 +71,9 @@ public class EngineAuthorizationService {
   private final GlobalConfigStore globalConfigStore;
   private final NonceStore nonceStore;
   private final AuthorizationTokenValidator validator;
-  private final KafkaStreams kafkaStreams;
   private final KeyTrustPolicy keyTrustPolicy;
   private final MessageSecurityPolicyRegistry messageSecurityPolicyRegistry;
-
-  private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
+  private final VerificationCore verificationCore;
 
   @Inject
   public EngineAuthorizationService(
@@ -88,16 +81,35 @@ public class EngineAuthorizationService {
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
       NonceStore nonceStore,
-      KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy,
-      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
+      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry,
+      VerificationCore verificationCore) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
     this.nonceStore = nonceStore;
-    this.kafkaStreams = kafkaStreams;
     this.keyTrustPolicy = keyTrustPolicy;
     this.messageSecurityPolicyRegistry = messageSecurityPolicyRegistry;
+    this.verificationCore = verificationCore;
     this.validator = new AuthorizationTokenValidator(publicKeyProvider);
+  }
+
+  /** Test constructor — no CDI. */
+  EngineAuthorizationService(
+      TaktConfiguration config,
+      GlobalConfigStore globalConfigStore,
+      PublicKeyProvider publicKeyProvider,
+      NonceStore nonceStore,
+      KafkaStreams kafkaStreams,
+      KeyTrustPolicy keyTrustPolicy,
+      MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
+    this(
+        config,
+        globalConfigStore,
+        publicKeyProvider,
+        nonceStore,
+        keyTrustPolicy,
+        messageSecurityPolicyRegistry,
+        new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
   /** Test constructor — no CDI. */
@@ -113,9 +125,9 @@ public class EngineAuthorizationService {
         globalConfigStore,
         publicKeyProvider,
         nonceStore,
-        kafkaStreams,
         keyTrustPolicy,
-        new MessageSecurityPolicyRegistry());
+        new MessageSecurityPolicyRegistry(),
+        new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
   /** Test constructor — no CDI. */
@@ -130,9 +142,9 @@ public class EngineAuthorizationService {
         globalConfigStore,
         publicKeyProvider,
         nonceStore,
-        kafkaStreams,
         new OpenKeyTrustPolicy(),
-        new MessageSecurityPolicyRegistry());
+        new MessageSecurityPolicyRegistry(),
+        new VerificationCore(config, kafkaStreams));
   }
 
   @PostConstruct
@@ -153,7 +165,7 @@ public class EngineAuthorizationService {
    * io.taktx.serdes.JsonDeserializer} via {@link EngineSigningKeysHolder}.
    */
   private String resolvePublicKeyFromKTable(String keyId) {
-    SigningKeyDTO entry = lookupSigningKey(keyId);
+    SigningKeyDTO entry = verificationCore.resolveKey(keyId);
     if (entry == null || entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) return null;
     return entry.getPublicKeyBase64();
   }
@@ -285,95 +297,52 @@ public class EngineAuthorizationService {
    * Authorizes a `topic-meta-requested` record after the deserializer has already verified the
    * Ed25519 signature cryptographically.
    *
-   * <p>This path derives trust exclusively from the signing-key KTable and active trust policy. A
-   * request must carry a valid `X-TaktX-Signature` whose key resolves to a trusted `CLIENT`-or-
-   * higher role.
+   * <p>Delegates key resolution, revoke check, and trust-policy evaluation to {@link
+   * VerificationCore}. A request must carry a valid {@code X-TaktX-Signature} whose key resolves to
+   * a trusted {@code CLIENT}-or-higher role.
    */
   public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName(), TopicMetaDTO.class);
-    Header sigHeader = lastHeader(headers, SIG_HEADER);
-    if (sigHeader == null || sigHeader.value() == null) {
-      throw new AuthorizationTokenException(
-          "Missing required "
-              + SIG_HEADER
-              + " header on topic-meta-requested for topic "
-              + (request == null ? null : request.getTopicName()));
-    }
 
-    String keyId = extractKeyId(sigHeader);
-    SigningKeyDTO entry = lookupSigningKey(keyId);
-    if (entry == null) {
-      throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '" + keyId + "' — rejecting topic-meta-requested record");
-    }
-    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
-      throw new AuthorizationTokenException(
-          "Revoked Ed25519 keyId '" + keyId + "' — rejecting topic-meta-requested record");
-    }
-    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole(policy))) {
-      throw new AuthorizationTokenException(
-          "Signing keyId '"
-              + keyId
-              + "' is not trusted for CLIENT topic requests — rejecting topic-meta-requested record");
-    }
+    VerifiedMessageContext ctx =
+        verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
 
     log.info(
         "✅ Authorised topic-meta-requested topic={} keyId={} owner={} role={}",
         request == null ? null : request.getTopicName(),
-        keyId,
-        entry.getOwner(),
-        entry.effectiveRole());
-    return entry;
+        ctx.keyId(),
+        ctx.key().getOwner(),
+        ctx.role());
+    return ctx.key();
   }
 
   /**
    * Authorizes a {@code schedule-commands} record after the deserializer has already verified the
    * Ed25519 signature cryptographically.
    *
-   * <p>This path requires a valid {@code X-TaktX-Signature} whose signing key resolves to a trusted
-   * {@code ENGINE} role.
+   * <p>Delegates key resolution, revoke check, and trust-policy evaluation to {@link
+   * VerificationCore}. Requires a valid {@code X-TaktX-Signature} whose signing key resolves to a
+   * trusted {@code ENGINE} role.
    */
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
-    Header sigHeader = lastHeader(headers, SIG_HEADER);
-    if (sigHeader == null || sigHeader.value() == null) {
-      throw new AuthorizationTokenException(
-          "Missing required "
-              + SIG_HEADER
-              + " header on schedule-commands for scheduleKey "
-              + scheduleKey);
-    }
 
-    String keyId = extractKeyId(sigHeader);
-    SigningKeyDTO entry = lookupSigningKey(keyId);
-    if (entry == null) {
-      throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '" + keyId + "' — rejecting schedule-commands record");
-    }
-    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
-      throw new AuthorizationTokenException(
-          "Revoked Ed25519 keyId '" + keyId + "' — rejecting schedule-commands record");
-    }
-    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole(policy))) {
-      throw new AuthorizationTokenException(
-          "Signing keyId '"
-              + keyId
-              + "' is not trusted for ENGINE schedule commands — rejecting schedule-commands record");
-    }
+    VerifiedMessageContext ctx =
+        verificationCore.verify(lastHeader(headers, SIG_HEADER), requiredRole(policy));
 
     log.info(
         "✅ Authorised schedule-commands scheduleKey={} keyId={} owner={} role={} messageType={}",
         scheduleKey,
-        keyId,
-        entry.getOwner(),
-        entry.effectiveRole(),
+        ctx.keyId(),
+        ctx.key().getOwner(),
+        ctx.role(),
         scheduleMessageType(schedule));
-    return entry;
+    return ctx.key();
   }
 
   // ── JWT path ────────────────────────────────────────────────────────────────
@@ -471,9 +440,9 @@ public class EngineAuthorizationService {
   /**
    * Enforces Ed25519 authorization for worker responses and engine-internal commands.
    *
-   * <p>The deserializer has already verified the signature cryptographically. This method enforces
-   * that the referenced key still exists in the {@code taktx-signing-keys} KTable and is not
-   * revoked.
+   * <p>The deserializer has already verified the signature cryptographically. This method checks
+   * envelope-level errors first, then delegates key resolution and trust checks to {@link
+   * VerificationCore#verify(Header, KeyRole)}.
    */
   private CommandTrustMetadataDTO authorizeViaEd25519(
       Header sigHeader, ProcessInstanceTriggerEnvelope triggerEnvelope, KeyRole requiredRole) {
@@ -481,48 +450,25 @@ public class EngineAuthorizationService {
       throw new AuthorizationTokenException(triggerEnvelope.signatureError());
     }
 
-    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
-    int dot = headerValue.indexOf('.');
-    String keyId = dot >= 0 ? headerValue.substring(0, dot) : headerValue;
+    // Delegate key resolution, revoke check, and trust-policy evaluation to VerificationCore.
+    VerifiedMessageContext ctx = verificationCore.verify(sigHeader, requiredRole);
 
-    SigningKeyDTO entry = lookupSigningKey(keyId);
-    if (entry == null) {
-      throw new AuthorizationTokenException(
-          "Unknown Ed25519 keyId '"
-              + keyId
-              + "' — rejecting command "
-              + triggerEnvelope.trigger().getClass().getSimpleName());
-    }
-    if (entry.getStatus() == SigningKeyDTO.KeyStatus.REVOKED) {
-      throw new AuthorizationTokenException(
-          "Revoked Ed25519 keyId '"
-              + keyId
-              + "' — rejecting command "
-              + triggerEnvelope.trigger().getClass().getSimpleName());
-    }
+    // Check that the deserializer actually performed the cryptographic verification.
     if (!triggerEnvelope.signatureVerified()) {
       throw new AuthorizationTokenException(
           "Ed25519 header present for command "
               + triggerEnvelope.trigger().getClass().getSimpleName()
               + " but the signature was not verified by the deserializer");
     }
-    if (!keyTrustPolicy.isTrustedForRole(entry, requiredRole)) {
-      throw new AuthorizationTokenException(
-          "Signing keyId '"
-              + keyId
-              + "' is not trusted for "
-              + requiredRole
-              + " process-instance command "
-              + triggerEnvelope.trigger().getClass().getSimpleName());
-    }
-    boolean isEngine = keyTrustPolicy.isTrustedForRole(entry, KeyRole.ENGINE);
+
+    boolean isEngine = keyTrustPolicy.isTrustedForRole(ctx.key(), KeyRole.ENGINE);
     log.info(
         "✅ Authorised (Ed25519) command={} keyId={} owner={} roleRequired={} derivedRole={}",
         triggerEnvelope.trigger().getClass().getSimpleName(),
-        keyId,
-        entry.getOwner(),
+        ctx.keyId(),
+        ctx.key().getOwner(),
         requiredRole,
-        entry.effectiveRole());
+        ctx.role());
 
     return CommandTrustMetadataDTO.builder()
         .authMethod(CommandAuthMethod.ED25519)
@@ -531,9 +477,9 @@ public class EngineAuthorizationService {
                 ? CommandTrustVerificationResult.ENGINE_SIGNED
                 : CommandTrustVerificationResult.SIGNATURE_VERIFIED)
         .trusted(true)
-        .signerKeyId(keyId)
-        .signerOwner(entry.getOwner())
-        .signerAlgorithm(entry.getAlgorithm())
+        .signerKeyId(ctx.keyId())
+        .signerOwner(ctx.key().getOwner())
+        .signerAlgorithm(ctx.key().getAlgorithm())
         .build();
   }
 
@@ -570,31 +516,10 @@ public class EngineAuthorizationService {
     return globalConfigStore.get();
   }
 
-  private SigningKeyDTO lookupSigningKey(String keyId) {
-    try {
-      if (signingKeysStore == null) {
-        signingKeysStore =
-            kafkaStreams.store(
-                StoreQueryParameters.fromNameAndType(
-                    config.getPrefixed(Stores.SIGNING_KEYS.getStorename()),
-                    QueryableStoreTypes.keyValueStore()));
-      }
-      return signingKeysStore.get(keyId);
-    } catch (Exception e) {
-      log.warn("Could not read signing-keys store for keyId={}: {}", keyId, e.getMessage());
-      return null;
-    }
-  }
-
   private static Header lastHeader(Headers headers, String headerName) {
     return headers != null ? headers.lastHeader(headerName) : null;
   }
 
-  private static String extractKeyId(Header sigHeader) {
-    String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
-    int dot = headerValue.indexOf('.');
-    return dot >= 0 ? headerValue.substring(0, dot) : headerValue;
-  }
 
   private static String scheduleMessageType(MessageScheduleDTO schedule) {
     if (schedule == null || schedule.getMessage() == null) {

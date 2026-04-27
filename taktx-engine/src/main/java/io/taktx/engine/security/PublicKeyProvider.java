@@ -10,7 +10,6 @@ package io.taktx.engine.security;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.pd.Stores;
 import io.taktx.security.AuthorizationTokenException;
 import io.taktx.security.KeyTrustPolicy;
 import io.taktx.security.OpenKeyTrustPolicy;
@@ -24,9 +23,6 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 /**
  * Resolves the Platform Service RSA public key from the {@code taktx-signing-keys} KTable.
@@ -35,6 +31,9 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
  * under a custom keyId and sets that same keyId as the {@code kid} header in every JWT it issues.
  * {@link #getKey(String)} looks up the KTable by the {@code kid} extracted from the JWT header, so
  * key rotation is handled automatically without a restart.
+ *
+ * <p>KTable access is delegated to {@link VerificationCore#resolveKey(String)} to eliminate the
+ * prior duplicate store accessor. The RSA-specific trust, revoke, and algorithm checks remain here.
  *
  * <p>If the KTable does not contain a non-revoked entry for the requested keyId, {@link
  * #getKey(String)} throws {@link AuthorizationTokenException} and the JWT is rejected.
@@ -48,24 +47,24 @@ public class PublicKeyProvider implements PublicKeySource {
 
   private static final String RSA_ALGORITHM = "RSA";
 
-  private final TaktConfiguration config;
-  private final KafkaStreams kafkaStreams;
+  private final VerificationCore verificationCore;
   private final KeyTrustPolicy keyTrustPolicy;
 
-  /** Lazy-initialised KTable store — null until first lookup. */
-  private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
-
   @Inject
-  public PublicKeyProvider(
-      TaktConfiguration config, KafkaStreams kafkaStreams, KeyTrustPolicy keyTrustPolicy) {
-    this.config = config;
-    this.kafkaStreams = kafkaStreams;
+  public PublicKeyProvider(VerificationCore verificationCore, KeyTrustPolicy keyTrustPolicy) {
+    this.verificationCore = verificationCore;
     this.keyTrustPolicy = keyTrustPolicy;
   }
 
-  /** Test constructor — no CDI. */
+  /** Test constructor — no CDI; mirrors the previous (config, kafkaStreams, keyTrustPolicy) API. */
+  PublicKeyProvider(
+      TaktConfiguration config, KafkaStreams kafkaStreams, KeyTrustPolicy keyTrustPolicy) {
+    this(new VerificationCore(config, kafkaStreams, keyTrustPolicy), keyTrustPolicy);
+  }
+
+  /** Test constructor — no CDI; uses {@link OpenKeyTrustPolicy}. */
   PublicKeyProvider(TaktConfiguration config, KafkaStreams kafkaStreams) {
-    this(config, kafkaStreams, new OpenKeyTrustPolicy());
+    this(new VerificationCore(config, kafkaStreams), new OpenKeyTrustPolicy());
   }
 
   /**
@@ -73,14 +72,15 @@ public class PublicKeyProvider implements PublicKeySource {
    *
    * @param kid the key ID extracted from the JWT {@code kid} header
    * @return the resolved {@link PublicKey}
-   * @throws AuthorizationTokenException if the key is missing, revoked, or cannot be parsed
+   * @throws AuthorizationTokenException if the key is missing, revoked, untrusted, or cannot be
+   *     parsed
    */
   @Override
   public PublicKey getKey(String kid) {
     if (kid == null || kid.isBlank()) {
       throw new AuthorizationTokenException("JWT 'kid' header is missing or blank");
     }
-    SigningKeyDTO entry = lookupKeyEntry(kid);
+    SigningKeyDTO entry = verificationCore.resolveKey(kid);
     if (entry == null) {
       throw new AuthorizationTokenException("No signing key found in KTable for kid='" + kid + "'");
     }
@@ -108,22 +108,6 @@ public class PublicKeyProvider implements PublicKeySource {
   }
 
   // ── private ──────────────────────────────────────────────────────────────────
-
-  private SigningKeyDTO lookupKeyEntry(String kid) {
-    try {
-      if (signingKeysStore == null) {
-        signingKeysStore =
-            kafkaStreams.store(
-                StoreQueryParameters.fromNameAndType(
-                    config.getPrefixed(Stores.SIGNING_KEYS.getStorename()),
-                    QueryableStoreTypes.keyValueStore()));
-      }
-      return signingKeysStore.get(kid);
-    } catch (Exception e) {
-      log.debug("Could not read signing-keys store for kid={}: {}", kid, e.getMessage());
-      return null;
-    }
-  }
 
   private static PublicKey parseRsaPublicKey(String base64) throws GeneralSecurityException {
     byte[] keyBytes = Base64.getDecoder().decode(base64);

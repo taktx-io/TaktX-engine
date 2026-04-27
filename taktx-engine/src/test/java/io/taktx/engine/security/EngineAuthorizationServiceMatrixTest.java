@@ -451,7 +451,7 @@ class EngineAuthorizationServiceMatrixTest {
                     new ProcessInstanceTriggerEnvelope(
                         continueFlowElementTrigger(), true, WORKER_KEY_ID)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for ENGINE process-instance command");
+        .hasMessageContaining("not trusted for required role ENGINE");
   }
 
   @Test

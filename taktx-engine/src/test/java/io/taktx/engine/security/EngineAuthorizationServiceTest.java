@@ -265,7 +265,7 @@ class EngineAuthorizationServiceTest {
     assertThatThrownBy(
             () -> service.authorizeTopicMetaRequest(headersWithSignature(keyId), request))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for CLIENT topic requests");
+        .hasMessageContaining("not trusted for required role CLIENT");
   }
 
   @Test
@@ -320,7 +320,7 @@ class EngineAuthorizationServiceTest {
                     scheduleKey(),
                     oneTimeSchedule(startCommand("proc", -1))))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for ENGINE schedule commands");
+        .hasMessageContaining("not trusted for required role ENGINE");
   }
 
   // ── missing header ─────────────────────────────────────────────────────────
@@ -593,7 +593,7 @@ class EngineAuthorizationServiceTest {
                     headers,
                     new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("not trusted for ENGINE process-instance command");
+        .hasMessageContaining("not trusted for required role ENGINE");
   }
 
   @Test
