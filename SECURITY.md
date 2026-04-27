@@ -9,7 +9,7 @@ This document defines how to report vulnerabilities and the repository security 
 ## Related Security Documents
 
 - Implemented architecture and controls: [`docs/security.md`](docs/security.md)
-- Planned follow-up roadmap (DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
+- Planned follow-up roadmap (replay hardening, DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
 
 ## Supported Versions
 
@@ -73,6 +73,10 @@ Operationally, production deployments are expected to:
 - enable anchored trust instead of relying on community/open trust mode
 - publish countersigned signing keys for engine, workers, and platform JWT issuers
 - restrict writes to `taktx-signing-keys` with Kafka ACLs even when anchored mode is enabled
+- protect Kafka itself with TLS / SASL, quotas, and least-privilege producer ACLs
+- keep engine, worker, and token-issuer clocks synchronized
 
 Community mode remains useful for local development, but it should be treated as insecure for production.
+
+For the full trust assumptions, residual risks, and production checklist, see [`docs/security.md`](docs/security.md).
 

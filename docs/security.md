@@ -10,24 +10,28 @@ This document describes the security controls that are implemented and active in
 
 **Related security documents:**
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
-- Planned follow-up work (DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- Planned follow-up work (replay hardening, DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 
 ---
 
 ## Contents
 
 1. [Architecture overview](#architecture-overview)
-2. [Ed25519 message signing](#ed25519-message-signing)
-3. [RS256 JWT command authorization](#rs256-jwt-command-authorization)
-4. [Signing keys topic](#signing-keys-topic)
-5. [Root trust chain — anchored mode](#root-trust-chain--anchored-mode)
-6. [Configuration topic](#configuration-topic)
-7. [Trust metadata on instance updates](#trust-metadata-on-instance-updates)
-8. [Environment variable reference](#environment-variable-reference)
-9. [Key generation quick reference](#key-generation-quick-reference)
-10. [Operational runbook](#operational-runbook)
-11. [Migration notes](#migration-notes)
-12. [Future security roadmap](#future-security-roadmap)
+2. [Threat model summary](#threat-model-summary)
+3. [Ed25519 message signing](#ed25519-message-signing)
+4. [RS256 JWT command authorization](#rs256-jwt-command-authorization)
+5. [Signing keys topic](#signing-keys-topic)
+6. [Protecting the signing-keys topic](#protecting-the-signing-keys-topic)
+7. [Root trust chain — anchored mode](#root-trust-chain--anchored-mode)
+8. [Configuration topic](#configuration-topic)
+9. [Trust metadata on instance updates](#trust-metadata-on-instance-updates)
+10. [Time and clock assumptions](#time-and-clock-assumptions)
+11. [Environment variable reference](#environment-variable-reference)
+12. [Key generation quick reference](#key-generation-quick-reference)
+13. [Operational runbook](#operational-runbook)
+14. [Production readiness checklist](#production-readiness-checklist)
+15. [Migration notes](#migration-notes)
+16. [Future security roadmap](#future-security-roadmap)
 
 ---
 
@@ -77,6 +81,29 @@ engineRequiresAuthorization = false
 ```
 
 BPMN processing runs normally on a fresh deployment with no configuration record. Both mechanisms must be explicitly enabled by publishing a `GlobalConfigurationDTO`.
+
+## Threat model summary
+
+TaktX currently protects against:
+
+- message tampering in signed flows via Ed25519 verification
+- unauthorized entry commands via RS256 JWT validation
+- key forgery in anchored mode via platform-root countersignatures
+- startup key-discovery races via `SigningKeysStore` initial load to end-of-topic before signed triggers are accepted
+
+TaktX currently assumes:
+
+- the Kafka cluster is secured with TLS, ACLs, quotas, and operational monitoring
+- the platform root RSA private key is kept offline / out of application runtime
+- engine, workers, and token issuers have reasonably synchronized clocks
+- downstream handlers are independently idempotent where duplicate signed non-entry messages would be harmful
+
+Residual risks and explicit non-goals in the current implementation:
+
+- community mode is not production-grade security; any actor able to write the relevant topics can impersonate trusted roles
+- anchored mode validates key material and role claims, but it does **not** replace broker authorization; a principal that can write security-critical topics can still cause denial-of-service, churn, or disruptive state changes
+- replay protection is intentionally narrow today and does **not** provide blanket duplicate suppression across all signed/control-plane topics
+- a compromised platform root key defeats anchored trust entirely
 
 ---
 
@@ -188,6 +215,10 @@ It is intentionally **not** applied to the following paths at this stage:
 
 This means the durable replay store is an `auditId`-based control for externally authorized entry commands, not a blanket duplicate-message filter across all topics.
 
+This narrow scope is intentional in the current release, but it is also a real residual risk. A replayed signed non-entry or control-plane message can still create duplicate work, extra load, or repeated side effects if the targeted processing path is not independently idempotent. In particular, worker responses, schedule commands, and other signed internal messages should not be treated as globally replay-safe merely because they are signed or usually converge under normal processing.
+
+Planned follow-up work will extend lightweight replay / dedup coverage to selected signed non-entry and control-plane paths. The current direction is to use a stable message identifier or a derived hash (for example from signature + payload) with a short-lived dedup window, rather than attempting global exactly-once semantics across every topic. That work is tracked in [`docs/security-future-development-plan.md`](security-future-development-plan.md).
+
 ### Key lookup
 
 The JWT `kid` header is used as a lookup key in the `taktx-signing-keys` KTable to retrieve the RSA public key. The engine does not maintain a static configured `signingKeyId`; all RSA keys are looked up dynamically from Kafka state.
@@ -262,6 +293,32 @@ Publish a new record with the same `keyId` and `status=REVOKED`. The engine and 
 
 When `TaktXClient.start()` is called, a `SigningKeysStore` is initialised that reads the entire `taktx-signing-keys` topic to end-of-topic before accepting signed trigger records. This guarantees the engine key is present before the first trigger arrives. A missing key ID after that point is always a security violation, never a race condition.
 
+## Protecting the signing-keys topic
+
+`<tenantId>.<namespace>.taktx-signing-keys` is a security-critical topic. It is the live trust registry for both Ed25519 message signing and RS256 JWT key lookup.
+
+### Required operator controls
+
+- Restrict write ACLs with least privilege.
+- Allow writes only from identities that are expected to publish, rotate, or revoke keys.
+- If workers self-register keys in production, scope their permissions as tightly as the Kafka platform allows.
+- If a central CI / platform publisher is used instead, remove worker write access entirely.
+- Enable broker-side audit logging for ACL changes and produce activity on this topic.
+
+### Recommended monitoring
+
+Alert on:
+
+- new `PLATFORM` keys
+- revocations
+- unusual key churn / frequent republishes
+- unexpected tombstones
+- repeated failures to resolve expected key IDs
+
+### Why Kafka ACLs still matter in anchored mode
+
+Anchored mode prevents an attacker without the platform root key from introducing arbitrary **new trusted key material**, but it does not make the broker write path irrelevant. A principal that can write `taktx-signing-keys` can still create operationally disruptive records, churn the registry, or otherwise interfere with trust distribution. Treat the topic as a first-class security boundary, not as a passive metadata stream.
+
 ---
 
 ## Root trust chain — anchored mode
@@ -271,6 +328,8 @@ When `TaktXClient.start()` is called, a `SigningKeysStore` is initialised that r
 In **community mode** (default), any non-revoked key whose declared role is sufficient is trusted. The security perimeter is entirely Kafka ACLs. This mode is intended for local/community deployments and should be treated as insecure for production.
 
 In **anchored mode**, every key entry in `taktx-signing-keys` — regardless of role — must carry a `registrationSignature` that is an RSA/SHA-256 (PKCS#1 v1.5) signature produced by the platform root private key. A key without a valid countersignature is rejected at the trust gate even if its declared role is correct. Kafka ACLs must still restrict who may write `taktx-signing-keys`; anchored mode validates the contents of keys, but it does not replace broker authorization.
+
+If Kafka write permissions are compromised, anchored mode still helps by rejecting unsigned / uncountersigned key material, but it does **not** prevent all broker-level abuse. A write-capable attacker can still inject noise, churn, or denial-of-service style updates against security-critical topics. Anchored mode should therefore be treated as a cryptographic trust layer on top of Kafka security, not as a substitute for it.
 
 Anchored mode is activated automatically when `TAKTX_PLATFORM_PUBLIC_KEY` is set on the engine.
 
@@ -496,6 +555,22 @@ The `origin` field makes it possible to show in a console/audit log who original
 
 > The legacy accessor `commandTrustMetadata` resolves to `currentTrustMetadata` for compatibility. New consumers should prefer the explicit `current`/`origin` fields.
 
+## Time and clock assumptions
+
+Time is part of the effective trust model even though TaktX does not currently expose a separate runtime clock-security configuration surface.
+
+- JWT `exp` validation uses the local system time of the validating node.
+- Replay retention windows are also evaluated against local engine time.
+- No explicit clock-skew leeway is currently documented or configured in the engine.
+
+Operational guidance:
+
+- Synchronize engine nodes, workers, token issuers, and supporting platform systems with NTP or an equivalent time source.
+- Keep clock skew small; as an operational guideline, target well below 30 seconds.
+- Investigate any negative-latency or token-expiry anomalies as possible time-drift symptoms.
+
+If clocks drift significantly, valid JWTs may be rejected early, expired JWTs may be accepted longer than intended, and replay-retention behavior may become inconsistent across nodes.
+
 ---
 
 ## Environment variable reference
@@ -608,6 +683,21 @@ scripts/generate_trust_anchor.sh --show-pubkey
 
 ## Operational runbook
 
+### Ingress protection (Kafka layer)
+
+TaktX exposes no custom REST API, but Kafka remains an ingress surface and should be protected accordingly.
+
+TaktX relies on Kafka / platform controls for:
+
+- producer ACL enforcement
+- TLS / SASL authentication
+- producer quotas and throttling
+- connection limits
+- maximum request / message size limits
+- broker-side monitoring and alerting for abusive producers
+
+Operators should configure per-client quotas and throttling policies appropriate to each producer class (engine, worker, platform / ingester, ops tooling). This is especially important for security-critical topics such as `taktx-signing-keys`, `process-instance`, `schedule-commands`, and `topic-meta-requested`.
+
 ### Enable signing and authorization on a running cluster
 
 ```java
@@ -653,12 +743,44 @@ Or publish a `SigningKeyDTO` with `status=REVOKED` directly.
 4. The engine picks up the change within the refresh interval and retires the old key automatically.
 5. No restart required.
 
+### Runtime key rotation propagation behaviour
+
+The startup guarantee from `SigningKeysStore` applies at client start only: the client reads `taktx-signing-keys` to end-of-topic before it begins accepting signed triggers.
+
+After startup, long-running clients learn about key changes via background polling (approximately every second by default). During that steady-state rotation window:
+
+- a message signed with a brand-new key may arrive before a consumer has observed the corresponding key record
+- current behavior is **fail closed**: an unknown or revoked key is rejected as a security violation
+- the security layer does **not** buffer such records for later retry
+
+Operational guidance:
+
+1. Publish the new key first.
+2. Allow at least one poll interval plus safety margin for consumers to observe it.
+3. Only then shift traffic to the new signing key.
+4. Keep the old key valid during the overlap window when possible.
+
 ### Rotate the platform root key
 
 1. Run `generate_trust_anchor.sh --init` (confirm the overwrite prompt).
 2. Re-sign **all** engine and worker keys with the new platform private key.
 3. Update `TAKTX_PLATFORM_PUBLIC_KEY` and all `*_REGISTRATION_SIGNATURE` environment variables.
 4. Rolling-restart the engine and all workers.
+
+## Production readiness checklist
+
+- [ ] Anchored mode enabled (`TAKTX_PLATFORM_PUBLIC_KEY` set)
+- [ ] Platform root private key stored offline and outside runtime containers
+- [ ] Least-privilege Kafka ACLs enforced for all security-critical topics
+- [ ] `taktx-signing-keys` writes restricted and audited
+- [ ] Kafka TLS / SASL configured for engine, workers, and platform publishers
+- [ ] `signingEnabled=true` for workloads that require signed message flows
+- [ ] `engineRequiresAuthorization=true` for externally authorized entry commands
+- [ ] `replayProtectionMode=STRICT` for compliant JWT issuers, or `COMPAT` only as a staged rollout step
+- [ ] Engine / workers / token issuer clocks synchronized with NTP or equivalent
+- [ ] Alerts configured for key revocation, platform-key changes, and abnormal key churn
+- [ ] Producer quotas, throttling, and max request-size limits configured in Kafka
+- [ ] Key-rotation overlap procedure documented and tested
 
 ---
 
@@ -704,5 +826,5 @@ Planned future work is tracked in:
 
 - [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 
-That roadmap covers DLQ architecture for security rejections, structured telemetry, and publication of a formal threat model.
+That roadmap covers replay hardening, DLQ architecture for security rejections, structured telemetry, and publication of a formal threat model.
 

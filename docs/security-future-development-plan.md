@@ -22,15 +22,63 @@ Define the next security development slice after completion of the hardening bas
 
 This roadmap covers:
 
-1. DLQ architecture for security rejections
-2. Structured security telemetry (logs and metrics)
-3. Formal threat model publication
+1. Replay hardening beyond JWT entry commands
+2. DLQ architecture for security rejections
+3. Structured security telemetry (logs and metrics)
+4. Formal threat model publication
 
-This roadmap does not re-open already completed baseline controls (signing, JWT authorization, replay protection, and anchored trust).
+This roadmap builds on the completed baseline controls (signing, JWT authorization, replay protection, and anchored trust) and tracks the next hardening steps needed for stronger production deployments.
 
 ---
 
-## Workstream 1 — Security DLQ architecture
+## Workstream 1 — Replay hardening for signed non-entry messages
+
+**Priority:** High
+
+### Problem statement
+
+Current durable replay protection is intentionally scoped to JWT-bearing entry commands via `auditId`. That leaves signed non-entry and control-plane paths dependent on message semantics and downstream idempotency rather than on a dedicated duplicate-detection layer.
+
+This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed worker responses, schedule commands, or internal continuation traffic may still create duplicate work, load spikes, or repeated side effects.
+
+### Design goals
+
+- Preserve the current fail-closed trust model for signed messages
+- Add lightweight duplicate detection without attempting global exactly-once semantics
+- Keep retention windows short and operationally predictable
+- Avoid unbounded state growth in replay / dedup stores
+- Roll out by topic class so high-risk paths can be hardened first
+
+### Proposed design direction
+
+- Introduce a stable dedup identity for signed non-entry messages, likely via one of:
+  - explicit `messageId` on all signed messages
+  - derived hash of signature + payload bytes
+- Apply short-lived dedup windows to selected high-risk topics / DTO classes first:
+  - worker responses
+  - `schedule-commands`
+  - `topic-meta-requested`
+  - engine continuations where duplicate load is operationally relevant
+- Keep dedup state partition-local where that matches topic routing semantics
+- Document clearly that this is duplicate suppression, not a general transactional guarantee
+
+### Acceptance criteria
+
+- Duplicate signed messages on the selected protected paths are rejected within the configured dedup window
+- State size remains bounded and configurable
+- Rotation / restart behavior is documented and tested
+- `docs/security.md` is updated to describe protected and unprotected paths precisely
+
+### Open decisions
+
+- Canonical dedup key: explicit `messageId` versus derived hash
+- Which topics are hardened in phase 1 versus later phases
+- Retention defaults per topic class
+- Whether schedule / control-plane dedup should feed DLQ or fail closed with log-only handling first
+
+---
+
+## Workstream 2 — Security DLQ architecture
 
 **Priority:** High
 
@@ -78,7 +126,7 @@ Current hardened paths reject unauthorized or malformed records, but there is no
 
 ---
 
-## Workstream 2 — Structured security telemetry
+## Workstream 3 — Structured security telemetry
 
 **Priority:** Medium
 
@@ -107,7 +155,7 @@ Make security failures measurable and queryable without requiring log scraping o
 
 ---
 
-## Workstream 3 — Threat model publication
+## Workstream 4 — Threat model publication
 
 **Priority:** Medium
 
@@ -137,24 +185,28 @@ Publish a concise threat model that aligns with implemented controls and deploym
 
 | Milestone | Target | Outcome |
 |---|---|---|
-| M1 - DLQ decision record | Next development cycle | Final DLQ topology, envelope, and retention decisions |
-| M2 - DLQ implementation | Following cycle | Rejections routed to DLQ with tests and runbook |
-| M3 - Telemetry completion | Following cycle | Structured logs + metrics exported and validated |
-| M4 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance |
+| M1 - Replay hardening decision record | Next development cycle | Final dedup identity and phase-1 protected topics selected |
+| M2 - Replay hardening implementation | Following cycle | Selected signed paths protected with tests and operational guidance |
+| M3 - DLQ decision record | Following cycle | Final DLQ topology, envelope, and retention decisions |
+| M4 - DLQ + telemetry completion | Following cycle | Rejections routed to DLQ and exported with structured logs / metrics |
+| M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance |
 
 ---
 
 ## Recommended implementation order
 
-1. Finalize DLQ architecture decisions (M1)
-2. Implement DLQ publishing in rejection paths (M2)
-3. Add telemetry for both rejections and DLQ publishing health (M3)
-4. Publish threat model using the now-stable observability + recovery model (M4)
+1. Finalize replay-hardening decisions and phase-1 scope (M1)
+2. Implement replay hardening on selected signed paths (M2)
+3. Finalize DLQ architecture decisions (M3)
+4. Implement DLQ publishing and telemetry together so reason codes and observability stay aligned (M4)
+5. Publish threat model using the now-stable replay / observability / recovery model (M5)
 
 ---
 
 ## Validation strategy
 
+- Unit tests for dedup identity generation and replay-window behavior
+- Integration tests for duplicate signed message rejection on each phase-1 protected topic
 - Unit tests for DLQ envelope generation and reason-code mapping
 - Integration tests for rejected message -> DLQ publication on each protected topic
 - Negative tests for DLQ publishing failure visibility
@@ -168,5 +220,6 @@ Publish a concise threat model that aligns with implemented controls and deploym
 
 - Selected roadmap-first approach before implementing DLQ code
 - Prioritized DLQ ahead of observability metrics because telemetry semantics depend on final rejection handling model
+- Expanded the roadmap to explicitly include replay hardening beyond JWT-bearing entry commands
 
 

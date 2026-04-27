@@ -122,7 +122,7 @@ Coverage badges are automatically generated from JaCoCo test reports and include
 
 TaktX Engine can be configured using application properties or environment variables:
 
-> **Security note:** the default/community trust mode is intended for local development. Production deployments should enable anchored trust (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing identities, and registration signatures) and restrict writes to `taktx-signing-keys` with Kafka ACLs.
+> **Security note:** the default/community trust mode is intended for local development. Production deployments should enable anchored trust (`TAKTX_PLATFORM_PUBLIC_KEY`, stable signing identities, and registration signatures), restrict writes to `taktx-signing-keys` with Kafka ACLs, and protect Kafka itself with TLS / SASL, quotas, and least-privilege producer access. See [`docs/security.md`](./docs/security.md) for the threat assumptions and production checklist.
 
 ```properties
 # Core Engine Configuration
