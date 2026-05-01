@@ -57,6 +57,28 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
   - Added focused unit test `taktx-engine/src/test/java/io/taktx/engine/dlq/DlqPublisherTest.java`.
   - Verification: `:taktx-engine:compileJava` and `:taktx-shared:test --tests io.taktx.TopicsTest` are green.
   - Known baseline issue: `:taktx-engine:compileTestJava` fails in pre-existing unrelated security tests (`ProcessInstanceTriggerEnvelope` constructor mismatches), which currently blocks execution of the new engine unit test in CI/local test task.
+- 2026-05-01 (checkpoint 7):
+  - Continued DLQ-004 cleanup after unified-topic migration:
+    - removed dead `setupDlq(...)` scaffolding and legacy `DLQ_KEY_SERDE` from `taktx-engine/src/main/java/io/taktx/engine/generic/TopologyProducer.java`.
+    - switched all three DLQ branches to route by `value instanceof DlqEntryDTO`.
+    - updated `taktx-engine/src/main/java/io/taktx/engine/pi/Forwarder.java` to emit legacy DLQ values with `null` key (no `DlqEntryKey`).
+    - deleted unused `taktx-engine/src/main/java/io/taktx/engine/pd/DlqReplayProcessor.java`.
+  - Validation now includes test compilation and DLQ unit test execution:
+    - `:taktx-engine:compileJava`
+    - `:taktx-engine:compileTestJava`
+    - `:taktx-engine:test --tests io.taktx.engine.dlq.DlqPublisherTest`
+    - `:taktx-shared:test --tests io.taktx.TopicsTest`
+    - all successful.
+  - Previous baseline blocker (`ProcessInstanceTriggerEnvelope` test-constructor mismatches) is resolved.
+- 2026-05-01 (checkpoint 8):
+  - Removed fully-unused legacy class `taktx-shared/src/main/java/io/taktx/dto/DlqEntryKey.java`.
+  - Re-validated cleanup path with:
+    - `:taktx-shared:compileJava`
+    - `:taktx-engine:compileJava`
+    - `:taktx-engine:compileTestJava`
+    - `:taktx-engine:test --tests io.taktx.engine.dlq.DlqPublisherTest`
+    - all successful.
+  - DLQ-004 remains in progress because `DlqEntryDTO` subclasses are still used as legacy runtime intermediates before full direct-`DlqEnvelope` capture in processors.
 
 This backlog is structured for sprint/Jira tracking and follows the agreed constraints:
 - append-only DLQ coverage for external execution ingress only
@@ -82,7 +104,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 |---|---|---|---|---|---|
 | DLQ-001 | P0 | Done | Define namespace-scoped DLQ/replay/replay-results topics (`dlq`, `dlq.replay`, `dlq.replay-results`) with DELETE cleanup in `Topics`; remove legacy per-surface constants and unused DLQ stores. | - | High |
 | DLQ-002 | P0 | Done | Introduce `DlqEnvelope` + metadata (lineage, source identity, severity, schema, captureStage) in `taktx-shared`. | DLQ-001 | Medium |
-| DLQ-003 | P0 | In Progress | Implement `DlqPublisher` and wire unified `dlq` sink into topology; replace legacy `setupDlq` stub and `DlqEntryKey`/`DlqEntryDTO` branch paths. | DLQ-001, DLQ-002 | High |
+| DLQ-003 | P0 | Done | Implement `DlqPublisher` and wire unified `dlq` sink into topology; replace legacy `setupDlq` stub and `DlqEntryKey`/`DlqEntryDTO` branch paths. | DLQ-001, DLQ-002 | High |
 | DLQ-004 | P0 | In Progress | Remove legacy `DlqEntryDTO` runtime path and fix remaining compile blockers in `ProcessInstanceProcessor`. | DLQ-003 | Medium |
 
 ### Acceptance Criteria (E1)

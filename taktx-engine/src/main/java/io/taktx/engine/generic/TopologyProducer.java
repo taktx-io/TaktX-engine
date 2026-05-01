@@ -17,7 +17,6 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
-import io.taktx.dto.DlqEntryKey;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
@@ -191,7 +190,6 @@ public class TopologyProducer {
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
       new ObjectMapperSerde<>(VariableKeyDTO.class);
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
-  public static final Serde<DlqEntryKey> DLQ_KEY_SERDE = new ObjectMapperSerde<>(DlqEntryKey.class);
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
@@ -222,8 +220,6 @@ public class TopologyProducer {
   @Produces
   public Topology buildTopology() {
     StreamsBuilder builder = new StreamsBuilder();
-
-    setupDlq(builder);
 
     setupNewDefinitionStream(builder);
 
@@ -322,11 +318,6 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(
                                 Topics.XML_BY_DMN_DEFINITION_ID.getTopicName()),
                             Produced.with(DMN_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))));
-  }
-
-  private void setupDlq(StreamsBuilder builder) {
-    // Unified namespace-scoped DLQ topics are sink targets in branch wiring.
-    // Replay/replay-results stream processing is implemented under DLQ-010.
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
@@ -450,11 +441,11 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(Topics.SIGNAL_TOPIC.getTopicName()),
                             Produced.with(Serdes.String(), SIGNAL_SERDE))))
         .branch(
-            (key, value) -> key instanceof DlqEntryKey,
+            (_, value) -> value instanceof DlqEntryDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
-                            (key, value) -> {
+                            (_, value) -> {
                               DlqEnvelope envelope =
                                   dlqPublisher.toEnvelope(
                                       (DlqEntryDTO) value, clock.millis(), engineInstanceId());
@@ -624,11 +615,11 @@ public class TopologyProducer {
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))))
         .branch(
-            (key, value) -> key instanceof DlqEntryKey,
+            (_, value) -> value instanceof DlqEntryDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
-                            (key, value) -> {
+                            (_, value) -> {
                               DlqEnvelope envelope =
                                   dlqPublisher.toEnvelope(
                                       (DlqEntryDTO) value, clock.millis(), engineInstanceId());
@@ -692,11 +683,11 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
         .branch(
-            (key, value) -> key instanceof DlqEntryKey,
+            (_, value) -> value instanceof DlqEntryDTO,
             Branched.withConsumer(
                 ks ->
                     ks.map(
-                            (key, value) -> {
+                            (_, value) -> {
                               DlqEnvelope envelope =
                                   dlqPublisher.toEnvelope(
                                       (DlqEntryDTO) value, clock.millis(), engineInstanceId());

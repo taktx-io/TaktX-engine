@@ -15,7 +15,6 @@ import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
 import io.taktx.dto.DlqEntryDTO;
-import io.taktx.dto.DlqEntryKey;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
@@ -112,7 +111,7 @@ public class Forwarder {
       InstanceResult instanceResult, ProcessorContext<Object, Object> context) {
     Queue<DlqEntryDTO> entries = instanceResult.getDlqEntries();
     while (!entries.isEmpty()) {
-      context.forward(new Record<>(new DlqEntryKey(), entries.poll(), clock.millis()));
+      context.forward(new Record<>(null, entries.poll(), clock.millis()));
     }
   }
 
