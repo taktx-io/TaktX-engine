@@ -8,33 +8,16 @@
 
 package io.taktx.engine.pd;
 
-import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.DlqEntryKey;
-import io.taktx.dto.ParsedDefinitionsDTO;
-import io.taktx.dto.ProcessDefinitionActivationDTO;
-import io.taktx.dto.ProcessDefinitionDTO;
-import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.ProcessDefinitionStateEnum;
-import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.feel.FeelExpressionHandler;
-import io.taktx.engine.pi.DefinitionsCache;
-import io.taktx.xml.BpmnParser;
-import java.time.Clock;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 @Slf4j
-public class DlqReplayProcessor
-    implements Processor<DlqEntryKey, DlqEntryDTO, Object, Object> {
+public class DlqReplayProcessor implements Processor<DlqEntryKey, DlqEntryDTO, Object, Object> {
 
   private final TaktConfiguration taktConfiguration;
   private ProcessorContext<Object, Object> context;
@@ -49,7 +32,5 @@ public class DlqReplayProcessor
   }
 
   @Override
-  public void process(Record<DlqEntryKey, DlqEntryDTO> dlqRecord) {
-  }
-
+  public void process(Record<DlqEntryKey, DlqEntryDTO> dlqRecord) {}
 }

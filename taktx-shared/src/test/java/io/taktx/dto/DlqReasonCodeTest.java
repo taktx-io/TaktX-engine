@@ -30,4 +30,3 @@ class DlqReasonCodeTest {
     assertThat(DlqReasonCode.UNKNOWN_REJECTION_REASON.getSeverity()).isEqualTo(DlqSeverity.LOW);
   }
 }
-

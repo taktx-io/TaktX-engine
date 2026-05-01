@@ -11,4 +11,3 @@ public enum ReplayValidationPolicy {
   STRICT,
   OPERATOR_OVERRIDE
 }
-

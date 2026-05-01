@@ -99,9 +99,8 @@ public class Forwarder {
     forwardNewStartCommands(context, instanceResult, processInstance, originTrustMetadata);
     forwardContinuations(context, instanceResult, originTrustMetadata);
     forwardCancelSchedules(context, instanceResult);
-    forwardScheduledEvents(context, instanceResult, processInstance, originTrustMetadata);
-    forwardScheduledExternalTaskTriggerTimeouts(
-        context, instanceResult, processInstance, originTrustMetadata);
+    forwardScheduledEvents(context, instanceResult, processInstance);
+    forwardScheduledExternalTaskTriggerTimeouts(context, instanceResult, processInstance);
     forwardTerminateCommands(context, instanceResult, originTrustMetadata);
     forwardMessageSubscriptionCommands(context, instanceResult, processInstance);
     forwardEventSignalTriggers(context, instanceResult, originTrustMetadata);
@@ -109,12 +108,12 @@ public class Forwarder {
     forwardSignalSubscriptions(context, instanceResult, processInstance);
   }
 
-  private void forwardToDeadLetterQueue(InstanceResult instanceResult, ProcessorContext<Object, Object> context) {
-    Queue<DlqEntryDTO> entries =
-        instanceResult.getDlqEntries();
-      while (!entries.isEmpty()) {
-        context.forward(new Record<>(new DlqEntryKey(), entries.poll(), clock.millis()));
-      }
+  private void forwardToDeadLetterQueue(
+      InstanceResult instanceResult, ProcessorContext<Object, Object> context) {
+    Queue<DlqEntryDTO> entries = instanceResult.getDlqEntries();
+    while (!entries.isEmpty()) {
+      context.forward(new Record<>(new DlqEntryKey(), entries.poll(), clock.millis()));
+    }
   }
 
   private void forwardSignalSubscriptions(
@@ -204,8 +203,7 @@ public class Forwarder {
   private void forwardScheduledEvents(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstance processInstance,
-      CommandTrustMetadataDTO originTrustMetadata) {
+      ProcessInstance processInstance) {
     Queue<ScheduledEventInfo> scheduledEventInfos = instanceResult.getScheduledEventInfos();
     while (!scheduledEventInfos.isEmpty()) {
       ScheduledEventInfo info = scheduledEventInfos.poll();
@@ -246,8 +244,7 @@ public class Forwarder {
   private void forwardScheduledExternalTaskTriggerTimeouts(
       ProcessorContext<Object, Object> context,
       InstanceResult instanceResult,
-      ProcessInstance processInstance,
-      CommandTrustMetadataDTO originTrustMetadata) {
+      ProcessInstance processInstance) {
     Queue<ScheduledExternalTaskTriggerTimeoutInfo> scheduledExternalTaskTriggerTimeouts =
         instanceResult.getScheduledExternalTaskTriggerTimeouts();
     while (!scheduledExternalTaskTriggerTimeouts.isEmpty()) {

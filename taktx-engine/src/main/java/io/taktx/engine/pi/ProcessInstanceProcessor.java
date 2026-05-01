@@ -140,7 +140,7 @@ public class ProcessInstanceProcessor
     }
 
     if (trigger == null) {
-      handleUnDecodedTrigger(triggerRecord.key(), triggerRecord.headers(), triggerEnvelope, currentTrustMetadata);
+      handleUnDecodedTrigger(triggerRecord.key(), triggerRecord.headers(), triggerEnvelope);
       return;
     }
 
@@ -217,8 +217,8 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void handleUnDecodedTrigger(UUID processInstanceId, Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope,
-      CommandTrustMetadataDTO currentTrustMetadata) {
+  private void handleUnDecodedTrigger(
+      UUID processInstanceId, Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
@@ -230,8 +230,11 @@ public class ProcessInstanceProcessor
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
       InstanceResult instanceResult = InstanceResult.empty();
-      Map<String, byte[]> headersMap = Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
-      DlqEntryDTO dlqEntry = new ProcessInstanceDlqEntryDTO(processInstanceId, triggerEnvelope.trigger(), headersMap, triggerEnvelope.data());
+      Map<String, byte[]> headersMap =
+          Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
+      DlqEntryDTO dlqEntry =
+          new ProcessInstanceDlqEntryDTO(
+              processInstanceId, triggerEnvelope.trigger(), headersMap, triggerEnvelope.data());
       instanceResult.addDlqEntry(dlqEntry);
       forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
     }
@@ -588,10 +591,7 @@ public class ProcessInstanceProcessor
                 }));
         DlqEntryDTO dlqEntry =
             new ProcessInstanceDlqEntryDTO(
-                processInstance.getProcessInstanceId(),
-                null,
-                Map.of(),
-                new byte[0]);
+                processInstance.getProcessInstanceId(), null, Map.of(), new byte[0]);
         processInstanceProcessingContext.getInstanceResult().addDlqEntry(dlqEntry);
         // Don't abort - leave process in incident state for potential resolution
       } else if (eventSignal instanceof EscalationEventSignal escalationEventSignal) {

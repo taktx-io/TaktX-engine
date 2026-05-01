@@ -171,7 +171,8 @@ class EngineAuthorizationServiceMatrixTest {
   }
 
   private ProcessInstanceTriggerEnvelope clientNonEntryEnvelope(boolean sigVerified, String keyId) {
-    return new ProcessInstanceTriggerEnvelope(new byte[0], externalTaskResponseTrigger(), sigVerified, keyId);
+    return new ProcessInstanceTriggerEnvelope(
+        new byte[0], externalTaskResponseTrigger(), sigVerified, keyId);
   }
 
   private ContinueFlowElementTriggerDTO continueFlowElementTrigger() {
@@ -273,7 +274,8 @@ class EngineAuthorizationServiceMatrixTest {
     EngineAuthorizationService svc = service(false, false);
     assertThat(
             svc.authorize(
-                noHeaders(), new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
+                noHeaders(),
+                new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
         .isNull();
   }
 
@@ -317,7 +319,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThatThrownBy(
             () ->
                 svc.authorize(
-                    noHeaders(), new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -448,8 +451,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], 
-                        continueFlowElementTrigger(), true, WORKER_KEY_ID)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], continueFlowElementTrigger(), true, WORKER_KEY_ID)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for required role ENGINE");
   }
@@ -461,7 +464,8 @@ class EngineAuthorizationServiceMatrixTest {
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(ENGINE_KEY_ID),
-            new ProcessInstanceTriggerEnvelope(new byte[0], continueFlowElementTrigger(), true, ENGINE_KEY_ID));
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], continueFlowElementTrigger(), true, ENGINE_KEY_ID));
 
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
     assertThat(result.getVerificationResult())
@@ -480,7 +484,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThatThrownBy(
             () ->
                 svc.authorize(
-                    noHeaders(), new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Entry command");
   }
@@ -514,7 +519,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, WORKER_KEY_ID)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], startCommand(), true, WORKER_KEY_ID)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("JWT");
   }
@@ -528,7 +534,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThatThrownBy(
             () ->
                 svc.authorize(
-                    noHeaders(), new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -539,7 +546,8 @@ class EngineAuthorizationServiceMatrixTest {
     assertThatThrownBy(
             () ->
                 svc.authorize(
-                    noHeaders(), new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
+                    noHeaders(),
+                    new ProcessInstanceTriggerEnvelope(new byte[0], abortTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Entry command");
   }
@@ -608,7 +616,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand(), true, WORKER_KEY_ID)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], startCommand(), true, WORKER_KEY_ID)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("JWT");
   }
@@ -634,8 +643,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(revokedKeyId),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], 
-                        continueFlowElementTrigger(), true, revokedKeyId)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], continueFlowElementTrigger(), true, revokedKeyId)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Revoked");
   }
@@ -650,7 +659,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     sigHeaders(WORKER_KEY_ID),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], 
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0],
                         continueFlowElementTrigger(),
                         false,
                         WORKER_KEY_ID,
@@ -670,7 +680,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     noHeaders(),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), false, null)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], setVariableTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("X-TaktX-Signature");
   }
@@ -686,7 +697,8 @@ class EngineAuthorizationServiceMatrixTest {
             () ->
                 svc.authorize(
                     noHeaders(),
-                    new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), false, null)))
+                    new ProcessInstanceTriggerEnvelope(
+                        new byte[0], setVariableTrigger(), false, null)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("Entry command");
   }
@@ -701,7 +713,8 @@ class EngineAuthorizationServiceMatrixTest {
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigHeaders(ENGINE_KEY_ID),
-            new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), true, ENGINE_KEY_ID));
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], setVariableTrigger(), true, ENGINE_KEY_ID));
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -720,7 +733,8 @@ class EngineAuthorizationServiceMatrixTest {
     CommandTrustMetadataDTO result =
         svc.authorize(
             sigAndJwtHeaders(WORKER_KEY_ID, jwt),
-            new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), true, WORKER_KEY_ID));
+            new ProcessInstanceTriggerEnvelope(
+                new byte[0], setVariableTrigger(), true, WORKER_KEY_ID));
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.JWT_AND_ED25519);
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);

@@ -40,7 +40,8 @@ class DlqPublisherTest {
     assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR);
     assertThat(envelope.getSeverity()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR.getSeverity());
     assertThat(envelope.getCaptureStage().name()).isEqualTo("PROCESSOR");
-    assertThat(envelope.getHeaders()).containsEntry("X-Test", Base64.getEncoder().encodeToString(authHeader));
+    assertThat(envelope.getHeaders())
+        .containsEntry("X-Test", Base64.getEncoder().encodeToString(authHeader));
     assertThat(envelope.getValueBytes()).containsExactly(payload);
     assertThat(envelope.getSourceMessageHash()).startsWith("sha256:");
     assertThat(dlqPublisher.recordKey(envelope)).isEqualTo("process-instance");
@@ -49,9 +50,7 @@ class DlqPublisherTest {
   @Test
   void toEnvelope_mapsProcessDefinitionEntryToDefinitionsTopic() {
     ProcessDefinitionDlqEntryDTO entry =
-        new ProcessDefinitionDlqEntryDTO(
-            new ProcessDefinitionKey("demo-process", 3),
-            null);
+        new ProcessDefinitionDlqEntryDTO(new ProcessDefinitionKey("demo-process", 3), null);
 
     DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_100_000L, "engine-b");
 

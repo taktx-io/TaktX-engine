@@ -624,19 +624,19 @@ public class TopologyProducer {
                                 Topics.MESSAGE_EVENT_TOPIC.getTopicName()),
                             Produced.with(MESSAGE_EVENT_KEY_SERDE, MESSAGE_EVENT_SERDE))))
         .branch(
-          (key, value) -> key instanceof DlqEntryKey,
-          Branched.withConsumer(
-            ks ->
-                ks.map(
-                        (key, value) -> {
-                          DlqEnvelope envelope =
-                              dlqPublisher.toEnvelope(
-                                  (DlqEntryDTO) value, clock.millis(), engineInstanceId());
-                          return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
-                        })
-                    .to(
-                        taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-                        Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
+            (key, value) -> key instanceof DlqEntryKey,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private static boolean isReplayProtectedEntryCommand(ProcessInstanceTriggerEnvelope envelope) {
@@ -692,19 +692,19 @@ public class TopologyProducer {
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
         .branch(
-        (key, value) -> key instanceof DlqEntryKey,
-        Branched.withConsumer(
-            ks ->
-                ks.map(
-                        (key, value) -> {
-                          DlqEnvelope envelope =
-                              dlqPublisher.toEnvelope(
-                                  (DlqEntryDTO) value, clock.millis(), engineInstanceId());
-                          return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
-                        })
-                    .to(
-                        taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-                        Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
+            (key, value) -> key instanceof DlqEntryKey,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private void setupScheduleCommandStream(StreamsBuilder builder) {

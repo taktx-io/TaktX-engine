@@ -11,11 +11,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import io.taktx.dto.ParsedDefinitionsDTO;
-import io.taktx.dto.ProcessDefinitionActivationDTO;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
-import io.taktx.dto.XmlDefinitionsDTO;
 
 public class DlqEntryTypeIdResolver extends TypeIdResolverBase {
 

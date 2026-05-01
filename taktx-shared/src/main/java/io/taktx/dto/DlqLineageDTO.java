@@ -25,4 +25,3 @@ public class DlqLineageDTO {
   private String sourceSignatureKeyId;
   private String sourceSignature;
 }
-

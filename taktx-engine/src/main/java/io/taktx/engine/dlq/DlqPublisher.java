@@ -14,18 +14,19 @@ import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class DlqPublisher {
 
-  public DlqEnvelope toEnvelope(DlqEntryDTO entry, long rejectionTimestampMs, String engineInstanceId) {
+  public DlqEnvelope toEnvelope(
+      DlqEntryDTO entry, long rejectionTimestampMs, String engineInstanceId) {
     String sourceTopic = sourceTopic(entry);
     byte[] valueBytes = valueBytes(entry);
     DlqReasonCode reasonCode = reasonCode(entry, valueBytes);
@@ -75,7 +76,7 @@ public class DlqPublisher {
     if (entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry) {
       return processInstanceDlqEntry.getData();
     }
-    return null;
+    return new byte[0];
   }
 
   private static Map<String, String> headerSnapshot(DlqEntryDTO entry) {
@@ -119,7 +120,7 @@ public class DlqPublisher {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       byte[] hash = digest.digest(valueBytes);
       return "sha256:" + bytesToHex(hash);
-    } catch (NoSuchAlgorithmException e) {
+    } catch (NoSuchAlgorithmException _) {
       return "sha256-unavailable:" + new String(valueBytes, StandardCharsets.ISO_8859_1).hashCode();
     }
   }
@@ -132,4 +133,3 @@ public class DlqPublisher {
     return sb.toString();
   }
 }
-

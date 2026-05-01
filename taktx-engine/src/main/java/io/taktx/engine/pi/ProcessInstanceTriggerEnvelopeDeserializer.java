@@ -86,7 +86,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
       if (!Ed25519Service.verify(data, signatureBytes, publicKeyBase64)) {
         return new ProcessInstanceTriggerEnvelope(
-            data,
+                data,
                 trigger,
                 false,
                 keyId,
@@ -95,7 +95,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       }
     } catch (IllegalArgumentException e) {
       return new ProcessInstanceTriggerEnvelope(
-          data,
+              data,
               trigger,
               false,
               keyId,
@@ -156,7 +156,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
   private ProcessInstanceTriggerDTO decode(byte[] data) {
     try {
       return OBJECT_MAPPER.readValue(data, ProcessInstanceTriggerDTO.class);
-    } catch (IOException e) {
+    } catch (IOException _) {
       // Fall back to null, or partial object later
       return null;
     }

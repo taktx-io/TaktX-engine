@@ -34,4 +34,3 @@ public class DlqReplayCommand {
   @Nullable private String overrideReason;
   @Nullable private List<String> changedFields;
 }
-

@@ -20,5 +20,4 @@ import lombok.ToString;
 @NoArgsConstructor
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 @RegisterForReflection
-public class DlqEntryKey  {
-}
+public class DlqEntryKey {}

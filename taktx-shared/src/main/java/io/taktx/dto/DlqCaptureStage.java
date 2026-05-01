@@ -12,4 +12,3 @@ public enum DlqCaptureStage {
   PROCESSOR,
   ERROR_HANDLER
 }
-

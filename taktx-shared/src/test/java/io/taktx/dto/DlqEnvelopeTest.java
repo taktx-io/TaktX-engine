@@ -17,7 +17,8 @@ class DlqEnvelopeTest {
   @Test
   void allArgsConstructor_retainsCoreMetadata() {
     DlqLineageDTO lineage =
-        new DlqLineageDTO("process-instance", 1, 42L, 1_700_000_000_000L, "sha256:abc", "kid-1", "sig");
+        new DlqLineageDTO(
+            "process-instance", 1, 42L, 1_700_000_000_000L, "sha256:abc", "kid-1", "sig");
 
     DlqEnvelope envelope =
         new DlqEnvelope(
@@ -53,4 +54,3 @@ class DlqEnvelopeTest {
     assertThat(envelope.getReplaySignatureKeyId()).isEqualTo("kid-1");
   }
 }
-

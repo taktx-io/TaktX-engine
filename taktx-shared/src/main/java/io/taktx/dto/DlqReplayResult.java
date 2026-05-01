@@ -8,7 +8,6 @@
 package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.dto.DlqReasonCode;
 import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,5 +29,3 @@ public class DlqReplayResult {
   @Nullable private String replaySignatureKeyId;
   @Nullable private String compatibilityDecision;
 }
-
-

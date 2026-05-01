@@ -47,4 +47,3 @@ public class DlqEnvelope {
   @Nullable private String replaySigner;
   @Nullable private String replaySignatureKeyId;
 }
-
