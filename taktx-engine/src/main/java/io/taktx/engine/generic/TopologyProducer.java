@@ -39,6 +39,7 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
@@ -59,6 +60,7 @@ import io.taktx.engine.pd.ScheduleCommandDeserializer;
 import io.taktx.engine.pd.ScheduleProcessor;
 import io.taktx.engine.pd.SignalProcessor;
 import io.taktx.engine.pd.Stores;
+import io.taktx.engine.pd.UserTaskResponseProcessor;
 import io.taktx.engine.pi.DefinitionMapper;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.DtoMapper;
@@ -185,6 +187,8 @@ public class TopologyProducer {
           return new SigningSerializer<>(super.serializer());
         }
       };
+  public static final ObjectMapperSerde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
+      new ObjectMapperSerde<>(UserTaskResponseTriggerDTO.class);
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
@@ -232,6 +236,9 @@ public class TopologyProducer {
     setupProcessInstanceStream(builder);
 
     setupSignalStream(builder);
+
+    setupUserTaskResponseStream(builder);
+
     return builder.build();
   }
 
@@ -266,7 +273,21 @@ public class TopologyProducer {
                             taktConfiguration.getPrefixed(
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
-                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
+        .branch(
+            (_, value) -> value instanceof DlqEntryDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (_, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private void setupDmnDefinitionStream(StreamsBuilder builder) {
@@ -777,6 +798,42 @@ public class TopologyProducer {
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+  }
+
+  private void setupUserTaskResponseStream(StreamsBuilder builder) {
+    builder.stream(
+            taktConfiguration.getPrefixed(Topics.USER_TASK_RESPONSE_TOPIC.getTopicName()),
+            Consumed.with(PROCESS_INSTANCE_KEY_SERDE, USER_TASK_RESPONSE_SERDE))
+        .process(() -> new UserTaskResponseProcessor(clock))
+        .split()
+        .branch(
+            (_, value) -> value instanceof ProcessInstanceTriggerDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (key, value) ->
+                                KeyValue.pair(
+                                    ((ProcessInstanceTriggerDTO) value).getProcessInstanceId(),
+                                    (ProcessInstanceTriggerDTO) value))
+                        .to(
+                            taktConfiguration.getPrefixed(
+                                Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
+                            Produced.with(
+                                PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))))
+        .branch(
+            (_, value) -> value instanceof DlqEntryDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (_, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private String engineInstanceId() {

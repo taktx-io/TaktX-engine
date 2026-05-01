@@ -11,8 +11,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
+import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.SignalDlqEntryDTO;
+import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 
 public class DlqEntryTypeIdResolver extends TypeIdResolverBase {
 
@@ -21,6 +24,9 @@ public class DlqEntryTypeIdResolver extends TypeIdResolverBase {
     return switch (value) {
       case ProcessDefinitionDlqEntryDTO ignored -> "D";
       case ProcessInstanceDlqEntryDTO ignored -> "I";
+      case MessageEventDlqEntryDTO ignored -> "M";
+      case SignalDlqEntryDTO ignored -> "S";
+      case UserTaskResponseDlqEntryDTO ignored -> "U";
       default -> throw new IllegalStateException("Unknown type: " + value.getClass());
     };
   }
@@ -40,6 +46,9 @@ public class DlqEntryTypeIdResolver extends TypeIdResolverBase {
     return switch (id) {
       case "D" -> context.constructType(ProcessDefinitionDlqEntryDTO.class);
       case "I" -> context.constructType(ProcessInstanceDlqEntryDTO.class);
+      case "M" -> context.constructType(MessageEventDlqEntryDTO.class);
+      case "S" -> context.constructType(SignalDlqEntryDTO.class);
+      case "U" -> context.constructType(UserTaskResponseDlqEntryDTO.class);
       default -> throw new IllegalStateException("Unknown type: " + id);
     };
   }

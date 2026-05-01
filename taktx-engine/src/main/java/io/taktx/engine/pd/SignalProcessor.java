@@ -17,8 +17,8 @@ import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.NewDefinitionSignalSubscriptionDTO;
 import io.taktx.dto.NewInstanceSignalSubscriptionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SignalDTO;
+import io.taktx.dto.SignalDlqEntryDTO;
 import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
@@ -30,9 +30,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -40,15 +44,18 @@ import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 @Slf4j
-public class SignalProcessor
-    implements Processor<String, SignalDTO, UUID, ProcessInstanceTriggerDTO> {
+public class SignalProcessor implements Processor<String, SignalDTO, Object, Object> {
+
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
 
   private final TaktConfiguration taktConfiguration;
   private final Clock clock;
   private KeyValueStore<SignalInstanceSubscriptionKeyDTO, String> instanceSignalSubscriptionStore;
   private KeyValueStore<SignalDefinitionSubscriptionKeyDTO, String>
       definitionSignalSubscriptionStore;
-  private ProcessorContext<UUID, ProcessInstanceTriggerDTO> context;
+  private ProcessorContext<Object, Object> context;
 
   private static final ThreadLocal<MessageDigest> SHA256_DIGEST =
       ThreadLocal.withInitial(
@@ -66,7 +73,7 @@ public class SignalProcessor
   }
 
   @Override
-  public void init(ProcessorContext<UUID, ProcessInstanceTriggerDTO> context) {
+  public void init(ProcessorContext<Object, Object> context) {
     this.instanceSignalSubscriptionStore =
         context.getStateStore(
             taktConfiguration.getPrefixed(Stores.INSTANCE_SIGNAL_SUBSCRIPTIONS.getStorename()));
@@ -78,44 +85,71 @@ public class SignalProcessor
 
   @Override
   public void process(Record<String, SignalDTO> singalRecord) {
-    if (singalRecord.value()
-        instanceof NewInstanceSignalSubscriptionDTO newInstanceSignalSubscriptionDTO) {
-      SignalInstanceSubscriptionKeyDTO key =
-          new SignalInstanceSubscriptionKeyDTO(
-              hash(newInstanceSignalSubscriptionDTO.getSignalName()),
-              newInstanceSignalSubscriptionDTO.getProcessInstanceId(),
-              newInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
-      instanceSignalSubscriptionStore.put(key, newInstanceSignalSubscriptionDTO.getSignalName());
-    } else if (singalRecord.value()
-        instanceof CancelInstanceSignalSubscriptionDTO cancelInstanceSignalSubscriptionDTO) {
-      SignalInstanceSubscriptionKeyDTO key =
-          new SignalInstanceSubscriptionKeyDTO(
-              hash(cancelInstanceSignalSubscriptionDTO.getSignalName()),
-              cancelInstanceSignalSubscriptionDTO.getProcessInstanceId(),
-              cancelInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
-      instanceSignalSubscriptionStore.delete(key);
-    } else if (singalRecord.value()
-        instanceof NewDefinitionSignalSubscriptionDTO newDefinitionSignalSubscriptionDTO) {
-      SignalDefinitionSubscriptionKeyDTO key =
-          new SignalDefinitionSubscriptionKeyDTO(
-              hash(newDefinitionSignalSubscriptionDTO.getSignalName()),
-              newDefinitionSignalSubscriptionDTO.getProcessDefinitionKey(),
-              newDefinitionSignalSubscriptionDTO.getElementId());
-      definitionSignalSubscriptionStore.put(
-          key, newDefinitionSignalSubscriptionDTO.getSignalName());
-    } else if (singalRecord.value()
-        instanceof CancelDefinitionSignalSubscriptionDTO cancelDefinitionSignalSubscriptionDTO) {
-      SignalDefinitionSubscriptionKeyDTO key =
-          new SignalDefinitionSubscriptionKeyDTO(
-              hash(cancelDefinitionSignalSubscriptionDTO.getSignalName()),
-              cancelDefinitionSignalSubscriptionDTO.getProcessDefinitionKey(),
-              cancelDefinitionSignalSubscriptionDTO.getElementId());
-      definitionSignalSubscriptionStore.delete(key);
+    if (singalRecord.value() == null) {
+      emitSignalDlq(
+          singalRecord, "CBOR_DECODE_ERROR", "Null payload for signals record", "PROCESSOR");
+      return;
     }
-    // Handle this one last as all others are subclasses
-    else if (singalRecord.value() instanceof SignalDTO signalDTO) {
-      handleTriggerSignal(signalDTO);
+    try {
+      if (singalRecord.value()
+          instanceof NewInstanceSignalSubscriptionDTO newInstanceSignalSubscriptionDTO) {
+        SignalInstanceSubscriptionKeyDTO key =
+            new SignalInstanceSubscriptionKeyDTO(
+                hash(newInstanceSignalSubscriptionDTO.getSignalName()),
+                newInstanceSignalSubscriptionDTO.getProcessInstanceId(),
+                newInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
+        instanceSignalSubscriptionStore.put(key, newInstanceSignalSubscriptionDTO.getSignalName());
+      } else if (singalRecord.value()
+          instanceof CancelInstanceSignalSubscriptionDTO cancelInstanceSignalSubscriptionDTO) {
+        SignalInstanceSubscriptionKeyDTO key =
+            new SignalInstanceSubscriptionKeyDTO(
+                hash(cancelInstanceSignalSubscriptionDTO.getSignalName()),
+                cancelInstanceSignalSubscriptionDTO.getProcessInstanceId(),
+                cancelInstanceSignalSubscriptionDTO.getElementInstanceIdPath());
+        instanceSignalSubscriptionStore.delete(key);
+      } else if (singalRecord.value()
+          instanceof NewDefinitionSignalSubscriptionDTO newDefinitionSignalSubscriptionDTO) {
+        SignalDefinitionSubscriptionKeyDTO key =
+            new SignalDefinitionSubscriptionKeyDTO(
+                hash(newDefinitionSignalSubscriptionDTO.getSignalName()),
+                newDefinitionSignalSubscriptionDTO.getProcessDefinitionKey(),
+                newDefinitionSignalSubscriptionDTO.getElementId());
+        definitionSignalSubscriptionStore.put(
+            key, newDefinitionSignalSubscriptionDTO.getSignalName());
+      } else if (singalRecord.value()
+          instanceof CancelDefinitionSignalSubscriptionDTO cancelDefinitionSignalSubscriptionDTO) {
+        SignalDefinitionSubscriptionKeyDTO key =
+            new SignalDefinitionSubscriptionKeyDTO(
+                hash(cancelDefinitionSignalSubscriptionDTO.getSignalName()),
+                cancelDefinitionSignalSubscriptionDTO.getProcessDefinitionKey(),
+                cancelDefinitionSignalSubscriptionDTO.getElementId());
+        definitionSignalSubscriptionStore.delete(key);
+      }
+      // Handle this one last as all others are subclasses
+      else if (singalRecord.value() instanceof SignalDTO signalDTO) {
+        handleTriggerSignal(signalDTO);
+      }
+    } catch (Exception e) {
+      log.error("⚠ Exception processing signals record, routing to DLQ: {}", e.getMessage(), e);
+      emitSignalDlq(singalRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
+
+  private void emitSignalDlq(
+      Record<String, SignalDTO> signalRecord, String reasonHint, String reasonText, String captureStage) {
+    Map<String, byte[]> headersMap = headersToMap(signalRecord.headers());
+    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    SignalDlqEntryDTO dlqEntry = new SignalDlqEntryDTO(signalRecord.key(), signalRecord.value(), headersMap);
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private static Map<String, byte[]> headersToMap(org.apache.kafka.common.header.Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
+    }
+    return Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
   }
 
   private void handleTriggerSignal(SignalDTO signalDTO) {
@@ -134,7 +168,7 @@ public class SignalProcessor
         return upper;
       }
     }
-    return null;
+    return new byte[0];
   }
 
   private void handleDefinitionSignals(SignalDTO signalDTO) {

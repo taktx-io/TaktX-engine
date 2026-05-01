@@ -16,23 +16,35 @@ import io.taktx.dto.DefinitionMessageEventTriggerDTO;
 import io.taktx.dto.DefinitionMessageSubscriptionDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.MessageEventDTO;
+import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.MessageEventKeyDTO;
 import io.taktx.dto.MessageEventSignalDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pi.ProcessingStatistics;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+@Slf4j
 public class MessageEventProcessor
     implements Processor<MessageEventKeyDTO, MessageEventDTO, Object, Object> {
+
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
 
   private final TaktConfiguration taktConfiguration;
 
@@ -64,31 +76,73 @@ public class MessageEventProcessor
 
   @Override
   public void process(Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord) {
+    if (messageEventRecord.value() == null) {
+      emitMessageEventDlq(
+          messageEventRecord,
+          "CBOR_DECODE_ERROR",
+          "Null payload for message-event record",
+          "PROCESSOR");
+      return;
+    }
     // Record end-to-end latency using Kafka timestamp
     processingStatistics.recordMessageEventLatency(
         messageEventRecord.timestamp(), messageEventRecord.value().getClass().getSimpleName());
 
-    switch (messageEventRecord.value()) {
-      case DefinitionMessageSubscriptionDTO startEventMessageSubscription ->
-          storeDefinitionMessageSubscription(
-              messageEventRecord.key(), startEventMessageSubscription);
-      case CorrelationMessageSubscriptionDTO correlatingMessageSubscription ->
-          storeCorrelationMessageSubscription(
-              messageEventRecord.key(), correlatingMessageSubscription);
-      case CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription ->
-          cancelDefinitionMessageSubscription(
-              messageEventRecord.key(), cancelDefinitionMessageSubscription);
-      case CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription ->
-          cancelCorrelationMessageSubscription(
-              messageEventRecord.key(), cancelCorrelatingMessageSubscription);
-      case DefinitionMessageEventTriggerDTO messageEvent ->
-          processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
-      case CorrelationMessageEventTriggerDTO messageEvent ->
-          processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
-      default ->
-          throw new IllegalArgumentException(
-              "Unknown message event type" + messageEventRecord.value().getClass());
+    try {
+      switch (messageEventRecord.value()) {
+        case DefinitionMessageSubscriptionDTO startEventMessageSubscription ->
+            storeDefinitionMessageSubscription(
+                messageEventRecord.key(), startEventMessageSubscription);
+        case CorrelationMessageSubscriptionDTO correlatingMessageSubscription ->
+            storeCorrelationMessageSubscription(
+                messageEventRecord.key(), correlatingMessageSubscription);
+        case CancelDefinitionMessageSubscriptionDTO cancelDefinitionMessageSubscription ->
+            cancelDefinitionMessageSubscription(
+                messageEventRecord.key(), cancelDefinitionMessageSubscription);
+        case CancelCorrelationMessageSubscriptionDTO cancelCorrelatingMessageSubscription ->
+            cancelCorrelationMessageSubscription(
+                messageEventRecord.key(), cancelCorrelatingMessageSubscription);
+        case DefinitionMessageEventTriggerDTO messageEvent ->
+            processDefinitionMessageEventTrigger(messageEventRecord.key(), messageEvent);
+        case CorrelationMessageEventTriggerDTO messageEvent ->
+            processCorrelationMessageEventTrigger(messageEventRecord.key(), messageEvent);
+        default -> {
+          log.warn(
+              "⚠ Unknown message-event type, routing to DLQ: {}",
+              messageEventRecord.value().getClass().getName());
+          emitMessageEventDlq(
+              messageEventRecord,
+              "CBOR_TYPE_MISMATCH",
+              "Unknown message event type: " + messageEventRecord.value().getClass().getName(),
+              "PROCESSOR");
+        }
+      }
+    } catch (Exception e) {
+      log.error(
+          "⚠ Exception processing message-event record, routing to DLQ: {}", e.getMessage(), e);
+      emitMessageEventDlq(messageEventRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
+
+  private void emitMessageEventDlq(
+      Record<MessageEventKeyDTO, MessageEventDTO> messageEventRecord,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
+    Map<String, byte[]> headersMap = headersToMap(messageEventRecord.headers());
+    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    MessageEventDlqEntryDTO dlqEntry =
+        new MessageEventDlqEntryDTO(messageEventRecord.key(), messageEventRecord.value(), headersMap);
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private static Map<String, byte[]> headersToMap(org.apache.kafka.common.header.Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
+    }
+    return Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
   }
 
   private void cancelDefinitionMessageSubscription(

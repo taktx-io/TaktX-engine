@@ -101,6 +101,25 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-engine:test --tests io.taktx.engine.pi.ProcessInstanceProcessorDlqTest --tests io.taktx.engine.dlq.DlqPublisherTest`
     - successful.
   - `DLQ-005` complete for `process-instance` decode/signature/auth rejection capture.
+- 2026-05-01 (checkpoint 11):
+  - Implemented DLQ-006: failure capture for `message-event`, `signals`, and `usertasks-response`.
+  - Added new `DlqEntryDTO` subclasses in `taktx-shared`:
+    - `MessageEventDlqEntryDTO` (key, value, headers)
+    - `SignalDlqEntryDTO` (signalKey, value, headers)
+    - `UserTaskResponseDlqEntryDTO` (processInstanceId, value, headers)
+  - Extended `DlqEntryTypeIdResolver` with type codes `M`, `S`, `U` for the three new subtypes.
+  - Extended `DlqPublisher` to resolve correct `sourceTopic` for all five ingress surfaces and to generically extract headers via `getHeadersMap()`.
+  - Updated `MessageEventProcessor`: null-value guard + try-catch around `process()`, `default` case emits DLQ instead of throwing `IllegalArgumentException`.
+  - Updated `SignalProcessor`: widened output type to `Object, Object`, added null-value guard + try-catch, emits `SignalDlqEntryDTO` on exception.
+  - Created `UserTaskResponseProcessor` (new): consumes from `usertasks-response`, routes valid `UserTaskResponseTriggerDTO` to process-instance trigger; null value or exception → `UserTaskResponseDlqEntryDTO` to DLQ.
+  - Updated `TopologyProducer`: added DLQ branch to `setupSignalStream`; added `setupUserTaskResponseStream` consuming `USER_TASK_RESPONSE_TOPIC` with DLQ + process-instance-trigger routing; added `USER_TASK_RESPONSE_SERDE`.
+  - Added unit tests: `MessageEventProcessorDlqTest`, `SignalProcessorDlqTest`, `UserTaskResponseProcessorDlqTest`.
+  - Re-validated with:
+    - `:taktx-shared:compileJava` + `:taktx-engine:compileJava` + `:taktx-engine:compileTestJava`
+    - `:taktx-engine:test --tests io.taktx.engine.pd.MessageEventProcessorDlqTest --tests io.taktx.engine.pd.SignalProcessorDlqTest --tests io.taktx.engine.pd.UserTaskResponseProcessorDlqTest --tests io.taktx.engine.dlq.DlqPublisherTest --tests io.taktx.engine.pi.ProcessInstanceProcessorDlqTest`
+    - `:taktx-shared:test`
+    - all successful — 13 tests, 0 failures.
+  - `DLQ-006` complete.
 
 This backlog is structured for sprint/Jira tracking and follows the agreed constraints:
 - append-only DLQ coverage for external execution ingress only
@@ -142,7 +161,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | ID | Pri | Status | Task | Depends On | Risk |
 |---|---|---|---|---|---|
 | DLQ-005 | P0 | Done | Capture `process-instance` decode/signature/auth failures into DLQ. | DLQ-003 | High |
-| DLQ-006 | P0 | Todo | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
+| DLQ-006 | P0 | Done | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
 | DLQ-007 | P0 | Todo | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
 | DLQ-008 | P1 | Todo | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
 | DLQ-008A | P1 | Todo | Define non-DLQ handling for excluded topics (`schedule-commands`, control-plane/security topics, projections). | DLQ-003 | Medium |

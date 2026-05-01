@@ -12,8 +12,11 @@ import io.taktx.dto.DlqCaptureStage;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
+import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.SignalDlqEntryDTO;
+import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -74,6 +77,15 @@ public class DlqPublisher {
     if (entry instanceof ProcessDefinitionDlqEntryDTO) {
       return Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName();
     }
+    if (entry instanceof MessageEventDlqEntryDTO) {
+      return Topics.MESSAGE_EVENT_TOPIC.getTopicName();
+    }
+    if (entry instanceof SignalDlqEntryDTO) {
+      return Topics.SIGNAL_TOPIC.getTopicName();
+    }
+    if (entry instanceof UserTaskResponseDlqEntryDTO) {
+      return Topics.USER_TASK_RESPONSE_TOPIC.getTopicName();
+    }
     return "unknown";
   }
 
@@ -86,18 +98,26 @@ public class DlqPublisher {
 
   private static Map<String, String> headerSnapshot(DlqEntryDTO entry) {
     Map<String, String> headers = new HashMap<>();
-    if (entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry
-        && processInstanceDlqEntry.getHeaders() != null) {
-      processInstanceDlqEntry
-          .getHeaders()
-          .forEach(
-              (key, value) -> {
-                if (value != null) {
-                  headers.put(key, Base64.getEncoder().encodeToString(value));
-                }
-              });
+    Map<String, byte[]> rawHeaders = getHeadersMap(entry);
+    if (rawHeaders != null) {
+      rawHeaders.forEach(
+          (key, value) -> {
+            if (value != null) {
+              headers.put(key, Base64.getEncoder().encodeToString(value));
+            }
+          });
     }
     return headers;
+  }
+
+  private static Map<String, byte[]> getHeadersMap(DlqEntryDTO entry) {
+    return switch (entry) {
+      case ProcessInstanceDlqEntryDTO pi -> pi.getHeaders();
+      case MessageEventDlqEntryDTO me -> me.getHeaders();
+      case SignalDlqEntryDTO s -> s.getHeaders();
+      case UserTaskResponseDlqEntryDTO u -> u.getHeaders();
+      default -> null;
+    };
   }
 
   private static DlqReasonCode reasonCode(DlqEntryDTO entry, byte[] valueBytes) {
@@ -144,11 +164,11 @@ public class DlqPublisher {
   }
 
   private static String headerValue(DlqEntryDTO entry, String key) {
-    if (!(entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry)
-        || processInstanceDlqEntry.getHeaders() == null) {
+    Map<String, byte[]> headers = getHeadersMap(entry);
+    if (headers == null) {
       return null;
     }
-    byte[] value = processInstanceDlqEntry.getHeaders().get(key);
+    byte[] value = headers.get(key);
     if (value == null) {
       return null;
     }
