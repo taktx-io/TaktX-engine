@@ -15,6 +15,7 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
@@ -24,6 +25,7 @@ import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDTO;
+import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.ScopeDTO;
@@ -59,8 +61,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -121,7 +126,6 @@ public class ProcessInstanceProcessor
   public void process(Record<UUID, ProcessInstanceTriggerEnvelope> triggerRecord) {
     ProcessInstanceTriggerEnvelope triggerEnvelope = triggerRecord.value();
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
-
     // Start timing for P99 investigation
     long kafkaTimestamp = triggerRecord.timestamp();
 
@@ -134,6 +138,12 @@ public class ProcessInstanceProcessor
       log.error("⛔ Command rejected — authorization failed: {}", e.getMessage());
       return;
     }
+
+    if (trigger == null) {
+      handleUnDecodedTrigger(triggerRecord.key(), triggerRecord.headers(), triggerEnvelope, currentTrustMetadata);
+      return;
+    }
+
     trigger.setCurrentTrustMetadata(currentTrustMetadata);
     trigger.setOriginTrustMetadata(resolveOriginTrustMetadata(trigger, currentTrustMetadata));
 
@@ -204,6 +214,26 @@ public class ProcessInstanceProcessor
                   .toArray(String[]::new)));
       processResultAndForward(
           processInstanceProcessingContext, processDefinitionKey, scope, variableScope);
+    }
+  }
+
+  private void handleUnDecodedTrigger(UUID processInstanceId, Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope,
+      CommandTrustMetadataDTO currentTrustMetadata) {
+    ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);
+    if (processInstanceDTO != null) {
+      FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
+      ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
+      IncidentInfo incidentInfo = new IncidentInfo(null, "Unable to decode trigger", null);
+      processInstance.setIncidentInfo(incidentInfo);
+      enrichScope(processInstance.getScope(), processInstanceId, flowElements);
+      ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
+      processDefinitionKeyThreadLocal.set(processDefinitionKey);
+
+      InstanceResult instanceResult = InstanceResult.empty();
+      Map<String, byte[]> headersMap = Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
+      DlqEntryDTO dlqEntry = new ProcessInstanceDlqEntryDTO(processInstanceId, triggerEnvelope.trigger(), headersMap, triggerEnvelope.data());
+      instanceResult.addDlqEntry(dlqEntry);
+      forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
     }
   }
 
@@ -556,6 +586,8 @@ public class ProcessInstanceProcessor
                   "Error message: " + errorEventSignal.getMessage(),
                   "Source element: " + errorEventSignal.getCurrentInstance().getFlowNode().getId()
                 }));
+        DlqEntryDTO dlqEntry = new ProcessInstanceDlqEntryDTO(processInstance.getProcessInstanceId(), );
+        processInstanceProcessingContext.getInstanceResult().addDlqEntry(dlqEntry);
         // Don't abort - leave process in incident state for potential resolution
       } else if (eventSignal instanceof EscalationEventSignal escalationEventSignal) {
         // Unhandled escalation event - this is BPMN 2.0 compliant

@@ -26,6 +26,7 @@ public enum Stores {
   GLOBAL_PROCESS_DEFINITION("global-process-definition"),
   TOPIC_META_REQUESTED(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
   TOPIC_META_ACTUAL(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),
+  DLQ(Topics.DLQ.getTopicName()),
   DEFINITION_MESSAGE_SUBSCRIPTION("definition-message-subscription"),
   CORRELATION_MESSAGE_SUBSCRIPTION("correlation-message-subscription"),
   VARIABLES("variables"),

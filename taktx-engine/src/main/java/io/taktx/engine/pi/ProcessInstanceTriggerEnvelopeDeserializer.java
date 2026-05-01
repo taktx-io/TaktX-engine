@@ -32,7 +32,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
 
   @Override
   public ProcessInstanceTriggerEnvelope deserialize(String topic, byte[] data) {
-    return new ProcessInstanceTriggerEnvelope(decode(data), false, null);
+    return new ProcessInstanceTriggerEnvelope(data, decode(data), false, null);
   }
 
   @Override
@@ -42,7 +42,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     Header sigHeader =
         headers != null ? headers.lastHeader(Constants.HEADER_ENGINE_SIGNATURE) : null;
     if (sigHeader == null || sigHeader.value() == null) {
-      return new ProcessInstanceTriggerEnvelope(trigger, false, null)
+      return new ProcessInstanceTriggerEnvelope(data, trigger, false, null)
           .withReplayRoutingKeyHint(replayRoutingKeyHint);
     }
 
@@ -50,6 +50,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
       return new ProcessInstanceTriggerEnvelope(
+              data,
               trigger,
               false,
               null,
@@ -62,6 +63,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
     if (keyResolver == null) {
       return new ProcessInstanceTriggerEnvelope(
+              data,
               trigger,
               false,
               keyId,
@@ -72,6 +74,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     String publicKeyBase64 = keyResolver.resolvePublicKey(keyId);
     if (publicKeyBase64 == null) {
       return new ProcessInstanceTriggerEnvelope(
+              data,
               trigger,
               false,
               keyId,
@@ -83,6 +86,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       byte[] signatureBytes = Base64.getDecoder().decode(base64Sig);
       if (!Ed25519Service.verify(data, signatureBytes, publicKeyBase64)) {
         return new ProcessInstanceTriggerEnvelope(
+            data,
                 trigger,
                 false,
                 keyId,
@@ -91,6 +95,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       }
     } catch (IllegalArgumentException e) {
       return new ProcessInstanceTriggerEnvelope(
+          data,
               trigger,
               false,
               keyId,
@@ -98,7 +103,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
           .withReplayRoutingKeyHint(replayRoutingKeyHint);
     }
 
-    return new ProcessInstanceTriggerEnvelope(trigger, true, keyId)
+    return new ProcessInstanceTriggerEnvelope(data, trigger, true, keyId)
         .withReplayRoutingKeyHint(replayRoutingKeyHint);
   }
 
@@ -152,7 +157,8 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     try {
       return OBJECT_MAPPER.readValue(data, ProcessInstanceTriggerDTO.class);
     } catch (IOException e) {
-      throw new IllegalStateException(e);
+      // Fall back to null, or partial object later
+      return null;
     }
   }
 }

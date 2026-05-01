@@ -14,6 +14,8 @@ import io.taktx.dto.CancelInstanceSignalSubscriptionDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.CorrelationMessageSubscriptionDTO;
+import io.taktx.dto.DlqEntryDTO;
+import io.taktx.dto.DlqEntryKey;
 import io.taktx.dto.EventSignalDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
@@ -90,6 +92,7 @@ public class Forwarder {
       ProcessInstance processInstance,
       CommandTrustMetadataDTO currentTrustMetadata,
       CommandTrustMetadataDTO originTrustMetadata) {
+    forwardToDeadLetterQueue(instanceResult, context);
     forwardInstanceUpdates(context, instanceResult, currentTrustMetadata, originTrustMetadata);
     forwardExternalTaskRequests(context, instanceResult, definitionKey, processInstance);
     forwardUserTaskTriggers(context, instanceResult, definitionKey, processInstance);
@@ -104,6 +107,14 @@ public class Forwarder {
     forwardEventSignalTriggers(context, instanceResult, originTrustMetadata);
     forwardSignals(context, instanceResult);
     forwardSignalSubscriptions(context, instanceResult, processInstance);
+  }
+
+  private void forwardToDeadLetterQueue(InstanceResult instanceResult, ProcessorContext<Object, Object> context) {
+    Queue<DlqEntryDTO> entries =
+        instanceResult.getDlqEntries();
+      while (!entries.isEmpty()) {
+        context.forward(new Record<>(new DlqEntryKey(), entries.poll(), clock.millis()));
+      }
   }
 
   private void forwardSignalSubscriptions(

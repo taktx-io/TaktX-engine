@@ -13,6 +13,7 @@ import io.taktx.dto.TokenClaims;
 import jakarta.annotation.Nullable;
 
 public record ProcessInstanceTriggerEnvelope(
+    byte[] data,
     ProcessInstanceTriggerDTO trigger,
     boolean signatureVerified,
     @Nullable String signatureKeyId,
@@ -21,23 +22,26 @@ public record ProcessInstanceTriggerEnvelope(
     @Nullable TokenClaims validatedJwtClaims) {
 
   public ProcessInstanceTriggerEnvelope(
+      byte[] data,
       ProcessInstanceTriggerDTO trigger,
       boolean signatureVerified,
       @Nullable String signatureKeyId) {
-    this(trigger, signatureVerified, signatureKeyId, null, null, null);
+    this(data, trigger, signatureVerified, signatureKeyId, null, null, null);
   }
 
   public ProcessInstanceTriggerEnvelope(
+      byte[] data,
       ProcessInstanceTriggerDTO trigger,
       boolean signatureVerified,
       @Nullable String signatureKeyId,
       @Nullable String signatureError) {
-    this(trigger, signatureVerified, signatureKeyId, signatureError, null, null);
+    this(data, trigger, signatureVerified, signatureKeyId, signatureError, null, null);
   }
 
   public ProcessInstanceTriggerEnvelope withReplayRoutingKeyHint(
       @Nullable String replayRoutingKeyHint) {
     return new ProcessInstanceTriggerEnvelope(
+        data,
         trigger,
         signatureVerified,
         signatureKeyId,
@@ -49,6 +53,7 @@ public record ProcessInstanceTriggerEnvelope(
   public ProcessInstanceTriggerEnvelope withValidatedJwtClaims(
       @Nullable TokenClaims validatedJwtClaims) {
     return new ProcessInstanceTriggerEnvelope(
+        data,
         trigger,
         signatureVerified,
         signatureKeyId,

@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -28,6 +29,7 @@ import lombok.Getter;
 @Getter
 public class InstanceResult {
 
+  private final Queue<DlqEntryDTO> dlqEntries = new ArrayDeque<>();
   private final Queue<InstanceUpdate> instanceUpdates = new ArrayDeque<>();
   private final Queue<ExternalTaskInfo> externalTaskRequests = new ArrayDeque<>();
   private final Queue<NewStartCommand> newStartCommands = new ArrayDeque<>();
@@ -51,6 +53,10 @@ public class InstanceResult {
 
   public static InstanceResult empty() {
     return new InstanceResult();
+  }
+
+  public void addDlqEntry(DlqEntryDTO dlqEntry) {
+    dlqEntries.add(dlqEntry);
   }
 
   public void addUserTask(UserTaskInfo userTask) {
