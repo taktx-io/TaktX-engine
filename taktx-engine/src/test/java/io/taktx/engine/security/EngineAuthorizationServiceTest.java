@@ -357,7 +357,7 @@ class EngineAuthorizationServiceTest {
             () ->
                 service.authorize(
                     headers,
-                    new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
+                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("JWT");
   }
@@ -382,7 +382,7 @@ class EngineAuthorizationServiceTest {
 
     CommandTrustMetadataDTO result =
         service.authorize(
-            headers, new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId));
+            headers, new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId));
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -410,7 +410,7 @@ class EngineAuthorizationServiceTest {
             () ->
                 service.authorize(
                     headers,
-                    new ProcessInstanceTriggerEnvelope(startCommand("proc", -1), true, keyId)))
+                    new ProcessInstanceTriggerEnvelope(new byte[0], startCommand("proc", -1), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("JWT");
   }
@@ -435,7 +435,7 @@ class EngineAuthorizationServiceTest {
 
     AbortTriggerDTO cmd = new AbortTriggerDTO(java.util.UUID.randomUUID(), List.of());
     CommandTrustMetadataDTO result =
-        service.authorize(headers, new ProcessInstanceTriggerEnvelope(cmd, true, keyId));
+        service.authorize(headers, new ProcessInstanceTriggerEnvelope(new byte[0], cmd, true, keyId));
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getTrusted()).isTrue();
@@ -525,7 +525,7 @@ class EngineAuthorizationServiceTest {
     CommandTrustMetadataDTO result =
         service.authorize(
             headers,
-            new ProcessInstanceTriggerEnvelope(externalTaskResponseTrigger(), true, keyId));
+            new ProcessInstanceTriggerEnvelope(new byte[0], externalTaskResponseTrigger(), true, keyId));
     assertThat(result)
         .isEqualTo(
             CommandTrustMetadataDTO.builder()
@@ -557,7 +557,7 @@ class EngineAuthorizationServiceTest {
 
     CommandTrustMetadataDTO result =
         service.authorize(
-            headers, new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, keyId));
+            headers, new ProcessInstanceTriggerEnvelope(new byte[0], continueFlowElementTrigger(), true, keyId));
     assertThat(result)
         .isEqualTo(
             CommandTrustMetadataDTO.builder()
@@ -591,7 +591,7 @@ class EngineAuthorizationServiceTest {
             () ->
                 service.authorize(
                     headers,
-                    new ProcessInstanceTriggerEnvelope(continueFlowElementTrigger(), true, keyId)))
+                    new ProcessInstanceTriggerEnvelope(new byte[0], continueFlowElementTrigger(), true, keyId)))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("not trusted for required role ENGINE");
   }
@@ -648,7 +648,7 @@ class EngineAuthorizationServiceTest {
             () ->
                 service.authorize(
                     headers,
-                    new ProcessInstanceTriggerEnvelope(
+                    new ProcessInstanceTriggerEnvelope(new byte[0], 
                         continueFlowElementTrigger(),
                         false,
                         keyId,
@@ -697,7 +697,7 @@ class EngineAuthorizationServiceTest {
 
     CommandTrustMetadataDTO result =
         service.authorize(
-            headers, new ProcessInstanceTriggerEnvelope(setVariableTrigger(), true, keyId));
+            headers, new ProcessInstanceTriggerEnvelope(new byte[0], setVariableTrigger(), true, keyId));
     assertThat(result.getVerificationResult())
         .isEqualTo(CommandTrustVerificationResult.ENGINE_SIGNED);
     assertThat(result.getAuthMethod()).isEqualTo(CommandAuthMethod.ED25519);
@@ -782,19 +782,19 @@ class EngineAuthorizationServiceTest {
   }
 
   private ProcessInstanceTriggerEnvelope envelope(StartCommandDTO trigger) {
-    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
   }
 
   private ProcessInstanceTriggerEnvelope envelope(AbortTriggerDTO trigger) {
-    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
   }
 
   private ProcessInstanceTriggerEnvelope envelope(ContinueFlowElementTriggerDTO trigger) {
-    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
   }
 
   private ProcessInstanceTriggerEnvelope envelope(SetVariableTriggerDTO trigger) {
-    return new ProcessInstanceTriggerEnvelope(trigger, false, null);
+    return new ProcessInstanceTriggerEnvelope(new byte[0], trigger, false, null);
   }
 
   private StartCommandDTO startCommand(String processDefinitionId, int version) {

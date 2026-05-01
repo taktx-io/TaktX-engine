@@ -220,7 +220,8 @@ class ReplayProtectionProcessorTest {
       inputTopic.pipeInput(
           new TestRecord<>(
               processInstanceId,
-              new ProcessInstanceTriggerEnvelope(startCommand(processInstanceId), false, null),
+              new ProcessInstanceTriggerEnvelope(
+                  new byte[0], startCommand(processInstanceId), false, null),
               headers,
               Instant.ofEpochMilli(nowMs.get())));
     }

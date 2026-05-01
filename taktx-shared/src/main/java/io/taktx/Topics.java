@@ -32,8 +32,11 @@ public enum Topics {
   DMN_DEFINITIONS_TRIGGER_TOPIC("dmn-definitions", false, CleanupPolicy.DELETE),
   DMN_DEFINITION_ACTIVATION_TOPIC("dmn-definition-activation", false, CleanupPolicy.COMPACT),
   XML_BY_DMN_DEFINITION_ID("xml-by-dmn-definition-id", false, CleanupPolicy.COMPACT),
-  DLQ("dlq", false, CleanupPolicy.COMPACT),
-  DLQ_REPLAY("dlq-replay", false, CleanupPolicy.DELETE);
+  // DLQ topics — single namespace-scoped topics (append-only, DELETE cleanup policy).
+  // The DlqEnvelope.sourceTopic field carries per-surface routing metadata.
+  DLQ("dlq", false, CleanupPolicy.DELETE),
+  DLQ_REPLAY("dlq.replay", false, CleanupPolicy.DELETE),
+  DLQ_REPLAY_RESULTS("dlq.replay-results", false, CleanupPolicy.DELETE);
 
   private final String topicName;
   private final boolean initialAvailable;

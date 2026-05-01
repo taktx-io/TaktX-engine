@@ -1,0 +1,28 @@
+/*
+ * TaktX - A high-performance BPMN engine
+ * Copyright (c) 2025 Eric Hendriks
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+package io.taktx.dto;
+
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@RegisterForReflection
+public class DlqLineageDTO {
+  private String sourceTopic;
+  private Integer sourcePartition;
+  private Long sourceOffset;
+  private Long sourceTimestampMs;
+  private String sourceMessageHash;
+  private String sourceSignatureKeyId;
+  private String sourceSignature;
+}
+

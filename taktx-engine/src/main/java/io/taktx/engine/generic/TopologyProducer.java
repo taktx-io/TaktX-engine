@@ -18,6 +18,7 @@ import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.DlqEntryKey;
+import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -44,6 +45,7 @@ import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqPublisher;
 import io.taktx.engine.dmn.DmnDefinitionsCache;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.license.LicenseConfigProcessor;
@@ -51,7 +53,6 @@ import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.pd.CorrelationMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionMessageSubscriptions;
 import io.taktx.engine.pd.DefinitionsProcessor;
-import io.taktx.engine.pd.DlqReplayProcessor;
 import io.taktx.engine.pd.DmnDefinitionsProcessor;
 import io.taktx.engine.pd.MessageEventProcessor;
 import io.taktx.engine.pd.MessageSchedulerFactory;
@@ -193,10 +194,8 @@ public class TopologyProducer {
   public static final Serde<DlqEntryKey> DLQ_KEY_SERDE = new ObjectMapperSerde<>(DlqEntryKey.class);
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
-  public static final Serde<DlqEntryDTO> DLQ_SERDE =
-      new ObjectMapperSerde<>(DlqEntryDTO.class);
-  public static final Serde<DlqEntryDTO> DLQ_REPLAY_SERDE =
-      new ObjectMapperSerde<>(DlqEntryDTO.class);
+  public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
+      new ObjectMapperSerde<>(DlqEnvelope.class);
   public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
       new ObjectMapperSerde<>(SigningKeyDTO.class);
 
@@ -218,6 +217,7 @@ public class TopologyProducer {
   private final EngineAuthorizationService engineAuthorizationService;
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
+  private final DlqPublisher dlqPublisher;
 
   @Produces
   public Topology buildTopology() {
@@ -325,19 +325,8 @@ public class TopologyProducer {
   }
 
   private void setupDlq(StreamsBuilder builder) {
-    builder.globalTable(
-        taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-        Materialized.<DlqEntryKey, DlqEntryDTO>as(keyValueStoreSupplier.get(Stores.DLQ))
-            .withKeySerde(DLQ_KEY_SERDE)
-            .withValueSerde(DLQ_SERDE));
-
-    builder.stream(
-            taktConfiguration.getPrefixed(Topics.DLQ_REPLAY.getTopicName()),
-            Consumed.with(DLQ_KEY_SERDE, DLQ_REPLAY_SERDE))
-        .process(
-            () ->
-                new DlqReplayProcessor(taktConfiguration),
-            taktConfiguration.getPrefixed(Stores.DLQ.getStorename()));
+    // Unified namespace-scoped DLQ topics are sink targets in branch wiring.
+    // Replay/replay-results stream processing is implemented under DLQ-010.
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {
@@ -464,11 +453,16 @@ public class TopologyProducer {
             (key, value) -> key instanceof DlqEntryKey,
             Branched.withConsumer(
                 ks ->
-                    ks.map((key, value) ->
-                            KeyValue.pair((DlqEntryKey) key, (DlqEntryDTO) value))
+                    ks.map(
+                            (key, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
                         .to(
                             taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-                            Produced.with(DLQ_KEY_SERDE, DLQ_SERDE))));
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
@@ -633,11 +627,16 @@ public class TopologyProducer {
           (key, value) -> key instanceof DlqEntryKey,
           Branched.withConsumer(
             ks ->
-                ks.map((key, value) ->
-                        KeyValue.pair((DlqEntryKey) key, (DlqEntryDTO) value))
+                ks.map(
+                        (key, value) -> {
+                          DlqEnvelope envelope =
+                              dlqPublisher.toEnvelope(
+                                  (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                          return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                        })
                     .to(
                         taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-                        Produced.with(DLQ_KEY_SERDE, DLQ_SERDE))));
+                        Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private static boolean isReplayProtectedEntryCommand(ProcessInstanceTriggerEnvelope envelope) {
@@ -696,11 +695,16 @@ public class TopologyProducer {
         (key, value) -> key instanceof DlqEntryKey,
         Branched.withConsumer(
             ks ->
-                ks.map((key, value) ->
-                        KeyValue.pair((DlqEntryKey) key, (DlqEntryDTO) value))
+                ks.map(
+                        (key, value) -> {
+                          DlqEnvelope envelope =
+                              dlqPublisher.toEnvelope(
+                                  (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                          return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                        })
                     .to(
                         taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
-                        Produced.with(DLQ_KEY_SERDE, DLQ_SERDE))));
+                        Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private void setupScheduleCommandStream(StreamsBuilder builder) {
@@ -782,5 +786,15 @@ public class TopologyProducer {
                                 Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_SERDE))));
+  }
+
+  private String engineInstanceId() {
+    return taktConfiguration.getTenantId()
+        + "."
+        + taktConfiguration.getNamespace()
+        + "@"
+        + taktConfiguration.getHost()
+        + ":"
+        + taktConfiguration.getPort();
   }
 }

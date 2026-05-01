@@ -48,5 +48,20 @@ class TopicsTest {
     assertThat(Topics.XML_BY_PROCESS_DEFINITION_ID.getTopicName())
         .isEqualTo("xml-by-process-definition-id");
     assertThat(Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()).isEqualTo("definitions");
+    // Unified DLQ topics — single namespace-scoped set
+    assertThat(Topics.DLQ.getTopicName()).isEqualTo("dlq");
+    assertThat(Topics.DLQ_REPLAY.getTopicName()).isEqualTo("dlq.replay");
+    assertThat(Topics.DLQ_REPLAY_RESULTS.getTopicName()).isEqualTo("dlq.replay-results");
+  }
+
+  @Test
+  void dlqTopics_allHaveDeleteCleanupPolicy() {
+    for (Topics topic : Topics.values()) {
+      if (topic.getTopicName().equals("dlq") || topic.getTopicName().startsWith("dlq.")) {
+        assertThat(topic.getCleanupPolicy())
+            .as("DLQ topic %s must use DELETE cleanup policy", topic.getTopicName())
+            .isEqualTo(CleanupPolicy.DELETE);
+      }
+    }
   }
 }

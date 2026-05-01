@@ -586,7 +586,12 @@ public class ProcessInstanceProcessor
                   "Error message: " + errorEventSignal.getMessage(),
                   "Source element: " + errorEventSignal.getCurrentInstance().getFlowNode().getId()
                 }));
-        DlqEntryDTO dlqEntry = new ProcessInstanceDlqEntryDTO(processInstance.getProcessInstanceId(), );
+        DlqEntryDTO dlqEntry =
+            new ProcessInstanceDlqEntryDTO(
+                processInstance.getProcessInstanceId(),
+                null,
+                Map.of(),
+                new byte[0]);
         processInstanceProcessingContext.getInstanceResult().addDlqEntry(dlqEntry);
         // Don't abort - leave process in incident state for potential resolution
       } else if (eventSignal instanceof EscalationEventSignal escalationEventSignal) {

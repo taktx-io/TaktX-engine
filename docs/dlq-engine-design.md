@@ -5,9 +5,71 @@
 **Status**: Design Review  
 **Author**: GitHub Copilot (with guidance from Engineering Team)
 
+## Final Scope Decision (Authoritative)
+
+DLQ is used **only for external execution ingress topics** that:
+- drive BPMN/DMN execution,
+- have business significance,
+- can be meaningfully inspected, corrected, and replayed.
+
+### Topics WITH DLQ coverage
+- `process-instance`
+- `message-event`
+- `signals`
+- `process-definition-activation`
+- `dmn-definition-activation`
+- `definitions`
+- `dmn-definitions`
+- `usertasks-response`
+
+### Topics WITHOUT DLQ coverage
+
+**Engine-internal topics**
+- `schedule-commands`
+
+**Control-plane / security topics**
+- `topic-meta-requested`
+- `topic-meta-actual`
+- `taktx-configuration`
+- `taktx-signing-keys`
+
+**Projections / materialized views**
+- `xml-by-process-definition-id`
+- `xml-by-dmn-definition-id`
+- `instance-update`
+- `usertasks`
+
+### Handling for excluded topics
+- Engine-internal failures: incident + structured logs + metrics + alerting.
+- Control-plane/security failures: reject immediately + audit/security events + alerting.
+- Projection/materialization failures: rebuild/regenerate from source rather than replay.
+
+## Topology Decision: Single DLQ Topic Per Namespace (Authoritative)
+
+**Decision date**: May 1, 2026
+
+The DLQ uses **three namespace-scoped topics** shared across all ingress surfaces:
+
+| Topic | Purpose | Cleanup |
+|---|---|---|
+| `dlq` | All rejection captures | DELETE |
+| `dlq.replay` | Operator replay commands | DELETE |
+| `dlq.replay-results` | Replay outcome records | DELETE |
+
+Per-surface routing is carried entirely inside `DlqEnvelope.sourceTopic`.
+
+**Rationale**: The `DlqEnvelope` already contains `sourceTopic`, `reasonCode`, `severity`, and full lineage, making separate per-surface topics redundant. Separate topics would have required 24 topic constants (8 surfaces × 3), adding operational overhead (ACLs, retention config, monitoring rules) with no functional benefit at current scale.
+
+**Future split criteria**: Per-surface topics may be introduced later if there is a demonstrated need for:
+- different retention policies per surface,
+- separate ACL/RBAC boundaries per surface, or
+- distinct scaling/throughput characteristics per surface.
+
+> This section is authoritative and supersedes earlier examples in this document that still mention broader DLQ coverage during design exploration.
+
 ## Executive Summary
 
-This document formalizes the architecture, design decisions, and implementation roadmap for the TaktX Engine Dead Letter Queue (DLQ) feature. The DLQ captures failed message processing events across all ingress surfaces (process-instance commands, schedule-commands, topic-meta-requested) with sufficient metadata for forensic analysis, manual intervention, and controlled reprocessing.
+This document formalizes the architecture, design decisions, and implementation roadmap for the TaktX Engine Dead Letter Queue (DLQ) feature. The DLQ captures failed message processing events for the approved external execution ingress topics, with sufficient metadata for forensic analysis, manual intervention, and controlled reprocessing.
 
 ### Problem Statement
 
@@ -23,7 +85,7 @@ Messages fail processing at multiple stages:
 ### Design Vision
 
 - **Append-only audit trail**: All rejections preserved immutably with full context
-- **Per-surface isolation**: Separate DLQ topics for each ingress surface (process-instance, schedule-commands, topic-meta-requested) allow independent scaling and retention policies
+- **Ingress-focused isolation**: Separate DLQ topics are created only for included external execution ingress surfaces, allowing independent scaling and retention policies without mixing in control-plane or engine-internal failures
 - **Structured envelope**: Unified `DlqEnvelope` carrying raw bytes, headers snapshot, reason code, human-readable explanation, and optional decoded summary
 - **Operator-driven replay**: Operators investigate DLQ via console, approve corrected messages, and submit to explicit replay topic
 - **Comprehensive observability**: Structured logging, metrics, and audit events for all rejection stages
@@ -61,12 +123,13 @@ public class DlqEntryKey {
 
 **Topology Change**:
 
-Replace single compacted topic with three append-only per-surface topics:
+Replace the single compacted topic with append-only DLQ topics for included external execution ingress surfaces only:
 
 ```
-<tenant>.<namespace>.dlq.process-instance    (CleanupPolicy.DELETE, retention=30d/90d/configurable)
-<tenant>.<namespace>.dlq.schedule-commands    (CleanupPolicy.DELETE, retention=30d/90d/configurable)
-<tenant>.<namespace>.dlq.topic-meta-requested (CleanupPolicy.DELETE, retention=30d/90d/configurable)
+<tenant>.<namespace>.dlq.process-instance          (CleanupPolicy.DELETE, retention=30d/90d/configurable)
+<tenant>.<namespace>.dlq.message-event             (CleanupPolicy.DELETE, retention=30d/90d/configurable)
+<tenant>.<namespace>.dlq.definitions               (CleanupPolicy.DELETE, retention=30d/90d/configurable)
+... additional included execution-ingress DLQ topics follow the same pattern ...
 ```
 Example trimmed for brevity.
 Use adjacent phase/file bullets as the source of truth.
@@ -196,11 +259,11 @@ Example trimmed for brevity.
 Use adjacent phase/file bullets as the source of truth.
 ```
 <tenant>.<namespace>.dlq.replay.process-instance          (input: operator-approved replay commands)
-<tenant>.<namespace>.dlq.replay.schedule-commands         (input: operator-approved replay commands)
-<tenant>.<namespace>.dlq.replay.topic-meta-requested      (input: operator-approved replay commands)
+<tenant>.<namespace>.dlq.replay.message-event             (input: operator-approved replay commands)
+<tenant>.<namespace>.dlq.replay.definitions               (input: operator-approved replay commands)
 <tenant>.<namespace>.dlq.replay-results.process-instance  (output: replay success/failure audit)
-<tenant>.<namespace>.dlq.replay-results.schedule-commands (output: replay success/failure audit)
-<tenant>.<namespace>.dlq.replay-results.topic-meta-requested (output: replay success/failure audit)
+<tenant>.<namespace>.dlq.replay-results.message-event     (output: replay success/failure audit)
+<tenant>.<namespace>.dlq.replay-results.definitions       (output: replay success/failure audit)
 ```
 
 **Option B: Unified Replay Topic with Source Hint**
@@ -273,7 +336,7 @@ The console needs to:
 The implementation is organized into 4 phases:
 
 - **Phase 1**: Fix compilation errors and establish foundational DLQ infrastructure (reason codes, envelope, publishers)
-- **Phase 2**: Wire rejections from each surface to DLQ (process-instance, schedule-commands, topic-meta-requested)
+- **Phase 2**: Wire included execution-ingress rejections to DLQ and define non-DLQ handling for excluded topics
 - **Phase 3**: Implement replay mechanism (processor, command envelope, replay topics)
 - **Phase 4**: Observability and operational tooling (metrics, logging, dashboards)
 
@@ -361,20 +424,20 @@ Add new DLQ topics:
 // Replace single compacted DLQ
 // DLQ("dlq", false, CleanupPolicy.COMPACT),  // OLD - remove
 
-// ADD new per-surface DLQ topics
+// ADD new DLQ topics only for included execution-ingress surfaces
 DLQ_PROCESS_INSTANCE("dlq.process-instance", false, CleanupPolicy.DELETE),
-DLQ_SCHEDULE_COMMANDS("dlq.schedule-commands", false, CleanupPolicy.DELETE),
-DLQ_TOPIC_META_REQUESTED("dlq.topic-meta-requested", false, CleanupPolicy.DELETE),
+DLQ_MESSAGE_EVENT("dlq.message-event", false, CleanupPolicy.DELETE),
+DLQ_DEFINITIONS("dlq.definitions", false, CleanupPolicy.DELETE),
 
 // ADD replay topics
 DLQ_REPLAY_PROCESS_INSTANCE("dlq.replay.process-instance", false, CleanupPolicy.DELETE),
-DLQ_REPLAY_SCHEDULE_COMMANDS("dlq.replay.schedule-commands", false, CleanupPolicy.DELETE),
-DLQ_REPLAY_TOPIC_META_REQUESTED("dlq.replay.topic-meta-requested", false, CleanupPolicy.DELETE),
+DLQ_REPLAY_MESSAGE_EVENT("dlq.replay.message-event", false, CleanupPolicy.DELETE),
+DLQ_REPLAY_DEFINITIONS("dlq.replay.definitions", false, CleanupPolicy.DELETE),
 
 // ADD replay results topics
 DLQ_REPLAY_RESULTS_PROCESS_INSTANCE("dlq.replay-results.process-instance", false, CleanupPolicy.DELETE),
-DLQ_REPLAY_RESULTS_SCHEDULE_COMMANDS("dlq.replay-results.schedule-commands", false, CleanupPolicy.DELETE),
-DLQ_REPLAY_RESULTS_TOPIC_META_REQUESTED("dlq.replay-results.topic-meta-requested", false, CleanupPolicy.DELETE),
+DLQ_REPLAY_RESULTS_MESSAGE_EVENT("dlq.replay-results.message-event", false, CleanupPolicy.DELETE),
+DLQ_REPLAY_RESULTS_DEFINITIONS("dlq.replay-results.definitions", false, CleanupPolicy.DELETE),
 
 // REMOVE old topics
 // DLQ_REPLAY("dlq-replay", false, CleanupPolicy.DELETE),
@@ -1206,3 +1269,4 @@ Team should review this document and adapt to local requirements:
 ### Kickoff
 
 Once this design is approved, implementation can proceed in phases without blockers. Phase 1 fixes compilation errors and establishes infrastructure; Phases 2–4 build out features incrementally with independent testing.
+
