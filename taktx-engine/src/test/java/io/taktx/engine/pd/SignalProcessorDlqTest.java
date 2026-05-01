@@ -18,7 +18,6 @@ import io.taktx.dto.SignalDlqEntryDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;

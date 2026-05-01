@@ -51,18 +51,25 @@ public class UserTaskResponseProcessor
     if (userTaskResponseTriggerRecord.value() == null) {
       log.warn("⚠ Null payload on usertasks-response, routing to DLQ");
       emitUserTaskResponseDlq(
-          userTaskResponseTriggerRecord, "CBOR_DECODE_ERROR", "Null payload for usertasks-response record", "PROCESSOR");
+          userTaskResponseTriggerRecord,
+          "CBOR_DECODE_ERROR",
+          "Null payload for usertasks-response record",
+          "PROCESSOR");
       return;
     }
     try {
       context.forward(
-          new Record<>(userTaskResponseTriggerRecord.value().getProcessInstanceId(), userTaskResponseTriggerRecord.value(), clock.millis()));
+          new Record<>(
+              userTaskResponseTriggerRecord.value().getProcessInstanceId(),
+              userTaskResponseTriggerRecord.value(),
+              clock.millis()));
     } catch (Exception e) {
       log.error(
           "⚠ Exception processing usertasks-response record, routing to DLQ: {}",
           e.getMessage(),
           e);
-      emitUserTaskResponseDlq(userTaskResponseTriggerRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
+      emitUserTaskResponseDlq(
+          userTaskResponseTriggerRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
   }
 
@@ -77,7 +84,9 @@ public class UserTaskResponseProcessor
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     UserTaskResponseDlqEntryDTO dlqEntry =
         new UserTaskResponseDlqEntryDTO(
-            userTaskResponseTriggerRecord.value() != null ? userTaskResponseTriggerRecord.value().getProcessInstanceId() : userTaskResponseTriggerRecord.key(),
+            userTaskResponseTriggerRecord.value() != null
+                ? userTaskResponseTriggerRecord.value().getProcessInstanceId()
+                : userTaskResponseTriggerRecord.key(),
             userTaskResponseTriggerRecord.value(),
             headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));

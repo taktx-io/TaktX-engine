@@ -134,7 +134,8 @@ public class MessageEventProcessor
     headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     MessageEventDlqEntryDTO dlqEntry =
-        new MessageEventDlqEntryDTO(messageEventRecord.key(), messageEventRecord.value(), headersMap);
+        new MessageEventDlqEntryDTO(
+            messageEventRecord.key(), messageEventRecord.value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 

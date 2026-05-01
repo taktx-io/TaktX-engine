@@ -136,12 +136,16 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   }
 
   private void emitSignalDlq(
-      Record<String, SignalDTO> signalRecord, String reasonHint, String reasonText, String captureStage) {
+      Record<String, SignalDTO> signalRecord,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
     Map<String, byte[]> headersMap = headersToMap(signalRecord.headers());
     headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
-    SignalDlqEntryDTO dlqEntry = new SignalDlqEntryDTO(signalRecord.key(), signalRecord.value(), headersMap);
+    SignalDlqEntryDTO dlqEntry =
+        new SignalDlqEntryDTO(signalRecord.key(), signalRecord.value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 
