@@ -25,12 +25,17 @@ import java.util.Map;
 @ApplicationScoped
 public class DlqPublisher {
 
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
+
   public DlqEnvelope toEnvelope(
       DlqEntryDTO entry, long rejectionTimestampMs, String engineInstanceId) {
     String sourceTopic = sourceTopic(entry);
     byte[] valueBytes = valueBytes(entry);
     DlqReasonCode reasonCode = reasonCode(entry, valueBytes);
     Map<String, String> headers = headerSnapshot(entry);
+    DlqCaptureStage captureStage = captureStage(entry);
 
     return new DlqEnvelope(
         sourceTopic,
@@ -40,7 +45,7 @@ public class DlqPublisher {
         reasonCode,
         reasonText(entry, reasonCode),
         reasonCode.getSeverity(),
-        DlqCaptureStage.PROCESSOR,
+        captureStage,
         rejectionTimestampMs,
         engineInstanceId,
         null,
@@ -96,6 +101,15 @@ public class DlqPublisher {
   }
 
   private static DlqReasonCode reasonCode(DlqEntryDTO entry, byte[] valueBytes) {
+    String reasonHint = headerValue(entry, DLQ_REASON_HINT_HEADER);
+    if (reasonHint != null) {
+      try {
+        return DlqReasonCode.valueOf(reasonHint);
+      } catch (IllegalArgumentException _) {
+        // ignore invalid hint and use fallback inference
+      }
+    }
+
     if (entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry
         && processInstanceDlqEntry.getTrigger() == null
         && valueBytes != null
@@ -106,10 +120,39 @@ public class DlqPublisher {
   }
 
   private static String reasonText(DlqEntryDTO entry, DlqReasonCode reasonCode) {
+    String reasonTextHint = headerValue(entry, DLQ_REASON_TEXT_HEADER);
+    if (reasonTextHint != null && !reasonTextHint.isBlank()) {
+      return reasonTextHint;
+    }
+
     if (reasonCode == DlqReasonCode.CBOR_DECODE_ERROR) {
       return "Unable to decode process-instance trigger payload";
     }
     return "Rejected by legacy DLQ path for " + entry.getClass().getSimpleName();
+  }
+
+  private static DlqCaptureStage captureStage(DlqEntryDTO entry) {
+    String captureStageHint = headerValue(entry, DLQ_CAPTURE_STAGE_HEADER);
+    if (captureStageHint != null) {
+      try {
+        return DlqCaptureStage.valueOf(captureStageHint);
+      } catch (IllegalArgumentException _) {
+        // ignore invalid hint and use default
+      }
+    }
+    return DlqCaptureStage.PROCESSOR;
+  }
+
+  private static String headerValue(DlqEntryDTO entry, String key) {
+    if (!(entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry)
+        || processInstanceDlqEntry.getHeaders() == null) {
+      return null;
+    }
+    byte[] value = processInstanceDlqEntry.getHeaders().get(key);
+    if (value == null) {
+      return null;
+    }
+    return new String(value, StandardCharsets.UTF_8);
   }
 
   private static String messageHash(byte[] valueBytes) {

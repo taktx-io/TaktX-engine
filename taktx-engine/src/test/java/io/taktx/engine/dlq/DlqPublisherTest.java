@@ -14,6 +14,7 @@ import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
@@ -59,5 +60,25 @@ class DlqPublisherTest {
     assertThat(envelope.getMessageType()).isEqualTo("ProcessDefinitionDlqEntryDTO");
     assertThat(envelope.getEngineInstanceId()).isEqualTo("engine-b");
     assertThat(envelope.getHeaders()).isEmpty();
+  }
+
+  @Test
+  void toEnvelope_honorsReasonAndCaptureHintsForAuthorizationRejection() {
+    ProcessInstanceDlqEntryDTO entry =
+        new ProcessInstanceDlqEntryDTO(
+            UUID.fromString("f72f519f-8a0b-4d67-8ab1-96563fd2e0ff"),
+            null,
+            Map.of(
+                "X-TaktX-DLQ-Reason-Hint", "AUTHORIZATION_FAILED".getBytes(StandardCharsets.UTF_8),
+                "X-TaktX-DLQ-Reason-Text",
+                    "Entry command requires JWT".getBytes(StandardCharsets.UTF_8),
+                "X-TaktX-DLQ-Capture-Stage", "PROCESSOR".getBytes(StandardCharsets.UTF_8)),
+            new byte[] {9, 9, 9});
+
+    DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_300_000L, "engine-c");
+
+    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.AUTHORIZATION_FAILED);
+    assertThat(envelope.getReasonText()).isEqualTo("Entry command requires JWT");
+    assertThat(envelope.getCaptureStage().name()).isEqualTo("PROCESSOR");
   }
 }

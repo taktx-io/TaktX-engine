@@ -51,6 +51,7 @@ import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.security.AuthorizationTokenException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,6 +79,10 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @RequiredArgsConstructor
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerEnvelope, Object, Object> {
+
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
 
   private final DefinitionsCache definitionsCache;
   private final DefinitionMapper definitionMapper;
@@ -136,6 +141,13 @@ public class ProcessInstanceProcessor
           engineAuthorizationService.authorize(triggerRecord.headers(), triggerEnvelope);
     } catch (AuthorizationTokenException e) {
       log.error("⛔ Command rejected — authorization failed: {}", e.getMessage());
+      emitProcessInstanceDlq(
+          triggerRecord.key(),
+          triggerRecord.headers(),
+          triggerEnvelope,
+          reasonHintForAuthorizationFailure(triggerEnvelope, e),
+          e.getMessage(),
+          "PROCESSOR");
       return;
     }
 
@@ -219,6 +231,14 @@ public class ProcessInstanceProcessor
 
   private void handleUnDecodedTrigger(
       UUID processInstanceId, Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
+    emitProcessInstanceDlq(
+        processInstanceId,
+        headers,
+        triggerEnvelope,
+        "CBOR_DECODE_ERROR",
+        "Unable to decode trigger",
+        "DESERIALIZER");
+
     ProcessInstanceDTO processInstanceDTO = processInstanceStore.get(processInstanceId);
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
@@ -232,12 +252,53 @@ public class ProcessInstanceProcessor
       InstanceResult instanceResult = InstanceResult.empty();
       Map<String, byte[]> headersMap =
           Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
-      DlqEntryDTO dlqEntry =
-          new ProcessInstanceDlqEntryDTO(
-              processInstanceId, triggerEnvelope.trigger(), headersMap, triggerEnvelope.data());
-      instanceResult.addDlqEntry(dlqEntry);
       forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
     }
+  }
+
+  private void emitProcessInstanceDlq(
+      UUID processInstanceId,
+      Headers headers,
+      ProcessInstanceTriggerEnvelope triggerEnvelope,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
+    Map<String, byte[]> headersMap = headersToMap(headers);
+    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_REASON_TEXT_HEADER, reasonText.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    DlqEntryDTO dlqEntry =
+        new ProcessInstanceDlqEntryDTO(
+            processInstanceId, triggerEnvelope.trigger(), headersMap, triggerEnvelope.data());
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private static Map<String, byte[]> headersToMap(Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
+    }
+    return Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
+  }
+
+  private static String reasonHintForAuthorizationFailure(
+      ProcessInstanceTriggerEnvelope triggerEnvelope, AuthorizationTokenException exception) {
+    String signatureError = triggerEnvelope.signatureError();
+    if (signatureError != null && !signatureError.isBlank()) {
+      String normalized = signatureError.toLowerCase();
+      if (normalized.contains("unknown") || normalized.contains("revoked")) {
+        return "SIGNATURE_KEY_UNKNOWN";
+      }
+      if (normalized.contains("malformed")) {
+        return "SIGNATURE_MALFORMED";
+      }
+      return "SIGNATURE_VERIFICATION_FAILED";
+    }
+
+    String message = exception.getMessage() != null ? exception.getMessage().toLowerCase() : "";
+    if (message.contains("requires jwt") || message.contains("jwt")) {
+      return "AUTHORIZATION_FAILED";
+    }
+    return "AUTHORIZATION_FAILED";
   }
 
   private void processStartCommandRecord(UUID processInstanceId, StartCommandDTO startCommand) {

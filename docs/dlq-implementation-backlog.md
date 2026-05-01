@@ -56,7 +56,7 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
   - Added engine instance id tagging helper in `TopologyProducer` and removed legacy `DlqReplayProcessor`/global-table DLQ setup dependency.
   - Added focused unit test `taktx-engine/src/test/java/io/taktx/engine/dlq/DlqPublisherTest.java`.
   - Verification: `:taktx-engine:compileJava` and `:taktx-shared:test --tests io.taktx.TopicsTest` are green.
-  - Known baseline issue: `:taktx-engine:compileTestJava` fails in pre-existing unrelated security tests (`ProcessInstanceTriggerEnvelope` constructor mismatches), which currently blocks execution of the new engine unit test in CI/local test task.
+  - Historical note at that time: `:taktx-engine:compileTestJava` failed due to pre-existing security-test constructor mismatches (resolved later in checkpoint 7).
 - 2026-05-01 (checkpoint 7):
   - Continued DLQ-004 cleanup after unified-topic migration:
     - removed dead `setupDlq(...)` scaffolding and legacy `DLQ_KEY_SERDE` from `taktx-engine/src/main/java/io/taktx/engine/generic/TopologyProducer.java`.
@@ -79,6 +79,28 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-engine:test --tests io.taktx.engine.dlq.DlqPublisherTest`
     - all successful.
   - DLQ-004 remains in progress because `DlqEntryDTO` subclasses are still used as legacy runtime intermediates before full direct-`DlqEnvelope` capture in processors.
+- 2026-05-01 (checkpoint 9):
+  - Started DLQ-005 for `process-instance` failure capture.
+  - `ProcessInstanceProcessor` now emits DLQ entries for:
+    - authorization failures (`AuthorizationTokenException`) before early return,
+    - undecodable triggers (`trigger == null`) regardless of process-instance store presence.
+  - Added synthetic reason/capture hints on emitted entries (`X-TaktX-DLQ-Reason-Hint`, `X-TaktX-DLQ-Reason-Text`, `X-TaktX-DLQ-Capture-Stage`).
+  - Extended `DlqPublisher` to honor those hints for deterministic `DlqReasonCode`, `reasonText`, and `DlqCaptureStage` mapping.
+  - Added unit-test coverage in `taktx-engine/src/test/java/io/taktx/engine/dlq/DlqPublisherTest.java` for auth-failure hint mapping.
+  - Verification:
+    - `:taktx-engine:compileJava`
+    - `:taktx-engine:compileTestJava`
+    - `:taktx-engine:test --tests io.taktx.engine.dlq.DlqPublisherTest`
+    - all successful.
+- 2026-05-01 (checkpoint 10):
+  - Added focused unit coverage in `taktx-engine/src/test/java/io/taktx/engine/pi/ProcessInstanceProcessorDlqTest.java` for:
+    - authorization rejection → DLQ emission,
+    - undecodable trigger with no stored instance → DLQ emission,
+    - signature failure → DLQ emission with `SIGNATURE_KEY_UNKNOWN` hint.
+  - Re-validated with:
+    - `:taktx-engine:test --tests io.taktx.engine.pi.ProcessInstanceProcessorDlqTest --tests io.taktx.engine.dlq.DlqPublisherTest`
+    - successful.
+  - `DLQ-005` complete for `process-instance` decode/signature/auth rejection capture.
 
 This backlog is structured for sprint/Jira tracking and follows the agreed constraints:
 - append-only DLQ coverage for external execution ingress only
@@ -119,7 +141,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 
 | ID | Pri | Status | Task | Depends On | Risk |
 |---|---|---|---|---|---|
-| DLQ-005 | P0 | Todo | Capture `process-instance` decode/signature/auth failures into DLQ. | DLQ-003 | High |
+| DLQ-005 | P0 | Done | Capture `process-instance` decode/signature/auth failures into DLQ. | DLQ-003 | High |
 | DLQ-006 | P0 | Todo | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
 | DLQ-007 | P0 | Todo | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
 | DLQ-008 | P1 | Todo | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
@@ -189,7 +211,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | ID | Pri | Status | Test Scope | Depends On |
 |---|---|---|---|---|
 | DLQ-T01 | P0 | Done | Envelope/reason-severity baseline tests in `taktx-shared` | DLQ-002 |
-| DLQ-T02 | P0 | Todo | Rejection capture tests for included DLQ ingress topics | DLQ-005..DLQ-007 |
+| DLQ-T02 | P0 | In Progress | Rejection capture tests for included DLQ ingress topics | DLQ-005..DLQ-007 |
 | DLQ-T03 | P0 | Todo | Replay policy tests (`STRICT`, `OPERATOR_OVERRIDE`) | DLQ-009..DLQ-010 |
 | DLQ-T04 | P0 | Todo | Destination safety and engine signing provenance tests | DLQ-011, DLQ-012 |
 | DLQ-T05 | P1 | Todo | Schema compatibility tests (`STRICT` fail, override warn/audit) | DLQ-013 |
