@@ -81,7 +81,7 @@ public class MessageEventProcessor
           messageEventRecord,
           "CBOR_DECODE_ERROR",
           "Null payload for message-event record",
-          "PROCESSOR");
+          "DESERIALIZER");
       return;
     }
     // Record end-to-end latency using Kafka timestamp

@@ -62,15 +62,19 @@ public class DmnDefinitionsProcessor
   }
 
   @Override
-  public void process(Record<String, XmlDmnDefinitionsDTO> record) {
-    if (record.value() == null || record.value().getXml() == null) {
-      log.warn("⚠ Null payload on dmn-definitions for key {}, routing to DLQ", record.key());
+  public void process(Record<String, XmlDmnDefinitionsDTO> definitionsRecord) {
+    if (definitionsRecord.value() == null || definitionsRecord.value().getXml() == null) {
+      log.warn(
+          "⚠ Null payload on dmn-definitions for key {}, routing to DLQ", definitionsRecord.key());
       emitDmnDefinitionsDlq(
-          record, "CBOR_DECODE_ERROR", "Null payload for dmn-definitions record", "PROCESSOR");
+          definitionsRecord,
+          "CBOR_DECODE_ERROR",
+          "Null payload for dmn-definitions record",
+          "DESERIALIZER");
       return;
     }
-    String dmnDefinitionId = record.key();
-    String xml = record.value().getXml();
+    String dmnDefinitionId = definitionsRecord.key();
+    String xml = definitionsRecord.value().getXml();
     log.info("Processing DMN definitions record for definition {}", dmnDefinitionId);
 
     try {
@@ -112,23 +116,24 @@ public class DmnDefinitionsProcessor
           dmnDefinitionId,
           e.getMessage(),
           e);
-      emitDmnDefinitionsDlq(record, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
+      emitDmnDefinitionsDlq(definitionsRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
   }
 
   private void emitDmnDefinitionsDlq(
-      Record<String, XmlDmnDefinitionsDTO> record,
+      Record<String, XmlDmnDefinitionsDTO> definitionsRecord,
       String reasonHint,
       String reasonText,
       String captureStage) {
-    Map<String, byte[]> headersMap = headersToMap(record.headers());
+    Map<String, byte[]> headersMap = headersToMap(definitionsRecord.headers());
     headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
     headersMap.put(
         DLQ_REASON_TEXT_HEADER,
         (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     DmnDefinitionsDlqEntryDTO dlqEntry =
-        new DmnDefinitionsDlqEntryDTO(record.key(), record.value(), headersMap);
+        new DmnDefinitionsDlqEntryDTO(
+            definitionsRecord.key(), definitionsRecord.value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 

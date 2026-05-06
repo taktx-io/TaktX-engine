@@ -66,10 +66,10 @@ class DefinitionsProcessorDlqTest {
   void process_nullValue_emitsDlqWithDecodeErrorHint() {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Source", "client".getBytes(StandardCharsets.UTF_8));
-    Record<String, io.taktx.dto.DefinitionsTriggerDTO> record =
+    Record<String, io.taktx.dto.DefinitionsTriggerDTO> definitionsRecord =
         new Record<>("proc-1", null, 100L, headers);
 
-    processor.process(record);
+    processor.process(definitionsRecord);
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -86,7 +86,7 @@ class DefinitionsProcessorDlqTest {
     assertThat(
             new String(
                 dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
+        .isEqualTo("DESERIALIZER");
   }
 
   @Test
@@ -94,10 +94,10 @@ class DefinitionsProcessorDlqTest {
     // Inject a malformed XML that will cause BpmnParser.parse() to throw
     XmlDefinitionsDTO xmlDefinitions = new XmlDefinitionsDTO("NOT_VALID_XML <<<");
     RecordHeaders headers = new RecordHeaders();
-    Record<String, io.taktx.dto.DefinitionsTriggerDTO> record =
+    Record<String, io.taktx.dto.DefinitionsTriggerDTO> definitionsRecord =
         new Record<>("proc-2", xmlDefinitions, 200L, headers);
 
-    processor.process(record);
+    processor.process(definitionsRecord);
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());

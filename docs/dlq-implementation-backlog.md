@@ -120,6 +120,18 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-shared:test`
     - all successful — 13 tests, 0 failures.
   - `DLQ-006` complete.
+- 2026-05-06 (checkpoint 14):
+  - Implemented DLQ-008: verified and corrected `captureStage` on all DLQ ingress surfaces.
+  - Root cause: 5 processors (`MessageEventProcessor`, `SignalProcessor`, `UserTaskResponseProcessor`, `DefinitionsProcessor`, `DmnDefinitionsProcessor`) were tagging null-value (decode-error) paths as `captureStage=PROCESSOR`; `ProcessInstanceProcessor` already correctly used `DESERIALIZER` for this case.
+  - Fix: changed null-value DLQ emit calls in all 5 processors from `"PROCESSOR"` → `"DESERIALIZER"`.
+  - Updated corresponding null-payload test assertions in all 5 `*DlqTest` classes.
+  - **Duplicate semantics (documented here):** The `dlq` topic is append-only. A record that fails during processing and is retried by the stream thread MAY produce multiple DLQ entries with the same `sourceTopic` + offset. Deduplication of replays is the responsibility of tooling/operator; the engine does not deduplicate. Consumers of `dlq` should use `sourceOffset` + `sourceTopic` as a logical dedup key.
+  - **captureStage mapping (documented here):**
+    - `DESERIALIZER`: value is null at processor entry — deserialization returned null (typically a framing/decode failure surfaced by `ContinueOnDeserializationErrorHandler`)
+    - `PROCESSOR`: exception or business-rule violation caught inside `process()` body
+    - `ERROR_HANDLER`: reserved for engine-level stream error handler (not yet wired to `dlq` output)
+  - Re-validated with all 7 DLQ unit tests — `BUILD SUCCESSFUL`.
+  - `DLQ-008` complete.
 - 2026-05-06 (checkpoint 13):
   - Completed DLQ-004 cleanup: removed stale Kafka-serialisation machinery from `DlqEntryDTO`.
   - Removed `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonFormat(shape = ARRAY)` annotations and the dead `topicName` field from `DlqEntryDTO` (were only needed when it was the Kafka topic value; it is now a purely in-process typed adapter).
@@ -191,13 +203,13 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | DLQ-005 | P0 | Done | Capture `process-instance` decode/signature/auth failures into DLQ. | DLQ-003 | High |
 | DLQ-006 | P0 | Done | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
 | DLQ-007 | P0 | Done | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
-| DLQ-008 | P1 | Todo | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
+| DLQ-008 | P1 | Done | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
 | DLQ-008A | P1 | Todo | Define non-DLQ handling for excluded topics (`schedule-commands`, control-plane/security topics, projections). | DLQ-003 | Medium |
 
 ### Acceptance Criteria (E2)
-- [ ] All included ingress surfaces emit DLQ entries with stable reason codes.
-- [ ] `captureStage` is present where relevant (`DESERIALIZER`, `PROCESSOR`, `ERROR_HANDLER`).
-- [ ] Documented behavior: DLQ append-only may contain duplicates; dedup is logical in tooling.
+- [x] All included ingress surfaces emit DLQ entries with stable reason codes.
+- [x] `captureStage` is present where relevant (`DESERIALIZER`, `PROCESSOR`, `ERROR_HANDLER`).
+- [x] Documented behavior: DLQ append-only may contain duplicates; dedup is logical in tooling.
 - [ ] Excluded topics have explicit incident/audit/rebuild handling.
 
 ---
@@ -258,7 +270,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | ID | Pri | Status | Test Scope | Depends On |
 |---|---|---|---|---|
 | DLQ-T01 | P0 | Done | Envelope/reason-severity baseline tests in `taktx-shared` | DLQ-002 |
-| DLQ-T02 | P0 | In Progress | Rejection capture tests for included DLQ ingress topics | DLQ-005..DLQ-007 |
+| DLQ-T02 | P0 | Done | Rejection capture tests for included DLQ ingress topics | DLQ-005..DLQ-007 |
 | DLQ-T03 | P0 | Todo | Replay policy tests (`STRICT`, `OPERATOR_OVERRIDE`) | DLQ-009..DLQ-010 |
 | DLQ-T04 | P0 | Todo | Destination safety and engine signing provenance tests | DLQ-011, DLQ-012 |
 | DLQ-T05 | P1 | Todo | Schema compatibility tests (`STRICT` fail, override warn/audit) | DLQ-013 |

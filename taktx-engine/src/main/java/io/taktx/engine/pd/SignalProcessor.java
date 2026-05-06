@@ -87,7 +87,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   public void process(Record<String, SignalDTO> singalRecord) {
     if (singalRecord.value() == null) {
       emitSignalDlq(
-          singalRecord, "CBOR_DECODE_ERROR", "Null payload for signals record", "PROCESSOR");
+          singalRecord, "CBOR_DECODE_ERROR", "Null payload for signals record", "DESERIALIZER");
       return;
     }
     try {

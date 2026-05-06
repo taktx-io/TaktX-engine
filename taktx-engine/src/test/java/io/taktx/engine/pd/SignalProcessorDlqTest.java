@@ -86,7 +86,7 @@ class SignalProcessorDlqTest {
     assertThat(
             new String(
                 dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
+        .isEqualTo("DESERIALIZER");
   }
 
   @Test

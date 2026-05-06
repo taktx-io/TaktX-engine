@@ -54,7 +54,7 @@ public class UserTaskResponseProcessor
           userTaskResponseTriggerRecord,
           "CBOR_DECODE_ERROR",
           "Null payload for usertasks-response record",
-          "PROCESSOR");
+          "DESERIALIZER");
       return;
     }
     try {

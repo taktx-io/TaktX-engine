@@ -56,9 +56,10 @@ class DmnDefinitionsProcessorDlqTest {
   void process_nullValue_emitsDlqWithDecodeErrorHint() {
     RecordHeaders headers = new RecordHeaders();
     headers.add("X-Origin", "dmn-client".getBytes(StandardCharsets.UTF_8));
-    Record<String, XmlDmnDefinitionsDTO> record = new Record<>("dmn-1", null, 100L, headers);
+    Record<String, XmlDmnDefinitionsDTO> definitionsRecord =
+        new Record<>("dmn-1", null, 100L, headers);
 
-    processor.process(record);
+    processor.process(definitionsRecord);
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());
@@ -76,16 +77,17 @@ class DmnDefinitionsProcessorDlqTest {
     assertThat(
             new String(
                 dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
-        .isEqualTo("PROCESSOR");
+        .isEqualTo("DESERIALIZER");
   }
 
   @Test
   void process_invalidXml_emitsDlqWithProcessorExceptionHint() {
     XmlDmnDefinitionsDTO dto = new XmlDmnDefinitionsDTO("NOT_VALID_DMN_XML <<<");
     RecordHeaders headers = new RecordHeaders();
-    Record<String, XmlDmnDefinitionsDTO> record = new Record<>("dmn-2", dto, 200L, headers);
+    Record<String, XmlDmnDefinitionsDTO> definitionsRecord =
+        new Record<>("dmn-2", dto, 200L, headers);
 
-    processor.process(record);
+    processor.process(definitionsRecord);
 
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context).forward(captor.capture());

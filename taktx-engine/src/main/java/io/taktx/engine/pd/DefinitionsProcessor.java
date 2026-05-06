@@ -93,7 +93,7 @@ public class DefinitionsProcessor
           definitionsRecord,
           "CBOR_DECODE_ERROR",
           "Null payload for definitions record",
-          "PROCESSOR");
+          "DESERIALIZER");
       return;
     }
     try {
@@ -119,18 +119,18 @@ public class DefinitionsProcessor
   }
 
   private void emitDefinitionsDlq(
-      Record<String, DefinitionsTriggerDTO> record,
+      Record<String, DefinitionsTriggerDTO> definitionsRecord,
       String reasonHint,
       String reasonText,
       String captureStage) {
-    Map<String, byte[]> headersMap = headersToMap(record.headers());
+    Map<String, byte[]> headersMap = headersToMap(definitionsRecord.headers());
     headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
     headersMap.put(
         DLQ_REASON_TEXT_HEADER,
         (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
     headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
     ProcessDefinitionDlqEntryDTO dlqEntry =
-        new ProcessDefinitionDlqEntryDTO(null, record.value(), headersMap);
+        new ProcessDefinitionDlqEntryDTO(null, definitionsRecord.value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));
   }
 
