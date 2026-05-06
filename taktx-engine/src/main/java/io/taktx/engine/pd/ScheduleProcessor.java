@@ -119,7 +119,21 @@ public class ScheduleProcessor
     processingStatistics.recordScheduleLatency(scheduleRecord.timestamp(), scheduleType);
 
     BucketProcessor bucketProcessor = bucketProcessorMap.get(scheduleKey.getTimeBucket());
-    bucketProcessor.process(scheduleKey, value, clock.millis());
+    try {
+      bucketProcessor.process(scheduleKey, value, clock.millis());
+    } catch (Exception e) {
+      // schedule-commands is an engine-internal topic — the engine itself produces to it.
+      // A processing failure here is an engine defect, not a user-correctable replay situation.
+      // Log as a structured incident and skip the record to keep the stream thread alive.
+      log.error(
+          "INCIDENT schedule-command processing failure — no DLQ (engine-internal topic)."
+              + " topic='{}' scheduleKey='{}' messageType='{}' cause='{}'",
+          scheduleTopicName,
+          scheduleKey,
+          scheduleMessageType(value),
+          e.getMessage(),
+          e);
+    }
   }
 
   private static String extractSignerKeyId(

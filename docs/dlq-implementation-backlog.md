@@ -120,6 +120,14 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-shared:test`
     - all successful — 13 tests, 0 failures.
   - `DLQ-006` complete.
+- 2026-05-06 (checkpoint 15):
+  - Implemented DLQ-008A: defined and hardened non-DLQ handling for all excluded topics.
+  - **`schedule-commands` (engine-internal):** Added outer `try/catch(Exception)` around `bucketProcessor.process()` in `ScheduleProcessor` with `log.error(INCIDENT ...)` containing structured fields (`topic`, `scheduleKey`, `messageType`, `cause`). Auth rejection already had `log.warn` + return. Record is skipped on failure to keep stream thread alive. No DLQ — engine produces to this topic itself; failures are engine defects requiring a fix/redeploy, not user-replay.
+  - **`topic-meta-requested` / `topic-meta-actual` (control-plane):** `DynamicTopicManager` already catches `RecordDeserializationException` from its plain Kafka consumer, logs `log.error` with partition + offset, and seeks past the poison record. Self-healing; no DLQ.
+  - **`taktx-configuration` / `taktx-signing-keys` (control-plane):** Consumed as `globalTable()` in `TopologyProducer`. Protected by `ContinueOnDeserializationErrorHandler` (configured globally in `application.properties`), which logs `log.error` with full record coordinates and skips the poison record. Rebuild = republish the correct config/key record. No DLQ.
+  - **`instance-update`, `usertasks`, `xml-by-*` (projection outputs):** These are engine-**output** topics — the engine writes to them, it does not consume them for executable business logic. Write failures are Kafka producer errors handled by the Streams production exception handler (stream restart). Projections rebuild automatically on restart via reprocessing of the upstream `process-instance` stream. No DLQ.
+  - Re-validated with `:taktx-engine:compileJava` + `:taktx-engine:compileTestJava` — `BUILD SUCCESSFUL`.
+  - `DLQ-008A` complete.
 - 2026-05-06 (checkpoint 14):
   - Implemented DLQ-008: verified and corrected `captureStage` on all DLQ ingress surfaces.
   - Root cause: 5 processors (`MessageEventProcessor`, `SignalProcessor`, `UserTaskResponseProcessor`, `DefinitionsProcessor`, `DmnDefinitionsProcessor`) were tagging null-value (decode-error) paths as `captureStage=PROCESSOR`; `ProcessInstanceProcessor` already correctly used `DESERIALIZER` for this case.
@@ -204,13 +212,13 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | DLQ-006 | P0 | Done | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
 | DLQ-007 | P0 | Done | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
 | DLQ-008 | P1 | Done | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
-| DLQ-008A | P1 | Todo | Define non-DLQ handling for excluded topics (`schedule-commands`, control-plane/security topics, projections). | DLQ-003 | Medium |
+| DLQ-008A | P1 | Done | Define non-DLQ handling for excluded topics (`schedule-commands`, control-plane/security topics, projections). | DLQ-003 | Medium |
 
 ### Acceptance Criteria (E2)
 - [x] All included ingress surfaces emit DLQ entries with stable reason codes.
 - [x] `captureStage` is present where relevant (`DESERIALIZER`, `PROCESSOR`, `ERROR_HANDLER`).
 - [x] Documented behavior: DLQ append-only may contain duplicates; dedup is logical in tooling.
-- [ ] Excluded topics have explicit incident/audit/rebuild handling.
+- [x] Excluded topics have explicit incident/audit/rebuild handling.
 
 ---
 
