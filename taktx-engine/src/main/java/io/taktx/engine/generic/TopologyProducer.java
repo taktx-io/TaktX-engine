@@ -18,6 +18,8 @@ import io.taktx.dto.Constants;
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.DlqReplayCommand;
+import io.taktx.dto.DlqReplayResult;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -45,7 +47,10 @@ import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqForwardingProcessor;
 import io.taktx.engine.dlq.DlqPublisher;
+import io.taktx.engine.dlq.DlqReplayForwardRecord;
+import io.taktx.engine.dlq.DlqReplayProcessor;
 import io.taktx.engine.dmn.DmnDefinitionsCache;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.license.LicenseConfigProcessor;
@@ -74,6 +79,7 @@ import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.SigningSerializer;
@@ -198,6 +204,10 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(TopicMetaDTO.class);
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
       new ObjectMapperSerde<>(DlqEnvelope.class);
+  public static final ObjectMapperSerde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
+      new ObjectMapperSerde<>(DlqReplayCommand.class);
+  public static final ObjectMapperSerde<DlqReplayResult> DLQ_REPLAY_RESULT_SERDE =
+      new ObjectMapperSerde<>(DlqReplayResult.class);
   public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
       new ObjectMapperSerde<>(SigningKeyDTO.class);
 
@@ -220,6 +230,7 @@ public class TopologyProducer {
   private final LicenseManager licenseManager;
   private final GlobalConfigStore globalConfigStore;
   private final DlqPublisher dlqPublisher;
+  private final MessageSigningService messageSigningService;
 
   @Produces
   public Topology buildTopology() {
@@ -238,6 +249,8 @@ public class TopologyProducer {
     setupSignalStream(builder);
 
     setupUserTaskResponseStream(builder);
+
+    setupDlqReplayStream(builder);
 
     return builder.build();
   }
@@ -848,6 +861,47 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
                             Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
+  }
+
+  /**
+   * Wires the {@code dlq.replay} consumer stream (DLQ-010 through DLQ-014).
+   *
+   * <p>Records published to {@code dlq.replay} by the console/operator are consumed by {@link
+   * DlqReplayProcessor}, which enforces destination safety (DLQ-011), ENGINE signing (DLQ-012),
+   * schema compatibility (DLQ-013), and dry-run semantics (DLQ-014). Two output branches:
+   *
+   * <ul>
+   *   <li>{@link DlqReplayResult} → {@code dlq.replay-results} (always).
+   *   <li>{@link DlqReplayForwardRecord} → target ingress topic via {@link DlqForwardingProcessor}
+   *       (only on success + not dry-run).
+   * </ul>
+   */
+  private void setupDlqReplayStream(StreamsBuilder builder) {
+    builder.stream(
+            taktConfiguration.getPrefixed(Topics.DLQ_REPLAY.getTopicName()),
+            Consumed.with(Serdes.String(), DLQ_REPLAY_COMMAND_SERDE))
+        .process(() -> new DlqReplayProcessor(messageSigningService, taktConfiguration))
+        .split()
+        .branch(
+            (_, value) -> value instanceof DlqReplayResult,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (_, value) ->
+                                KeyValue.pair(
+                                    ((DlqReplayResult) value).getDlqEntryRef(),
+                                    (DlqReplayResult) value))
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ_REPLAY_RESULTS.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_REPLAY_RESULT_SERDE))))
+        .branch(
+            (_, value) -> value instanceof DlqReplayForwardRecord,
+            Branched.withConsumer(
+                ks ->
+                    ks.process(() -> new DlqForwardingProcessor())
+                        .to(
+                            (key, value, ctx) -> key,
+                            Produced.with(Serdes.String(), Serdes.ByteArray()))));
   }
 
   private String engineInstanceId() {

@@ -10,12 +10,14 @@ package io.taktx.dto;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @RegisterForReflection
 public class DlqReplayResult {
   private String dlqEntryRef;
@@ -28,4 +30,10 @@ public class DlqReplayResult {
   @Nullable private String replaySigner;
   @Nullable private String replaySignatureKeyId;
   @Nullable private String compatibilityDecision;
+
+  /** Mirrors the {@code dryRun} flag from the originating {@link DlqReplayCommand}. */
+  private boolean dryRun;
+
+  /** Reference linking this result back to the source DLQ entry ({@code dlqEntryRef}). */
+  @Nullable private String lineageRef;
 }

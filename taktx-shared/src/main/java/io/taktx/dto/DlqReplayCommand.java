@@ -12,12 +12,14 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @RegisterForReflection
 public class DlqReplayCommand {
   private String dlqEntryRef;
@@ -33,4 +35,14 @@ public class DlqReplayCommand {
 
   @Nullable private String overrideReason;
   @Nullable private List<String> changedFields;
+
+  /** When {@code true} the processor validates all checks but does NOT forward the record. */
+  private boolean dryRun;
+
+  /**
+   * Optional schema version of the corrected payload. If provided and it does not match the
+   * engine's {@code SUPPORTED_SCHEMA_VERSION}, behaviour is governed by {@link
+   * ReplayValidationPolicy}: {@code STRICT} rejects, {@code OPERATOR_OVERRIDE} warns.
+   */
+  @Nullable private Integer expectedSchemaVersion;
 }
