@@ -120,6 +120,16 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-shared:test`
     - all successful — 13 tests, 0 failures.
   - `DLQ-006` complete.
+- 2026-05-06 (checkpoint 13):
+  - Completed DLQ-004 cleanup: removed stale Kafka-serialisation machinery from `DlqEntryDTO`.
+  - Removed `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonFormat(shape = ARRAY)` annotations and the dead `topicName` field from `DlqEntryDTO` (were only needed when it was the Kafka topic value; it is now a purely in-process typed adapter).
+  - Deleted `taktx-shared/src/main/java/io/taktx/DlqEntryTypeIdResolver.java` (became unreachable after annotation removal).
+  - Fixed stale "Rejected by legacy DLQ path" fallback text in `DlqPublisher.reasonText()` → "Processing exception for …".
+  - Re-validated with:
+    - `:taktx-shared:compileJava` + `:taktx-engine:compileJava` + `:taktx-engine:compileTestJava`
+    - all 7 DLQ unit tests + `:taktx-shared:test`
+    - `BUILD SUCCESSFUL`.
+  - `DLQ-004` complete.
 - 2026-05-06 (checkpoint 12):
   - Implemented DLQ-007: failure capture for `definitions` and `dmn-definitions`.
   - Added `headers` field to `ProcessDefinitionDlqEntryDTO` (was missing; needed for DLQ hint headers consistency).
@@ -164,7 +174,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | DLQ-001 | P0 | Done | Define namespace-scoped DLQ/replay/replay-results topics (`dlq`, `dlq.replay`, `dlq.replay-results`) with DELETE cleanup in `Topics`; remove legacy per-surface constants and unused DLQ stores. | - | High |
 | DLQ-002 | P0 | Done | Introduce `DlqEnvelope` + metadata (lineage, source identity, severity, schema, captureStage) in `taktx-shared`. | DLQ-001 | Medium |
 | DLQ-003 | P0 | Done | Implement `DlqPublisher` and wire unified `dlq` sink into topology; replace legacy `setupDlq` stub and `DlqEntryKey`/`DlqEntryDTO` branch paths. | DLQ-001, DLQ-002 | High |
-| DLQ-004 | P0 | In Progress | Remove legacy `DlqEntryDTO` runtime path and fix remaining compile blockers in `ProcessInstanceProcessor`. | DLQ-003 | Medium |
+| DLQ-004 | P0 | Done | Remove legacy `DlqEntryDTO` runtime path and fix remaining compile blockers in `ProcessInstanceProcessor`. | DLQ-003 | Medium |
 
 ### Acceptance Criteria (E1)
 - [x] Three unified DLQ topics (`dlq`, `dlq.replay`, `dlq.replay-results`) with DELETE cleanup policy exist in `Topics`.

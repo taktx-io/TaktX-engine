@@ -154,7 +154,7 @@ public class DlqPublisher {
     if (reasonCode == DlqReasonCode.CBOR_DECODE_ERROR) {
       return "Unable to decode process-instance trigger payload";
     }
-    return "Rejected by legacy DLQ path for " + entry.getClass().getSimpleName();
+    return "Processing exception for " + entry.getClass().getSimpleName();
   }
 
   private static DlqCaptureStage captureStage(DlqEntryDTO entry) {
