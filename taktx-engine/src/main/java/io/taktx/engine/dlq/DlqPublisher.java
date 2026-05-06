@@ -12,6 +12,7 @@ import io.taktx.dto.DlqCaptureStage;
 import io.taktx.dto.DlqEntryDTO;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
+import io.taktx.dto.DmnDefinitionsDlqEntryDTO;
 import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
@@ -86,6 +87,9 @@ public class DlqPublisher {
     if (entry instanceof UserTaskResponseDlqEntryDTO) {
       return Topics.USER_TASK_RESPONSE_TOPIC.getTopicName();
     }
+    if (entry instanceof DmnDefinitionsDlqEntryDTO) {
+      return Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName();
+    }
     return "unknown";
   }
 
@@ -113,9 +117,11 @@ public class DlqPublisher {
   private static Map<String, byte[]> getHeadersMap(DlqEntryDTO entry) {
     return switch (entry) {
       case ProcessInstanceDlqEntryDTO pi -> pi.getHeaders();
+      case ProcessDefinitionDlqEntryDTO pd -> pd.getHeaders();
       case MessageEventDlqEntryDTO me -> me.getHeaders();
       case SignalDlqEntryDTO s -> s.getHeaders();
       case UserTaskResponseDlqEntryDTO u -> u.getHeaders();
+      case DmnDefinitionsDlqEntryDTO dmn -> dmn.getHeaders();
       default -> null;
     };
   }

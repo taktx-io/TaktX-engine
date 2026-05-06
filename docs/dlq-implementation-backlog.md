@@ -120,6 +120,24 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - `:taktx-shared:test`
     - all successful — 13 tests, 0 failures.
   - `DLQ-006` complete.
+- 2026-05-06 (checkpoint 12):
+  - Implemented DLQ-007: failure capture for `definitions` and `dmn-definitions`.
+  - Added `headers` field to `ProcessDefinitionDlqEntryDTO` (was missing; needed for DLQ hint headers consistency).
+  - Created `DmnDefinitionsDlqEntryDTO` (dmnDefinitionId, value, headers) in `taktx-shared`.
+  - Extended `DlqEntryTypeIdResolver` with type code `N` for `DmnDefinitionsDlqEntryDTO`.
+  - Extended `DlqPublisher`: `sourceTopic()` for `DmnDefinitionsDlqEntryDTO` → `dmn-definitions`; `getHeadersMap()` for both `ProcessDefinitionDlqEntryDTO` and `DmnDefinitionsDlqEntryDTO`.
+  - Updated `DefinitionsProcessor`: null-value guard + try-catch around `process()`; `IllegalStateException` default case replaced with DLQ emit via `ProcessDefinitionDlqEntryDTO`.
+  - Updated `DmnDefinitionsProcessor`: null/null-xml guard + try-catch; emits `DmnDefinitionsDlqEntryDTO` on failure.
+  - Updated `TopologyProducer`: added DLQ branch to `setupDmnDefinitionStream`.
+  - Note: `process-definition-activation` and `dmn-definition-activation` are engine-written compacted output topics consumed only as `globalTable()`; no custom processor to intercept — `ContinueOnDeserializationErrorHandler` provides the deserialization safety net for these.
+  - Added unit tests: `DefinitionsProcessorDlqTest`, `DmnDefinitionsProcessorDlqTest`.
+  - Fixed `DlqPublisherTest` to use updated 3-arg `ProcessDefinitionDlqEntryDTO` constructor.
+  - Re-validated with:
+    - `:taktx-shared:compileJava` + `:taktx-engine:compileJava` + `:taktx-engine:compileTestJava`
+    - `:taktx-engine:test --tests io.taktx.engine.pd.DefinitionsProcessorDlqTest --tests io.taktx.engine.pd.DmnDefinitionsProcessorDlqTest --tests io.taktx.engine.dlq.DlqPublisherTest --tests io.taktx.engine.pi.ProcessInstanceProcessorDlqTest`
+    - `:taktx-shared:test`
+    - all successful.
+  - `DLQ-007` complete.
 
 This backlog is structured for sprint/Jira tracking and follows the agreed constraints:
 - append-only DLQ coverage for external execution ingress only
@@ -162,7 +180,7 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 |---|---|---|---|---|---|
 | DLQ-005 | P0 | Done | Capture `process-instance` decode/signature/auth failures into DLQ. | DLQ-003 | High |
 | DLQ-006 | P0 | Done | Capture external execution event ingress failures for `message-event`, `signals`, and `usertasks-response`. | DLQ-003 | High |
-| DLQ-007 | P0 | Todo | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
+| DLQ-007 | P0 | Done | Capture definition/deployment ingress failures for `definitions`, `process-definition-activation`, `dmn-definitions`, and `dmn-definition-activation`. | DLQ-003 | High |
 | DLQ-008 | P1 | Todo | Ensure DLQ records include `captureStage` and document duplicate semantics for included ingress topics. | DLQ-005, DLQ-006, DLQ-007 | Medium |
 | DLQ-008A | P1 | Todo | Define non-DLQ handling for excluded topics (`schedule-commands`, control-plane/security topics, projections). | DLQ-003 | Medium |
 

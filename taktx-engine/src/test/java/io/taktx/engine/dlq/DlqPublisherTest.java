@@ -51,7 +51,7 @@ class DlqPublisherTest {
   @Test
   void toEnvelope_mapsProcessDefinitionEntryToDefinitionsTopic() {
     ProcessDefinitionDlqEntryDTO entry =
-        new ProcessDefinitionDlqEntryDTO(new ProcessDefinitionKey("demo-process", 3), null);
+        new ProcessDefinitionDlqEntryDTO(new ProcessDefinitionKey("demo-process", 3), null, null);
 
     DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_100_000L, "engine-b");
 

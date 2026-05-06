@@ -11,16 +11,21 @@ package io.taktx.engine.pd;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.DmnDefinitionStateEnum;
+import io.taktx.dto.DmnDefinitionsDlqEntryDTO;
 import io.taktx.dto.DmnDefinitionsKey;
 import io.taktx.dto.ParsedDmnDefinitionsDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dmn.DmnDefinitionsCache;
 import io.taktx.xml.DmnParser;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -29,6 +34,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 @Slf4j
 public class DmnDefinitionsProcessor
     implements Processor<String, XmlDmnDefinitionsDTO, Object, Object> {
+
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
 
   private final TaktConfiguration taktConfiguration;
   private final Clock clock;
@@ -54,42 +63,80 @@ public class DmnDefinitionsProcessor
 
   @Override
   public void process(Record<String, XmlDmnDefinitionsDTO> record) {
+    if (record.value() == null || record.value().getXml() == null) {
+      log.warn("⚠ Null payload on dmn-definitions for key {}, routing to DLQ", record.key());
+      emitDmnDefinitionsDlq(
+          record, "CBOR_DECODE_ERROR", "Null payload for dmn-definitions record", "PROCESSOR");
+      return;
+    }
     String dmnDefinitionId = record.key();
     String xml = record.value().getXml();
     log.info("Processing DMN definitions record for definition {}", dmnDefinitionId);
 
-    ParsedDmnDefinitionsDTO parsed = DmnParser.parse(xml);
-    DmnDefinitionsKey definitionsKey = parsed.getDefinitionsKey();
+    try {
+      ParsedDmnDefinitionsDTO parsed = DmnParser.parse(xml);
+      DmnDefinitionsKey definitionsKey = parsed.getDefinitionsKey();
 
-    Map<String, Integer> hashVersionPairs = getHashVersionPairs(dmnDefinitionId);
-    if (hashVersionPairs == null) {
-      hashVersionPairs = new HashMap<>();
+      Map<String, Integer> hashVersionPairs = getHashVersionPairs(dmnDefinitionId);
+      if (hashVersionPairs == null) {
+        hashVersionPairs = new HashMap<>();
+      }
+
+      Integer version = hashVersionPairs.get(definitionsKey.getHash());
+      if (version == null) {
+        version = hashVersionPairs.size() + 1;
+        log.info("Creating new version {} of DMN definition {}", version, dmnDefinitionId);
+
+        hashVersionPairs.put(definitionsKey.getHash(), version);
+        hashVersionStore.put(dmnDefinitionId, hashVersionPairs);
+        hashVersionCache.put(dmnDefinitionId, hashVersionPairs);
+
+        DmnDefinitionKey key = new DmnDefinitionKey(dmnDefinitionId, version);
+        DmnDefinitionDTO dto = new DmnDefinitionDTO(parsed, version, DmnDefinitionStateEnum.ACTIVE);
+
+        dmnDefinitionsCache.put(key, dto);
+
+        // Forward: (DmnDefinitionKey, DmnDefinitionDTO) → global-dmn-definition topic
+        context.forward(new Record<>(key, dto, clock.millis()));
+        // Forward: (DmnDefinitionKey, String xml) → xml-by-dmn-definition-id topic
+        context.forward(new Record<>(key, xml, clock.millis()));
+      } else {
+        log.info(
+            "Version {} of DMN definition {} already exists, no action needed",
+            version,
+            dmnDefinitionId);
+      }
+    } catch (Exception e) {
+      log.error(
+          "⚠ Exception processing dmn-definitions record for {}, routing to DLQ: {}",
+          dmnDefinitionId,
+          e.getMessage(),
+          e);
+      emitDmnDefinitionsDlq(record, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
     }
+  }
 
-    Integer version = hashVersionPairs.get(definitionsKey.getHash());
-    if (version == null) {
-      version = hashVersionPairs.size() + 1;
-      log.info("Creating new version {} of DMN definition {}", version, dmnDefinitionId);
+  private void emitDmnDefinitionsDlq(
+      Record<String, XmlDmnDefinitionsDTO> record,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
+    Map<String, byte[]> headersMap = headersToMap(record.headers());
+    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(
+        DLQ_REASON_TEXT_HEADER,
+        (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    DmnDefinitionsDlqEntryDTO dlqEntry =
+        new DmnDefinitionsDlqEntryDTO(record.key(), record.value(), headersMap);
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
 
-      hashVersionPairs.put(definitionsKey.getHash(), version);
-      hashVersionStore.put(dmnDefinitionId, hashVersionPairs);
-      hashVersionCache.put(dmnDefinitionId, hashVersionPairs);
-
-      DmnDefinitionKey key = new DmnDefinitionKey(dmnDefinitionId, version);
-      DmnDefinitionDTO dto = new DmnDefinitionDTO(parsed, version, DmnDefinitionStateEnum.ACTIVE);
-
-      dmnDefinitionsCache.put(key, dto);
-
-      // Forward: (DmnDefinitionKey, DmnDefinitionDTO) → global-dmn-definition topic
-      context.forward(new Record<>(key, dto, clock.millis()));
-      // Forward: (DmnDefinitionKey, String xml) → xml-by-dmn-definition-id topic
-      context.forward(new Record<>(key, xml, clock.millis()));
-    } else {
-      log.info(
-          "Version {} of DMN definition {} already exists, no action needed",
-          version,
-          dmnDefinitionId);
+  private static Map<String, byte[]> headersToMap(org.apache.kafka.common.header.Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
     }
+    return Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
   }
 
   private Map<String, Integer> getHashVersionPairs(String dmnDefinitionId) {

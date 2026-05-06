@@ -338,7 +338,21 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(
                                 Topics.XML_BY_DMN_DEFINITION_ID.getTopicName()),
-                            Produced.with(DMN_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))));
+                            Produced.with(DMN_DEFINITION_KEY_SERDE, ZIPPED_STRING_SERDE))))
+        .branch(
+            (_, value) -> value instanceof DlqEntryDTO,
+            Branched.withConsumer(
+                ks ->
+                    ks.map(
+                            (_, value) -> {
+                              DlqEnvelope envelope =
+                                  dlqPublisher.toEnvelope(
+                                      (DlqEntryDTO) value, clock.millis(), engineInstanceId());
+                              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+                            })
+                        .to(
+                            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+                            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
   }
 
   private void setupNewDefinitionStream(StreamsBuilder builder) {

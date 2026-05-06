@@ -12,6 +12,7 @@ import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionActivationDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.XmlDefinitionsDTO;
@@ -19,10 +20,14 @@ import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.xml.BpmnParser;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -33,6 +38,10 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @Slf4j
 public class DefinitionsProcessor
     implements Processor<String, DefinitionsTriggerDTO, Object, Object> {
+
+  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
+  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
+  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
 
   private final TaktConfiguration taktConfiguration;
   private final MessageSchedulerFactory messageSchedulerFactory;
@@ -79,14 +88,57 @@ public class DefinitionsProcessor
 
   @Override
   public void process(Record<String, DefinitionsTriggerDTO> definitionsRecord) {
-    if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
-      processDefinitionsRecord(definitionsRecord.key(), xmlDefinitions);
-    } else if (definitionsRecord.value()
-        instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
-      processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
-    } else {
-      throw new IllegalStateException("Unsupported trigger: " + definitionsRecord.value());
+    if (definitionsRecord.value() == null) {
+      emitDefinitionsDlq(
+          definitionsRecord,
+          "CBOR_DECODE_ERROR",
+          "Null payload for definitions record",
+          "PROCESSOR");
+      return;
     }
+    try {
+      if (definitionsRecord.value() instanceof XmlDefinitionsDTO xmlDefinitions) {
+        processDefinitionsRecord(definitionsRecord.key(), xmlDefinitions);
+      } else if (definitionsRecord.value()
+          instanceof ProcessDefinitionActivationDTO processDefinitionActivationDTO) {
+        processDefinitionActivationProcessor.process(processDefinitionActivationDTO);
+      } else {
+        log.warn(
+            "⚠ Unknown definitions trigger type, routing to DLQ: {}",
+            definitionsRecord.value().getClass().getName());
+        emitDefinitionsDlq(
+            definitionsRecord,
+            "CBOR_TYPE_MISMATCH",
+            "Unknown definitions trigger type: " + definitionsRecord.value().getClass().getName(),
+            "PROCESSOR");
+      }
+    } catch (Exception e) {
+      log.error("⚠ Exception processing definitions record, routing to DLQ: {}", e.getMessage(), e);
+      emitDefinitionsDlq(definitionsRecord, "PROCESSOR_EXCEPTION", e.getMessage(), "PROCESSOR");
+    }
+  }
+
+  private void emitDefinitionsDlq(
+      Record<String, DefinitionsTriggerDTO> record,
+      String reasonHint,
+      String reasonText,
+      String captureStage) {
+    Map<String, byte[]> headersMap = headersToMap(record.headers());
+    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(
+        DLQ_REASON_TEXT_HEADER,
+        (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+    ProcessDefinitionDlqEntryDTO dlqEntry =
+        new ProcessDefinitionDlqEntryDTO(null, record.value(), headersMap);
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private static Map<String, byte[]> headersToMap(org.apache.kafka.common.header.Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
+    }
+    return Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
   }
 
   public void processDefinitionsRecord(

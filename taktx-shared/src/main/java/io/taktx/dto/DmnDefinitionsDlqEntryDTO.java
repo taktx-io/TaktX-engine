@@ -21,8 +21,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @RegisterForReflection
-public class ProcessDefinitionDlqEntryDTO extends DlqEntryDTO {
-  private ProcessDefinitionKey key;
-  private DefinitionsTriggerDTO definitionsTrigger;
+public class DmnDefinitionsDlqEntryDTO extends DlqEntryDTO {
+  private String dmnDefinitionId;
+  private XmlDmnDefinitionsDTO value;
   private Map<String, byte[]> headers;
 }
