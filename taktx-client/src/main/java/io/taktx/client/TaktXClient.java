@@ -13,9 +13,15 @@ import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.Deployment;
 import io.taktx.client.auth.AuthorizationTokenProvider;
 import io.taktx.client.auth.OpenIdClientCredentialsTokenProvider;
+import io.taktx.client.dlq.DlqEntryConsumer;
+import io.taktx.client.dlq.DlqReplayCommandProducer;
+import io.taktx.client.dlq.DlqReplayResultConsumer;
 import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
+import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.DlqReplayCommand;
+import io.taktx.dto.DlqReplayResult;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
@@ -89,6 +95,11 @@ public class TaktXClient {
   private final TaktPropertiesHelper taktPropertiesHelper;
   private final SigningIdentitySource signingIdentitySource;
   private final @Nullable AuthorizationTokenProvider authorizationTokenProvider;
+
+  // ── DLQ client (lazily initialised on first use) ──────────────────────────────
+  private DlqEntryConsumer dlqEntryConsumer;
+  private DlqReplayCommandProducer dlqReplayCommandProducer;
+  private DlqReplayResultConsumer dlqReplayResultConsumer;
 
   /**
    * Optional base64-encoded RSA/SHA-256 registration signature for this worker's signing key.
@@ -658,6 +669,18 @@ public class TaktXClient {
     this.processInstanceUpdateConsumer.stop();
     this.xmlByProcessDefinitionIdConsumer.stop();
     this.xmlByDmnDefinitionIdConsumer.stop();
+    if (dlqEntryConsumer != null) {
+      dlqEntryConsumer.stop();
+      dlqEntryConsumer = null;
+    }
+    if (dlqReplayResultConsumer != null) {
+      dlqReplayResultConsumer.stop();
+      dlqReplayResultConsumer = null;
+    }
+    if (dlqReplayCommandProducer != null) {
+      dlqReplayCommandProducer.close();
+      dlqReplayCommandProducer = null;
+    }
     if (signingKeysStore != null) {
       SigningKeysStoreHolder.clear();
       signingKeysStore.close();
@@ -1010,6 +1033,101 @@ public class TaktXClient {
    */
   public void sendSignal(String signalName) {
     this.signalSender.sendMSignal(new SignalDTO(signalName));
+  }
+
+  // ── DLQ API ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Registers a handler that receives every {@link DlqEnvelope} from the {@code dlq} topic,
+   * resuming from the last committed offset for this consumer group.
+   *
+   * <p>The first call starts the background polling loop on a virtual thread. Additional handlers
+   * for the same client instance are added to the same loop.
+   *
+   * <p>This is a <em>Community</em>-tier feature — any application with proper Kafka ACLs can
+   * consume the DLQ topic directly.
+   *
+   * @param groupId Kafka consumer group ID (determines offset tracking and parallelism)
+   * @param handler callback invoked for each {@link DlqEnvelope} (runs on the polling thread)
+   */
+  public void registerDlqEntryConsumer(
+      String groupId, java.util.function.Consumer<DlqEnvelope> handler) {
+    dlqEntryConsumerInstance().registerConsumer(groupId, handler);
+  }
+
+  /**
+   * Registers a handler that receives every {@link DlqEnvelope} from the {@code dlq} topic with
+   * explicit start-from-beginning control.
+   *
+   * @param groupId Kafka consumer group ID
+   * @param handler callback invoked for each envelope
+   * @param startFromEarliest when {@code true}, seeks every assigned partition to offset 0 after
+   *     the first rebalance, guaranteeing a full-history replay
+   */
+  public void registerDlqEntryConsumer(
+      String groupId, java.util.function.Consumer<DlqEnvelope> handler, boolean startFromEarliest) {
+    dlqEntryConsumerInstance().registerConsumer(groupId, handler, startFromEarliest);
+  }
+
+  /**
+   * Submits a {@link DlqReplayCommand} to the {@code dlq.replay} topic.
+   *
+   * <p>The engine's replay processor validates the command (destination safety, schema
+   * compatibility, ENGINE signing) and either forwards the corrected record to the target ingress
+   * topic or emits a failure result. The outcome is published to {@code dlq.replay-results} and can
+   * be consumed via {@link #registerReplayResultConsumer}.
+   *
+   * <p>Use {@link io.taktx.client.dlq.DlqReplayCommandBuilder#from(DlqEnvelope)} to build a
+   * well-formed command from an envelope.
+   *
+   * <p>This is a <em>Community</em>-tier feature.
+   *
+   * @param command the replay command to submit; must not be {@code null}
+   */
+  public void submitReplayCommand(DlqReplayCommand command) {
+    dlqReplayCommandProducerInstance().submit(command);
+  }
+
+  /**
+   * Registers a handler that receives {@link DlqReplayResult} records from the {@code
+   * dlq.replay-results} topic.
+   *
+   * <p>Correlate results with submitted commands using {@link DlqReplayResult#getCorrectionId()}.
+   * The {@link DlqReplayResult#getStatus()} field indicates {@code SUCCESS}, {@code
+   * DRY_RUN_PASSED}, or {@code FAILED}.
+   *
+   * <p>This is a <em>Community</em>-tier feature.
+   *
+   * @param groupId Kafka consumer group ID
+   * @param handler callback invoked for each replay result
+   */
+  public void registerReplayResultConsumer(
+      String groupId, java.util.function.Consumer<DlqReplayResult> handler) {
+    dlqReplayResultConsumerInstance().registerConsumer(groupId, handler);
+  }
+
+  private synchronized DlqEntryConsumer dlqEntryConsumerInstance() {
+    if (dlqEntryConsumer == null) {
+      dlqEntryConsumer =
+          new DlqEntryConsumer(taktPropertiesHelper, Executors.newVirtualThreadPerTaskExecutor());
+    }
+    return dlqEntryConsumer;
+  }
+
+  private synchronized DlqReplayCommandProducer dlqReplayCommandProducerInstance() {
+    if (dlqReplayCommandProducer == null) {
+      dlqReplayCommandProducer = new DlqReplayCommandProducer(taktPropertiesHelper);
+    }
+    return dlqReplayCommandProducer;
+  }
+
+  private synchronized DlqReplayResultConsumer dlqReplayResultConsumerInstance() {
+    if (dlqReplayResultConsumer == null) {
+      dlqReplayResultConsumer =
+          new DlqReplayResultConsumer(
+              taktPropertiesHelper, Executors.newVirtualThreadPerTaskExecutor());
+    }
+    return dlqReplayResultConsumer;
   }
 
   /**

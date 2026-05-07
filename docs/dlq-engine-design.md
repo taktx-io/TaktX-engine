@@ -2,8 +2,15 @@
 
 **Document Version**: 1.0  
 **Date**: May 1, 2026  
-**Status**: Design Review  
+**Status**: Implementation Complete (2026-05-07)  
 **Author**: GitHub Copilot (with guidance from Engineering Team)
+
+> **Implementation status**: All five epics (E1–E5) are complete as of 2026-05-07.  
+> See companion documents for the living implementation contracts:
+> - [`docs/dlq-implementation-backlog.md`](./dlq-implementation-backlog.md) — full implementation history and task status
+> - [`docs/dlq-console-contract.md`](./dlq-console-contract.md) — engine-console topic/DTO contract (DLQ-019)
+> - [`docs/dlq-feature-matrix.md`](./dlq-feature-matrix.md) — Community vs Premium feature split (DLQ-020)
+> - [`docs/dlq-retention-policy.md`](./dlq-retention-policy.md) — per-environment retention and storage guidance (DLQ-018)
 
 ## Final Scope Decision (Authoritative)
 
