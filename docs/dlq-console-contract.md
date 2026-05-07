@@ -1,6 +1,6 @@
 # TaktX DLQ Console Integration Contract
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Date**: May 7, 2026  
 **Status**: Active  
 **Depends on**: DLQ-014, DLQ-017  
@@ -277,6 +277,11 @@ DlqEnvelope (on dlq topic)
   └─ dlqEntryRef = "sourceTopic:partition:offset:hash"
   └─ captureStage, reasonCode, severity
 
+ProcessInstanceUpdateDTO (on process-instance-updates topic)  ← NEW
+  └─ incidentInfo.dlqEntryRef → links directly to DlqEnvelope above
+  └─ incidentInfo.message, incidentInfo.elementInstanceIdPath
+  └─ only present when the incident was caused by a message failure captured in DLQ
+
 DlqReplayCommand (on dlq.replay topic)
   └─ dlqEntryRef → links to DlqEnvelope
   └─ operatorId, changedFields, overrideReason
@@ -330,3 +335,146 @@ The engine emits these metrics observable from the console:
 
 See `docker/prometheus-dlq-alerts.yaml` for alert rules.
 
+---
+
+## Incident → DLQ Link
+
+When a process instance enters **incident state** due to a message ingestion failure (decode error, unhandled BPMN error event), the engine co-produces both a `DlqEnvelope` on the `dlq` topic and a `ProcessInstanceUpdateDTO` on the `process-instance-updates` topic. The update carries a direct back-reference to the DLQ entry.
+
+### `IncidentInfoDTO.dlqEntryRef`
+
+| Field | Type | When populated |
+|---|---|---|
+| `dlqEntryRef` | `String` (nullable) | When the incident was caused by a message failure that also produced a DLQ entry |
+
+**Format**: `sourceTopic:partition:offset:sha256:hash`  
+If the SHA-256 hash is unavailable (e.g. empty payload), the hash segment is `?`: `process-instance:0:42:?`
+
+**When it is `null`**: Engine-internal BPMN exceptions (`doWhileCatching`) and exceptions without a corresponding DLQ entry do not set this field.
+
+### Correlating an incident to its DLQ entry
+
+```java
+client.registerProcessInstanceUpdateConsumer("console-group", update -> {
+    if (update instanceof ProcessInstanceUpdateDTO piUpdate
+            && piUpdate.getIncidentInfoDTO() != null
+            && piUpdate.getIncidentInfoDTO().getDlqEntryRef() != null) {
+
+        String dlqRef = piUpdate.getIncidentInfoDTO().getDlqEntryRef();
+        // Look up the matching DlqEnvelope in your local DLQ store
+        // Key: dlqRef == envelope.getSourceTopic() + ":" + partition + ":" + offset + ":" + hash
+        DlqEnvelope match = dlqStore.findByRef(dlqRef);
+    }
+});
+```
+
+The `dlqEntryRef` in `IncidentInfoDTO` uses the same format as `DlqEnvelope`'s dedup key, so a direct map lookup works without any transformation.
+
+---
+
+## Console Implementation Guide
+
+This section consolidates all the touch points needed to implement the full DLQ console feature set using the `taktx-client` library.
+
+### 1. Bootstrap
+
+```java
+TaktXClient client = TaktXClient.newClientBuilder()
+    .withProperties(kafkaProperties) // standard Kafka consumer/producer config
+    .build();
+client.start();
+```
+
+### 2. DLQ Explorer — reading entries
+
+```java
+// startFromEarliest=true on first run to replay history; false thereafter
+client.registerDlqEntryConsumer("console-dlq-group", envelope -> {
+    // Store envelope keyed by dlqEntryRef for O(1) incident correlation lookups
+    String ref = envelope.getSourceTopic()
+        + ":" + envelope.getSourcePartition()
+        + ":" + envelope.getSourceOffset()
+        + ":" + envelope.getSourceMessageHash();
+    dlqStore.put(ref, envelope);
+}, /* startFromEarliest= */ true);
+```
+
+Deduplicate by the dedup key (`sourceTopic:sourcePartition:sourceOffset:sourceMessageHash`) — the engine may re-emit an entry on Kafka Streams retry.
+
+### 3. Process instance incident state — linking to DLQ
+
+```java
+client.registerProcessInstanceUpdateConsumer("console-pi-group", update -> {
+    if (update instanceof ProcessInstanceUpdateDTO piUpdate) {
+        IncidentInfoDTO incident = piUpdate.getIncidentInfoDTO();
+        if (incident != null && incident.getDlqEntryRef() != null) {
+            // Navigate console from incident panel directly to DLQ explorer entry
+            DlqEnvelope linked = dlqStore.get(incident.getDlqEntryRef());
+            consoleUI.showIncidentWithDlqLink(piUpdate, linked);
+        }
+    }
+});
+```
+
+`ProcessInstanceUpdateDTO` arrives via the `registerProcessInstanceUpdateConsumer` API, not a separate topic subscription. The `incidentInfoDTO.dlqEntryRef` is populated **only** when:
+- The incident was caused by a CBOR decode failure (`captureStage = DESERIALIZER`)
+- The incident was caused by an unhandled BPMN error event (`captureStage = PROCESSOR`, DLQ entry has empty payload, `dlqEntryRef` hash segment = `?`)
+
+### 4. Payload correction and replay
+
+```java
+// Step 1 — dry-run to validate before committing
+DlqReplayCommand dryRun = DlqReplayCommandBuilder.from(envelope)
+    .operatorId("ops@example.com")
+    .correctedPayload(correctedCborBytes)
+    .correctedHeaders(Map.of("Authorization", base64NewJwt))
+    .dryRun()
+    .build();
+client.submitReplayCommand(dryRun);
+
+// Step 2 — listen for result, then go live
+client.registerReplayResultConsumer("console-results-group", result -> {
+    if ("DRY_RUN_PASSED".equals(result.getStatus())) {
+        DlqReplayCommand live = DlqReplayCommandBuilder.from(envelope)
+            .operatorId("ops@example.com")
+            .correctedPayload(correctedCborBytes)
+            .correctedHeaders(Map.of("Authorization", base64NewJwt))
+            .build(); // dryRun defaults to false
+        client.submitReplayCommand(live);
+    } else if ("FAILED".equals(result.getStatus())) {
+        consoleUI.showReplayError(result.getOutcomeText(), result.getFailureReasonCode());
+    }
+});
+```
+
+### 5. Schema override (OPERATOR_OVERRIDE policy)
+
+Use only when the operator has verified the payload is compatible with an older or newer schema:
+
+```java
+DlqReplayCommand override = DlqReplayCommandBuilder.from(envelope)
+    .operatorId("ops@example.com")
+    .correctedPayload(correctedBytes)
+    .validationPolicy(DlqValidationPolicy.OPERATOR_OVERRIDE)
+    .overrideReason("Schema v2→v3 migration: field 'amount' renamed to 'totalAmount'")
+    .changedFields(List.of("totalAmount"))
+    .build();
+client.submitReplayCommand(override);
+```
+
+### 6. Correlation summary
+
+| Console action | Data source | Key field |
+|---|---|---|
+| List DLQ entries | `dlq` topic via `registerDlqEntryConsumer` | `dlqEntryRef` (computed from envelope fields) |
+| Detect incident with DLQ cause | `process-instance-updates` topic | `incidentInfoDTO.dlqEntryRef` |
+| Navigate incident → DLQ entry | Local store lookup | `dlqEntryRef` equality |
+| Submit replay | `dlq.replay` topic via `submitReplayCommand` | `dlqEntryRef` |
+| Track replay outcome | `dlq.replay-results` topic via `registerReplayResultConsumer` | `dlqEntryRef` + `correctionId` |
+| Track forwarded record | Target ingress topic headers | `X-DLQ-Lineage-Ref`, `X-DLQ-Correction-Id` |
+
+### 7. Shutdown
+
+```java
+client.stop(); // stops all consumers and flushes the replay producer
+```

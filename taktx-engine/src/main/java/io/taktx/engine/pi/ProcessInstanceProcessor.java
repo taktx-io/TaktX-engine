@@ -52,6 +52,8 @@ import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -223,7 +225,8 @@ public class ProcessInstanceProcessor
               t.getMessage(),
               Arrays.stream(t.getStackTrace())
                   .map(StackTraceElement::toString)
-                  .toArray(String[]::new)));
+                  .toArray(String[]::new),
+              null)); // no DLQ entry emitted for engine-internal exceptions
       processResultAndForward(
           processInstanceProcessingContext, processDefinitionKey, scope, variableScope);
     }
@@ -243,15 +246,18 @@ public class ProcessInstanceProcessor
     if (processInstanceDTO != null) {
       FlowElements flowElements = getFlowElements(processInstanceDTO.getProcessDefinitionKey());
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
-      IncidentInfo incidentInfo = new IncidentInfo(null, "Unable to decode trigger", null);
+      IncidentInfo incidentInfo =
+          new IncidentInfo(
+              null,
+              "Unable to decode trigger",
+              null,
+              buildDlqEntryRef(triggerEnvelope.data()));
       processInstance.setIncidentInfo(incidentInfo);
       enrichScope(processInstance.getScope(), processInstanceId, flowElements);
       ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
       processDefinitionKeyThreadLocal.set(processDefinitionKey);
 
       InstanceResult instanceResult = InstanceResult.empty();
-      Map<String, byte[]> headersMap =
-          Arrays.stream(headers.toArray()).collect(Collectors.toMap(Header::key, Header::value));
       forwarder.forward(context, instanceResult, processDefinitionKey, processInstance);
     }
   }
@@ -649,7 +655,8 @@ public class ProcessInstanceProcessor
                   "Error code: " + errorEventSignal.getCode(),
                   "Error message: " + errorEventSignal.getMessage(),
                   "Source element: " + errorEventSignal.getCurrentInstance().getFlowNode().getId()
-                }));
+                },
+                buildDlqEntryRef(new byte[0])));
         DlqEntryDTO dlqEntry =
             new ProcessInstanceDlqEntryDTO(
                 processInstance.getProcessInstanceId(), null, Map.of(), new byte[0]);
@@ -870,14 +877,15 @@ public class ProcessInstanceProcessor
               new IncidentInfo(
                   processInstanceException.getFlowNodeInstance(),
                   processInstanceException.getMessage(),
-                  stackTraceStrings));
+                  stackTraceStrings,
+                  null));
     } catch (Exception t) {
       StackTraceElement[] stackTrace = t.getStackTrace();
       String[] stackTraceStrings =
           Arrays.stream(stackTrace).map(StackTraceElement::toString).toArray(String[]::new);
       processInstanceProcessingContext
           .getProcessInstance()
-          .setIncidentInfo(new IncidentInfo(null, t.getMessage(), stackTraceStrings));
+          .setIncidentInfo(new IncidentInfo(null, t.getMessage(), stackTraceStrings, null));
     } finally {
       processResultAndForward(
           processInstanceProcessingContext,
@@ -900,5 +908,46 @@ public class ProcessInstanceProcessor
     return trustMetadata != null
         && Boolean.TRUE.equals(trustMetadata.getTrusted())
         && trustMetadata.getVerificationResult() == CommandTrustVerificationResult.ENGINE_SIGNED;
+  }
+
+  /**
+   * Builds a fully-qualified DLQ entry reference ({@code sourceTopic:partition:offset:hash}) that
+   * can be used to navigate directly from an incident to the matching DLQ entry. Returns {@code
+   * null} when Kafka record metadata is unavailable (e.g. internally forwarded records).
+   *
+   * @param valueBytes the raw value bytes of the failing message; used to compute the SHA-256 hash
+   */
+  private String buildDlqEntryRef(byte[] valueBytes) {
+    return context
+        .recordMetadata()
+        .map(
+            meta -> {
+              String hash = computeMessageHash(valueBytes);
+              return meta.topic()
+                  + ":"
+                  + meta.partition()
+                  + ":"
+                  + meta.offset()
+                  + ":"
+                  + (hash != null ? hash : "?");
+            })
+        .orElse(null);
+  }
+
+  private static String computeMessageHash(byte[] valueBytes) {
+    if (valueBytes == null || valueBytes.length == 0) {
+      return null;
+    }
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(valueBytes);
+      StringBuilder sb = new StringBuilder(hash.length * 2);
+      for (byte b : hash) {
+        sb.append(String.format("%02x", b));
+      }
+      return "sha256:" + sb;
+    } catch (NoSuchAlgorithmException e) {
+      return null;
+    }
   }
 }
