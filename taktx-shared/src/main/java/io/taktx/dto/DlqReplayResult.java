@@ -31,9 +31,22 @@ public class DlqReplayResult {
   @Nullable private String replaySignatureKeyId;
   @Nullable private String compatibilityDecision;
 
+  /**
+   * Operator-supplied override justification copied from the originating {@link DlqReplayCommand}.
+   * Present only when {@link ReplayValidationPolicy#OPERATOR_OVERRIDE} was used.
+   */
+  @Nullable private String overrideReason;
+
   /** Mirrors the {@code dryRun} flag from the originating {@link DlqReplayCommand}. */
   private boolean dryRun;
 
   /** Reference linking this result back to the source DLQ entry ({@code dlqEntryRef}). */
   @Nullable private String lineageRef;
+
+  /**
+   * Unique ID generated per replay attempt; matches the {@code X-DLQ-Correction-Id} header stamped
+   * on the forwarded record. Use this to correlate the replay result with the record that arrived
+   * on the target ingress topic.
+   */
+  @Nullable private String correctionId;
 }

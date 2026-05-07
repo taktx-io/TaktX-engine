@@ -195,7 +195,36 @@ Excluded topics are handled via incident/alerting, structured logs, audit events
     - all successful.
   - `DLQ-007` complete.
 
-This backlog is structured for sprint/Jira tracking and follows the agreed constraints:
+- 2026-05-07 (checkpoint 17):
+  - Implemented DLQ-015: `DlqObservabilityService` (`@Singleton`, Micrometer) — centralises all DLQ observability.
+    - `recordDlqEntry(DlqEnvelope)`: increments `taktx.dlq.entries` tagged `severity/reason_code/source_topic/capture_stage`; log level follows severity (`CRITICAL`→ERROR, `HIGH`→WARN, `MEDIUM`/`LOW`→INFO).
+    - Injected into `DlqPublisher` via `@Inject` + package-private testing constructor; called at end of `toEnvelope()`.
+  - Implemented DLQ-016: `docker/prometheus-dlq-alerts.yaml` with four alert rules:
+    - `DlqCriticalEntry` — fires immediately on any CRITICAL entry (for=0m).
+    - `DlqHighEntryThreshold` — fires when > 5 HIGH entries in 5 min (configurable via `TAKTX_DLQ_HIGH_ALERT_THRESHOLD_PER_5M`).
+    - `ExcludedTopicDeserializationError` — fires on any excluded-topic deserialization skip.
+    - `ExcludedTopicScheduleCommandFailure` — fires on schedule-command processing failure.
+    - Added `taktx.dlq.alert.high-threshold-per-5m` property to `application.properties`.
+  - Implemented DLQ-017: replay-result audit details.
+    - Added `overrideReason` field to `DlqReplayResult` in `taktx-shared`.
+    - Added `recordReplayOutcome(DlqReplayResult)` to `DlqObservabilityService`: increments `taktx.dlq.replay.outcomes{status=…}`; emits structured audit log with all provenance fields.
+    - Updated `DlqReplayProcessor`: added `DlqObservabilityService` constructor parameter; `emitResult()` sets `overrideReason` and calls `recordReplayOutcome`.
+    - Updated `TopologyProducer`: injects `DlqObservabilityService`; passes it to `DlqReplayProcessor`.
+  - Implemented DLQ-018: created `docs/dlq-retention-policy.md` with per-environment retention matrix (dev 7d / staging 30d / prod 90–180d), storage sizing guidance, AlertManager near-capacity rule, and future cold-archive strategy.
+  - Implemented DLQ-018A: added observable metrics for excluded topics.
+    - `ContinueOnDeserializationErrorHandler` now increments `taktx.excluded.topic.deserialization.errors{topic=…}` via `Metrics.globalRegistry` (Quarkus Micrometer global registry) after the existing `log.error`.
+    - `ScheduleProcessor`: added `DlqObservabilityService` constructor parameter; calls `recordExcludedTopicFailure("schedule-commands")` in the `catch(Exception)` block.
+    - Updated `TopologyProducer`: passes `dlqObservabilityService` to `ScheduleProcessor`.
+  - Added unit tests: `DlqObservabilityServiceTest` (DLQ-T07, 9 tests) and `ScheduleProcessorExcludedTopicTest` (DLQ-T08, 2 tests).
+  - Updated `DlqPublisherTest`, `DlqReplayProcessorTest`, `ScheduleProcessorTest` to pass mock `DlqObservabilityService`.
+  - Re-validated with:
+    - `:taktx-shared:compileJava` + `:taktx-engine:compileJava` + `:taktx-engine:compileTestJava`
+    - all 151 engine unit tests — `BUILD SUCCESSFUL`, 0 failures.
+    - `:taktx-shared:test` — `BUILD SUCCESSFUL`.
+  - **DLQ-015 closed. DLQ-016 closed. DLQ-017 closed. DLQ-018 closed. DLQ-018A closed.**
+  - **DLQ-T07 closed. DLQ-T08 closed.**
+
+
 - append-only DLQ coverage for external execution ingress only
 - lineage and immutable replay chain
 - replay policies: `STRICT`, `OPERATOR_OVERRIDE`
@@ -272,17 +301,17 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 
 | ID | Pri | Status | Task | Depends On | Risk |
 |---|---|---|---|---|---|
-| DLQ-015 | P1 | Todo | Implement reason->severity mapping and include severity in logs/metrics for included DLQ surfaces. | DLQ-005..DLQ-007 | Medium |
-| DLQ-016 | P1 | Todo | Implement alert policy: `CRITICAL` immediate page, `HIGH` threshold alert, `MEDIUM/LOW` dashboard. | DLQ-015 | Medium |
-| DLQ-017 | P1 | Todo | Emit replay-result audit details (compatibility decision, signer, override reason). | DLQ-010, DLQ-013 | Medium |
-| DLQ-018 | P2 | Todo | Document retention and storage policy (enforced retention + future cold archive/tiered storage). | DLQ-015 | Low |
-| DLQ-018A | P1 | Todo | Add structured logging/metrics/incident handling for excluded engine-internal and control-plane topics. | DLQ-008A | Medium |
+| DLQ-015 | P1 | Done | Implement reason->severity mapping and include severity in logs/metrics for included DLQ surfaces. | DLQ-005..DLQ-007 | Medium |
+| DLQ-016 | P1 | Done | Implement alert policy: `CRITICAL` immediate page, `HIGH` threshold alert, `MEDIUM/LOW` dashboard. | DLQ-015 | Medium |
+| DLQ-017 | P1 | Done | Emit replay-result audit details (compatibility decision, signer, override reason). | DLQ-010, DLQ-013 | Medium |
+| DLQ-018 | P2 | Done | Document retention and storage policy (enforced retention + future cold archive/tiered storage). | DLQ-015 | Low |
+| DLQ-018A | P1 | Done | Add structured logging/metrics/incident handling for excluded engine-internal and control-plane topics. | DLQ-008A | Medium |
 
 ### Acceptance Criteria (E4)
-- [ ] Alert behavior matches severity policy.
-- [ ] Replay audit records include signer and schema compatibility outcome.
-- [ ] Retention policy is explicit per environment.
-- [ ] Excluded topics have observable non-DLQ failure handling.
+- [x] Alert behavior matches severity policy.
+- [x] Replay audit records include signer and schema compatibility outcome.
+- [x] Retention policy is explicit per environment.
+- [x] Excluded topics have observable non-DLQ failure handling.
 
 ---
 
@@ -309,8 +338,8 @@ This backlog is structured for sprint/Jira tracking and follows the agreed const
 | DLQ-T04 | P0 | Done | Destination safety and engine signing provenance tests | DLQ-011, DLQ-012 |
 | DLQ-T05 | P1 | Done | Schema compatibility tests (`STRICT` fail, override warn/audit) | DLQ-013 |
 | DLQ-T06 | P1 | Done | Dry-run no-side-effects test coverage | DLQ-014 |
-| DLQ-T07 | P1 | Todo | Alerting behavior by severity | DLQ-016 |
-| DLQ-T08 | P1 | Todo | Excluded-topic handling tests (incident/log/metric paths, no replay) | DLQ-008A, DLQ-018A |
+| DLQ-T07 | P1 | Done | Alerting behavior by severity | DLQ-016 |
+| DLQ-T08 | P1 | Done | Excluded-topic handling tests (incident/log/metric paths, no replay) | DLQ-008A, DLQ-018A |
 
 ---
 

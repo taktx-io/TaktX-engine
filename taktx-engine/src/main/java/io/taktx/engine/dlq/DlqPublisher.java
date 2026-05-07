@@ -19,6 +19,7 @@ import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,6 +29,16 @@ import java.util.Map;
 
 @ApplicationScoped
 public class DlqPublisher {
+
+  @Inject DlqObservabilityService observabilityService;
+
+  /** No-arg constructor for CDI (required for {@code @ApplicationScoped}). */
+  DlqPublisher() {}
+
+  /** Testing constructor. */
+  DlqPublisher(DlqObservabilityService observabilityService) {
+    this.observabilityService = observabilityService;
+  }
 
   private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
   private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
@@ -41,30 +52,33 @@ public class DlqPublisher {
     Map<String, String> headers = headerSnapshot(entry);
     DlqCaptureStage captureStage = captureStage(entry);
 
-    return new DlqEnvelope(
-        sourceTopic,
-        null,
-        valueBytes,
-        headers,
-        reasonCode,
-        reasonText(entry, reasonCode),
-        reasonCode.getSeverity(),
-        captureStage,
-        rejectionTimestampMs,
-        engineInstanceId,
-        null,
-        null,
-        null,
-        messageHash(valueBytes),
-        entry.getClass().getSimpleName(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    DlqEnvelope envelope =
+        new DlqEnvelope(
+            sourceTopic,
+            null,
+            valueBytes,
+            headers,
+            reasonCode,
+            reasonText(entry, reasonCode),
+            reasonCode.getSeverity(),
+            captureStage,
+            rejectionTimestampMs,
+            engineInstanceId,
+            null,
+            null,
+            null,
+            messageHash(valueBytes),
+            entry.getClass().getSimpleName(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    observabilityService.recordDlqEntry(envelope);
+    return envelope;
   }
 
   public String recordKey(DlqEnvelope envelope) {

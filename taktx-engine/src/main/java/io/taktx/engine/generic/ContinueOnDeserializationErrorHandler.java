@@ -7,6 +7,7 @@
  */
 package io.taktx.engine.generic;
 
+import io.micrometer.core.instrument.Metrics;
 import java.util.Map;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler;
@@ -55,6 +56,12 @@ public class ContinueOnDeserializationErrorHandler implements DeserializationExc
         consumerRecord.value() != null ? consumerRecord.value().length : -1,
         exception.getMessage(),
         exception);
+
+    // DLQ-018A: increment observable counter so dashboards can detect excluded-topic poison
+    // records.
+    Metrics.globalRegistry
+        .counter("taktx.excluded.topic.deserialization.errors", "topic", consumerRecord.topic())
+        .increment();
 
     // CONTINUE tells Kafka Streams to commit the offset and move past this record.
     // The stream thread stays alive; no state store is corrupted.

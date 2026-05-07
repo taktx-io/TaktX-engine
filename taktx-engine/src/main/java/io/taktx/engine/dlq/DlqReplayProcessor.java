@@ -88,6 +88,7 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
 
   private final MessageSigningService messageSigningService;
   private final TaktConfiguration taktConfiguration;
+  private final DlqObservabilityService observabilityService;
 
   private ProcessorContext<Object, Object> context;
 
@@ -97,14 +98,14 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
   }
 
   @Override
-  public void process(Record<String, DlqReplayCommand> record) {
-    DlqReplayCommand command = record.value();
+  public void process(Record<String, DlqReplayCommand> replayRecord) {
+    DlqReplayCommand command = replayRecord.value();
     if (command == null) {
       log.warn("⚠ Null DlqReplayCommand on dlq.replay — skipping");
       return;
     }
 
-    long now = record.timestamp();
+    long now = replayRecord.timestamp();
     String correctionId = UUID.randomUUID().toString();
 
     // ── DLQ-011: Destination topic safety ────────────────────────────────────
@@ -308,6 +309,9 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
     result.setCompatibilityDecision(compatibilityDecision);
     result.setDryRun(dryRun);
     result.setLineageRef(command.getDlqEntryRef());
+    result.setOverrideReason(command.getOverrideReason());
+    result.setCorrectionId(correctionId);
+    observabilityService.recordReplayOutcome(result);
     context.forward(new Record<>(command.getDlqEntryRef(), result, nowMs));
   }
 

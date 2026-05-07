@@ -8,6 +8,7 @@
 package io.taktx.engine.dlq;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
@@ -22,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 class DlqPublisherTest {
 
-  private final DlqPublisher dlqPublisher = new DlqPublisher();
+  private final DlqPublisher dlqPublisher = new DlqPublisher(mock(DlqObservabilityService.class));
 
   @Test
   void toEnvelope_mapsDecodeFailureToCborErrorAndPreservesPayloadDetails() {

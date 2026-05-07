@@ -13,10 +13,11 @@ import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.ScheduleKeyDTO;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.TimeBucket;
+import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.engine.security.VerificationCore;
 import io.taktx.security.AuthorizationTokenException;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +43,7 @@ public class ScheduleProcessor
   private final ProcessingStatistics processingStatistics;
   private final EngineAuthorizationService engineAuthorizationService;
   private final String scheduleTopicName;
+  private final DlqObservabilityService dlqObservabilityService;
 
   private Map<TimeBucket, BucketProcessor> bucketProcessorMap;
 
@@ -56,7 +58,8 @@ public class ScheduleProcessor
       TimeBucket[] timeBuckets,
       ProcessingStatistics processingStatistics,
       EngineAuthorizationService engineAuthorizationService,
-      String scheduleTopicName) {
+      String scheduleTopicName,
+      DlqObservabilityService dlqObservabilityService) {
     this.clock = clock;
     this.testProfile = testProfile;
     this.scheduleStoreProvider = scheduleStoreProvider;
@@ -64,6 +67,7 @@ public class ScheduleProcessor
     this.processingStatistics = processingStatistics;
     this.engineAuthorizationService = engineAuthorizationService;
     this.scheduleTopicName = scheduleTopicName;
+    this.dlqObservabilityService = dlqObservabilityService;
   }
 
   @Override
@@ -133,6 +137,8 @@ public class ScheduleProcessor
           scheduleMessageType(value),
           e.getMessage(),
           e);
+      // DLQ-018A: increment counter so dashboards can track excluded-topic failures.
+      dlqObservabilityService.recordExcludedTopicFailure("schedule-commands");
     }
   }
 
@@ -146,9 +152,7 @@ public class ScheduleProcessor
     if (header == null || header.value() == null) {
       return null;
     }
-    String headerValue = new String(header.value(), StandardCharsets.UTF_8);
-    int dotIndex = headerValue.indexOf('.');
-    return dotIndex >= 0 ? headerValue.substring(0, dotIndex) : headerValue;
+    return VerificationCore.extractKeyId(header);
   }
 
   private static String scheduleMessageType(MessageScheduleDTO schedule) {

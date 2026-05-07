@@ -48,6 +48,7 @@ import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqForwardingProcessor;
+import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.dlq.DlqPublisher;
 import io.taktx.engine.dlq.DlqReplayForwardRecord;
 import io.taktx.engine.dlq.DlqReplayProcessor;
@@ -231,6 +232,7 @@ public class TopologyProducer {
   private final GlobalConfigStore globalConfigStore;
   private final DlqPublisher dlqPublisher;
   private final MessageSigningService messageSigningService;
+  private final DlqObservabilityService dlqObservabilityService;
 
   @Produces
   public Topology buildTopology() {
@@ -791,7 +793,8 @@ public class TopologyProducer {
                     TimeBucket.values(),
                     processingStatistics,
                     engineAuthorizationService,
-                    taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName())),
+                    taktConfiguration.getPrefixed(Topics.SCHEDULE_COMMANDS.getTopicName()),
+                    dlqObservabilityService),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_MINUTE.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_HOURLY.getStorename()),
             taktConfiguration.getPrefixed(Stores.SCHEDULES_DAILY.getStorename()),
@@ -880,7 +883,10 @@ public class TopologyProducer {
     builder.stream(
             taktConfiguration.getPrefixed(Topics.DLQ_REPLAY.getTopicName()),
             Consumed.with(Serdes.String(), DLQ_REPLAY_COMMAND_SERDE))
-        .process(() -> new DlqReplayProcessor(messageSigningService, taktConfiguration))
+        .process(
+            () ->
+                new DlqReplayProcessor(
+                    messageSigningService, taktConfiguration, dlqObservabilityService))
         .split()
         .branch(
             (_, value) -> value instanceof DlqReplayResult,
@@ -898,7 +904,7 @@ public class TopologyProducer {
             (_, value) -> value instanceof DlqReplayForwardRecord,
             Branched.withConsumer(
                 ks ->
-                    ks.process(() -> new DlqForwardingProcessor())
+                    ks.process(DlqForwardingProcessor::new)
                         .to(
                             (key, value, ctx) -> key,
                             Produced.with(Serdes.String(), Serdes.ByteArray()))));

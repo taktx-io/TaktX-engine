@@ -1,0 +1,86 @@
+# TaktX DLQ Alert Rules (DLQ-016)
+#
+# Policy:
+#   CRITICAL  — immediate page; fires the moment any CRITICAL DLQ entry is produced.
+#   HIGH      — threshold alert; fires when ≥ THRESHOLD entries arrive in a 5-minute window.
+#   MEDIUM    — dashboard-only; no alert rule.
+#   LOW       — dashboard-only; no alert rule.
+#
+# Metric source: taktx_dlq_entries_total{severity, reason_code, source_topic, capture_stage}
+# Emitted by:    io.taktx.engine.dlq.DlqObservabilityService#recordDlqEntry
+#
+# Usage: reference this file from your prometheus.yml `rule_files:` section:
+#   rule_files:
+#     - /etc/prometheus/prometheus-dlq-alerts.yaml
+
+groups:
+  - name: taktx_dlq
+    rules:
+
+      # ── CRITICAL: immediate page ───────────────────────────────────────────
+      # Fires as soon as any CRITICAL-severity DLQ entry is recorded (e.g. REPLAY_DETECTED).
+      # Threshold: any count > 0 in the last 1 minute.
+      - alert: DlqCriticalEntry
+        expr: increase(taktx_dlq_entries_total{severity="CRITICAL"}[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TaktX DLQ CRITICAL entry on {{ $labels.instance }}"
+          description: >
+            A CRITICAL-severity DLQ entry was published to the dlq topic.
+            source_topic={{ $labels.source_topic }}
+            reason_code={{ $labels.reason_code }}
+            capture_stage={{ $labels.capture_stage }}
+            Count (1 m) = {{ $value | printf "%.0f" }}
+
+      # ── HIGH: threshold alert ──────────────────────────────────────────────
+      # Fires when the number of HIGH-severity DLQ entries exceeds the threshold
+      # within a 5-minute rolling window.
+      #
+      # Default threshold: 5. To change it, edit the `> 5` literal below and redeploy
+      # your Prometheus configuration. The TaktX engine does not control this value —
+      # AlertManager reads this YAML directly, not application.properties.
+      - alert: DlqHighEntryThreshold
+        expr: increase(taktx_dlq_entries_total{severity="HIGH"}[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TaktX DLQ HIGH entry threshold exceeded on {{ $labels.instance }}"
+          description: >
+            More than 5 HIGH-severity DLQ entries were produced in the last 5 minutes.
+            source_topic={{ $labels.source_topic }}
+            reason_code={{ $labels.reason_code }}
+            Count (5 m) = {{ $value | printf "%.0f" }}
+
+      # ── Excluded-topic deserialization errors ──────────────────────────────
+      # Non-DLQ topics (control-plane, projections) emit taktx_excluded_topic_deserialization_errors.
+      # Alert if any such errors appear in a 5-minute window (they should be zero in steady state).
+      - alert: ExcludedTopicDeserializationError
+        expr: increase(taktx_excluded_topic_deserialization_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TaktX excluded-topic deserialization error on {{ $labels.instance }}"
+          description: >
+            A poison record was skipped on a non-DLQ topic (control-plane / projection).
+            topic={{ $labels.topic }}
+            Count (5 m) = {{ $value | printf "%.0f" }}
+            Action: check topic={{ $labels.topic }} for producer issues; rebuild/republish if needed.
+
+      # ── Schedule-commands (engine-internal) failures ───────────────────────
+      # Alert if schedule-command processing failures appear — these indicate engine defects.
+      - alert: ExcludedTopicScheduleCommandFailure
+        expr: increase(taktx_excluded_topic_failures_total{topic_group="schedule-commands"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TaktX schedule-command processing failure on {{ $labels.instance }}"
+          description: >
+            An engine-internal schedule-command record failed to process.
+            This is an ENGINE DEFECT — fix + redeploy required; replay is not applicable.
+            Count (5 m) = {{ $value | printf "%.0f" }}
+

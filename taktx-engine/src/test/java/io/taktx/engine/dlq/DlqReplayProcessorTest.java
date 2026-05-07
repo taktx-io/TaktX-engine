@@ -33,15 +33,13 @@ import org.mockito.ArgumentCaptor;
 class DlqReplayProcessorTest {
 
   private ProcessorContext<Object, Object> context;
-  private MessageSigningService signingService;
-  private TaktConfiguration config;
   private DlqReplayProcessor processor;
 
   @BeforeEach
   void setUp() {
     context = mock(ProcessorContext.class);
-    signingService = mock(MessageSigningService.class);
-    config = mock(TaktConfiguration.class);
+    MessageSigningService signingService = mock(MessageSigningService.class);
+    TaktConfiguration config = mock(TaktConfiguration.class);
 
     when(signingService.signToHeaderValue(any())).thenReturn("engine-key.AABBCCDD==");
     when(signingService.getKeyId()).thenReturn("engine-key");
@@ -50,7 +48,7 @@ class DlqReplayProcessorTest {
     when(config.getTenantId()).thenReturn("tenant");
     when(config.getNamespace()).thenReturn("ns");
 
-    processor = new DlqReplayProcessor(signingService, config);
+    processor = new DlqReplayProcessor(signingService, config, mock(DlqObservabilityService.class));
     processor.init(context);
   }
 
@@ -77,8 +75,8 @@ class DlqReplayProcessorTest {
     List<Record> emitted = captor.getAllValues();
 
     // First forward: DlqReplayForwardRecord
-    assertThat(emitted.get(0).value()).isInstanceOf(DlqReplayForwardRecord.class);
-    DlqReplayForwardRecord fwd = (DlqReplayForwardRecord) emitted.get(0).value();
+    assertThat(emitted.getFirst().value()).isInstanceOf(DlqReplayForwardRecord.class);
+    DlqReplayForwardRecord fwd = (DlqReplayForwardRecord) emitted.getFirst().value();
     assertThat(fwd.targetTopic()).isEqualTo("tenant.ns.process-instance");
     assertThat(fwd.payload()).containsExactly(1, 2, 3);
     assertThat(fwd.headers()).containsKey(DlqReplayProcessor.HEADER_DLQ_LINEAGE_REF);
@@ -227,7 +225,7 @@ class DlqReplayProcessorTest {
     ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
     verify(context, org.mockito.Mockito.times(2)).forward(captor.capture());
 
-    DlqReplayForwardRecord fwd = (DlqReplayForwardRecord) captor.getAllValues().get(0).value();
+    DlqReplayForwardRecord fwd = (DlqReplayForwardRecord) captor.getAllValues().getFirst().value();
     assertThat(
             new String(
                 fwd.headers().get(DlqReplayProcessor.HEADER_DLQ_LINEAGE_REF),

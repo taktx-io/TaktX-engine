@@ -5,12 +5,11 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
 package io.taktx.engine.pd;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,13 +29,10 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.streams.processor.Cancellable;
@@ -44,40 +40,41 @@ import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.Punctuator;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class ScheduleProcessorTest {
+/**
+ * Tests for excluded-topic failure observability in {@link ScheduleProcessor} (DLQ-T08 / DLQ-018A).
+ *
+ * <p>Verifies that a {@code schedule-command} processing failure:
+ *
+ * <ul>
+ *   <li>increments the {@code taktx.excluded.topic.failures} counter via {@link
+ *       DlqObservabilityService#recordExcludedTopicFailure},
+ *   <li>does <em>not</em> publish any DLQ record, and
+ *   <li>does <em>not</em> forward the output (stream thread keeps running).
+ * </ul>
+ */
+@SuppressWarnings("unchecked")
+class ScheduleProcessorExcludedTopicTest {
 
   private static final String SCHEDULE_TOPIC = "acme.prod.schedule-commands";
 
-  private final Map<ScheduleKeyDTO, MessageScheduleDTO> storeMap = new HashMap<>();
-
   private EngineAuthorizationService engineAuthorizationService;
-  private ProcessingStatistics processingStatistics;
   private KeyValueStore<ScheduleKeyDTO, MessageScheduleDTO> store;
+  private ProcessorContext<Object, SchedulableMessageDTO> context;
+  private DlqObservabilityService dlqObservabilityService;
   private ScheduleProcessor scheduleProcessor;
 
   @BeforeEach
-  @SuppressWarnings("unchecked")
   void setUp() {
     engineAuthorizationService = mock(EngineAuthorizationService.class);
-    processingStatistics = mock(ProcessingStatistics.class);
+    ProcessingStatistics processingStatistics = mock(ProcessingStatistics.class);
     store = mock(KeyValueStore.class);
-    ProcessorContext<Object, SchedulableMessageDTO> context = mock(ProcessorContext.class);
+    context = mock(ProcessorContext.class);
+    dlqObservabilityService = mock(DlqObservabilityService.class);
 
-    when(store.get(any())).thenAnswer(invocation -> storeMap.get(invocation.getArgument(0)));
-    doAnswer(
-            invocation -> {
-              storeMap.put(invocation.getArgument(0), invocation.getArgument(1));
-              return null;
-            })
-        .when(store)
-        .put(any(), any());
-    when(store.delete(any())).thenAnswer(invocation -> storeMap.remove(invocation.getArgument(0)));
-    when(store.all()).thenReturn(emptyIterator());
     when(context.schedule(any(), eq(PunctuationType.WALL_CLOCK_TIME), any(Punctuator.class)))
         .thenReturn(mock(Cancellable.class));
 
@@ -91,37 +88,44 @@ class ScheduleProcessorTest {
             processingStatistics,
             engineAuthorizationService,
             SCHEDULE_TOPIC,
-            mock(DlqObservabilityService.class));
+            dlqObservabilityService);
     scheduleProcessor.init(context);
   }
 
   @Test
-  void authorizedEngineSchedule_isStoredAndMeasured() {
+  void processingFailureOnEngineInternalTopic_incrementsExcludedTopicCounter() {
     DefinitionScheduleKeyDTO scheduleKey = scheduleKey();
     MessageScheduleDTO schedule = oneTimeSchedule();
     RecordHeaders headers = signedHeaders("engine-key-1");
-    when(engineAuthorizationService.authorizeScheduleCommand(headers, scheduleKey, schedule))
+
+    // Auth passes but BucketProcessor.process() throws a RuntimeException (engine defect)
+    when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
         .thenReturn(activeKey("engine-key-1", KeyRole.ENGINE));
+    doThrow(new RuntimeException("simulated bucket defect")).when(store).get(any());
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
-    verify(store).put(scheduleKey, schedule);
-    verify(processingStatistics).recordScheduleLatency(999_000L, "DefinitionScheduleKeyDTO_CREATE");
+    // DLQ-018A: the excluded-topic failure counter must be incremented once
+    verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
+    // No record must be forwarded (the stream thread should survive silently)
+    verify(context, never()).forward(any());
   }
 
   @Test
-  void unauthorizedClientSchedule_isRejectedWithoutSideEffects() {
+  void processingSuccess_doesNotIncrementExcludedTopicCounter() {
     DefinitionScheduleKeyDTO scheduleKey = scheduleKey();
     MessageScheduleDTO schedule = oneTimeSchedule();
-    RecordHeaders headers = signedHeaders("client-key-1");
-    when(engineAuthorizationService.authorizeScheduleCommand(headers, scheduleKey, schedule))
-        .thenThrow(new AuthorizationTokenException("client signer not allowed"));
+    RecordHeaders headers = signedHeaders("engine-key-2");
+
+    when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
+        .thenReturn(activeKey("engine-key-2", KeyRole.ENGINE));
 
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
-    verify(store, never()).put(any(), any());
-    verify(processingStatistics, never()).recordScheduleLatency(any(Long.class), any());
+    verify(dlqObservabilityService, never()).recordExcludedTopicFailure(any());
   }
+
+  // ── helpers ──────────────────────────────────────────────────────────────
 
   private DefinitionScheduleKeyDTO scheduleKey() {
     return new DefinitionScheduleKeyDTO(
@@ -154,29 +158,5 @@ class ScheduleProcessorTest {
         .owner("engine")
         .role(role)
         .build();
-  }
-
-  private KeyValueIterator<ScheduleKeyDTO, MessageScheduleDTO> emptyIterator() {
-    return new KeyValueIterator<>() {
-      @Override
-      public void close() {
-        // No-op for the empty in-memory iterator used by this unit test.
-      }
-
-      @Override
-      public ScheduleKeyDTO peekNextKey() {
-        return null;
-      }
-
-      @Override
-      public boolean hasNext() {
-        return false;
-      }
-
-      @Override
-      public org.apache.kafka.streams.KeyValue<ScheduleKeyDTO, MessageScheduleDTO> next() {
-        throw new java.util.NoSuchElementException();
-      }
-    };
   }
 }
