@@ -10,7 +10,8 @@ This document describes the security controls that are implemented and active in
 
 **Related security documents:**
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
-- Planned follow-up work (replay hardening, DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- Follow-up work (replay hardening, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- **DLQ implementation (complete)**: [`docs/dlq-engine-design.md`](dlq-engine-design.md), [`docs/dlq-console-contract.md`](dlq-console-contract.md), [`docs/dlq-feature-matrix.md`](dlq-feature-matrix.md)
 
 ---
 
@@ -217,7 +218,9 @@ This means the durable replay store is an `auditId`-based control for externally
 
 This narrow scope is intentional in the current release, but it is also a real residual risk. A replayed signed non-entry or control-plane message can still create duplicate work, extra load, or repeated side effects if the targeted processing path is not independently idempotent. In particular, worker responses, schedule commands, and other signed internal messages should not be treated as globally replay-safe merely because they are signed or usually converge under normal processing.
 
-Planned follow-up work will extend lightweight replay / dedup coverage to selected signed non-entry and control-plane paths. The current direction is to use a stable message identifier or a derived hash (for example from signature + payload) with a short-lived dedup window, rather than attempting global exactly-once semantics across every topic. That work is tracked in [`docs/security-future-development-plan.md`](security-future-development-plan.md).
+Planned follow-up work will extend lightweight replay / dedup coverage to selected signed non-entry and control-plane paths. The current direction is to use a stable message identifier or a derived hash (for example from signature + payload) with a short-lived dedup window, rather than attempting global exactly-once semantics across every topic. That work is tracked in [`docs/security-future-development-plan.md`](security-future-development-plan.md) (Workstream 1, milestones M1/M2).
+
+> **Note**: DLQ capture for external execution ingress failures (a distinct concern from replay hardening) has been fully implemented as of 2026-05-07. See [`docs/dlq-engine-design.md`](dlq-engine-design.md).
 
 ### Key lookup
 
@@ -822,9 +825,14 @@ GlobalConfigurationDTO.builder()
 
 The current security controls described in this document are implemented and active.
 
-Planned future work is tracked in:
+**DLQ (Dead Letter Queue)** has been fully implemented as of 2026-05-07 (Epics E1–E5). All 8 external execution ingress surfaces route failed records to the unified `dlq` topic with structured `DlqEnvelope` metadata, ENGINE-signed replay, and full audit observability. See:
+- [`docs/dlq-engine-design.md`](dlq-engine-design.md) — authoritative design and topology  
+- [`docs/dlq-console-contract.md`](dlq-console-contract.md) — engine-console API contract  
+- [`docs/dlq-feature-matrix.md`](dlq-feature-matrix.md) — Community vs Premium feature split  
+
+Remaining planned work is tracked in:
 
 - [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 
-That roadmap covers replay hardening, DLQ architecture for security rejections, structured telemetry, and publication of a formal threat model.
+That roadmap covers replay hardening for signed non-entry messages (M1/M2), broader security-rejection telemetry counters (Workstream 3 deferred items), and publication of a formal threat model (M5).
 

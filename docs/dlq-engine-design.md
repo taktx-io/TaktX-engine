@@ -87,12 +87,14 @@ Messages fail processing at multiple stages:
 - **Business logic failures**: Unhandled error events, authorization scope violations, state conflicts
 - **Runtime exceptions**: Processor errors, state store failures, downstream topic issues
 
-**Current Gap**: Most rejection points either log and skip (losing the message) or throw unhandled exceptions. No systematic capture, audit trail, or replay mechanism exists. The incomplete implementation uses a fundamentally flawed compacted-topic design that collapses all DLQ entries into a single compaction point, defeating the purpose.
+**Current Gap (at design time)**: Most rejection points either log and skip (losing the message) or throw unhandled exceptions. No systematic capture, audit trail, or replay mechanism existed. The incomplete implementation used a fundamentally flawed compacted-topic design that collapsed all DLQ entries into a single compaction point, defeating the purpose.
+
+> **Implementation status (2026-05-07)**: This gap has been fully closed. All five epics are complete. See `docs/dlq-implementation-backlog.md` for the full implementation history.
 
 ### Design Vision
 
 - **Append-only audit trail**: All rejections preserved immutably with full context
-- **Ingress-focused isolation**: Separate DLQ topics are created only for included external execution ingress surfaces, allowing independent scaling and retention policies without mixing in control-plane or engine-internal failures
+- **Ingress-focused isolation**: DLQ coverage applies only to the 8 external execution ingress surfaces — not to control-plane or engine-internal topics. A single unified `dlq` topic carries all rejection captures; per-surface routing is provided by `DlqEnvelope.sourceTopic` (see the final Topology Decision above).
 - **Structured envelope**: Unified `DlqEnvelope` carrying raw bytes, headers snapshot, reason code, human-readable explanation, and optional decoded summary
 - **Operator-driven replay**: Operators investigate DLQ via console, approve corrected messages, and submit to explicit replay topic
 - **Comprehensive observability**: Structured logging, metrics, and audit events for all rejection stages
@@ -332,7 +334,7 @@ The console needs to:
 | **Replay mechanism** | ❌ State machine unclear | ✅ Explicit replay topics simple |
 | **Storage footprint** | ✅ Smallest (compacted) | ⚠️ Larger (but configurable retention) |
 
-**Decision**: **Append-only per-surface topics.** Audit trail preservation and operator access are critical for DLQ utility.
+**Decision (final, implemented)**: **Append-only unified topic** (`dlq`). Audit trail preservation and operator access are critical for DLQ utility. Per-surface routing is achieved via `DlqEnvelope.sourceTopic` — see the Topology Decision section above for the rationale.
 
 ---
 
@@ -1257,21 +1259,31 @@ Add dry-run mode prior to publish:
 
 ## Part 7: Conclusion & Next Steps
 
-This design document provides a comprehensive architecture for the TaktX Engine Dead Letter Queue feature. The recommended approach emphasizes:
+This design document provides a comprehensive architecture for the TaktX Engine Dead Letter Queue feature. The implemented approach emphasises:
 
-✅ **Audit Trail**: Append-only per-surface topics preserve all rejections immutably  
-✅ **Operator Access**: Direct Kafka topic consumption for forensic analysis  
+✅ **Audit Trail**: Append-only unified `dlq` topic preserves all rejections immutably; per-surface routing via `DlqEnvelope.sourceTopic`  
+✅ **Operator Access**: Direct Kafka topic consumption for forensic analysis; `taktx-client` DLQ API for programmatic access  
 ✅ **Structured Metadata**: Unified envelope with reason codes, headers, and optional decoded summary  
-✅ **Replay Mechanism**: Explicit operator-driven replay with validation policies and audit results  
-✅ **Observability**: Metrics, logging, and alerting for operational insights  
-✅ **Scalability**: Independent retention/partitioning per surface  
+✅ **Replay Mechanism**: Explicit operator-driven replay with `STRICT`/`OPERATOR_OVERRIDE` validation policies and full audit results  
+✅ **Observability**: Micrometer metrics, structured logging, and Prometheus alert rules for operational insights  
+✅ **Scalability**: Single shared topic with per-envelope metadata; independent per-surface topics can be introduced later if throughput or ACL isolation demands it  
 
-### Review & Adaptation
+### Open Questions — Resolved
 
-Team should review this document and adapt to local requirements:
-- **Open question 1**: Permission/RBAC for replay approval — does operator need specific role?
-- **Open question 2**: Should console be built by engine team or consumer side?
-- **Open question 3**: Is 30/90-day retention sufficient, or archive to long-term storage?
+All three open questions from the original design review have been resolved during implementation:
+
+- **Open question 1 (RBAC for replay approval)**: The engine enforces destination-topic safety and ENGINE signing. Operator identity (`operatorId`) is a plain string in the Community tier. JWT-backed operator auth for replay approval is a Premium ops-console concern (see `docs/dlq-feature-matrix.md`).
+- **Open question 2 (Console ownership)**: Console UI is a Premium ops-console feature built by the console team on top of the `taktx-client` DLQ API. All console interactions flow through the three DLQ topics — no additional engine API surface is required (see `docs/dlq-console-contract.md`).
+- **Open question 3 (Retention sufficiency)**: 30/90-day retention is the baseline recommendation. Long-term cold-archive via Kafka Connect + object storage is documented in `docs/dlq-retention-policy.md` for regulatory retention requirements.
+
+### Companion Documents
+
+| Document | Purpose |
+|---|---|
+| `docs/dlq-implementation-backlog.md` | Full implementation history (checkpoints 1–18), all task status |
+| `docs/dlq-console-contract.md` | Engine-console topic/DTO contract (DLQ-019) |
+| `docs/dlq-feature-matrix.md` | Community vs Premium feature split (DLQ-020) |
+| `docs/dlq-retention-policy.md` | Per-environment retention and storage guidance (DLQ-018) |
 
 ### Kickoff
 
