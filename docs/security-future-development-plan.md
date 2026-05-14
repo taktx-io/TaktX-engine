@@ -1,7 +1,7 @@
 # Security Future Development Plan
 
 **Last updated:** 2026-05-14  
-**Status:** Active roadmap — Workstreams 1 and 4 remain pending; Workstreams 2 and 3 are complete  
+**Status:** Active roadmap — Workstream 1 decision record (M1) is complete, Workstream 1 implementation (M2) and Workstream 4 remain pending; Workstreams 2 and 3 are complete  
 **Audience:** Platform and security engineers planning upcoming hardening work
 
 This document tracks planned security development beyond the implemented baseline.
@@ -35,6 +35,7 @@ This roadmap builds on the completed baseline controls (signing, JWT authorizati
 ## Workstream 1 — Replay hardening for signed non-entry messages
 
 **Priority:** High
+**Status:** 🔄 M1 decision record complete (2026-05-14); M2 implementation pending
 
 ### Problem statement
 
@@ -70,12 +71,130 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
 - Rotation / restart behavior is documented and tested
 - `docs/security.md` is updated to describe protected and unprotected paths precisely
 
-### Open decisions
+### Resolved decisions
 
-- Canonical dedup key: explicit `messageId` versus derived hash
-- Which topics are hardened in phase 1 versus later phases
-- Retention defaults per topic class
-- Whether schedule / control-plane dedup should feed DLQ or fail closed with log-only handling first
+- ✅ Canonical dedup key: optional explicit `messageId` with a transition fallback to a derived signature + payload hash
+- ✅ Phase-1 scope: worker responses, `schedule-commands`, and `topic-meta-requested`
+- ✅ Retention defaults: 10 minutes for worker responses, 5 minutes for `schedule-commands`, 2 minutes for `topic-meta-requested`
+- ✅ Topic-specific observability model retained: `schedule-commands` remains DLQ-excluded; external paths continue to use the existing rejection / DLQ surfaces as applicable
+
+### M1 — Replay hardening decision record ✅ Resolved 2026-05-14
+
+#### Context
+
+The current durable replay store protects JWT-bearing entry commands only and keys them by `issuer + auditId`.
+That leaves the signed non-entry paths already enforced by `MessageSecurityPolicyRegistry` — notably
+`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, `MessageScheduleDTO`, and
+`TopicMetaDTO` — without a dedicated duplicate-suppression layer. Those paths are already signed and
+authorised today, but a replayed valid record can still create duplicate work, extra scheduling load,
+or repeated operational churn within the acceptance window of the receiving processor.
+
+The decision record below resolves the three M1 design questions in a way that keeps M2 incremental,
+backward-compatible, and aligned with the existing signing / DLQ model.
+
+#### Decision 1 — Canonical dedup identity (SEC-013)
+
+Use an optional explicit `messageId` field as the canonical dedup identity on the four phase-1 DTOs:
+
+- `ExternalTaskResponseTriggerDTO`
+- `UserTaskResponseTriggerDTO`
+- `MessageScheduleDTO`
+- `TopicMetaDTO`
+
+The M2 engine logic should derive the durable dedup key as follows:
+
+1. If `messageId` is present and non-blank, use it as the logical message identity.
+2. If `messageId` is absent or blank, fall back to a derived hash of the exact signed record identity
+   (`X-TaktX-Signature` header value + payload bytes as consumed from Kafka) for transition
+   compatibility with existing producers.
+3. Prefix the stored key with a topic-class namespace so identical UUIDs on different protected
+   paths do not collide.
+
+This chooses the explicit-ID model for long-term operability while preserving a non-breaking upgrade
+path for existing clients and engine-produced records.
+
+#### Rationale
+
+- `messageId` is human-readable, loggable, and can be copied into incident tickets and DLQ review
+  workflows.
+- `messageId` survives payload correction during DLQ replay; a hash of signature + payload does not.
+- The current codebase has multiple producer entry points, not a single builder-only API:
+  `ProcessInstanceResponder` / worker responders construct worker and user-task responses directly,
+  `ExternalTaskTopicRequester` constructs `TopicMetaDTO` directly, and the engine itself creates
+  `MessageScheduleDTO` instances. An optional field plus producer-side auto-population fits that
+  rollout model without breaking existing wire compatibility.
+- The fallback hash remains useful during migration because the current signing serializers already
+  bind the Ed25519 signature to the exact payload bytes that hit Kafka.
+
+#### Transition and backward compatibility
+
+- `messageId` remains optional for the whole M2 rollout.
+- Producer-side helper code should auto-populate `UUID.randomUUID().toString()` when callers do not
+  set `messageId` explicitly.
+- Engine-generated `MessageScheduleDTO` records should populate `messageId` at creation time rather
+  than relying on an external client API.
+- Legacy records without `messageId` must still be accepted and deduplicated via the derived fallback.
+- A corrected DLQ replay should preserve the original `messageId` unless the operator is explicitly
+  creating a new logical action.
+- The fallback hash can be deprecated only after all supported producers populate `messageId`
+  consistently.
+
+#### Decision 2 — Phase-1 protected scope (SEC-014)
+
+M2 phase 1 will protect the following signed non-entry paths first:
+
+1. `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` on `process-instance`
+2. `MessageScheduleDTO` on `schedule-commands`
+3. `TopicMetaDTO` on `topic-meta-requested`
+
+These are the first protected paths because they cover the highest-value non-entry surfaces already
+present in the codebase:
+
+- worker and user-task responses are externally produced, security-sensitive, and can advance or
+  re-drive business execution
+- `schedule-commands` is engine-internal but can create duplicate timer activity and is intentionally
+  DLQ-excluded, so suppression must happen in-stream
+- `topic-meta-requested` is operationally idempotent but externally supplied and vulnerable to burst
+  replay noise without lightweight dedup
+
+Deferred to a later phase:
+
+- engine-internal continuations on `process-instance`
+  (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`)
+
+Those continuation paths are already restricted to trusted `ENGINE` signatures and usually converge
+through process state. They remain worth hardening later, but including them in M2 would broaden the
+topology and test matrix without reducing as much externally reachable risk as the three phase-1
+targets above.
+
+#### Decision 3 — Retention defaults (SEC-015)
+
+The default dedup windows for M2 phase 1 are:
+
+| Topic class | Default window | Reasoning |
+|---|---|---|
+| Worker / user-task responses on `process-instance` | 10 minutes | Aligns with the existing default `replayProtectionRetentionMs = 600_000`, matches common task completion / retry latency, and keeps operator expectations simple |
+| `schedule-commands` | 5 minutes | Engine-generated records are short-lived and bursty; a shorter window suppresses near-term duplicates without retaining obsolete schedule keys longer than necessary |
+| `topic-meta-requested` | 2 minutes | Requests are operationally idempotent and primarily need burst suppression, not long-lived duplicate quarantine |
+
+These are defaults, not protocol guarantees. Duplicates outside the configured window are allowed to
+flow again and must still be safe under normal processor semantics.
+
+#### Implementation notes that directly unblock M2
+
+- M2 should treat this as duplicate suppression, not exactly-once delivery.
+- `messageId` should be surfaced in logs / DLQ summaries where available; when the fallback path is
+  used, operators should still be able to tell that no explicit `messageId` was present.
+- The worker-response scope covers both `ExternalTaskResponseTriggerDTO` and
+  `UserTaskResponseTriggerDTO` even though they share the `process-instance` topic; dedup keys must
+  therefore include a DTO/topic-class namespace.
+- `schedule-commands` dedup rejections should continue to use the excluded-topic observability path,
+  consistent with the existing decision that this topic is not operator-replayable.
+- `topic-meta-requested` dedup should be implemented upstream of `DynamicTopicManager` so duplicate
+  requests are suppressed before topic-management side effects and before DLQ reason mapping for
+  unrelated auth failures.
+- The chosen defaults unblock SEC-016 through SEC-022 without requiring a breaking protocol change or
+  a single all-at-once producer migration.
 
 ---
 
@@ -201,7 +320,7 @@ Publish a concise threat model that aligns with implemented controls and deploym
 
 | Milestone | Target | Outcome | Status |
 |---|---|---|---|
-| M1 - Replay hardening decision record | Next development cycle | Final dedup identity and phase-1 protected topics selected (SEC-013 – SEC-015) | ⏳ Pending |
+| M1 - Replay hardening decision record | Next development cycle | Final dedup identity, phase-1 protected topics, and retention defaults selected (SEC-013 – SEC-015) | ✅ Done (2026-05-14) |
 | M2 - Replay hardening implementation | Following cycle | Selected signed paths protected with tests and operational guidance (SEC-016 – SEC-022) | ⏳ Pending |
 | M3 - DLQ decision record | Following cycle | Final DLQ topology, envelope, and retention decisions | ✅ Done (2026-05-01) |
 | M4 - DLQ + telemetry completion | Following cycle | Rejections routed to DLQ and exported with structured logs / metrics | ✅ Done (2026-05-07) |
@@ -223,7 +342,7 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 
 ## Recommended implementation order
 
-1. Finalize replay-hardening decisions and phase-1 scope (M1)
+1. ~~Finalize replay-hardening decisions and phase-1 scope (M1)~~ — **Done**
 2. Implement replay hardening on selected signed paths (M2)
 3. ~~Finalize DLQ architecture decisions (M3)~~ — **Done**
 4. ~~Implement DLQ publishing and telemetry together so reason codes and observability stay aligned (M4)~~ — **Done**
@@ -243,6 +362,16 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 ---
 
 ## Decision log
+
+### 2026-05-14
+
+- M1 resolved for Workstream 1.
+- Canonical dedup identity chosen: optional explicit `messageId` on phase-1 DTOs, with a transition
+  fallback to a derived `signature + payload` hash for legacy producers.
+- M2 phase-1 scope fixed to worker responses, `schedule-commands`, and `topic-meta-requested`.
+- Default retention windows fixed at 10 minutes / 5 minutes / 2 minutes respectively.
+- Engine-internal continuations deferred to a later phase because they are already `ENGINE`-signed
+  and lower risk than the selected externally or operationally sensitive paths.
 
 ### 2026-04-27
 

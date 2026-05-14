@@ -311,7 +311,16 @@ superseded the original standalone counter proposal.
 > Target: design session. Output is a decision record, not code.  
 > Must complete before Phase 4.
 
-### SEC-013 — Decide dedup identity approach 💬
+### SEC-013 — Decide dedup identity approach ✅
+
+**Completed:** 2026-05-14
+
+**Decision:** Use an optional explicit `messageId` field as the canonical dedup identity on the
+phase-1 signed non-entry DTOs (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`,
+`MessageScheduleDTO`, `TopicMetaDTO`). When `messageId` is absent or blank, M2 falls back to a
+derived hash of the exact signed record identity (`X-TaktX-Signature` header value + payload
+bytes as consumed from Kafka) for backward compatibility with existing producers. Stored dedup
+keys must be topic-class namespaced to prevent collisions across protected paths.
 
 **Open question:** For Workstream 1 replay hardening of signed non-entry messages, which dedup identity to use?
 
@@ -328,7 +337,17 @@ superseded the original standalone counter proposal.
 
 ---
 
-### SEC-014 — Decide phase-1 topic scope 💬
+### SEC-014 — Decide phase-1 topic scope ✅
+
+**Completed:** 2026-05-14
+
+**Decision:** M2 phase 1 will protect the signed non-entry paths with the highest externally
+reachable or operationally meaningful replay risk: worker responses on `process-instance`
+(`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`), `MessageScheduleDTO` on
+`schedule-commands`, and `TopicMetaDTO` on `topic-meta-requested`. Engine-internal continuation
+messages (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`)
+are deferred to a later phase because they are already restricted to trusted `ENGINE` signatures
+and usually converge through process state.
 
 **Open question:** Which signed non-entry paths to harden first in M2?
 
@@ -346,7 +365,15 @@ superseded the original standalone counter proposal.
 
 ---
 
-### SEC-015 — Decide retention defaults per topic class 💬
+### SEC-015 — Decide retention defaults per topic class ✅
+
+**Completed:** 2026-05-14
+
+**Decision:** Use the following default dedup windows in M2 phase 1: 10 minutes for worker /
+user-task responses on `process-instance`, 5 minutes for `schedule-commands`, and 2 minutes for
+`topic-meta-requested`. The worker-response default intentionally aligns with the existing
+`replayProtectionRetentionMs = 600_000` baseline; the shorter `schedule-commands` and
+`topic-meta-requested` windows keep state growth bounded for short-lived operational traffic.
 
 **Open question:** What dedup window to use per topic class?
 
@@ -377,11 +404,17 @@ superseded the original standalone counter proposal.
 - `taktx-shared/src/main/java/io/taktx/dto/MessageScheduleDTO.java`
 - `taktx-shared/src/main/java/io/taktx/dto/TopicMetaDTO.java`
 
-**Semantics:** Optional `String messageId` field. Client-generated (UUID recommended). Engine falls back to signature-hash dedup if absent (transition compatibility).
+**Semantics:** Optional `String messageId` field. Producer-generated (UUID recommended). Engine
+falls back to signature-hash dedup if absent (transition compatibility). Auto-population should be
+implemented at the existing producer entry points already present in the codebase:
+- `ProcessInstanceResponder` / `ExternalTaskInstanceResponder` / `UserTaskInstanceResponder` for
+  worker and user-task responses
+- engine-side schedule creation paths for `MessageScheduleDTO`
+- `ExternalTaskTopicRequester` (and equivalent topic-meta helper APIs) for `TopicMetaDTO`
 
 **Acceptance criteria:**
 - Field added and CBOR-serializable.
-- `taktx-client` builder helpers auto-populate `messageId` via `UUID.randomUUID()` when not set.
+- Producer-side helper APIs auto-populate `messageId` via `UUID.randomUUID()` when not set.
 - Serialization round-trip test.
 
 ---
@@ -488,12 +521,21 @@ superseded the original standalone counter proposal.
 | Phase 0 | Housekeeping | SEC-001 ✅ SEC-002 ✅ SEC-003 ✅ SEC-004 ✅ | ✅ Complete |
 | Phase 1 | Security rejection visibility (Epic H / Workstream 3) | SEC-005 ✅ SEC-006 ✅ SEC-007 ✅ SEC-008 ✅ SEC-009 ✅ SEC-010 ✅ | ✅ Complete |
 | Phase 2 | Threat model (M5) | SEC-011 – SEC-012 | ⏳ Pending |
-| Phase 3 | Replay hardening decisions (M1) | SEC-013 – SEC-015 | 💬 Decisions needed |
-| Phase 4 | Replay hardening implementation (M2) | SEC-016 – SEC-022 | ⏳ Blocked on Phase 3 |
+| Phase 3 | Replay hardening decisions (M1) | SEC-013 ✅ SEC-014 ✅ SEC-015 ✅ | ✅ Complete |
+| Phase 4 | Replay hardening implementation (M2) | SEC-016 – SEC-022 | ⏳ Pending |
 
 ---
 
 ## Decision log
+
+### 2026-05-14 — SEC-013, SEC-014, and SEC-015 implemented; Phase 3 complete
+
+- Chosen dedup identity: optional explicit `messageId` on the phase-1 signed non-entry DTOs, with
+  a transition fallback to a derived `X-TaktX-Signature + payload` hash for legacy producers.
+- M2 phase-1 scope fixed to worker responses, `schedule-commands`, and `topic-meta-requested`.
+- Default dedup windows fixed at 10 minutes for worker responses, 5 minutes for
+  `schedule-commands`, and 2 minutes for `topic-meta-requested`.
+- `security-future-development-plan.md` updated with the resolved M1 ADR; Phase 4 is now unblocked.
 
 ### 2026-05-14 — Phase 1 replanned: counters replaced with DLQ routing
 
