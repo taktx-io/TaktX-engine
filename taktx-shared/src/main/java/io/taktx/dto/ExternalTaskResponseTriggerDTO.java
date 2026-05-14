@@ -22,6 +22,8 @@ import lombok.ToString;
 @RegisterForReflection
 public class ExternalTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
 
+  private String messageId;
+
   private ExternalTaskResponseResultDTO externalTaskResponseResult;
 
   public ExternalTaskResponseTriggerDTO(
@@ -29,7 +31,17 @@ public class ExternalTaskResponseTriggerDTO extends ContinueFlowElementTriggerDT
       List<Long> elementInstanceIdPath,
       ExternalTaskResponseResultDTO externalTaskResponseResult,
       VariablesDTO variables) {
+    this(processInstanceId, elementInstanceIdPath, null, externalTaskResponseResult, variables);
+  }
+
+  public ExternalTaskResponseTriggerDTO(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String messageId,
+      ExternalTaskResponseResultDTO externalTaskResponseResult,
+      VariablesDTO variables) {
     super(processInstanceId, elementInstanceIdPath, null, variables);
+    this.messageId = messageId;
     this.externalTaskResponseResult = externalTaskResponseResult;
   }
 }

@@ -14,6 +14,7 @@ import io.taktx.dto.TopicMetaDTO;
 import io.taktx.serdes.ExternalTaskMetaSerializer;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.util.TaktPropertiesHelper;
+import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -24,12 +25,18 @@ public class ExternalTaskTopicRequester {
   private final KafkaProducer<String, TopicMetaDTO> producer;
 
   public ExternalTaskTopicRequester(TaktPropertiesHelper taktPropertiesHelper) {
-    this.taktPropertiesHelper = taktPropertiesHelper;
-    this.producer =
+    this(
+        taktPropertiesHelper,
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(),
             new StringSerializer(),
-            new SigningSerializer<>(new ExternalTaskMetaSerializer()));
+            new SigningSerializer<>(new ExternalTaskMetaSerializer())));
+  }
+
+  ExternalTaskTopicRequester(
+      TaktPropertiesHelper taktPropertiesHelper, KafkaProducer<String, TopicMetaDTO> producer) {
+    this.taktPropertiesHelper = taktPropertiesHelper;
+    this.producer = producer;
   }
 
   /**
@@ -47,7 +54,8 @@ public class ExternalTaskTopicRequester {
         taktPropertiesHelper.getPrefixedTopicName(
             Constants.EXTERNAL_TASK_TRIGGER_TOPIC_PREFIX + externalTaskId);
     TopicMetaDTO topicMetaDTO =
-        new TopicMetaDTO(topicName, partitions, cleanupPolicy, replicationFactor);
+        new TopicMetaDTO(
+            topicName, partitions, cleanupPolicy, replicationFactor, UUID.randomUUID().toString());
 
     producer.send(
         new ProducerRecord<>(

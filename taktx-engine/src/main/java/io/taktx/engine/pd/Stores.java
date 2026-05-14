@@ -35,6 +35,8 @@ public enum Stores {
   GLOBAL_CONFIGURATION(Topics.CONFIGURATION_TOPIC.getTopicName()),
   SIGNING_KEYS(Topics.SIGNING_KEYS_TOPIC.getTopicName()),
   REPLAY_PROTECTION("replay-protection"),
+  WORKER_RESPONSE_DEDUP("worker-response-dedup"),
+  TOPIC_META_REQUEST_DEDUP("topic-meta-request-dedup"),
   GLOBAL_DMN_DEFINITION("global-dmn-definition"),
   DMN_VERSION_BY_HASH("dmn-version-by-hash"),
   XML_BY_DMN_DEFINITION_ID(Topics.XML_BY_DMN_DEFINITION_ID.getTopicName());

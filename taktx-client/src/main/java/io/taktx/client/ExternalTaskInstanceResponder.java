@@ -92,6 +92,7 @@ public class ExternalTaskInstanceResponder {
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             externalTaskResponseResult,
             new VariablesDTO(variablesMap));
     sendSigned(processInstanceTrigger);
@@ -119,6 +120,7 @@ public class ExternalTaskInstanceResponder {
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ESCALATION, true, code, message, 0L),
             variables);
@@ -150,6 +152,7 @@ public class ExternalTaskInstanceResponder {
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.ERROR, allowRetry, code, message, 0L),
             variables);
@@ -178,6 +181,7 @@ public class ExternalTaskInstanceResponder {
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.INCIDENT, false, null, message, 0L, stackTrace),
             variables);
@@ -195,6 +199,7 @@ public class ExternalTaskInstanceResponder {
         new ExternalTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new ExternalTaskResponseResultDTO(
                 ExternalTaskResponseType.PROMISE, true, null, null, duration.toMillis()),
             VariablesDTO.empty());

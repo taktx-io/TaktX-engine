@@ -534,6 +534,9 @@ public class TopologyProducer {
     builder.addStateStore(
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.REPLAY_PROTECTION), Serdes.String(), Serdes.Long()));
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.WORKER_RESPONSE_DEDUP), Serdes.String(), Serdes.Long()));
 
     KStream<UUID, ProcessInstanceTriggerEnvelope> processInstanceTriggerStream =
         builder.stream(

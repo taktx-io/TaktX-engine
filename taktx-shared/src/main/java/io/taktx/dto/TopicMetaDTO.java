@@ -9,7 +9,6 @@ package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.taktx.CleanupPolicy;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -19,11 +18,29 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
-@AllArgsConstructor
 @RegisterForReflection
 public class TopicMetaDTO {
   private String topicName; // The actual Kafka topic name
   private int nrPartitions;
   private CleanupPolicy cleanupPolicy;
   private short replicationFactor;
+  private String messageId;
+
+  public TopicMetaDTO(
+      String topicName, int nrPartitions, CleanupPolicy cleanupPolicy, short replicationFactor) {
+    this(topicName, nrPartitions, cleanupPolicy, replicationFactor, null);
+  }
+
+  public TopicMetaDTO(
+      String topicName,
+      int nrPartitions,
+      CleanupPolicy cleanupPolicy,
+      short replicationFactor,
+      String messageId) {
+    this.topicName = topicName;
+    this.nrPartitions = nrPartitions;
+    this.cleanupPolicy = cleanupPolicy;
+    this.replicationFactor = replicationFactor;
+    this.messageId = messageId;
+  }
 }

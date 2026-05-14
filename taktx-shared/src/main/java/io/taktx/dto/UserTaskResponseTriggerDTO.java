@@ -22,6 +22,8 @@ import lombok.ToString;
 @RegisterForReflection
 public class UserTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
 
+  private String messageId;
+
   private UserTaskResponseResultDTO userTaskResponseResult;
 
   public UserTaskResponseTriggerDTO(
@@ -29,7 +31,17 @@ public class UserTaskResponseTriggerDTO extends ContinueFlowElementTriggerDTO {
       List<Long> elementInstanceIdPath,
       UserTaskResponseResultDTO userTaskResponseResult,
       VariablesDTO variables) {
+    this(processInstanceId, elementInstanceIdPath, null, userTaskResponseResult, variables);
+  }
+
+  public UserTaskResponseTriggerDTO(
+      UUID processInstanceId,
+      List<Long> elementInstanceIdPath,
+      String messageId,
+      UserTaskResponseResultDTO userTaskResponseResult,
+      VariablesDTO variables) {
     super(processInstanceId, elementInstanceIdPath, null, variables);
+    this.messageId = messageId;
     this.userTaskResponseResult = userTaskResponseResult;
   }
 }

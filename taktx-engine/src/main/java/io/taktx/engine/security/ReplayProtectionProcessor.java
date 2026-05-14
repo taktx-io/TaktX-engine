@@ -20,9 +20,7 @@ import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +30,6 @@ import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
-import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 /**
@@ -154,18 +151,8 @@ public class ReplayProtectionProcessor
   }
 
   private void purgeExpiredEntries(long timestamp) {
-    long retentionMs = engineAuthorizationService.replayProtectionRetentionMs();
-    List<String> expiredKeys = new ArrayList<>();
-    try (KeyValueIterator<String, Long> entries = replayStore.all()) {
-      while (entries.hasNext()) {
-        org.apache.kafka.streams.KeyValue<String, Long> entry = entries.next();
-        // Use Math.abs() to handle both normal timestamps and negative DLQ-emitted sentinels.
-        if (entry.value != null && timestamp - Math.abs(entry.value) >= retentionMs) {
-          expiredKeys.add(entry.key);
-        }
-      }
-    }
-    expiredKeys.forEach(replayStore::delete);
+    DedupStoreSupport.purgeExpiredEntries(
+        replayStore, timestamp, engineAuthorizationService.replayProtectionRetentionMs());
   }
 
   private void emitReplayDlq(

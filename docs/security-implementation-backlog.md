@@ -399,7 +399,9 @@ candidate default for a later internal-only phase.
 > Target: implementation session. Requires Phase 3 complete.  
 > Largest engineering effort in this backlog.
 
-### SEC-016 — Add `messageId` field to phase-1 signed DTOs ⏳
+### SEC-016 — Add `messageId` field to phase-1 signed DTOs ✅
+
+**Completed:** 2026-05-14
 
 **Prerequisite:** SEC-013 decided in favour of explicit `messageId`.
 
@@ -419,14 +421,26 @@ implemented at the existing producer entry points already present in the codebas
 same optional `messageId` field to `MessageScheduleDTO` at that time rather than pulling it into
 the current release scope.
 
+**Change made:** Optional `messageId` fields added to
+`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and `TopicMetaDTO`. Existing DTO
+constructors remain source-compatible; explicit-messageId overloads were added for the two trigger
+DTOs, and `TopicMetaDTO` now provides both 4-argument and 5-argument constructors. External helper
+APIs now auto-populate `messageId` via `UUID.randomUUID().toString()` in
+`ExternalTaskInstanceResponder`, `UserTaskInstanceResponder`, and `ExternalTaskTopicRequester`.
+
 **Acceptance criteria:**
 - Field added and CBOR-serializable.
 - Producer-side helper APIs auto-populate `messageId` via `UUID.randomUUID()` when not set.
 - Serialization round-trip test.
 
+**Tests added/updated:** `MessageIdSerializationTest`, `ExternalTaskTopicRequesterTest`,
+`UserTaskInstanceResponderTest`, and `ExternalTaskInstanceResponderTest`.
+
 ---
 
-### SEC-017 — Add dedup state store to Kafka Streams topology ⏳
+### SEC-017 — Add dedup state store to Kafka Streams topology 🔄
+
+**Started:** 2026-05-14
 
 **Prerequisite:** SEC-014 (phase-1 scope decided).
 
@@ -441,6 +455,20 @@ Keep the stores separate rather than shared so retention windows and purge logic
 Partitioned locally where topic routing allows.
 
 **Expiry:** Periodic punctuator (mirrors `ReplayProtectionProcessor.purgeExpiredEntries` pattern) removes entries older than the configured retention window.
+
+**Progress so far:**
+- `Stores` enum now includes dedicated store names for `WORKER_RESPONSE_DEDUP` and
+  `TOPIC_META_REQUEST_DEDUP`.
+- `TopologyProducer.setupProcessInstanceStream()` now registers the persistent
+  `WORKER_RESPONSE_DEDUP` state store.
+- Shared TTL cleanup helper `DedupStoreSupport.purgeExpiredEntries(...)` added and wired into
+  `ReplayProtectionProcessor` so the future external dedup processors can reuse the same purge
+  semantics.
+- `DedupStoreSupportTest` added.
+
+**Remaining to finish SEC-017:**
+- Register the `TOPIC_META_REQUEST_DEDUP` store once the `topic-meta-requested` ingress path has
+  moved into the Kafka Streams topology (see SEC-020 architecture split).
 
 **Acceptance criteria:**
 - Store registered in topology.

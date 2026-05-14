@@ -90,6 +90,7 @@ public class UserTaskInstanceResponder {
         new UserTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             userTaskResponseResult,
             new VariablesDTO(variablesMap));
     sendSigned(processInstanceTrigger);
@@ -117,6 +118,7 @@ public class UserTaskInstanceResponder {
         new UserTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new UserTaskResponseResultDTO(UserTaskResponseType.ESCALATION, code, message),
             variables);
     sendSigned(processInstanceTrigger);
@@ -135,6 +137,7 @@ public class UserTaskInstanceResponder {
         new UserTaskResponseTriggerDTO(
             processInstanceId,
             elementInstanceIdPath,
+            UUID.randomUUID().toString(),
             new UserTaskResponseResultDTO(UserTaskResponseType.ERROR, code, message),
             variables);
     sendSigned(processInstanceTrigger);
