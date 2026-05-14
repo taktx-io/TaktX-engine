@@ -108,7 +108,6 @@ class EngineAuthorizationServiceMatrixTest {
   private TaktConfiguration taktConfig;
   private GlobalConfigStore globalConfigStore;
   private PublicKeyProvider publicKeyProvider;
-  private NonceStore nonceStore;
   private KafkaStreams kafkaStreams;
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
   private KeyPair rsaKeyPair;
@@ -121,7 +120,6 @@ class EngineAuthorizationServiceMatrixTest {
     taktConfig = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
     publicKeyProvider = mock(PublicKeyProvider.class);
-    nonceStore = new NonceStore();
     kafkaStreams = mock(KafkaStreams.class);
     signingKeysStore = mock(ReadOnlyKeyValueStore.class);
 
@@ -162,12 +160,7 @@ class EngineAuthorizationServiceMatrixTest {
             .signingEnabled(cSe)
             .build());
     return new EngineAuthorizationService(
-        taktConfig,
-        globalConfigStore,
-        publicKeyProvider,
-        nonceStore,
-        kafkaStreams,
-        new OpenKeyTrustPolicy());
+        taktConfig, globalConfigStore, publicKeyProvider, kafkaStreams, new OpenKeyTrustPolicy());
   }
 
   private ProcessInstanceTriggerEnvelope clientNonEntryEnvelope(boolean sigVerified, String keyId) {

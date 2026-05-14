@@ -50,7 +50,8 @@ import org.apache.kafka.streams.KafkaStreams;
  *
  * <ul>
  *   <li>{@code X-TaktX-Authorization} (RS256 JWT) — used by Console/Platform for start-process and
- *       abort commands; validates claims, expiry, and replay via {@link NonceStore}.
+ *       abort commands; validates claims and expiry. Durable replay protection is enforced by
+ *       {@link ReplayProtectionProcessor} upstream in the Kafka Streams topology.
  *   <li>{@code X-TaktX-Signature} (Ed25519) — used by worker processes for task responses and by
  *       the engine itself for internal sub-process/call-activity triggers. Key resolution, revoke
  *       checks, and trust-policy evaluation are delegated to {@link VerificationCore}.
@@ -69,7 +70,6 @@ public class EngineAuthorizationService {
 
   private final TaktConfiguration config;
   private final GlobalConfigStore globalConfigStore;
-  private final NonceStore nonceStore;
   private final AuthorizationTokenValidator validator;
   private final KeyTrustPolicy keyTrustPolicy;
   private final MessageSecurityPolicyRegistry messageSecurityPolicyRegistry;
@@ -80,13 +80,11 @@ public class EngineAuthorizationService {
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
-      NonceStore nonceStore,
       KeyTrustPolicy keyTrustPolicy,
       MessageSecurityPolicyRegistry messageSecurityPolicyRegistry,
       VerificationCore verificationCore) {
     this.config = config;
     this.globalConfigStore = globalConfigStore;
-    this.nonceStore = nonceStore;
     this.keyTrustPolicy = keyTrustPolicy;
     this.messageSecurityPolicyRegistry = messageSecurityPolicyRegistry;
     this.verificationCore = verificationCore;
@@ -98,7 +96,6 @@ public class EngineAuthorizationService {
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
-      NonceStore nonceStore,
       KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy,
       MessageSecurityPolicyRegistry messageSecurityPolicyRegistry) {
@@ -106,7 +103,6 @@ public class EngineAuthorizationService {
         config,
         globalConfigStore,
         publicKeyProvider,
-        nonceStore,
         keyTrustPolicy,
         messageSecurityPolicyRegistry,
         new VerificationCore(config, kafkaStreams, keyTrustPolicy));
@@ -117,31 +113,27 @@ public class EngineAuthorizationService {
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
-      NonceStore nonceStore,
       KafkaStreams kafkaStreams,
       KeyTrustPolicy keyTrustPolicy) {
     this(
         config,
         globalConfigStore,
         publicKeyProvider,
-        nonceStore,
         keyTrustPolicy,
         new MessageSecurityPolicyRegistry(),
         new VerificationCore(config, kafkaStreams, keyTrustPolicy));
   }
 
-  /** Test constructor — no CDI. */
-  EngineAuthorizationService(
+  /** Test constructor — no CDI. Accessible from any package (e.g. integration test classes). */
+  public EngineAuthorizationService(
       TaktConfiguration config,
       GlobalConfigStore globalConfigStore,
       PublicKeyProvider publicKeyProvider,
-      NonceStore nonceStore,
       KafkaStreams kafkaStreams) {
     this(
         config,
         globalConfigStore,
         publicKeyProvider,
-        nonceStore,
         new OpenKeyTrustPolicy(),
         new MessageSecurityPolicyRegistry(),
         new VerificationCore(config, kafkaStreams));
@@ -394,9 +386,6 @@ public class EngineAuthorizationService {
         triggerEnvelope.validatedJwtClaims() != null
             ? triggerEnvelope.validatedJwtClaims()
             : validateJwtClaims(authHeader, trigger);
-    if (triggerEnvelope.validatedJwtClaims() == null) {
-      enforceReplayProtectionFallback(claims, trigger);
-    }
     log.info(
         "✅ Authorised (JWT) command={} user={} auditId={}",
         trigger.getClass().getSimpleName(),
@@ -409,30 +398,6 @@ public class EngineAuthorizationService {
         .userId(claims.getUserId())
         .issuer(claims.getIssuer())
         .build();
-  }
-
-  private void enforceReplayProtectionFallback(
-      TokenClaims claims, ProcessInstanceTriggerDTO trigger) {
-    ReplayProtectionMode mode = replayProtectionMode();
-    if (mode == ReplayProtectionMode.OFF) {
-      return;
-    }
-
-    String auditId = claims.getAuditId();
-    if (auditId == null || auditId.isBlank()) {
-      if (mode == ReplayProtectionMode.STRICT) {
-        throw new AuthorizationTokenException(
-            "Entry command "
-                + trigger.getClass().getSimpleName()
-                + " requires non-blank auditId when replayProtectionMode=STRICT");
-      }
-      return;
-    }
-
-    String replayKey = canonicalReplayKey(claims);
-    if (!nonceStore.checkAndRecord(replayKey)) {
-      throw new AuthorizationTokenException("Replayed auditId detected: " + auditId);
-    }
   }
 
   // ── Ed25519 path ──────────────────────────────────────────────────────────────

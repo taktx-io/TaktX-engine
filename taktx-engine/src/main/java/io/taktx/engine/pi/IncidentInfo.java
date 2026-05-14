@@ -15,7 +15,7 @@ public record IncidentInfo(
     String message,
     String[] stacktrace,
     /*
-      DLQ entry reference ({@code sourceTopic:partition:offset:hash}) when this incident was
-      triggered by a message ingestion failure that also produced a DLQ entry. Null otherwise.
-     */
+     DLQ entry reference ({@code sourceTopic:partition:offset:hash}) when this incident was
+     triggered by a message ingestion failure that also produced a DLQ entry. Null otherwise.
+    */
     String dlqEntryRef) {}

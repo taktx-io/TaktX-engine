@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("java-test-fixtures")
     alias(libs.plugins.spotless)
     alias(libs.plugins.quarkus)
     id("com.github.jk1.dependency-license-report") version "2.9"
@@ -65,6 +66,26 @@ dependencies {
 
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.mapstruct.processor)
+
+    // ── Test fixture infrastructure (shared by `test` and `securityIntegrationTest`) ──────────────
+    // These classes live in src/testFixtures/java so that the securityIntegrationTest source set
+    // can depend on them WITHOUT pulling in the compiled regular-test classes.  If both source sets
+    // shared sourceSets["test"].output on their runtime classpath, Quarkus's test runner would
+    // discover all @QuarkusTest classes from the regular test suite and execute them when a single
+    // security-integration test is launched from the IDE.
+    testFixturesImplementation(project(":taktx-shared"))
+    testFixturesImplementation(project(":taktx-client"))
+    testFixturesImplementation(enforcedPlatform(libs.quarkus.bom.get()))
+    testFixturesImplementation(enforcedPlatform(libs.quarkus.camel.bom.get()))
+    testFixturesImplementation(libs.quarkus.kafka.client)
+    testFixturesImplementation(libs.quarkus.core)
+    testFixturesImplementation(libs.quarkus.junit5)
+    testFixturesImplementation(libs.assertj.core)
+    testFixturesImplementation(libs.awaitility)
+    testFixturesImplementation(libs.jackson.cbor)
+
+    // Re-expose testFixtures to the regular test source set (was implicitly available before).
+    testImplementation(testFixtures(project))
 }
 
 tasks.test {
@@ -86,6 +107,23 @@ tasks.test {
 // Because Gradle forks a separate process for every Test task, the SingletonBpmnTestEngine
 // shutdown hook fires at the end of `test` and all consumers are cleanly closed before
 // this task even starts — no stale connections, no log spam.
+
+// Register the source set so the compiler picks up src/securityIntegrationTest/java/.
+// Its compile/runtime classpath extends the main test source set so all test dependencies
+// (Quarkus, Mockito, AssertJ, …) are available without repetition.
+val securityIntegrationTestSourceSet = sourceSets.create("securityIntegrationTest") {
+    java.srcDir("src/securityIntegrationTest/java")
+    resources.srcDir("src/securityIntegrationTest/resources")
+    // compileClasspath: test JARs + main output — intentionally excludes sourceSets["test"].output so
+    // that the compiled regular unit-test classes are not on the classpath.  This prevents Quarkus's
+    // test runner from discovering (and executing) unrelated unit tests when a security-integration
+    // test is launched directly from the IDE.
+    compileClasspath += sourceSets["test"].compileClasspath
+    // runtimeClasspath: reconstruct what sourceSets["test"].runtimeClasspath normally provides but
+    // without sourceSets["test"].output (= compiled regular test classes).
+    runtimeClasspath += configurations["testRuntimeClasspath"] + sourceSets["main"].output + output
+}
+
 val securityIntegrationTest by tasks.registering(Test::class) {
     description = "Runs security-profile integration tests (separate Quarkus profile / JVM)"
     group = LifecycleBasePlugin.VERIFICATION_GROUP
@@ -94,9 +132,9 @@ val securityIntegrationTest by tasks.registering(Test::class) {
         includeTags("security-integration")
     }
 
-    // Reuse the same compiled test classes and runtime classpath as the main test task.
-    testClassesDirs = sourceSets["test"].output.classesDirs
-    classpath = sourceSets["test"].runtimeClasspath
+    // Use the dedicated source set's compiled output and runtime classpath.
+    testClassesDirs = securityIntegrationTestSourceSet.output.classesDirs
+    classpath = securityIntegrationTestSourceSet.runtimeClasspath
 
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
 
@@ -115,7 +153,12 @@ tasks.named("check") {
 }
 
 tasks.jacocoTestReport {
-    dependsOn(tasks.test)
+    // NOTE: no `dependsOn(tasks.test)` here – that would pull the full unit-test suite into the
+    // execution graph whenever `securityIntegrationTest` (or any other finalizing task) calls
+    // `finalizedBy(tasks.jacocoTestReport)`.  Both `tasks.test` and `securityIntegrationTest`
+    // already declare `finalizedBy(tasks.jacocoTestReport)`, so the report is always regenerated
+    // after whichever test task ran.  The `doFirst` filter below safely skips exec files that
+    // don't exist yet (e.g. when only security-integration tests have been executed).
 
     // Merge coverage from all engine test tasks:
     //  • jacoco/test.exec                    – standard Gradle JaCoCo (unit + default-profile tests)
@@ -174,4 +217,3 @@ licenseReport {
     )
     configurations = arrayOf("runtimeClasspath")
 }
-

@@ -60,7 +60,6 @@ class EngineAuthorizationServiceTest {
   private TaktConfiguration config;
   private GlobalConfigStore globalConfigStore;
   private PublicKeyProvider publicKeyProvider;
-  private NonceStore nonceStore;
   private KafkaStreams kafkaStreams;
   private ReadOnlyKeyValueStore<String, SigningKeyDTO> signingKeysStore;
   private EngineAuthorizationService service;
@@ -74,7 +73,6 @@ class EngineAuthorizationServiceTest {
     config = mock(TaktConfiguration.class);
     globalConfigStore = new GlobalConfigStore();
     publicKeyProvider = mock(PublicKeyProvider.class);
-    nonceStore = new NonceStore();
     kafkaStreams = mock(KafkaStreams.class);
     signingKeysStore = mock(ReadOnlyKeyValueStore.class);
 
@@ -84,8 +82,7 @@ class EngineAuthorizationServiceTest {
         .thenReturn("default.taktx-signing-keys");
 
     service =
-        new EngineAuthorizationService(
-            config, globalConfigStore, publicKeyProvider, nonceStore, kafkaStreams);
+        new EngineAuthorizationService(config, globalConfigStore, publicKeyProvider, kafkaStreams);
   }
 
   // ── authorization disabled ─────────────────────────────────────────────────
@@ -152,36 +149,6 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
-  void replayProtectionOff_allowsDuplicateAuditIdInDirectAuthorizationFallback() {
-    globalConfigStore.update(config(true, false, ReplayProtectionMode.OFF));
-
-    String auditId = UUID.randomUUID().toString();
-    String jwt = buildJwt("START", "my-proc", -1, auditId, futureExpiry());
-
-    CommandTrustMetadataDTO first =
-        service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1)));
-    CommandTrustMetadataDTO second =
-        service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1)));
-
-    assertThat(first.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
-    assertThat(second.getVerificationResult())
-        .isEqualTo(CommandTrustVerificationResult.JWT_AUTHORIZED);
-  }
-
-  @Test
-  void replayProtectionStrict_rejectsBlankAuditIdInDirectAuthorizationFallback() {
-    globalConfigStore.update(config(true, false, ReplayProtectionMode.STRICT));
-
-    String jwt = buildJwt("START", "my-proc", -1, "   ", futureExpiry());
-
-    assertThatThrownBy(
-            () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("my-proc", -1))))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("replayProtectionMode=STRICT");
-  }
-
-  @Test
   void topicMetaRequest_trustedClientKeyAccepted() {
     String keyId = "worker-topic-request-key";
     SigningKeyDTO keyEntry =
@@ -240,12 +207,7 @@ class EngineAuthorizationServiceTest {
   void topicMetaRequest_untrustedKeyRejected() {
     service =
         new EngineAuthorizationService(
-            config,
-            globalConfigStore,
-            publicKeyProvider,
-            nonceStore,
-            kafkaStreams,
-            (_, _) -> false);
+            config, globalConfigStore, publicKeyProvider, kafkaStreams, (_, _) -> false);
 
     String keyId = "untrusted-topic-request-key";
     SigningKeyDTO keyEntry =
@@ -488,22 +450,6 @@ class EngineAuthorizationServiceTest {
             () -> service.authorize(headersWithAuth(jwt), envelope(startCommand("proc", 3))))
         .isInstanceOf(AuthorizationTokenException.class)
         .hasMessageContaining("version");
-  }
-
-  // ── nonce / replay ─────────────────────────────────────────────────────────
-
-  @Test
-  void replayedAuditId_throwsAuthorizationTokenException() {
-    globalConfigStore.update(authorizationConfig());
-
-    String auditId = UUID.randomUUID().toString();
-    String jwt = buildJwt("START", null, -1, auditId, futureExpiry());
-    Headers headers = headersWithAuth(jwt);
-
-    service.authorize(headers, envelope(startCommand(null, -1)));
-    assertThatThrownBy(() -> service.authorize(headers, envelope(startCommand(null, -1))))
-        .isInstanceOf(AuthorizationTokenException.class)
-        .hasMessageContaining("Replayed");
   }
 
   // ── Ed25519 passthrough — non-entry (engine-internal continuations) ───────

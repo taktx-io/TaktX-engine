@@ -225,13 +225,16 @@ class SecurityIntegrationTest {
     TaktXClient.publishSigningKey(signingKeyProps, WORKER_KEY_ID, workerPublicKeyBase64, "worker");
 
     // Publish the platform RSA public key under PLATFORM_KID so the engine can resolve it
-    // from the KTable when validating JWTs (the kid header in every JWT points to this entry)
+    // from the KTable when validating JWTs (the kid header in every JWT points to this entry).
+    // MUST use KeyRole.PLATFORM — the 5-arg overload defaults to KeyRole.CLIENT which causes
+    // PublicKeyProvider.getKey() to reject it as "not trusted as a PLATFORM JWT issuer key".
     TaktXClient.publishSigningKey(
         signingKeyProps,
         PLATFORM_KID,
         SecurityTestConfigResource.rsaPublicKeyBase64,
         "platform",
-        "RSA");
+        "RSA",
+        io.taktx.dto.KeyRole.PLATFORM);
 
     // Publish the revoked key — status REVOKED so the engine rejects messages signed with it
     publishRevokedSigningKey(
@@ -292,7 +295,7 @@ class SecurityIntegrationTest {
           .until(() -> configStore.get() != null && configStore.get().isSigningEnabled());
     }
 
-    // 2. Wait for the worker signing key to appear in the engine's KTable
+    // 2. Wait for both the worker AND platform signing keys to appear in the engine's KTable.
     // EngineSigningKeysHolder holds the lambda registered by EngineAuthorizationService that
     // delegates to the Kafka Streams state store — returning null for unknown keys.
     EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
@@ -301,6 +304,12 @@ class SecurityIntegrationTest {
           .atMost(Duration.ofSeconds(30))
           .pollInterval(Duration.ofMillis(200))
           .until(() -> keyResolver.resolvePublicKey(WORKER_KEY_ID) != null);
+      // Also wait for the platform RSA key — tests that issue JWTs cannot proceed until the
+      // engine's KTable has processed this entry and PublicKeyProvider.getKey() can resolve it.
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(() -> keyResolver.resolvePublicKey(PLATFORM_KID) != null);
     }
   }
 
@@ -471,20 +480,18 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
     // Wait until the instance is registered so activeProcessInstanceId is set, then wait
     // for the external-task trigger, then respond using workerResponder — it signs the
     // response with WORKER_KEY_ID Ed25519 via its own isolated KafkaProducer;
     // SigningServiceHolder is never touched so the engine's MessageSigningService
     // registration stays intact.
-    engine.waitForNewProcessInstance();
-    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
-
-    ExternalTaskTriggerDTO trigger = engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
-    workerResponder.respondSuccess(trigger, VariablesDTO.of("var1", "ok"));
-
-    engine.waitUntilDone();
+    engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    engine
+        .waitForNewProcessInstance()
+        .waitForExternalTaskTrigger(SERVICE_TASK_TYPE)
+        .andRespondToExternalTaskWithSuccess(SERVICE_TASK_TYPE, VariablesDTO.of("var1", "ok"))
+        .waitUntilDone();
 
     engine
         .assertThatProcess()

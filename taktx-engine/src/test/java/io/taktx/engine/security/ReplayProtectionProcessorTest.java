@@ -148,7 +148,6 @@ class ReplayProtectionProcessorTest {
             taktConfiguration,
             globalConfigStore,
             publicKeyProvider,
-            new NonceStore(),
             mock(org.apache.kafka.streams.KafkaStreams.class));
 
     AtomicLong nowMs = new AtomicLong(Instant.parse("2026-04-20T12:00:00Z").toEpochMilli());

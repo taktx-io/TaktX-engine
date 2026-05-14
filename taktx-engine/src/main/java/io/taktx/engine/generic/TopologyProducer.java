@@ -547,6 +547,7 @@ public class TopologyProducer {
     KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
         processInstanceTriggerStream
             .filter((_, envelope) -> isReplayProtectedEntryCommand(envelope))
+            // Re-key to issuer:auditId so the replay-protection store shard is co-located.
             .selectKey((_, envelope) -> envelope.replayRoutingKeyHint())
             .repartition(
                 Repartitioned.<String, ProcessInstanceTriggerEnvelope>as(
@@ -559,7 +560,15 @@ public class TopologyProducer {
                         clock,
                         engineAuthorizationService,
                         taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename())),
-                taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename()));
+                taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename()))
+            // Re-partition by processInstanceId (UUID) so ProcessInstanceProcessor always
+            // runs in the same task — and thus the same processInstanceStore shard — as the
+            // UUID-keyed bypass path and all subsequent worker/continuation messages.
+            .repartition(
+                Repartitioned.<UUID, ProcessInstanceTriggerEnvelope>as(
+                        taktConfiguration.getPrefixed("process-instance-replay-rekey"))
+                    .withKeySerde(PROCESS_INSTANCE_KEY_SERDE)
+                    .withValueSerde(PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
 
     replayBypassStream
         .merge(replayProtectedEntryStream)

@@ -248,10 +248,7 @@ public class ProcessInstanceProcessor
       ProcessInstance processInstance = instanceMapper.map(processInstanceDTO, flowElements);
       IncidentInfo incidentInfo =
           new IncidentInfo(
-              null,
-              "Unable to decode trigger",
-              null,
-              buildDlqEntryRef(triggerEnvelope.data()));
+              null, "Unable to decode trigger", null, buildDlqEntryRef(triggerEnvelope.data()));
       processInstance.setIncidentInfo(incidentInfo);
       enrichScope(processInstance.getScope(), processInstanceId, flowElements);
       ProcessDefinitionKey processDefinitionKey = processInstance.getProcessDefinitionKey();
@@ -946,7 +943,7 @@ public class ProcessInstanceProcessor
         sb.append(String.format("%02x", b));
       }
       return "sha256:" + sb;
-    } catch (NoSuchAlgorithmException e) {
+    } catch (NoSuchAlgorithmException _) {
       return null;
     }
   }
