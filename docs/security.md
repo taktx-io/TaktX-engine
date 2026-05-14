@@ -503,7 +503,7 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | `COMPAT` | allowed | rejected when `auditId` is non-blank | staged rollout default |
 | `STRICT` | rejected | rejected | fail-closed mode for compliant issuers |
 
-These modes apply to JWT-bearing entry commands only. They do not apply to `schedule-commands`, `topic-meta-requested`, engine-internal non-entry continuations, or worker/user-task response DTOs.
+These modes apply to JWT-bearing entry commands only. They do not apply to `schedule-commands`, `topic-meta-requested`, engine-internal non-entry continuations, or external-task / user-task response DTOs.
 
 ### Publishing runtime configuration
 

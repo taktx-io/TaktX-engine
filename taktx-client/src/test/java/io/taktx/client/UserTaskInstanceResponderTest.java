@@ -38,7 +38,8 @@ class UserTaskInstanceResponderTest {
     elementInstanceIdPath = List.of(101L, 202L);
     topicName = "test-topic";
     responder =
-        new UserTaskInstanceResponder(mockProducer, topicName, processInstanceId, elementInstanceIdPath);
+        new UserTaskInstanceResponder(
+            mockProducer, topicName, processInstanceId, elementInstanceIdPath);
   }
 
   @SuppressWarnings("unchecked")
@@ -79,5 +80,3 @@ class UserTaskInstanceResponderTest {
     assertThat(trigger.getUserTaskResponseResult().getCode()).isEqualTo("ERR-1");
   }
 }
-
-

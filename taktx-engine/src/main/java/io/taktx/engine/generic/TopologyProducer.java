@@ -22,6 +22,7 @@ import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
 import io.taktx.dto.DmnDefinitionDTO;
 import io.taktx.dto.DmnDefinitionKey;
+import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
@@ -81,6 +82,7 @@ import io.taktx.engine.pi.ScopeProcessor;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.security.MessageSigningService;
+import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.serdes.SigningSerializer;
@@ -89,6 +91,7 @@ import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -109,6 +112,9 @@ import org.apache.kafka.streams.kstream.Repartitioned;
 @ApplicationScoped
 @RequiredArgsConstructor
 public class TopologyProducer {
+
+  private static final long PROCESS_INSTANCE_RESPONSE_DEDUP_RETENTION_MS =
+      Duration.ofMinutes(10).toMillis();
 
   public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
       new ObjectMapperSerde<>(MessageEventDTO.class);
@@ -536,16 +542,24 @@ public class TopologyProducer {
             keyValueStoreSupplier.get(Stores.REPLAY_PROTECTION), Serdes.String(), Serdes.Long()));
     builder.addStateStore(
         keyValueStoreBuilder(
-            keyValueStoreSupplier.get(Stores.WORKER_RESPONSE_DEDUP), Serdes.String(), Serdes.Long()));
+            keyValueStoreSupplier.get(Stores.PROCESS_INSTANCE_RESPONSE_DEDUP),
+            Serdes.String(),
+            Serdes.Long()));
 
     KStream<UUID, ProcessInstanceTriggerEnvelope> processInstanceTriggerStream =
         builder.stream(
             taktConfiguration.getPrefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName()),
             Consumed.with(PROCESS_INSTANCE_KEY_SERDE, PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
 
+    KStream<UUID, ProcessInstanceTriggerEnvelope> responseDedupProtectedStream =
+        processInstanceTriggerStream.filter(
+            (_, envelope) -> isProcessInstanceResponseDedupProtected(envelope));
+
     KStream<UUID, ProcessInstanceTriggerEnvelope> replayBypassStream =
         processInstanceTriggerStream.filter(
-            (_, envelope) -> !isReplayProtectedEntryCommand(envelope));
+            (_, envelope) ->
+                !isReplayProtectedEntryCommand(envelope)
+                    && !isProcessInstanceResponseDedupProtected(envelope));
 
     // ReplayProtectionProcessor outputs Object,Object so DLQ entries and normal envelopes
     // can share the same forward path. Split them here before the UUID repartition.
@@ -582,7 +596,7 @@ public class TopologyProducer {
 
     // Re-partition normal envelopes by processInstanceId (UUID) so ProcessInstanceProcessor always
     // runs in the same task — and thus the same processInstanceStore shard — as the
-    // UUID-keyed bypass path and all subsequent worker/continuation messages.
+    // UUID-keyed bypass path and all subsequent process-instance response/continuation messages.
     KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
         replayCheckedStream
             .filter((_, value) -> value instanceof ProcessInstanceTriggerEnvelope)
@@ -593,7 +607,18 @@ public class TopologyProducer {
                     .withKeySerde(PROCESS_INSTANCE_KEY_SERDE)
                     .withValueSerde(PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE));
 
+    KStream<UUID, ProcessInstanceTriggerEnvelope> dedupedProcessInstanceResponseStream =
+        responseDedupProtectedStream.process(
+            () ->
+                new ProcessInstanceResponseDedupProcessor(
+                    clock,
+                    PROCESS_INSTANCE_RESPONSE_DEDUP_RETENTION_MS,
+                    taktConfiguration.getPrefixed(
+                        Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename())),
+            taktConfiguration.getPrefixed(Stores.PROCESS_INSTANCE_RESPONSE_DEDUP.getStorename()));
+
     replayBypassStream
+        .merge(dedupedProcessInstanceResponseStream)
         .merge(replayProtectedEntryStream)
         .process(
             () ->
@@ -719,6 +744,14 @@ public class TopologyProducer {
         && (envelope.trigger() instanceof StartCommandDTO
             || envelope.trigger() instanceof AbortTriggerDTO
             || envelope.trigger() instanceof SetVariableTriggerDTO);
+  }
+
+  private static boolean isProcessInstanceResponseDedupProtected(
+      ProcessInstanceTriggerEnvelope envelope) {
+    return envelope != null
+        && envelope.trigger() != null
+        && (envelope.trigger() instanceof ExternalTaskResponseTriggerDTO
+            || envelope.trigger() instanceof UserTaskResponseTriggerDTO);
   }
 
   private void setupMessageStream(StreamsBuilder builder) {

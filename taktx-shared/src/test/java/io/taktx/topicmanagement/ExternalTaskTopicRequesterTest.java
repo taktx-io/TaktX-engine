@@ -29,7 +29,9 @@ class ExternalTaskTopicRequesterTest {
     ExternalTaskTopicRequester requester =
         new ExternalTaskTopicRequester(taktPropertiesHelper(), producer);
 
-    String topicName = requester.requestExternalTaskTopic("ship-order", 3, io.taktx.CleanupPolicy.DELETE, (short) 1);
+    String topicName =
+        requester.requestExternalTaskTopic(
+            "ship-order", 3, io.taktx.CleanupPolicy.DELETE, (short) 1);
 
     ArgumentCaptor<ProducerRecord<String, TopicMetaDTO>> captor =
         ArgumentCaptor.forClass(ProducerRecord.class);
@@ -37,7 +39,8 @@ class ExternalTaskTopicRequesterTest {
 
     ProducerRecord<String, TopicMetaDTO> produced = captor.getValue();
     assertThat(topicName).isEqualTo("tenant.ns.external-task-trigger-ship-order");
-    assertThat(produced.topic()).isEqualTo("tenant.ns." + Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
+    assertThat(produced.topic())
+        .isEqualTo("tenant.ns." + Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
     assertThat(produced.key()).isEqualTo(topicName);
     assertThat(produced.value().getTopicName()).isEqualTo(topicName);
     assertThat(produced.value().getMessageId()).isNotBlank();
@@ -50,5 +53,3 @@ class ExternalTaskTopicRequesterTest {
     return new TaktPropertiesHelper(props);
   }
 }
-
-

@@ -238,7 +238,8 @@ class ExternalTaskInstanceResponderTest {
     assertThat(((ContinueFlowElementTriggerDTO) triggerDTO).getElementInstanceIdPath())
         .isEqualTo(elementInstanceIdPath);
     assertThat(triggerDTO).isInstanceOf(ExternalTaskResponseTriggerDTO.class);
-    ExternalTaskResponseTriggerDTO externalTaskTrigger = (ExternalTaskResponseTriggerDTO) triggerDTO;
+    ExternalTaskResponseTriggerDTO externalTaskTrigger =
+        (ExternalTaskResponseTriggerDTO) triggerDTO;
     assertThat(externalTaskTrigger.getMessageId()).isNotBlank();
     return externalTaskTrigger;
   }

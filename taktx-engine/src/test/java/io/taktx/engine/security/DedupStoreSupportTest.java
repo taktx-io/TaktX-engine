@@ -46,4 +46,3 @@ class DedupStoreSupportTest {
     verify(iterator).close();
   }
 }
-

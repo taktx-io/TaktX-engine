@@ -342,8 +342,8 @@ keys must be topic-class namespaced to prevent collisions across protected paths
 **Completed:** 2026-05-14
 
 **Decision:** M2 phase 1 will protect the signed non-entry paths with the highest externally
-reachable or operationally meaningful replay risk that are also externally originated: worker
-responses on `process-instance` (`ExternalTaskResponseTriggerDTO`,
+reachable or operationally meaningful replay risk that are also externally originated: external-task
+and user-task responses on `process-instance` (`ExternalTaskResponseTriggerDTO`,
 `UserTaskResponseTriggerDTO`) and `TopicMetaDTO` on `topic-meta-requested`. Engine-internal paths
 (`MessageScheduleDTO` on `schedule-commands` and continuation messages on `process-instance`) are
 deferred to a later phase because they are already restricted to trusted `ENGINE` signatures and
@@ -370,8 +370,8 @@ the current release already contains a large console-facing DLQ/security change 
 **Completed:** 2026-05-14
 
 **Decision:** Use the following default dedup windows in the current M2 release slice: 10 minutes
-for worker / user-task responses on `process-instance` and 2 minutes for
-`topic-meta-requested`. The worker-response default intentionally aligns with the existing
+for external-task / user-task responses on `process-instance` and 2 minutes for
+`topic-meta-requested`. The response-dedup default intentionally aligns with the existing
 `replayProtectionRetentionMs = 600_000` baseline; the shorter `topic-meta-requested` window keeps
 state growth bounded for short-lived operational traffic. `schedule-commands` retains a 5 minute
 candidate default for a later internal-only phase.
@@ -381,7 +381,7 @@ candidate default for a later internal-only phase.
 **Starting point:**
 | Topic class | Suggested window | Rationale |
 |---|---|---|
-| Worker responses | 10 minutes | Matches typical task completion SLAs |
+| External-task / user-task responses | 10 minutes | Matches typical task completion SLAs |
 | `topic-meta-requested` | 2 minutes | Idempotent; short window enough to suppress burst replays |
 
 **Deferred candidate default:**
@@ -414,7 +414,7 @@ candidate default for a later internal-only phase.
 falls back to signature-hash dedup if absent (transition compatibility). Auto-population should be
 implemented at the existing producer entry points already present in the codebase:
 - `ProcessInstanceResponder` / `ExternalTaskInstanceResponder` / `UserTaskInstanceResponder` for
-  worker and user-task responses
+  external-task and user-task responses
 - `ExternalTaskTopicRequester` (and equivalent topic-meta helper APIs) for `TopicMetaDTO`
 
 **Deferred note:** If engine-internal `schedule-commands` is hardened in a later phase, add the
@@ -448,7 +448,7 @@ APIs now auto-populate `messageId` via `UUID.randomUUID().toString()` in
 
 **Semantics:** For the current release slice, add a persistent `KeyValueStore<String, Long>` per
 protected external topic class:
-- worker / user-task responses on `process-instance`
+- external-task / user-task responses on `process-instance`
 - `topic-meta-requested`
 
 Keep the stores separate rather than shared so retention windows and purge logic stay simple.
@@ -457,10 +457,10 @@ Partitioned locally where topic routing allows.
 **Expiry:** Periodic punctuator (mirrors `ReplayProtectionProcessor.purgeExpiredEntries` pattern) removes entries older than the configured retention window.
 
 **Progress so far:**
-- `Stores` enum now includes dedicated store names for `WORKER_RESPONSE_DEDUP` and
+- `Stores` enum now includes dedicated store names for `PROCESS_INSTANCE_RESPONSE_DEDUP` and
   `TOPIC_META_REQUEST_DEDUP`.
 - `TopologyProducer.setupProcessInstanceStream()` now registers the persistent
-  `WORKER_RESPONSE_DEDUP` state store.
+  `PROCESS_INSTANCE_RESPONSE_DEDUP` state store.
 - Shared TTL cleanup helper `DedupStoreSupport.purgeExpiredEntries(...)` added and wired into
   `ReplayProtectionProcessor` so the future external dedup processors can reuse the same purge
   semantics.
@@ -477,11 +477,13 @@ Partitioned locally where topic routing allows.
 
 ---
 
-### SEC-018 — Implement dedup processor for worker responses ⏳
+### SEC-018 — Implement dedup processor for external-task and user-task responses ✅
+
+**Completed:** 2026-05-14
 
 **Prerequisite:** SEC-016, SEC-017.
 
-**Where:** New `WorkerResponseDedupProcessor` (or extend `ReplayProtectionProcessor` to cover non-JWT paths).
+**Where:** New `ProcessInstanceResponseDedupProcessor` (or extend `ReplayProtectionProcessor` to cover non-JWT paths).
 
 **Semantics:**
 - Extracts dedup key from `messageId` (or derived hash if absent).
@@ -490,11 +492,23 @@ Partitioned locally where topic routing allows.
 
 **Applies to:** `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`
 
+**Change made:** Added `ProcessInstanceResponseDedupProcessor` and wired it into
+`TopologyProducer.setupProcessInstanceStream()` on a dedicated external-task / user-task response branch before normal
+`ProcessInstanceProcessor` handling. The dedup key is namespaced by DTO class and
+`processInstanceId`, then uses `messageId` when present or a fallback SHA-256 hash of
+`X-TaktX-Signature + payload bytes` when `messageId` is absent. Because external-task / user-task responses
+already arrive on the UUID-keyed `process-instance` topic and the dedup key includes
+`processInstanceId`, no extra repartition topic is needed in the current release slice. Duplicate
+responses are logged and dropped; first-seen or expired entries pass through unchanged.
+
 **Acceptance criteria:**
-- Duplicate worker response within retention window is rejected.
+- Duplicate external-task or user-task response within retention window is rejected.
 - First occurrence passes through unchanged.
 - Duplicate outside the window is accepted (retention expired).
 - Unit tests covering all three cases.
+
+**Tests added/updated:** `ProcessInstanceResponseDedupProcessorTest`; `ReplayProtectionProcessorTest` also
+continues to pass with the shared purge helper introduced under SEC-017.
 
 ---
 
@@ -551,7 +565,7 @@ documented in `security-future-development-plan.md`.
 
 **Acceptance criteria:**
 - Tests pass in `securityIntegrationTest` source set (mirrors `SecurityIntegrationTest` naming).
-- Covers worker responses and `topic-meta-requested`; `schedule-commands` test remains deferred
+- Covers external-task and user-task responses plus `topic-meta-requested`; `schedule-commands` test remains deferred
   with SEC-019.
 
 ---
@@ -589,9 +603,9 @@ documented in `security-future-development-plan.md`.
 
 - Chosen dedup identity: optional explicit `messageId` on the phase-1 signed non-entry DTOs, with
   a transition fallback to a derived `X-TaktX-Signature + payload` hash for legacy producers.
-- M2 release scope narrowed to externally originated signed non-entry paths: worker responses and
-  `topic-meta-requested`; internal paths remain deferred.
-- Default dedup windows fixed at 10 minutes for worker responses and 2 minutes for
+- M2 release scope narrowed to externally originated signed non-entry paths: external-task and
+  user-task responses plus `topic-meta-requested`; internal paths remain deferred.
+- Default dedup windows fixed at 10 minutes for external-task and user-task responses and 2 minutes for
   `topic-meta-requested`; `schedule-commands` keeps a 5 minute candidate default for a later phase.
 - `topic-meta-requested` will use a topology-ingress / broker-admin orchestration split so dedup and
   trust checks stay in Kafka Streams while admin side effects remain isolated.

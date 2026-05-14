@@ -41,7 +41,7 @@ This roadmap builds on the completed baseline controls (signing, JWT authorizati
 
 Current durable replay protection is intentionally scoped to JWT-bearing entry commands via `auditId`. That leaves signed non-entry and control-plane paths dependent on message semantics and downstream idempotency rather than on a dedicated duplicate-detection layer.
 
-This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed worker responses, external topic-management requests, or other signed non-entry traffic may still create duplicate work, load spikes, or repeated side effects.
+This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed external-task responses, duplicate signed user-task responses, external topic-management requests, or other signed non-entry traffic may still create duplicate work, load spikes, or repeated side effects.
 
 ### Design goals
 
@@ -57,7 +57,7 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
   - explicit `messageId` on all signed messages
   - derived hash of signature + payload bytes
 - Apply short-lived dedup windows to selected high-risk topics / DTO classes first:
-  - worker responses
+  - external-task and user-task responses
   - `topic-meta-requested`
   - additional external message / trigger ingress surfaces as they are productised
 - Defer engine-internal paths until after the current console/DLQ adoption wave:
@@ -76,8 +76,8 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
 ### Resolved decisions
 
 - ✅ Canonical dedup key: optional explicit `messageId` with a transition fallback to a derived signature + payload hash
-- ✅ Phase-1 scope: external worker/user-task responses and `topic-meta-requested`; engine-internal paths deferred
-- ✅ Retention defaults: 10 minutes for worker responses and 2 minutes for `topic-meta-requested` in the current release slice; `schedule-commands` keeps a 5 minute candidate default for a later internal-only phase
+- ✅ Phase-1 scope: external-task and user-task responses plus `topic-meta-requested`; engine-internal paths deferred
+- ✅ Retention defaults: 10 minutes for external-task and user-task responses and 2 minutes for `topic-meta-requested` in the current release slice; `schedule-commands` keeps a 5 minute candidate default for a later internal-only phase
 - ✅ Topic-specific observability model retained: `topic-meta-requested` stays on the existing DLQ/null-publication contract; engine-internal topics remain out of scope for this release slice
 
 ### M1 — Replay hardening decision record ✅ Resolved 2026-05-14
@@ -121,7 +121,7 @@ as `MessageScheduleDTO` if a later release decides to harden those paths too.
   workflows.
 - `messageId` survives payload correction during DLQ replay; a hash of signature + payload does not.
 - The current codebase has multiple external producer entry points, not a single builder-only API:
-  `ProcessInstanceResponder` / worker responders construct worker and user-task responses directly,
+  `ProcessInstanceResponder` / responder helpers construct external-task and user-task responses directly,
   and `ExternalTaskTopicRequester` constructs `TopicMetaDTO` directly. An optional field plus
   producer-side auto-population fits that rollout model without breaking existing wire compatibility.
 - The fallback hash remains useful during migration because the current signing serializers already
@@ -148,7 +148,7 @@ M2 phase 1 will protect the following external signed non-entry paths first:
 These are the first protected paths because they cover the highest-value non-entry surfaces already
 present in the codebase:
 
-- worker and user-task responses are externally produced, security-sensitive, and can advance or
+- external-task and user-task responses are externally produced, security-sensitive, and can advance or
   re-drive business execution
 - `topic-meta-requested` is operationally idempotent but externally supplied and vulnerable to burst
   replay noise without lightweight dedup
@@ -170,7 +170,7 @@ The default dedup windows for the current M2 release slice are:
 
 | Topic class | Default window | Reasoning |
 |---|---|---|
-| Worker / user-task responses on `process-instance` | 10 minutes | Aligns with the existing default `replayProtectionRetentionMs = 600_000`, matches common task completion / retry latency, and keeps operator expectations simple |
+| External-task / user-task responses on `process-instance` | 10 minutes | Aligns with the existing default `replayProtectionRetentionMs = 600_000`, matches common task completion / retry latency, and keeps operator expectations simple |
 | `topic-meta-requested` | 2 minutes | Requests are operationally idempotent and primarily need burst suppression, not long-lived duplicate quarantine |
 
 Candidate default for a later internal-only phase:
@@ -212,7 +212,7 @@ preserving a clean boundary around non-deterministic broker-admin operations.
 - M2 should treat this as duplicate suppression, not exactly-once delivery.
 - `messageId` should be surfaced in logs / DLQ summaries where available; when the fallback path is
   used, operators should still be able to tell that no explicit `messageId` was present.
-- The worker-response scope covers both `ExternalTaskResponseTriggerDTO` and
+- The external-task / user-task response scope covers both `ExternalTaskResponseTriggerDTO` and
   `UserTaskResponseTriggerDTO` even though they share the `process-instance` topic; dedup keys must
   therefore include a DTO/topic-class namespace.
 - `topic-meta-requested` dedup should be implemented in the topology-owned ingress stage so
@@ -395,9 +395,9 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 - M1 resolved for Workstream 1.
 - Canonical dedup identity chosen: optional explicit `messageId` on phase-1 DTOs, with a transition
   fallback to a derived `signature + payload` hash for legacy producers.
-- M2 release scope narrowed to externally originated signed non-entry paths: worker/user-task
-  responses plus `topic-meta-requested`.
-- Default retention windows fixed at 10 minutes for worker responses and 2 minutes for
+- M2 release scope narrowed to externally originated signed non-entry paths: external-task and
+  user-task responses plus `topic-meta-requested`.
+- Default retention windows fixed at 10 minutes for external-task and user-task responses and 2 minutes for
   `topic-meta-requested`; `schedule-commands` retains a 5 minute candidate default for a later phase.
 - Engine-internal paths (`schedule-commands`, continuations) deferred to a later phase because they
   are already `ENGINE`-signed and the current release already contains a large console-facing

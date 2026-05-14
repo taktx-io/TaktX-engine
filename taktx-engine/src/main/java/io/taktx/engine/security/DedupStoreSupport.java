@@ -18,7 +18,8 @@ public final class DedupStoreSupport {
   private DedupStoreSupport() {}
 
   /**
-   * Purges all store entries whose effective first-seen timestamp is older than {@code retentionMs}.
+   * Purges all store entries whose effective first-seen timestamp is older than {@code
+   * retentionMs}.
    *
    * <p>{@link Math#abs(long)} is applied to the stored value so callers can reuse the helper for
    * stores that encode internal sentinels via sign (for example replay protection's negative
@@ -39,4 +40,3 @@ public final class DedupStoreSupport {
     expiredKeys.forEach(store::delete);
   }
 }
-

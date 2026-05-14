@@ -27,7 +27,8 @@ class MessageIdSerializationTest {
             UUID.randomUUID(),
             List.of(1L, 2L),
             "msg-ext-1",
-            new ExternalTaskResponseResultDTO(ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
             VariablesDTO.empty());
 
     ExternalTaskResponseTriggerDTO deserialized =
@@ -59,12 +60,17 @@ class MessageIdSerializationTest {
   @Test
   void topicMeta_roundTripsMessageId() throws Exception {
     TopicMetaDTO original =
-        new TopicMetaDTO("tenant.ns.external-task-trigger.ship-order", 3, CleanupPolicy.DELETE, (short) 1, "msg-topic-1");
+        new TopicMetaDTO(
+            "tenant.ns.external-task-trigger.ship-order",
+            3,
+            CleanupPolicy.DELETE,
+            (short) 1,
+            "msg-topic-1");
 
-    TopicMetaDTO deserialized = CBOR.readValue(CBOR.writeValueAsBytes(original), TopicMetaDTO.class);
+    TopicMetaDTO deserialized =
+        CBOR.readValue(CBOR.writeValueAsBytes(original), TopicMetaDTO.class);
 
     assertThat(deserialized.getMessageId()).isEqualTo("msg-topic-1");
     assertThat(deserialized.getTopicName()).isEqualTo(original.getTopicName());
   }
 }
-
