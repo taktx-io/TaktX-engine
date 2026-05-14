@@ -41,7 +41,7 @@ This roadmap builds on the completed baseline controls (signing, JWT authorizati
 
 Current durable replay protection is intentionally scoped to JWT-bearing entry commands via `auditId`. That leaves signed non-entry and control-plane paths dependent on message semantics and downstream idempotency rather than on a dedicated duplicate-detection layer.
 
-This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed worker responses, schedule commands, or internal continuation traffic may still create duplicate work, load spikes, or repeated side effects.
+This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed worker responses, external topic-management requests, or other signed non-entry traffic may still create duplicate work, load spikes, or repeated side effects.
 
 ### Design goals
 
@@ -58,8 +58,10 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
   - derived hash of signature + payload bytes
 - Apply short-lived dedup windows to selected high-risk topics / DTO classes first:
   - worker responses
-  - `schedule-commands`
   - `topic-meta-requested`
+  - additional external message / trigger ingress surfaces as they are productised
+- Defer engine-internal paths until after the current console/DLQ adoption wave:
+  - `schedule-commands`
   - engine continuations where duplicate load is operationally relevant
 - Keep dedup state partition-local where that matches topic routing semantics
 - Document clearly that this is duplicate suppression, not a general transactional guarantee
@@ -74,9 +76,9 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
 ### Resolved decisions
 
 - ✅ Canonical dedup key: optional explicit `messageId` with a transition fallback to a derived signature + payload hash
-- ✅ Phase-1 scope: worker responses, `schedule-commands`, and `topic-meta-requested`
-- ✅ Retention defaults: 10 minutes for worker responses, 5 minutes for `schedule-commands`, 2 minutes for `topic-meta-requested`
-- ✅ Topic-specific observability model retained: `schedule-commands` remains DLQ-excluded; external paths continue to use the existing rejection / DLQ surfaces as applicable
+- ✅ Phase-1 scope: external worker/user-task responses and `topic-meta-requested`; engine-internal paths deferred
+- ✅ Retention defaults: 10 minutes for worker responses and 2 minutes for `topic-meta-requested` in the current release slice; `schedule-commands` keeps a 5 minute candidate default for a later internal-only phase
+- ✅ Topic-specific observability model retained: `topic-meta-requested` stays on the existing DLQ/null-publication contract; engine-internal topics remain out of scope for this release slice
 
 ### M1 — Replay hardening decision record ✅ Resolved 2026-05-14
 
@@ -94,11 +96,10 @@ backward-compatible, and aligned with the existing signing / DLQ model.
 
 #### Decision 1 — Canonical dedup identity (SEC-013)
 
-Use an optional explicit `messageId` field as the canonical dedup identity on the four phase-1 DTOs:
+Use an optional explicit `messageId` field as the canonical dedup identity on the external phase-1 DTOs:
 
 - `ExternalTaskResponseTriggerDTO`
 - `UserTaskResponseTriggerDTO`
-- `MessageScheduleDTO`
 - `TopicMetaDTO`
 
 The M2 engine logic should derive the durable dedup key as follows:
@@ -111,18 +112,18 @@ The M2 engine logic should derive the durable dedup key as follows:
    paths do not collide.
 
 This chooses the explicit-ID model for long-term operability while preserving a non-breaking upgrade
-path for existing clients and engine-produced records.
+path for existing clients. The same mechanism can later be extended to engine-internal records such
+as `MessageScheduleDTO` if a later release decides to harden those paths too.
 
 #### Rationale
 
 - `messageId` is human-readable, loggable, and can be copied into incident tickets and DLQ review
   workflows.
 - `messageId` survives payload correction during DLQ replay; a hash of signature + payload does not.
-- The current codebase has multiple producer entry points, not a single builder-only API:
+- The current codebase has multiple external producer entry points, not a single builder-only API:
   `ProcessInstanceResponder` / worker responders construct worker and user-task responses directly,
-  `ExternalTaskTopicRequester` constructs `TopicMetaDTO` directly, and the engine itself creates
-  `MessageScheduleDTO` instances. An optional field plus producer-side auto-population fits that
-  rollout model without breaking existing wire compatibility.
+  and `ExternalTaskTopicRequester` constructs `TopicMetaDTO` directly. An optional field plus
+  producer-side auto-population fits that rollout model without breaking existing wire compatibility.
 - The fallback hash remains useful during migration because the current signing serializers already
   bind the Ed25519 signature to the exact payload bytes that hit Kafka.
 
@@ -131,8 +132,6 @@ path for existing clients and engine-produced records.
 - `messageId` remains optional for the whole M2 rollout.
 - Producer-side helper code should auto-populate `UUID.randomUUID().toString()` when callers do not
   set `messageId` explicitly.
-- Engine-generated `MessageScheduleDTO` records should populate `messageId` at creation time rather
-  than relying on an external client API.
 - Legacy records without `messageId` must still be accepted and deduplicated via the derived fallback.
 - A corrected DLQ replay should preserve the original `messageId` unless the operator is explicitly
   creating a new logical action.
@@ -141,44 +140,72 @@ path for existing clients and engine-produced records.
 
 #### Decision 2 — Phase-1 protected scope (SEC-014)
 
-M2 phase 1 will protect the following signed non-entry paths first:
+M2 phase 1 will protect the following external signed non-entry paths first:
 
 1. `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` on `process-instance`
-2. `MessageScheduleDTO` on `schedule-commands`
-3. `TopicMetaDTO` on `topic-meta-requested`
+2. `TopicMetaDTO` on `topic-meta-requested`
 
 These are the first protected paths because they cover the highest-value non-entry surfaces already
 present in the codebase:
 
 - worker and user-task responses are externally produced, security-sensitive, and can advance or
   re-drive business execution
-- `schedule-commands` is engine-internal but can create duplicate timer activity and is intentionally
-  DLQ-excluded, so suppression must happen in-stream
 - `topic-meta-requested` is operationally idempotent but externally supplied and vulnerable to burst
   replay noise without lightweight dedup
 
 Deferred to a later phase:
 
+- engine-internal `schedule-commands` (`MessageScheduleDTO`)
 - engine-internal continuations on `process-instance`
   (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`)
 
-Those continuation paths are already restricted to trusted `ENGINE` signatures and usually converge
-through process state. They remain worth hardening later, but including them in M2 would broaden the
-topology and test matrix without reducing as much externally reachable risk as the three phase-1
-targets above.
+Those internal paths are already restricted to trusted `ENGINE` signatures and usually converge
+through process state. They remain worth hardening later, but including them in the current release
+would broaden the topology and test matrix while the console team is still absorbing the already
+large DLQ/security surface added in Workstreams 2 and 3.
 
 #### Decision 3 — Retention defaults (SEC-015)
 
-The default dedup windows for M2 phase 1 are:
+The default dedup windows for the current M2 release slice are:
 
 | Topic class | Default window | Reasoning |
 |---|---|---|
 | Worker / user-task responses on `process-instance` | 10 minutes | Aligns with the existing default `replayProtectionRetentionMs = 600_000`, matches common task completion / retry latency, and keeps operator expectations simple |
-| `schedule-commands` | 5 minutes | Engine-generated records are short-lived and bursty; a shorter window suppresses near-term duplicates without retaining obsolete schedule keys longer than necessary |
 | `topic-meta-requested` | 2 minutes | Requests are operationally idempotent and primarily need burst suppression, not long-lived duplicate quarantine |
+
+Candidate default for a later internal-only phase:
+
+| Topic class | Candidate window | Reasoning |
+|---|---|---|
+| `schedule-commands` | 5 minutes | Engine-generated records are short-lived and bursty; a shorter window suppresses near-term duplicates without retaining obsolete schedule keys longer than necessary |
 
 These are defaults, not protocol guarantees. Duplicates outside the configured window are allowed to
 flow again and must still be safe under normal processor semantics.
+
+#### Architecture split for `topic-meta-requested`
+
+To remove the current architectural awkwardness around `DynamicTopicManager`, the preferred M2 shape
+is a split between ingress security handling in Kafka Streams and broker-admin side effects in a
+small orchestration service.
+
+Preferred target shape:
+
+1. `topic-meta-requested` remains the external ingress topic.
+2. Kafka Streams owns the intake pipeline for that topic:
+   - deserialisation
+   - signature / trust verification
+   - duplicate suppression
+   - rejection routing (DLQ + preserved `topic-meta-actual` null contract)
+3. Accepted requests are forwarded to a thin engine-internal handoff stage (implementation may use
+   either a dedicated internal topic or a dedicated side-effect processor boundary, whichever keeps
+   ownership clear).
+4. A slimmed-down topic-management service owns only broker-admin side effects:
+   - create / resize / inspect topics via `AdminClient`
+   - publish `topic-meta-actual`
+   - maintain reconciliation / adaptation scans
+
+This keeps the security-critical intake path aligned with the rest of the Streams topology while
+preserving a clean boundary around non-deterministic broker-admin operations.
 
 #### Implementation notes that directly unblock M2
 
@@ -188,13 +215,13 @@ flow again and must still be safe under normal processor semantics.
 - The worker-response scope covers both `ExternalTaskResponseTriggerDTO` and
   `UserTaskResponseTriggerDTO` even though they share the `process-instance` topic; dedup keys must
   therefore include a DTO/topic-class namespace.
-- `schedule-commands` dedup rejections should continue to use the excluded-topic observability path,
-  consistent with the existing decision that this topic is not operator-replayable.
-- `topic-meta-requested` dedup should be implemented upstream of `DynamicTopicManager` so duplicate
-  requests are suppressed before topic-management side effects and before DLQ reason mapping for
-  unrelated auth failures.
-- The chosen defaults unblock SEC-016 through SEC-022 without requiring a breaking protocol change or
-  a single all-at-once producer migration.
+- `topic-meta-requested` dedup should be implemented in the topology-owned ingress stage so
+  duplicate requests are suppressed before topic-management side effects and before DLQ reason
+  mapping for unrelated auth failures.
+- Engine-internal paths (`schedule-commands`, internal continuations) are deliberately deferred until
+  after the console team has adapted to the current DLQ/security release surface.
+- The chosen defaults and architecture split unblock the external-facing part of SEC-016 through
+  SEC-022 without requiring a breaking protocol change or a single all-at-once producer migration.
 
 ---
 
@@ -321,7 +348,7 @@ Publish a concise threat model that aligns with implemented controls and deploym
 | Milestone | Target | Outcome | Status |
 |---|---|---|---|
 | M1 - Replay hardening decision record | Next development cycle | Final dedup identity, phase-1 protected topics, and retention defaults selected (SEC-013 – SEC-015) | ✅ Done (2026-05-14) |
-| M2 - Replay hardening implementation | Following cycle | Selected signed paths protected with tests and operational guidance (SEC-016 – SEC-022) | ⏳ Pending |
+| M2 - Replay hardening implementation | Following cycle | Selected external signed paths protected with tests and operational guidance; engine-internal paths deferred to a later slice (SEC-016 – SEC-022, narrowed scope) | ⏳ Pending |
 | M3 - DLQ decision record | Following cycle | Final DLQ topology, envelope, and retention decisions | ✅ Done (2026-05-01) |
 | M4 - DLQ + telemetry completion | Following cycle | Rejections routed to DLQ and exported with structured logs / metrics | ✅ Done (2026-05-07) |
 | M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance (SEC-011 – SEC-012) | ⏳ Pending |
@@ -368,10 +395,15 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 - M1 resolved for Workstream 1.
 - Canonical dedup identity chosen: optional explicit `messageId` on phase-1 DTOs, with a transition
   fallback to a derived `signature + payload` hash for legacy producers.
-- M2 phase-1 scope fixed to worker responses, `schedule-commands`, and `topic-meta-requested`.
-- Default retention windows fixed at 10 minutes / 5 minutes / 2 minutes respectively.
-- Engine-internal continuations deferred to a later phase because they are already `ENGINE`-signed
-  and lower risk than the selected externally or operationally sensitive paths.
+- M2 release scope narrowed to externally originated signed non-entry paths: worker/user-task
+  responses plus `topic-meta-requested`.
+- Default retention windows fixed at 10 minutes for worker responses and 2 minutes for
+  `topic-meta-requested`; `schedule-commands` retains a 5 minute candidate default for a later phase.
+- Engine-internal paths (`schedule-commands`, continuations) deferred to a later phase because they
+  are already `ENGINE`-signed and the current release already contains a large console-facing
+  DLQ/security change set.
+- Preferred `topic-meta-requested` architecture split recorded: topology-owned ingress security and
+  dedup, separate broker-admin orchestration service for side effects.
 
 ### 2026-04-27
 

@@ -342,21 +342,21 @@ keys must be topic-class namespaced to prevent collisions across protected paths
 **Completed:** 2026-05-14
 
 **Decision:** M2 phase 1 will protect the signed non-entry paths with the highest externally
-reachable or operationally meaningful replay risk: worker responses on `process-instance`
-(`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`), `MessageScheduleDTO` on
-`schedule-commands`, and `TopicMetaDTO` on `topic-meta-requested`. Engine-internal continuation
-messages (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`)
-are deferred to a later phase because they are already restricted to trusted `ENGINE` signatures
-and usually converge through process state.
+reachable or operationally meaningful replay risk that are also externally originated: worker
+responses on `process-instance` (`ExternalTaskResponseTriggerDTO`,
+`UserTaskResponseTriggerDTO`) and `TopicMetaDTO` on `topic-meta-requested`. Engine-internal paths
+(`MessageScheduleDTO` on `schedule-commands` and continuation messages on `process-instance`) are
+deferred to a later phase because they are already restricted to trusted `ENGINE` signatures and
+the current release already contains a large console-facing DLQ/security change set.
 
 **Open question:** Which signed non-entry paths to harden first in M2?
 
 **Recommended phase-1 scope (highest risk first):**
 1. `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` — can cause re-execution of business tasks if replayed
-2. `MessageScheduleDTO` on `schedule-commands` — duplicate schedules can fire timers twice
-3. `TopicMetaDTO` on `topic-meta-requested` — operationally idempotent today but volume-sensitive
+2. `TopicMetaDTO` on `topic-meta-requested` — operationally idempotent today but volume-sensitive, and currently architecturally awkward enough that the ingress split should be cleaned up before dedup is added
 
 **Deferred to phase-2:**
+- Engine-internal `schedule-commands` (`MessageScheduleDTO`) — useful hardening, but not part of the current external-facing release slice
 - Engine-internal non-entry continuations (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) — trusted ENGINE-only paths with natural idempotency via process state
 
 **Acceptance criteria:**
@@ -369,11 +369,12 @@ and usually converge through process state.
 
 **Completed:** 2026-05-14
 
-**Decision:** Use the following default dedup windows in M2 phase 1: 10 minutes for worker /
-user-task responses on `process-instance`, 5 minutes for `schedule-commands`, and 2 minutes for
+**Decision:** Use the following default dedup windows in the current M2 release slice: 10 minutes
+for worker / user-task responses on `process-instance` and 2 minutes for
 `topic-meta-requested`. The worker-response default intentionally aligns with the existing
-`replayProtectionRetentionMs = 600_000` baseline; the shorter `schedule-commands` and
-`topic-meta-requested` windows keep state growth bounded for short-lived operational traffic.
+`replayProtectionRetentionMs = 600_000` baseline; the shorter `topic-meta-requested` window keeps
+state growth bounded for short-lived operational traffic. `schedule-commands` retains a 5 minute
+candidate default for a later internal-only phase.
 
 **Open question:** What dedup window to use per topic class?
 
@@ -381,8 +382,12 @@ user-task responses on `process-instance`, 5 minutes for `schedule-commands`, an
 | Topic class | Suggested window | Rationale |
 |---|---|---|
 | Worker responses | 10 minutes | Matches typical task completion SLAs |
-| `schedule-commands` | 5 minutes | Engine-generated, short-lived window sufficient |
 | `topic-meta-requested` | 2 minutes | Idempotent; short window enough to suppress burst replays |
+
+**Deferred candidate default:**
+| Topic class | Candidate window | Rationale |
+|---|---|---|
+| `schedule-commands` | 5 minutes | Engine-generated, short-lived window sufficient |
 
 **Acceptance criteria:**
 - Retention defaults recorded alongside phase-1 scope in M1 decision record.
@@ -401,7 +406,6 @@ user-task responses on `process-instance`, 5 minutes for `schedule-commands`, an
 **Files:**
 - `taktx-shared/src/main/java/io/taktx/dto/ExternalTaskResponseTriggerDTO.java`
 - `taktx-shared/src/main/java/io/taktx/dto/UserTaskResponseTriggerDTO.java`
-- `taktx-shared/src/main/java/io/taktx/dto/MessageScheduleDTO.java`
 - `taktx-shared/src/main/java/io/taktx/dto/TopicMetaDTO.java`
 
 **Semantics:** Optional `String messageId` field. Producer-generated (UUID recommended). Engine
@@ -409,8 +413,11 @@ falls back to signature-hash dedup if absent (transition compatibility). Auto-po
 implemented at the existing producer entry points already present in the codebase:
 - `ProcessInstanceResponder` / `ExternalTaskInstanceResponder` / `UserTaskInstanceResponder` for
   worker and user-task responses
-- engine-side schedule creation paths for `MessageScheduleDTO`
 - `ExternalTaskTopicRequester` (and equivalent topic-meta helper APIs) for `TopicMetaDTO`
+
+**Deferred note:** If engine-internal `schedule-commands` is hardened in a later phase, add the
+same optional `messageId` field to `MessageScheduleDTO` at that time rather than pulling it into
+the current release scope.
 
 **Acceptance criteria:**
 - Field added and CBOR-serializable.
@@ -425,7 +432,13 @@ implemented at the existing producer entry points already present in the codebas
 
 **Where:** `taktx-engine/src/main/java/io/taktx/engine/pd/Stores.java` and `TopologyProducer.java`
 
-**Semantics:** A new persistent `KeyValueStore<String, Long>` (dedup key → first-seen timestamp) per protected topic class, or a single shared store with a namespaced key prefix. Partitioned locally where topic routing allows.
+**Semantics:** For the current release slice, add a persistent `KeyValueStore<String, Long>` per
+protected external topic class:
+- worker / user-task responses on `process-instance`
+- `topic-meta-requested`
+
+Keep the stores separate rather than shared so retention windows and purge logic stay simple.
+Partitioned locally where topic routing allows.
 
 **Expiry:** Periodic punctuator (mirrors `ReplayProtectionProcessor.purgeExpiredEntries` pattern) removes entries older than the configured retention window.
 
@@ -459,13 +472,17 @@ implemented at the existing producer entry points already present in the codebas
 
 ### SEC-019 — Implement dedup for `schedule-commands` ⏳
 
+**Status note (2026-05-14):** Deferred from the current release slice. Keep this task for the
+next internal-only hardening phase after the console team has adapted to the current DLQ/security
+surface.
+
 **Prerequisite:** SEC-016, SEC-017.
 
 **Where:** `ScheduleProcessor.java` or a new upstream processor.
 
 **Semantics:** Same dedup pattern as SEC-018, applied to `MessageScheduleDTO` on `schedule-commands`.
 
-**Acceptance criteria:**
+**Acceptance criteria (deferred phase):**
 - Duplicate schedule command within window is rejected with excluded-topic failure metric increment.
 - Unit test.
 
@@ -475,7 +492,17 @@ implemented at the existing producer entry points already present in the codebas
 
 **Prerequisite:** SEC-016, SEC-017.
 
-**Where:** Upstream of `DynamicTopicManager` in `TopologyProducer`.
+**Where:** Upstream of `DynamicTopicManager` in `TopologyProducer`, using the architecture split
+documented in `security-future-development-plan.md`.
+
+**Architecture split:**
+1. Kafka Streams owns `topic-meta-requested` ingress handling: verification, dedup, and reject/
+   accept routing.
+2. Accepted requests are handed off to a slim broker-admin orchestration service (a refactored
+   `DynamicTopicManager` or successor) that owns only `AdminClient` side effects,
+   `topic-meta-actual` publication, and reconciliation scans.
+3. The existing null-publication contract to `topic-meta-actual` on rejected requests must be
+   preserved.
 
 **Semantics:** Same dedup pattern, applied to `TopicMetaDTO`.
 
@@ -489,13 +516,15 @@ implemented at the existing producer entry points already present in the codebas
 
 **Prerequisite:** SEC-018 through SEC-020.
 
-**Scope:** One integration test per protected path demonstrating:
+**Scope:** One integration test per current release protected path demonstrating:
 1. First message passes.
 2. Duplicate within window is rejected.
 3. After window expiry, message is re-accepted.
 
 **Acceptance criteria:**
 - Tests pass in `securityIntegrationTest` source set (mirrors `SecurityIntegrationTest` naming).
+- Covers worker responses and `topic-meta-requested`; `schedule-commands` test remains deferred
+  with SEC-019.
 
 ---
 
@@ -504,7 +533,7 @@ implemented at the existing producer entry points already present in the codebas
 **Prerequisite:** SEC-018 through SEC-021 complete.
 
 **Change:** Update the "Replay protection scope" section to accurately reflect:
-- Which paths now have dedup protection (phase-1 list).
+- Which externally originated paths now have dedup protection (current release list).
 - Which paths remain outside dedup scope and why.
 - Dedup window defaults per protected path.
 
@@ -532,10 +561,14 @@ implemented at the existing producer entry points already present in the codebas
 
 - Chosen dedup identity: optional explicit `messageId` on the phase-1 signed non-entry DTOs, with
   a transition fallback to a derived `X-TaktX-Signature + payload` hash for legacy producers.
-- M2 phase-1 scope fixed to worker responses, `schedule-commands`, and `topic-meta-requested`.
-- Default dedup windows fixed at 10 minutes for worker responses, 5 minutes for
-  `schedule-commands`, and 2 minutes for `topic-meta-requested`.
-- `security-future-development-plan.md` updated with the resolved M1 ADR; Phase 4 is now unblocked.
+- M2 release scope narrowed to externally originated signed non-entry paths: worker responses and
+  `topic-meta-requested`; internal paths remain deferred.
+- Default dedup windows fixed at 10 minutes for worker responses and 2 minutes for
+  `topic-meta-requested`; `schedule-commands` keeps a 5 minute candidate default for a later phase.
+- `topic-meta-requested` will use a topology-ingress / broker-admin orchestration split so dedup and
+  trust checks stay in Kafka Streams while admin side effects remain isolated.
+- `security-future-development-plan.md` updated with the refined M1 ADR and architecture split;
+  Phase 4 is now unblocked for the external-facing slice.
 
 ### 2026-05-14 — Phase 1 replanned: counters replaced with DLQ routing
 
