@@ -12,8 +12,14 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
 import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
+import io.taktx.dto.DlqCaptureStage;
+import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqHeaders;
+import io.taktx.engine.dlq.DlqPublisher;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.license.LicenseManager;
@@ -23,8 +29,11 @@ import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.JsonDeserializer;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -67,6 +76,7 @@ public class DynamicTopicManager {
   private final LicenseManager licenseManager;
   private final EngineAuthorizationService engineAuthorizationService;
   private final RequestedTopicValidator requestedTopicValidator;
+  private final DlqPublisher dlqPublisher;
   private final ExecutorService executor =
       Executors.newCachedThreadPool(
           r -> {
@@ -81,16 +91,24 @@ public class DynamicTopicManager {
   private final ConcurrentHashMap<String, TopicMetaDTO> cachedActualTopicMetaMap =
       new ConcurrentHashMap<>();
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
+  private KafkaProducer<String, DlqEnvelope> dlqProducer;
   // Cached once at startup — avoids CDI proxy access from background threads
   private String cachedActualTopicName;
   private String cachedRequestedTopicName;
+  private String cachedDlqTopicName;
 
   public void start(KafkaProducer<String, TopicMetaDTO> topicMetaProducer) {
     this.topicMetaProducer = topicMetaProducer;
+    this.dlqProducer =
+        new KafkaProducer<>(
+            kafkaClientsConfig.getConfig(),
+            TopologyProducer.TOPIC_META_KEY_SERDE.serializer(),
+            TopologyProducer.DLQ_ENVELOPE_SERDE.serializer());
     this.cachedActualTopicName =
         taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
     this.cachedRequestedTopicName =
         taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
+    this.cachedDlqTopicName = taktConfiguration.getPrefixed(Topics.DLQ.getTopicName());
     scanActual();
 
     if (taktConfiguration.getTopicCreationEnabled()) {
@@ -102,6 +120,9 @@ public class DynamicTopicManager {
   public void stop() {
     log.info("Shutting down DynamicTopicManager");
     running.set(false);
+    if (dlqProducer != null) {
+      dlqProducer.close(Duration.ofSeconds(5));
+    }
     executor.shutdown();
     try {
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -216,6 +237,7 @@ public class DynamicTopicManager {
           extractSignerKeyId(topicRecord.headers()),
           e.getMessage());
       publishRejectedRequestedTopic(topicMeta.getTopicName());
+      publishAuthorizationFailureDlq(topicRecord, topicMeta, e);
     }
   }
 
@@ -477,7 +499,7 @@ public class DynamicTopicManager {
       TopicMetaDTO requestedTopicMeta,
       TopicDescription actualTopicDescription) {
     short actualReplicationFactor =
-        (short) actualTopicDescription.partitions().get(0).replicas().size();
+        (short) actualTopicDescription.partitions().getFirst().replicas().size();
     return new TopicMetaDTO(
         prefixedTopicName,
         actualTopicDescription.partitions().size(),
@@ -509,6 +531,86 @@ public class DynamicTopicManager {
     if (requestedTopicValidator.isAllowedRequestedTopicName(topicName)) {
       publishTopicMetaActual(topicName, null);
     }
+  }
+
+  private void publishAuthorizationFailureDlq(
+      ConsumerRecord<String, TopicMetaDTO> topicRecord,
+      TopicMetaDTO topicMeta,
+      AuthorizationTokenException exception) {
+    if (!running.get() || dlqProducer == null) {
+      return;
+    }
+
+    try {
+      DlqReasonCode reasonCode = reasonCodeForAuthorizationFailure(exception);
+      Map<String, byte[]> headers = headersToMap(topicRecord.headers());
+      headers.put(DlqHeaders.REASON_HINT, reasonCode.name().getBytes(StandardCharsets.UTF_8));
+      headers.put(
+          DlqHeaders.REASON_TEXT,
+          String.valueOf(exception.getMessage()).getBytes(StandardCharsets.UTF_8));
+      headers.put(
+          DlqHeaders.CAPTURE_STAGE,
+          DlqCaptureStage.PROCESSOR.name().getBytes(StandardCharsets.UTF_8));
+
+      TopicMetaDlqEntryDTO entry =
+          new TopicMetaDlqEntryDTO(
+              topicRecord.key(),
+              topicMeta,
+              headers,
+              TopologyProducer.TOPIC_META_SERDE
+                  .serializer()
+                  .serialize(cachedRequestedTopicName, topicMeta));
+      DlqEnvelope envelope =
+          dlqPublisher.toEnvelope(entry, System.currentTimeMillis(), engineInstanceId());
+      dlqProducer.send(
+          new ProducerRecord<>(cachedDlqTopicName, dlqPublisher.recordKey(envelope), envelope),
+          (metadata, publishException) -> {
+            if (publishException != null) {
+              log.error(
+                  "Failed to send DLQ entry for rejected topic meta request key='{}' topicName='{}'",
+                  topicRecord.key(),
+                  topicMeta.getTopicName(),
+                  publishException);
+            }
+          });
+    } catch (Exception publishException) {
+      log.error(
+          "Failed to build DLQ entry for rejected topic meta request key='{}' topicName='{}'",
+          topicRecord.key(),
+          topicMeta.getTopicName(),
+          publishException);
+    }
+  }
+
+  static DlqReasonCode reasonCodeForAuthorizationFailure(AuthorizationTokenException exception) {
+    String message =
+        exception == null || exception.getMessage() == null ? "" : exception.getMessage();
+    String normalized = message.toLowerCase();
+
+    if (normalized.startsWith("missing required x-taktx-signature header")) {
+      return DlqReasonCode.SIGNATURE_MISSING;
+    }
+    if (normalized.startsWith("unknown ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_UNKNOWN;
+    }
+    if (normalized.startsWith("revoked ed25519 keyid")) {
+      return DlqReasonCode.SIGNATURE_KEY_REVOKED;
+    }
+    if (normalized.startsWith("signing keyid")) {
+      return DlqReasonCode.AUTHORIZATION_FAILED;
+    }
+    return DlqReasonCode.AUTHORIZATION_FAILED;
+  }
+
+  private static Map<String, byte[]> headersToMap(Headers headers) {
+    if (headers == null) {
+      return new HashMap<>();
+    }
+    return Arrays.stream(headers.toArray())
+        .collect(
+            java.util.stream.Collectors.toMap(
+                org.apache.kafka.common.header.Header::key,
+                org.apache.kafka.common.header.Header::value));
   }
 
   private TopicCreationResult createTopicIfNotExists(
@@ -552,7 +654,7 @@ public class DynamicTopicManager {
   private enum TopicCreationResult {
     CREATED,
     ALREADY_EXISTS,
-    FAILED;
+    FAILED
   }
 
   private KafkaConsumer<String, TopicMetaDTO> createConsumer(String groupId) {
@@ -592,6 +694,16 @@ public class DynamicTopicManager {
     String headerValue = new String(header.value(), java.nio.charset.StandardCharsets.UTF_8);
     int dotIndex = headerValue.indexOf('.');
     return dotIndex >= 0 ? headerValue.substring(0, dotIndex) : headerValue;
+  }
+
+  private String engineInstanceId() {
+    return taktConfiguration.getTenantId()
+        + "."
+        + taktConfiguration.getNamespace()
+        + "@"
+        + taktConfiguration.getHost()
+        + ":"
+        + taktConfiguration.getPort();
   }
 
   /**

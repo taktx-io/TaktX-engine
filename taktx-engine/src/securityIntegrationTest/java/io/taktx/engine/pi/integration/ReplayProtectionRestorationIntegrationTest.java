@@ -53,6 +53,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -220,6 +221,12 @@ class ReplayProtectionRestorationIntegrationTest {
                 new ReplayProtectionProcessor(
                     java.time.Clock.systemUTC(), authorizationService, REPLAY_STORE_NAME),
             REPLAY_STORE_NAME)
+        .filter((_, value) -> value instanceof ProcessInstanceTriggerEnvelope)
+        .map(
+            (_, value) ->
+                KeyValue.pair(
+                    ((ProcessInstanceTriggerEnvelope) value).trigger().getProcessInstanceId(),
+                    (ProcessInstanceTriggerEnvelope) value))
         .to(
             outputTopic,
             Produced.with(
@@ -419,7 +426,9 @@ class ReplayProtectionRestorationIntegrationTest {
       return;
     }
     try (var paths = Files.walk(directory)) {
-      paths.sorted(Comparator.reverseOrder()).forEach(path -> deleteQuietly(path));
+      paths
+          .sorted(Comparator.reverseOrder())
+          .forEach(ReplayProtectionRestorationIntegrationTest::deleteQuietly);
     }
   }
 

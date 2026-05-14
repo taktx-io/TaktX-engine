@@ -17,6 +17,7 @@ import io.taktx.dto.MessageEventDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseDlqEntryDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -40,9 +41,10 @@ public class DlqPublisher {
     this.observabilityService = observabilityService;
   }
 
-  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
-  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
-  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
+  // Header keys are centralised in DlqHeaders; kept as aliases here for readability.
+  private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
+  private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
+  private static final String DLQ_CAPTURE_STAGE_HEADER = DlqHeaders.CAPTURE_STAGE;
 
   public DlqEnvelope toEnvelope(
       DlqEntryDTO entry, long rejectionTimestampMs, String engineInstanceId) {
@@ -104,12 +106,18 @@ public class DlqPublisher {
     if (entry instanceof DmnDefinitionsDlqEntryDTO) {
       return Topics.DMN_DEFINITIONS_TRIGGER_TOPIC.getTopicName();
     }
+    if (entry instanceof TopicMetaDlqEntryDTO) {
+      return Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName();
+    }
     return "unknown";
   }
 
   private static byte[] valueBytes(DlqEntryDTO entry) {
     if (entry instanceof ProcessInstanceDlqEntryDTO processInstanceDlqEntry) {
       return processInstanceDlqEntry.getData();
+    }
+    if (entry instanceof TopicMetaDlqEntryDTO topicMetaDlqEntry) {
+      return topicMetaDlqEntry.getData();
     }
     return new byte[0];
   }
@@ -136,6 +144,7 @@ public class DlqPublisher {
       case SignalDlqEntryDTO s -> s.getHeaders();
       case UserTaskResponseDlqEntryDTO u -> u.getHeaders();
       case DmnDefinitionsDlqEntryDTO dmn -> dmn.getHeaders();
+      case TopicMetaDlqEntryDTO topicMeta -> topicMeta.getHeaders();
       default -> null;
     };
   }

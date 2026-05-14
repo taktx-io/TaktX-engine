@@ -7,6 +7,9 @@
  */
 package io.taktx.engine.pi;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -132,16 +135,12 @@ class ProcessInstanceProcessorDlqTest {
     assertThat(dlqEntry.getData()).containsExactly(payload);
     assertThat(dlqEntry.getHeaders())
         .containsKey("X-TaktX-Authorization")
-        .containsKey("X-TaktX-DLQ-Reason-Hint")
-        .containsKey("X-TaktX-DLQ-Reason-Text")
-        .containsKey("X-TaktX-DLQ-Capture-Stage");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+        .containsKey(REASON_HINT)
+        .containsKey(REASON_TEXT)
+        .containsKey(CAPTURE_STAGE);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("AUTHORIZATION_FAILED");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
   }
 
@@ -167,13 +166,9 @@ class ProcessInstanceProcessorDlqTest {
     assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
     assertThat(dlqEntry.getTrigger()).isNull();
     assertThat(dlqEntry.getData()).containsExactly(payload);
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("CBOR_DECODE_ERROR");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }
 
@@ -195,7 +190,7 @@ class ProcessInstanceProcessorDlqTest {
 
     // The DLQ entry is emitted; verify the canonical ref format matches
     // sourceTopic:partition:offset:sha256:hash — topic and coordinates from mocked metadata
-    assertThat(dlqEntry.getHeaders()).containsKey("X-TaktX-DLQ-Reason-Hint");
+    assertThat(dlqEntry.getHeaders()).containsKey(REASON_HINT);
     // (incident dlqEntryRef is validated via the IncidentInfo directly in integration tests
     // because the processInstanceStore returns null here — no stored instance to update)
     assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
@@ -231,13 +226,9 @@ class ProcessInstanceProcessorDlqTest {
     ProcessInstanceDlqEntryDTO dlqEntry =
         (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
 
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("SIGNATURE_KEY_UNKNOWN");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
   }
 }

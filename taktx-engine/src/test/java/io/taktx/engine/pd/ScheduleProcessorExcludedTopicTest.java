@@ -29,6 +29,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.dlq.DlqObservabilityService;
 import io.taktx.engine.pi.ProcessingStatistics;
 import io.taktx.engine.security.EngineAuthorizationService;
+import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -123,6 +124,21 @@ class ScheduleProcessorExcludedTopicTest {
     scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
 
     verify(dlqObservabilityService, never()).recordExcludedTopicFailure(any());
+  }
+
+  @Test
+  void authorizationFailureOnEngineInternalTopic_incrementsExcludedTopicCounterWithoutForwarding() {
+    DefinitionScheduleKeyDTO scheduleKey = scheduleKey();
+    MessageScheduleDTO schedule = oneTimeSchedule();
+    RecordHeaders headers = signedHeaders("client-key-1");
+
+    when(engineAuthorizationService.authorizeScheduleCommand(any(), any(), any()))
+        .thenThrow(new AuthorizationTokenException("client signer not allowed"));
+
+    scheduleProcessor.process(new Record<>(scheduleKey, schedule, 999_000L, headers));
+
+    verify(dlqObservabilityService).recordExcludedTopicFailure("schedule-commands");
+    verify(context, never()).forward(any());
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────

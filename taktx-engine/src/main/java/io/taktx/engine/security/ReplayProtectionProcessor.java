@@ -8,18 +8,26 @@
 package io.taktx.engine.security;
 
 import io.taktx.dto.Constants;
+import io.taktx.dto.DlqEntryDTO;
+import io.taktx.dto.DlqReasonCode;
+import io.taktx.dto.ProcessInstanceDlqEntryDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.dto.TokenClaims;
+import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.pi.ProcessInstanceTriggerEnvelope;
 import io.taktx.security.AuthorizationTokenException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -33,16 +41,18 @@ import org.apache.kafka.streams.state.KeyValueStore;
  */
 @Slf4j
 public class ReplayProtectionProcessor
-    implements Processor<
-        String, ProcessInstanceTriggerEnvelope, UUID, ProcessInstanceTriggerEnvelope> {
+    implements Processor<String, ProcessInstanceTriggerEnvelope, Object, Object> {
 
   private static final Duration CLEANUP_INTERVAL = Duration.ofMinutes(1);
+  private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
+  private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
+  private static final String DLQ_CAPTURE_STAGE_HEADER = DlqHeaders.CAPTURE_STAGE;
 
   private final Clock clock;
   private final EngineAuthorizationService engineAuthorizationService;
   private final String replayStoreName;
 
-  private ProcessorContext<UUID, ProcessInstanceTriggerEnvelope> context;
+  private ProcessorContext<Object, Object> context;
   private KeyValueStore<String, Long> replayStore;
 
   public ReplayProtectionProcessor(
@@ -53,7 +63,7 @@ public class ReplayProtectionProcessor
   }
 
   @Override
-  public void init(ProcessorContext<UUID, ProcessInstanceTriggerEnvelope> context) {
+  public void init(ProcessorContext<Object, Object> context) {
     this.context = context;
     this.replayStore = context.getStateStore(replayStoreName);
     context.schedule(CLEANUP_INTERVAL, PunctuationType.WALL_CLOCK_TIME, this::purgeExpiredEntries);
@@ -76,13 +86,13 @@ public class ReplayProtectionProcessor
             : null;
 
     if (processInstanceId == null || authHeader == null || authHeader.value() == null) {
-      forward(inputRecord, envelope);
+      forwardEnvelope(inputRecord, envelope);
       return;
     }
 
     if (!engineAuthorizationService.isEntryAuthorizationGateActive()
         || !engineAuthorizationService.isReplayProtectionActive()) {
-      forward(inputRecord, envelope);
+      forwardEnvelope(inputRecord, envelope);
       return;
     }
 
@@ -92,7 +102,7 @@ public class ReplayProtectionProcessor
       String auditId = claims.getAuditId();
 
       if (mode == ReplayProtectionMode.OFF) {
-        forward(inputRecord, envelope);
+        forwardEnvelope(inputRecord, envelope);
         return;
       }
 
@@ -104,27 +114,36 @@ public class ReplayProtectionProcessor
               processInstanceId);
           return;
         }
-        forward(inputRecord, envelope.withValidatedJwtClaims(claims));
+        forwardEnvelope(inputRecord, envelope.withValidatedJwtClaims(claims));
         return;
       }
 
       long now = clock.millis();
       long retentionMs = engineAuthorizationService.replayProtectionRetentionMs();
       String replayKey = engineAuthorizationService.canonicalReplayKey(claims);
-      Long existingTimestamp = replayStore.get(replayKey);
-      if (existingTimestamp != null && now - existingTimestamp < retentionMs) {
-        log.warn(
-            "Rejected replayed entry command {} for processInstanceId={} auditId={} replayKey={} retentionMs={}",
-            trigger.getClass().getSimpleName(),
-            processInstanceId,
-            auditId,
-            replayKey,
-            retentionMs);
-        return;
+      Long storedValue = replayStore.get(replayKey);
+      if (storedValue != null) {
+        long firstSeenTs = Math.abs(storedValue);
+        if (now - firstSeenTs < retentionMs) {
+          log.warn(
+              "Rejected replayed entry command {} for processInstanceId={} auditId={} replayKey={} retentionMs={}",
+              trigger.getClass().getSimpleName(),
+              processInstanceId,
+              auditId,
+              replayKey,
+              retentionMs);
+          // Rate-gate: storedValue > 0 means first detection — emit DLQ entry once.
+          // Negative storedValue is the sentinel: DLQ already emitted for this replayKey.
+          if (storedValue > 0) {
+            emitReplayDlq(inputRecord, envelope, processInstanceId, auditId, replayKey);
+            replayStore.put(replayKey, -storedValue);
+          }
+          return;
+        }
       }
 
       replayStore.put(replayKey, now);
-      forward(inputRecord, envelope.withValidatedJwtClaims(claims));
+      forwardEnvelope(inputRecord, envelope.withValidatedJwtClaims(claims));
     } catch (AuthorizationTokenException e) {
       log.warn(
           "Rejected entry command {} for processInstanceId={} during replay precheck: {}",
@@ -140,7 +159,8 @@ public class ReplayProtectionProcessor
     try (KeyValueIterator<String, Long> entries = replayStore.all()) {
       while (entries.hasNext()) {
         org.apache.kafka.streams.KeyValue<String, Long> entry = entries.next();
-        if (entry.value != null && timestamp - entry.value >= retentionMs) {
+        // Use Math.abs() to handle both normal timestamps and negative DLQ-emitted sentinels.
+        if (entry.value != null && timestamp - Math.abs(entry.value) >= retentionMs) {
           expiredKeys.add(entry.key);
         }
       }
@@ -148,7 +168,38 @@ public class ReplayProtectionProcessor
     expiredKeys.forEach(replayStore::delete);
   }
 
-  private void forward(
+  private void emitReplayDlq(
+      Record<String, ProcessInstanceTriggerEnvelope> inputRecord,
+      ProcessInstanceTriggerEnvelope envelope,
+      UUID processInstanceId,
+      String auditId,
+      String replayKey) {
+    Map<String, byte[]> headersMap = headersToMap(inputRecord.headers());
+    headersMap.put(
+        DLQ_REASON_HINT_HEADER,
+        DlqReasonCode.REPLAY_DETECTED.name().getBytes(StandardCharsets.UTF_8));
+    headersMap.put(
+        DLQ_REASON_TEXT_HEADER,
+        ("Replay attack detected: auditId=" + auditId + " replayKey=" + replayKey)
+            .getBytes(StandardCharsets.UTF_8));
+    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, "PROCESSOR".getBytes(StandardCharsets.UTF_8));
+    DlqEntryDTO dlqEntry =
+        new ProcessInstanceDlqEntryDTO(
+            processInstanceId, envelope.trigger(), headersMap, envelope.data());
+    context.forward(new Record<>(null, dlqEntry, clock.millis()));
+  }
+
+  private static Map<String, byte[]> headersToMap(Headers headers) {
+    Map<String, byte[]> result = new HashMap<>();
+    if (headers != null) {
+      for (Header header : headers) {
+        result.put(header.key(), header.value());
+      }
+    }
+    return result;
+  }
+
+  private void forwardEnvelope(
       Record<String, ProcessInstanceTriggerEnvelope> inputRecord,
       ProcessInstanceTriggerEnvelope envelope) {
     context.forward(

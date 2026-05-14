@@ -1,6 +1,6 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** 2026-04-27
+**Last updated:** 2026-05-14
 **Status:** Fully implemented — all features described here are live in the current codebase
 **Audience:** Platform and security engineers operating or integrating TaktX
 
@@ -832,7 +832,8 @@ The current security controls described in this document are implemented and act
 
 Remaining planned work is tracked in:
 
-- [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- [`docs/security-future-development-plan.md`](security-future-development-plan.md) — workstream roadmap
+- [`docs/security-implementation-backlog.md`](security-implementation-backlog.md) — task-level backlog (SEC-001 onwards)
 
-That roadmap covers replay hardening for signed non-entry messages (M1/M2), broader security-rejection telemetry counters (Workstream 3 deferred items), and publication of a formal threat model (M5).
+That roadmap covers replay hardening for signed non-entry messages (M1/M2) and publication of a formal threat model (M5). The task backlog also records the now-complete Workstream 3 security rejection visibility implementation (DLQ routing plus excluded-topic metrics).
 

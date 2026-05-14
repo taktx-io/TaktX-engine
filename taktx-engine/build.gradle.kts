@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("idea")
     id("java-test-fixtures")
     alias(libs.plugins.spotless)
     alias(libs.plugins.quarkus)
@@ -122,6 +123,14 @@ val securityIntegrationTestSourceSet = sourceSets.create("securityIntegrationTes
     // runtimeClasspath: reconstruct what sourceSets["test"].runtimeClasspath normally provides but
     // without sourceSets["test"].output (= compiled regular test classes).
     runtimeClasspath += configurations["testRuntimeClasspath"] + sourceSets["main"].output + output
+}
+
+// Mark custom source set roots as test code for IDE/static-analysis tooling.
+idea {
+    module {
+        testSources.from(file("src/securityIntegrationTest/java"))
+        testResources.from(file("src/securityIntegrationTest/resources"))
+    }
 }
 
 val securityIntegrationTest by tasks.registering(Test::class) {

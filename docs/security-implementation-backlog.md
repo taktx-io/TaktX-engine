@@ -1,0 +1,554 @@
+# Security Implementation Backlog
+
+**Document Version**: 1.0  
+**Date**: May 14, 2026  
+**Status**: Active  
+**Audience**: Platform and security engineers working on TaktX hardening
+
+This document is the task-level tracking companion to [`docs/security-future-development-plan.md`](security-future-development-plan.md).  
+Each task has a stable ID (`SEC-NNN`), a status, and acceptance criteria.
+
+**Related documents:**
+- Implemented controls: [`docs/security.md`](security.md)
+- Roadmap and workstreams: [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- Vulnerability policy: [`SECURITY.md`](../SECURITY.md)
+
+---
+
+## Status legend
+
+| Symbol | Meaning |
+|---|---|
+| ⏳ | Pending — not started |
+| 🔄 | In progress |
+| ✅ | Done |
+| 🚫 | Blocked |
+| 💬 | Decision needed |
+
+---
+
+## Phase 0 — Housekeeping (doc fixes, no code changes)
+
+> Target: next available session. Low risk, always safe to do first.
+
+### SEC-001 — Fix metric name discrepancy ✅
+
+**Completed:** 2026-05-14
+
+**File:** `docs/security-future-development-plan.md`, Workstream 3, line ~149
+
+**Change made:** Corrected `taktx.excluded.topic.processing.failures{topic}` to `taktx.excluded.topic.failures{topic_group}` in the "implemented" metrics list, and added a clarifying note in the deferred section.
+
+---
+
+### SEC-002 — Update `security.md` last-updated date ✅
+
+**Completed:** 2026-05-14
+
+**Change made:** Updated `**Last updated:**` to `2026-05-14`.
+
+---
+
+### SEC-003 — Document internal epic labels in the roadmap ✅
+
+**Completed:** 2026-05-14
+
+**Change made:** "Internal epic label reference" table added to `security-future-development-plan.md` mapping Epic B2, D4, and H to their public workstream equivalents.
+
+---
+
+### SEC-004 — Investigate `cancelScheduledStartCommands` TODO ✅
+
+**Completed:** 2026-05-14
+
+**File:** `taktx-engine/src/main/java/io/taktx/engine/pd/ProcessDefinitionActivationProcessor.java`
+
+**Change made:** Implemented `cancelScheduledStartCommands` to forward a tombstone record
+(null value) for every `TimeBucket` (MINUTE, HOURLY, DAILY, WEEKLY, YEARLY) for each timer
+event definition on the start event. This is the correct approach because the exact bucket
+chosen at activation time is not tracked; for date-based timers the bucket depends on the
+time remaining to the first execution, which can differ between activation and deactivation.
+`BucketProcessor.process()` already handles null values as a store delete, and
+`store.delete()` is a no-op for non-existent keys, so the fan-out over all buckets is safe.
+
+**Test added:** `ProcessDefinitionActivationProcessorTest` — three test cases:
+1. Deactivating a process definition with a timer start event forwards tombstones for **all**
+   five `TimeBucket` values with the correct `processDefinitionKey` and `flowNodeId`.
+2. Deactivating an already-INACTIVE definition is a no-op (early return).
+3. Deactivating a process definition with a non-timer start event forwards no schedule
+   tombstones.
+
+---
+
+## Phase 1 — Workstream 3: Security rejection visibility (Epic H)
+
+> Target: self-contained session. No DTO changes needed; hooks already exist.  
+> Prerequisite: Phase 0 complete (specifically SEC-003 to understand Epic H scope).
+>
+> **Architectural decision (2026-05-14):** The original plan was to add four separate Micrometer
+> counters (SEC-005 to SEC-009). After analysis it was established that the `DlqReasonCode` enum
+> already carries appropriate codes for every security failure category (`SIGNATURE_KEY_UNKNOWN`,
+> `SIGNATURE_KEY_REVOKED`, `REPLAY_DETECTED` / `CRITICAL`, `AUTHORIZATION_FAILED`, etc.) and that
+> routing the three silent-drop paths to the existing DLQ infrastructure gives more value than
+> parallel counters alone (full payload inspection, single dashboard, existing alerting rules).
+> SEC-005, SEC-006, and SEC-009 are superseded. SEC-007 and SEC-008 are revised to use DLQ routing.
+> See decision log for full rationale.
+
+---
+
+### SEC-005 — Add `taktx.security.rejected.messages` counter ✅ Superseded
+
+**Superseded:** 2026-05-14
+
+**Reason:** `ProcessInstanceProcessor` already catches `AuthorizationTokenException` from
+`EngineAuthorizationService.authorize()` and routes it to the DLQ with
+`reason_code = AUTHORIZATION_FAILED`. The existing `taktx.dlq.entries{reason_code, source_topic}`
+counter already provides per-rejection visibility for this path. No further code change needed.
+
+---
+
+### SEC-006 — Add `taktx.security.invalid.signatures` counter ✅ Superseded
+
+**Superseded:** 2026-05-14
+
+**Reason:** `DlqReasonCode` already defines `SIGNATURE_KEY_UNKNOWN`, `SIGNATURE_KEY_REVOKED`,
+`SIGNATURE_VERIFICATION_FAILED`, `SIGNATURE_MISSING`, and `SIGNATURE_MALFORMED` — all with
+`DlqSeverity.HIGH`. The two remaining silent-drop paths (replay and topic-meta) will be routed
+to the DLQ via SEC-007 and SEC-008 respectively, exposing the same signal through the existing
+`taktx.dlq.entries` counter. A standalone signature-failure counter adds no further diagnostic
+value once DLQ routing is in place.
+
+---
+
+### SEC-007 — Route replay-attack detections to DLQ ✅
+
+**Completed:** 2026-05-14
+
+**Replaces:** original "Add `taktx.security.replay.attempts` counter" task.
+
+**Where:** `ReplayProtectionProcessor.process()` — the duplicate-`auditId` rejection branch
+(currently logs `log.warn(…)` and silently drops).
+
+**Change:** When a duplicate `auditId` is detected within the retention window, emit a DLQ entry
+with `reason_code = REPLAY_DETECTED` (`DlqSeverity.CRITICAL`) in addition to the existing warn
+log. The original (rejected) message payload and headers must be included in the entry so that
+operators can inspect what was being replayed.
+
+**Rate-gate:** Emit at most one DLQ entry per `replayKey` per retention window to prevent an
+attacker from flooding the DLQ topic. The replay store already records
+`replayKey → first-seen-timestamp`; on the first detection write an entry. On subsequent
+detections within the same window, increment the `taktx.dlq.entries` counter is sufficient
+(the earlier entry already alerted the operator). Use the existing store entry as the gate.
+
+**Semantics boundary:** A blank `auditId` rejected in STRICT mode is **not** a replay attempt —
+that path remains a `log.warn()` silent drop with no DLQ entry.
+
+**DLQ wiring:** `ReplayProtectionProcessor` currently has no `DlqPublisher` reference. Route the
+entry through the processor's `context.forward()` using the existing `DlqEntryDTO` pattern so
+the toplogy branch in `setupProcessInstanceStream` picks it up (mirrors other DLQ emitters
+in the process-instance stream).
+
+**Acceptance criteria:**
+- First duplicate-`auditId` detection within retention window produces a `REPLAY_DETECTED` /
+  `CRITICAL` DLQ entry containing the original message.
+- Subsequent duplicates within the same window for the same `replayKey` do **not** produce
+  additional DLQ entries (rate-gate).
+- Blank `auditId` rejection in STRICT mode produces no DLQ entry (existing behaviour preserved).
+- Unit test covering all three cases (first replay → DLQ, second replay → no DLQ, blank auditId → no DLQ).
+
+**Change made:** `ReplayProtectionProcessor` now emits a `ProcessInstanceDlqEntryDTO` with
+`REPLAY_DETECTED` / `CRITICAL` on the first duplicate-`auditId` seen inside the retention window,
+while retaining the existing warn log. The existing replay state store is used as a durable
+rate-gate by storing a negated sentinel timestamp after the first DLQ emission for a given
+`replayKey`, so subsequent duplicates within the same window do not publish additional DLQ entries.
+`TopologyProducer.setupProcessInstanceStream()` now splits replay-protection output into the normal
+process-instance branch and a DLQ branch. Blank `auditId` rejection in STRICT mode remains a silent
+drop with no DLQ entry.
+
+**Tests added/updated:** `ReplayProtectionProcessorTest` covers all three acceptance cases; the two
+`ReplayProtectionRestorationIntegrationTest` topologies were also updated to account for the mixed
+`Object,Object` output type introduced by the DLQ branch.
+
+---
+
+### SEC-008 — Route `topic-meta-requested` failures to DLQ; counter for `schedule-commands` ✅
+
+**Completed:** 2026-05-14
+
+**Replaces:** original "Add `taktx.security.topic.requests.rejected` counter" task.
+
+#### Part A — `topic-meta-requested` (external topic, DLQ routing)
+
+**Where:** `DynamicTopicManager` — `authorizeTopicMetaRequest()` catch block
+(currently logs `log.warn(…)` and calls `publishRejectedRequestedTopic()`).
+
+**Change:** In addition to the existing `publishRejectedRequestedTopic()` call (which writes a
+`null` to `topic-meta-actual` — this worker contract signal **must be preserved**), also emit a
+DLQ entry. Map the `AuthorizationTokenException` message prefix to a specific `DlqReasonCode`:
+
+| Exception cause | `DlqReasonCode` |
+|---|---|
+| Missing `X-TaktX-Signature` header | `SIGNATURE_MISSING` |
+| Unknown key ID | `SIGNATURE_KEY_UNKNOWN` |
+| Revoked key | `SIGNATURE_KEY_REVOKED` |
+| Trust policy rejected | `AUTHORIZATION_FAILED` |
+| (fallback) | `AUTHORIZATION_FAILED` |
+
+**DLQ wiring:** `DynamicTopicManager` is a CDI bean called from the Kafka Streams topology via
+`TopologyProducer`. The existing pattern for emitting DLQ entries from within a non-processor bean
+is to have the bean return a result that the calling processor forwards. Alternatively, inject
+`DlqPublisher` into `DynamicTopicManager` and forward via a shared `ProcessorContext` reference
+(see how `DlqPublisher` is used elsewhere). Follow whichever pattern is already established.
+
+**Acceptance criteria:**
+- `authorizeTopicMetaRequest()` failure emits a DLQ entry with the correct `DlqReasonCode` and
+  `DlqSeverity.HIGH`.
+- `publishRejectedRequestedTopic()` is still called (worker contract preserved).
+- Unit test: auth failure → DLQ entry emitted with correct reason code AND
+  `publishRejectedRequestedTopic()` still called.
+
+#### Part B — `schedule-commands` (engine-internal, stays DLQ-excluded)
+
+**Where:** `ScheduleProcessor` — `authorizeScheduleCommand()` catch block (lines ~105–113;
+currently `log.warn(…); return`).
+
+**Change:** On `AuthorizationTokenException`, call the existing
+`dlqObservabilityService.recordExcludedTopicFailure("schedule-commands")`. This counter is
+already wired in `ScheduleProcessor` for the lower processing-exception catch block but is
+**not currently called on auth failures**. No DLQ routing: `schedule-commands` is an
+engine-internal topic whose records should never be operator-replayed.
+
+**Acceptance criteria:**
+- `AuthorizationTokenException` on `schedule-commands` increments
+  `taktx.excluded.topic.failures{topic_group=schedule-commands}`.
+- No DLQ entry is produced.
+- Unit test.
+
+**Change made:** `DynamicTopicManager` now preserves the existing
+`publishRejectedRequestedTopic()` null publication to `topic-meta-actual` and additionally emits a
+DLQ entry for rejected `topic-meta-requested` records. Authorization failure messages are mapped to
+`SIGNATURE_MISSING`, `SIGNATURE_KEY_UNKNOWN`, `SIGNATURE_KEY_REVOKED`, or
+`AUTHORIZATION_FAILED`, and the rejected `TopicMetaDTO` payload plus headers are preserved in a new
+`TopicMetaDlqEntryDTO`. `ScheduleProcessor` now increments
+`dlqObservabilityService.recordExcludedTopicFailure("schedule-commands")` on
+`AuthorizationTokenException` and still produces no DLQ entry for that engine-internal topic.
+
+**Tests added/updated:** `DynamicTopicManagerTest`, `DlqPublisherTest`, and
+`ScheduleProcessorExcludedTopicTest`.
+
+---
+
+### SEC-009 — Register counters at startup ✅ Superseded
+
+**Superseded:** 2026-05-14
+
+**Reason:** `DlqObservabilityService.init()` already pre-registers `taktx.dlq.entries` for all
+`DlqSeverity` values (including `CRITICAL`, which covers `REPLAY_DETECTED`) and
+`taktx.excluded.topic.failures`. No additional pre-registration work is required.
+
+---
+
+### SEC-010 — Update `security-future-development-plan.md` Workstream 3 status ✅
+
+**Completed:** 2026-05-14
+
+**Prerequisite:** SEC-007 and SEC-008 complete.
+
+**Change:** Update the Workstream 3 section to reflect the revised approach — DLQ routing for
+external paths plus the excluded-topic counter for `schedule-commands` — rather than four
+standalone security counters. Mark Workstream 3 as ✅ Complete.
+
+**Acceptance criteria:**
+- Workstream 3 status updated to reflect the actual implementation.
+- The architectural decision (DLQ routing over parallel counters) is noted in the roadmap.
+
+**Change made:** `docs/security-future-development-plan.md` now marks Workstream 3 as complete,
+describes the final implementation model (DLQ routing for external rejection paths plus the
+excluded-topic counter for `schedule-commands`), and records the architectural decision that
+superseded the original standalone counter proposal.
+
+---
+
+## Phase 2 — Milestone M5: Threat model publication
+
+> Target: doc-only session, can run in parallel with Phase 1 or after it.  
+> No code changes required.
+
+### SEC-011 — Write `docs/security-threat-model.md` ⏳
+
+**Required sections** (from `security-future-development-plan.md` Workstream 4):
+
+1. Security boundaries and trust assumptions
+2. What is enforced in engine code
+3. What still depends on Kafka ACLs and platform controls
+4. Anchored mode guarantees and limitations
+5. Community mode limitations and explicit non-goals
+6. Security-critical topics and data flows
+7. Residual risks and compensating controls
+
+**Acceptance criteria:**
+- File exists at `docs/security-threat-model.md`.
+- All seven required sections present.
+- Cross-linked from `docs/security.md` (Future security roadmap section) and `SECURITY.md`.
+- Consistent with runtime behaviour and current configuration options.
+
+---
+
+### SEC-012 — Cross-link threat model from existing docs ⏳
+
+**Prerequisite:** SEC-011 complete.
+
+**Files:** `docs/security.md` (Future security roadmap section), `SECURITY.md`
+
+**Acceptance criteria:**
+- Both files contain a link to `docs/security-threat-model.md`.
+- `security-future-development-plan.md` M5 marked ✅ Done.
+
+---
+
+## Phase 3 — Milestone M1: Replay hardening decision record
+
+> Target: design session. Output is a decision record, not code.  
+> Must complete before Phase 4.
+
+### SEC-013 — Decide dedup identity approach 💬
+
+**Open question:** For Workstream 1 replay hardening of signed non-entry messages, which dedup identity to use?
+
+| Option | Pros | Cons |
+|---|---|---|
+| Explicit `messageId` field on signed DTOs | Human-readable, survives payload correction in DLQ replay, traceable in logs | Requires DTO changes across `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, `MessageScheduleDTO`, `TopicMetaDTO`; client-side generation needed |
+| Derived hash of `signature + payload bytes` | Zero DTO changes, works with existing wire format immediately | Cannot survive DLQ payload correction (corrected message gets a new hash); opaque in logs |
+
+**Recommendation:** Prefer explicit `messageId`. The DTO additions are small and the observability and DLQ replay compatibility benefits outweigh the migration cost. A `messageId` can be optional with fallback to hash-based dedup during a transition period.
+
+**Acceptance criteria:**
+- Decision recorded in `security-future-development-plan.md` under M1 as a resolved ADR.
+- Chosen approach documented with rationale and transition plan if applicable.
+
+---
+
+### SEC-014 — Decide phase-1 topic scope 💬
+
+**Open question:** Which signed non-entry paths to harden first in M2?
+
+**Recommended phase-1 scope (highest risk first):**
+1. `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO` — can cause re-execution of business tasks if replayed
+2. `MessageScheduleDTO` on `schedule-commands` — duplicate schedules can fire timers twice
+3. `TopicMetaDTO` on `topic-meta-requested` — operationally idempotent today but volume-sensitive
+
+**Deferred to phase-2:**
+- Engine-internal non-entry continuations (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) — trusted ENGINE-only paths with natural idempotency via process state
+
+**Acceptance criteria:**
+- Phase-1 scope recorded in `security-future-development-plan.md` under M1.
+- Phase-2 deferred items listed with rationale.
+
+---
+
+### SEC-015 — Decide retention defaults per topic class 💬
+
+**Open question:** What dedup window to use per topic class?
+
+**Starting point:**
+| Topic class | Suggested window | Rationale |
+|---|---|---|
+| Worker responses | 10 minutes | Matches typical task completion SLAs |
+| `schedule-commands` | 5 minutes | Engine-generated, short-lived window sufficient |
+| `topic-meta-requested` | 2 minutes | Idempotent; short window enough to suppress burst replays |
+
+**Acceptance criteria:**
+- Retention defaults recorded alongside phase-1 scope in M1 decision record.
+
+---
+
+## Phase 4 — Milestone M2: Replay hardening implementation
+
+> Target: implementation session. Requires Phase 3 complete.  
+> Largest engineering effort in this backlog.
+
+### SEC-016 — Add `messageId` field to phase-1 signed DTOs ⏳
+
+**Prerequisite:** SEC-013 decided in favour of explicit `messageId`.
+
+**Files:**
+- `taktx-shared/src/main/java/io/taktx/dto/ExternalTaskResponseTriggerDTO.java`
+- `taktx-shared/src/main/java/io/taktx/dto/UserTaskResponseTriggerDTO.java`
+- `taktx-shared/src/main/java/io/taktx/dto/MessageScheduleDTO.java`
+- `taktx-shared/src/main/java/io/taktx/dto/TopicMetaDTO.java`
+
+**Semantics:** Optional `String messageId` field. Client-generated (UUID recommended). Engine falls back to signature-hash dedup if absent (transition compatibility).
+
+**Acceptance criteria:**
+- Field added and CBOR-serializable.
+- `taktx-client` builder helpers auto-populate `messageId` via `UUID.randomUUID()` when not set.
+- Serialization round-trip test.
+
+---
+
+### SEC-017 — Add dedup state store to Kafka Streams topology ⏳
+
+**Prerequisite:** SEC-014 (phase-1 scope decided).
+
+**Where:** `taktx-engine/src/main/java/io/taktx/engine/pd/Stores.java` and `TopologyProducer.java`
+
+**Semantics:** A new persistent `KeyValueStore<String, Long>` (dedup key → first-seen timestamp) per protected topic class, or a single shared store with a namespaced key prefix. Partitioned locally where topic routing allows.
+
+**Expiry:** Periodic punctuator (mirrors `ReplayProtectionProcessor.purgeExpiredEntries` pattern) removes entries older than the configured retention window.
+
+**Acceptance criteria:**
+- Store registered in topology.
+- Store name follows existing `Stores` enum pattern.
+- Purge punctuator unit-tested.
+
+---
+
+### SEC-018 — Implement dedup processor for worker responses ⏳
+
+**Prerequisite:** SEC-016, SEC-017.
+
+**Where:** New `WorkerResponseDedupProcessor` (or extend `ReplayProtectionProcessor` to cover non-JWT paths).
+
+**Semantics:**
+- Extracts dedup key from `messageId` (or derived hash if absent).
+- Checks dedup store; if present and within window → reject (log + optional DLQ).
+- If absent → store key with current timestamp, forward record.
+
+**Applies to:** `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`
+
+**Acceptance criteria:**
+- Duplicate worker response within retention window is rejected.
+- First occurrence passes through unchanged.
+- Duplicate outside the window is accepted (retention expired).
+- Unit tests covering all three cases.
+
+---
+
+### SEC-019 — Implement dedup for `schedule-commands` ⏳
+
+**Prerequisite:** SEC-016, SEC-017.
+
+**Where:** `ScheduleProcessor.java` or a new upstream processor.
+
+**Semantics:** Same dedup pattern as SEC-018, applied to `MessageScheduleDTO` on `schedule-commands`.
+
+**Acceptance criteria:**
+- Duplicate schedule command within window is rejected with excluded-topic failure metric increment.
+- Unit test.
+
+---
+
+### SEC-020 — Implement dedup for `topic-meta-requested` ⏳
+
+**Prerequisite:** SEC-016, SEC-017.
+
+**Where:** Upstream of `DynamicTopicManager` in `TopologyProducer`.
+
+**Semantics:** Same dedup pattern, applied to `TopicMetaDTO`.
+
+**Acceptance criteria:**
+- Duplicate topic-meta request within window is rejected.
+- Unit test.
+
+---
+
+### SEC-021 — Integration tests for phase-1 dedup paths ⏳
+
+**Prerequisite:** SEC-018 through SEC-020.
+
+**Scope:** One integration test per protected path demonstrating:
+1. First message passes.
+2. Duplicate within window is rejected.
+3. After window expiry, message is re-accepted.
+
+**Acceptance criteria:**
+- Tests pass in `securityIntegrationTest` source set (mirrors `SecurityIntegrationTest` naming).
+
+---
+
+### SEC-022 — Update `docs/security.md` replay protection scope section ⏳
+
+**Prerequisite:** SEC-018 through SEC-021 complete.
+
+**Change:** Update the "Replay protection scope" section to accurately reflect:
+- Which paths now have dedup protection (phase-1 list).
+- Which paths remain outside dedup scope and why.
+- Dedup window defaults per protected path.
+
+**Acceptance criteria:**
+- Section accurately describes protected and unprotected paths post-M2.
+- `security-future-development-plan.md` M2 marked ✅ Done.
+
+---
+
+## Milestone tracker
+
+| Milestone | Description | Tasks | Status |
+|---|---|---|---|
+| Phase 0 | Housekeeping | SEC-001 ✅ SEC-002 ✅ SEC-003 ✅ SEC-004 ✅ | ✅ Complete |
+| Phase 1 | Security rejection visibility (Epic H / Workstream 3) | SEC-005 ✅ SEC-006 ✅ SEC-007 ✅ SEC-008 ✅ SEC-009 ✅ SEC-010 ✅ | ✅ Complete |
+| Phase 2 | Threat model (M5) | SEC-011 – SEC-012 | ⏳ Pending |
+| Phase 3 | Replay hardening decisions (M1) | SEC-013 – SEC-015 | 💬 Decisions needed |
+| Phase 4 | Replay hardening implementation (M2) | SEC-016 – SEC-022 | ⏳ Blocked on Phase 3 |
+
+---
+
+## Decision log
+
+### 2026-05-14 — Phase 1 replanned: counters replaced with DLQ routing
+
+**Decision:** Replace the four standalone Micrometer security counters (original SEC-005 to
+SEC-009) with direct DLQ routing for the two silent-drop paths, plus a single excluded-topic
+counter increment for the engine-internal `schedule-commands` path.
+
+**Rationale:**
+- Three of the four rejection paths never reach the DLQ today:
+  `schedule-commands` auth failures, `topic-meta-requested` auth failures, and replay detections
+  all `log.warn()` and silently drop.
+- `DlqReasonCode` already defines appropriate codes for every failure category
+  (`REPLAY_DETECTED` / `CRITICAL`, `SIGNATURE_KEY_UNKNOWN` / `HIGH`,
+  `SIGNATURE_KEY_REVOKED` / `HIGH`, `AUTHORIZATION_FAILED` / `MEDIUM`).
+- DLQ routing gives more operator value than counters alone: full payload inspection,
+  single dashboard, existing alerting infrastructure, and replay-safety enforcement (DLQ-011)
+  prevents accidental re-replay of detected attacks.
+- The `process-instance` path (SEC-005) already routes to DLQ — nothing to change there.
+- Counter pre-registration (SEC-009) is already handled by `DlqObservabilityService.init()`.
+
+**Tasks closed as superseded:** SEC-005, SEC-006, SEC-009.  
+**Tasks revised:** SEC-007 (replay → DLQ), SEC-008 (topic-meta → DLQ; schedule-commands → excluded-topic counter).  
+**Tasks unchanged:** SEC-010 (roadmap doc update), SEC-011 through SEC-022.
+
+### 2026-05-14 — SEC-004 implemented; Phase 0 complete
+
+- `cancelScheduledStartCommands` implemented: tombstones fanned out over all `TimeBucket` values.
+- Rationale: for date-based timers the bucket used at activation depends on remaining time to first
+  execution and cannot be reliably recomputed at deactivation time; covering all buckets is safe
+  because `BucketProcessor.store.delete()` is a no-op for non-existent keys.
+- Three unit tests added in `ProcessDefinitionActivationProcessorTest`.
+- Phase 0 fully complete. Next: Phase 1 — SEC-005 through SEC-010 (security rejection visibility).
+
+### 2026-05-14 — SEC-007, SEC-008, and SEC-010 implemented; Phase 1 complete
+
+- Replay detections on JWT entry commands now emit a rate-gated `REPLAY_DETECTED` / `CRITICAL` DLQ
+  entry on first duplicate detection per retention window.
+- `topic-meta-requested` authorization failures now emit DLQ entries with mapped signature /
+  authorization reason codes while preserving the `topic-meta-actual` null publication contract.
+- `schedule-commands` authorization failures now increment the excluded-topic failure counter and
+  remain DLQ-excluded.
+- `security-future-development-plan.md` updated to reflect the final Workstream 3 implementation
+  model; Phase 1 is now complete.
+
+### 2026-05-14 — Backlog created; Phase 0 partially completed
+
+- Full code audit performed across `taktx-engine` and `taktx-shared` security and DLQ surfaces.
+- DLQ Epics E1–E5 confirmed complete.
+- Security baseline (Ed25519, JWT, replay protection, anchored trust) confirmed complete.
+- Remaining work identified: Workstream 1 (M1/M2), Workstream 3 deferred counters, M5 threat model, and housekeeping items.
+- This backlog created as the task-level tracking companion to `security-future-development-plan.md`.
+- SEC-001 (metric name fix), SEC-002 (date update), SEC-003 (epic label mapping) completed in the same session.
+
+
+
+
+
+

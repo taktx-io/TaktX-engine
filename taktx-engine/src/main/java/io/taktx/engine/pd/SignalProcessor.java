@@ -23,6 +23,7 @@ import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
 import java.nio.charset.StandardCharsets;
@@ -46,9 +47,9 @@ import org.apache.kafka.streams.state.KeyValueStore;
 @Slf4j
 public class SignalProcessor implements Processor<String, SignalDTO, Object, Object> {
 
-  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
-  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
-  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
+  private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
+  private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
+  private static final String DLQ_CAPTURE_STAGE_HEADER = DlqHeaders.CAPTURE_STAGE;
 
   private final TaktConfiguration taktConfiguration;
   private final Clock clock;

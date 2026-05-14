@@ -544,7 +544,9 @@ public class TopologyProducer {
         processInstanceTriggerStream.filter(
             (_, envelope) -> !isReplayProtectedEntryCommand(envelope));
 
-    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
+    // ReplayProtectionProcessor outputs Object,Object so DLQ entries and normal envelopes
+    // can share the same forward path. Split them here before the UUID repartition.
+    KStream<Object, Object> replayCheckedStream =
         processInstanceTriggerStream
             .filter((_, envelope) -> isReplayProtectedEntryCommand(envelope))
             // Re-key to issuer:auditId so the replay-protection store shard is co-located.
@@ -560,10 +562,28 @@ public class TopologyProducer {
                         clock,
                         engineAuthorizationService,
                         taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename())),
-                taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename()))
-            // Re-partition by processInstanceId (UUID) so ProcessInstanceProcessor always
-            // runs in the same task — and thus the same processInstanceStore shard — as the
-            // UUID-keyed bypass path and all subsequent worker/continuation messages.
+                taktConfiguration.getPrefixed(Stores.REPLAY_PROTECTION.getStorename()));
+
+    // Route DLQ entries emitted by ReplayProtectionProcessor directly to the DLQ topic.
+    replayCheckedStream
+        .filter((_, value) -> value instanceof DlqEntryDTO)
+        .map(
+            (_, value) -> {
+              DlqEnvelope envelope =
+                  dlqPublisher.toEnvelope((DlqEntryDTO) value, clock.millis(), engineInstanceId());
+              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+            })
+        .to(
+            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE));
+
+    // Re-partition normal envelopes by processInstanceId (UUID) so ProcessInstanceProcessor always
+    // runs in the same task — and thus the same processInstanceStore shard — as the
+    // UUID-keyed bypass path and all subsequent worker/continuation messages.
+    KStream<UUID, ProcessInstanceTriggerEnvelope> replayProtectedEntryStream =
+        replayCheckedStream
+            .filter((_, value) -> value instanceof ProcessInstanceTriggerEnvelope)
+            .map((key, value) -> KeyValue.pair((UUID) key, (ProcessInstanceTriggerEnvelope) value))
             .repartition(
                 Repartitioned.<UUID, ProcessInstanceTriggerEnvelope>as(
                         taktConfiguration.getPrefixed("process-instance-replay-rekey"))

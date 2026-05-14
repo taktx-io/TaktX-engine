@@ -8,6 +8,10 @@
 
 package io.taktx.engine.pd;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
+
 import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.ParsedDefinitionsDTO;
 import io.taktx.dto.ProcessDefinitionActivationDTO;
@@ -38,11 +42,6 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 @Slf4j
 public class DefinitionsProcessor
     implements Processor<String, DefinitionsTriggerDTO, Object, Object> {
-
-  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
-  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
-  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
-
   private final TaktConfiguration taktConfiguration;
   private final MessageSchedulerFactory messageSchedulerFactory;
   private ProcessorContext<Object, Object> context;
@@ -124,11 +123,10 @@ public class DefinitionsProcessor
       String reasonText,
       String captureStage) {
     Map<String, byte[]> headersMap = headersToMap(definitionsRecord.headers());
-    headersMap.put(DLQ_REASON_HINT_HEADER, reasonHint.getBytes(StandardCharsets.UTF_8));
+    headersMap.put(REASON_HINT, reasonHint.getBytes(StandardCharsets.UTF_8));
     headersMap.put(
-        DLQ_REASON_TEXT_HEADER,
-        (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
-    headersMap.put(DLQ_CAPTURE_STAGE_HEADER, captureStage.getBytes(StandardCharsets.UTF_8));
+        REASON_TEXT, (reasonText != null ? reasonText : "").getBytes(StandardCharsets.UTF_8));
+    headersMap.put(CAPTURE_STAGE, captureStage.getBytes(StandardCharsets.UTF_8));
     ProcessDefinitionDlqEntryDTO dlqEntry =
         new ProcessDefinitionDlqEntryDTO(null, definitionsRecord.value(), headersMap);
     context.forward(new Record<>(null, dlqEntry, clock.millis()));

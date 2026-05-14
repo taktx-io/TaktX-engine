@@ -221,15 +221,21 @@ public class ProcessDefinitionActivationProcessor {
 
   private void cancelScheduledStartCommands(
       ProcessDefinitionKey processDefinitionKey, StartEventDTO startEvent) {
-    // TODO ????
+    // SEC-004: Send a tombstone (null value) for every TimeBucket.
+    // The ScheduleProcessor (BucketProcessor.process) treats a null value as a store delete, and
+    // store.delete() is a no-op for non-existent keys — so fanning out over all buckets is safe.
+    // We must cover all buckets because the exact bucket chosen at activation time is not stored:
+    // for date-based timers the bucket depends on the remaining time to first execution, which
+    // can differ between activation and deactivation.
     startEvent
         .getTimerEventDefinitions()
         .forEach(
-            timerEventDefinition -> {
-              //              DefinitionScheduleKeyDTO scheduleKey =
-              //                  new DefinitionScheduleKeyDTO(processDefinitionKey,
-              // startEvent.getId());
-              //              context.forward(new Record<>(scheduleKey, null, clock.millis()));
+            _ -> {
+              for (TimeBucket bucket : TimeBucket.values()) {
+                DefinitionScheduleKeyDTO scheduleKey =
+                    new DefinitionScheduleKeyDTO(processDefinitionKey, startEvent.getId(), bucket);
+                context.forward(new Record<>(scheduleKey, null, clock.millis()));
+              }
             });
   }
 

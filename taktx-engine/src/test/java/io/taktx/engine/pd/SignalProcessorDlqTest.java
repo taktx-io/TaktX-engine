@@ -7,6 +7,9 @@
  */
 package io.taktx.engine.pd;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -79,13 +82,9 @@ class SignalProcessorDlqTest {
     SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) forwarded.value();
     assertThat(dlqEntry.getSignalKey()).isEqualTo("signal-key");
     assertThat(dlqEntry.getValue()).isNull();
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("CBOR_DECODE_ERROR");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }
 
@@ -114,13 +113,9 @@ class SignalProcessorDlqTest {
     SignalDlqEntryDTO dlqEntry = (SignalDlqEntryDTO) forwarded.value();
     assertThat(dlqEntry.getSignalKey()).isEqualTo("order-placed");
     assertThat(dlqEntry.getValue()).isSameAs(signal);
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR_EXCEPTION");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Text"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
         .contains("store unavailable");
   }
 }

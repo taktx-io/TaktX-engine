@@ -10,6 +10,7 @@ package io.taktx.engine.topicmanagement;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,10 +19,15 @@ import static org.mockito.Mockito.when;
 
 import io.taktx.CleanupPolicy;
 import io.taktx.dto.Constants;
+import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqHeaders;
+import io.taktx.engine.dlq.DlqPublisher;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.license.LicenseManager;
 import io.taktx.engine.security.EngineAuthorizationService;
@@ -52,25 +58,33 @@ class DynamicTopicManagerTest {
 
   private static final String LOCAL_PREFIX = "acme.prod.";
   private static final String ACTUAL_TOPIC = LOCAL_PREFIX + "topic-meta-actual";
+  private static final String REQUESTED_TOPIC = LOCAL_PREFIX + "topic-meta-requested";
+  private static final String DLQ_TOPIC = LOCAL_PREFIX + "dlq";
 
   private AdminClient adminClient;
-  private TaktConfiguration taktConfiguration;
-  private LicenseManager licenseManager;
   private EngineAuthorizationService engineAuthorizationService;
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
+  private KafkaProducer<String, DlqEnvelope> dlqProducer;
+  private DlqPublisher dlqPublisher;
   private DynamicTopicManager dynamicTopicManager;
 
   @BeforeEach
   void setUp() throws Exception {
     adminClient = mock(AdminClient.class);
-    taktConfiguration = mock(TaktConfiguration.class);
+    TaktConfiguration taktConfiguration = mock(TaktConfiguration.class);
     KafkaClientsConfig kafkaClientsConfig = mock(KafkaClientsConfig.class);
-    licenseManager = mock(LicenseManager.class);
+    LicenseManager licenseManager = mock(LicenseManager.class);
     engineAuthorizationService = mock(EngineAuthorizationService.class);
     topicMetaProducer = mock(KafkaProducer.class);
+    dlqProducer = mock(KafkaProducer.class);
+    dlqPublisher = mock(DlqPublisher.class);
 
     when(taktConfiguration.getPrefixed(anyString()))
         .thenAnswer(invocation -> LOCAL_PREFIX + invocation.getArgument(0, String.class));
+    when(taktConfiguration.getTenantId()).thenReturn("tenant");
+    when(taktConfiguration.getNamespace()).thenReturn("namespace");
+    when(taktConfiguration.getHost()).thenReturn("host");
+    when(taktConfiguration.getPort()).thenReturn(8080);
     when(licenseManager.getPartitionBudget()).thenReturn(Integer.MAX_VALUE);
 
     RequestedTopicValidator requestedTopicValidator =
@@ -82,10 +96,14 @@ class DynamicTopicManagerTest {
             kafkaClientsConfig,
             licenseManager,
             engineAuthorizationService,
-            requestedTopicValidator);
+            requestedTopicValidator,
+            dlqPublisher);
 
     setPrivateField(dynamicTopicManager, "topicMetaProducer", topicMetaProducer);
+    setPrivateField(dynamicTopicManager, "dlqProducer", dlqProducer);
     setPrivateField(dynamicTopicManager, "cachedActualTopicName", ACTUAL_TOPIC);
+    setPrivateField(dynamicTopicManager, "cachedRequestedTopicName", REQUESTED_TOPIC);
+    setPrivateField(dynamicTopicManager, "cachedDlqTopicName", DLQ_TOPIC);
   }
 
   @Test
@@ -276,16 +294,58 @@ class DynamicTopicManagerTest {
         new ConsumerRecord<>(ACTUAL_TOPIC, 0, 0L, topicName, topicMeta);
     topicRecord.headers().add(Constants.HEADER_ENGINE_SIGNATURE, "client-key-1.AABB".getBytes());
     when(engineAuthorizationService.authorizeTopicMetaRequest(any(), any()))
-        .thenThrow(new AuthorizationTokenException("untrusted signer"));
+        .thenThrow(
+            new AuthorizationTokenException(
+                "Unknown Ed25519 keyId 'client-key-1' — signer not found in taktx-signing-keys KTable"));
+    DlqEnvelope dlqEnvelope = new DlqEnvelope();
+    ArgumentCaptor<TopicMetaDlqEntryDTO> dlqEntryCaptor =
+        ArgumentCaptor.forClass(TopicMetaDlqEntryDTO.class);
+    when(dlqPublisher.toEnvelope(dlqEntryCaptor.capture(), anyLong(), anyString()))
+        .thenReturn(dlqEnvelope);
+    when(dlqPublisher.recordKey(dlqEnvelope)).thenReturn("topic-meta-requested");
 
     dynamicTopicManager.handleRequestedTopicRecord(collectedTopics, topicRecord);
 
     assertThat(collectedTopics).isEmpty();
     verify(topicMetaProducer).send(anyProducerRecord(), any());
+    verify(dlqProducer).send(anyDlqProducerRecord(), any());
+    assertThat(dlqEntryCaptor.getValue().getTopicName()).isEqualTo(topicName);
+    assertThat(new String(dlqEntryCaptor.getValue().getHeaders().get(DlqHeaders.REASON_HINT)))
+        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN.name());
+    assertThat(dlqEntryCaptor.getValue().getData()).isNotEmpty();
+  }
+
+  @Test
+  void reasonCodeForAuthorizationFailure_mapsKnownVerificationMessages() {
+    assertThat(
+            DynamicTopicManager.reasonCodeForAuthorizationFailure(
+                new AuthorizationTokenException(
+                    "Missing required X-TaktX-Signature header — required role: CLIENT")))
+        .isEqualTo(DlqReasonCode.SIGNATURE_MISSING);
+    assertThat(
+            DynamicTopicManager.reasonCodeForAuthorizationFailure(
+                new AuthorizationTokenException(
+                    "Unknown Ed25519 keyId 'client-key-1' — signer not found in taktx-signing-keys KTable")))
+        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN);
+    assertThat(
+            DynamicTopicManager.reasonCodeForAuthorizationFailure(
+                new AuthorizationTokenException(
+                    "Revoked Ed25519 keyId 'client-key-1' — rejecting message")))
+        .isEqualTo(DlqReasonCode.SIGNATURE_KEY_REVOKED);
+    assertThat(
+            DynamicTopicManager.reasonCodeForAuthorizationFailure(
+                new AuthorizationTokenException(
+                    "Signing keyId 'client-key-1' (role=CLIENT) is not trusted for required role CLIENT")))
+        .isEqualTo(DlqReasonCode.AUTHORIZATION_FAILED);
   }
 
   @SuppressWarnings("unchecked")
   private ProducerRecord<String, TopicMetaDTO> anyProducerRecord() {
+    return any(ProducerRecord.class);
+  }
+
+  @SuppressWarnings("unchecked")
+  private ProducerRecord<String, DlqEnvelope> anyDlqProducerRecord() {
     return any(ProducerRecord.class);
   }
 
@@ -299,8 +359,7 @@ class DynamicTopicManagerTest {
         .build();
   }
 
-  private void mockDescribeTopics(String topicName, int partitionCount, short replicationFactor)
-      throws Exception {
+  private void mockDescribeTopics(String topicName, int partitionCount, short replicationFactor) {
     DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
     when(adminClient.describeTopics(Set.of(topicName))).thenReturn(describeTopicsResult);
     when(describeTopicsResult.topicNameValues())
@@ -319,7 +378,8 @@ class DynamicTopicManagerTest {
             .toList();
     List<TopicPartitionInfo> partitions =
         java.util.stream.IntStream.range(0, partitionCount)
-            .mapToObj(index -> new TopicPartitionInfo(index, replicas.get(0), replicas, replicas))
+            .mapToObj(
+                index -> new TopicPartitionInfo(index, replicas.getFirst(), replicas, replicas))
             .toList();
     return new TopicDescription(topicName, false, partitions);
   }

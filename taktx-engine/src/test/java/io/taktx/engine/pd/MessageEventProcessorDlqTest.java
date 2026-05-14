@@ -7,6 +7,9 @@
  */
 package io.taktx.engine.pd;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -95,14 +98,10 @@ class MessageEventProcessorDlqTest {
 
     MessageEventDlqEntryDTO dlqEntry = (MessageEventDlqEntryDTO) forwarded.value();
     assertThat(dlqEntry.getKey()).isEqualTo(key);
-    assertThat(dlqEntry.getHeaders()).containsKey("X-TaktX-DLQ-Reason-Hint");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(dlqEntry.getHeaders()).containsKey(REASON_HINT);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("CBOR_DECODE_ERROR");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }
 
@@ -133,17 +132,11 @@ class MessageEventProcessorDlqTest {
     assertThat(forwarded.value()).isInstanceOf(MessageEventDlqEntryDTO.class);
 
     MessageEventDlqEntryDTO dlqEntry = (MessageEventDlqEntryDTO) forwarded.value();
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR_EXCEPTION");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Text"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
         .contains("simulated store failure");
   }
 }

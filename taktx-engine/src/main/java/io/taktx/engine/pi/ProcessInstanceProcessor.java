@@ -35,6 +35,7 @@ import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
+import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.pd.Stores;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.FlowElements;
@@ -82,9 +83,9 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 public class ProcessInstanceProcessor
     implements Processor<UUID, ProcessInstanceTriggerEnvelope, Object, Object> {
 
-  private static final String DLQ_REASON_HINT_HEADER = "X-TaktX-DLQ-Reason-Hint";
-  private static final String DLQ_REASON_TEXT_HEADER = "X-TaktX-DLQ-Reason-Text";
-  private static final String DLQ_CAPTURE_STAGE_HEADER = "X-TaktX-DLQ-Capture-Stage";
+  private static final String DLQ_REASON_HINT_HEADER = DlqHeaders.REASON_HINT;
+  private static final String DLQ_REASON_TEXT_HEADER = DlqHeaders.REASON_TEXT;
+  private static final String DLQ_CAPTURE_STAGE_HEADER = DlqHeaders.CAPTURE_STAGE;
 
   private final DefinitionsCache definitionsCache;
   private final DefinitionMapper definitionMapper;

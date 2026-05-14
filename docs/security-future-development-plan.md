@@ -1,13 +1,14 @@
 # Security Future Development Plan
 
-**Last updated:** 2026-05-07  
-**Status:** Active roadmap — Workstreams 1, 3 (deferred items), and 4 remain pending; Workstream 2 (DLQ) is complete  
+**Last updated:** 2026-05-14  
+**Status:** Active roadmap — Workstreams 1 and 4 remain pending; Workstreams 2 and 3 are complete  
 **Audience:** Platform and security engineers planning upcoming hardening work
 
 This document tracks planned security development beyond the implemented baseline.
 
 **Related security documents:**
 - Implemented controls reference: [`docs/security.md`](security.md)
+- Task-level tracking backlog: [`docs/security-implementation-backlog.md`](security-implementation-backlog.md)
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
 
 ---
@@ -129,38 +130,42 @@ Rejected records on all 8 external execution ingress surfaces now route to the u
 
 ---
 
-## Workstream 3 — Structured security telemetry
+## Workstream 3 — Structured security rejection visibility
 
 **Priority:** Medium  
-**Status: ✅ Partially complete — DLQ observability implemented (DLQ-015, DLQ-018A); broader security-rejection counters deferred**
+**Status: ✅ Complete — implemented 2026-05-14 via DLQ routing for external rejection paths plus excluded-topic metrics for engine-internal `schedule-commands` failures (SEC-007, SEC-008, SEC-010)**
 
 ### Goal
 
 Make security failures measurable and queryable without requiring log scraping only.
 
-### Deliverables — DLQ observability (implemented)
+### Deliverables — implemented visibility model
 
-The following Micrometer counters are live as of 2026-05-07:
+The final implementation uses the existing DLQ and excluded-topic observability surfaces rather than four new standalone security counters:
+
+- `process-instance` authorization failures already route to the DLQ with `reason_code = AUTHORIZATION_FAILED`
+- replay detections on JWT entry commands now route the first duplicate in-window event to the DLQ with `reason_code = REPLAY_DETECTED` / `DlqSeverity.CRITICAL`; subsequent duplicates for the same replay key are rate-gated
+- `topic-meta-requested` authorization failures now route to the DLQ with mapped reason codes (`SIGNATURE_MISSING`, `SIGNATURE_KEY_UNKNOWN`, `SIGNATURE_KEY_REVOKED`, `AUTHORIZATION_FAILED`) while preserving the existing `topic-meta-actual` null publication contract
+- `schedule-commands` authorization failures now increment `taktx.excluded.topic.failures{topic_group=schedule-commands}` and remain DLQ-excluded because the topic is engine-internal
+
+The supporting Micrometer counters are live as of 2026-05-14:
 
 - `taktx.dlq.entries{severity, reason_code, source_topic, capture_stage}` — counter per DLQ capture
 - `taktx.dlq.replay.outcomes{status}` — replay outcome per attempt (SUCCESS / FAILED / DRY_RUN_PASSED)
-- `taktx.excluded.topic.deserialization.errors{topic}` — excluded-topic poison records skipped
-- `taktx.excluded.topic.processing.failures{topic}` — engine-internal processing exceptions (schedule-commands)
+- `taktx.excluded.topic.deserialization.errors{topic}` — excluded-topic poison records skipped (`ContinueOnDeserializationErrorHandler`)
+- `taktx.excluded.topic.failures{topic_group}` — engine-internal processing exceptions for excluded topics (`DlqObservabilityService.recordExcludedTopicFailure`)
 
 Structured audit logs are emitted by `DlqObservabilityService` for every DLQ entry and replay outcome. See `docs/dlq-console-contract.md` for the full Prometheus metric reference and `docker/prometheus-dlq-alerts.yaml` for alert rules.
 
-### Deliverables — broader security rejection counters (deferred)
+### Architectural decision
 
-The following metrics from the original proposal have not yet been implemented and remain on the backlog:
+The original plan proposed four standalone Micrometer counters for security rejections. That approach was superseded in favour of DLQ routing for the external rejection paths plus the existing excluded-topic counter for `schedule-commands`. This provides better operator value than parallel counters alone: full payload inspection, reason-code tagging, a single dashboard/alerting surface, and safe replay controls through the DLQ workflow.
 
-- `taktx.security.rejected.messages` — aggregate rejection counter across all secured paths
-- `taktx.security.invalid.signatures` — Ed25519 signature failures
-- `taktx.security.replay.attempts` — replay-attack detections
-- `taktx.security.topic.requests.rejected` — topic-meta / control-plane rejections
+> **Note on excluded-topic metric naming:** The live implementation uses `taktx.excluded.topic.failures{topic_group}` (in `DlqObservabilityService`) and `taktx.excluded.topic.deserialization.errors{topic}` (in `ContinueOnDeserializationErrorHandler`). Earlier drafts of this document referred to the former as `taktx.excluded.topic.processing.failures` — the live name is authoritative.
 
 ### Acceptance criteria
 
-- Counters increment from real rejection and trust-failure code paths
+- DLQ entries or excluded-topic counters increment from real rejection and trust-failure code paths
 - Log fields are consistent across `process-instance`, `schedule-commands`, and `topic-meta-requested`
 - Metrics are visible through existing Prometheus export
 
@@ -196,11 +201,23 @@ Publish a concise threat model that aligns with implemented controls and deploym
 
 | Milestone | Target | Outcome | Status |
 |---|---|---|---|
-| M1 - Replay hardening decision record | Next development cycle | Final dedup identity and phase-1 protected topics selected | ⏳ Pending |
-| M2 - Replay hardening implementation | Following cycle | Selected signed paths protected with tests and operational guidance | ⏳ Pending |
+| M1 - Replay hardening decision record | Next development cycle | Final dedup identity and phase-1 protected topics selected (SEC-013 – SEC-015) | ⏳ Pending |
+| M2 - Replay hardening implementation | Following cycle | Selected signed paths protected with tests and operational guidance (SEC-016 – SEC-022) | ⏳ Pending |
 | M3 - DLQ decision record | Following cycle | Final DLQ topology, envelope, and retention decisions | ✅ Done (2026-05-01) |
 | M4 - DLQ + telemetry completion | Following cycle | Rejections routed to DLQ and exported with structured logs / metrics | ✅ Done (2026-05-07) |
-| M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance | ⏳ Pending |
+| M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance (SEC-011 – SEC-012) | ⏳ Pending |
+
+---
+
+## Internal epic label reference
+
+Source code in `taktx-engine` uses short internal labels in Javadoc. This table maps them to publicly tracked workstreams:
+
+| Code label | Public workstream / task |
+|---|---|
+| Epic B2 | Adoption of `VerificationCore` as the single verification seam for any future topic consumers added beyond the current three (`process-instance`, `schedule-commands`, `topic-meta-requested`) |
+| Epic D4 | Durable dedup enforcement on signed non-entry message paths — maps to Workstream 1, M2 (SEC-016 – SEC-022) |
+| Epic H | Structured security rejection visibility — maps to Workstream 3 (SEC-005 – SEC-010) |
 
 ---
 

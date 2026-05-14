@@ -110,6 +110,7 @@ public class ScheduleProcessor
           extractSignerKeyId(scheduleRecord),
           e.getMessage(),
           scheduleMessageType(value));
+      dlqObservabilityService.recordExcludedTopicFailure("schedule-commands");
       return;
     }
 

@@ -7,14 +7,20 @@
  */
 package io.taktx.engine.dlq;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import io.taktx.CleanupPolicy;
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.ProcessDefinitionDlqEntryDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessInstanceDlqEntryDTO;
+import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
@@ -70,10 +76,9 @@ class DlqPublisherTest {
             UUID.fromString("f72f519f-8a0b-4d67-8ab1-96563fd2e0ff"),
             null,
             Map.of(
-                "X-TaktX-DLQ-Reason-Hint", "AUTHORIZATION_FAILED".getBytes(StandardCharsets.UTF_8),
-                "X-TaktX-DLQ-Reason-Text",
-                    "Entry command requires JWT".getBytes(StandardCharsets.UTF_8),
-                "X-TaktX-DLQ-Capture-Stage", "PROCESSOR".getBytes(StandardCharsets.UTF_8)),
+                REASON_HINT, "AUTHORIZATION_FAILED".getBytes(StandardCharsets.UTF_8),
+                REASON_TEXT, "Entry command requires JWT".getBytes(StandardCharsets.UTF_8),
+                CAPTURE_STAGE, "PROCESSOR".getBytes(StandardCharsets.UTF_8)),
             new byte[] {9, 9, 9});
 
     DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_300_000L, "engine-c");
@@ -81,5 +86,26 @@ class DlqPublisherTest {
     assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.AUTHORIZATION_FAILED);
     assertThat(envelope.getReasonText()).isEqualTo("Entry command requires JWT");
     assertThat(envelope.getCaptureStage().name()).isEqualTo("PROCESSOR");
+  }
+
+  @Test
+  void toEnvelope_mapsTopicMetaEntryToTopicMetaRequestedTopic() {
+    byte[] payload =
+        "{\"topicName\":\"acme.prod.external-task-trigger-payments\"}"
+            .getBytes(StandardCharsets.UTF_8);
+    TopicMetaDlqEntryDTO entry =
+        new TopicMetaDlqEntryDTO(
+            "acme.prod.external-task-trigger-payments",
+            new TopicMetaDTO(
+                "acme.prod.external-task-trigger-payments", 3, CleanupPolicy.DELETE, (short) 1),
+            Map.of(REASON_HINT, "SIGNATURE_KEY_UNKNOWN".getBytes(StandardCharsets.UTF_8)),
+            payload);
+
+    DlqEnvelope envelope = dlqPublisher.toEnvelope(entry, 1_700_000_400_000L, "engine-d");
+
+    assertThat(envelope.getSourceTopic()).isEqualTo("topic-meta-requested");
+    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN);
+    assertThat(envelope.getSeverity()).isEqualTo(DlqReasonCode.SIGNATURE_KEY_UNKNOWN.getSeverity());
+    assertThat(envelope.getValueBytes()).containsExactly(payload);
   }
 }

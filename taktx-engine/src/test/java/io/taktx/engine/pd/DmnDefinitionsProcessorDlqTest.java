@@ -7,6 +7,8 @@
  */
 package io.taktx.engine.pd;
 
+import static io.taktx.engine.dlq.DlqHeaders.CAPTURE_STAGE;
+import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -70,13 +72,9 @@ class DmnDefinitionsProcessorDlqTest {
     DmnDefinitionsDlqEntryDTO dlqEntry = (DmnDefinitionsDlqEntryDTO) forwarded.value();
     assertThat(dlqEntry.getDmnDefinitionId()).isEqualTo("dmn-1");
     assertThat(dlqEntry.getValue()).isNull();
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("CBOR_DECODE_ERROR");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }
 
@@ -97,13 +95,9 @@ class DmnDefinitionsProcessorDlqTest {
     DmnDefinitionsDlqEntryDTO dlqEntry = (DmnDefinitionsDlqEntryDTO) forwarded.value();
     assertThat(dlqEntry.getDmnDefinitionId()).isEqualTo("dmn-2");
     assertThat(dlqEntry.getValue()).isSameAs(dto);
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Reason-Hint"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR_EXCEPTION");
-    assertThat(
-            new String(
-                dlqEntry.getHeaders().get("X-TaktX-DLQ-Capture-Stage"), StandardCharsets.UTF_8))
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
   }
 }
