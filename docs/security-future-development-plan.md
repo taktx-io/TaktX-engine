@@ -1,7 +1,7 @@
 # Security Future Development Plan
 
-**Last updated:** 2026-05-14  
-**Status:** Active roadmap — Workstream 1 decision record (M1) is complete, Workstream 1 implementation (M2) and Workstream 4 remain pending; Workstreams 2 and 3 are complete  
+**Last updated:** 2026-05-15  
+**Status:** Active roadmap — Workstreams 1, 2, 3, and 4 are complete for the current documented release scope  
 **Audience:** Platform and security engineers planning upcoming hardening work
 
 This document tracks planned security development beyond the implemented baseline.
@@ -35,13 +35,18 @@ This roadmap builds on the completed baseline controls (signing, JWT authorizati
 ## Workstream 1 — Replay hardening for signed non-entry messages
 
 **Priority:** High
-**Status:** 🔄 M1 decision record complete (2026-05-14); M2 implementation pending
+**Status:** ✅ Complete for the current external release slice — M1 resolved 2026-05-14; M2 implemented 2026-05-15
 
-### Problem statement
+### Problem statement (resolved in the current release slice)
 
-Current durable replay protection is intentionally scoped to JWT-bearing entry commands via `auditId`. That leaves signed non-entry and control-plane paths dependent on message semantics and downstream idempotency rather than on a dedicated duplicate-detection layer.
+Before M2, durable replay protection was intentionally scoped to JWT-bearing entry commands via
+`auditId`. That left signed non-entry and control-plane paths dependent on message semantics and
+downstream idempotency rather than on a dedicated duplicate-detection layer.
 
-This is acceptable as a baseline, but it is not a full replay-safety story for production environments where duplicate signed external-task responses, duplicate signed user-task responses, external topic-management requests, or other signed non-entry traffic may still create duplicate work, load spikes, or repeated side effects.
+That baseline was acceptable for the initial security rollout, but it was not a full replay-safety
+story for production environments where duplicate signed external-task responses, duplicate signed
+user-task responses, external topic-management requests, or other signed non-entry traffic could
+still create duplicate work, load spikes, or repeated side effects.
 
 ### Design goals
 
@@ -51,7 +56,7 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
 - Avoid unbounded state growth in replay / dedup stores
 - Roll out by topic class so high-risk paths can be hardened first
 
-### Proposed design direction
+### Chosen design direction
 
 - Introduce a stable dedup identity for signed non-entry messages, likely via one of:
   - explicit `messageId` on all signed messages
@@ -72,6 +77,25 @@ This is acceptable as a baseline, but it is not a full replay-safety story for p
 - State size remains bounded and configurable
 - Rotation / restart behavior is documented and tested
 - `docs/security.md` is updated to describe protected and unprotected paths precisely
+
+### Implementation status (current release slice)
+
+The current release slice has delivered the planned external phase-1 scope:
+
+- `messageId` is now available on `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and `TopicMetaDTO`
+- `process-instance` response dedup now protects `ExternalTaskResponseTriggerDTO` and `UserTaskResponseTriggerDTO`
+- `topic-meta-requested` ingress now performs authorization, duplicate suppression, and broker-admin handoff through the topology split recorded below
+- real-broker integration coverage exists for all three protected paths
+
+The engine-internal follow-on items remain deliberately deferred beyond this release slice:
+
+- `schedule-commands` (`MessageScheduleDTO`)
+- engine-internal continuations on `process-instance`
+
+The backlog now tracks those deferred internal-only follow-ons explicitly as:
+
+- `SEC-019` — `schedule-commands` dedup
+- `SEC-023` — engine-internal continuation dedup on `process-instance`
 
 ### Resolved decisions
 
@@ -162,7 +186,9 @@ Deferred to a later phase:
 Those internal paths are already restricted to trusted `ENGINE` signatures and usually converge
 through process state. They remain worth hardening later, but including them in the current release
 would broaden the topology and test matrix while the console team is still absorbing the already
-large DLQ/security surface added in Workstreams 2 and 3.
+large DLQ/security surface added in Workstreams 2 and 3. The backlog now tracks this deferred work
+explicitly as `SEC-019` (`schedule-commands`) and `SEC-023` (engine-internal continuations on
+`process-instance`).
 
 #### Decision 3 — Retention defaults (SEC-015)
 
@@ -320,6 +346,7 @@ The original plan proposed four standalone Micrometer counters for security reje
 ## Workstream 4 — Threat model publication
 
 **Priority:** Medium
+**Status:** ✅ Complete — implemented 2026-05-15 (SEC-011, SEC-012)
 
 ### Goal
 
@@ -348,10 +375,10 @@ Publish a concise threat model that aligns with implemented controls and deploym
 | Milestone | Target | Outcome | Status |
 |---|---|---|---|
 | M1 - Replay hardening decision record | Next development cycle | Final dedup identity, phase-1 protected topics, and retention defaults selected (SEC-013 – SEC-015) | ✅ Done (2026-05-14) |
-| M2 - Replay hardening implementation | Following cycle | Selected external signed paths protected with tests and operational guidance; engine-internal paths deferred to a later slice (SEC-016 – SEC-022, narrowed scope) | ⏳ Pending |
+| M2 - Replay hardening implementation | Following cycle | Selected external signed paths protected with tests and operational guidance; engine-internal paths deferred to a later slice (`SEC-019`, `SEC-023`) | ✅ Done (2026-05-15) |
 | M3 - DLQ decision record | Following cycle | Final DLQ topology, envelope, and retention decisions | ✅ Done (2026-05-01) |
 | M4 - DLQ + telemetry completion | Following cycle | Rejections routed to DLQ and exported with structured logs / metrics | ✅ Done (2026-05-07) |
-| M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance (SEC-011 – SEC-012) | ⏳ Pending |
+| M5 - Threat model publication | Following cycle | Public threat-model doc aligned with code and ops guidance (SEC-011 – SEC-012) | ✅ Done (2026-05-15) |
 
 ---
 
@@ -370,10 +397,10 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 ## Recommended implementation order
 
 1. ~~Finalize replay-hardening decisions and phase-1 scope (M1)~~ — **Done**
-2. Implement replay hardening on selected signed paths (M2)
+2. ~~Implement replay hardening on selected signed paths (M2)~~ — **Done**
 3. ~~Finalize DLQ architecture decisions (M3)~~ — **Done**
 4. ~~Implement DLQ publishing and telemetry together so reason codes and observability stay aligned (M4)~~ — **Done**
-5. Publish threat model using the now-stable replay / observability / recovery model (M5)
+5. ~~Publish threat model using the now-stable replay / observability / recovery model (M5)~~ — **Done**
 
 ---
 
@@ -389,6 +416,24 @@ Source code in `taktx-engine` uses short internal labels in Javadoc. This table 
 ---
 
 ## Decision log
+
+### 2026-05-15
+
+- Deferred internal-only replay-hardening work is now tracked explicitly in the backlog as
+  `SEC-019` (`schedule-commands`) and `SEC-023` (engine-internal continuations on
+  `process-instance`).
+- M5 implemented: `docs/security-threat-model.md` now documents security boundaries, trust assumptions,
+  enforced controls, Kafka/platform dependencies, anchored/community mode limitations, security-critical
+  topics, residual risks, and compensating controls.
+- `docs/security.md` and `SECURITY.md` now cross-link the threat model so public-facing security docs
+  point to the same trust-boundary reference.
+- M2 implemented for the current external replay-hardening slice.
+- Phase-1 dedup is now live on `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and
+  `TopicMetaDTO`, with 10 minute defaults for the `process-instance` response paths and a 2 minute
+  default for `topic-meta-requested`.
+- `docs/security.md` was updated so the public replay-protection scope matches the live code paths
+  and distinguishes JWT `auditId` replay enforcement from the newer fixed-window signed-message dedup.
+- Engine-internal `schedule-commands` and internal continuations remain deferred follow-on work.
 
 ### 2026-05-14
 

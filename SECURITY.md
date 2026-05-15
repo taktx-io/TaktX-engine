@@ -1,6 +1,6 @@
 # Security Policy
 
-**Last updated:** 2026-04-27
+**Last updated:** 2026-05-15
 **Status:** Active policy
 **Audience:** Security researchers, operators, and maintainers
 
@@ -9,7 +9,8 @@ This document defines how to report vulnerabilities and the repository security 
 ## Related Security Documents
 
 - Implemented architecture and controls: [`docs/security.md`](docs/security.md)
-- Planned follow-up roadmap (replay hardening, DLQ, telemetry, threat model): [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
+- Security boundaries, assumptions, and residual risks: [`docs/security-threat-model.md`](docs/security-threat-model.md)
+- Security roadmap and implementation history: [`docs/security-future-development-plan.md`](docs/security-future-development-plan.md)
 
 ## Supported Versions
 
@@ -17,7 +18,7 @@ TaktX Engine is currently in **beta**. Security fixes are applied to the **lates
 
 | Version | Supported |
 |---|---|
-| 0.3.x (latest beta) | ✅ Active |
+| 0.5.x (latest beta) | ✅ Active |
 | 0.2.x and earlier | ❌ No longer supported |
 
 Once `1.0.0` is released, a formal long-term support policy will be published.
@@ -78,5 +79,6 @@ Operationally, production deployments are expected to:
 
 Community mode remains useful for local development, but it should be treated as insecure for production.
 
-For the full trust assumptions, residual risks, and production checklist, see [`docs/security.md`](docs/security.md).
+For the full trust assumptions, residual risks, and production checklist, see
+[`docs/security-threat-model.md`](docs/security-threat-model.md) and [`docs/security.md`](docs/security.md).
 

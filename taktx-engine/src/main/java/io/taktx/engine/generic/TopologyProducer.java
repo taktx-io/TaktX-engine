@@ -85,6 +85,9 @@ import io.taktx.engine.security.MessageSigningService;
 import io.taktx.engine.security.ProcessInstanceResponseDedupProcessor;
 import io.taktx.engine.security.ReplayProtectionProcessor;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.engine.topicmanagement.RequestedTopicValidator;
+import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
+import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
@@ -115,6 +118,8 @@ public class TopologyProducer {
 
   private static final long PROCESS_INSTANCE_RESPONSE_DEDUP_RETENTION_MS =
       Duration.ofMinutes(10).toMillis();
+  private static final long TOPIC_META_REQUEST_DEDUP_RETENTION_MS =
+      Duration.ofMinutes(2).toMillis();
 
   public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
       new ObjectMapperSerde<>(MessageEventDTO.class);
@@ -209,6 +214,8 @@ public class TopologyProducer {
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       new ObjectMapperSerde<>(TopicMetaDTO.class);
+  public static final Serde<TopicMetaDTO> TOPIC_META_REQUEST_INPUT_SERDE =
+      Serdes.serdeFrom(TOPIC_META_SERDE.serializer(), new ExternalTaskMetaDeserializer());
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
       new ObjectMapperSerde<>(DlqEnvelope.class);
   public static final ObjectMapperSerde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
@@ -251,6 +258,8 @@ public class TopologyProducer {
     setupMessageStream(builder);
 
     setupScheduleCommandStream(builder);
+
+    setupTopicMetaRequestStream(builder);
 
     setupProcessInstanceStream(builder);
 
@@ -514,12 +523,6 @@ public class TopologyProducer {
 
   private void setupProcessInstanceStream(StreamsBuilder builder) {
     builder.globalTable(
-        taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
-        Materialized.<String, TopicMetaDTO>as(
-                keyValueStoreSupplier.get(Stores.TOPIC_META_REQUESTED))
-            .withKeySerde(TOPIC_META_KEY_SERDE)
-            .withValueSerde(TOPIC_META_SERDE));
-    builder.globalTable(
         taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName()),
         Materialized.<String, TopicMetaDTO>as(keyValueStoreSupplier.get(Stores.TOPIC_META_ACTUAL))
             .withKeySerde(TOPIC_META_KEY_SERDE)
@@ -735,6 +738,39 @@ public class TopologyProducer {
                         .to(
                             taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
                             Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE))));
+  }
+
+  private void setupTopicMetaRequestStream(StreamsBuilder builder) {
+    builder.addStateStore(
+        keyValueStoreBuilder(
+            keyValueStoreSupplier.get(Stores.TOPIC_META_REQUEST_DEDUP),
+            Serdes.String(),
+            Serdes.Long()));
+
+    builder.stream(
+            taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+            Consumed.with(TOPIC_META_KEY_SERDE, TOPIC_META_REQUEST_INPUT_SERDE))
+        .process(
+            () ->
+                new TopicMetaRequestIngressProcessor(
+                    clock,
+                    TOPIC_META_REQUEST_DEDUP_RETENTION_MS,
+                    taktConfiguration.getPrefixed(Stores.TOPIC_META_REQUEST_DEDUP.getStorename()),
+                    taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName()),
+                    engineAuthorizationService,
+                    new RequestedTopicValidator(taktConfiguration),
+                    topicManager),
+            taktConfiguration.getPrefixed(Stores.TOPIC_META_REQUEST_DEDUP.getStorename()))
+        .filter((_, value) -> value != null)
+        .map(
+            (_, value) -> {
+              DlqEnvelope envelope =
+                  dlqPublisher.toEnvelope(value, clock.millis(), engineInstanceId());
+              return KeyValue.pair(dlqPublisher.recordKey(envelope), envelope);
+            })
+        .to(
+            taktConfiguration.getPrefixed(Topics.DLQ.getTopicName()),
+            Produced.with(Serdes.String(), DLQ_ENVELOPE_SERDE));
   }
 
   private static boolean isReplayProtectedEntryCommand(ProcessInstanceTriggerEnvelope envelope) {

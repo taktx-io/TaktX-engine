@@ -1,6 +1,6 @@
 # TaktX — Security & Trust Chain Reference
 
-**Last updated:** 2026-05-14
+**Last updated:** 2026-05-15
 **Status:** Fully implemented — all features described here are live in the current codebase
 **Audience:** Platform and security engineers operating or integrating TaktX
 
@@ -10,7 +10,8 @@ This document describes the security controls that are implemented and active in
 
 **Related security documents:**
 - Vulnerability reporting and support policy: [`SECURITY.md`](../SECURITY.md)
-- Follow-up work (replay hardening, telemetry, threat model): [`docs/security-future-development-plan.md`](security-future-development-plan.md)
+- Security boundaries, assumptions, and residual risks: [`docs/security-threat-model.md`](security-threat-model.md)
+- Security roadmap and implementation history: [`docs/security-future-development-plan.md`](security-future-development-plan.md)
 - **DLQ implementation (complete)**: [`docs/dlq-engine-design.md`](dlq-engine-design.md), [`docs/dlq-console-contract.md`](dlq-console-contract.md), [`docs/dlq-feature-matrix.md`](dlq-feature-matrix.md)
 
 ---
@@ -45,7 +46,7 @@ TaktX has **two orthogonal security mechanisms** that can be enabled or disabled
 | **Ed25519 message signing** | `signingEnabled` | Engine outbound records, worker responses, engine-internal continuations | No — opt-in per config topic |
 | **RS256 JWT command authorization** | `engineRequiresAuthorization` | `StartCommandDTO`, `AbortTriggerDTO`, `SetVariableTriggerDTO` (entry commands) | No — opt-in per config topic |
 
-Replay protection is layered on top of the JWT entry-command path and is intentionally scoped to the canonical `auditId` on those entry commands only. Control-plane topics and non-entry `process-instance` messages are not currently replay-protected; see [Replay protection scope](#replay-protection-scope).
+Replay protection now has two layers: durable `auditId`-based replay protection for JWT-bearing entry commands and short-lived duplicate suppression for the current phase-1 externally originated signed non-entry paths (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and `TopicMetaDTO`). Coverage remains intentionally scoped rather than blanket across all signed and control-plane topics; see [Replay protection scope](#replay-protection-scope).
 
 Both mechanisms share a single trust registry: the compacted Kafka topic **`taktx-signing-keys`**.
 
@@ -201,24 +202,50 @@ The JWT is attached in the `X-TaktX-Authorization` Kafka record header as a comp
 
 ### Replay protection scope
 
-Durable replay protection is currently required for **JWT-bearing entry commands only**:
+TaktX now applies two distinct replay / dedup mechanisms, each with its own scope.
+
+#### 1. Durable replay protection for JWT-bearing entry commands
+
+This is the original `auditId`-based control governed by `replayProtectionMode` and
+`replayProtectionRetentionMs`. It applies to:
 
 - `StartCommandDTO`
 - `AbortTriggerDTO`
 - `SetVariableTriggerDTO`
 
-It is intentionally **not** applied to the following paths at this stage:
+The durable replay store remains keyed by the canonical JWT replay identity (`issuer + auditId`).
 
-- `schedule-commands` (`MessageScheduleDTO`) — already engine-signed, trusted-`ENGINE` only, and validated before schedule handling
-- `topic-meta-requested` (`TopicMetaDTO`) — signed, structurally validated, and operationally idempotent on duplicate valid requests
+#### 2. Phase-1 duplicate suppression for selected external signed non-entry paths
+
+The current release also applies topology-owned fixed-window dedup to the highest-risk external
+signed non-entry paths:
+
+- `ExternalTaskResponseTriggerDTO` on `process-instance` — 10 minute default dedup window
+- `UserTaskResponseTriggerDTO` on `process-instance` — 10 minute default dedup window
+- `TopicMetaDTO` on `topic-meta-requested` — 2 minute default dedup window
+
+For these phase-1 paths, the dedup key uses `messageId` when present and falls back to a derived
+identity from the exact signed record (`X-TaktX-Signature` header value + payload bytes) when
+legacy producers do not yet supply `messageId`.
+
+#### Paths still outside dedup scope in the current release slice
+
+The following paths are still intentionally outside dedicated replay / dedup enforcement:
+
+- `schedule-commands` (`MessageScheduleDTO`) — engine-internal, trusted-`ENGINE` only, and deferred to a later internal-only hardening phase
 - engine-internal non-entry `process-instance` messages (`ContinueFlowElementTriggerDTO`, `StartFlowElementTriggerDTO`, `EventSignalTriggerDTO`) — trusted internal continuations/recovery messages
-- worker / user-task response DTOs (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`) — once a valid response is processed, the corresponding flow node instance completes and replayed responses are ignored
+- any other signed/control-plane ingress not listed above — protected by existing trust checks but not by a dedicated duplicate-suppression window
 
-This means the durable replay store is an `auditId`-based control for externally authorized entry commands, not a blanket duplicate-message filter across all topics.
+This means replay protection in TaktX is still deliberately scoped. The entry-command replay store
+and the phase-1 signed-message dedup stores are separate mechanisms, and neither should be treated
+as a blanket exactly-once layer across all topics.
 
-This narrow scope is intentional in the current release, but it is also a real residual risk. A replayed signed non-entry or control-plane message can still create duplicate work, extra load, or repeated side effects if the targeted processing path is not independently idempotent. In particular, worker responses, schedule commands, and other signed internal messages should not be treated as globally replay-safe merely because they are signed or usually converge under normal processing.
+Duplicates that arrive outside the configured windows are allowed to flow again. Downstream
+handlers still need their normal idempotency / convergence properties for safe operation.
 
-Planned follow-up work will extend lightweight replay / dedup coverage to selected signed non-entry and control-plane paths. The current direction is to use a stable message identifier or a derived hash (for example from signature + payload) with a short-lived dedup window, rather than attempting global exactly-once semantics across every topic. That work is tracked in [`docs/security-future-development-plan.md`](security-future-development-plan.md) (Workstream 1, milestones M1/M2).
+Follow-up work, if taken up later, will focus on the still-deferred internal paths such as
+`schedule-commands` rather than on reworking the now-implemented external phase-1 slice. That work
+remains tracked in [`docs/security-future-development-plan.md`](security-future-development-plan.md).
 
 > **Note**: DLQ capture for external execution ingress failures (a distinct concern from replay hardening) has been fully implemented as of 2026-05-07. See [`docs/dlq-engine-design.md`](dlq-engine-design.md).
 
@@ -503,7 +530,10 @@ The compacted topic `<tenantId>.<namespace>.taktx-configuration` carries `Config
 | `COMPAT` | allowed | rejected when `auditId` is non-blank | staged rollout default |
 | `STRICT` | rejected | rejected | fail-closed mode for compliant issuers |
 
-These modes apply to JWT-bearing entry commands only. They do not apply to `schedule-commands`, `topic-meta-requested`, engine-internal non-entry continuations, or external-task / user-task response DTOs.
+These modes apply to JWT-bearing entry commands only. Separate topology-owned dedup windows now
+protect `ExternalTaskResponseTriggerDTO` / `UserTaskResponseTriggerDTO` on `process-instance`
+(10 minutes) and `TopicMetaDTO` on `topic-meta-requested` (2 minutes). `schedule-commands` and
+engine-internal non-entry continuations remain outside dedup scope in the current release slice.
 
 ### Publishing runtime configuration
 
@@ -834,6 +864,9 @@ Remaining planned work is tracked in:
 
 - [`docs/security-future-development-plan.md`](security-future-development-plan.md) — workstream roadmap
 - [`docs/security-implementation-backlog.md`](security-implementation-backlog.md) — task-level backlog (SEC-001 onwards)
+- [`docs/security-threat-model.md`](security-threat-model.md) — threat boundaries, assumptions, residual risks, and compensating controls
 
-That roadmap covers replay hardening for signed non-entry messages (M1/M2) and publication of a formal threat model (M5). The task backlog also records the now-complete Workstream 3 security rejection visibility implementation (DLQ routing plus excluded-topic metrics).
+That roadmap now records the completed external phase-1 replay hardening slice (Workstream 1,
+M1/M2), the completed Workstream 3 security rejection visibility implementation (DLQ routing plus
+excluded-topic metrics), and the published threat model (M5).
 

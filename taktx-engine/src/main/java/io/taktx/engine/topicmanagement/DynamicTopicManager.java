@@ -12,28 +12,15 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
 import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
-import io.taktx.dto.DlqCaptureStage;
-import io.taktx.dto.DlqEnvelope;
-import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.TopicMetaDTO;
-import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.dlq.DlqHeaders;
-import io.taktx.engine.dlq.DlqPublisher;
 import io.taktx.engine.generic.KafkaClientsConfig;
 import io.taktx.engine.generic.TopologyProducer;
 import io.taktx.engine.license.LicenseManager;
-import io.taktx.engine.security.EngineAuthorizationService;
-import io.taktx.security.AuthorizationTokenException;
-import io.taktx.serdes.ExternalTaskMetaDeserializer;
-import io.taktx.serdes.JsonDeserializer;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -53,7 +40,6 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -61,8 +47,6 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
-import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.serialization.Deserializer;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -74,9 +58,7 @@ public class DynamicTopicManager {
   private final TaktConfiguration taktConfiguration;
   private final KafkaClientsConfig kafkaClientsConfig;
   private final LicenseManager licenseManager;
-  private final EngineAuthorizationService engineAuthorizationService;
   private final RequestedTopicValidator requestedTopicValidator;
-  private final DlqPublisher dlqPublisher;
   private final ExecutorService executor =
       Executors.newCachedThreadPool(
           r -> {
@@ -91,38 +73,20 @@ public class DynamicTopicManager {
   private final ConcurrentHashMap<String, TopicMetaDTO> cachedActualTopicMetaMap =
       new ConcurrentHashMap<>();
   private KafkaProducer<String, TopicMetaDTO> topicMetaProducer;
-  private KafkaProducer<String, DlqEnvelope> dlqProducer;
   // Cached once at startup — avoids CDI proxy access from background threads
   private String cachedActualTopicName;
-  private String cachedRequestedTopicName;
-  private String cachedDlqTopicName;
 
   public void start(KafkaProducer<String, TopicMetaDTO> topicMetaProducer) {
     this.topicMetaProducer = topicMetaProducer;
-    this.dlqProducer =
-        new KafkaProducer<>(
-            kafkaClientsConfig.getConfig(),
-            TopologyProducer.TOPIC_META_KEY_SERDE.serializer(),
-            TopologyProducer.DLQ_ENVELOPE_SERDE.serializer());
     this.cachedActualTopicName =
         taktConfiguration.getPrefixed(Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName());
-    this.cachedRequestedTopicName =
-        taktConfiguration.getPrefixed(Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName());
-    this.cachedDlqTopicName = taktConfiguration.getPrefixed(Topics.DLQ.getTopicName());
     scanActual();
-
-    if (taktConfiguration.getTopicCreationEnabled()) {
-      scanRequest();
-    }
   }
 
   @PreDestroy
   public void stop() {
     log.info("Shutting down DynamicTopicManager");
     running.set(false);
-    if (dlqProducer != null) {
-      dlqProducer.close(Duration.ofSeconds(5));
-    }
     executor.shutdown();
     try {
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -170,75 +134,6 @@ public class DynamicTopicManager {
             }
           }
         });
-  }
-
-  private void scanRequest() {
-    executor.submit(
-        () -> {
-          try (KafkaConsumer<String, TopicMetaDTO> requestConsumer =
-              createRequestConsumer("taktx-topicmanager-request-consumer")) {
-            requestConsumer.subscribe(
-                List.of(cachedRequestedTopicName),
-                getConsumerRebalanceListener(cachedRequestedTopicName));
-
-            Map<String, TopicMetaDTO> collectedTopics = new ConcurrentHashMap<>();
-
-            while (running.get()) {
-              org.apache.kafka.clients.consumer.ConsumerRecords<String, TopicMetaDTO> records;
-              try {
-                records = requestConsumer.poll(Duration.ofMillis(100));
-              } catch (org.apache.kafka.common.errors.RecordDeserializationException e) {
-                log.error(
-                    "Failed to deserialise TopicMetaDTO (requested) on partition={} offset={}"
-                        + " — seeking past poison record: {}",
-                    e.topicPartition().partition(),
-                    e.offset(),
-                    e.getMessage());
-                requestConsumer.seek(e.topicPartition(), e.offset() + 1);
-                continue;
-              }
-              if (records.isEmpty() && !collectedTopics.isEmpty()) {
-                for (Map.Entry<String, TopicMetaDTO> entry : collectedTopics.entrySet()) {
-                  processRequestedTopic(entry.getKey(), entry.getValue());
-                }
-                collectedTopics.clear();
-                continue;
-              }
-              records.forEach(
-                  topicRecord -> handleRequestedTopicRecord(collectedTopics, topicRecord));
-            }
-          }
-        });
-  }
-
-  void handleRequestedTopicRecord(
-      Map<String, TopicMetaDTO> collectedTopics, ConsumerRecord<String, TopicMetaDTO> topicRecord) {
-    TopicMetaDTO topicMeta = topicRecord.value();
-    if (topicMeta == null) {
-      collectedTopics.remove(topicRecord.key());
-      return;
-    }
-
-    try {
-      var trustedSigner =
-          engineAuthorizationService.authorizeTopicMetaRequest(topicRecord.headers(), topicMeta);
-      log.info(
-          "Accepted topic meta request key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
-          topicRecord.key(),
-          topicMeta.getTopicName(),
-          trustedSigner.getKeyId(),
-          trustedSigner.effectiveRole());
-      collectedTopics.put(topicRecord.key(), topicMeta);
-    } catch (AuthorizationTokenException e) {
-      log.warn(
-          "Rejected topic meta request key='{}' topicName='{}' signerKeyId='{}' outcome='rejected' reason='{}'",
-          topicRecord.key(),
-          topicMeta.getTopicName(),
-          extractSignerKeyId(topicRecord.headers()),
-          e.getMessage());
-      publishRejectedRequestedTopic(topicMeta.getTopicName());
-      publishAuthorizationFailureDlq(topicRecord, topicMeta, e);
-    }
   }
 
   void processRequestedTopic(String recordKey, TopicMetaDTO topicMeta) {
@@ -527,90 +422,10 @@ public class DynamicTopicManager {
     }
   }
 
-  private void publishRejectedRequestedTopic(String topicName) {
+  void publishRejectedRequestedTopic(String topicName) {
     if (requestedTopicValidator.isAllowedRequestedTopicName(topicName)) {
       publishTopicMetaActual(topicName, null);
     }
-  }
-
-  private void publishAuthorizationFailureDlq(
-      ConsumerRecord<String, TopicMetaDTO> topicRecord,
-      TopicMetaDTO topicMeta,
-      AuthorizationTokenException exception) {
-    if (!running.get() || dlqProducer == null) {
-      return;
-    }
-
-    try {
-      DlqReasonCode reasonCode = reasonCodeForAuthorizationFailure(exception);
-      Map<String, byte[]> headers = headersToMap(topicRecord.headers());
-      headers.put(DlqHeaders.REASON_HINT, reasonCode.name().getBytes(StandardCharsets.UTF_8));
-      headers.put(
-          DlqHeaders.REASON_TEXT,
-          String.valueOf(exception.getMessage()).getBytes(StandardCharsets.UTF_8));
-      headers.put(
-          DlqHeaders.CAPTURE_STAGE,
-          DlqCaptureStage.PROCESSOR.name().getBytes(StandardCharsets.UTF_8));
-
-      TopicMetaDlqEntryDTO entry =
-          new TopicMetaDlqEntryDTO(
-              topicRecord.key(),
-              topicMeta,
-              headers,
-              TopologyProducer.TOPIC_META_SERDE
-                  .serializer()
-                  .serialize(cachedRequestedTopicName, topicMeta));
-      DlqEnvelope envelope =
-          dlqPublisher.toEnvelope(entry, System.currentTimeMillis(), engineInstanceId());
-      dlqProducer.send(
-          new ProducerRecord<>(cachedDlqTopicName, dlqPublisher.recordKey(envelope), envelope),
-          (metadata, publishException) -> {
-            if (publishException != null) {
-              log.error(
-                  "Failed to send DLQ entry for rejected topic meta request key='{}' topicName='{}'",
-                  topicRecord.key(),
-                  topicMeta.getTopicName(),
-                  publishException);
-            }
-          });
-    } catch (Exception publishException) {
-      log.error(
-          "Failed to build DLQ entry for rejected topic meta request key='{}' topicName='{}'",
-          topicRecord.key(),
-          topicMeta.getTopicName(),
-          publishException);
-    }
-  }
-
-  static DlqReasonCode reasonCodeForAuthorizationFailure(AuthorizationTokenException exception) {
-    String message =
-        exception == null || exception.getMessage() == null ? "" : exception.getMessage();
-    String normalized = message.toLowerCase();
-
-    if (normalized.startsWith("missing required x-taktx-signature header")) {
-      return DlqReasonCode.SIGNATURE_MISSING;
-    }
-    if (normalized.startsWith("unknown ed25519 keyid")) {
-      return DlqReasonCode.SIGNATURE_KEY_UNKNOWN;
-    }
-    if (normalized.startsWith("revoked ed25519 keyid")) {
-      return DlqReasonCode.SIGNATURE_KEY_REVOKED;
-    }
-    if (normalized.startsWith("signing keyid")) {
-      return DlqReasonCode.AUTHORIZATION_FAILED;
-    }
-    return DlqReasonCode.AUTHORIZATION_FAILED;
-  }
-
-  private static Map<String, byte[]> headersToMap(Headers headers) {
-    if (headers == null) {
-      return new HashMap<>();
-    }
-    return Arrays.stream(headers.toArray())
-        .collect(
-            java.util.stream.Collectors.toMap(
-                org.apache.kafka.common.header.Header::key,
-                org.apache.kafka.common.header.Header::value));
   }
 
   private TopicCreationResult createTopicIfNotExists(
@@ -668,42 +483,6 @@ public class DynamicTopicManager {
         props,
         TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
         TopologyProducer.TOPIC_META_SERDE.deserializer());
-  }
-
-  private KafkaConsumer<String, TopicMetaDTO> createRequestConsumer(String groupId) {
-    log.info("Creating signed request consumer for group id {}", groupId);
-    Properties props = new Properties();
-    props.putAll(kafkaClientsConfig.getConfig());
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(JsonDeserializer.SIGNING_REQUIRED_CONFIG, "true");
-
-    Deserializer<TopicMetaDTO> valueDeserializer = new ExternalTaskMetaDeserializer();
-    return new KafkaConsumer<>(
-        props, TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(), valueDeserializer);
-  }
-
-  private String extractSignerKeyId(Headers headers) {
-    if (headers == null) {
-      return null;
-    }
-    var header = headers.lastHeader(io.taktx.dto.Constants.HEADER_ENGINE_SIGNATURE);
-    if (header == null || header.value() == null) {
-      return null;
-    }
-    String headerValue = new String(header.value(), java.nio.charset.StandardCharsets.UTF_8);
-    int dotIndex = headerValue.indexOf('.');
-    return dotIndex >= 0 ? headerValue.substring(0, dotIndex) : headerValue;
-  }
-
-  private String engineInstanceId() {
-    return taktConfiguration.getTenantId()
-        + "."
-        + taktConfiguration.getNamespace()
-        + "@"
-        + taktConfiguration.getHost()
-        + ":"
-        + taktConfiguration.getPort();
   }
 
   /**

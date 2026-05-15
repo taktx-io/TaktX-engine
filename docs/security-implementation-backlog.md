@@ -274,7 +274,9 @@ superseded the original standalone counter proposal.
 > Target: doc-only session, can run in parallel with Phase 1 or after it.  
 > No code changes required.
 
-### SEC-011 — Write `docs/security-threat-model.md` ⏳
+### SEC-011 — Write `docs/security-threat-model.md` ✅
+
+**Completed:** 2026-05-15
 
 **Required sections** (from `security-future-development-plan.md` Workstream 4):
 
@@ -292,9 +294,18 @@ superseded the original standalone counter proposal.
 - Cross-linked from `docs/security.md` (Future security roadmap section) and `SECURITY.md`.
 - Consistent with runtime behaviour and current configuration options.
 
+**Change made:** Added `docs/security-threat-model.md` as the public threat-boundary reference for
+TaktX. The document covers all seven planned sections: security boundaries and trust assumptions;
+what the engine enforces in code; what still depends on Kafka ACLs and platform controls; anchored
+mode guarantees and limitations; community mode limitations and explicit non-goals; security-critical
+topics and data flows; and residual risks plus compensating controls. The content is aligned with the
+implemented security baseline in `docs/security.md` and the completed external replay-hardening slice.
+
 ---
 
-### SEC-012 — Cross-link threat model from existing docs ⏳
+### SEC-012 — Cross-link threat model from existing docs ✅
+
+**Completed:** 2026-05-15
 
 **Prerequisite:** SEC-011 complete.
 
@@ -303,6 +314,10 @@ superseded the original standalone counter proposal.
 **Acceptance criteria:**
 - Both files contain a link to `docs/security-threat-model.md`.
 - `security-future-development-plan.md` M5 marked ✅ Done.
+
+**Change made:** `docs/security.md` and `SECURITY.md` now both link to
+`docs/security-threat-model.md`, and `docs/security-future-development-plan.md` now marks Workstream 4 /
+M5 as complete.
 
 ---
 
@@ -438,9 +453,9 @@ APIs now auto-populate `messageId` via `UUID.randomUUID().toString()` in
 
 ---
 
-### SEC-017 — Add dedup state store to Kafka Streams topology 🔄
+### SEC-017 — Add dedup state store to Kafka Streams topology ✅
 
-**Started:** 2026-05-14
+**Completed:** 2026-05-15
 
 **Prerequisite:** SEC-014 (phase-1 scope decided).
 
@@ -461,14 +476,12 @@ Partitioned locally where topic routing allows.
   `TOPIC_META_REQUEST_DEDUP`.
 - `TopologyProducer.setupProcessInstanceStream()` now registers the persistent
   `PROCESS_INSTANCE_RESPONSE_DEDUP` state store.
+- `TopologyProducer.setupTopicMetaRequestStream()` now registers the persistent
+  `TOPIC_META_REQUEST_DEDUP` state store.
 - Shared TTL cleanup helper `DedupStoreSupport.purgeExpiredEntries(...)` added and wired into
   `ReplayProtectionProcessor` so the future external dedup processors can reuse the same purge
   semantics.
 - `DedupStoreSupportTest` added.
-
-**Remaining to finish SEC-017:**
-- Register the `TOPIC_META_REQUEST_DEDUP` store once the `topic-meta-requested` ingress path has
-  moved into the Kafka Streams topology (see SEC-020 architecture split).
 
 **Acceptance criteria:**
 - Store registered in topology.
@@ -530,7 +543,9 @@ surface.
 
 ---
 
-### SEC-020 — Implement dedup for `topic-meta-requested` ⏳
+### SEC-020 — Implement dedup for `topic-meta-requested` ✅
+
+**Completed:** 2026-05-15
 
 **Prerequisite:** SEC-016, SEC-017.
 
@@ -548,13 +563,27 @@ documented in `security-future-development-plan.md`.
 
 **Semantics:** Same dedup pattern, applied to `TopicMetaDTO`.
 
+**Change made:** Added `TopicMetaRequestIngressProcessor` and wired it into a new
+`TopologyProducer.setupTopicMetaRequestStream()` stage ahead of `DynamicTopicManager` side effects.
+Kafka Streams now owns `topic-meta-requested` ingress authorization, request-shape validation,
+duplicate suppression, and auth-failure DLQ forwarding. Accepted requests are handed off to the
+slimmed `DynamicTopicManager`, which now owns broker-admin side effects, `topic-meta-actual`
+publication, reconciliation scans, and the preserved null-publication contract for rejected
+requests. Topic-meta dedup uses the dedicated `TOPIC_META_REQUEST_DEDUP` store, a 2-minute default
+window, `messageId` when present, and a fallback SHA-256 hash of `X-TaktX-Signature + payload`
+when `messageId` is absent.
+
 **Acceptance criteria:**
 - Duplicate topic-meta request within window is rejected.
 - Unit test.
 
+**Tests added/updated:** `TopicMetaRequestIngressProcessorTest` and `DynamicTopicManagerTest`.
+
 ---
 
-### SEC-021 — Integration tests for phase-1 dedup paths ⏳
+### SEC-021 — Integration tests for phase-1 dedup paths ✅
+
+**Completed:** 2026-05-15
 
 **Prerequisite:** SEC-018 through SEC-020.
 
@@ -568,9 +597,23 @@ documented in `security-future-development-plan.md`.
 - Covers external-task and user-task responses plus `topic-meta-requested`; `schedule-commands` test remains deferred
   with SEC-019.
 
+**Change made:** Added `PhaseOneDedupIntegrationTest` under the dedicated
+`securityIntegrationTest` source set. The class runs against an isolated Kafka broker and verifies
+all current release dedup paths end-to-end at the Kafka Streams layer:
+1. `ExternalTaskResponseTriggerDTO` on `process-instance` — first response forwarded, duplicate
+   inside the window dropped, same response accepted again after expiry.
+2. `UserTaskResponseTriggerDTO` on `process-instance` — same pass / reject / re-accept sequence.
+3. `TopicMetaDTO` on `topic-meta-requested` — first request handed off to
+   `DynamicTopicManager`, duplicate inside the window suppressed, same request handed off again
+   after expiry, with no DLQ entry on the happy path.
+
+**Tests added/updated:** `PhaseOneDedupIntegrationTest`.
+
 ---
 
-### SEC-022 — Update `docs/security.md` replay protection scope section ⏳
+### SEC-022 — Update `docs/security.md` replay protection scope section ✅
+
+**Completed:** 2026-05-15
 
 **Prerequisite:** SEC-018 through SEC-021 complete.
 
@@ -583,6 +626,64 @@ documented in `security-future-development-plan.md`.
 - Section accurately describes protected and unprotected paths post-M2.
 - `security-future-development-plan.md` M2 marked ✅ Done.
 
+**Change made:** `docs/security.md` now distinguishes the two live protection layers: durable
+JWT entry-command replay protection (`auditId`) and fixed-window phase-1 dedup for externally
+originated signed non-entry paths. The replay-protection scope section now lists the current
+protected paths (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, `TopicMetaDTO`),
+their default windows (10 minutes for process-instance responses, 2 minutes for
+`topic-meta-requested`), the `messageId` / signature+payload fallback identity model, and the
+still-deferred internal paths (`schedule-commands`, engine-internal continuations). The roadmap in
+`security-future-development-plan.md` now marks M2 done for the current release slice.
+
+---
+
+## Phase 5 — Deferred internal replay-hardening follow-on
+
+> Target: later internal-only hardening session after the current external replay/DLQ slice has
+> settled operationally.
+
+### SEC-023 — Implement dedup for engine-internal continuations on `process-instance` ⏳
+
+**Status note (2026-05-15):** This was intentionally deferred from the external-facing M2 slice,
+but the remaining internal continuation paths should now be tracked explicitly rather than only in
+roadmap prose.
+
+**Prerequisite:** Follow-on task after SEC-019; relies on the dedup-store and topology patterns
+established by SEC-017 through SEC-018.
+
+**Where:** `TopologyProducer.setupProcessInstanceStream()` on a new engine-internal continuation
+branch upstream of `ProcessInstanceProcessor`, or a dedicated processor adjacent to the existing
+response-dedup branch.
+
+**Applies to:**
+- `ContinueFlowElementTriggerDTO`
+- `StartFlowElementTriggerDTO`
+- `EventSignalTriggerDTO`
+
+**Semantics:** Apply the same fixed-window duplicate-suppression model used in SEC-018, but scoped
+to the trusted `ENGINE`-signed continuation messages that stay on `process-instance`.
+
+**Identity model (proposed):**
+- Stored dedup keys must be namespaced by DTO class and `processInstanceId`.
+- For the first internal-only phase, use a derived hash of `X-TaktX-Signature + payload bytes` as
+  the continuation identity.
+- If later operational experience shows a need for human-readable continuity across replay / repair
+  workflows, consider a separate explicit continuation/message ID ADR rather than blocking the
+  initial internal-only hardening step on DTO changes.
+
+**Why this remains separate from SEC-018:** These messages share the `process-instance` topic with
+entry commands and external-task/user-task responses, but they represent engine-generated follow-on
+execution rather than external ingress. They therefore need their own branching and test matrix even
+if they reuse the same dedup-store support primitives.
+
+**Acceptance criteria:**
+- Duplicate engine-internal continuation within the configured window is rejected.
+- First occurrence passes through unchanged.
+- Duplicate outside the window is accepted again.
+- Unit tests cover all three DTO classes (or a parameterized equivalent).
+- `docs/security.md` replay-protection scope section updated if the deferred continuation paths move
+  into protected status.
+
 ---
 
 ## Milestone tracker
@@ -591,13 +692,65 @@ documented in `security-future-development-plan.md`.
 |---|---|---|---|
 | Phase 0 | Housekeeping | SEC-001 ✅ SEC-002 ✅ SEC-003 ✅ SEC-004 ✅ | ✅ Complete |
 | Phase 1 | Security rejection visibility (Epic H / Workstream 3) | SEC-005 ✅ SEC-006 ✅ SEC-007 ✅ SEC-008 ✅ SEC-009 ✅ SEC-010 ✅ | ✅ Complete |
-| Phase 2 | Threat model (M5) | SEC-011 – SEC-012 | ⏳ Pending |
+| Phase 2 | Threat model (M5) | SEC-011 ✅ SEC-012 ✅ | ✅ Complete |
 | Phase 3 | Replay hardening decisions (M1) | SEC-013 ✅ SEC-014 ✅ SEC-015 ✅ | ✅ Complete |
-| Phase 4 | Replay hardening implementation (M2) | SEC-016 – SEC-022 | ⏳ Pending |
+| Phase 4 | Replay hardening implementation (M2) | SEC-016 ✅ SEC-017 ✅ SEC-018 ✅ SEC-019 ⏳ deferred SEC-020 ✅ SEC-021 ✅ SEC-022 ✅ | ✅ Complete for current external release slice |
+| Phase 5 | Deferred internal replay hardening follow-on | SEC-023 ⏳ | ⏳ Pending |
 
 ---
 
 ## Decision log
+
+### 2026-05-15 — SEC-023 added to make deferred continuation hardening explicit
+
+- Added `SEC-023` so engine-internal continuation dedup on `process-instance` is tracked as an
+  explicit follow-up task rather than only as deferred roadmap prose.
+- The deferred continuation scope is now spelled out as `ContinueFlowElementTriggerDTO`,
+  `StartFlowElementTriggerDTO`, and `EventSignalTriggerDTO`.
+- The current recommendation is to reuse the existing fixed-window dedup pattern with DTO-class +
+  `processInstanceId` namespacing and an initial `X-TaktX-Signature + payload` identity model.
+
+### 2026-05-15 — SEC-011 and SEC-012 completed; M5 threat model published
+
+- Added `docs/security-threat-model.md` as the public threat model for the current security baseline.
+- The threat model now documents security boundaries, trust assumptions, enforced controls,
+  Kafka/platform dependencies, anchored and community mode limitations, security-critical topics,
+  residual risks, and compensating controls.
+- `docs/security.md` and `SECURITY.md` now cross-link the threat model.
+- `docs/security-future-development-plan.md` now marks Workstream 4 / M5 complete.
+
+### 2026-05-15 — SEC-022 completed; M2 docs aligned with implementation
+
+- `docs/security.md` now reflects the live replay-hardening model rather than the earlier
+  entry-command-only scope.
+- The public docs now distinguish durable JWT `auditId` replay protection from the newer
+  fixed-window dedup for `ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`, and
+  `TopicMetaDTO`.
+- Default windows are documented as 10 minutes for the external process-instance response paths and
+  2 minutes for `topic-meta-requested`.
+- `security-future-development-plan.md` now marks M2 complete for the current external release
+  slice; `schedule-commands` remains intentionally deferred under SEC-019.
+
+### 2026-05-15 — SEC-021 completed
+
+- Added `PhaseOneDedupIntegrationTest` in `securityIntegrationTest`.
+- The integration suite now covers external-task responses, user-task responses, and
+  `topic-meta-requested` with the full first-pass / duplicate-reject / post-expiry re-accept
+  sequence against a real Kafka broker.
+- `schedule-commands` remains intentionally deferred with SEC-019 because the current release slice
+  hardens only the external-facing phase-1 paths.
+
+### 2026-05-15 — SEC-017 completed and SEC-020 implemented
+
+- `topic-meta-requested` ingress now runs through Kafka Streams before broker-admin side effects.
+- New `TopicMetaRequestIngressProcessor` performs authorization, request validation, duplicate
+  suppression, and auth-failure DLQ forwarding for `TopicMetaDTO` records.
+- `DynamicTopicManager` was slimmed down to accepted-request side effects, reconciliation, and the
+  preserved `topic-meta-actual` null-publication contract for rejections.
+- `TopologyProducer` now registers the `TOPIC_META_REQUEST_DEDUP` state store and wires the new
+  ingress processor with a 2-minute default dedup window.
+- Focused tests added for auth rejection, validation rejection, dedup, fallback identity, and
+  expiry handling on the `topic-meta-requested` path.
 
 ### 2026-05-14 — SEC-013, SEC-014, and SEC-015 implemented; Phase 3 complete
 
@@ -633,7 +786,7 @@ counter increment for the engine-internal `schedule-commands` path.
 
 **Tasks closed as superseded:** SEC-005, SEC-006, SEC-009.  
 **Tasks revised:** SEC-007 (replay → DLQ), SEC-008 (topic-meta → DLQ; schedule-commands → excluded-topic counter).  
-**Tasks unchanged:** SEC-010 (roadmap doc update), SEC-011 through SEC-022.
+**Tasks unchanged in that replanning step:** SEC-010 (roadmap doc update), SEC-011 through SEC-022.
 
 ### 2026-05-14 — SEC-004 implemented; Phase 0 complete
 
