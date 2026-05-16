@@ -91,12 +91,19 @@ public class TopicMetaRequestIngressProcessor
     try {
       var trustedSigner =
           engineAuthorizationService.authorizeTopicMetaRequest(inputRecord.headers(), topicMeta);
-      log.info(
-          "Accepted topic meta ingress key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
-          inputRecord.key(),
-          topicMeta.getTopicName(),
-          trustedSigner.getKeyId(),
-          trustedSigner.effectiveRole());
+      if (trustedSigner != null) {
+        log.info(
+            "Accepted topic meta ingress key='{}' topicName='{}' signerKeyId='{}' signerRole='{}' outcome='accepted'",
+            inputRecord.key(),
+            topicMeta.getTopicName(),
+            trustedSigner.getKeyId(),
+            trustedSigner.effectiveRole());
+      } else {
+        log.info(
+            "Accepted topic meta ingress key='{}' topicName='{}' outcome='accepted' (security disabled)",
+            inputRecord.key(),
+            topicMeta.getTopicName());
+      }
     } catch (AuthorizationTokenException e) {
       log.warn(
           "Rejected topic meta ingress key='{}' topicName='{}' signerKeyId='{}' outcome='rejected' reason='{}'",

@@ -95,13 +95,21 @@ public class ScheduleProcessor
       SigningKeyDTO trustedSigner =
           engineAuthorizationService.authorizeScheduleCommand(
               scheduleRecord.headers(), scheduleKey, value);
-      log.info(
-          "Accepted schedule command topic='{}' scheduleKey='{}' signerKeyId='{}' signerRole='{}' outcome='accepted' messageType='{}'",
-          scheduleTopicName,
-          scheduleKey,
-          trustedSigner.getKeyId(),
-          trustedSigner.effectiveRole(),
-          scheduleMessageType(value));
+      if (trustedSigner != null) {
+        log.info(
+            "Accepted schedule command topic='{}' scheduleKey='{}' signerKeyId='{}' signerRole='{}' outcome='accepted' messageType='{}'",
+            scheduleTopicName,
+            scheduleKey,
+            trustedSigner.getKeyId(),
+            trustedSigner.effectiveRole(),
+            scheduleMessageType(value));
+      } else {
+        log.info(
+            "Accepted schedule command topic='{}' scheduleKey='{}' outcome='accepted' (security disabled) messageType='{}'",
+            scheduleTopicName,
+            scheduleKey,
+            scheduleMessageType(value));
+      }
     } catch (AuthorizationTokenException e) {
       log.warn(
           "Rejected schedule command topic='{}' scheduleKey='{}' signerKeyId='{}' outcome='rejected' reason='{}' messageType='{}'",

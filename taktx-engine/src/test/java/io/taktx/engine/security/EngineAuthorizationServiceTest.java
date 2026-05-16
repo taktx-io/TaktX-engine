@@ -149,7 +149,21 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
+  void topicMetaRequest_securityDisabled_returnsNullWithoutCheckingSignature() {
+    // globalConfigStore has no config: both signingEnabled and engineRequiresAuthorization default
+    // to false.  No signature header is present — the method must return null, not throw.
+    TopicMetaDTO request =
+        new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
+
+    SigningKeyDTO result = service.authorizeTopicMetaRequest(new RecordHeaders(), request);
+
+    assertThat(result).isNull();
+  }
+
+  @Test
   void topicMetaRequest_trustedClientKeyAccepted() {
+    globalConfigStore.update(signingConfig());
+
     String keyId = "worker-topic-request-key";
     SigningKeyDTO keyEntry =
         SigningKeyDTO.builder()
@@ -172,6 +186,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void topicMetaRequest_missingSignatureRejected() {
+    globalConfigStore.update(signingConfig());
+
     TopicMetaDTO request =
         new TopicMetaDTO("tenant.ns.external-task-trigger-billing", 3, null, (short) 1);
 
@@ -182,6 +198,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void topicMetaRequest_revokedKeyRejected() {
+    globalConfigStore.update(signingConfig());
+
     String keyId = "revoked-topic-request-key";
     SigningKeyDTO keyEntry =
         SigningKeyDTO.builder()
@@ -205,6 +223,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void topicMetaRequest_untrustedKeyRejected() {
+    globalConfigStore.update(signingConfig());
+
     service =
         new EngineAuthorizationService(
             config, globalConfigStore, publicKeyProvider, kafkaStreams, (_, _) -> false);
@@ -231,7 +251,20 @@ class EngineAuthorizationServiceTest {
   }
 
   @Test
+  void scheduleCommand_securityDisabled_returnsNullWithoutCheckingSignature() {
+    // globalConfigStore has no config: both signingEnabled and engineRequiresAuthorization default
+    // to false.  No signature header is present — the method must return null, not throw.
+    SigningKeyDTO result =
+        service.authorizeScheduleCommand(
+            new RecordHeaders(), scheduleKey(), oneTimeSchedule(startCommand("proc", -1)));
+
+    assertThat(result).isNull();
+  }
+
+  @Test
   void scheduleCommand_trustedEngineKeyAccepted() {
+    globalConfigStore.update(signingConfig());
+
     String keyId = "engine-schedule-key";
     SigningKeyDTO keyEntry =
         SigningKeyDTO.builder()
@@ -253,6 +286,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void scheduleCommand_missingSignatureRejected() {
+    globalConfigStore.update(signingConfig());
+
     assertThatThrownBy(
             () ->
                 service.authorizeScheduleCommand(
@@ -263,6 +298,8 @@ class EngineAuthorizationServiceTest {
 
   @Test
   void scheduleCommand_clientKeyRejected() {
+    globalConfigStore.update(signingConfig());
+
     String keyId = "client-schedule-key";
     SigningKeyDTO keyEntry =
         SigningKeyDTO.builder()
@@ -675,6 +712,11 @@ class EngineAuthorizationServiceTest {
 
   private GlobalConfigurationDTO authorizationConfig() {
     return config(true, false, ReplayProtectionMode.COMPAT);
+  }
+
+  /** Config with only {@code signingEnabled=true} — used for topic-meta and schedule-commands. */
+  private GlobalConfigurationDTO signingConfig() {
+    return config(false, true, ReplayProtectionMode.COMPAT);
   }
 
   private GlobalConfigurationDTO config(boolean signingEnabled) {

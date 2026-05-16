@@ -286,14 +286,26 @@ public class EngineAuthorizationService {
   }
 
   /**
-   * Authorizes a `topic-meta-requested` record after the deserializer has already verified the
+   * Authorises a `topic-meta-requested` record after the deserializer has already verified the
    * Ed25519 signature cryptographically.
    *
-   * <p>Delegates key resolution, revoke check, and trust-policy evaluation to {@link
-   * VerificationCore}. A request must carry a valid {@code X-TaktX-Signature} whose key resolves to
-   * a trusted {@code CLIENT}-or-higher role.
+   * <p>Returns {@code null} when all security gates are disabled (both {@code signingEnabled} and
+   * {@code engineRequiresAuthorization} are {@code false} in the latest {@link
+   * GlobalConfigurationDTO}). This matches the opt-in posture of {@link #authorize}: no enforcement
+   * is applied until an operator explicitly enables it via the {@code taktx-configuration} topic.
+   *
+   * <p>When security is active, delegates key resolution, revoke check, and trust-policy evaluation
+   * to {@link VerificationCore}. A request must carry a valid {@code X-TaktX-Signature} whose key
+   * resolves to a trusted {@code CLIENT}-or-higher role.
    */
   public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    if (!cfg.isEngineRequiresAuthorization() && !cfg.isSigningEnabled()) {
+      log.debug(
+          "Security gates disabled — skipping signature enforcement for topic-meta-requested");
+      return null;
+    }
+
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.TOPIC_META_REQUESTED_TOPIC.getTopicName(), TopicMetaDTO.class);
@@ -314,12 +326,23 @@ public class EngineAuthorizationService {
    * Authorizes a {@code schedule-commands} record after the deserializer has already verified the
    * Ed25519 signature cryptographically.
    *
-   * <p>Delegates key resolution, revoke check, and trust-policy evaluation to {@link
-   * VerificationCore}. Requires a valid {@code X-TaktX-Signature} whose signing key resolves to a
-   * trusted {@code ENGINE} role.
+   * <p>Returns {@code null} when all security gates are disabled (both {@code signingEnabled} and
+   * {@code engineRequiresAuthorization} are {@code false} in the latest {@link
+   * GlobalConfigurationDTO}). This matches the opt-in posture of {@link #authorize}: no enforcement
+   * is applied until an operator explicitly enables it via the {@code taktx-configuration} topic.
+   *
+   * <p>When security is active, delegates key resolution, revoke check, and trust-policy evaluation
+   * to {@link VerificationCore}. Requires a valid {@code X-TaktX-Signature} whose signing key
+   * resolves to a trusted {@code ENGINE} role.
    */
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {
+    GlobalConfigurationDTO cfg = effectiveConfig();
+    if (!cfg.isEngineRequiresAuthorization() && !cfg.isSigningEnabled()) {
+      log.debug("Security gates disabled — skipping signature enforcement for schedule-commands");
+      return null;
+    }
+
     MessageSecurityPolicy policy =
         messageSecurityPolicyRegistry.resolve(
             Topics.SCHEDULE_COMMANDS.getTopicName(), MessageScheduleDTO.class);
