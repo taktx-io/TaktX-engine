@@ -31,58 +31,68 @@
     {
       "description": "Group all Quarkus platform and extension updates",
       "groupName": "quarkus",
-      "matchPackagePrefixes": ["io.quarkus"],
       "matchUpdateTypes": ["minor", "patch"],
-      "labels": ["dependencies", "quarkus"]
+      "labels": ["dependencies", "quarkus"],
+      "matchPackageNames": [
+        "io.quarkus{/,}**"
+      ]
     },
 
     {
       "description": "Group all Jackson modules and auto-merge minor/patch",
       "groupName": "jackson",
-      "matchPackagePrefixes": ["com.fasterxml.jackson"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "matchPackageNames": [
+        "com.fasterxml.jackson{/,}**"
+      ]
     },
 
     {
       "description": "Group all Spring Framework and Spring Boot updates (3.x and 4.x tracked separately in TOML)",
       "groupName": "spring",
-      "matchPackagePrefixes": ["org.springframework"],
       "matchUpdateTypes": ["minor", "patch"],
-      "labels": ["dependencies", "spring"]
+      "labels": ["dependencies", "spring"],
+      "matchPackageNames": [
+        "org.springframework{/,}**"
+      ]
     },
 
     {
       "description": "Group Apache Kafka client libraries",
       "groupName": "kafka",
-      "matchPackagePrefixes": ["org.apache.kafka"],
       "matchUpdateTypes": ["minor", "patch"],
-      "labels": ["dependencies", "kafka"]
+      "labels": ["dependencies", "kafka"],
+      "matchPackageNames": [
+        "org.apache.kafka{/,}**"
+      ]
     },
 
     {
       "description": "Group JJWT (JSON Web Token) libraries",
       "groupName": "jjwt",
-      "matchPackagePrefixes": ["io.jsonwebtoken"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "matchPackageNames": [
+        "io.jsonwebtoken{/,}**"
+      ]
     },
 
     {
       "description": "Group and auto-merge all testing libraries",
       "groupName": "testing",
-      "matchPackagePrefixes": [
-        "org.junit",
-        "org.assertj",
-        "org.mockito",
-        "org.testcontainers",
-        "org.awaitility"
-      ],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "matchPackageNames": [
+        "org.junit{/,}**",
+        "org.assertj{/,}**",
+        "org.mockito{/,}**",
+        "org.testcontainers{/,}**",
+        "org.awaitility{/,}**"
+      ]
     },
 
     {
