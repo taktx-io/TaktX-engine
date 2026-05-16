@@ -8,6 +8,7 @@
 package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -37,6 +38,11 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
   private Set<IoVariableMappingDTO> outputMappings;
 
+  // Business metadata — appended last for CBOR array backward compatibility
+  @Nullable private String businessKey;
+
+  private Set<String> tags;
+
   public StartCommandDTO(
       UUID processInstanceId,
       String elementId,
@@ -51,6 +57,8 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
         processDefinitionKey,
         variables,
         false,
+        Set.of(),
+        null,
         Set.of());
   }
 
@@ -63,6 +71,30 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
       VariablesDTO variables,
       boolean propagateAllToParent,
       Set<IoVariableMappingDTO> outputMappings) {
+    this(
+        processInstanceId,
+        parentProcessInstanceId,
+        elementId,
+        parentElementInstancePath,
+        processDefinitionKey,
+        variables,
+        propagateAllToParent,
+        outputMappings,
+        null,
+        Set.of());
+  }
+
+  public StartCommandDTO(
+      UUID processInstanceId,
+      UUID parentProcessInstanceId,
+      String elementId,
+      List<Long> parentElementInstancePath,
+      ProcessDefinitionKey processDefinitionKey,
+      VariablesDTO variables,
+      boolean propagateAllToParent,
+      Set<IoVariableMappingDTO> outputMappings,
+      @Nullable String businessKey,
+      Set<String> tags) {
     super(processInstanceId);
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.elementId = elementId;
@@ -71,5 +103,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
     this.variables = variables;
     this.propagateAllToParent = propagateAllToParent;
     this.outputMappings = outputMappings;
+    this.businessKey = businessKey;
+    this.tags = tags != null ? tags : Set.of();
   }
 }

@@ -1,22 +1,22 @@
 {
   "overall": {
-    "coverage": 73.25,
-    "covered": 8883,
-    "missed": 3244,
-    "total": 12127
+    "coverage": 72.36,
+    "covered": 8824,
+    "missed": 3370,
+    "total": 12194
   },
   "modules": {
     "taktx-engine": {
-      "coverage": 85.46,
-      "covered": 7260,
-      "missed": 1235,
-      "total": 8495
+      "coverage": 85.65,
+      "covered": 7327,
+      "missed": 1228,
+      "total": 8555
     },
     "taktx-client": {
-      "coverage": 36.88,
-      "covered": 832,
-      "missed": 1424,
-      "total": 2256
+      "coverage": 31.29,
+      "covered": 708,
+      "missed": 1555,
+      "total": 2263
     },
     "taktx-client-quarkus": {
       "coverage": 53.95,
@@ -37,9 +37,9 @@
       "total": 59
     },
     "taktx-shared": {
-      "coverage": 57.87,
-      "covered": 684,
-      "missed": 498,
+      "coverage": 57.7,
+      "covered": 682,
+      "missed": 500,
       "total": 1182
     }
   }

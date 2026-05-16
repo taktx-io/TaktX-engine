@@ -794,6 +794,39 @@ public class TaktXClient {
   }
 
   /**
+   * Starts a new process instance with optional business metadata (latest version).
+   *
+   * @param businessKey optional business identifier for this instance; trimmed, empty treated as
+   *     {@code null}, max 512 characters
+   * @param tags optional immutable operational labels; normalised to lowercase, max 20 tags, max 64
+   *     characters each, allowed characters: {@code a-z 0-9 . _ -}
+   */
+  public UUID startProcess(
+      String process, VariablesDTO variables, @Nullable String businessKey, Set<String> tags) {
+    return processInstanceProducer.startProcess(process, variables, businessKey, tags);
+  }
+
+  /**
+   * Starts a new process instance with optional business metadata and a Platform Service
+   * authorization token.
+   *
+   * @param businessKey optional business identifier; see {@link #startProcess(String, VariablesDTO,
+   *     String, Set)} for rules
+   * @param tags optional immutable operational labels; see above for rules
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   */
+  public UUID startProcess(
+      String process,
+      int version,
+      VariablesDTO variables,
+      @Nullable String businessKey,
+      Set<String> tags,
+      @Nullable String authorizationToken) {
+    return processInstanceProducer.startProcess(
+        process, version, variables, businessKey, tags, authorizationToken);
+  }
+
+  /**
    * Sends a message event to the engine.
    *
    * @param messageEventDTO The message event DTO containing the message details.

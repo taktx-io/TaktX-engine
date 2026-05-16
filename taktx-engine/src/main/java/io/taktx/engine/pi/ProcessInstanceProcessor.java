@@ -168,7 +168,31 @@ public class ProcessInstanceProcessor
           // Record end-to-end latency using Kafka timestamp
           processingStatistics.recordProcessInstanceLatency(
               kafkaTimestamp, trigger.getClass().getSimpleName());
-          processStartCommandRecord(triggerRecord.key(), startCommand);
+
+          // Validate and normalise business metadata before any state is created.
+          // Failures emit a DLQ entry and abort — matching the authorization-failure pattern.
+          // Doing this here (not inside processStartCommandRecord) ensures the envelope and headers
+          // are available for the DLQ emit and that no half-initialised thread-locals are left
+          // behind if validation fails before processInstanceThreadLocal is set.
+          String businessKey;
+          Set<String> tags;
+          try {
+            businessKey =
+                BusinessMetadataValidator.validateBusinessKey(startCommand.getBusinessKey());
+            tags = BusinessMetadataValidator.validateTags(startCommand.getTags());
+          } catch (IllegalArgumentException e) {
+            log.warn("⛔ Start command rejected — invalid business metadata: {}", e.getMessage());
+            emitProcessInstanceDlq(
+                triggerRecord.key(),
+                triggerRecord.headers(),
+                triggerEnvelope,
+                "INVALID_BUSINESS_METADATA",
+                e.getMessage(),
+                "PROCESSOR");
+            return;
+          }
+
+          processStartCommandRecord(triggerRecord.key(), startCommand, businessKey, tags);
         }
         case SetVariableTriggerDTO setVariableTrigger -> {
           // Record end-to-end latency using Kafka timestamp
@@ -202,8 +226,26 @@ public class ProcessInstanceProcessor
             throw new IllegalArgumentException("Unknown trigger type: " + trigger.getClass());
       }
     } catch (Throwable t) { // NOSONAR
-      handleIncident(t);
-      log.error("Internal error occurred for", t);
+      // Always emit a DLQ entry so the original message is preserved regardless of whether
+      // the process instance state was initialised.  For escaped Throwables (typically
+      // java.lang.Error subclasses that bypass doWhileCatching's catch(Exception), or a
+      // secondary failure inside processResultAndForward's finally block) the DLQ entry is
+      // the only reliable notification if the state-update channel cannot be used.
+      String dlqEntryRef = buildDlqEntryRef(triggerEnvelope.data());
+      emitProcessInstanceDlq(
+          triggerRecord.key(),
+          triggerRecord.headers(),
+          triggerEnvelope,
+          "INTERNAL_ENGINE_ERROR",
+          t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName(),
+          "PROCESSOR");
+      if (processInstanceThreadLocal.get() != null
+          && processInstanceProcessingContextThreadLocal.get() != null) {
+        // Process instance state is fully initialised — additionally record an incident so the
+        // process is left in INCIDENT state and the DLQ cross-reference is stored alongside it.
+        handleIncident(t, dlqEntryRef);
+      }
+      log.error("Internal error occurred", t);
     } finally {
       processDefinitionKeyThreadLocal.remove();
       processInstanceThreadLocal.remove();
@@ -212,7 +254,7 @@ public class ProcessInstanceProcessor
     }
   }
 
-  private void handleIncident(Throwable t) {
+  private void handleIncident(Throwable t, String dlqEntryRef) {
     ProcessInstance processInstance = processInstanceThreadLocal.get();
     ProcessDefinitionKey processDefinitionKey = processDefinitionKeyThreadLocal.get();
     VariableScope variableScope = variableScopeThreadLocal.get();
@@ -227,7 +269,7 @@ public class ProcessInstanceProcessor
               Arrays.stream(t.getStackTrace())
                   .map(StackTraceElement::toString)
                   .toArray(String[]::new),
-              null)); // no DLQ entry emitted for engine-internal exceptions
+              dlqEntryRef)); // cross-reference to the DLQ entry emitted in the outer catch
       processResultAndForward(
           processInstanceProcessingContext, processDefinitionKey, scope, variableScope);
     }
@@ -305,7 +347,8 @@ public class ProcessInstanceProcessor
     return "AUTHORIZATION_FAILED";
   }
 
-  private void processStartCommandRecord(UUID processInstanceId, StartCommandDTO startCommand) {
+  private void processStartCommandRecord(
+      UUID processInstanceId, StartCommandDTO startCommand, String businessKey, Set<String> tags) {
     processingStatistics.startTimerForProcessInstance(processInstanceId);
     processingStatistics.increaseProcessInstancesStarted();
 
@@ -348,7 +391,9 @@ public class ProcessInstanceProcessor
             processDefinitionKey,
             scope,
             startCommand.isPropagateAllToParent(),
-            ioVariableMappings);
+            ioVariableMappings,
+            businessKey,
+            tags);
     processInstanceThreadLocal.set(processInstance);
 
     InstanceResult instanceResult = InstanceResult.empty();
@@ -414,7 +459,13 @@ public class ProcessInstanceProcessor
 
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
-        new ProcessInstanceUpdateDTO(processInstanceDTO, variables, clock.millis(), null));
+        new ProcessInstanceUpdateDTO(
+            processInstanceDTO,
+            variables,
+            clock.millis(),
+            null,
+            processInstance.getBusinessKey(),
+            processInstance.getTags()));
   }
 
   private InstanceUpdate processInstanceToUpdate(

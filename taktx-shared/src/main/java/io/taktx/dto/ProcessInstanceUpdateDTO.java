@@ -8,7 +8,9 @@
 package io.taktx.dto;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -36,6 +38,11 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   private Long processStartTime;
   private Long processEndTime;
 
+  // Business metadata — appended last for CBOR array backward compatibility
+  @Nullable private String businessKey;
+
+  private Set<String> tags;
+
   public ProcessInstanceUpdateDTO(
       UUID parentProcessInstanceId,
       List<Long> parentElementInstancePath,
@@ -45,7 +52,30 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
       VariablesDTO variables,
       Long processStartTime,
       Long processEndTime) {
+    this(
+        parentProcessInstanceId,
+        parentElementInstancePath,
+        processDefinitionKey,
+        incidentInfoDTO,
+        scope,
+        variables,
+        processStartTime,
+        processEndTime,
+        null,
+        Set.of());
+  }
 
+  public ProcessInstanceUpdateDTO(
+      UUID parentProcessInstanceId,
+      List<Long> parentElementInstancePath,
+      ProcessDefinitionKey processDefinitionKey,
+      IncidentInfoDTO incidentInfoDTO,
+      ScopeDTO scope,
+      VariablesDTO variables,
+      Long processStartTime,
+      Long processEndTime,
+      @Nullable String businessKey,
+      Set<String> tags) {
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
     this.processDefinitionKey = processDefinitionKey;
@@ -54,6 +84,8 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
     this.variables = variables;
     this.processStartTime = processStartTime;
     this.processEndTime = processEndTime;
+    this.businessKey = businessKey;
+    this.tags = tags != null ? tags : Set.of();
   }
 
   public ProcessInstanceUpdateDTO(
@@ -69,6 +101,32 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
         processInstance.getScope(),
         variables,
         processStartTime,
-        processEndTime);
+        processEndTime,
+        null,    // businessKey — only emitted on the initial start update
+        Set.of()); // tags — only emitted on the initial start update
+  }
+
+  /**
+   * Convenience constructor for the initial start update that includes business metadata.
+   * Subsequent state-change updates should use the 4-arg constructor which omits them.
+   */
+  public ProcessInstanceUpdateDTO(
+      ProcessInstanceDTO processInstance,
+      VariablesDTO variables,
+      Long processStartTime,
+      Long processEndTime,
+      @Nullable String businessKey,
+      Set<String> tags) {
+    this(
+        processInstance.getParentProcessInstanceId(),
+        processInstance.getParentElementInstancePath(),
+        processInstance.getProcessDefinitionKey(),
+        processInstance.getIncidentInfo(),
+        processInstance.getScope(),
+        variables,
+        processStartTime,
+        processEndTime,
+        businessKey,
+        tags);
   }
 }

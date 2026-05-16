@@ -12,6 +12,7 @@ import static io.taktx.engine.dlq.DlqHeaders.REASON_HINT;
 import static io.taktx.engine.dlq.DlqHeaders.REASON_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +33,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -47,11 +49,12 @@ class ProcessInstanceProcessorDlqTest {
 
   private ProcessorContext<Object, Object> context;
   private EngineAuthorizationService engineAuthorizationService;
+  private DefinitionsCache definitionsCache;
   private ProcessInstanceProcessor processor;
 
   @BeforeEach
   void setUp() {
-    DefinitionsCache definitionsCache = mock(DefinitionsCache.class);
+    definitionsCache = mock(DefinitionsCache.class);
     DefinitionMapper definitionMapper = mock(DefinitionMapper.class);
     ProcessInstanceMapper instanceMapper = mock(ProcessInstanceMapper.class);
     Forwarder forwarder = mock(Forwarder.class);
@@ -230,5 +233,119 @@ class ProcessInstanceProcessorDlqTest {
         .isEqualTo("SIGNATURE_KEY_UNKNOWN");
     assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("PROCESSOR");
+  }
+
+  @Test
+  void process_invalidBusinessKey_emitsDlqEntryWithInvalidBusinessMetadataHint() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {7, 8, 9};
+    RecordHeaders headers = new RecordHeaders();
+    // businessKey longer than 512 chars
+    String tooLongKey = "a".repeat(513);
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty(),
+            false,
+            Set.of(),
+            tooLongKey,
+            Set.of());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+
+    processor.process(new Record<>(processInstanceId, envelope, 10L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+
+    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("INVALID_BUSINESS_METADATA");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("PROCESSOR");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("businessKey exceeds maximum length");
+  }
+
+  @Test
+  void process_invalidTag_emitsDlqEntryWithInvalidBusinessMetadataHint() {
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {11, 12, 13};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty(),
+            false,
+            Set.of(),
+            null,
+            Set.of("invalid tag with spaces"));
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+
+    processor.process(new Record<>(processInstanceId, envelope, 10L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+
+    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("INVALID_BUSINESS_METADATA");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("illegal characters");
+  }
+
+  @Test
+  void process_preInitialisationException_emitsDlqEntryWithInternalEngineErrorHint() {
+    // Simulate a failure that occurs before processInstanceThreadLocal is populated —
+    // e.g. the definitions cache/store is unavailable when processing a valid StartCommand.
+    // Prior to the fix, handleIncident() would silently drop the message because the
+    // processInstance thread-local was null.  After the fix, a DLQ entry must be emitted.
+    UUID processInstanceId = UUID.randomUUID();
+    byte[] payload = new byte[] {21, 22, 23};
+    RecordHeaders headers = new RecordHeaders();
+    StartCommandDTO trigger =
+        new StartCommandDTO(
+            processInstanceId,
+            null,
+            null,
+            new ProcessDefinitionKey("proc", -1),
+            VariablesDTO.empty());
+    ProcessInstanceTriggerEnvelope envelope =
+        new ProcessInstanceTriggerEnvelope(payload, trigger, false, null);
+    when(engineAuthorizationService.authorize(headers, envelope)).thenReturn(null);
+    // Make the definitions cache blow up before processInstanceThreadLocal is set
+    doThrow(new RuntimeException("simulated store failure"))
+        .when(definitionsCache)
+        .computeIfAbsent(any(), any());
+
+    processor.process(new Record<>(processInstanceId, envelope, 55L, headers));
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(context).forward(recordCaptor.capture());
+    ProcessInstanceDlqEntryDTO dlqEntry =
+        (ProcessInstanceDlqEntryDTO) recordCaptor.getValue().value();
+
+    assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
+        .isEqualTo("INTERNAL_ENGINE_ERROR");
+    assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
+        .isEqualTo("PROCESSOR");
+    assertThat(new String(dlqEntry.getHeaders().get(REASON_TEXT), StandardCharsets.UTF_8))
+        .contains("simulated store failure");
   }
 }

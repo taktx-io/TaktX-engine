@@ -21,6 +21,7 @@ import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -81,14 +82,56 @@ public class ProcessInstanceProducer {
       int version,
       VariablesDTO variables,
       @Nullable String authorizationToken) {
+    return startProcess(
+        processDefinitionId, version, variables, null, Set.of(), authorizationToken);
+  }
+
+  /**
+   * Starts a new process instance with optional business metadata.
+   *
+   * @param businessKey optional business identifier for this instance; trimmed, empty treated as
+   *     {@code null}, max 512 characters
+   * @param tags optional immutable operational labels; normalised to lowercase, max 20 tags, max 64
+   *     characters each, allowed characters: {@code a-z 0-9 . _ -}
+   */
+  public UUID startProcess(
+      String processDefinitionId,
+      VariablesDTO variables,
+      @Nullable String businessKey,
+      Set<String> tags) {
+    return startProcess(processDefinitionId, -1, variables, businessKey, tags, null);
+  }
+
+  /**
+   * Starts a new process instance with optional business metadata and a Platform Service
+   * authorization token.
+   *
+   * @param businessKey optional business identifier; see {@link #startProcess(String, VariablesDTO,
+   *     String, Set)} for rules
+   * @param tags optional immutable operational labels; see above for rules
+   * @param authorizationToken RS256 JWT from the Platform Service, or {@code null} for
+   *     unauthenticated deployments
+   */
+  public UUID startProcess(
+      String processDefinitionId,
+      int version,
+      VariablesDTO variables,
+      @Nullable String businessKey,
+      Set<String> tags,
+      @Nullable String authorizationToken) {
     UUID processInstanceId = UUID.randomUUID();
     StartCommandDTO startCommand =
         new StartCommandDTO(
             processInstanceId,
             null,
             null,
+            null,
             new ProcessDefinitionKey(processDefinitionId, version),
-            variables);
+            variables,
+            false,
+            Set.of(),
+            businessKey,
+            tags != null ? tags : Set.of());
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord =
         new ProducerRecord<>(
             kafkaPropertiesHelper.getPrefixedTopicName(
@@ -172,7 +215,7 @@ public class ProcessInstanceProducer {
   }
 
   private void attachAuthorizationHeader(
-      ProducerRecord<UUID, ProcessInstanceTriggerDTO> record,
+      ProducerRecord<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerRecord,
       @Nullable String explicitAuthorizationToken,
       CommandAuthorizationRequest authorizationRequest) {
     String authorizationToken = explicitAuthorizationToken;
@@ -180,7 +223,7 @@ public class ProcessInstanceProducer {
       authorizationToken = resolveAuthorizationToken(authorizationRequest);
     }
     if (authorizationToken != null && !authorizationToken.isBlank()) {
-      record
+      processInstanceTriggerRecord
           .headers()
           .add(Constants.HEADER_AUTHORIZATION, authorizationToken.getBytes(StandardCharsets.UTF_8));
     }

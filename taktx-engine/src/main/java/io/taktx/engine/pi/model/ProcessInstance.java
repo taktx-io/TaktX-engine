@@ -11,6 +11,7 @@ package io.taktx.engine.pi.model;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pi.IncidentInfo;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -28,6 +29,10 @@ public class ProcessInstance {
   private final Set<IoVariableMapping> outputMappings;
   @Setter private IncidentInfo incidentInfo;
 
+  // Business metadata — immutable after construction
+  @Nullable private final String businessKey;
+  private final Set<String> tags;
+
   public ProcessInstance(
       UUID processInstanceId,
       UUID parentProcessInstanceId,
@@ -35,7 +40,9 @@ public class ProcessInstance {
       ProcessDefinitionKey processDefinitionKey,
       Scope scope,
       boolean propagateAllToParent,
-      Set<IoVariableMapping> outputMappings) {
+      Set<IoVariableMapping> outputMappings,
+      @Nullable String businessKey,
+      Set<String> tags) {
     this.processInstanceId = processInstanceId;
     this.parentProcessInstanceId = parentProcessInstanceId;
     this.parentElementInstancePath = parentElementInstancePath;
@@ -43,5 +50,7 @@ public class ProcessInstance {
     this.scope = scope;
     this.propagateAllToParent = propagateAllToParent;
     this.outputMappings = outputMappings;
+    this.businessKey = businessKey;
+    this.tags = tags != null ? tags : Set.of();
   }
 }
