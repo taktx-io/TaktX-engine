@@ -102,7 +102,7 @@ public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
         variables,
         processStartTime,
         processEndTime,
-        null,    // businessKey — only emitted on the initial start update
+        null, // businessKey — only emitted on the initial start update
         Set.of()); // tags — only emitted on the initial start update
   }
 

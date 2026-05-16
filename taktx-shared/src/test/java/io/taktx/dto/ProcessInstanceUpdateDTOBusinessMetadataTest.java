@@ -14,9 +14,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /**
- * Guards the contract that businessKey and tags are only present on the initial start update
- * (6-arg ProcessInstanceDTO constructor) and are explicitly absent on every subsequent
- * state-change update (4-arg ProcessInstanceDTO constructor).
+ * Guards the contract that businessKey and tags are only present on the initial start update (6-arg
+ * ProcessInstanceDTO constructor) and are explicitly absent on every subsequent state-change update
+ * (4-arg ProcessInstanceDTO constructor).
  */
 class ProcessInstanceUpdateDTOBusinessMetadataTest {
 
@@ -43,7 +43,13 @@ class ProcessInstanceUpdateDTOBusinessMetadataTest {
     ProcessInstanceDTO dto = buildDto("order-42", Set.of("region.eu", "priority.high"));
 
     ProcessInstanceUpdateDTO update =
-        new ProcessInstanceUpdateDTO(dto, VariablesDTO.empty(), 1_000L, null, "order-42", Set.of("region.eu", "priority.high"));
+        new ProcessInstanceUpdateDTO(
+            dto,
+            VariablesDTO.empty(),
+            1_000L,
+            null,
+            "order-42",
+            Set.of("region.eu", "priority.high"));
 
     assertThat(update.getBusinessKey()).isEqualTo("order-42");
     assertThat(update.getTags()).containsExactlyInAnyOrder("region.eu", "priority.high");
@@ -54,7 +60,8 @@ class ProcessInstanceUpdateDTOBusinessMetadataTest {
     ProcessInstanceDTO dto = buildDto(null, Set.of("env.prod"));
 
     ProcessInstanceUpdateDTO update =
-        new ProcessInstanceUpdateDTO(dto, VariablesDTO.empty(), 1_000L, null, null, Set.of("env.prod"));
+        new ProcessInstanceUpdateDTO(
+            dto, VariablesDTO.empty(), 1_000L, null, null, Set.of("env.prod"));
 
     assertThat(update.getBusinessKey()).isNull();
     assertThat(update.getTags()).containsExactly("env.prod");
@@ -96,9 +103,7 @@ class ProcessInstanceUpdateDTOBusinessMetadataTest {
     assertThat(update.getBusinessKey())
         .as("businessKey must be null on state-change updates")
         .isNull();
-    assertThat(update.getTags())
-        .as("tags must be empty on state-change updates")
-        .isEmpty();
+    assertThat(update.getTags()).as("tags must be empty on state-change updates").isEmpty();
   }
 
   @Test
@@ -122,7 +127,16 @@ class ProcessInstanceUpdateDTOBusinessMetadataTest {
     ProcessDefinitionKey key = new ProcessDefinitionKey("billing-process", 3);
     ProcessInstanceDTO dto =
         new ProcessInstanceDTO(
-            UUID.randomUUID(), null, null, null, key, false, Set.of(), null, "some-bk", Set.of("t1"));
+            UUID.randomUUID(),
+            null,
+            null,
+            null,
+            key,
+            false,
+            Set.of(),
+            null,
+            "some-bk",
+            Set.of("t1"));
 
     ProcessInstanceUpdateDTO update =
         new ProcessInstanceUpdateDTO(dto, VariablesDTO.empty(), null, 5_000L);
@@ -135,4 +149,3 @@ class ProcessInstanceUpdateDTOBusinessMetadataTest {
     assertThat(update.getTags()).isEmpty();
   }
 }
-
