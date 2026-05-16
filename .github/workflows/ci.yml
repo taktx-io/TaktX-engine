@@ -8,20 +8,21 @@
 name: Java CI with Gradle
 
 on:
+  # Run on every push to main (post-merge verification).
   push:
     branches:
       - main
-      - 'feature/**'
-      - 'fix/**'
-      - 'release/**'
+  # Run on every PR opened, updated, or reopened — regardless of the source
+  # branch name.  This covers feature/*, fix/*, hotfix/*, dependabot/*, renovate/*
+  # and any other naming convention without having to enumerate them.
+  # Targeting main AND release/** ensures release-branch work is also tested.
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'release/**'
 
 jobs:
   build:
-    # Skip this job if it's a pull_request event on a branch that belongs to the same repository
-    # This prevents duplicate runs when pushing to a feature branch with an open PR
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
