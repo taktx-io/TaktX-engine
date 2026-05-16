@@ -1,5 +1,5 @@
 [versions]
-quarkus = "3.34.5"
+quarkus = "3.35.3"
 jackson = "2.21.3"
 cronutils = "9.2.1"
 lombok = "1.18.46"
