@@ -150,7 +150,7 @@ class JsonDeserializerTest {
 
     assertThatThrownBy(() -> deser.deserialize("test-topic", new RecordHeaders(), valueBytes))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no X-TaktX-Signature header");
+        .hasMessageContaining("no tx-sig header");
   }
 
   // ── isKey=true, signingRequired=true: missing header still passes ─────────
@@ -196,6 +196,6 @@ class JsonDeserializerTest {
     RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
     assertThatThrownBy(() -> deser.deserialize("test-topic", new RecordHeaders(), valueBytes))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no X-TaktX-Signature header");
+        .hasMessageContaining("no tx-sig header");
   }
 }

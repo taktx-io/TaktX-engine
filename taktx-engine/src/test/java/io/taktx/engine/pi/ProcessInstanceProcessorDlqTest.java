@@ -112,7 +112,7 @@ class ProcessInstanceProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {1, 2, 3};
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Authorization", "jwt-token".getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-auth", "jwt-token".getBytes(StandardCharsets.UTF_8));
     StartCommandDTO trigger =
         new StartCommandDTO(
             processInstanceId,
@@ -137,7 +137,7 @@ class ProcessInstanceProcessorDlqTest {
     assertThat(dlqEntry.getProcessInstanceId()).isEqualTo(processInstanceId);
     assertThat(dlqEntry.getData()).containsExactly(payload);
     assertThat(dlqEntry.getHeaders())
-        .containsKey("X-TaktX-Authorization")
+        .containsKey("tx-auth")
         .containsKey(REASON_HINT)
         .containsKey(REASON_TEXT)
         .containsKey(CAPTURE_STAGE);
@@ -204,7 +204,7 @@ class ProcessInstanceProcessorDlqTest {
     UUID processInstanceId = UUID.randomUUID();
     byte[] payload = new byte[] {4, 5, 6};
     RecordHeaders headers = new RecordHeaders();
-    headers.add("X-TaktX-Signature", "worker-key.AABB".getBytes(StandardCharsets.UTF_8));
+    headers.add("tx-sig", "worker-key.AABB".getBytes(StandardCharsets.UTF_8));
     StartCommandDTO trigger =
         new StartCommandDTO(
             processInstanceId,

@@ -27,6 +27,8 @@ Eliminate the positional-array brittleness that blocks schema evolution.
 5. **`protobuf-java-lite` everywhere.** The full runtime is not needed; lite is smaller (~175 KB) and GraalVM-native-friendly.
 6. **Tests are acceptance criteria.** Every backlog item has an explicit testing requirement; items without it are not done.
 7. **Kafka state-store KEYS are never protobuf.** Protobuf bytes are not byte-lexicographically ordered; range queries on protobuf-serialized keys would silently return wrong results. All range-queryable store keys keep their explicit big-endian binary layout. See E4.12 for the full treatment.
+8. **Do not introduce new Sonar warnings; fix easy wins as you go.** Every story must leave the Sonar issue count for touched files the same or lower than before the story started. Fix obvious issues encountered while editing a file (e.g. duplicate string literals → constant, magic numbers → named constant, missing `@Override`, unnecessary `null` checks after safe API calls). Do **not** start a heavy refactoring solely to resolve a Sonar issue — if a fix requires touching more than ~5 lines unrelated to the current story, raise it as a separate issue instead.
+9. **Each story is implemented in a fresh AI session.** The plan document is the single source of truth. Begin every implementation session by re-reading the relevant story and its dependencies from this file. Do not rely on context carried over from a planning session — it will be stale or truncated. Mark acceptance criteria `[x]` as each is verified; commit the updated plan alongside the implementation so progress is always visible in version control.
 
 ---
 
@@ -89,6 +91,7 @@ Author all `.proto` files under `taktx-shared/src/main/proto/`. These become the
 - [ ] All `.proto` files compile without warnings via `protoc`.
 - [ ] Every existing DTO class in `taktx-shared/src/main/java/io/taktx/dto` has a 1:1 corresponding proto message (ignoring abstract base classes which become embedded `*Base` messages or are flattened).
 - [ ] Design review sign-off from maintainer before PROTO-1.2 starts.
+- [ ] No new Sonar issues introduced in any `.proto` file or hand-authored companion classes created during this story.
 
 **Dependencies:** none  
 **Estimate:** 4 days
@@ -254,6 +257,7 @@ public final class Variables {
 - [ ] Unit test: `Variables.toJavaObject(Variables.of(42L))` returns `Long 42`.
 - [ ] Unit test: `Variables.of(Object)` handles `java.util.Map<String,Object>`, `java.util.List<Object>`, `String`, `Long`, `Double`, `Boolean`, `null`.
 - [ ] Size assertion test: a map of 3 typical variables (`{"amount": 100, "name": "Alice", "active": true}`) encodes in ≤ 40 bytes.
+- [ ] No new Sonar issues in `Variables.java` or `variables.proto`.
 
 **Dependencies:** PROTO-1.1, PROTO-1.2  
 **Estimate:** 1.5 days
@@ -339,6 +343,7 @@ Create concrete subclasses for each top-level envelope type (e.g., `ProcessInsta
 - [ ] Unit test: `ProtoSerializer` + `ProtoDeserializer` round-trip for each of the 10 top-level envelope types.
 - [ ] Unit test: `null` input serializes to `null`; `null` input deserializes to `null`.
 - [ ] Unit test: corrupted bytes cause `InvalidProtocolBufferException`; the deserializer wraps it in a `DeserializationResult.failure(...)` (see PROTO-3.2).
+- [ ] No new Sonar issues in `ProtoSerializer.java` or `ProtoDeserializer.java`.
 
 **Dependencies:** PROTO-1.2  
 **Estimate:** 0.5 day
@@ -411,6 +416,7 @@ Key stores to migrate (based on existing imports):
 - [ ] `grep "ObjectMapperSerde" taktx-engine/src/main/java` returns zero results.
 - [ ] `./gradlew :taktx-engine:build` succeeds.
 - [ ] All Kafka Streams unit tests using `TopologyTestDriver` pass.
+- [ ] Sonar issue delta for `TopologyProducer.java` is zero or negative (easy wins fixed, no new issues added).
 
 **Dependencies:** PROTO-3.1, PROTO-3.2, E4.2–E4.11 must be complete before this compiles  
 **Estimate:** 1 day
@@ -648,6 +654,7 @@ The current DTOs each declare `@RegisterForReflection`. Proto-lite generated cla
 - [ ] Unit test: `UserTaskInstanceResponder.complete(...)` produces a binary payload parseable as `UserTaskResponseTriggerEnvelope`.
 - [ ] Unit test: `VariableParameterResolver` resolves a `VariableValue` from an inbound record.
 - [ ] All existing 110 source files in `taktx-client/src` compile without Jackson imports.
+- [ ] No new Sonar issues introduced across the `taktx-client` module; trivial existing issues in touched files resolved opportunistically.
 
 **Dependencies:** E3, E4.8  
 **Estimate:** 1.5 days
@@ -773,6 +780,7 @@ Scope of the full suite:
 - [ ] `./gradlew check` is green with zero failures and zero skipped tests.
 - [ ] `./gradlew :taktx-engine:securityIntegrationTest` passes (Ed25519 signing with proto payloads).
 - [ ] Code coverage does not drop below pre-migration levels.
+- [ ] Sonar quality gate passes (no new Blocker or Critical issues; overall issue count does not increase relative to pre-migration baseline).
 
 **Dependencies:** All preceding epics  
 **Estimate:** 1 day (buffer for fixing edge cases)

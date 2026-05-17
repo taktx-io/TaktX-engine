@@ -69,7 +69,7 @@ The engine remains authoritative for:
 
 - destination topic safety
 - schema compatibility enforcement
-- replay signing (`X-TaktX-Signature` is always replaced by the engine)
+- replay signing (`tx-sig` is always replaced by the engine)
 - trust-policy enforcement
 - security validation of inbound messages
 
@@ -629,10 +629,10 @@ When replay succeeds, the engine forwards a **new** record, not an edited re-sen
 
 | Header | Meaning |
 |---|---|
-| `X-DLQ-Lineage-Ref` | Original `dlqEntryRef` |
-| `X-DLQ-Correction-Id` | Replay attempt ID |
-| `X-DLQ-Source-Offset` | Original source offset |
-| `X-TaktX-Signature` | Fresh engine-generated signature |
+| `dlq-lin` | Original `dlqEntryRef` |
+| `dlq-cid` | Replay attempt ID |
+| `dlq-off` | Original source offset |
+| `tx-sig` | Fresh engine-generated signature |
 
 ### Critical implementation rule
 
@@ -676,22 +676,22 @@ The console must assume DLQ content can contain:
 
 The live codebase uses:
 
-- `X-TaktX-Authorization` for JWT authorization
-- `X-TaktX-Signature` for Ed25519 signatures
+- `tx-auth` for JWT authorization
+- `tx-sig` for Ed25519 signatures
 
 Some older examples use `Authorization` in sample payloads. The console should therefore:
 
 - treat headers generically
-- specifically recognize and protect `X-TaktX-Authorization`
-- specifically recognize and protect `X-TaktX-Signature`
+- specifically recognize and protect `tx-auth`
+- specifically recognize and protect `tx-sig`
 - not hardcode `Authorization` as the only auth header name
 
 ## 12.3 Replay header editing rule
 
 The operator may edit auth-related headers if replay requires correction, but:
 
-- the console must not require or encourage editing `X-TaktX-Signature`
-- if the operator includes `X-TaktX-Signature`, the engine replaces it anyway
+- the console must not require or encourage editing `tx-sig`
+- if the operator includes `tx-sig`, the engine replaces it anyway
 - the UI should either hide that field from editing or mark it read-only/ignored
 
 ## 12.4 Operator identity
@@ -988,7 +988,7 @@ A release should not be considered complete until all of the following are true.
 - [ ] Live replay submission works
 - [ ] `SUCCESS` and `FAILED` are shown correctly
 - [ ] `OPERATOR_OVERRIDE` requires justification
-- [ ] `X-TaktX-Signature` is not operator-editable as a meaningful input
+- [ ] `tx-sig` is not operator-editable as a meaningful input
 
 ### Security UX
 
@@ -1029,8 +1029,8 @@ A release should not be considered complete until all of the following are true.
 
 ## 17.4 Security UX
 
-- masked rendering of `X-TaktX-Authorization`
-- hidden/ignored `X-TaktX-Signature` in correction UI
+- masked rendering of `tx-auth`
+- hidden/ignored `tx-sig` in correction UI
 - low-privilege user blocked from replay action
 
 ## 17.5 Observability

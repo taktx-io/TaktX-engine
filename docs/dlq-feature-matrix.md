@@ -51,7 +51,7 @@ The boundary is designed to be:
 | `STRICT` validation policy | ✅ | ✅ |
 | `OPERATOR_OVERRIDE` validation policy | ✅ | ✅ |
 | Destination topic safety enforcement (engine-side) | ✅ | ✅ |
-| Lineage headers (`X-DLQ-Lineage-Ref`, `X-DLQ-Correction-Id`, `X-DLQ-Source-Offset`) | ✅ | ✅ |
+| Lineage headers (`dlq-lin`, `dlq-cid`, `dlq-off`) | ✅ | ✅ |
 
 ### Epic E4 — Observability
 

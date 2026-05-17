@@ -61,7 +61,7 @@ class SigningFixtureGenerator {
       }
 
       // Extract the header value
-      byte[] headerBytes = headers.lastHeader("X-TaktX-Signature").value();
+      byte[] headerBytes = headers.lastHeader("tx-sig").value();
       String headerValue = new String(headerBytes, java.nio.charset.StandardCharsets.UTF_8);
 
       // Verify before printing so we know the fixture is self-consistent

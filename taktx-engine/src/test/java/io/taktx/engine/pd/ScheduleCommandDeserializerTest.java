@@ -46,7 +46,7 @@ class ScheduleCommandDeserializerTest {
 
     assertThatThrownBy(() -> deserializer.deserialize(TOPIC, new RecordHeaders(), payload))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no X-TaktX-Signature header");
+        .hasMessageContaining("no tx-sig header");
   }
 
   @Test

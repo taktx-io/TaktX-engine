@@ -188,7 +188,7 @@ DLQ entry. Map the `AuthorizationTokenException` message prefix to a specific `D
 
 | Exception cause | `DlqReasonCode` |
 |---|---|
-| Missing `X-TaktX-Signature` header | `SIGNATURE_MISSING` |
+| Missing `tx-sig` header | `SIGNATURE_MISSING` |
 | Unknown key ID | `SIGNATURE_KEY_UNKNOWN` |
 | Revoked key | `SIGNATURE_KEY_REVOKED` |
 | Trust policy rejected | `AUTHORIZATION_FAILED` |
@@ -333,7 +333,7 @@ M5 as complete.
 **Decision:** Use an optional explicit `messageId` field as the canonical dedup identity on the
 phase-1 signed non-entry DTOs (`ExternalTaskResponseTriggerDTO`, `UserTaskResponseTriggerDTO`,
 `MessageScheduleDTO`, `TopicMetaDTO`). When `messageId` is absent or blank, M2 falls back to a
-derived hash of the exact signed record identity (`X-TaktX-Signature` header value + payload
+derived hash of the exact signed record identity (`tx-sig` header value + payload
 bytes as consumed from Kafka) for backward compatibility with existing producers. Stored dedup
 keys must be topic-class namespaced to prevent collisions across protected paths.
 

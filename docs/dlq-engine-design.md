@@ -256,7 +256,7 @@ The `headers` field stores a snapshot of Kafka record headers as `Map<String, St
 ```json
 {
   "headers": {
-    "X-TaktX-Signature": "base64_encoded_signature_bytes",
+    "tx-sig": "base64_encoded_signature_bytes",
     "X-TaktX-Signature-KeyId": "key-2026-05-01-alpha-001",
     "Authorization": "Bearer eyJhbGc...",
     "X-Tenant-Id": "tenant-123",
@@ -1091,9 +1091,9 @@ Add lineage fields to `DlqReplayCommand` and `DlqReplayResult`:
 
 Implementation rule:
 - Replayed output MUST include headers:
-  - `X-DLQ-Lineage-Ref`
-  - `X-DLQ-Correction-Id`
-  - `X-DLQ-Source-Offset`
+  - `dlq-lin`
+  - `dlq-cid`
+  - `dlq-off`
 
 Replay signing authority:
 - Replayed messages MUST always be newly signed.

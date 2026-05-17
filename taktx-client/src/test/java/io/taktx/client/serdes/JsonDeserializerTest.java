@@ -147,7 +147,7 @@ class JsonDeserializerTest {
       // Then – missing signature header must be rejected
       assertThatThrownBy(() -> deserializer.deserialize(TOPIC, new RecordHeaders(), bytes))
           .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("no X-TaktX-Signature header");
+          .hasMessageContaining("no tx-sig header");
     }
   }
 

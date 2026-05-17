@@ -57,7 +57,7 @@ class ExternalTaskMetaSerdesTest {
       assertThatThrownBy(
               () -> deserializer.deserialize("topic-meta-requested", new RecordHeaders(), bytes))
           .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("no X-TaktX-Signature header");
+          .hasMessageContaining("no tx-sig header");
     }
   }
 }

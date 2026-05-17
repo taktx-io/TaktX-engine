@@ -37,7 +37,7 @@ Topics use **DELETE** cleanup (time-bounded retention) — see `docs/dlq-retenti
   "keyBytes":           null,
   "valueBytes":         "<base64-encoded raw CBOR payload>",
   "headers": {
-    "X-TaktX-Signature": "<base64>",
+    "tx-sig": "<base64>",
     "Authorization":     "Bearer <jwt>"
   },
   "reasonCode":         "SIGNATURE_VERIFICATION_FAILED",
@@ -117,7 +117,7 @@ The `dlq` topic is append-only; the engine may produce duplicate entries when Ka
 **Key notes**:
 - `destinationTopic` must be a **bare** topic name (no prefix) from the 8 allowed ingress surfaces — the engine enforces this whitelist.
 - `correctedHeaders` values are base64-encoded; the engine decodes them before attaching to the forwarded record.
-- `X-TaktX-Signature` must **not** be included in `correctedHeaders` — the engine always replaces it with a fresh ENGINE-signed value.
+- `tx-sig` must **not** be included in `correctedHeaders` — the engine always replaces it with a fresh ENGINE-signed value.
 - `dryRun: true` runs all validation without forwarding the record; use for pre-flight checks.
 - `validationPolicy: "OPERATOR_OVERRIDE"` allows schema version mismatch with an explicit `overrideReason`.
 
@@ -172,10 +172,10 @@ Replayed records carry these Kafka headers:
 
 | Header | Value |
 |---|---|
-| `X-DLQ-Lineage-Ref` | `dlqEntryRef` of the originating DLQ entry |
-| `X-DLQ-Correction-Id` | UUID matching `DlqReplayResult.correctionId` |
-| `X-DLQ-Source-Offset` | Kafka offset of the original failed record |
-| `X-TaktX-Signature` | Fresh ENGINE Ed25519 signature (replaces any previous signature) |
+| `dlq-lin` | `dlqEntryRef` of the originating DLQ entry |
+| `dlq-cid` | UUID matching `DlqReplayResult.correctionId` |
+| `dlq-off` | Kafka offset of the original failed record |
+| `tx-sig` | Fresh ENGINE Ed25519 signature (replaces any previous signature) |
 
 ---
 
@@ -471,7 +471,7 @@ client.submitReplayCommand(override);
 | Navigate incident → DLQ entry | Local store lookup | `dlqEntryRef` equality |
 | Submit replay | `dlq.replay` topic via `submitReplayCommand` | `dlqEntryRef` |
 | Track replay outcome | `dlq.replay-results` topic via `registerReplayResultConsumer` | `dlqEntryRef` + `correctionId` |
-| Track forwarded record | Target ingress topic headers | `X-DLQ-Lineage-Ref`, `X-DLQ-Correction-Id` |
+| Track forwarded record | Target ingress topic headers | `dlq-lin`, `dlq-cid` |
 
 ### 7. Shutdown
 

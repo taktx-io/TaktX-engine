@@ -714,7 +714,7 @@ class SecurityIntegrationTest {
                       .anyMatch(
                           r -> r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null);
               assertThat(hasSigned)
-                  .as("External-task trigger record must carry X-TaktX-Signature")
+                  .as("External-task trigger record must carry tx-sig")
                   .isTrue();
             });
 
@@ -761,9 +761,9 @@ class SecurityIntegrationTest {
             () -> {
               boolean hasSignedRecord =
                   rawInstanceUpdates.stream()
-                      .anyMatch(r -> r.headers().lastHeader("X-TaktX-Signature") != null);
+                      .anyMatch(r -> r.headers().lastHeader("tx-sig") != null);
               assertThat(hasSignedRecord)
-                  .as("At least one instance-update record must carry X-TaktX-Signature")
+                  .as("At least one instance-update record must carry tx-sig")
                   .isTrue();
             });
   }
@@ -792,7 +792,7 @@ class SecurityIntegrationTest {
             () -> {
               ConsumerRecord<UUID, InstanceUpdateDTO> found =
                   rawInstanceUpdates.stream()
-                      .filter(r -> r.headers().lastHeader("X-TaktX-Signature") != null)
+                      .filter(r -> r.headers().lastHeader("tx-sig") != null)
                       .findFirst()
                       .orElse(null);
               assertThat(found).as("Signed instance-update record not yet received").isNotNull();
@@ -800,7 +800,7 @@ class SecurityIntegrationTest {
             });
 
     ConsumerRecord<UUID, InstanceUpdateDTO> consumerRecord = signedRecord.get();
-    Header sigHeader = consumerRecord.headers().lastHeader("X-TaktX-Signature");
+    Header sigHeader = consumerRecord.headers().lastHeader("tx-sig");
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
 
     // Header format: "<keyId>.<base64(signature)>"
