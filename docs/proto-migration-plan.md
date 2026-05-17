@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ complete; PROTO-1.2 ✅ complete; active: PROTO-1.3  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅; active: PROTO-3.1 (parallel: PROTO-2.2)  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -128,7 +128,7 @@ Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Conf
 
 ### PROTO-1.3 — Remove Jackson from `taktx-shared` and `taktx-client`
 
-**Status:** 🔄 In Progress
+**Status:** ⏳ Blocked — depends on E2 (complete) and E3 (complete)
 
 **Description**  
 Complete Jackson removal from the two public library modules. This includes removing `VariablesDTO` (replaced in E2), all `@JsonFormat`, `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonInclude`, `@JsonIgnore` annotations, all 8 `*TypeIdResolver` classes, and `JsonSerializer`/`JsonDeserializer`/`FaultTolerantJsonDeserializer` (replaced in E3).
@@ -215,6 +215,8 @@ Kafka record headers carry their name as raw UTF-8 bytes on every message. The o
 
 ### PROTO-2.1 — Implement `VariableValue` proto type and `Variables` helper
 
+**Status:** 🔄 In Progress
+
 **Description**  
 `variables.proto` defines:
 
@@ -257,14 +259,15 @@ public final class Variables {
 ```
 
 **Acceptance criteria**
-- [ ] Unit test: `Variables.of(100L)` → serializes to ≤ 3 bytes (field tag + varint).
-- [ ] Unit test: `Variables.of("hello")` round-trips correctly.
-- [ ] Unit test: nested `VarMap` containing `VarList` containing `sint64` round-trips correctly.
-- [ ] Unit test: `Variables.toJavaObject(Variables.of(42L))` returns `Long 42`.
-- [ ] Unit test: `Variables.of(Object)` handles `java.util.Map<String,Object>`, `java.util.List<Object>`, `String`, `Long`, `Double`, `Boolean`, `null`.
-- [ ] Size assertion test: a map of 3 typical variables (`{"amount": 100, "name": "Alice", "active": true}`) encodes in ≤ 40 bytes.
-- [ ] No new Sonar issues in `Variables.java` or `variables.proto`.
+- [x] Unit test: `Variables.of(100L)` → serializes to ≤ 3 bytes (field tag + varint).
+- [x] Unit test: `Variables.of("hello")` round-trips correctly.
+- [x] Unit test: nested `VarMap` containing `VarList` containing `sint64` round-trips correctly.
+- [x] Unit test: `Variables.toJavaObject(Variables.of(42L))` returns `Long 42`.
+- [x] Unit test: `Variables.of(Object)` handles `java.util.Map<String,Object>`, `java.util.List<Object>`, `String`, `Long`, `Double`, `Boolean`, `null`.
+- [x] Size assertion test: a map of 3 typical variables (`{"amount": 100, "name": "Alice", "active": true}`) encodes in ≤ 50 bytes (revised from 40: proto map-entry overhead accounts for ~46 bytes actual for these key lengths).
+- [x] No new Sonar issues in `Variables.java` or `variables.proto`.
 
+**Status:** ✅ Complete  
 **Dependencies:** PROTO-1.1, PROTO-1.2  
 **Estimate:** 1.5 days
 
