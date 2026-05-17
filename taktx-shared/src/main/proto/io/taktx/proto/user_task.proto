@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "UserTaskProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/variables.proto";
+import "io/taktx/proto/definitions.proto";
+
+// Java: UserTaskTriggerDTO
+message UserTaskTriggerMessage {
+  Uuid process_instance_id = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string user_task_id = 3;
+  repeated sint64 element_instance_id_path = 4;
+  AssignmentDefinitionMessage assignment_definition = 5;
+  TaskScheduleMessage task_schedule = 6;
+  PriorityDefinitionMessage priority_definition = 7;
+  VarMap variables = 8;
+}

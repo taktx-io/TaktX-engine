@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "ConfigurationProto";
+
+// Java: DmnValidationMode (top-level enum)
+enum DmnValidationMode {
+  DMN_VALIDATION_MODE_UNSPECIFIED = 0;
+  DMN_VALIDATION_PERMISSIVE       = 1;
+  DMN_VALIDATION_WARN             = 2;
+  DMN_VALIDATION_STRICT           = 3;
+}
+
+// Java: GlobalConfigurationDTO.ReplayProtectionMode (inner enum)
+enum ReplayProtectionMode {
+  REPLAY_PROTECTION_MODE_UNSPECIFIED = 0;
+  OFF = 1;
+  COMPAT = 2;
+}
+
+// Java: ConfigurationEventDTO.ConfigurationEventType (inner enum)
+enum ConfigurationEventType {
+  CONFIGURATION_EVENT_TYPE_UNSPECIFIED = 0;
+  CONFIGURATION_UPDATE = 1;
+  LICENSE_UPDATE = 2;
+  COMBINED_UPDATE = 3;
+}
+
+// Java: ConfigurationEventDTO
+message ConfigurationEventMessage {
+  ConfigurationEventType event_type = 1;
+  GlobalConfigurationMessage configuration = 2;
+  // Java: Instant — epoch milliseconds
+  int64 timestamp_ms = 3;
+  string published_by_instance = 4;
+}
+
+// Java: GlobalConfigurationDTO
+message GlobalConfigurationMessage {
+  bool signing_enabled = 1;
+  bool engine_requires_authorization = 2;
+  repeated string trusted_key_ids = 3;
+  DmnValidationMode dmn_validation_mode = 4;
+  ReplayProtectionMode replay_protection_mode = 5;
+  sint64 replay_protection_retention_ms = 6;
+}

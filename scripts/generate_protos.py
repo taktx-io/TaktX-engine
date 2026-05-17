@@ -62,6 +62,7 @@ TYPE_MAP = {
     "Float":   "float",
     "byte[]":  "bytes",
     "String":  "string",
+    "String[]": "repeated string",
     "Instant": "sint64",  # epoch-ms
 
     # domain types
@@ -344,12 +345,47 @@ FILE_ASSIGNMENT = {
 
     # process_definition.proto
     "ProcessDefinitionDTO":          "process_definition",
+
+    # --- subscriptions sub-package ---
+    "CatchAllErrorSubscriptionDTO":    "process_instance",
+    "CatchAllEscalationSubscriptionDTO": "process_instance",
+    "ErrorSubscriptionDTO":            "process_instance",
+    "EscalationSubscriptionDTO":       "process_instance",
+    "MessageSubscriptionDTO":          "process_instance",
+    "TimerSubscriptionDTO":            "process_instance",
+    "SignalSubscriptionDTO":           "process_instance",
+    "SubScriptionType":                "process_instance",
+
+    # --- user_task.proto ---
+    "UserTaskTriggerDTO":              "user_task",
+
+    # --- misc that we still want covered ---
+    "UserTaskResponseDlqEntryDTO":     "dlq",
+    "SignalDlqEntryDTO":               "dlq",
+    "ProcessDefinitionDlqEntryDTO":    "dlq",
+    "ProcessInstanceDlqEntryDTO":      "dlq",
+    "MessageEventDlqEntryDTO":         "dlq",
+    "TopicMetaDlqEntryDTO":            "dlq",
+
+    # --- misc flow-node instance types ---
+    "ThrowEventInstanceDTO":           "flow_node_instance",
+
+    # --- skip non-DTO utility/marker classes ---
+    # (added to SKIP_CLASSES below)
 }
 
 # Classes to skip entirely (interfaces, abstract marker classes, etc.)
 SKIP_CLASSES = {
     "WithIoMappingDTO", "WithFlowNodeInstancesDTO", "SchedulableMessageDTO",
-    "DlqEntryDTO",  # abstract empty base
+    "DlqEntryDTO",           # abstract empty base
+    "Constants",             # static constants only
+    "DmnDefinitionKey",      # Kafka store key — not proto
+    "ExternalTaskMetaState", # engine-internal enum
+    "FlowNodeInstanceKeyDTO","VariableKeyDTO",  # range-query store keys — not proto
+    "GatewayDTO",            # abstract, no concrete fields beyond FlowNodeDTO
+    "TokenClaims",           # JWT parsing helper
+    "TopicStatus",           # engine-internal
+    "SubScriptionType",      # will be inlined as enum
 }
 
 # ─────────────────────────────────────────────
@@ -560,10 +596,12 @@ message MessageScheduleEnvelope {
 # PARSER
 # ─────────────────────────────────────────────
 FIELD_RE = re.compile(
+    r'(?:@\w+(?:\([^)]*\))?\s+)*'   # optional annotations
     r'(?:private|protected)\s+'
+    r'(?:@\w+(?:\([^)]*\))?\s+)*'   # optional annotations after access modifier
     r'(?:final\s+)?'
-    r'([\w<>,\s\[\]]+?)\s+'   # type  (group 1)
-    r'(\w+)\s*;',              # name  (group 2)
+    r'([\w<>,\s\[\]]+?)\s+'          # type  (group 1)
+    r'(\w+)\s*(?:=\s*[^;]+)?\s*;',   # name  (group 2), optional initializer
     re.MULTILINE,
 )
 CLASS_RE = re.compile(
@@ -765,7 +803,12 @@ def main():
     # Build and write each proto file
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # These are fully hand-crafted — skip auto-generation
+    HAND_CRAFTED = {"common", "variables"}
+
     for proto_file, class_names in sorted(groups.items()):
+        if proto_file in HAND_CRAFTED:
+            continue
         outer = "".join(w.capitalize() for w in proto_file.split("_")) + "Proto"
         imports_list = FILE_IMPORTS.get(proto_file, [])
         import_lines = "\n".join(
@@ -952,4 +995,10 @@ def _write_or_print(name: str, content: str, dry_run: bool):
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
 

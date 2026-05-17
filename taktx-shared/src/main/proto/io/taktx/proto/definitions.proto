@@ -1,0 +1,597 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "DefinitionsProto";
+
+import "io/taktx/proto/common.proto";
+
+// BaseElementEnvelope — replaces BaseElementTypeIdResolver (27 types)
+message BaseElementEnvelope {
+  oneof element {
+    BoundaryEventMessage              boundary_event        = 1;  // TypeId "B"
+    StartEventMessage                 start_event           = 2;  // TypeId "S"
+    IntermediateCatchEventMessage     catch_event           = 3;  // TypeId "IC"
+    IntermediateThrowEventMessage     throw_event           = 4;  // TypeId "IT"
+    EndEventMessage                   end_event             = 5;  // TypeId "E"
+    InclusiveGatewayMessage           inclusive_gw          = 6;  // TypeId "IG"
+    EventBasedGatewayMessage          event_based_gw        = 7;  // TypeId "VG"
+    ParallelGatewayMessage            parallel_gw           = 8;  // TypeId "PG"
+    ExclusiveGatewayMessage           exclusive_gw          = 9;  // TypeId "EG"
+    SubProcessMessage                 sub_process           = 10; // TypeId "SP"
+    CallActivityMessage               call_activity         = 11; // TypeId "CA"
+    ReceiveTaskMessage                receive_task          = 12; // TypeId "RT"
+    SendTaskMessage                   send_task             = 13; // TypeId "ST"
+    ServiceTaskMessage                service_task          = 14; // TypeId "SV"
+    MessageEndEventMessage            msg_end_event         = 15; // TypeId "MS"
+    MessageIntermediateThrowEventMessage msg_throw_event       = 16; // TypeId "MI"
+    BusinessRuleTaskMessage           brt                   = 17; // TypeId "BR"
+    ScriptTaskMessage                 script_task           = 18; // TypeId "SC"
+    UserTaskMessage                   user_task             = 19; // TypeId "UT"
+    TaskMessage                       task                  = 20; // TypeId "T"
+    SequenceFlowMessage               sequence_flow         = 21; // TypeId "Q"
+    ProcessMessage                    process               = 22; // TypeId "P"
+    LinkEventDefinitionMessage        link_event_def        = 23; // TypeId "LE"
+    TerminateEventDefinitionMessage   terminate_event_def   = 24; // TypeId "TE"
+    EscalationEventDefinitionMessage  escalation_event_def  = 25; // TypeId "ES"
+    TimerEventDefinitionMessage       timer_event_def       = 26; // TypeId "TM"
+    ErrorEventDefinitionMessage       error_event_def       = 27; // TypeId "ER"
+    MessageEventDefinitionMessage     msg_event_def         = 28; // TypeId "ME"
+    SignalEventDefinitionMessage      signal_event_def      = 29; // TypeId "SE"
+  }
+}
+
+// DefinitionsTriggerEnvelope — replaces DefinitionsTriggerTypeIdResolver
+message DefinitionsTriggerEnvelope {
+  oneof trigger {
+    XmlDefinitionsMessage             xml_defs     = 1; // TypeId "X"
+    ParsedDefinitionsMessage          parsed_defs  = 2; // TypeId "P"
+    ProcessDefinitionActivationMessage activation  = 3; // TypeId "A"
+  }
+}
+
+enum ProcessDefinitionStateEnum {
+  PROCESS_DEFINITION_STATE_UNSPECIFIED = 0;
+  PROCESS_DEFINITION_STATE_ACTIVE      = 1;
+  PROCESS_DEFINITION_STATE_INACTIVE    = 2;
+}
+
+enum ScriptType {
+  FEEL = 0;
+  JOBWORKER = 1;
+  JAVASCRIPT = 2;
+  GROOVY = 3;
+  PYTHON = 4;
+  RUBY = 5;
+  KOTLIN = 6;
+  BEANSHELL = 7;
+  LUA = 8;
+  PERL = 9;
+  PHP = 10;
+  SHELL = 11;
+  JUEL = 12;
+}
+
+enum UserTaskTypeEnum {
+  ZEEBE = 0;
+}
+
+// Java: ActivityDTO (abstract)
+message ActivityMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+}
+
+// Java: AssignmentDefinitionDTO
+message AssignmentDefinitionMessage {
+  string assignee = 1;
+  string candidate_groups = 2;
+  string candidate_users = 3;
+}
+
+// Java: BaseElementDTO (abstract)
+message BaseElementMessage {
+  string id = 1;
+  string parent_id = 2;
+}
+
+// Java: BoundaryEventDTO
+message BoundaryEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+  string attached_to_ref = 8;
+  bool cancel_activity = 9;
+}
+
+// Java: BusinessRuleTaskDTO
+message BusinessRuleTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string decision_id = 8;
+  string result_variable = 9;
+}
+
+// Java: CallActivityDTO
+message CallActivityMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string called_element = 8;
+  bool propagate_all_parent_variables = 9;
+  bool propagate_all_child_variables = 10;
+}
+
+// Java: CatchEventDTO (abstract)
+message CatchEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+}
+
+// Java: DefinitionsTriggerDTO (abstract)
+message DefinitionsTriggerMessage {
+  // no own fields (abstract base or marker)
+}
+
+// Java: EndEventDTO
+message EndEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+}
+
+// Java: ErrorDTO
+message ErrorMessage {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+}
+
+// Java: ErrorEventDefinitionDTO
+message ErrorEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string error_ref = 3;
+}
+
+// Java: EscalationDTO
+message EscalationMessage {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+}
+
+// Java: EscalationEventDefinitionDTO
+message EscalationEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string escalation_ref = 3;
+}
+
+// Java: EventBasedGatewayDTO
+message EventBasedGatewayMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  string default_flow = 6;
+}
+
+// Java: EventDTO (abstract)
+message EventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+}
+
+// Java: EventDefinitionDTO
+message EventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+}
+
+// Java: ExclusiveGatewayDTO
+message ExclusiveGatewayMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  string default_flow = 6;
+}
+
+// Java: ExternalTaskDTO (abstract)
+message ExternalTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+}
+
+// NOTE: FlowConditionMessage is defined in common.proto — do not redefine here.
+
+// Java: FlowElementDTO (abstract)
+message FlowElementMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+}
+
+// Java: FlowElementsDTO
+message FlowElementsMessage {
+  map<string, FlowElementMessage> elements = 1;
+}
+
+// Java: FlowNodeDTO (abstract)
+message FlowNodeMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+}
+
+// Java: InclusiveGatewayDTO
+message InclusiveGatewayMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  string default_flow = 6;
+}
+
+// NOTE: InputOutputMappingMessage is defined in common.proto — do not redefine here.
+
+// Java: IntermediateCatchEventDTO
+message IntermediateCatchEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+}
+
+// Java: IntermediateThrowEventDTO
+message IntermediateThrowEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+}
+
+// Java: LinkEventDefinitionDTO
+message LinkEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+}
+
+// Java: LoopCharacteristicsDTO
+message LoopCharacteristicsMessage {
+  bool sequential = 1;
+  string input_collection = 2;
+  string input_element = 3;
+  string output_collection = 4;
+  string output_element = 5;
+}
+
+// Java: MessageDTO
+message MessageMessage {
+  string id = 1;
+  string name = 2;
+  string correlation_key = 3;
+}
+
+// Java: MessageEndEventDTO
+message MessageEndEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+}
+
+// Java: MessageEventDefinitionDTO
+message MessageEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string message_ref = 3;
+}
+
+// Java: MessageIntermediateThrowEventDTO
+message MessageIntermediateThrowEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+}
+
+// Java: ParallelGatewayDTO
+message ParallelGatewayMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  string default_flow = 6;
+}
+
+// Java: EscalationDTO
+message EscalationDefinitionMessage {
+  string id   = 1;
+  string name = 2;
+  string code = 3;
+}
+
+// Java: ErrorDTO
+message ErrorDefinitionMessage {
+  string id   = 1;
+  string name = 2;
+  string code = 3;
+}
+
+// Java: ParsedDefinitionsDTO
+message ParsedDefinitionsMessage {
+  DefinitionsKeyMessage                       definitions_key = 1;
+  ProcessMessage                              root_process    = 2;
+  map<string, MessageMessage>                 messages        = 3;
+  map<string, EscalationDefinitionMessage>    escalations     = 4;
+  map<string, ErrorDefinitionMessage>         errors          = 5;
+  map<string, SigMessage>                     signals         = 6;
+}
+
+// Java: PriorityDefinitionDTO
+message PriorityDefinitionMessage {
+  string priority = 1;
+}
+
+// Java: ProcessDTO
+message ProcessMessage {
+  string id = 1;
+  string parent_id = 2;
+  string version_tag = 3;
+  FlowElementsMessage flow_elements = 4;
+}
+
+// Java: ProcessDefinitionActivationDTO
+message ProcessDefinitionActivationMessage {
+  ProcessDefinitionKeyMessage process_definition_key = 1;
+  ProcessDefinitionStateEnum state = 2;
+}
+
+// Java: ReceiveTaskDTO
+message ReceiveTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string message_ref = 8;
+}
+
+// Java: RootElementDTO (abstract)
+message RootElementMessage {
+  string id = 1;
+  string parent_id = 2;
+}
+
+// Java: ScriptTaskDTO
+message ScriptTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+  ScriptType script_type = 12;
+  repeated string script_expressions = 13;
+  string result_variable_name = 14;
+}
+
+// Java: SendTaskDTO
+message SendTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+}
+
+// Java: SequenceFlowDTO
+message SequenceFlowMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  string source = 4;
+  string target = 5;
+  FlowConditionMessage condition = 6;
+}
+
+// Java: ServiceTaskDTO
+message ServiceTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  string worker_definition = 8;
+  string retries = 9;
+  string implementation = 10;
+  map<string, string> headers = 11;
+}
+
+// Java: SigDTO
+message SigMessage {
+  string id = 1;
+  string name = 2;
+}
+
+// Java: SignalEventDefinitionDTO
+message SignalEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string signal_ref = 3;
+}
+
+// Java: StartEventDTO
+message StartEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+  bool interrupting = 8;
+}
+
+// Java: SubProcessDTO
+message SubProcessMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  FlowElementsMessage elements = 8;
+  bool triggered_by_event = 9;
+}
+
+// Java: TaskDTO
+message TaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+}
+
+// Java: TaskScheduleDTO
+message TaskScheduleMessage {
+  string due_date = 1;
+  string follow_up_date = 2;
+}
+
+// Java: TerminateEventDefinitionDTO
+message TerminateEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+}
+
+// Java: ThrowEventDTO (abstract)
+message ThrowEventMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  InputOutputMappingMessage io_mapping = 6;
+  repeated EventDefinitionMessage event_definitions = 7;
+}
+
+// Java: TimerEventDefinitionDTO
+message TimerEventDefinitionMessage {
+  string id = 1;
+  string parent_id = 2;
+  string time_date = 3;
+  string time_duration = 4;
+  string time_cycle = 5;
+}
+
+// Java: UserTaskDTO
+message UserTaskMessage {
+  string id = 1;
+  string parent_id = 2;
+  string name = 3;
+  repeated string incoming = 4;
+  repeated string outgoing = 5;
+  LoopCharacteristicsMessage loop_characteristics = 6;
+  InputOutputMappingMessage io_mapping = 7;
+  UserTaskTypeEnum user_task_type = 8;
+  AssignmentDefinitionMessage assignment_definition = 9;
+  TaskScheduleMessage task_schedule = 10;
+  PriorityDefinitionMessage priority_definition = 11;
+  map<string, string> headers = 12;
+}
+
+// Java: XmlDefinitionsDTO
+message XmlDefinitionsMessage {
+  string xml = 1;
+}

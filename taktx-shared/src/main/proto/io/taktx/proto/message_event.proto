@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "MessageEventProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/variables.proto";
+
+// MessageEventEnvelope — replaces MessageEventTypeIdResolver
+message MessageEventEnvelope {
+  oneof event {
+    DefinitionMessageSubscriptionMessage        def_sub         = 1; // TypeId "D"
+    CancelDefinitionMessageSubscriptionMessage  cancel_def_sub  = 2; // TypeId "C"
+    CorrelationMessageSubscriptionMessage       corr_sub        = 3; // TypeId "O"
+    CancelCorrelationMessageSubscriptionMessage cancel_corr_sub = 4; // TypeId "A"
+    DefinitionMessageEventTriggerMessage        def_trigger     = 5; // TypeId "E"
+    CorrelationMessageEventTriggerMessage       corr_trigger    = 6; // TypeId "R"
+  }
+}
+
+// Java: CancelCorrelationMessageSubscriptionDTO
+message CancelCorrelationMessageSubscriptionMessage {
+  string message_name = 1;
+  string correlation_key = 2;
+}
+
+// Java: CancelDefinitionMessageSubscriptionDTO
+message CancelDefinitionMessageSubscriptionMessage {
+  string message_name = 1;
+}
+
+// Java: CorrelationMessageEventTriggerDTO
+message CorrelationMessageEventTriggerMessage {
+  string message_name = 1;
+  string correlation_key = 2;
+  VarMap variables = 3;
+}
+
+// Java: CorrelationMessageSubscriptionDTO
+message CorrelationMessageSubscriptionMessage {
+  string message_name = 1;
+  Uuid process_instance_id = 2;
+  string correlation_key = 3;
+  repeated sint64 element_instance_id_path = 4;
+  string element_id = 5;
+}
+
+// Java: DefinitionMessageEventTriggerDTO
+message DefinitionMessageEventTriggerMessage {
+  string message_name = 1;
+  VarMap variables = 2;
+}
+
+// Java: DefinitionMessageSubscriptionDTO
+message DefinitionMessageSubscriptionMessage {
+  string message_name = 1;
+  ProcessDefinitionKeyMessage process_definition_key = 2;
+  string element_id = 3;
+}
+
+// Java: MessageEventDTO (abstract)
+message MessageEventMessage {
+  string message_name = 1;
+}
+
+// Java: MessageEventKeyDTO
+message MessageEventKeyMessage {
+  string message_name = 1;
+}

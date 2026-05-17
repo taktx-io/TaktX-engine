@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "CommonProto";
+
+
+// UUID encoded as two fixed64 (MSB first).
+// Replaces java.util.UUID everywhere on the wire.
+// 16 bytes vs. ~36 bytes for a hyphenated string UUID.
+message Uuid {
+  fixed64 high = 1;
+  fixed64 low  = 2;
+}
+
+// Embedded key value — NOT the range-queryable Kafka Streams store key.
+// Replaces ProcessDefinitionKey when embedded inside a value message.
+message ProcessDefinitionKeyMessage {
+  string process_definition_id = 1;
+  int32  version               = 2; // -1 = "latest"
+}
+
+// Replaces DefinitionsKey (processDefinitionId + content hash)
+message DefinitionsKeyMessage {
+  string process_definition_id = 1;
+  string hash                  = 2;
+}
+
+// Replaces DmnDefinitionsKey
+message DmnDefinitionsKeyMessage {
+  string dmn_definition_id = 1;
+  string hash              = 2;
+}
+
+// Replaces IncidentInfoDTO
+message IncidentInfoMessage {
+  repeated sint64 element_instance_id_path = 1;
+  string          message                  = 2;
+  repeated string stacktrace               = 3;
+  string          dlq_entry_ref            = 4; // nullable: empty = absent
+}
+
+// Replaces IoVariableMappingDTO (source/target FEEL expression pair)
+message IoVariableMappingMessage {
+  string source = 1;
+  string target = 2;
+}
+
+// Replaces InputOutputMappingDTO
+message InputOutputMappingMessage {
+  repeated IoVariableMappingMessage input_mappings  = 1;
+  repeated IoVariableMappingMessage output_mappings = 2;
+}
+
+// Replaces FlowConditionDTO
+message FlowConditionMessage {
+  string expression = 1;
+}
+
+// Replaces ExecutionState enum
+// Codes: INITIALIZED="S", ACTIVE="A", COMPLETED="C", ABORTED="F"
+enum ExecutionState {
+  EXECUTION_STATE_UNSPECIFIED = 0;
+  EXECUTION_STATE_INITIALIZED = 1; // "S"
+  EXECUTION_STATE_ACTIVE      = 2; // "A"
+  EXECUTION_STATE_COMPLETED   = 3; // "C"
+  EXECUTION_STATE_ABORTED     = 4; // "F"
+}

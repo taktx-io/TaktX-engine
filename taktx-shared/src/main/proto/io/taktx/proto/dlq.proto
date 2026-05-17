@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "DlqProto";
+
+import "io/taktx/proto/common.proto";
+import "io/taktx/proto/definitions.proto";
+import "io/taktx/proto/dmn_definitions.proto";
+import "io/taktx/proto/message_event.proto";
+import "io/taktx/proto/process_instance_trigger.proto";
+import "io/taktx/proto/signals.proto";
+import "io/taktx/proto/topic_meta.proto";
+
+enum DlqCaptureStage {
+  DLQ_CAPTURE_STAGE_UNSPECIFIED = 0;
+  DLQ_CAPTURE_DESERIALIZER      = 1;
+  DLQ_CAPTURE_PROCESSOR         = 2;
+}
+
+enum DlqReasonCode {
+  DLQ_REASON_UNSPECIFIED              = 0;
+  DLQ_REASON_CBOR_DECODE_ERROR        = 1;
+  DLQ_REASON_CBOR_TYPE_MISMATCH       = 2;
+  DLQ_REASON_SIGNATURE_MISSING        = 3;
+  DLQ_REASON_SIGNATURE_MALFORMED      = 4;
+  DLQ_REASON_SIGNATURE_KEY_UNKNOWN    = 5;
+  DLQ_REASON_SIGNATURE_KEY_REVOKED    = 6;
+  DLQ_REASON_SIGNATURE_VERIFICATION_FAILED = 7;
+  DLQ_REASON_JWT_MISSING              = 8;
+  DLQ_REASON_JWT_MALFORMED            = 9;
+  DLQ_REASON_JWT_SIGNATURE_INVALID    = 10;
+  DLQ_REASON_AUTHORIZATION_FAILED     = 11;
+  DLQ_REASON_INSUFFICIENT_ROLE        = 12;
+  DLQ_REASON_INSUFFICIENT_SCOPE       = 13;
+  DLQ_REASON_REPLAY_DETECTED          = 14;
+  DLQ_REASON_PROCESSOR_EXCEPTION      = 15;
+  DLQ_REASON_TOPIC_NOT_ALLOWED        = 16;
+  DLQ_REASON_UNKNOWN                  = 17;
+}
+
+enum DlqSeverity {
+  DLQ_SEVERITY_UNSPECIFIED = 0;
+  DLQ_SEVERITY_LOW         = 1;
+  DLQ_SEVERITY_MEDIUM      = 2;
+  DLQ_SEVERITY_HIGH        = 3;
+}
+
+enum ReplayValidationPolicy {
+  REPLAY_VALIDATION_STRICT = 0;
+}
+
+// Java: DlqEnvelope
+message DlqEnvelope {
+  string         source_topic            = 1;
+  bytes          key_bytes               = 2;
+  bytes          value_bytes             = 3;
+  map<string, string> headers            = 4;
+  DlqReasonCode  reason_code             = 5;
+  string         reason_text             = 6;
+  DlqSeverity    severity                = 7;
+  DlqCaptureStage capture_stage          = 8;
+  sint64         rejection_timestamp_ms  = 9;
+  string         engine_instance_id      = 10;
+  int32          source_partition        = 11;
+  sint64         source_offset           = 12;
+  sint64         source_timestamp_ms     = 13;
+  string         source_message_hash     = 14;
+  string         message_type            = 15;
+  int32          schema_version          = 16;
+  string         decoder_version         = 17;
+  string         schema_fingerprint      = 18;
+  string         decoded_summary_json    = 19;
+  string         additional_context_json = 20;
+  DlqLineageMessage lineage              = 21;
+  string         replay_signer           = 22;
+  string         replay_signature_key_id = 23;
+}
+
+// Java: DlqLineageDTO
+message DlqLineageMessage {
+  string source_topic            = 1;
+  int32  source_partition        = 2;
+  sint64 source_offset           = 3;
+  sint64 source_timestamp_ms     = 4;
+  string source_message_hash     = 5;
+  string source_signature_key_id = 6;
+  string source_signature        = 7;
+}
+
+// Java: DlqReplayCommand
+message DlqReplayCommand {
+  string                dlq_entry_ref           = 1;
+  string                operator_id             = 2;
+  sint64                approved_at_ms          = 3;
+  string                operator_notes          = 4;
+  bytes                 corrected_value_bytes   = 5;
+  bytes                 corrected_key_bytes     = 6;
+  map<string, string>   corrected_headers       = 7;
+  string                destination_topic       = 8;
+  ReplayValidationPolicy validation_policy      = 9;
+  DlqLineageMessage     lineage                 = 10;
+  string                override_reason         = 11;
+  repeated string       changed_fields          = 12;
+  bool                  dry_run                 = 13;
+  int32                 expected_schema_version = 14;
+}
+
+// Java: DlqReplayResult
+message DlqReplayResult {
+  string       dlq_entry_ref          = 1;
+  string       operator_id            = 2;
+  sint64       replay_at_ms           = 3;
+  string       status                 = 4;
+  string       outcome_text           = 5;
+  DlqReasonCode failure_reason_code   = 6;
+  string       replay_signer          = 7;
+  string       replay_signature_key_id = 8;
+  string       compatibility_decision = 9;
+  string       override_reason        = 10;
+  bool         dry_run                = 11;
+  string       lineage_ref            = 12;
+  string       correction_id          = 13;
+}
+
+// Java: DmnDefinitionsDlqEntryDTO
+message DmnDefinitionsDlqEntryMessage {
+  string                  dmn_definition_id = 1;
+  XmlDmnDefinitionsMessage value            = 2;
+  map<string, bytes>       headers          = 3;
+}
+
+// Java: MessageEventDlqEntryDTO
+message MessageEventDlqEntryMessage {
+  MessageEventKeyMessage key            = 1;
+  MessageEventMessage    value          = 2;
+  map<string, bytes>     headers        = 3;
+}
+
+// Java: ProcessDefinitionDlqEntryDTO
+message ProcessDefinitionDlqEntryMessage {
+  ProcessDefinitionKeyMessage    key                  = 1;
+  DefinitionsTriggerEnvelope     definitions_trigger  = 2;
+  map<string, bytes>             headers              = 3;
+}
+
+// Java: ProcessInstanceDlqEntryDTO
+message ProcessInstanceDlqEntryMessage {
+  Uuid                          process_instance_id = 1;
+  ProcessInstanceTriggerMessage trigger             = 2;
+  map<string, bytes>            headers             = 3;
+  bytes                         data                = 4;
+}
+
+// Java: SignalDlqEntryDTO
+message SignalDlqEntryMessage {
+  string        signal_key = 1;
+  SignalMessage value      = 2;
+  map<string, bytes> headers = 3;
+}
+
+// Java: TopicMetaDlqEntryDTO
+message TopicMetaDlqEntryMessage {
+  string         topic_name = 1;
+  TopicMetaMessage value    = 2;
+  map<string, bytes> headers = 3;
+  bytes          data        = 4;
+}
+
+// Java: UserTaskResponseDlqEntryDTO
+message UserTaskResponseDlqEntryMessage {
+  Uuid                          process_instance_id = 1;
+  UserTaskResponseTriggerMessage value              = 2;
+  map<string, bytes>             headers            = 3;
+}

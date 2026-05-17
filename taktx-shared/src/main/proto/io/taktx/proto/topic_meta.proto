@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package io.taktx.proto;
+
+option java_package = "io.taktx.proto";
+option java_multiple_files = true;
+option java_outer_classname = "TopicMetaProto";
+
+// Java: CleanupPolicy (top-level enum)
+enum CleanupPolicy {
+  CLEANUP_POLICY_UNSPECIFIED = 0;
+  CLEANUP_POLICY_DELETE      = 1;
+  CLEANUP_POLICY_COMPACT     = 2;
+}
+
+// Java: TopicMetaDTO
+message TopicMetaMessage {
+  string        topic_name         = 1;
+  int32         nr_partitions      = 2;
+  CleanupPolicy cleanup_policy     = 3;
+  int32         replication_factor = 4;
+  string        message_id         = 5;
+}
