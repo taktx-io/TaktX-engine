@@ -54,7 +54,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
               trigger,
               false,
               null,
-              "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): " + headerValue)
+              "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): " + headerValue)
           .withReplayRoutingKeyHint(replayRoutingKeyHint);
     }
     String keyId = headerValue.substring(0, dot);

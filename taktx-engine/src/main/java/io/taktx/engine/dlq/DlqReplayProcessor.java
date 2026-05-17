@@ -8,6 +8,7 @@
 package io.taktx.engine.dlq;
 
 import io.taktx.Topics;
+import io.taktx.dto.Constants;
 import io.taktx.dto.DlqLineageDTO;
 import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
@@ -66,10 +67,10 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
   /** Schema version currently understood by this engine build. */
   static final int SUPPORTED_SCHEMA_VERSION = 1;
 
-  static final String HEADER_DLQ_LINEAGE_REF = "X-DLQ-Lineage-Ref";
-  static final String HEADER_DLQ_CORRECTION_ID = "X-DLQ-Correction-Id";
-  static final String HEADER_DLQ_SOURCE_OFFSET = "X-DLQ-Source-Offset";
-  private static final String HEADER_ENGINE_SIGNATURE = "X-TaktX-Signature";
+  static final String HEADER_DLQ_LINEAGE_REF = "dlq-lin";
+  static final String HEADER_DLQ_CORRECTION_ID = "dlq-cid";
+  static final String HEADER_DLQ_SOURCE_OFFSET = "dlq-off";
+  private static final String HEADER_ENGINE_SIGNATURE = Constants.HEADER_ENGINE_SIGNATURE;
 
   /**
    * Bare topic names (without tenant/namespace prefix) accepted as replay destinations. Mirrors the

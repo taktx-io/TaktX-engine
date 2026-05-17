@@ -189,7 +189,7 @@ class TopicMetaRequestIngressProcessorTest {
     assertThat(
             TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(
                 new AuthorizationTokenException(
-                    "Missing required X-TaktX-Signature header — required role: CLIENT")))
+                    "Missing required tx-sig header — required role: CLIENT")))
         .isEqualTo(DlqReasonCode.SIGNATURE_MISSING);
     assertThat(
             TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure(

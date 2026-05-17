@@ -187,7 +187,7 @@ public class TopicMetaRequestIngressProcessor
         exception == null || exception.getMessage() == null ? "" : exception.getMessage();
     String normalized = message.toLowerCase();
 
-    if (normalized.startsWith("missing required x-taktx-signature header")) {
+    if (normalized.startsWith("missing required tx-sig header")) {
       return DlqReasonCode.SIGNATURE_MISSING;
     }
     if (normalized.startsWith("unknown ed25519 keyid")) {

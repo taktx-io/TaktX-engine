@@ -37,14 +37,14 @@ public class ScheduleCommandDeserializer implements Deserializer<MessageSchedule
       throw new IllegalStateException(
           "Inbound record on topic='"
               + topic
-              + "' has no X-TaktX-Signature header — rejecting unsigned schedule command");
+              + "' has no " + Constants.HEADER_ENGINE_SIGNATURE + " header — rejecting unsigned schedule command");
     }
 
     String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
       throw new IllegalStateException(
-          "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): " + headerValue);
+          "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): " + headerValue);
     }
 
     String keyId = headerValue.substring(0, dot);

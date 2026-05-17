@@ -540,7 +540,7 @@ public class TaktXClient {
       if (authRequired) {
         log.info(
             "engineRequiresAuthorization=true — entry commands require JWT"
-                + " (X-TaktX-Authorization); non-entry commands are accepted without Ed25519");
+                + " (tx-auth); non-entry commands are accepted without Ed25519");
       }
       return;
     }

@@ -1,0 +1,855 @@
+# TaktX v1.0 — Full Protobuf Migration Plan
+
+**Status:** Proposed  
+**Target release:** v1.0.0 (major, beta → stable)  
+**Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
+Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
+Eliminate the positional-array brittleness that blocks schema evolution.
+
+---
+
+## Goals
+
+- Every Kafka record is encoded with Protobuf.
+- Zero Jackson dependency in `taktx-shared` and `taktx-client`; Jackson remains only in the Quarkus REST layer of `taktx-engine`.
+- Schema evolution is safe by contract (field numbers are permanent, adding fields is always backward-compatible).
+- Wire messages are smaller than or equal to the current CBOR-array format for typical payloads.
+- All existing behaviour is covered by tests at unit and integration level.
+
+---
+
+## Governing principles
+
+1. **Field numbers are permanent.** Once a `.proto` field number is assigned it must never be reused. Removed fields become `reserved`.
+2. **Integers are `sint64` or `uint64` by default**, not `int64`, wherever values can span 0. Zigzag varint encoding is substantially smaller for small absolute values.
+3. **UUIDs are `bytes` (16 raw bytes)**, never `string`. Saves ~20 bytes per UUID per message.
+4. **`VariableValue` over `google.protobuf.Struct`.** Custom recursive type using `sint64` for integer variables instead of `double`. Never encode what is not there — proto default values are omitted.
+5. **`protobuf-java-lite` everywhere.** The full runtime is not needed; lite is smaller (~175 KB) and GraalVM-native-friendly.
+6. **Tests are acceptance criteria.** Every backlog item has an explicit testing requirement; items without it are not done.
+7. **Kafka state-store KEYS are never protobuf.** Protobuf bytes are not byte-lexicographically ordered; range queries on protobuf-serialized keys would silently return wrong results. All range-queryable store keys keep their explicit big-endian binary layout. See E4.12 for the full treatment.
+
+---
+
+## Epic Index
+
+| Epic | Title | Items |
+|---|---|---|
+| E1 | Proto Schema Design & Build Infrastructure | 5 stories |
+| E2 | Variable System Replacement | 3 stories |
+| E3 | Kafka Serdes Layer | 3 stories |
+| E4 | Engine Migration | 12 stories |
+| E5 | Client Libraries Migration | 4 stories |
+| E6 | Test Hardening & Regression Guard | 4 stories |
+
+---
+
+## E1 — Proto Schema Design & Build Infrastructure
+
+> This epic gates all other work. No implementation starts until E1.1 is reviewed and approved.
+
+---
+
+### PROTO-1.1 — Design all `.proto` schemas
+
+**Description**  
+Author all `.proto` files under `taktx-shared/src/main/proto/`. These become the canonical wire contracts for v1.0.
+
+**Files to create**
+
+**Important constraint: key types for range-queryable stores are NOT proto messages.**  
+`FlowNodeInstanceKeyDTO`, `VariableKeyDTO`, `ProcessDefinitionKey` (as a store key), `SignalDefinitionSubscriptionKeyDTO`, and `SignalInstanceSubscriptionKeyDTO` all double as Kafka Streams state-store keys that are range-scanned. Protobuf bytes are not byte-lexicographically ordered, so these types must keep an explicit big-endian binary serialization format. They do **not** get `.proto` definitions for the key path. They appear as embedded fields inside value messages (see `common.proto`) using their proto equivalent.
+
+| File | Covers |
+|---|---|
+| `variables.proto` | `VariableValue`, `VarMap`, `VarList` |
+| `common.proto` | `Uuid` (bytes 16), `ProcessDefinitionKeyValue` (proto equivalent for embedding in messages), `DefinitionsKey`, `DmnDefinitionKey`, `ExecutionState` enum |
+| `process_instance.proto` | `ProcessInstanceMessage`, `ScopeMessage`, `SubscriptionMessage` and all subscription sub-types (8 concrete types via `oneof`), `IoVariableMappingMessage`, `InputOutputMappingMessage` |
+| `flow_node_instance.proto` | `FlowNodeInstanceEnvelope` with `oneof payload` covering all 21 concrete types; base fields shared via a `FlowNodeInstanceBase` embedded message |
+| `instance_update.proto` | `InstanceUpdateEnvelope` with `oneof` for `FlowNodeInstanceUpdateMessage` and `ProcessInstanceUpdateMessage`; `CommandTrustMetadataMessage` |
+| `process_instance_trigger.proto` | `ProcessInstanceTriggerEnvelope` with `oneof` for 9 trigger types incl. `StartCommandMessage`, `ContinueFlowElementTriggerMessage`, `UserTaskResponseTriggerMessage`, `ExternalTaskResponseTriggerMessage`, `SetVariableTriggerMessage`, `AbortTriggerMessage`, `EventSignalTriggerMessage`, `ExternalTaskTriggerMessage`, `StartFlowElementTriggerMessage` |
+| `definitions.proto` | `ParsedDefinitionsMessage`, `ProcessMessage` and full `BaseElementEnvelope` `oneof` covering all 27 BPMN element types; `FlowElementsMessage`, `SequenceFlowMessage`, `LoopCharacteristicsMessage`, `AssignmentDefinitionMessage`, `PriorityDefinitionMessage`, `TaskScheduleMessage` |
+| `dmn_definitions.proto` | `DmnDefinitionMessage`, `DmnDecisionTableMessage`, `DmnRuleMessage`, `DmnInputClauseMessage`, `DmnOutputClauseMessage`, enums for hit policy / collect operator |
+| `message_event.proto` | `MessageEventEnvelope` with `oneof` for 6 message event types; `MessageEventKeyMessage` |
+| `signals.proto` | `SignalEnvelope` with `oneof` for 5 signal types |
+| `user_task.proto` | `UserTaskTriggerMessage`, `UserTaskResponseResultMessage` |
+| `schedule.proto` | `ScheduleKeyMessage`, `MessageScheduleEnvelope`, `TaskScheduleMessage`, `TimeBucketMessage` |
+| `configuration.proto` | `GlobalConfigurationMessage`, `ConfigurationEventMessage` |
+| `signing_key.proto` | `SigningKeyMessage` with `KeyStatus` and `KeyRole` enums |
+| `topic_meta.proto` | `TopicMetaMessage` |
+| `dlq.proto` | `DlqEnvelopeMessage`, `DlqReplayCommandMessage`, `DlqReplayResultMessage`, `DlqLineageMessage`, `DlqEntryMessage`, `DlqSeverity`/`DlqReasonCode`/`DlqCaptureStage` enums |
+| `process_definition.proto` | `ProcessDefinitionMessage`, `ProcessDefinitionActivationMessage`, `XmlDefinitionsMessage`, `XmlDmnDefinitionsMessage` |
+
+**Key design decisions to capture in each file**
+- Every `oneof` variant gets a comment stating the equivalent Java `TypeIdResolver` short code it replaces and the field number that is locked for that type.
+- All `UUID` values use the `Uuid` message from `common.proto` (two `fixed64` fields: `high` and `low`).
+- All `string` BPMN element IDs remain `string` (already short, no gain from bytes).
+- FEEL expression strings remain `string`.
+
+**Acceptance criteria**
+- [ ] All `.proto` files compile without warnings via `protoc`.
+- [ ] Every existing DTO class in `taktx-shared/src/main/java/io/taktx/dto` has a 1:1 corresponding proto message (ignoring abstract base classes which become embedded `*Base` messages or are flattened).
+- [ ] Design review sign-off from maintainer before PROTO-1.2 starts.
+
+**Dependencies:** none  
+**Estimate:** 4 days
+
+---
+
+### PROTO-1.2 — Configure Protobuf build toolchain in `taktx-shared`
+
+**Description**  
+Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Configure `protobuf-java-lite` as the runtime. Wire source generation into the Java compile task.
+
+**Changes**
+
+- `gradle/libs.versions.toml`: add `protobuf = "4.x.y"` version entry; add `protobuf-java-lite` library entry; add `protobuf-gradle-plugin` plugin entry.
+- `taktx-shared/build.gradle.kts`: apply `com.google.protobuf` plugin; configure `protobuf { protoc { artifact = ... } }` and `generateProtoTasks { all().forEach { it.builtins { id("java") { option("lite") } } } }`.
+- `gradle.lockfile` + `settings-gradle.lockfile`: regenerate with `./gradlew dependencies --write-locks`.
+- `taktx-shared/build.gradle.kts`: remove `jackson-cbor` and `jackson-datatype-jsr310` from `dependencies` block; keep `jackson-databind` only as a `testImplementation` scope if any existing shared tests still need it (to be removed fully in PROTO-1.3).
+- Add `src/main/proto/` directory to version control.
+- **Note:** `TaktUUIDSerde`, `TaktCompositeUUIDSerde`, `TaktLongListSerializer`, `TaktLongListDeserializer` in `taktx-shared/src/main/java/io/taktx/util/` are **kept** — they are used as raw binary key serializers for range-queryable stores and are independent of both CBOR and protobuf. Their Jackson `extends JsonSerializer<>` inheritance is removed in PROTO-4.12.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-shared:build` succeeds and generates Java sources from all `.proto` files in `build/generated/source/proto/`.
+- [ ] No `jackson-cbor` or `jackson-datatype-jsr310` appear in `taktx-shared` or `taktx-client` compile classpath.
+- [ ] Dependency lock file is committed and passes `--strict` lock mode.
+
+**Dependencies:** PROTO-1.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-1.3 — Remove Jackson from `taktx-shared` and `taktx-client`
+
+**Description**  
+Complete Jackson removal from the two public library modules. This includes removing `VariablesDTO` (replaced in E2), all `@JsonFormat`, `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonInclude`, `@JsonIgnore` annotations, all 8 `*TypeIdResolver` classes, and `JsonSerializer`/`JsonDeserializer`/`FaultTolerantJsonDeserializer` (replaced in E3).
+
+**Scope**
+- Delete `taktx-shared/src/main/java/io/taktx/serdes/JsonSerializer.java`
+- Delete `taktx-shared/src/main/java/io/taktx/serdes/JsonDeserializer.java`
+- Delete `taktx-shared/src/main/java/io/taktx/serdes/FaultTolerantJsonDeserializer.java`
+- Delete `taktx-shared/src/main/java/io/taktx/serdes/SigningSerializer.java` (replaced in E3)
+- Delete all 8 `*TypeIdResolver.java` files in `taktx-shared/src/main/java/io/taktx/`
+- Delete all DTO classes in `taktx-shared/src/main/java/io/taktx/dto/` (202 files — replaced by generated proto classes + thin wrapper helpers)
+- Remove all Jackson `api`/`implementation` declarations from `taktx-shared/build.gradle.kts` (except `jackson-databind` which stays as `testImplementation` only until tests are updated in E6)
+- Remove `jackson-cbor`, `jackson-datatype-jsr310` from `taktx-client/build.gradle.kts`
+- Remove `@RegisterForReflection` annotations (Quarkus-specific — proto-generated classes do not need them; reflection is registered differently in E4.11)
+- **Do NOT delete** `taktx-shared/src/main/java/io/taktx/util/Takt*Serializer.java`, `Takt*Deserializer.java`, `Takt*Serde.java` — these are raw binary key serializers required for range queries. Their Jackson inheritance is removed in PROTO-4.12 instead.
+
+**Note:** This item should be done as a single commit after E2 and E3 are complete so the build does not break mid-way.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-shared:build :taktx-client:build` succeeds.
+- [ ] `grep -r "CBORFactory\|JsonFormat\|JsonTypeInfo\|TypeIdResolver\|ObjectMapper" taktx-shared/src/main taktx-client/src/main` returns zero results.
+- [ ] No Jackson runtime JARs appear in `taktx-shared` or `taktx-client` runtime classpaths.
+
+**Dependencies:** E2 (complete), E3 (complete)  
+**Estimate:** 1 day
+
+---
+
+### PROTO-1.4 — Remove `@JsonFormat(shape=ARRAY)` workaround documentation
+
+**Description**  
+Delete all ADR/comment references to CBOR array backward compatibility that are scattered through the codebase as inline comments (e.g., `"// Business metadata — appended last for CBOR array backward compatibility"`). Replace with a brief top-of-file reference to the relevant `.proto` file.
+
+**Acceptance criteria**
+- [ ] `grep -r "CBOR array backward compat"` returns zero results.
+- [ ] Each remaining comment referencing serialization points to the `.proto` file and field number.
+
+**Dependencies:** PROTO-1.3  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-1.5 — Shorten Kafka record header names
+
+**Description**  
+Kafka record headers carry their name as raw UTF-8 bytes on every message. The old `X-`-prefixed names are an HTTP convention with no meaning in the Kafka context. Replacing them with concise names saves bytes on every record that carries them.
+
+| Old name | New name | Bytes saved per record |
+|---|---|---|
+| `tx-sig` (18 B) | `tx-sig` (6 B) | 12 |
+| `tx-auth` (22 B) | `tx-auth` (7 B) | 15 |
+| `dlq-hint` (24 B) | `dlq-hint` (8 B) | 16 |
+| `dlq-text` (24 B) | `dlq-text` (8 B) | 16 |
+| `dlq-stage` (26 B) | `dlq-stage` (9 B) | 17 |
+| `dlq-lin` (18 B) | `dlq-lin` (7 B) | 11 |
+| `dlq-cid` (20 B) | `dlq-cid` (7 B) | 13 |
+| `dlq-off` (20 B) | `dlq-off` (7 B) | 13 |
+
+**Scope** — all changes are already implemented as of the v1.0 planning phase. This story tracks that they are verified complete:
+
+- `Constants.java`: `HEADER_ENGINE_SIGNATURE = "tx-sig"`, `HEADER_AUTHORIZATION = "tx-auth"`.
+- `DlqHeaders.java`: `REASON_HINT = "dlq-hint"`, `REASON_TEXT = "dlq-text"`, `CAPTURE_STAGE = "dlq-stage"`.
+- `DlqReplayProcessor.java`: `HEADER_DLQ_LINEAGE_REF = "dlq-lin"`, `HEADER_DLQ_CORRECTION_ID = "dlq-cid"`, `HEADER_DLQ_SOURCE_OFFSET = "dlq-off"`. Local duplicate of the engine-signature constant replaced with `Constants.HEADER_ENGINE_SIGNATURE` reference.
+- All error-message strings that embedded the literal header name are rewritten to use `Constants.HEADER_ENGINE_SIGNATURE` via string concatenation — so the message stays accurate when the constant value changes.
+- `TopicMetaRequestIngressProcessor.reasonCodeForAuthorizationFailure()` lowercase prefix match updated from `"missing required x-taktx-signature header"` to `"missing required tx-sig header"`.
+- All test files: literal header name strings (`headers.add(...)`, `lastHeader(...)`, `containsKey(...)`, `hasMessageContaining(...)`) updated to the new values.
+
+**Acceptance criteria**
+- [ ] `grep -r '"X-TaktX-\|"X-DLQ-' src/` returns zero results in `taktx-shared`, `taktx-engine`, `taktx-client`.
+- [ ] All unit tests pass: `./gradlew :taktx-shared:test :taktx-engine:test :taktx-client:test`.
+- [ ] Security integration test passes: `./gradlew :taktx-engine:securityIntegrationTest`.
+- [ ] Consumer applications (DLQ console, monitoring) updated to use new header names (external coordination item — out of code scope but noted here).
+
+**Note for external consumers:** Any monitoring dashboard, DLQ console, or log-parsing rule that filters on `tx-sig` or `X-DLQ-*` header names must be updated before deploying v1.0. This is expected given the major version bump.
+
+**Dependencies:** none (standalone rename, already complete)  
+**Estimate:** 0 days (already done)
+
+---
+
+> Replaces `VariablesDTO` (`Map<String, JsonNode>`) and all `JsonNode` variable usages with the `VariableValue` proto-based variable type.
+
+---
+
+### PROTO-2.1 — Implement `VariableValue` proto type and `Variables` helper
+
+**Description**  
+`variables.proto` defines:
+
+```protobuf
+syntax = "proto3";
+package io.taktx.proto;
+
+message VariableValue {
+  oneof kind {
+    string    string_val  = 1;
+    sint64    long_val    = 2;
+    double    double_val  = 3;
+    bool      bool_val    = 4;
+    bytes     bytes_val   = 5;   // opaque caller-managed blob
+    VarMap    map_val     = 6;
+    VarList   list_val    = 7;
+    NullValue null_val    = 8;
+  }
+}
+
+enum NullValue { NULL_VALUE = 0; }
+message VarMap  { map<string, VariableValue> fields = 1; }
+message VarList { repeated VariableValue     values = 1; }
+```
+
+Additionally, author a **non-generated** helper class `io.taktx.variables.Variables` in `taktx-shared/src/main/java/` providing:
+
+```java
+public final class Variables {
+    public static VariableValue of(long value) { ... }
+    public static VariableValue of(String value) { ... }
+    public static VariableValue of(double value) { ... }
+    public static VariableValue of(boolean value) { ... }
+    public static VariableValue nullValue() { ... }
+    public static VariableValue of(Object javaValue) { ... }  // converts Map, List, primitives
+    public static Map<String, VariableValue> map(String k1, Object v1, ...) { ... }  // overloads up to 5 pairs
+    public static Object toJavaObject(VariableValue value) { ... }  // for FEEL/DMN adapters
+    public static Map<String, Object> toJavaMap(VarMap varMap) { ... }
+}
+```
+
+**Acceptance criteria**
+- [ ] Unit test: `Variables.of(100L)` → serializes to ≤ 3 bytes (field tag + varint).
+- [ ] Unit test: `Variables.of("hello")` round-trips correctly.
+- [ ] Unit test: nested `VarMap` containing `VarList` containing `sint64` round-trips correctly.
+- [ ] Unit test: `Variables.toJavaObject(Variables.of(42L))` returns `Long 42`.
+- [ ] Unit test: `Variables.of(Object)` handles `java.util.Map<String,Object>`, `java.util.List<Object>`, `String`, `Long`, `Double`, `Boolean`, `null`.
+- [ ] Size assertion test: a map of 3 typical variables (`{"amount": 100, "name": "Alice", "active": true}`) encodes in ≤ 40 bytes.
+
+**Dependencies:** PROTO-1.1, PROTO-1.2  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-2.2 — Replace `VariablesDTO` references in the engine model layer
+
+**Description**  
+The engine's internal `VariableScope` model and 35 files that reference `VariablesDTO`/`JsonNode` must be updated to use `Map<String, VariableValue>` (or a thin `VariableScope` wrapper around it).
+
+Key files:
+- `engine/pi/model/VariableScope` (and all subclasses) — replace `Map<String, JsonNode>` internals with `Map<String, VariableValue>`
+- All scope merge / propagation logic in `engine/pi/scope/`
+- I/O mapping evaluation in task processors
+- `ActivityInstanceDTO` → `ActivityInstanceMessage` field `inputElement`/`outputElement` become `VariableValue`
+
+**Acceptance criteria**
+- [ ] `grep -r "VariablesDTO\|JsonNode" taktx-engine/src/main/java` returns zero results.
+- [ ] All existing unit tests in `taktx-engine/src/test` that cover variable propagation and I/O mapping still pass.
+
+**Dependencies:** PROTO-2.1  
+**Estimate:** 2 days
+
+---
+
+### PROTO-2.3 — FEEL engine adapter: `VariableValue` ↔ FEEL context
+
+**Description**  
+`FeelExpressionHandlerImpl` must be rewritten to work without `JsonNode` and `ObjectMapper`. The FEEL engine (`camunda-feel`) takes and returns Scala `Object` values. The adapter layer converts:
+
+- `VariableValue` → plain Java `Object` (via `Variables.toJavaObject()`) when building the FEEL context.
+- FEEL result `Object` → `VariableValue` (via `Variables.of(Object)`) when returning the expression result .
+
+Replace the `ObjectMapper`-based conversions:
+- `objectMapper.treeToValue(variables.get(name), Object.class)` → `Variables.toJavaObject(scope.get(name))`
+- `objectMapper.valueToTree(expressionResult)` → `Variables.of(expressionResult)`
+
+Remove the `ObjectMapper` constructor parameter and field from `FeelExpressionHandlerImpl`.
+
+**Acceptance criteria**
+- [ ] Unit test: `FeelExpressionHandlerImpl.processFeelExpression("= amount + 10", scope)` where `amount = 90L` returns a `VariableValue` with `long_val = 100`.
+- [ ] Unit test: FEEL expression returning a string returns `VariableValue` with `string_val`.
+- [ ] Unit test: FEEL expression returning a map returns `VariableValue` with `map_val`.
+- [ ] Integration test in the existing BPMN test suite for a process with a Script Task using FEEL expressions still passes.
+- [ ] No `ObjectMapper` reference inside `FeelExpressionHandlerImpl`.
+
+**Dependencies:** PROTO-2.1, PROTO-2.2  
+**Estimate:** 1 day
+
+---
+
+## E3 — Kafka Serdes Layer
+
+> Replaces all Jackson-based Kafka serializers and deserializers with Protobuf-native implementations.
+
+---
+
+### PROTO-3.1 — Implement `ProtoSerializer` and `ProtoDeserializer`
+
+**Description**  
+Create generic Kafka `Serializer<T extends MessageLite>` and `Deserializer<T extends MessageLite>` in `taktx-shared/src/main/java/io/taktx/serdes/`.
+
+```java
+public class ProtoSerializer<T extends MessageLite> implements Serializer<T> {
+    public byte[] serialize(String topic, T data) {
+        return data == null ? null : data.toByteArray();
+    }
+}
+
+public abstract class ProtoDeserializer<T extends MessageLite>
+    implements Deserializer<T> {
+    protected abstract Parser<T> parser();
+    public T deserialize(String topic, byte[] data) {
+        return data == null ? null : parser().parseFrom(data);
+    }
+}
+```
+
+Create concrete subclasses for each top-level envelope type (e.g., `ProcessInstanceTriggerDeserializer`, `InstanceUpdateDeserializer`, etc.).
+
+**Acceptance criteria**
+- [ ] Unit test: `ProtoSerializer` + `ProtoDeserializer` round-trip for each of the 10 top-level envelope types.
+- [ ] Unit test: `null` input serializes to `null`; `null` input deserializes to `null`.
+- [ ] Unit test: corrupted bytes cause `InvalidProtocolBufferException`; the deserializer wraps it in a `DeserializationResult.failure(...)` (see PROTO-3.2).
+
+**Dependencies:** PROTO-1.2  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-3.2 — Implement `FaultTolerantProtoDeserializer` with Ed25519 signing support
+
+**Description**  
+Port the `FaultTolerantJsonDeserializer` logic (body decode + optional Ed25519 header verification) to a proto-based equivalent `FaultTolerantProtoDeserializer<T extends MessageLite>`. The signing verification already works on raw `byte[]` so the Ed25519 path (`tryVerifySignature`, `resolvePublicKey`, `EngineSigningKeysHolder`) is unchanged. Only the body decode line changes:
+
+```java
+// Before:
+T value = OBJECT_MAPPER.readValue(data, clazz);
+// After:
+T value = parser().parseFrom(data);
+```
+
+Retain the `DeserializationResult<T>` wrapper type with `success`, `failure`, and `bodyDecodedWithError` states — these are protocol-level, not format-level.
+
+**Acceptance criteria**
+- [ ] Unit test: valid proto bytes → `DeserializationResult.success(value)`.
+- [ ] Unit test: corrupt bytes → `DeserializationResult.failure(message)` with `null` value.
+- [ ] Unit test: valid bytes + invalid signature → `DeserializationResult.bodyDecodedWithError(value, errorMsg)`.
+- [ ] Unit test: `SIGNING_REQUIRED_CONFIG = true` + no signature header → `bodyDecodedWithError`.
+- [ ] All existing `SecurityIntegrationTest` cases pass against the new deserializer.
+
+**Dependencies:** PROTO-3.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-3.3 — Implement `ProtoSigningSerializer` (replace `SigningSerializer`)
+
+**Description**  
+Port `SigningSerializer` to use `message.toByteArray()` instead of Jackson's `OBJECT_MAPPER.writeValueAsBytes(data)`. The signing logic (Ed25519 key lookup, header stamping) is unchanged.
+
+**Acceptance criteria**
+- [ ] Unit test: serialized bytes are `message.toByteArray()` — verified by parsing back.
+- [ ] Unit test: `tx-sig` header is present and verifiable when signing is enabled.
+- [ ] Integration test: engine produces signed records that are verified by `FaultTolerantProtoDeserializer`.
+
+**Dependencies:** PROTO-3.1  
+**Estimate:** 0.5 day
+
+---
+
+## E4 — Engine Migration
+
+> Migrates `taktx-engine` (244 source files) to the new proto types, removes all Jackson Kafka serialization, and replaces Quarkus `ObjectMapperSerde` state-store usages.
+
+---
+
+### PROTO-4.1 — Migrate `TopologyProducer` Serde registrations
+
+**Description**  
+`TopologyProducer.java` registers Serdes for every Kafka Streams state store and stream/table. Replace every `ObjectMapperSerde<T>` and `JsonSerializer<T>` / `JsonDeserializer<T>` reference with `ProtoSerializer<T>` / `ProtoDeserializer<T>` counterparts.
+
+Key stores to migrate (based on existing imports):
+- `ProcessInstanceDTO` state store → `ProcessInstanceMessageSerde`
+- `FlowNodeInstanceDTO` state store → `FlowNodeInstanceEnvelopeSerde`
+- `ProcessDefinitionDTO` state store → `ProcessDefinitionMessageSerde`
+- `DmnDefinitionDTO` state store → `DmnDefinitionMessageSerde`
+- `VariableKeyDTO` / `VariablesDTO` stores → use new proto Serde for **values**; the key Serde (`TaktUUIDSerde` + `TaktLongListSerializer`) is **unchanged** (see PROTO-4.12)
+- All other stores listed in `Stores.java`
+
+**Rule for every store:** the **value** Serde becomes `ProtoSerializer`/`ProtoDeserializer`. The **key** Serde stays as the existing raw binary Serde if that store is ever range-scanned; only use proto for key Serdes of stores accessed by exact key lookup only.
+
+**Acceptance criteria**
+- [ ] `grep "ObjectMapperSerde" taktx-engine/src/main/java` returns zero results.
+- [ ] `./gradlew :taktx-engine:build` succeeds.
+- [ ] All Kafka Streams unit tests using `TopologyTestDriver` pass.
+
+**Dependencies:** PROTO-3.1, PROTO-3.2, E4.2–E4.11 must be complete before this compiles  
+**Estimate:** 1 day
+
+---
+
+### PROTO-4.2 — Migrate `ProcessInstanceTrigger` family
+
+**Description**  
+Replace `ProcessInstanceTriggerDTO` hierarchy (9 concrete types, currently dispatched by `ProcessInstanceTriggerTypeIdResolver`) with `ProcessInstanceTriggerEnvelope` proto message. Update:
+
+- `ProcessInstanceTriggerEnvelopeSerializer` / `ProcessInstanceTriggerEnvelopeDeserializer`
+- `ProcessInstanceProcessor` and all methods that switch on trigger type
+- `StartCommandMessage` construction at all call sites in the engine
+- `ContinueFlowElementTriggerMessage`, `UserTaskResponseTriggerMessage`, `ExternalTaskResponseTriggerMessage`, `SetVariableTriggerMessage`, `AbortTriggerMessage`, `EventSignalTriggerMessage`, `ExternalTaskTriggerMessage`, `StartFlowElementTriggerMessage`
+
+Delete `ProcessInstanceTriggerTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: each of the 9 trigger types serializes and round-trips through `ProcessInstanceTriggerEnvelope.parseFrom(envelope.toByteArray())`.
+- [ ] Existing `ProcessInstanceProcessorTest` (or equivalent) passes.
+- [ ] Integration test: full BPMN process start-to-end executes successfully.
+
+**Dependencies:** PROTO-3.1  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-4.3 — Migrate `InstanceUpdate` family
+
+**Description**  
+Replace `InstanceUpdateDTO` + `FlowNodeInstanceUpdateDTO` + `ProcessInstanceUpdateDTO` with `InstanceUpdateEnvelope` proto. Update `InstanceUpdateTypeIdResolver` dispatch → proto `oneof` switch. Update all emitters in the stream processor layer that produce instance-update records.
+
+Delete `InstanceUpdateTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: `FlowNodeInstanceUpdateMessage` and `ProcessInstanceUpdateMessage` round-trip.
+- [ ] Unit test: trust metadata fields (`currentTrustMetadata`, `originTrustMetadata`) round-trip.
+- [ ] Integration test: instance-update records consumed by the observability/DLQ pipeline are correctly deserialized.
+
+**Dependencies:** PROTO-4.2  
+**Estimate:** 1 day
+
+---
+
+### PROTO-4.4 — Migrate `FlowNodeInstance` family
+
+**Description**  
+Replace `FlowNodeInstanceDTO` hierarchy (21 concrete types, dispatched by `FlowNodeInstanceTypeIdResolver`) with `FlowNodeInstanceEnvelope` proto. Each concrete subtype's fields are included directly in the respective `oneof` case message (flatten inheritance; shared base fields appear in a `FlowNodeInstanceBase` embedded message included in each case).
+
+Delete `FlowNodeInstanceTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: each of the 21 concrete instance types round-trips through the envelope.
+- [ ] Unit test: `ActivityInstanceMessage.inputElement` (a `VariableValue`) round-trips.
+- [ ] Integration test: service task, user task, exclusive gateway, parallel gateway, inclusive gateway, sub-process, and boundary event all execute correctly end-to-end.
+
+**Dependencies:** PROTO-2.1, PROTO-4.3  
+**Estimate:** 2 days
+
+---
+
+### PROTO-4.5 — Migrate `DefinitionsTrigger` / BPMN element family
+
+**Description**  
+Replace `DefinitionsTriggerDTO` + `ParsedDefinitionsDTO` + the full `BaseElementDTO` hierarchy (27 BPMN element types, dispatched by `BaseElementTypeIdResolver`) with proto definitions from `definitions.proto`. Update `DefinitionsProcessor`, `DefinitionMapper`, `DefinitionsCache`.
+
+Delete `BaseElementTypeIdResolver.java` and `DefinitionsTriggerTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: a `ParsedDefinitionsMessage` containing a process with all 27 element types round-trips without data loss.
+- [ ] Unit test: `ServiceTaskMessage`, `UserTaskMessage`, `SubProcessMessage`, `CallActivityMessage` field coverage.
+- [ ] Integration test: deploy a BPMN with all supported element types; execute a process instance from start to end.
+- [ ] Integration test: redeploy a BPMN (version bump) and existing instances continue correctly.
+
+**Dependencies:** PROTO-2.1, PROTO-4.4  
+**Estimate:** 2 days
+
+---
+
+### PROTO-4.6 — Migrate `MessageEvent` family
+
+**Description**  
+Replace `MessageEventDTO` hierarchy (6 types, dispatched by `MessageEventTypeIdResolver`) with `MessageEventEnvelope` proto. Update `MessageEventProcessor`, `CorrelationMessageSubscriptions`, `DefinitionMessageSubscriptions`.
+
+Delete `MessageEventTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: each of the 6 message event types round-trips.
+- [ ] Integration test: message correlation (start event and intermediate catch event) works end-to-end.
+
+**Dependencies:** PROTO-4.5  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-4.7 — Migrate `Signal` family
+
+**Description**  
+Replace `SignalDTO` hierarchy (5 types, dispatched by `SignalTypeIdResolver`) with `SignalEnvelope` proto. Update `SignalProcessor`.
+
+Delete `SignalTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: each of the 5 signal types round-trips.
+- [ ] Integration test: broadcast signal caught by all active subscriptions works end-to-end.
+
+**Dependencies:** PROTO-4.5  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-4.8 — Migrate `UserTask` and `ExternalTask` families
+
+**Description**  
+Replace `UserTaskTriggerDTO`, `UserTaskResponseTriggerDTO`, `UserTaskResponseResultDTO`, `ExternalTaskTriggerDTO`, `ExternalTaskResponseTriggerDTO`, `ExternalTaskResponseResultDTO` with proto equivalents. Update `UserTaskResponseProcessor`.
+
+**Acceptance criteria**
+- [ ] Unit test: `UserTaskTriggerMessage` round-trips including `AssignmentDefinitionMessage`, `PriorityDefinitionMessage`, `TaskScheduleMessage`.
+- [ ] Unit test: `UserTaskResponseTriggerMessage` with variables round-trips.
+- [ ] Integration test: user task claim + complete cycle works end-to-end.
+- [ ] Integration test: external task fetch + complete with output variables works end-to-end.
+
+**Dependencies:** PROTO-4.5  
+**Estimate:** 1 day
+
+---
+
+### PROTO-4.9 — Migrate `MessageScheduler` / `Schedule` family
+
+**Description**  
+Replace `MessageScheduleDTO` hierarchy (dispatched by `MessageSchedulerTypeIdResolver`), `ScheduleKeyDTO` hierarchy (dispatched by `ScheduleKeyTypeIdResolver`), `TaskScheduleDTO`, `TimeBucket` with proto equivalents. Update `MessageSchedulerFactory`, `ScheduleProcessor`, `ScheduleCommandDeserializer`.
+
+Delete `MessageSchedulerTypeIdResolver.java` and `ScheduleKeyTypeIdResolver.java`.
+
+**Acceptance criteria**
+- [ ] Unit test: each schedule message type round-trips.
+- [ ] Integration test: timer boundary event fires at correct time.
+- [ ] Integration test: recurring message schedule re-fires the expected number of times.
+
+**Dependencies:** PROTO-4.6  
+**Estimate:** 1 day
+
+---
+
+### PROTO-4.10 — Migrate configuration, signing key, topic meta, and DLQ families
+
+**Description**  
+Replace the remaining lower-frequency families:
+- `GlobalConfigurationDTO` / `ConfigurationEventDTO` → `GlobalConfigurationMessage` / `ConfigurationEventMessage`
+- `SigningKeyDTO` → `SigningKeyMessage`
+- `TopicMetaDTO` → `TopicMetaMessage`
+- `DlqEnvelope`, `DlqReplayCommand`, `DlqReplayResult`, `DlqEntryDTO`, `DlqLineageDTO` → proto equivalents
+- `ProcessDefinitionDTO`, `ProcessDefinitionActivationDTO`, `DmnDefinitionDTO`, `DmnDefinitionActivationDTO`, `XmlDefinitionsDTO`, `XmlDmnDefinitionsDTO` → proto equivalents
+
+**Acceptance criteria**
+- [ ] Unit test: each of the above types round-trips.
+- [ ] Integration test: signing key publish + rotate + revoke lifecycle works.
+- [ ] Integration test: DLQ capture → replay cycle works end-to-end.
+- [ ] Integration test: BPMN deploy → activate → process isolation between versions works.
+
+**Dependencies:** PROTO-4.7, PROTO-4.8, PROTO-4.9  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-4.12 — Harden range-query key serializers; remove Jackson dependency from util layer
+
+**Description**  
+The five Kafka Streams state stores that are range-scanned use compound keys whose byte representation must be byte-lexicographically ordered for `store.range(startKey, endKey)` to return correct results. Protobuf encoding is NOT byte-lexicographically ordered and must never be used for these keys.
+
+The current `TaktUUIDSerializer`, `TaktLongListSerializer`, and `TaktCompositeUUIDSerializer` in `taktx-shared/.../util/` serve a dual role: they extend `JsonSerializer<T>` (used when the key appears embedded inside a CBOR value) **and** implement `Serializer<T>` (used as the raw Kafka key format for range scans). After the migration, the Jackson side disappears; only the Kafka `Serializer<T>` / `Deserializer<T>` role survives.
+
+**Actions per key type**
+
+| Store | Key type | Action |
+|---|---|---|
+| `flowNodeInstanceStore` | `FlowNodeInstanceKeyDTO` (UUID + List\<Long\>) | Remove `extends JsonSerializer<UUID>` from `TaktUUIDSerializer`; remove `extends JsonSerializer<List<Long>>` from `TaktLongListSerializer`. Binary layout `[16B UUID big-endian | 4B count | 8B×n longs big-endian]` stays **identical**. |
+| `variablesStore` | `VariableKeyDTO` (FlowNodeInstanceKeyDTO + String variableName) | Write `VariableKeySerializer` composing the FlowNodeInstanceKey bytes above + `2B length | UTF-8 string bytes`. Document the layout in a Javadoc constant. |
+| `processDefinitionStore` | `ProcessDefinitionKey` (String id + int version) | **Fix latent fragility:** current serialization relies on CBOR array byte order for the version integer. Replace with explicit `ProcessDefinitionKeySerializer`: `2B string length (big-endian) | UTF-8 id bytes | 4B big-endian int version`. This is properly byte-lexicographic and removes the CBOR implicit contract. |
+| `instanceSignalSubscriptionStore` | `SignalInstanceSubscriptionKeyDTO` (byte\[\] hash + UUID + List\<Long\>) | Write `SignalInstanceSubscriptionKeySerializer`: `32B hash (fixed) | 16B UUID | 4B count | 8B×n longs`. |
+| `definitionSignalSubscriptionStore` | `SignalDefinitionSubscriptionKeyDTO` (byte\[\] hash + ProcessDefinitionKey + String elementId) | Write `SignalDefinitionSubscriptionKeySerializer`: `32B hash | 2B id length | UTF-8 id | 4B version | 2B elementId length | UTF-8 elementId`. |
+
+> **Note:** `ScheduleKeyDTO` stores use `store.all()`, not `store.range()`. Byte ordering does not matter for them; they can use proto or the existing CBOR serializer at the implementer's discretion.
+
+**Binary layout specifications** must be written as Javadoc `@implSpec` comments directly above each serializer's `serialize()` method, describing field order, width, and endianness. This becomes the permanent contract.
+
+**Acceptance criteria**
+- [ ] `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.
+- [ ] Unit test for `ProcessDefinitionKeySerializer`: assert `bytes(key("proc", 1)) < bytes(key("proc", 2)) < bytes(key("proc", 100))`.
+- [ ] Unit test for `FlowNodeInstanceKey`: assert `bytes(key(X, [1,2,3])) < bytes(key(X, [1,2,4]))` and `bytes(key(X, [...])) < bytes(key(Y, [...]))` when `X < Y` (UUID byte order).
+- [ ] Unit test for `SignalInstanceSubscriptionKeySerializer`: assert range from `(hash, MIN_UUID, [])` to `(hash, MAX_UUID, [MAX_LONG])` covers all keys with that hash prefix and no keys with a different hash.
+- [ ] Unit test for `VariableKeySerializer`: round-trip serialization/deserialization preserves all fields.
+- [ ] All range query integration tests pass end-to-end (signal fan-out, process definition version scan, flow node instance retrieval, variable scope resolution).
+
+**Dependencies:** PROTO-1.2 (Jackson removed from build, so the `extends JsonSerializer` compilation dependency is gone)  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-4.11 — Remove Quarkus native reflection config for old DTOs; add for proto classes
+
+**Description**  
+The current DTOs each declare `@RegisterForReflection`. Proto-lite generated classes do not use reflection; they are fully self-contained. However, Quarkus native compilation needs help for any class loaded reflectively.
+
+- Remove all `@RegisterForReflection` from deleted DTO classes (already done in PROTO-1.3).
+- Add a `@RegisterForReflection(targets = { ProcessInstanceTriggerEnvelope.class, ... })` aggregate class for all top-level proto types, or use a `quarkus-extension.yaml` descriptor as appropriate.
+- Verify `Dockerfile.linux-native` build succeeds without reflection errors.
+
+**Acceptance criteria**
+- [ ] Native build (`./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.type=native`) succeeds.
+- [ ] Engine starts and processes a BPMN process in native mode (smoke test via `curl`).
+
+**Dependencies:** PROTO-1.3, PROTO-4.10  
+**Estimate:** 0.5 day
+
+---
+
+## E5 — Client Libraries Migration
+
+---
+
+### PROTO-5.1 — Migrate `taktx-client` public API
+
+**Description**  
+`taktx-client` is a Maven Central public library. Its API surface that changes:
+
+- `DefaultParameterResolverFactory`: remove `CBORFactory`/`ObjectMapper`; deserialize inbound records using `ProtoDeserializer`.
+- `UserTaskInstanceResponder`: replace `ObjectMapper.writeValueAsBytes(dto)` with `message.toByteArray()`.
+- `VariableParameterResolver` and any `@ParameterResolver` implementations: replace `JsonNode` with `VariableValue`; update `VariableParameterResolverTest`.
+- Update all `VariablesDTO.of(...)` call sites to `Variables.map(...)`.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-client:build` succeeds with no Jackson dependency.
+- [ ] Unit test: `UserTaskInstanceResponder.complete(...)` produces a binary payload parseable as `UserTaskResponseTriggerEnvelope`.
+- [ ] Unit test: `VariableParameterResolver` resolves a `VariableValue` from an inbound record.
+- [ ] All existing 110 source files in `taktx-client/src` compile without Jackson imports.
+
+**Dependencies:** E3, E4.8  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-5.2 — Migrate `taktx-client-quarkus`
+
+**Description**  
+Update `taktx-client-quarkus` extension — CDI bean wiring for serializers/deserializers; remove Jackson producer beans that provided `ObjectMapper` for the client.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-client-quarkus:build` succeeds.
+- [ ] Integration test in `taktx-client-quarkus` demonstrates a user task being completed and the engine receiving it correctly.
+
+**Dependencies:** PROTO-5.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-5.3 — Migrate `taktx-client-spring-boot-3`
+
+**Description**  
+Update Spring Boot 3 auto-configuration; replace `ObjectMapper` Kafka config bean with proto Serde wiring; update `InstanceUpdateRecordEventChecker` and `SpringBeanInstanceProvider`.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-client-spring-boot-3:build` succeeds.
+- [ ] Integration test in `taktx-client-spring-boot-3` demonstrates a user task being completed.
+
+**Dependencies:** PROTO-5.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-5.4 — Migrate `taktx-client-spring-boot-4`
+
+**Description**  
+Same as PROTO-5.3 for Spring Boot 4 / Spring Framework 7.
+
+**Acceptance criteria**
+- [ ] `./gradlew :taktx-client-spring-boot-4:build` succeeds.
+- [ ] Integration test demonstrates a user task being completed.
+
+**Dependencies:** PROTO-5.1  
+**Estimate:** 0.5 day
+
+---
+
+## E6 — Test Hardening & Regression Guard
+
+---
+
+### PROTO-6.1 — Golden-bytes round-trip test suite (`taktx-shared`)
+
+**Description**  
+For each top-level proto envelope type, create a test that:
+1. Constructs a fully-populated instance (all fields set, no defaults).
+2. Serializes to bytes.
+3. Asserts the byte count is within expected bounds (catches accidental size regressions).
+4. Parses back and asserts structural equality.
+5. Stores the serialized bytes as a golden file (`src/test/resources/golden/*.bin`).
+6. On CI, a separate test reads each golden file and asserts it still parses to the expected type (backward parse compatibility guard).
+
+**Acceptance criteria**
+- [ ] Golden files exist for: `ProcessInstanceTriggerEnvelope`, `InstanceUpdateEnvelope`, `FlowNodeInstanceEnvelope`, `ProcessInstanceMessage`, `ParsedDefinitionsMessage`, `MessageEventEnvelope`, `SignalEnvelope`, `UserTaskTriggerMessage`, `DlqEnvelopeMessage`, `GlobalConfigurationMessage`, `SigningKeyMessage`.
+- [ ] Each golden file test fails immediately if a field number is changed (proto parsing would silently misroute the value to the wrong field).
+- [ ] CI job runs golden tests in a separate task (`goldenTest`) that can be run independently.
+
+**Dependencies:** E3 complete  
+**Estimate:** 1.5 days
+
+---
+
+### PROTO-6.2 — Proto field-number stability lint rule
+
+**Description**  
+Add a `check_proto_field_numbers.py` script (similar to the existing `check_headers.py`) that:
+- Parses all `.proto` files.
+- Asserts field numbers are never reused within a message.
+- Asserts `reserved` entries exist for any field name that appears in a `reserved` statement.
+- Runs as part of the Spotless check or as a separate `protoCheck` Gradle task.
+
+**Acceptance criteria**
+- [ ] CI fails if a `.proto` file has a duplicate field number or a `reserved` omission.
+- [ ] Script is documented in `CONTRIBUTING.md`.
+
+**Dependencies:** PROTO-1.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-6.3 — `VariableValue` encoding size benchmarks
+
+**Description**  
+Add a JMH or simple assertion-based size benchmark in `taktx-shared/src/test` that compares:
+- Current CBOR-array encoding of representative `VariablesDTO` payloads (using saved golden CBOR bytes).
+- New `VarMap` proto encoding of equivalent data.
+
+The purpose is not to gate the build but to document the size improvement and catch future regressions.
+
+**Acceptance criteria**
+- [ ] Benchmark/assertion for: 5 numeric variables, 5 string variables, 1 nested object variable, 1 list variable.
+- [ ] For the numeric and string cases, proto output is ≤ CBOR-array output in bytes.
+- [ ] Results printed to build log for visibility.
+
+**Dependencies:** PROTO-2.1  
+**Estimate:** 0.5 day
+
+---
+
+### PROTO-6.4 — Full end-to-end integration test pass
+
+**Description**  
+Run the full test suite (`./gradlew check`) after all epics are complete. Investigate and fix any remaining failures. This is the exit criterion for the entire migration.
+
+Scope of the full suite:
+- `taktx-shared`: 31 tests
+- `taktx-engine`: 68 unit tests + `securityIntegrationTest` suite
+- `taktx-client`: 110 test files
+- `taktx-client-quarkus`, `taktx-client-spring-boot-3`, `taktx-client-spring-boot-4`: integration tests
+
+**Acceptance criteria**
+- [ ] `./gradlew check` is green with zero failures and zero skipped tests.
+- [ ] `./gradlew :taktx-engine:securityIntegrationTest` passes (Ed25519 signing with proto payloads).
+- [ ] Code coverage does not drop below pre-migration levels.
+
+**Dependencies:** All preceding epics  
+**Estimate:** 1 day (buffer for fixing edge cases)
+
+---
+
+## Dependency graph (simplified)
+
+```
+E1.1 ──► E1.2 ──► E1.3 ──► E1.4
+           │
+           ├──► E2.1 ──► E2.2 ──► E2.3
+           │     │
+           │     └──────────────────────────────────┐
+           │                                         │
+           ├──► E3.1 ──► E3.2                        │
+           │     │        │                          │
+           │     └──► E3.3                           │
+           │                                         │
+           ├──► E4.12  (can start as soon as         │
+           │            PROTO-1.2 removes Jackson)   │
+           │                                         │
+           └──► E6.2                                 │
+                                                     │
+E3.1 ──► E4.2 ──► E4.3 ──► E4.4 ──► E4.5 ──► E4.6 ──► E4.7
+          │                  │         │
+          │                  └─────────┴──► E4.8 ──► E4.9 ──► E4.10 ──► E4.11
+          │
+          └──► E4.1 (after all E4.x complete, incl. E4.12)
+
+E2.1 ──────────────────────────────────────────────► E5.1 ──► E5.2
+E4.8 ──────────────────────────────────────────────►          E5.3
+                                                               E5.4
+
+E3 complete ──► E6.1
+E2.1 ──────────► E6.3
+All complete ──► E6.4
+```
+
+---
+
+## Total effort summary
+
+| Epic | Stories | Estimate |
+|---|---|---|
+| E1 — Schema & Build | 5 | 6 days |
+| E2 — Variable System | 3 | 4.5 days |
+| E3 — Kafka Serdes | 3 | 1.5 days |
+| E4 — Engine Migration | 12 | 13.5 days |
+| E5 — Client Libraries | 4 | 3 days |
+| E6 — Test Hardening | 4 | 3.5 days |
+| **Total** | **31** | **~32 days (6–7 weeks)** |
+
+Single-developer estimate assuming full-time focus and no unrelated interruptions. E1.1 design review is the only hard synchronisation point. E4.12 (key serializers) can be parallelised with E2/E3 work after E1.2 completes.
+
+---
+
+## Items explicitly out of scope
+
+- Migration guides or backward-compatible release paths (full version break, no compatibility required).
+- Avro Schema Registry integration (decided against in favour of self-contained `.proto` files).
+- Per-message compression (Kafka LZ4 batch compression is a producer config change, not a code change — do it alongside this work as `compression.type=lz4` in the Kafka producer properties).
+- gRPC transport (this migration is wire-format only; Kafka remains the transport layer).
+- Renaming the `taktx-shared` or `taktx-client` Maven artifact IDs (that is a separate release decision).
+- Changing the binary layout of range-query store keys beyond what is specified in PROTO-4.12. The big-endian raw byte format is deliberately preserved; only the Jackson dependency is removed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

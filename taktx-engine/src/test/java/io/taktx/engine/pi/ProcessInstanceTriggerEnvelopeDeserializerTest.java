@@ -50,7 +50,7 @@ class ProcessInstanceTriggerEnvelopeDeserializerTest {
     assertThat(envelope.signatureVerified()).isFalse();
     assertThat(envelope.signatureKeyId()).isNull();
     assertThat(envelope.hasSignatureError()).isTrue();
-    assertThat(envelope.signatureError()).contains("Malformed X-TaktX-Signature header");
+    assertThat(envelope.signatureError()).contains("Malformed tx-sig header");
   }
 
   @Test

@@ -120,7 +120,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
         String error =
             "Inbound record on topic='"
                 + topic
-                + "' has no X-TaktX-Signature header but "
+                + "' has no " + Constants.HEADER_ENGINE_SIGNATURE + " header but "
                 + SIGNING_REQUIRED_CONFIG
                 + "=true — rejecting unsigned record";
         log.warn(error);
@@ -177,7 +177,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
       String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
       int dot = headerValue.indexOf('.');
       if (dot < 0) {
-        return "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): "
+        return "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): "
             + headerValue;
       }
       String keyId = headerValue.substring(0, dot);

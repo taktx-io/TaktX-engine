@@ -162,7 +162,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
         throw new IllegalStateException(
             "Inbound record on topic='"
                 + topic
-                + "' has no X-TaktX-Signature header but "
+                + "' has no " + Constants.HEADER_ENGINE_SIGNATURE + " header but "
                 + SIGNING_REQUIRED_CONFIG
                 + "=true — rejecting unsigned record");
       }
@@ -221,7 +221,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
       throw new IllegalStateException(
-          "Malformed X-TaktX-Signature header (expected '<keyId>.<base64sig>'): " + headerValue);
+          "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): " + headerValue);
     }
     String keyId = headerValue.substring(0, dot);
     String base64Sig = headerValue.substring(dot + 1);
