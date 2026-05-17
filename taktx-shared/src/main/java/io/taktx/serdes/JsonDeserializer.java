@@ -8,7 +8,7 @@
 package io.taktx.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; this entire class will be deleted in PROTO-1.3.
 import io.taktx.dto.Constants;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
@@ -69,7 +69,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
    */
   public static final String SIGNING_REQUIRED_CONFIG = "taktx.security.signing.enabled";
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(JsonDeserializer.class);
 
   private final Class<T> clazz;
@@ -162,7 +162,9 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
         throw new IllegalStateException(
             "Inbound record on topic='"
                 + topic
-                + "' has no " + Constants.HEADER_ENGINE_SIGNATURE + " header but "
+                + "' has no "
+                + Constants.HEADER_ENGINE_SIGNATURE
+                + " header but "
                 + SIGNING_REQUIRED_CONFIG
                 + "=true — rejecting unsigned record");
       }
@@ -221,7 +223,10 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
     int dot = headerValue.indexOf('.');
     if (dot < 0) {
       throw new IllegalStateException(
-          "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): " + headerValue);
+          "Malformed "
+              + Constants.HEADER_ENGINE_SIGNATURE
+              + " header (expected '<keyId>.<base64sig>'): "
+              + headerValue);
     }
     String keyId = headerValue.substring(0, dot);
     String base64Sig = headerValue.substring(dot + 1);

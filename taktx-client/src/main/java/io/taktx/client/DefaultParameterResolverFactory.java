@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; class is replaced in PROTO-5.1.
 import io.taktx.client.annotation.CustomHeaders;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -21,7 +21,7 @@ import java.util.Map;
  */
 public class DefaultParameterResolverFactory implements ParameterResolverFactory {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final ProcessInstanceResponder externalTaskResponder;
 

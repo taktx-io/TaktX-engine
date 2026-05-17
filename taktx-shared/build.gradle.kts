@@ -3,6 +3,7 @@ plugins {
     `maven-publish`
     alias(libs.plugins.xjc)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.protobuf)
     id("org.jreleaser")
     jacoco
 }
@@ -34,11 +35,10 @@ tasks {
 dependencies {
     api(libs.jackson.databind)
     api(libs.jjwt.api)
+    api(libs.protobuf.javalite)
     implementation(libs.jjwt.impl)
     implementation(libs.jjwt.jackson)
 
-    implementation(libs.jackson.cbor)
-    implementation(libs.jackson.datatype.jsr310)
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
 
@@ -50,11 +50,30 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
+    // Legacy CBOR/jsr310 kept for existing tests only — removed in PROTO-1.3 alongside test cleanup.
+    testImplementation(libs.jackson.cbor)
+    testImplementation(libs.jackson.datatype.jsr310)
 //    testImplementation(libs.jackson.annotations)
     testImplementation(libs.reflections)
     testImplementation(libs.jaxb.runtime)
 
     annotationProcessor(libs.lombok)
+}
+
+// ── Protobuf ────────────────────────────────────────────────────────────────
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                named("java") {
+                    option("lite")
+                }
+            }
+        }
+    }
 }
 
 tasks.test {

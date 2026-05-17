@@ -12,7 +12,8 @@ import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; this class is replaced by proto VariableValue in
+// PROTO-2.1.
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,7 @@ import lombok.ToString;
 @RegisterForReflection
 public class VariablesDTO {
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private Map<String, JsonNode> variables;
 

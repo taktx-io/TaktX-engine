@@ -9,8 +9,8 @@ package io.taktx.client.dlq;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+// NOTE: CBORFactory and JavaTimeModule removed in PROTO-1.2; class is replaced in PROTO-5.1.
 
 /**
  * Shared CBOR {@link ObjectMapper} used by all DLQ client classes.
@@ -27,9 +27,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 final class DlqClientMapper {
 
   static final ObjectMapper INSTANCE =
-      new ObjectMapper(new CBORFactory())
-          .registerModule(new JavaTimeModule())
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   private DlqClientMapper() {}
 }

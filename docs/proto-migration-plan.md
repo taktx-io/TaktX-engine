@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** Proposed  
+**Status:** In Progress — PROTO-1.1 ✅ complete; PROTO-1.2 ✅ complete; active: PROTO-1.3  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -88,17 +88,20 @@ Author all `.proto` files under `taktx-shared/src/main/proto/`. These become the
 - FEEL expression strings remain `string`.
 
 **Acceptance criteria**
-- [ ] All `.proto` files compile without warnings via `protoc`.
-- [ ] Every existing DTO class in `taktx-shared/src/main/java/io/taktx/dto` has a 1:1 corresponding proto message (ignoring abstract base classes which become embedded `*Base` messages or are flattened).
-- [ ] Design review sign-off from maintainer before PROTO-1.2 starts.
-- [ ] No new Sonar issues introduced in any `.proto` file or hand-authored companion classes created during this story.
+- [x] All `.proto` files compile without warnings via `protoc`.
+- [x] Every existing DTO class in `taktx-shared/src/main/java/io/taktx/dto` has a 1:1 corresponding proto message (ignoring abstract base classes which become embedded `*Base` messages or are flattened).
+- [x] Design review sign-off from maintainer before PROTO-1.2 starts.
+- [x] No new Sonar issues introduced in any `.proto` file or hand-authored companion classes created during this story.
 
+**Status:** ✅ Complete  
 **Dependencies:** none  
 **Estimate:** 4 days
 
 ---
 
 ### PROTO-1.2 — Configure Protobuf build toolchain in `taktx-shared`
+
+**Status:** 🔄 In Progress
 
 **Description**  
 Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Configure `protobuf-java-lite` as the runtime. Wire source generation into the Java compile task.
@@ -113,16 +116,19 @@ Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Conf
 - **Note:** `TaktUUIDSerde`, `TaktCompositeUUIDSerde`, `TaktLongListSerializer`, `TaktLongListDeserializer` in `taktx-shared/src/main/java/io/taktx/util/` are **kept** — they are used as raw binary key serializers for range-queryable stores and are independent of both CBOR and protobuf. Their Jackson `extends JsonSerializer<>` inheritance is removed in PROTO-4.12.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-shared:build` succeeds and generates Java sources from all `.proto` files in `build/generated/source/proto/`.
-- [ ] No `jackson-cbor` or `jackson-datatype-jsr310` appear in `taktx-shared` or `taktx-client` compile classpath.
-- [ ] Dependency lock file is committed and passes `--strict` lock mode.
+- [x] `./gradlew :taktx-shared:build` succeeds and generates Java sources from all `.proto` files in `build/generated/source/proto/`.
+- [x] No `jackson-cbor` or `jackson-datatype-jsr310` appear in `taktx-shared` or `taktx-client` compile classpath.
+- [x] Dependency lock file is committed and passes `--strict` lock mode.
 
+**Status:** ✅ Complete  
 **Dependencies:** PROTO-1.1  
 **Estimate:** 0.5 day
 
 ---
 
 ### PROTO-1.3 — Remove Jackson from `taktx-shared` and `taktx-client`
+
+**Status:** 🔄 In Progress
 
 **Description**  
 Complete Jackson removal from the two public library modules. This includes removing `VariablesDTO` (replaced in E2), all `@JsonFormat`, `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonInclude`, `@JsonIgnore` annotations, all 8 `*TypeIdResolver` classes, and `JsonSerializer`/`JsonDeserializer`/`FaultTolerantJsonDeserializer` (replaced in E3).

@@ -8,7 +8,7 @@
 package io.taktx.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; this entire class will be deleted in PROTO-1.3.
 import java.io.IOException;
 import lombok.Getter;
 import org.apache.kafka.common.serialization.Serializer;
@@ -16,7 +16,7 @@ import org.apache.kafka.common.serialization.Serializer;
 @Getter
 public abstract class JsonSerializer<T> implements Serializer<T> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final Class<T> clazz;
 

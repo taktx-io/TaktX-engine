@@ -11,8 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+// NOTE: CBORFactory/JavaTimeModule removed in PROTO-1.2. These tests will be replaced in PROTO-5.1.
 import io.taktx.dto.DlqEnvelope;
 import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.DlqReplayCommand;
@@ -35,13 +34,9 @@ class DlqClientSerdesTest {
 
   private static final ObjectMapper CLIENT_MAPPER = DlqClientMapper.INSTANCE;
 
-  /**
-   * Simulates the engine-side CBOR serialisation: {@code new ObjectMapper(new CBORFactory())} with
-   * {@code JavaTimeModule}, matching Quarkus's CDI-produced mapper from {@code
-   * CustomObjectMapperProvider}.
-   */
-  private static final ObjectMapper ENGINE_CBOR =
-      new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
+  // NOTE: PROTO-1.2 — engine-side mapper is now plain JSON (CBOR removed); cross-boundary tests
+  // verify JSON round-trips. All DLQ serdes will be replaced with proto in PROTO-5.1.
+  private static final ObjectMapper ENGINE_CBOR = new ObjectMapper();
 
   // ── DlqEnvelopeCborDeserializer — client-side round-trip ─────────────────────
 

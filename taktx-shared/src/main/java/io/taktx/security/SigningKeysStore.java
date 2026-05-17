@@ -8,8 +8,7 @@
 package io.taktx.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+// NOTE: CBORFactory and JavaTimeModule removed in PROTO-1.2; replaced by proto SerDes in PROTO-3.x.
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import java.time.Duration;
@@ -56,8 +55,7 @@ import org.slf4j.LoggerFactory;
 public class SigningKeysStore implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(SigningKeysStore.class);
-  private static final ObjectMapper CBOR =
-      new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
+  private static final ObjectMapper CBOR = new ObjectMapper();
 
   private final ConcurrentHashMap<String, SigningKeyDTO> keys = new ConcurrentHashMap<>();
   private final AtomicBoolean ready = new AtomicBoolean(false);

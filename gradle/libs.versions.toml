@@ -1,6 +1,7 @@
 [versions]
 quarkus = "3.35.3"
 jackson = "2.21.3"
+protobuf = "4.29.3"
 cronutils = "9.2.1"
 lombok = "1.18.46"
 junit = "5.14.4"
@@ -27,6 +28,10 @@ spring-boot = "3.5.14"
 spring-boot-4 = "4.0.6"
 
 [libraries]
+# Protobuf
+protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
+protobuf-protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
+
 # Quarkus dependencies
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
 quarkus-camel-bom = { module = "io.quarkus.platform:quarkus-camel-bom", version.ref = "quarkus" }
@@ -105,6 +110,7 @@ jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 xjc = { id = "com.github.bjornvester.xjc", version = "1.9.0" }
+protobuf = { id = "com.google.protobuf", version = "0.9.4" }
 
 [metadata]
 projectVersion = "0.5.0-beta"

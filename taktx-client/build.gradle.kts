@@ -37,8 +37,8 @@ dependencies {
     implementation(libs.classgraph)
 //    implementation(libs.jackson.annotations)
 //    implementation(libs.jackson.databind)
-    implementation(libs.jackson.cbor)
-    implementation(libs.jackson.datatype.jsr310)
+//    implementation(libs.jackson.cbor)         // removed: PROTO-1.2 — no CBOR in client
+//    implementation(libs.jackson.datatype.jsr310) // removed: PROTO-1.2
     implementation(libs.awaitility)
 
     compileOnly(libs.jakarta.cdi.api)
@@ -49,6 +49,9 @@ dependencies {
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.junit.jupiter)
+    // Legacy CBOR/jsr310 kept for existing tests only — removed in PROTO-1.3 alongside test cleanup.
+    testImplementation(libs.jackson.cbor)
+    testImplementation(libs.jackson.datatype.jsr310)
 }
 
 // These are required for Maven Central

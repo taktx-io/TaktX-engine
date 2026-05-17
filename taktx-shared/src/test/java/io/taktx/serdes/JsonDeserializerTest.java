@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; replaced by plain ObjectMapper for test encoding.
 import io.taktx.dto.Constants;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ProcessDefinitionKey;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 class JsonDeserializerTest {
 
-  private static final ObjectMapper CBOR = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper CBOR = new ObjectMapper();
 
   @AfterEach
   void tearDown() {

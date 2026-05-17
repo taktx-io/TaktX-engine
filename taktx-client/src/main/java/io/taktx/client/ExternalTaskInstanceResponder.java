@@ -10,7 +10,7 @@ package io.taktx.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; class is replaced in PROTO-5.1.
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
@@ -31,7 +31,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  */
 public class ExternalTaskInstanceResponder {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceId;

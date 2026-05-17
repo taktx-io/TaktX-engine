@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+// NOTE: JavaTimeModule removed in PROTO-1.2; class is updated in PROTO-5.1.
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.Deployment;
 import io.taktx.client.auth.AuthorizationTokenProvider;
@@ -76,8 +76,7 @@ public class TaktXClient {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
   static final String CONFIGURATION_RECORD_KEY = "config";
-  private static final ObjectMapper CONFIG_OBJECT_MAPPER =
-      new ObjectMapper().registerModule(new JavaTimeModule());
+  private static final ObjectMapper CONFIG_OBJECT_MAPPER = new ObjectMapper();
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
   private final ProcessDefinitionDeployer processDefinitionDeployer;

@@ -8,7 +8,7 @@
 package io.taktx.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+// NOTE: CBORFactory removed in PROTO-1.2; this entire class will be deleted in PROTO-1.3.
 import io.taktx.dto.Constants;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
@@ -49,7 +49,7 @@ public abstract class FaultTolerantJsonDeserializer<T>
    */
   public static final String SIGNING_REQUIRED_CONFIG = "taktx.security.signing.enabled";
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(FaultTolerantJsonDeserializer.class);
 
   private final Class<T> clazz;
@@ -120,7 +120,9 @@ public abstract class FaultTolerantJsonDeserializer<T>
         String error =
             "Inbound record on topic='"
                 + topic
-                + "' has no " + Constants.HEADER_ENGINE_SIGNATURE + " header but "
+                + "' has no "
+                + Constants.HEADER_ENGINE_SIGNATURE
+                + " header but "
                 + SIGNING_REQUIRED_CONFIG
                 + "=true — rejecting unsigned record";
         log.warn(error);
@@ -177,7 +179,9 @@ public abstract class FaultTolerantJsonDeserializer<T>
       String headerValue = new String(sigHeader.value(), StandardCharsets.UTF_8);
       int dot = headerValue.indexOf('.');
       if (dot < 0) {
-        return "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): "
+        return "Malformed "
+            + Constants.HEADER_ENGINE_SIGNATURE
+            + " header (expected '<keyId>.<base64sig>'): "
             + headerValue;
       }
       String keyId = headerValue.substring(0, dot);
