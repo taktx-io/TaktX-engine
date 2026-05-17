@@ -8,6 +8,7 @@
 
 package io.taktx.engine.pi;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.BoundaryEventInstanceDTO;
 import io.taktx.dto.BusinessRuleTaskInstanceDTO;
 import io.taktx.dto.CallActivityInstanceDTO;
@@ -80,6 +81,7 @@ import io.taktx.engine.pi.model.subscriptions.SignalSubscription;
 import io.taktx.engine.pi.model.subscriptions.Subscription;
 import io.taktx.engine.pi.model.subscriptions.Subscriptions;
 import io.taktx.engine.pi.model.subscriptions.TimerSubscription;
+import io.taktx.proto.VariableValue;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
@@ -901,4 +903,12 @@ public interface ProcessInstanceMapper {
   // mapping method when mapping the Map values (FlowNodeInstance -> FlowNodeInstanceDTO)
   Map<UUID, FlowNodeInstanceDTO> map(
       Map<UUID, FlowNodeInstance<?>> instances, @Context FlowElements flowElements);
+
+  default VariableValue map(JsonNode source) {
+    return VariableValueJsonMapper.toVariableValue(source);
+  }
+
+  default JsonNode map(VariableValue source) {
+    return VariableValueJsonMapper.toJsonNode(source);
+  }
 }

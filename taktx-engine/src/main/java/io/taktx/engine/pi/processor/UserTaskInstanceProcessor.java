@@ -30,6 +30,7 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -80,10 +81,10 @@ public class UserTaskInstanceProcessor
   private PriorityDefinitionDTO getProcessedPriorityDefinition(
       VariableScope flowNodeInstanceVariablesn, PriorityDefinition priorityDefinition) {
     if (priorityDefinition != null) {
-      com.fasterxml.jackson.databind.JsonNode priorityNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue priorityNode =
+          feelExpressionHandler.processFeelExpressionValue(
               priorityDefinition.getPriority(), flowNodeInstanceVariablesn);
-      String priority = priorityNode != null ? priorityNode.asText() : null;
+      String priority = stringValue(priorityNode);
       return new PriorityDefinitionDTO(priority);
     } else {
       return null;
@@ -93,15 +94,15 @@ public class UserTaskInstanceProcessor
   private TaskScheduleDTO getProcessedTaskSchedule(
       VariableScope flowNodeInstanceVariables, TaskSchedule taskSchedule) {
     if (taskSchedule != null) {
-      com.fasterxml.jackson.databind.JsonNode dueDateNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue dueDateNode =
+          feelExpressionHandler.processFeelExpressionValue(
               taskSchedule.getDueDate(), flowNodeInstanceVariables);
-      String dueDate = dueDateNode != null ? dueDateNode.asText() : null;
+      String dueDate = stringValue(dueDateNode);
 
-      com.fasterxml.jackson.databind.JsonNode followupDateNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue followupDateNode =
+          feelExpressionHandler.processFeelExpressionValue(
               taskSchedule.getFollowUpDate(), flowNodeInstanceVariables);
-      String followupDate = followupDateNode != null ? followupDateNode.asText() : null;
+      String followupDate = stringValue(followupDateNode);
 
       return new TaskScheduleDTO(dueDate, followupDate);
     } else {
@@ -112,20 +113,20 @@ public class UserTaskInstanceProcessor
   private AssignmentDefinitionDTO getProcessedAssignmentDefinition(
       VariableScope flowNodeInstanceVariables, AssignmentDefinition assignmentDefinition) {
     if (assignmentDefinition != null) {
-      com.fasterxml.jackson.databind.JsonNode assigneeNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue assigneeNode =
+          feelExpressionHandler.processFeelExpressionValue(
               assignmentDefinition.getAssignee(), flowNodeInstanceVariables);
-      String assignee = assigneeNode != null ? assigneeNode.asText() : null;
+      String assignee = stringValue(assigneeNode);
 
-      com.fasterxml.jackson.databind.JsonNode candidateGroupsNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue candidateGroupsNode =
+          feelExpressionHandler.processFeelExpressionValue(
               assignmentDefinition.getCandidateGroups(), flowNodeInstanceVariables);
-      String candidateGroups = candidateGroupsNode != null ? candidateGroupsNode.asText() : null;
+      String candidateGroups = stringValue(candidateGroupsNode);
 
-      com.fasterxml.jackson.databind.JsonNode candidateUsersNode =
-          feelExpressionHandler.processFeelExpression(
+      VariableValue candidateUsersNode =
+          feelExpressionHandler.processFeelExpressionValue(
               assignmentDefinition.getCandidateUsers(), flowNodeInstanceVariables);
-      String candidateUsers = candidateUsersNode != null ? candidateUsersNode.asText() : null;
+      String candidateUsers = stringValue(candidateUsersNode);
 
       return new AssignmentDefinitionDTO(assignee, candidateGroups, candidateUsers);
     } else {
@@ -187,5 +188,10 @@ public class UserTaskInstanceProcessor
       VariableScope variableScope,
       UserTaskInstance instance) {
     // no specific termination logic for user tasks
+  }
+
+  private static String stringValue(VariableValue value) {
+    Object javaValue = value == null ? null : io.taktx.variables.Variables.toJavaObject(value);
+    return javaValue != null ? String.valueOf(javaValue) : null;
   }
 }

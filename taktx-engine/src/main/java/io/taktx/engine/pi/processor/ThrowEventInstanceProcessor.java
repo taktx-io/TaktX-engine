@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.VariablesDTO;
@@ -28,6 +27,8 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
@@ -77,15 +78,17 @@ public abstract class ThrowEventInstanceProcessor<
                 throw new ProcessInstanceException(
                     flowNodeInstance, "SignalEventDefinition has no referenced signal");
               }
-              JsonNode jsonNode =
-                  feelExpressionHandler.processFeelExpression(
+              VariableValue signalNameValue =
+                  feelExpressionHandler.processFeelExpressionValue(
                       referencedSignal.name(), variableScope);
-              if (jsonNode == null || jsonNode.isNull()) {
+              if (signalNameValue == null
+                  || signalNameValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+                  || signalNameValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
                 throw new ProcessInstanceException(
                     flowNodeInstance, "Signal name expression returned null");
               }
 
-              String name = jsonNode.asText();
+              String name = String.valueOf(Variables.toJavaObject(signalNameValue));
 
               processInstanceProcessingContext.getInstanceResult().addSignal(name);
             });

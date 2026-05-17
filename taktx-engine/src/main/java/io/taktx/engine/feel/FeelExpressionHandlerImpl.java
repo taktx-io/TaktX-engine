@@ -8,11 +8,12 @@
 
 package io.taktx.engine.feel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
+import io.taktx.engine.pi.VariableValueJsonMapper;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,17 +40,20 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
   private static final BuiltinFunctions BUILTIN_FUNCTIONS =
       new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private final FeelEngineProvider feelEngineProvider;
-  private final ObjectMapper objectMapper;
   private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();
 
   public FeelExpressionHandlerImpl(
       FeelEngineProvider feelEngineProvider, ObjectMapper objectMapper) {
     this.feelEngineProvider = feelEngineProvider;
-    this.objectMapper = objectMapper;
   }
 
   public JsonNode processFeelExpression(String expression, VariableScope variables) {
-    JsonNode resultNode;
+    return VariableValueJsonMapper.toJsonNode(processFeelExpressionValue(expression, variables));
+  }
+
+  @Override
+  public VariableValue processFeelExpressionValue(String expression, VariableScope variables) {
+    VariableValue resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
       FeelEngineApi feelEngineApi = feelEngineProvider.getFeelEngineApi();
@@ -59,14 +63,14 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
       if (evaluationResult.isSuccess()) {
         Object expressionResult =
             ((SuccessfulEvaluationResult) evaluationResult).productIterator().next();
-        resultNode = objectMapper.valueToTree(expressionResult);
+        resultNode = Variables.of(expressionResult);
       } else {
         resultNode = null;
       }
     } else {
       resultNode = variables.get(expression);
       if (resultNode == null) {
-        resultNode = new TextNode(expression);
+        resultNode = Variables.of(expression);
       }
     }
 
@@ -80,11 +84,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
         return new VariableProvider() {
           @Override
           public Option<Object> getVariable(String name) {
-            try {
-              return Option.apply(objectMapper.treeToValue(variables.get(name), Object.class));
-            } catch (JsonProcessingException e) {
-              throw new IllegalStateException(e);
-            }
+            return Option.apply(Variables.toJavaObject(variables.get(name)));
           }
 
           @Override

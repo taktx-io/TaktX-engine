@@ -11,8 +11,6 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -25,6 +23,7 @@ import io.taktx.engine.pi.model.ActivityInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -63,7 +62,7 @@ class ActivityInstanceProcessorTest {
     LoopCharacteristics loopCharacteristics = mock(LoopCharacteristics.class);
     when(activityInstance.isIteration()).thenReturn(true);
     when(activityInstance.getLoopCnt()).thenReturn(5);
-    when(activityInstance.getInputElement()).thenReturn(new TextNode("testElement"));
+    when(activityInstance.getInputElement()).thenReturn(Variables.of("testElement"));
     when(activityInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputElement()).thenReturn("inputVar");
@@ -72,8 +71,8 @@ class ActivityInstanceProcessorTest {
     processor.processStartSpecificFlowNodeInstance(
         processingContext, scope, variableScope, activityInstance, "flow1");
 
-    verify(variableScope).put("loopCnt", new IntNode(5));
-    verify(variableScope).put("inputVar", new TextNode("testElement"));
+    verify(variableScope).put("loopCnt", Variables.of(5L));
+    verify(variableScope).put("inputVar", Variables.of("testElement"));
   }
 
   @Test
@@ -82,7 +81,7 @@ class ActivityInstanceProcessorTest {
     processor.processStartSpecificFlowNodeInstance(
         processingContext, scope, variableScope, activityInstance, "flow1");
 
-    verify(variableScope, never()).put(eq("loopCnt"), any());
+    verify(variableScope, never()).put(eq("loopCnt"), any(io.taktx.proto.VariableValue.class));
   }
 
   @Test
@@ -95,8 +94,8 @@ class ActivityInstanceProcessorTest {
     LoopCharacteristics loopCharacteristics = mock(LoopCharacteristics.class);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getOutputElement()).thenReturn("outputVar");
-    when(feelExpressionHandler.processFeelExpression("outputVar", variableScope))
-        .thenReturn(new TextNode("outputValue"));
+    when(feelExpressionHandler.processFeelExpressionValue("outputVar", variableScope))
+        .thenReturn(Variables.of("outputValue"));
 
     processor.processContinueSpecificFlowNodeInstance(
         processingContext, scope, variableScope, activityInstance, trigger);

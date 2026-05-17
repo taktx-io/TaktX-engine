@@ -10,7 +10,6 @@ package io.taktx.engine.pi.processor;
 
 import static com.cronutils.utils.StringUtils.isNumeric;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
@@ -32,6 +31,8 @@ import io.taktx.engine.pi.model.ExternalTaskInstance;
 import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
@@ -158,17 +159,19 @@ public abstract class ExternalTaskInstanceProcessor<
       E externalTask,
       VariablesDTO variables) {
     // We have some kind of retry definition
-    JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(externalTask.getRetries(), variableScope);
+    VariableValue retryValue =
+        feelExpressionHandler.processFeelExpressionValue(externalTask.getRetries(), variableScope);
 
-    if (jsonNode == null || jsonNode.isNull()) {
+    if (retryValue == null
+        || retryValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || retryValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       // Expression returned null, no retries possible
       handleNoRetriesAllowed(
           instanceResult, directInstanceResult, externalTaskInstance, responseResult, variables);
       return;
     }
 
-    String retryString = jsonNode.asText();
+    String retryString = String.valueOf(Variables.toJavaObject(retryValue));
 
     // Analyze the retry definition
     int retries = -1;
@@ -316,12 +319,15 @@ public abstract class ExternalTaskInstanceProcessor<
 
   private String getExternalTaskId(
       I flownodeInstance, String workerDefinition, VariableScope variables) {
-    JsonNode jsonNode = feelExpressionHandler.processFeelExpression(workerDefinition, variables);
-    if (jsonNode == null || jsonNode.isNull()) {
+    VariableValue workerValue =
+        feelExpressionHandler.processFeelExpressionValue(workerDefinition, variables);
+    if (workerValue == null
+        || workerValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || workerValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new ProcessInstanceException(
           flownodeInstance, "External task worker definition expression returned null");
     }
-    String text = jsonNode.asText();
+    String text = String.valueOf(Variables.toJavaObject(workerValue));
     // Sanitize the external task id to make it suitable for a topic name
     return text.replaceAll("[^a-zA-Z0-9._-]", "_");
   }

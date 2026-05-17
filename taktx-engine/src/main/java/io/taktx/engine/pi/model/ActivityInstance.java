@@ -8,9 +8,9 @@
 
 package io.taktx.engine.pi.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.pd.model.Activity;
+import io.taktx.proto.VariableValue;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,20 +21,20 @@ import lombok.Setter;
 public abstract class ActivityInstance<N extends Activity> extends FlowNodeInstance<N> {
   private boolean iteration = false;
   private long nextIterationId;
-  private JsonNode inputElement;
-  private JsonNode outputElement;
+  private VariableValue inputElement;
+  private VariableValue outputElement;
   private int loopCnt;
 
   protected ActivityInstance(IFlowNodeInstance parentInstance, N flowNode, long elementInstanceId) {
     super(parentInstance, flowNode, elementInstanceId);
   }
 
-  public void setOutputElement(JsonNode outputElement) {
+  public void setOutputElement(VariableValue outputElement) {
     this.outputElement = outputElement;
     setDirty();
   }
 
-  public void setInputElement(JsonNode inputElement) {
+  public void setInputElement(VariableValue inputElement) {
     this.inputElement = inputElement;
     setDirty();
   }

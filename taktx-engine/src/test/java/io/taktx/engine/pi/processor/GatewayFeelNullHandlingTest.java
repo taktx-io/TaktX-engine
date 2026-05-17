@@ -20,6 +20,7 @@ import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -74,10 +75,10 @@ class GatewayFeelNullHandlingTest {
     when(flow2.getCondition()).thenReturn(condition2);
 
     // Simulate FEEL expression returning null (e.g., missing variable)
-    when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("invalidExpression", variableScope))
         .thenReturn(null);
-    when(feelExpressionHandler.processFeelExpression("validExpression", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.BooleanNode.TRUE);
+    when(feelExpressionHandler.processFeelExpressionValue("validExpression", variableScope))
+        .thenReturn(Variables.of(true));
 
     processor.setCanTrigger(true);
 
@@ -106,7 +107,7 @@ class GatewayFeelNullHandlingTest {
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
 
     // All conditions return null
-    when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("badExpression", variableScope))
         .thenReturn(null);
 
     processor.setCanTrigger(true);
@@ -132,7 +133,7 @@ class GatewayFeelNullHandlingTest {
     when(gateway.getId()).thenReturn("gateway1");
     when(flow1.getCondition()).thenReturn(condition1);
 
-    when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("badExpression", variableScope))
         .thenReturn(null);
 
     processor.setCanTrigger(true);

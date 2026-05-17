@@ -9,7 +9,6 @@
 package io.taktx.engine.pi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import java.io.IOException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Serializer;
@@ -17,7 +16,7 @@ import org.apache.kafka.common.serialization.Serializer;
 public class ProcessInstanceTriggerEnvelopeSerializer
     implements Serializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Override
   public byte[] serialize(String topic, ProcessInstanceTriggerEnvelope data) {

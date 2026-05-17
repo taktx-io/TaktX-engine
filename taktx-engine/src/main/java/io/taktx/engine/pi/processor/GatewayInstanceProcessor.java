@@ -21,6 +21,7 @@ import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
@@ -85,12 +86,12 @@ public abstract class GatewayInstanceProcessor<
           flowsWithCondition.stream()
               .filter(
                   sequenceFlow -> {
-                    com.fasterxml.jackson.databind.JsonNode result =
-                        feelExpressionHandler.processFeelExpression(
+                    VariableValue result =
+                        feelExpressionHandler.processFeelExpressionValue(
                             sequenceFlow.getCondition().getExpression(), variableScope);
-                    // Handle null FEEL expression results (e.g., missing variables, invalid
-                    // expressions)
-                    return result != null && result.asBoolean();
+                    return result != null
+                        && result.getKindCase() == VariableValue.KindCase.BOOL_VALUE
+                        && result.getBoolValue();
                   })
               .collect(Collectors.toSet());
 

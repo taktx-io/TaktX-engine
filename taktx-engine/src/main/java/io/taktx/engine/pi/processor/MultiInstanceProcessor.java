@@ -8,9 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -26,6 +23,9 @@ import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VarList;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.util.Comparator;
 import java.util.Map;
@@ -77,11 +77,13 @@ public class MultiInstanceProcessor
 
     Activity activity = multiInstanceInstance.getFlowNode();
 
-    JsonNode inputCollection =
-        feelExpressionHandler.processFeelExpression(
+    VariableValue inputCollection =
+        feelExpressionHandler.processFeelExpressionValue(
             activity.getLoopCharacteristics().getInputCollection(), variableScope);
 
-    if (inputCollection == null || inputCollection.isEmpty()) {
+    if (inputCollection == null
+        || inputCollection.getKindCase() != VariableValue.KindCase.LIST_VALUE
+        || inputCollection.getListValue().getItemsCount() == 0) {
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
     } else {
       ActivityInstance<?> iterationInstance =
@@ -138,11 +140,11 @@ public class MultiInstanceProcessor
   private ActivityInstance<?> prepareIterationInstances(
       Activity activity,
       MultiInstanceInstance multiInstanceInstance,
-      JsonNode inputCollection,
+      VariableValue inputCollection,
       Scope scope) {
     ActivityInstance<?> previousIterationInstance = null;
     ActivityInstance<?> firstInstance = null;
-    for (int i = 0; i < inputCollection.size(); i++) {
+    for (int i = 0; i < inputCollection.getListValue().getItemsCount(); i++) {
       ActivityInstance<?> iterationInstance =
           activity.newActivityInstance(multiInstanceInstance, scope.nextElementInstanceId());
       iterationInstance.setState(ExecutionState.INITIALIZED);
@@ -160,7 +162,7 @@ public class MultiInstanceProcessor
       previousIterationInstance = iterationInstance;
       iterationInstance.setLoopCnt(i);
       multiInstanceInstance.getScope().putInstance(iterationInstance);
-      JsonNode inputElement = inputCollection.get(i);
+      VariableValue inputElement = inputCollection.getListValue().getItems(i);
       iterationInstance.setInputElement(inputElement);
     }
     return firstInstance;
@@ -233,7 +235,7 @@ public class MultiInstanceProcessor
       VariableScope variableScope, MultiInstanceInstance multiInstanceInstance) {
     if (multiInstanceInstance.getScope().getState().isDone()) {
       multiInstanceInstance.setState(ExecutionState.COMPLETED);
-      ArrayNode arrayNode = new ObjectMapper().createArrayNode();
+      VarList.Builder outputElements = VarList.newBuilder();
 
       Map<Long, FlowNodeInstance<?>> allInstances =
           multiInstanceInstance.getScope().getFlowNodeInstances().getAllInstances();
@@ -245,11 +247,13 @@ public class MultiInstanceProcessor
               Comparator.comparingInt(
                   (ToIntFunction<ActivityInstance<?>>) ActivityInstance::getLoopCnt))
           .map(ActivityInstance::getOutputElement)
-          .forEach(arrayNode::add);
+          .forEach(value -> outputElements.addItems(value == null ? Variables.nullValue() : value));
       String outputCollection =
           multiInstanceInstance.getFlowNode().getLoopCharacteristics().getOutputCollection();
       if (outputCollection != null) {
-        variableScope.put(outputCollection, arrayNode);
+        variableScope.put(
+            outputCollection,
+            VariableValue.newBuilder().setListValue(outputElements.build()).build());
       }
     }
   }

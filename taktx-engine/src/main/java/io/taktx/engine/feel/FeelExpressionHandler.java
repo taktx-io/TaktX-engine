@@ -9,9 +9,15 @@
 package io.taktx.engine.feel;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.taktx.engine.pi.VariableValueJsonMapper;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 
 public interface FeelExpressionHandler {
 
   JsonNode processFeelExpression(String expression, VariableScope variables);
+
+  default VariableValue processFeelExpressionValue(String expression, VariableScope variables) {
+    return VariableValueJsonMapper.toVariableValue(processFeelExpression(expression, variables));
+  }
 }

@@ -10,7 +10,6 @@ package io.taktx.engine.generic;
 
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
@@ -91,6 +90,7 @@ import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
+import io.taktx.proto.VariableValue;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
@@ -102,6 +102,7 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serdes.StringSerde;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -176,8 +177,19 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
-  public static final ObjectMapperSerde<JsonNode> VARIABLES_SERDE =
-      new ObjectMapperSerde<>(JsonNode.class);
+  public static final Serde<VariableValue> VARIABLES_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : data.toByteArray(),
+          (topic, data) -> {
+            if (data == null) {
+              return null;
+            }
+            try {
+              return VariableValue.parseFrom(data);
+            } catch (Exception e) {
+              throw new SerializationException("Failed to deserialize VariableValue", e);
+            }
+          });
   public static final ObjectMapperSerde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
       new ObjectMapperSerde<>(DefinitionsTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =

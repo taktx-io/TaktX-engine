@@ -10,7 +10,6 @@ package io.taktx.engine.pi;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.security.Ed25519Service;
@@ -27,7 +26,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 public class ProcessInstanceTriggerEnvelopeDeserializer
     implements Deserializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(new CBORFactory());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final ObjectMapper JSON_OBJECT_MAPPER = new ObjectMapper();
 
   @Override
@@ -154,6 +153,9 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
   }
 
   private ProcessInstanceTriggerDTO decode(byte[] data) {
+    if (data == null) {
+      return null;
+    }
     try {
       return OBJECT_MAPPER.readValue(data, ProcessInstanceTriggerDTO.class);
     } catch (IOException _) {

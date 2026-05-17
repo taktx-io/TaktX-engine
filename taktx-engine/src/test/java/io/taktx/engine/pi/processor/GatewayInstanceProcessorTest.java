@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.BooleanNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.FlowConditionDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -25,6 +24,7 @@ import io.taktx.engine.pi.model.GatewayInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -93,10 +93,10 @@ class GatewayInstanceProcessorTest {
     when(gateway.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
     when(flow1.getCondition()).thenReturn(condition1);
     when(flow2.getCondition()).thenReturn(condition2);
-    when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
-        .thenReturn(BooleanNode.TRUE);
-    when(feelExpressionHandler.processFeelExpression("y < 10", variableScope))
-        .thenReturn(BooleanNode.FALSE);
+    when(feelExpressionHandler.processFeelExpressionValue("x > 5", variableScope))
+        .thenReturn(Variables.of(true));
+    when(feelExpressionHandler.processFeelExpressionValue("y < 10", variableScope))
+        .thenReturn(Variables.of(false));
 
     processor.setCanTrigger(true);
 
@@ -120,8 +120,8 @@ class GatewayInstanceProcessorTest {
     when(gateway.getDefaultSequenceFlow()).thenReturn(defaultFlow);
     when(flow1.getCondition()).thenReturn(condition1);
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
-    when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
-        .thenReturn(BooleanNode.FALSE);
+    when(feelExpressionHandler.processFeelExpressionValue("x > 5", variableScope))
+        .thenReturn(Variables.of(false));
 
     processor.setCanTrigger(true);
 

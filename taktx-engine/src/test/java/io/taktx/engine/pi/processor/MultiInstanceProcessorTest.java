@@ -11,8 +11,6 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.Activity;
@@ -28,6 +26,7 @@ import io.taktx.engine.pi.model.MultiInstanceInstance;
 import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -75,13 +74,11 @@ class MultiInstanceProcessorTest {
 
   @Test
   void processStartSpecificFlowNodeInstance_shouldCompleteWhenInputCollectionIsEmpty() {
-    ArrayNode emptyArray = JsonNodeFactory.instance.arrayNode();
-
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
-        .thenReturn(emptyArray);
+    when(feelExpressionHandler.processFeelExpressionValue("inputCollection", variableScope))
+        .thenReturn(Variables.of(java.util.List.of()));
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);
 
@@ -97,7 +94,7 @@ class MultiInstanceProcessorTest {
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("inputCollection", variableScope))
         .thenReturn(null);
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);

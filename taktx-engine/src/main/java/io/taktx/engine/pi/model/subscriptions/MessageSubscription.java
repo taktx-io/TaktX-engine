@@ -1,6 +1,5 @@
 package io.taktx.engine.pi.model.subscriptions;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
@@ -15,6 +14,8 @@ import io.taktx.engine.pi.model.NewCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,12 +45,14 @@ public class MessageSubscription extends Subscription {
     }
 
     String correlationKeyExpression = message.correlationKey();
-    JsonNode jsonNode =
-        feelExpressionHandler.processFeelExpression(correlationKeyExpression, variableScope);
-    if (jsonNode == null || jsonNode.isNull()) {
+    VariableValue correlationKeyValue =
+        feelExpressionHandler.processFeelExpressionValue(correlationKeyExpression, variableScope);
+    if (correlationKeyValue == null
+        || correlationKeyValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
+        || correlationKeyValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
       throw new ProcessInstanceException(null, "Correlation key expression returned null");
     }
-    String parsedCorrelationKey = jsonNode.asText();
+    String parsedCorrelationKey = String.valueOf(Variables.toJavaObject(correlationKeyValue));
     NewCorrelationSubscriptionMessageEventInfo messageInfo =
         new NewCorrelationSubscriptionMessageEventInfo(
             message.name(), parsedCorrelationKey, parentFlowNodeInstance, flowNodeToStart);

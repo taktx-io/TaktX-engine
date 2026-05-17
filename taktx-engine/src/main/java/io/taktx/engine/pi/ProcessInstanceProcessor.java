@@ -10,7 +10,6 @@ package io.taktx.engine.pi;
 
 import static io.taktx.dto.Constants.MAX_LONG;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
@@ -51,6 +50,7 @@ import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.IoMappingProcessor;
 import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
+import io.taktx.proto.VariableValue;
 import io.taktx.security.AuthorizationTokenException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -105,7 +105,7 @@ public class ProcessInstanceProcessor
       definitionsStore;
   private KeyValueStore<UUID, ProcessInstanceDTO> processInstanceStore;
   private KeyValueStore<FlowNodeInstanceKeyDTO, FlowNodeInstanceDTO> flowNodeInstanceStore;
-  private KeyValueStore<VariableKeyDTO, JsonNode> variablesStore;
+  private KeyValueStore<VariableKeyDTO, VariableValue> variablesStore;
   private ProcessorContext<Object, Object> context;
   private final ThreadLocal<VariableScope> variableScopeThreadLocal = new ThreadLocal<>();
   private final ThreadLocal<ProcessInstance> processInstanceThreadLocal = new ThreadLocal<>();
@@ -819,13 +819,13 @@ public class ProcessInstanceProcessor
       VariablesDTO variables;
 
       if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.ofJsonMap(variableScope.retrieveAndFlattenAllVariables());
+        variables = VariableValueJsonMapper.toVariablesDTO(variableScope.retrieveAndFlattenAllVariables());
       } else {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             variableScope, outputVariables, processInstance.getOutputMappings());
-        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
+        variables = outputVariables.scopeToDTO();
       }
 
       instanceResult.addContinuation(
@@ -845,13 +845,13 @@ public class ProcessInstanceProcessor
     if (processInstance.getParentProcessInstanceId() != null) {
       VariablesDTO variables;
       if (processInstance.isPropagateAllToParent()) {
-        variables = VariablesDTO.ofJsonMap(variableScope.retrieveAndFlattenAllVariables());
+        variables = VariableValueJsonMapper.toVariablesDTO(variableScope.retrieveAndFlattenAllVariables());
       } else {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             outputVariables, variableScope.getParentScope(), processInstance.getOutputMappings());
-        variables = VariablesDTO.ofJsonMap(outputVariables.getVariables());
+        variables = outputVariables.scopeToDTO();
       }
       eventSignal.getVariables().getVariables().forEach(variables::put);
       eventSignal.setVariables(variables);
@@ -902,7 +902,7 @@ public class ProcessInstanceProcessor
         new FlowNodeInstanceKeyDTO(processInstanceId, List.of(MAX_LONG));
     VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "\uffff");
 
-    try (KeyValueIterator<VariableKeyDTO, JsonNode> range =
+    try (KeyValueIterator<VariableKeyDTO, VariableValue> range =
         this.variablesStore.range(variableStartKey, variableEndKey)) {
       range.forEachRemaining(r -> this.variablesStore.delete(r.key));
     }

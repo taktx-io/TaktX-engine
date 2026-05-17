@@ -25,6 +25,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.CallActivityInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -57,8 +58,8 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
     when(variableScope.scopeToDTO()).thenReturn(new VariablesDTO());
-    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(new TextNode("childProcessId"));
+    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+        .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
@@ -85,8 +86,8 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
     when(variableScope.scopeAndParentsToDto()).thenReturn(new VariablesDTO());
-    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(new TextNode("childProcessId"));
+    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+        .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
@@ -99,8 +100,8 @@ class CallActivityInstanceProcessorTest {
   void processStartSpecificActivityInstance_shouldAbortWhenCalledElementIsNull() {
     when(callActivityInstance.getFlowNode()).thenReturn(callActivity);
     when(callActivity.getCalledElement()).thenReturn("childProcess");
-    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
-        .thenReturn(null);
+    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+        .thenReturn(Variables.nullValue());
 
     assertThrows(
         ProcessInstanceException.class,

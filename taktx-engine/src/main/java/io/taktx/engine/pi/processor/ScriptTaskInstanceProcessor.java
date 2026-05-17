@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ScriptType;
@@ -19,6 +18,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.ScriptTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -50,8 +50,9 @@ public class ScriptTaskInstanceProcessor
     ScriptType scriptType = flownodeInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.FEEL) {
       String expression = flownodeInstance.getFlowNode().getScriptExpressions().getFirst();
-      JsonNode jsonNode = feelExpressionHandler.processFeelExpression(expression, variableScope);
-      variableScope.put(flownodeInstance.getFlowNode().getResultVariableName(), jsonNode);
+      VariableValue value =
+          feelExpressionHandler.processFeelExpressionValue(expression, variableScope);
+      variableScope.put(flownodeInstance.getFlowNode().getResultVariableName(), value);
       flownodeInstance.setState(ExecutionState.COMPLETED);
     } else if (scriptType == ScriptType.JOBWORKER) {
       super.processStartSpecificActivityInstance(

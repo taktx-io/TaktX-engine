@@ -22,6 +22,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.variables.Variables;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,7 +78,7 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Simulate FEEL expression returning null (missing variable)
-    when(feelExpressionHandler.processFeelExpression("missingVariable", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("missingVariable", variableScope))
         .thenReturn(null);
 
     // Should NOT throw NPE, should handle gracefully
@@ -104,10 +105,10 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Due date returns null, follow-up is valid
-    when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("invalidExpression", variableScope))
         .thenReturn(null);
-    when(feelExpressionHandler.processFeelExpression("P1D", variableScope))
-        .thenReturn(com.fasterxml.jackson.databind.node.TextNode.valueOf("P1D"));
+    when(feelExpressionHandler.processFeelExpressionValue("P1D", variableScope))
+        .thenReturn(Variables.of("P1D"));
 
     assertDoesNotThrow(
         () ->
@@ -129,7 +130,7 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getPriorityDefinition()).thenReturn(priorityDef);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
-    when(feelExpressionHandler.processFeelExpression("unknownVariable", variableScope))
+    when(feelExpressionHandler.processFeelExpressionValue("unknownVariable", variableScope))
         .thenReturn(null);
 
     assertDoesNotThrow(
@@ -158,7 +159,7 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // All expressions return null
-    when(feelExpressionHandler.processFeelExpression(anyString(), eq(variableScope)))
+    when(feelExpressionHandler.processFeelExpressionValue(anyString(), eq(variableScope)))
         .thenReturn(null);
 
     assertDoesNotThrow(

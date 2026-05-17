@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.ExecutionState;
@@ -22,6 +21,7 @@ import io.taktx.engine.pi.ProcessInstanceProcessingContext;
 import io.taktx.engine.pi.model.BusinessRuleTaskInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -73,7 +73,7 @@ public class BusinessRuleTaskInstanceProcessor
                         flownodeInstance,
                         "DMN decision '" + decisionId + "' not found in any deployed DMN"));
 
-    JsonNode result = dmnEvaluator.evaluate(decision, variableScope);
+    VariableValue result = dmnEvaluator.evaluateValue(decision, variableScope);
 
     if (resultVariable != null && !resultVariable.isBlank()) {
       variableScope.put(resultVariable, result);
