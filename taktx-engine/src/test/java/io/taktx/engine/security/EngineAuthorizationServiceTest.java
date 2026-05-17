@@ -92,6 +92,27 @@ class EngineAuthorizationServiceTest {
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
+  // ── null trigger (CBOR decode failed) ─────────────────────────────────────
+
+  @Test
+  void nullTrigger_securityDisabled_returnsNullWithoutThrowing() {
+    // When CBOR decoding fails, the envelope carries a null trigger.
+    // authorize() must return null gracefully so that ProcessInstanceProcessor's
+    // handleUnDecodedTrigger() can emit the CBOR_DECODE_ERROR DLQ entry.
+    ProcessInstanceTriggerEnvelope nullTriggerEnvelope =
+        new ProcessInstanceTriggerEnvelope(new byte[0], null, false, null);
+    assertThat(service.authorize(new RecordHeaders(), nullTriggerEnvelope)).isNull();
+  }
+
+  @Test
+  void nullTrigger_securityEnabled_returnsNullWithoutThrowing() {
+    // Security active, but trigger is null — must still not throw NullPointerException.
+    globalConfigStore.update(authorizationConfig());
+    ProcessInstanceTriggerEnvelope nullTriggerEnvelope =
+        new ProcessInstanceTriggerEnvelope(new byte[0], null, false, null);
+    assertThat(service.authorize(new RecordHeaders(), nullTriggerEnvelope)).isNull();
+  }
+
   // ── valid JWT token ────────────────────────────────────────────────────────
 
   @Test

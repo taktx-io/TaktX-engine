@@ -11,8 +11,8 @@ import io.taktx.dto.DlqEnvelope;
 import java.io.IOException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/** Plain-JSON deserializer for {@link DlqEnvelope} records read from the {@code dlq} topic. */
-public class DlqEnvelopeJsonDeserializer implements Deserializer<DlqEnvelope> {
+/** CBOR deserializer for {@link DlqEnvelope} records read from the {@code dlq} topic. */
+public class DlqEnvelopeCborDeserializer implements Deserializer<DlqEnvelope> {
 
   @Override
   public DlqEnvelope deserialize(String topic, byte[] data) {

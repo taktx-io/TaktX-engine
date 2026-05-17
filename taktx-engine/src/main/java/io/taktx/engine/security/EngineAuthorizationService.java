@@ -184,6 +184,11 @@ public class EngineAuthorizationService {
   public CommandTrustMetadataDTO authorize(
       Headers headers, ProcessInstanceTriggerEnvelope triggerEnvelope) {
     ProcessInstanceTriggerDTO trigger = triggerEnvelope.trigger();
+    if (trigger == null) {
+      // Trigger could not be decoded (CBOR failure). Skip authorization — the
+      // ProcessInstanceProcessor null-trigger guard will emit a CBOR_DECODE_ERROR DLQ entry.
+      return null;
+    }
     GlobalConfigurationDTO cfg = effectiveConfig();
     MessageSecurityPolicy policy = resolveProcessInstancePolicy(trigger);
 

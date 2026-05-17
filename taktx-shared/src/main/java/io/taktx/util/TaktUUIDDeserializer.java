@@ -13,9 +13,13 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
 public class TaktUUIDDeserializer extends JsonDeserializer<UUID> implements Deserializer<UUID> {
+
+  private static final int UUID_BYTE_LENGTH = 16;
+
   @Override
   public UUID deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
       throws IOException {
@@ -24,6 +28,19 @@ public class TaktUUIDDeserializer extends JsonDeserializer<UUID> implements Dese
   }
 
   private static UUID getUuid(byte[] bytes) {
+    if (bytes == null) {
+      throw new SerializationException(
+          "UUID deserialization failed: key bytes are null — expected "
+              + UUID_BYTE_LENGTH
+              + " bytes");
+    }
+    if (bytes.length != UUID_BYTE_LENGTH) {
+      throw new SerializationException(
+          "UUID deserialization failed: expected "
+              + UUID_BYTE_LENGTH
+              + " bytes but got "
+              + bytes.length);
+    }
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
     long mostSigBits = buffer.getLong();
     long leastSigBits = buffer.getLong();
