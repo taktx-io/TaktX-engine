@@ -11,16 +11,24 @@ package io.taktx.engine.pi.integration;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.engine.pi.testengine.BpmnTestEngine;
+import io.taktx.engine.pi.testengine.ProcessInstanceAssert;
 import io.taktx.engine.pi.testengine.SingletonBpmnTestEngine;
 import io.taktx.engine.pi.testengine.TestConfigResource;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.UUID;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 @QuarkusTestResource(TestConfigResource.class)
 class SignalsTest {
+
+  private static final String WAITING_SIGNAL_CATCH_ID = "SignalCatch_1";
+  private static final String COMPLETED_END_EVENT_ID = "EndEvent_1";
+  private static final String SERVICE_TASK_ID = "servicetask";
 
   @BeforeEach
   void reset() {
@@ -41,6 +49,45 @@ class SignalsTest {
         .sendSignal("123")
         .waitUntilDone()
         .assertThatProcess()
+        .isCompleted();
+  }
+
+  @Test
+  void testSignalBroadcastReachesAllActiveSubscriptions() throws IOException {
+    BpmnTestEngine engine = SingletonBpmnTestEngine.getInstance();
+
+    engine
+        .deployProcessDefinitionAndWait("/bpmn/signal-catch.bpmn")
+        .startProcessInstance(VariablesDTO.empty())
+        .waitUntilIdle();
+
+    UUID firstInstanceId =
+        engine.getProcessInstanceMap().keySet().stream().findFirst().orElseThrow();
+
+    engine.startProcessInstance(VariablesDTO.empty()).waitUntilIdle();
+
+    UUID secondInstanceId =
+        engine.getProcessInstanceMap().keySet().stream()
+            .filter(processInstanceId -> !processInstanceId.equals(firstInstanceId))
+            .findFirst()
+            .orElseThrow();
+
+    engine.sendSignal("123");
+
+    Awaitility.await()
+        .atMost(BpmnTestEngine.DEFAULT_DURATION)
+        .untilAsserted(() -> new ProcessInstanceAssert(firstInstanceId, engine).isCompleted());
+    Awaitility.await()
+        .atMost(BpmnTestEngine.DEFAULT_DURATION)
+        .untilAsserted(() -> new ProcessInstanceAssert(secondInstanceId, engine).isCompleted());
+
+    new ProcessInstanceAssert(firstInstanceId, engine)
+        .hasPassedElementWithId(WAITING_SIGNAL_CATCH_ID, 1)
+        .hasPassedElementWithId(COMPLETED_END_EVENT_ID, 1)
+        .isCompleted();
+    new ProcessInstanceAssert(secondInstanceId, engine)
+        .hasPassedElementWithId(WAITING_SIGNAL_CATCH_ID, 1)
+        .hasPassedElementWithId(COMPLETED_END_EVENT_ID, 1)
         .isCompleted();
   }
 
@@ -67,12 +114,12 @@ class SignalsTest {
   }
 
   @Test
-  void testSignalBoundary_Interrupting() throws IOException {
+  void testSignalBoundaryInterrupting() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_ID)
         .deployProcessDefinitionAndWait("/bpmn/signal_boundary.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitForExternalTaskTrigger("servicetask")
+        .waitForExternalTaskTrigger(SERVICE_TASK_ID)
         .sendSignal("xyz")
         .waitUntilDone()
         .assertThatProcess()
@@ -83,12 +130,12 @@ class SignalsTest {
   }
 
   @Test
-  void testSignalBoundary_NonInterrupting() throws IOException {
+  void testSignalBoundaryNonInterrupting() throws IOException {
     SingletonBpmnTestEngine.getInstance()
-        .registerAndSubscribeToExternalTaskIds("servicetask")
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_ID)
         .deployProcessDefinitionAndWait("/bpmn/signal_boundary.bpmn")
         .startProcessInstance(VariablesDTO.empty())
-        .waitForExternalTaskTrigger("servicetask")
+        .waitForExternalTaskTrigger(SERVICE_TASK_ID)
         .sendSignal("abc")
         .waitUntilIdle()
         .assertThatProcess()
@@ -96,11 +143,11 @@ class SignalsTest {
         .hasPassedElementWithId("Boundary_NonInterrupting_1")
         .isStillActive()
         .toProcessLevel()
-        .andRespondToExternalTaskWithSuccess("servicetask", VariablesDTO.empty())
+        .andRespondToExternalTaskWithSuccess(SERVICE_TASK_ID, VariablesDTO.empty())
         .waitUntilDone()
         .assertThatProcess()
         .hasPassedElementWithId("ServiceTask_1")
-        .hasPassedElementWithId("EndEvent_1")
+        .hasPassedElementWithId(COMPLETED_END_EVENT_ID)
         .isCompleted();
   }
 }

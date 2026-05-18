@@ -8,14 +8,4 @@
 
 package io.taktx.engine.pi.testengine;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
-import io.taktx.dto.SignalDTO;
-
-public class SignalDeserializer extends ObjectMapperDeserializer<SignalDTO> {
-
-  public SignalDeserializer() {
-    super(SignalDTO.class, new ObjectMapper(new CBORFactory()));
-  }
-}
+public class SignalDeserializer extends io.taktx.serdes.SignalDtoDeserializer {}

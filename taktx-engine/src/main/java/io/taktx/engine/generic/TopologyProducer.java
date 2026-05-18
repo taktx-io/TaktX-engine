@@ -104,6 +104,8 @@ import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
+import io.taktx.serdes.SignalDtoDeserializer;
+import io.taktx.serdes.SignalProtoMapper;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
 import io.taktx.serdes.ZippedStringSerde;
@@ -149,8 +151,10 @@ public class TopologyProducer {
   public static final Serde<SignalDefinitionSubscriptionKeyDTO>
       SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE =
           new ObjectMapperSerde<>(SignalDefinitionSubscriptionKeyDTO.class);
-  public static final ObjectMapperSerde<SignalDTO> SIGNAL_SERDE =
-      new ObjectMapperSerde<>(SignalDTO.class);
+  public static final Serde<SignalDTO> SIGNAL_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
+          new SignalDtoDeserializer());
   public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
       DEFINITION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);

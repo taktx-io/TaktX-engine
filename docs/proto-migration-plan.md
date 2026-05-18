@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅; active: PROTO-4.7  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅; active: PROTO-4.8  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -635,14 +635,26 @@ Delete `MessageEventTypeIdResolver.java`.
 
 ### PROTO-4.7 — Migrate `Signal` family
 
+**Status:** ✅ Complete
+
 **Description**  
 Replace `SignalDTO` hierarchy (5 types, dispatched by `SignalTypeIdResolver`) with `SignalEnvelope` proto. Update `SignalProcessor`.
 
 Delete `SignalTypeIdResolver.java`.
 
+**Implementation notes (2026-05-18)**
+- ✅ Added shared DTO↔proto mapping and DTO deserialization for all 5 `SignalDTO` variants via `SignalProtoMapper` and `SignalDtoDeserializer` in `taktx-shared`.
+- ✅ Switched engine `TopologyProducer.SIGNAL_SERDE`, client `SignalSerializer`, and the raw engine test-fixture signal consumer from Jackson/CBOR to protobuf bytes.
+- ✅ Removed obsolete Jackson polymorphic wiring from `SignalDTO` and deleted `SignalTypeIdResolver.java` after all active signal topic paths stopped depending on it.
+- ✅ Added focused round-trip coverage in `taktx-shared/src/test/java/io/taktx/serdes/SignalProtoMapperTest.java` for all 5 signal variants.
+- ✅ Added client serializer coverage in `taktx-client/src/test/java/io/taktx/client/serdes/SignalSerializerTest.java` to assert parseable protobuf signal envelope bytes.
+- ✅ Hardened `SignalsTest` with a new broadcast scenario that starts two instances waiting on the same signal and verifies both complete after a single broadcast.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.SignalProtoMapperTest :taktx-client:test --tests io.taktx.client.serdes.SignalSerializerTest :taktx-engine:test --tests io.taktx.engine.pd.SignalProcessorDlqTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.SignalsTest --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: each of the 5 signal types round-trips.
-- [ ] Integration test: broadcast signal caught by all active subscriptions works end-to-end.
+- [x] Unit test: each of the 5 signal types round-trips.
+- [x] Integration test: broadcast signal caught by all active subscriptions works end-to-end.
 
 **Dependencies:** PROTO-4.5  
 **Estimate:** 0.5 day

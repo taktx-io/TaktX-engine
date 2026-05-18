@@ -8,13 +8,29 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.SignalDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.proto.SignalEnvelope;
+import io.taktx.serdes.ProtoSerializer;
+import io.taktx.serdes.SignalProtoMapper;
+import java.util.Map;
+import org.apache.kafka.common.serialization.Serializer;
 
-/** A JSON serializer for MessageEventDTO objects. */
-public class SignalSerializer extends JsonSerializer<SignalDTO> {
+/** A protobuf serializer for {@link SignalDTO} objects. */
+public class SignalSerializer implements Serializer<SignalDTO> {
 
-  /** Constructor for MessageEventSerializer. */
-  public SignalSerializer() {
-    super(SignalDTO.class);
+  private final ProtoSerializer<SignalEnvelope> delegate = new ProtoSerializer<>();
+
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    delegate.configure(configs, isKey);
+  }
+
+  @Override
+  public byte[] serialize(String topic, SignalDTO data) {
+    return delegate.serialize(topic, data == null ? null : SignalProtoMapper.toProto(data));
+  }
+
+  @Override
+  public void close() {
+    delegate.close();
   }
 }
