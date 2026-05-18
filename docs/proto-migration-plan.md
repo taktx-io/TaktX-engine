@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅; active: PROTO-4.3  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅; active: PROTO-4.4  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -527,12 +527,20 @@ Delete `ProcessInstanceTriggerTypeIdResolver.java`.
 **Description**  
 Replace `InstanceUpdateDTO` + `FlowNodeInstanceUpdateDTO` + `ProcessInstanceUpdateDTO` with `InstanceUpdateEnvelope` proto. Update `InstanceUpdateTypeIdResolver` dispatch → proto `oneof` switch. Update all emitters in the stream processor layer that produce instance-update records.
 
+**Progress update (2026-05-18)**
+- ✅ Added shared DTO↔proto mapping and DTO deserialization for `FlowNodeInstanceUpdateDTO` and `ProcessInstanceUpdateDTO`, including trust metadata, scope/subscription payloads, variables, business metadata, and the existing `FlowNodeInstanceDTO` bridge payload.
+- ✅ Switched engine `TopologyProducer.INSTANCE_UPDATE_SERDE`, client-facing `InstanceUpdateJsonDeserializer`, and the raw engine test-fixture instance-update consumer to the protobuf-backed serde/deserializer path.
+- ✅ Deleted the now-unused `InstanceUpdateTypeIdResolver.java` and removed the obsolete Jackson array-format annotation from `InstanceUpdateDTO` after all instance-update topic paths stopped depending on Jackson polymorphism.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.InstanceUpdateProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.SigningRoundTripTest --tests io.taktx.client.serdes.InstanceUpdateJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client-quarkus:test --tests '*TaktXClientProvider*' :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.validJwt_commandAccepted_processInstanceStarted --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.workerEd25519SignedResponse_processCompletes --console=plain` passes, covering raw instance-update consumption, `tx-sig` verification, and trust-metadata propagation in the observability/client path.
+
 Delete `InstanceUpdateTypeIdResolver.java`.
 
 **Acceptance criteria**
-- [ ] Unit test: `FlowNodeInstanceUpdateMessage` and `ProcessInstanceUpdateMessage` round-trip.
-- [ ] Unit test: trust metadata fields (`currentTrustMetadata`, `originTrustMetadata`) round-trip.
-- [ ] Integration test: instance-update records consumed by the observability/DLQ pipeline are correctly deserialized.
+- [x] Unit test: `FlowNodeInstanceUpdateMessage` and `ProcessInstanceUpdateMessage` round-trip.
+- [x] Unit test: trust metadata fields (`currentTrustMetadata`, `originTrustMetadata`) round-trip.
+- [x] Integration test: instance-update records consumed by the observability/DLQ pipeline are correctly deserialized.
 
 **Dependencies:** PROTO-4.2  
 **Estimate:** 1 day

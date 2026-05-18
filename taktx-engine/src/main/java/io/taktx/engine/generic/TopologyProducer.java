@@ -88,13 +88,14 @@ import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
+import io.taktx.serdes.InstanceUpdateDtoDeserializer;
+import io.taktx.serdes.InstanceUpdateProtoMapper;
 import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.ProtoSigningSerializer;
-import io.taktx.serdes.SigningSerializer;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
 import io.taktx.serdes.ZippedStringSerde;
@@ -201,13 +202,10 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(DefinitionsTriggerDTO.class);
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
-  public static final ObjectMapperSerde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
-      new ObjectMapperSerde<>(InstanceUpdateDTO.class) {
-        @Override
-        public Serializer<InstanceUpdateDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
+  public static final Serde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto),
+          new InstanceUpdateDtoDeserializer());
   public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
   public static final Serde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =

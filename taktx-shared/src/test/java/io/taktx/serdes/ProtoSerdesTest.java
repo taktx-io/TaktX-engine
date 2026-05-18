@@ -117,11 +117,7 @@ class ProtoSerdesTest {
             InstanceUpdateEnvelope.newBuilder()
                 .setFlowNode(
                     FlowNodeInstanceUpdateMessage.newBuilder()
-                        .setFlowNodeInstance(
-                            FlowNodeInstanceMessage.newBuilder()
-                                .setElementId("task-a")
-                                .setState(ExecutionState.EXECUTION_STATE_ACTIVE)
-                                .build())
+                        .setFlowNodeInstance(com.google.protobuf.ByteString.copyFromUtf8("task-a"))
                         .setProcessTime(42L)
                         .build())
                 .build(),

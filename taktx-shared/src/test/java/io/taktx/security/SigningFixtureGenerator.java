@@ -10,8 +10,8 @@ package io.taktx.security;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.ProcessInstanceUpdateDTO;
 import io.taktx.dto.ScopeDTO;
-import io.taktx.serdes.JsonSerializer;
-import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.InstanceUpdateProtoMapper;
+import io.taktx.serdes.ProtoSigningSerializer;
 import java.security.KeyPair;
 import java.util.Base64;
 import org.apache.kafka.common.header.internals.RecordHeaders;
@@ -54,9 +54,8 @@ class SigningFixtureGenerator {
       // Serialize + sign exactly as the engine does
       RecordHeaders headers = new RecordHeaders();
       byte[] bytes;
-      try (JsonSerializer<InstanceUpdateDTO> delegate =
-          new JsonSerializer<>(InstanceUpdateDTO.class) {}) {
-        SigningSerializer<InstanceUpdateDTO> signer = new SigningSerializer<>(delegate);
+      try (ProtoSigningSerializer<InstanceUpdateDTO> signer =
+          new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto)) {
         bytes = signer.serialize(TOPIC, headers, dto);
       }
 

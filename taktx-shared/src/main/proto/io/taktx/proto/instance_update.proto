@@ -27,10 +27,10 @@ message FlowNodeInstanceUpdateMessage {
   CommandTrustMetadataMessage current_trust_metadata  = 1;
   CommandTrustMetadataMessage origin_trust_metadata   = 2;
   repeated sint64             flow_node_instance_path = 3;
-  FlowNodeInstanceMessage     flow_node_instance      = 4;
+  optional bytes              flow_node_instance      = 4;
   VarMap                      variables               = 5;
   sint64                      process_time            = 6;
-  string                      input_sequence_flow_id  = 7;
+  optional string             input_sequence_flow_id  = 7;
   repeated string             output_sequence_flow_ids = 8;
 }
 
@@ -50,8 +50,8 @@ message ProcessInstanceUpdateMessage {
   IncidentInfoMessage         incident_info               = 6;
   ScopeMessage                scope                       = 7;
   VarMap                      variables                   = 8;
-  sint64                      process_start_time          = 9;
-  sint64                      process_end_time            = 10;
-  string                      business_key                = 11;
+  optional sint64             process_start_time          = 9;
+  optional sint64             process_end_time            = 10;
+  optional string             business_key                = 11;
   repeated string             tags                        = 12;
 }
