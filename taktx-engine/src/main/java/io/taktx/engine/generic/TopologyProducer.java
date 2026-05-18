@@ -104,6 +104,8 @@ import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
+import io.taktx.serdes.ScheduleKeyDtoDeserializer;
+import io.taktx.serdes.ScheduleKeyProtoMapper;
 import io.taktx.serdes.SignalDtoDeserializer;
 import io.taktx.serdes.SignalProtoMapper;
 import io.taktx.serdes.UserTaskResponseTriggerProtoDeserializer;
@@ -164,8 +166,8 @@ public class TopologyProducer {
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
   public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
-  public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
-      new ObjectMapperSerde<>(ScheduleKeyDTO.class);
+  public static final Serde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
+      Serdes.serdeFrom(TopologyProducer::serializeScheduleKey, new ScheduleKeyDtoDeserializer());
   public static final Serde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       Serdes.serdeFrom(
           (topic, data) ->
@@ -262,6 +264,14 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(DlqReplayResult.class);
   public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
       new ObjectMapperSerde<>(SigningKeyDTO.class);
+
+  private static byte[] serializeScheduleKey(String topic, ScheduleKeyDTO data) {
+    try {
+      return data == null ? null : ScheduleKeyProtoMapper.toProto(data).toByteArray();
+    } catch (RuntimeException e) {
+      throw new SerializationException("Failed to serialize ScheduleKeyDTO for topic=" + topic, e);
+    }
+  }
 
   private final MessageSchedulerFactory messageSchedulerFactory;
   private final Clock clock;

@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +25,5 @@ public abstract class MessageScheduleDTO {
     this.instantiationTime = instantiationTime;
   }
 
-  @JsonIgnore
   public abstract Long getNextExecutionTime(long timestamp);
 }

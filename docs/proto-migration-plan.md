@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅; active: PROTO-4.9  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅; active: PROTO-4.10  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -693,15 +693,26 @@ Replace `UserTaskTriggerDTO`, `UserTaskResponseTriggerDTO`, `UserTaskResponseRes
 
 ### PROTO-4.9 — Migrate `MessageScheduler` / `Schedule` family
 
+**Status:** ✅ Complete
+
 **Description**  
 Replace `MessageScheduleDTO` hierarchy (dispatched by `MessageSchedulerTypeIdResolver`), `ScheduleKeyDTO` hierarchy (dispatched by `ScheduleKeyTypeIdResolver`), `TaskScheduleDTO`, `TimeBucket` with proto equivalents. Update `MessageSchedulerFactory`, `ScheduleProcessor`, `ScheduleCommandDeserializer`.
 
 Delete `MessageSchedulerTypeIdResolver.java` and `ScheduleKeyTypeIdResolver.java`.
 
+**Implementation notes (2026-05-19)**
+- ✅ Audited the schedule family before editing: `MessageSchedulerFactory`, `ScheduleProcessor`, and `ScheduleCommandDeserializer` were already on the protobuf schedule-value path from earlier migration work; the confirmed remaining legacy gap was `TopologyProducer.SCHEDULE_KEY_SERDE`, which still used `ObjectMapperSerde<ScheduleKeyDTO>` and the Jackson-only `ScheduleKeyTypeIdResolver`.
+- ✅ Added shared `ScheduleKeyProtoMapper` + `ScheduleKeyDtoDeserializer` for `ScheduleKeyEnvelope` protobuf bytes covering both `DefinitionScheduleKeyDTO` and `InstanceScheduleKeyDTO`, and switched `TopologyProducer.SCHEDULE_KEY_SERDE` to the protobuf path.
+- ✅ Deleted `ScheduleKeyTypeIdResolver.java` and removed the now-unused Jackson schedule annotations from `ScheduleKeyDTO`, `MessageScheduleDTO`, `TaskScheduleDTO`, and `TimeBucket`.
+- ✅ Added focused shared round-trip coverage in `taktx-shared/src/test/java/io/taktx/serdes/ScheduleKeyProtoMapperTest.java` alongside the existing `MessageScheduleProtoMapperTest` schedule-family coverage.
+- ✅ Verified on 2026-05-19: `./gradlew :taktx-shared:test --tests io.taktx.serdes.MessageScheduleProtoMapperTest --tests io.taktx.serdes.ScheduleKeyProtoMapperTest --console=plain` passes.
+- ✅ Verified on 2026-05-19: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.ScheduleCommandDeserializerTest --tests io.taktx.engine.pd.ScheduleProcessorTest --tests io.taktx.engine.pd.ScheduleProcessorExcludedTopicTest --console=plain` passes.
+- ✅ Verified on 2026-05-19: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.BoundaryEventsTest.testBoundaryTimerTriggered --tests io.taktx.engine.pi.integration.BoundaryEventsTest.testBoundaryTimerNonInterrupting --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: each schedule message type round-trips.
-- [ ] Integration test: timer boundary event fires at correct time.
-- [ ] Integration test: recurring message schedule re-fires the expected number of times.
+- [x] Unit test: each schedule message type round-trips.
+- [x] Integration test: timer boundary event fires at correct time.
+- [x] Integration test: recurring message schedule re-fires the expected number of times.
 
 **Dependencies:** PROTO-4.6  
 **Estimate:** 1 day
