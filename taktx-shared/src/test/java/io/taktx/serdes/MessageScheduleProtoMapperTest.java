@@ -69,6 +69,3 @@ class MessageScheduleProtoMapperTest {
             new RecurringMessageScheduleDTO(startCommand, "0 0/5 * * * ?", 2_500L)));
   }
 }
-
-
-

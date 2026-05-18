@@ -80,4 +80,3 @@ public class ProtoSigningSerializer<T> implements Serializer<T> {
     // no-op
   }
 }
-

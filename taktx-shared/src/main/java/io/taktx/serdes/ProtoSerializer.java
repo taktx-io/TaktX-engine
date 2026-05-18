@@ -18,4 +18,3 @@ public class ProtoSerializer<T extends MessageLite> implements Serializer<T> {
     return data == null ? null : data.toByteArray();
   }
 }
-

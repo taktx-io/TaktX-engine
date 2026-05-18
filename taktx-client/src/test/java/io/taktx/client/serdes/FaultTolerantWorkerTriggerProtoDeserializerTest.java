@@ -107,9 +107,7 @@ class FaultTolerantWorkerTriggerProtoDeserializerTest {
       byte[] payload = serializer.serialize(TOPIC, dto);
       RecordHeaders headers = signedHeaders(payload, otherPrivateKeyBase64);
       deserializer.configure(
-          Map.of(
-              FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG,
-              trustedPublicKeyBase64),
+          Map.of(FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, trustedPublicKeyBase64),
           false);
       result = deserializer.deserialize(TOPIC, headers, payload);
     }
@@ -162,4 +160,3 @@ class FaultTolerantWorkerTriggerProtoDeserializerTest {
     return headers;
   }
 }
-

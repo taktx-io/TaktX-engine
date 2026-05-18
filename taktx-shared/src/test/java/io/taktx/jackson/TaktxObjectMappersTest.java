@@ -37,7 +37,8 @@ class TaktxObjectMappersTest {
             .role(KeyRole.CLIENT)
             .build();
 
-    ObjectMapper legacyCborMapper = new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
+    ObjectMapper legacyCborMapper =
+        new ObjectMapper(new CBORFactory()).registerModule(new JavaTimeModule());
     byte[] payload = legacyCborMapper.writeValueAsBytes(signingKey);
 
     SigningKeyDTO decoded = TaktxObjectMappers.cbor().readValue(payload, SigningKeyDTO.class);
@@ -74,5 +75,3 @@ class TaktxObjectMappersTest {
     assertThat(decoded.getTimestamp()).isEqualTo(timestamp);
   }
 }
-
-

@@ -73,8 +73,7 @@ public final class TaktxObjectMappers {
       if (token == JsonToken.VALUE_NUMBER_FLOAT) {
         return fromDecimal(parser.getDecimalValue());
       }
-      return (Instant)
-          ctxt.handleUnexpectedToken(Instant.class, parser);
+      return (Instant) ctxt.handleUnexpectedToken(Instant.class, parser);
     }
 
     private static Instant parseText(String text) {

@@ -13,7 +13,6 @@ import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
 import io.taktx.jackson.TaktxObjectMappers;
-import java.io.IOException;
 import io.taktx.util.TaktPropertiesHelper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;

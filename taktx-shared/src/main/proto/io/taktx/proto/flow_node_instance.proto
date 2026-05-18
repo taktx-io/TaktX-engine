@@ -173,7 +173,7 @@ message ExternalTaskInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: FlowNodeInstanceDTO (abstract)
@@ -197,6 +197,7 @@ message GatewayInstanceMessage {
   int32 passed_cnt = 6;
   bool incident = 7;
   repeated string selected_output_flows = 8;
+  repeated string triggered_flows = 9;
 }
 
 // Java: InclusiveGatewayInstanceDTO
@@ -249,7 +250,7 @@ message MessageEndEventInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: MessageIntermediateThrowEventInstanceDTO
@@ -267,7 +268,7 @@ message MessageIntermediateThrowEventInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: MultiInstanceInstanceDTO
@@ -297,6 +298,7 @@ message ParallelGatewayInstanceMessage {
   int32 passed_cnt = 6;
   bool incident = 7;
   repeated string selected_output_flows = 8;
+  repeated string triggered_flows = 9;
 }
 
 // Java: ReceiveTaskInstanceDTO
@@ -338,7 +340,7 @@ message ScriptTaskInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: SendTaskInstanceDTO
@@ -356,7 +358,7 @@ message SendTaskInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: ServiceTaskInstanceDTO
@@ -374,7 +376,7 @@ message ServiceTaskInstanceMessage {
   VariableValue output_element = 11;
   int32 loop_cnt = 12;
   int32 attempt = 13;
-  repeated ScheduleKeyMessage scheduled_keys = 14;
+  repeated ScheduleKeyEnvelope scheduled_keys = 14;
 }
 
 // Java: StartEventInstanceDTO

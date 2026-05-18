@@ -17,4 +17,3 @@ public class TopicMetaDeserializer extends ProtoDeserializer<TopicMetaMessage> {
     return TopicMetaMessage.parser();
   }
 }
-

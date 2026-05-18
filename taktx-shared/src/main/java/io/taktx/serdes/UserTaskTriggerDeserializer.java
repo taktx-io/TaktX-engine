@@ -17,4 +17,3 @@ public class UserTaskTriggerDeserializer extends ProtoDeserializer<UserTaskTrigg
     return UserTaskTriggerMessage.parser();
   }
 }
-

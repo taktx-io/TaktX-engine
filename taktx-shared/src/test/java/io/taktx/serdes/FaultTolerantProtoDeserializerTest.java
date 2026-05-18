@@ -90,8 +90,7 @@ class FaultTolerantProtoDeserializerTest {
     DeserializationResult<UserTaskTriggerMessage> result;
     try (SignValidatingDeserializer deserializer = new SignValidatingDeserializer()) {
       deserializer.configure(
-          Map.of(
-              FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, trustedPublicKeyBase64),
+          Map.of(FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, trustedPublicKeyBase64),
           false);
       result = deserializer.deserialize(TOPIC, headers, bytes);
     }
@@ -135,8 +134,7 @@ class FaultTolerantProtoDeserializerTest {
     DeserializationResult<UserTaskTriggerMessage> unsignedRejected;
     try (SignValidatingDeserializer deserializer = new SignValidatingDeserializer()) {
       deserializer.configure(
-          Map.of(
-              FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, "static-key-placeholder"),
+          Map.of(FaultTolerantProtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, "static-key-placeholder"),
           false);
 
       RuntimeConfigurationHolder.set(
@@ -146,8 +144,7 @@ class FaultTolerantProtoDeserializerTest {
       assertThat(unsignedOk.isSuccess()).isTrue();
       assertThat(unsignedOk.getValue()).isEqualTo(message);
 
-      RuntimeConfigurationHolder.set(
-          GlobalConfigurationDTO.builder().signingEnabled(true).build());
+      RuntimeConfigurationHolder.set(GlobalConfigurationDTO.builder().signingEnabled(true).build());
       unsignedRejected = deserializer.deserialize(TOPIC, new RecordHeaders(), bytes);
     }
 
@@ -178,5 +175,3 @@ class FaultTolerantProtoDeserializerTest {
     }
   }
 }
-
-

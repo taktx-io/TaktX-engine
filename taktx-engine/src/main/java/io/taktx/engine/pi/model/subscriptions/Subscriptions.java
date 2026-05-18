@@ -43,6 +43,18 @@ public class Subscriptions {
 
   private Map<Long, List<Subscription>> instanceSubscriptions = new HashMap<>();
 
+  public Map<Long, List<Subscription>> getInstanceSubscriptions() {
+    if (instanceSubscriptions == null) {
+      instanceSubscriptions = new HashMap<>();
+    }
+    return instanceSubscriptions;
+  }
+
+  public void setInstanceSubscriptions(Map<Long, List<Subscription>> instanceSubscriptions) {
+    this.instanceSubscriptions =
+        instanceSubscriptions == null ? new HashMap<>() : instanceSubscriptions;
+  }
+
   public void addSubscriptionsForBoundaryEventDefinitions(
       ProcessInstanceProcessingContext context,
       VariableScope variableScope,

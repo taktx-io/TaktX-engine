@@ -17,4 +17,3 @@ public class DlqReplayCommandDeserializer extends ProtoDeserializer<DlqReplayCom
     return DlqReplayCommand.parser();
   }
 }
-

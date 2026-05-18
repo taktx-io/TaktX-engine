@@ -17,4 +17,3 @@ public class InstanceUpdateDeserializer extends ProtoDeserializer<InstanceUpdate
     return InstanceUpdateEnvelope.parser();
   }
 }
-

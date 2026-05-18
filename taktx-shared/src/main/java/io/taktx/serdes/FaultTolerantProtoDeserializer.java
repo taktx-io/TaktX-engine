@@ -90,8 +90,8 @@ public abstract class FaultTolerantProtoDeserializer<T extends MessageLite>
 
   /**
    * Header-aware path. Always decodes the body first, then attempts signature verification
-   * independently. A signature failure yields {@link DeserializationResult#bodyDecodedWithError}
-   * so the consumer still has the payload to work with.
+   * independently. A signature failure yields {@link DeserializationResult#bodyDecodedWithError} so
+   * the consumer still has the payload to work with.
    */
   @Override
   public DeserializationResult<T> deserialize(String topic, Headers headers, byte[] data) {

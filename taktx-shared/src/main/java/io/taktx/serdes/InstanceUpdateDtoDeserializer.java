@@ -159,4 +159,3 @@ public class InstanceUpdateDtoDeserializer implements Deserializer<InstanceUpdat
     }
   }
 }
-

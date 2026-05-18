@@ -19,4 +19,3 @@ public class TopicMetaDeserializer extends ObjectMapperDeserializer<TopicMetaDTO
     super(TopicMetaDTO.class, new ObjectMapper(new CBORFactory()));
   }
 }
-

@@ -7,13 +7,10 @@
  */
 package io.taktx.serdes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.ByteString;
 import io.taktx.dto.CommandAuthMethod;
 import io.taktx.dto.CommandTrustMetadataDTO;
 import io.taktx.dto.CommandTrustVerificationResult;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
 import io.taktx.dto.IncidentInfoDTO;
 import io.taktx.dto.InstanceScheduleKeyDTO;
@@ -25,7 +22,6 @@ import io.taktx.dto.SubscriptionDTO;
 import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.VariablesDTO;
-import io.taktx.jackson.TaktxObjectMappers;
 import io.taktx.proto.CatchAllErrorSubscriptionMessage;
 import io.taktx.proto.CatchAllEscalationSubscriptionMessage;
 import io.taktx.proto.CommandTrustMetadataMessage;
@@ -57,8 +53,6 @@ import java.util.UUID;
 
 /** Shared DTO ↔ protobuf mapper for instance-update records. */
 public final class InstanceUpdateProtoMapper {
-
-  private static final ObjectMapper CBOR = TaktxObjectMappers.cbor();
 
   private InstanceUpdateProtoMapper() {}
 
@@ -98,7 +92,7 @@ public final class InstanceUpdateProtoMapper {
       builder.addAllFlowNodeInstancePath(dto.getFlowNodeInstancePath());
     }
     if (dto.getFlowNodeInstance() != null) {
-      builder.setFlowNodeInstance(ByteString.copyFrom(serializeFlowNodeInstance(dto.getFlowNodeInstance())));
+      builder.setFlowNodeInstance(FlowNodeInstanceProtoMapper.toProto(dto.getFlowNodeInstance()));
     }
     if (dto.getVariables() != null) {
       builder.setVariables(toProto(dto.getVariables()));
@@ -121,7 +115,7 @@ public final class InstanceUpdateProtoMapper {
                 ? null
                 : new ArrayList<>(message.getFlowNodeInstancePathList()),
             message.hasFlowNodeInstance()
-                ? deserializeFlowNodeInstance(message.getFlowNodeInstance().toByteArray())
+                ? FlowNodeInstanceProtoMapper.toDto(message.getFlowNodeInstance())
                 : null,
             message.hasVariables() ? toVariablesDto(message.getVariables()) : null,
             message.getProcessTime(),
@@ -175,7 +169,9 @@ public final class InstanceUpdateProtoMapper {
   private static ProcessInstanceUpdateDTO toDto(ProcessInstanceUpdateMessage message) {
     ProcessInstanceUpdateDTO dto =
         new ProcessInstanceUpdateDTO(
-            message.hasParentProcessInstanceId() ? toDto(message.getParentProcessInstanceId()) : null,
+            message.hasParentProcessInstanceId()
+                ? toDto(message.getParentProcessInstanceId())
+                : null,
             message.getParentElementInstancePathCount() == 0
                 ? null
                 : new ArrayList<>(message.getParentElementInstancePathList()),
@@ -217,7 +213,9 @@ public final class InstanceUpdateProtoMapper {
             ? null
             : new ArrayList<>(message.getElementInstanceIdPathList()),
         emptyToNull(message.getMessage()),
-        message.getStacktraceCount() == 0 ? null : message.getStacktraceList().toArray(String[]::new),
+        message.getStacktraceCount() == 0
+            ? null
+            : message.getStacktraceList().toArray(String[]::new),
         emptyToNull(message.getDlqEntryRef()));
   }
 
@@ -244,10 +242,8 @@ public final class InstanceUpdateProtoMapper {
         message.getActiveCnt(),
         message.getSubProcessLevel(),
         message.getElementInstanceCnt(),
-        message.getGatewayInstancesMap().isEmpty()
-            ? null
-            : new LinkedHashMap<>(message.getGatewayInstancesMap()),
-        message.hasSubscriptions() ? toDto(message.getSubscriptions()) : null);
+        new LinkedHashMap<>(message.getGatewayInstancesMap()),
+        message.hasSubscriptions() ? toDto(message.getSubscriptions()) : new SubscriptionsDTO());
   }
 
   private static SubscriptionsMessage toProto(SubscriptionsDTO dto) {
@@ -260,7 +256,9 @@ public final class InstanceUpdateProtoMapper {
             (instanceId, subscriptions) -> {
               SubscriptionList.Builder listBuilder = SubscriptionList.newBuilder();
               if (subscriptions != null) {
-                subscriptions.stream().map(InstanceUpdateProtoMapper::toProto).forEach(listBuilder::addItems);
+                subscriptions.stream()
+                    .map(InstanceUpdateProtoMapper::toProto)
+                    .forEach(listBuilder::addItems);
               }
               builder.putInstanceSubscriptions(instanceId, listBuilder.build());
             });
@@ -270,7 +268,6 @@ public final class InstanceUpdateProtoMapper {
   private static SubscriptionsDTO toDto(SubscriptionsMessage message) {
     SubscriptionsDTO dto = new SubscriptionsDTO();
     if (message.getInstanceSubscriptionsCount() == 0) {
-      dto.setInstanceSubscriptions(null);
       return dto;
     }
     Map<Long, List<SubscriptionDTO>> subscriptions = new LinkedHashMap<>();
@@ -279,7 +276,9 @@ public final class InstanceUpdateProtoMapper {
         .forEach(
             (instanceId, list) -> {
               List<SubscriptionDTO> items = new ArrayList<>();
-              list.getItemsList().stream().map(InstanceUpdateProtoMapper::toDto).forEach(items::add);
+              list.getItemsList().stream()
+                  .map(InstanceUpdateProtoMapper::toDto)
+                  .forEach(items::add);
               subscriptions.put(instanceId, items);
             });
     dto.setInstanceSubscriptions(subscriptions);
@@ -289,7 +288,8 @@ public final class InstanceUpdateProtoMapper {
   private static SubscriptionEnvelope toProto(SubscriptionDTO dto) {
     SubscriptionEnvelope.Builder builder = SubscriptionEnvelope.newBuilder();
     if (dto instanceof io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO catchAllError) {
-      CatchAllErrorSubscriptionMessage.Builder message = CatchAllErrorSubscriptionMessage.newBuilder();
+      CatchAllErrorSubscriptionMessage.Builder message =
+          CatchAllErrorSubscriptionMessage.newBuilder();
       applyBaseSubscription(message, catchAllError);
       builder.setCatchAllError(message.build());
     } else if (dto instanceof io.taktx.dto.subscriptions.ErrorSubscriptionDTO error) {
@@ -299,7 +299,9 @@ public final class InstanceUpdateProtoMapper {
         message.setCode(error.getCode());
       }
       builder.setErrorSub(message.build());
-    } else if (dto instanceof io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO catchAllEscalation) {
+    } else if (dto
+        instanceof
+        io.taktx.dto.subscriptions.CatchAllEscalationSubscriptionDTO catchAllEscalation) {
       CatchAllEscalationSubscriptionMessage.Builder message =
           CatchAllEscalationSubscriptionMessage.newBuilder();
       applyBaseSubscription(message, catchAllEscalation);
@@ -311,7 +313,8 @@ public final class InstanceUpdateProtoMapper {
         message.setCode(escalation.getCode());
       }
       builder.setEscalationSub(message.build());
-    } else if (dto instanceof io.taktx.dto.subscriptions.MessageSubscriptionDTO messageSubscription) {
+    } else if (dto
+        instanceof io.taktx.dto.subscriptions.MessageSubscriptionDTO messageSubscription) {
       MessageSubscriptionMessage.Builder message = MessageSubscriptionMessage.newBuilder();
       applyBaseSubscription(message, messageSubscription);
       if (messageSubscription.getName() != null) {
@@ -347,13 +350,19 @@ public final class InstanceUpdateProtoMapper {
       case CATCH_ALL_ERROR -> {
         io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO dto =
             new io.taktx.dto.subscriptions.CatchAllErrorSubscriptionDTO();
-        applyBaseSubscription(dto, envelope.getCatchAllError().getSubScriptionType(), envelope.getCatchAllError().getElementId());
+        applyBaseSubscription(
+            dto,
+            envelope.getCatchAllError().getSubScriptionType(),
+            envelope.getCatchAllError().getElementId());
         yield dto;
       }
       case ERROR_SUB -> {
         io.taktx.dto.subscriptions.ErrorSubscriptionDTO dto =
             new io.taktx.dto.subscriptions.ErrorSubscriptionDTO();
-        applyBaseSubscription(dto, envelope.getErrorSub().getSubScriptionType(), envelope.getErrorSub().getElementId());
+        applyBaseSubscription(
+            dto,
+            envelope.getErrorSub().getSubScriptionType(),
+            envelope.getErrorSub().getElementId());
         dto.setCode(emptyToNull(envelope.getErrorSub().getCode()));
         yield dto;
       }
@@ -557,7 +566,8 @@ public final class InstanceUpdateProtoMapper {
     return toInstanceScheduleKeyDto(envelope.getInstanceKey());
   }
 
-  private static InstanceScheduleKeyDTO toInstanceScheduleKeyDto(InstanceScheduleKeyMessage message) {
+  private static InstanceScheduleKeyDTO toInstanceScheduleKeyDto(
+      InstanceScheduleKeyMessage message) {
     return new InstanceScheduleKeyDTO(
         message.hasProcessInstanceId() ? toDto(message.getProcessInstanceId()) : null,
         message.getElementInstanceIdPathCount() == 0
@@ -755,7 +765,9 @@ public final class InstanceUpdateProtoMapper {
   }
 
   private static VarMap toProto(VariablesDTO variables) {
-    return VarMap.newBuilder().putAllEntries(VariableValueDtoMapper.toVariableMap(variables)).build();
+    return VarMap.newBuilder()
+        .putAllEntries(VariableValueDtoMapper.toVariableMap(variables))
+        .build();
   }
 
   private static VariablesDTO toVariablesDto(VarMap variables) {
@@ -764,25 +776,7 @@ public final class InstanceUpdateProtoMapper {
     return VariableValueDtoMapper.toVariablesDto(entries);
   }
 
-  private static byte[] serializeFlowNodeInstance(FlowNodeInstanceDTO dto) {
-    try {
-      return CBOR.writeValueAsBytes(dto);
-    } catch (Exception e) {
-      throw new IllegalStateException("Failed to serialize FlowNodeInstanceDTO bridge payload", e);
-    }
-  }
-
-  private static FlowNodeInstanceDTO deserializeFlowNodeInstance(byte[] data) {
-    try {
-      return CBOR.readValue(data, FlowNodeInstanceDTO.class);
-    } catch (Exception e) {
-      throw new IllegalStateException("Failed to deserialize FlowNodeInstanceDTO bridge payload", e);
-    }
-  }
-
   private static String emptyToNull(String value) {
     return value == null || value.isEmpty() ? null : value;
   }
 }
-
-

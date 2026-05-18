@@ -17,4 +17,3 @@ public class DefinitionsTriggerDeserializer extends ProtoDeserializer<Definition
     return DefinitionsTriggerEnvelope.parser();
   }
 }
-

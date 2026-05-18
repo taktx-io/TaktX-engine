@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅; active: PROTO-4.4  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅; active: PROTO-4.5  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -552,12 +552,21 @@ Delete `InstanceUpdateTypeIdResolver.java`.
 **Description**  
 Replace `FlowNodeInstanceDTO` hierarchy (21 concrete types, dispatched by `FlowNodeInstanceTypeIdResolver`) with `FlowNodeInstanceEnvelope` proto. Each concrete subtype's fields are included directly in the respective `oneof` case message (flatten inheritance; shared base fields appear in a `FlowNodeInstanceBase` embedded message included in each case).
 
+**Progress update (2026-05-18)**
+- ✅ Added shared DTO↔proto mapping and DTO deserialization for all 21 concrete `FlowNodeInstanceDTO` variants, including nested scope/subscription payloads, activity input/output `VariableValue` fields, receive-task correlation/message-event data, external-task schedule-key envelopes, and event/gateway/task specializations.
+- ✅ Switched engine `TopologyProducer.FLOW_NODE_INSTANCE_SERDE` and the embedded `FlowNodeInstance` payload inside `InstanceUpdateProtoMapper` from Jackson/CBOR bytes to `FlowNodeInstanceEnvelope` protobuf bytes.
+- ✅ Closed schema fidelity gaps before wiring the serde by preserving polymorphic `ScheduleKeyDTO` values with `ScheduleKeyEnvelope`, adding `ParallelGatewayInstanceDTO.triggeredFlows`, and replacing raw `InstanceUpdate.flow_node_instance` bytes with a typed `FlowNodeInstanceEnvelope` field.
+- ✅ Deleted the now-unused `FlowNodeInstanceTypeIdResolver.java` after all active flow-node topic/state-store paths stopped depending on Jackson polymorphism.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.FlowNodeInstanceProtoMapperTest --tests io.taktx.serdes.InstanceUpdateProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.GatewayTest --tests io.taktx.engine.pi.integration.BoundaryEventsTest --tests io.taktx.engine.pi.integration.VariablesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.validJwt_commandAccepted_processInstanceStarted --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.workerEd25519SignedResponse_processCompletes --console=plain` passes.
+
 Delete `FlowNodeInstanceTypeIdResolver.java`.
 
 **Acceptance criteria**
-- [ ] Unit test: each of the 21 concrete instance types round-trips through the envelope.
-- [ ] Unit test: `ActivityInstanceMessage.inputElement` (a `VariableValue`) round-trips.
-- [ ] Integration test: service task, user task, exclusive gateway, parallel gateway, inclusive gateway, sub-process, and boundary event all execute correctly end-to-end.
+- [x] Unit test: each of the 21 concrete instance types round-trips through the envelope.
+- [x] Unit test: `ActivityInstanceMessage.inputElement` (a `VariableValue`) round-trips.
+- [x] Integration test: service task, user task, exclusive gateway, parallel gateway, inclusive gateway, sub-process, and boundary event all execute correctly end-to-end.
 
 **Dependencies:** PROTO-2.1, PROTO-4.3  
 **Estimate:** 2 days

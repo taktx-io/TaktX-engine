@@ -84,6 +84,19 @@ class SubscriptionsTest {
   }
 
   @Test
+  void setInstanceSubscriptions_shouldNormalizeNullToEmptyMap() {
+    subscriptions.setInstanceSubscriptions(null);
+    when(flowNodeInstance.getElementInstanceId()).thenReturn(42L);
+
+    assertNotNull(subscriptions.getInstanceSubscriptions());
+    assertTrue(subscriptions.getInstanceSubscriptions().isEmpty());
+    assertDoesNotThrow(
+        () ->
+            subscriptions.cancelSubscriptionsForInstance(
+                processingContext, flowNodeInstance, scope));
+  }
+
+  @Test
   void terminateAllSubscriptionsIfDone_shouldCancelAllSubscriptions_whenScopeIsDone() {
     Subscription subscription1 = mock(Subscription.class);
     Subscription subscription2 = mock(Subscription.class);

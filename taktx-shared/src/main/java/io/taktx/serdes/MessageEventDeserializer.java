@@ -17,4 +17,3 @@ public class MessageEventDeserializer extends ProtoDeserializer<MessageEventEnve
     return MessageEventEnvelope.parser();
   }
 }
-

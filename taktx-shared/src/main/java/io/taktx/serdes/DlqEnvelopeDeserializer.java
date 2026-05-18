@@ -17,4 +17,3 @@ public class DlqEnvelopeDeserializer extends ProtoDeserializer<DlqEnvelope> {
     return DlqEnvelope.parser();
   }
 }
-

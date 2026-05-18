@@ -17,4 +17,3 @@ public class ProcessInstanceDeserializer extends ProtoDeserializer<ProcessInstan
     return ProcessInstanceMessage.parser();
   }
 }
-

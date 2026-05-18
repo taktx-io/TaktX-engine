@@ -17,4 +17,3 @@ public class DmnDefinitionDeserializer extends ProtoDeserializer<DmnDefinitionMe
     return DmnDefinitionMessage.parser();
   }
 }
-

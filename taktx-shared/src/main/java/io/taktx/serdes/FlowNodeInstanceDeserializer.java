@@ -17,4 +17,3 @@ public class FlowNodeInstanceDeserializer extends ProtoDeserializer<FlowNodeInst
     return FlowNodeInstanceEnvelope.parser();
   }
 }
-

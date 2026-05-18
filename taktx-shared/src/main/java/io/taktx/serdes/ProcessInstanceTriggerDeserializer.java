@@ -18,4 +18,3 @@ public class ProcessInstanceTriggerDeserializer
     return ProcessInstanceTriggerEnvelope.parser();
   }
 }
-

@@ -17,4 +17,3 @@ public class ParsedDefinitionsDeserializer extends ProtoDeserializer<ParsedDefin
     return ParsedDefinitionsMessage.parser();
   }
 }
-

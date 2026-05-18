@@ -17,4 +17,3 @@ public class SignalDeserializer extends ProtoDeserializer<SignalEnvelope> {
     return SignalEnvelope.parser();
   }
 }
-

@@ -114,7 +114,10 @@ public final class WorkerTriggerProtoMapper {
   }
 
   private static Uuid toProto(UUID uuid) {
-    return Uuid.newBuilder().setHigh(uuid.getMostSignificantBits()).setLow(uuid.getLeastSignificantBits()).build();
+    return Uuid.newBuilder()
+        .setHigh(uuid.getMostSignificantBits())
+        .setLow(uuid.getLeastSignificantBits())
+        .build();
   }
 
   private static UUID toDto(Uuid uuid) {
@@ -165,7 +168,8 @@ public final class WorkerTriggerProtoMapper {
   }
 
   private static TaskScheduleDTO toDto(TaskScheduleMessage message) {
-    return new TaskScheduleDTO(emptyToNull(message.getDueDate()), emptyToNull(message.getFollowUpDate()));
+    return new TaskScheduleDTO(
+        emptyToNull(message.getDueDate()), emptyToNull(message.getFollowUpDate()));
   }
 
   private static PriorityDefinitionMessage toProto(PriorityDefinitionDTO dto) {
@@ -181,7 +185,9 @@ public final class WorkerTriggerProtoMapper {
   }
 
   private static VarMap toProto(VariablesDTO variables) {
-    return VarMap.newBuilder().putAllEntries(VariableValueDtoMapper.toVariableMap(variables)).build();
+    return VarMap.newBuilder()
+        .putAllEntries(VariableValueDtoMapper.toVariableMap(variables))
+        .build();
   }
 
   private static VariablesDTO toVariablesDto(VarMap variables) {
@@ -194,4 +200,3 @@ public final class WorkerTriggerProtoMapper {
     return value == null || value.isEmpty() ? null : value;
   }
 }
-

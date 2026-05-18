@@ -53,7 +53,8 @@ class InstanceUpdateProtoMapperTest {
 
     assertThat(restored).as(name).usingRecursiveComparison().isEqualTo(update);
     assertThat(restored)
-        .extracting(InstanceUpdateDTO::getCurrentTrustMetadata, InstanceUpdateDTO::getOriginTrustMetadata)
+        .extracting(
+            InstanceUpdateDTO::getCurrentTrustMetadata, InstanceUpdateDTO::getOriginTrustMetadata)
         .containsExactly(update.getCurrentTrustMetadata(), update.getOriginTrustMetadata());
   }
 
@@ -92,7 +93,7 @@ class InstanceUpdateProtoMapperTest {
     task.setIteration(true);
     task.setNextIterationId(102L);
     task.setInputElement(VariablesDTO.OBJECT_MAPPER.valueToTree(Map.of("input", "value")));
-    task.setOutputElement(VariablesDTO.OBJECT_MAPPER.valueToTree(Map.of("result", 42)));
+    task.setOutputElement(VariablesDTO.OBJECT_MAPPER.valueToTree(Map.of("result", 42L)));
     task.setLoopCnt(3);
 
     FlowNodeInstanceUpdateDTO flowNodeUpdate =
@@ -167,5 +168,3 @@ class InstanceUpdateProtoMapperTest {
         Arguments.of("processUpdate", processUpdate));
   }
 }
-
-

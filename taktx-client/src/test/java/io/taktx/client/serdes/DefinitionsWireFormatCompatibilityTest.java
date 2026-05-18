@@ -45,10 +45,10 @@ class DefinitionsWireFormatCompatibilityTest {
       payload = serializer.serialize("dmn-definitions", dto);
     }
 
-    DmnDefinitionsTriggerDTO decoded = ENGINE_CBOR.readValue(payload, DmnDefinitionsTriggerDTO.class);
+    DmnDefinitionsTriggerDTO decoded =
+        ENGINE_CBOR.readValue(payload, DmnDefinitionsTriggerDTO.class);
 
     assertThat(decoded).isInstanceOf(XmlDmnDefinitionsDTO.class);
     assertThat(decoded).isEqualTo(dto);
   }
 }
-

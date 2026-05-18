@@ -66,8 +66,7 @@ public final class MessageScheduleProtoMapper {
   }
 
   private static FixedRateMessageScheduleMessage toProto(FixedRateMessageScheduleDTO dto) {
-    FixedRateMessageScheduleMessage.Builder builder =
-        FixedRateMessageScheduleMessage.newBuilder();
+    FixedRateMessageScheduleMessage.Builder builder = FixedRateMessageScheduleMessage.newBuilder();
     if (dto.getMessage() != null) {
       builder.setMessage(toProto(dto.getMessage()));
     }
@@ -78,8 +77,7 @@ public final class MessageScheduleProtoMapper {
   }
 
   private static RecurringMessageScheduleMessage toProto(RecurringMessageScheduleDTO dto) {
-    RecurringMessageScheduleMessage.Builder builder =
-        RecurringMessageScheduleMessage.newBuilder();
+    RecurringMessageScheduleMessage.Builder builder = RecurringMessageScheduleMessage.newBuilder();
     if (dto.getMessage() != null) {
       builder.setMessage(toProto(dto.getMessage()));
     }
@@ -115,7 +113,8 @@ public final class MessageScheduleProtoMapper {
   private static SchedulableMessageEnvelope toProto(SchedulableMessageDTO dto) {
     SchedulableMessageEnvelope.Builder builder = SchedulableMessageEnvelope.newBuilder();
     if (dto instanceof ProcessInstanceTriggerDTO processInstanceTrigger) {
-      builder.setProcessInstanceTrigger(ProcessInstanceTriggerProtoMapper.toProto(processInstanceTrigger));
+      builder.setProcessInstanceTrigger(
+          ProcessInstanceTriggerProtoMapper.toProto(processInstanceTrigger));
     } else if (dto instanceof ExternalTaskTriggerDTO externalTaskTrigger) {
       builder.setExternalTaskTrigger(WorkerTriggerProtoMapper.toProto(externalTaskTrigger));
     } else if (dto != null) {
@@ -129,7 +128,8 @@ public final class MessageScheduleProtoMapper {
     return switch (message.getMessageCase()) {
       case PROCESS_INSTANCE_TRIGGER ->
           ProcessInstanceTriggerProtoMapper.toDto(message.getProcessInstanceTrigger());
-      case EXTERNAL_TASK_TRIGGER -> WorkerTriggerProtoMapper.toDto(message.getExternalTaskTrigger());
+      case EXTERNAL_TASK_TRIGGER ->
+          WorkerTriggerProtoMapper.toDto(message.getExternalTaskTrigger());
       case MESSAGE_NOT_SET -> null;
     };
   }
@@ -138,4 +138,3 @@ public final class MessageScheduleProtoMapper {
     return value == null || value.isEmpty() ? null : value;
   }
 }
-

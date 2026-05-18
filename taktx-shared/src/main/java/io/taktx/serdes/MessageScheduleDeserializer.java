@@ -17,4 +17,3 @@ public class MessageScheduleDeserializer extends ProtoDeserializer<MessageSchedu
     return MessageScheduleEnvelope.parser();
   }
 }
-

@@ -88,13 +88,15 @@ import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
+import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
+import io.taktx.serdes.FlowNodeInstanceProtoMapper;
 import io.taktx.serdes.InstanceUpdateDtoDeserializer;
 import io.taktx.serdes.InstanceUpdateProtoMapper;
 import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
-import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
@@ -111,7 +113,6 @@ import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serdes.StringSerde;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -206,8 +207,11 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto),
           new InstanceUpdateDtoDeserializer());
-  public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
-      new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
+  public static final Serde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : FlowNodeInstanceProtoMapper.toProto(data).toByteArray(),
+          new FlowNodeInstanceDtoDeserializer());
   public static final Serde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),

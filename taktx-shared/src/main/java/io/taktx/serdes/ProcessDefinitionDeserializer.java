@@ -17,4 +17,3 @@ public class ProcessDefinitionDeserializer extends ProtoDeserializer<ProcessDefi
     return ProcessDefinitionMessage.parser();
   }
 }
-

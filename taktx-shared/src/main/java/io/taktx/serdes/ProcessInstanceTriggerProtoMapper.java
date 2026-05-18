@@ -50,9 +50,9 @@ import io.taktx.proto.SignalEventSignalMessage;
 import io.taktx.proto.StartCommandMessage;
 import io.taktx.proto.StartFlowElementTriggerMessage;
 import io.taktx.proto.TimerEventSignalMessage;
-import io.taktx.proto.Uuid;
 import io.taktx.proto.UserTaskResponseResultMessage;
 import io.taktx.proto.UserTaskResponseTriggerMessage;
+import io.taktx.proto.Uuid;
 import io.taktx.proto.VarMap;
 import io.taktx.variables.VariableValueDtoMapper;
 import java.util.ArrayList;
@@ -132,7 +132,9 @@ public final class ProcessInstanceTriggerProtoMapper {
     }
     builder.setPropagateAllToParent(dto.isPropagateAllToParent());
     if (dto.getOutputMappings() != null) {
-      dto.getOutputMappings().stream().map(ProcessInstanceTriggerProtoMapper::toProto).forEach(builder::addOutputMappings);
+      dto.getOutputMappings().stream()
+          .map(ProcessInstanceTriggerProtoMapper::toProto)
+          .forEach(builder::addOutputMappings);
     }
     if (dto.getBusinessKey() != null) {
       builder.setBusinessKey(dto.getBusinessKey());
@@ -147,7 +149,9 @@ public final class ProcessInstanceTriggerProtoMapper {
     StartCommandDTO dto =
         new StartCommandDTO(
             message.hasProcessInstanceId() ? toDto(message.getProcessInstanceId()) : null,
-            message.hasParentProcessInstanceId() ? toDto(message.getParentProcessInstanceId()) : null,
+            message.hasParentProcessInstanceId()
+                ? toDto(message.getParentProcessInstanceId())
+                : null,
             emptyToNull(message.getElementId()),
             message.getParentElementInstancePathCount() == 0
                 ? null
@@ -166,7 +170,8 @@ public final class ProcessInstanceTriggerProtoMapper {
   }
 
   private static ContinueFlowElementTriggerMessage toProto(ContinueFlowElementTriggerDTO dto) {
-    ContinueFlowElementTriggerMessage.Builder builder = ContinueFlowElementTriggerMessage.newBuilder();
+    ContinueFlowElementTriggerMessage.Builder builder =
+        ContinueFlowElementTriggerMessage.newBuilder();
     setBaseTriggerFields(builder, dto);
     if (dto.getInputFlowId() != null) {
       builder.setInputFlowId(dto.getInputFlowId());
@@ -291,7 +296,8 @@ public final class ProcessInstanceTriggerProtoMapper {
   }
 
   private static ExternalTaskResponseTriggerMessage toProto(ExternalTaskResponseTriggerDTO dto) {
-    ExternalTaskResponseTriggerMessage.Builder builder = ExternalTaskResponseTriggerMessage.newBuilder();
+    ExternalTaskResponseTriggerMessage.Builder builder =
+        ExternalTaskResponseTriggerMessage.newBuilder();
     setBaseTriggerFields(builder, dto);
     if (dto.getInputFlowId() != null) {
       builder.setInputFlowId(dto.getInputFlowId());
@@ -365,7 +371,8 @@ public final class ProcessInstanceTriggerProtoMapper {
   }
 
   private static ExternalTaskResponseResultMessage toProto(ExternalTaskResponseResultDTO dto) {
-    ExternalTaskResponseResultMessage.Builder builder = ExternalTaskResponseResultMessage.newBuilder();
+    ExternalTaskResponseResultMessage.Builder builder =
+        ExternalTaskResponseResultMessage.newBuilder();
     if (dto.getResponseType() != null) {
       builder.setResponseType(toProto(dto.getResponseType()));
     }
@@ -392,7 +399,9 @@ public final class ProcessInstanceTriggerProtoMapper {
         emptyToNull(message.getCode()),
         emptyToNull(message.getMessage()),
         message.getTimeout(),
-        message.getStacktraceCount() == 0 ? null : message.getStacktraceList().toArray(String[]::new));
+        message.getStacktraceCount() == 0
+            ? null
+            : message.getStacktraceList().toArray(String[]::new));
   }
 
   private static UserTaskResponseResultMessage toProto(UserTaskResponseResultDTO dto) {
@@ -411,7 +420,9 @@ public final class ProcessInstanceTriggerProtoMapper {
 
   private static UserTaskResponseResultDTO toDto(UserTaskResponseResultMessage message) {
     return new UserTaskResponseResultDTO(
-        toDto(message.getResponseType()), emptyToNull(message.getCode()), emptyToNull(message.getMessage()));
+        toDto(message.getResponseType()),
+        emptyToNull(message.getCode()),
+        emptyToNull(message.getMessage()));
   }
 
   private static EventSignalEnvelope toProto(EventSignalDTO dto) {
@@ -467,7 +478,8 @@ public final class ProcessInstanceTriggerProtoMapper {
         builder.setSignalSignal(signal.build());
       }
       default ->
-          throw new IllegalArgumentException("Unsupported event signal type: " + dto.getClass().getName());
+          throw new IllegalArgumentException(
+              "Unsupported event signal type: " + dto.getClass().getName());
     }
     return builder.build();
   }
@@ -488,7 +500,8 @@ public final class ProcessInstanceTriggerProtoMapper {
 
   private static MessageEventSignalDTO toDto(MessageEventSignalMessage message) {
     MessageEventSignalDTO dto =
-        new MessageEventSignalDTO(emptyToNull(message.getElementId()), emptyToNull(message.getName()));
+        new MessageEventSignalDTO(
+            emptyToNull(message.getElementId()), emptyToNull(message.getName()));
     applyBaseEventSignal(
         dto,
         message.getElementInstanceIdPathList(),
@@ -508,7 +521,8 @@ public final class ProcessInstanceTriggerProtoMapper {
 
   private static EscalationEventSignalDTO toDto(EscalationEventSignalMessage message) {
     EscalationEventSignalDTO dto =
-        new EscalationEventSignalDTO(emptyToNull(message.getCode()), emptyToNull(message.getMessage()));
+        new EscalationEventSignalDTO(
+            emptyToNull(message.getCode()), emptyToNull(message.getMessage()));
     applyBaseEventSignal(
         dto,
         message.getElementInstanceIdPathList(),
@@ -534,39 +548,48 @@ public final class ProcessInstanceTriggerProtoMapper {
     return dto;
   }
 
-  private static void setBaseTriggerFields(StartCommandMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      StartCommandMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(ContinueFlowElementTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      ContinueFlowElementTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(StartFlowElementTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      StartFlowElementTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(SetVariableTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      SetVariableTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(AbortTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      AbortTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(EventSignalTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      EventSignalTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(ExternalTaskResponseTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      ExternalTaskResponseTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setBaseTriggerFields(UserTaskResponseTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setBaseTriggerFields(
+      UserTaskResponseTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     setCommonTriggerFields(builder, dto);
   }
 
-  private static void setCommonTriggerFields(StartCommandMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setCommonTriggerFields(
+      StartCommandMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     if (dto.getProcessInstanceId() != null) {
       builder.setProcessInstanceId(toProto(dto.getProcessInstanceId()));
     }
@@ -617,7 +640,8 @@ public final class ProcessInstanceTriggerProtoMapper {
     }
   }
 
-  private static void setCommonTriggerFields(AbortTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
+  private static void setCommonTriggerFields(
+      AbortTriggerMessage.Builder builder, ProcessInstanceTriggerDTO dto) {
     if (dto.getProcessInstanceId() != null) {
       builder.setProcessInstanceId(toProto(dto.getProcessInstanceId()));
     }
@@ -676,23 +700,28 @@ public final class ProcessInstanceTriggerProtoMapper {
     dto.setOriginTrustMetadata(originTrustMetadata);
   }
 
-  private static void setBaseEventSignalFields(MessageEventSignalMessage.Builder builder, EventSignalDTO dto) {
+  private static void setBaseEventSignalFields(
+      MessageEventSignalMessage.Builder builder, EventSignalDTO dto) {
     setCommonEventSignalFields(builder, dto);
   }
 
-  private static void setBaseEventSignalFields(ErrorEventSignalMessage.Builder builder, EventSignalDTO dto) {
+  private static void setBaseEventSignalFields(
+      ErrorEventSignalMessage.Builder builder, EventSignalDTO dto) {
     setCommonEventSignalFields(builder, dto);
   }
 
-  private static void setBaseEventSignalFields(EscalationEventSignalMessage.Builder builder, EventSignalDTO dto) {
+  private static void setBaseEventSignalFields(
+      EscalationEventSignalMessage.Builder builder, EventSignalDTO dto) {
     setCommonEventSignalFields(builder, dto);
   }
 
-  private static void setBaseEventSignalFields(TimerEventSignalMessage.Builder builder, EventSignalDTO dto) {
+  private static void setBaseEventSignalFields(
+      TimerEventSignalMessage.Builder builder, EventSignalDTO dto) {
     setCommonEventSignalFields(builder, dto);
   }
 
-  private static void setBaseEventSignalFields(SignalEventSignalMessage.Builder builder, EventSignalDTO dto) {
+  private static void setBaseEventSignalFields(
+      SignalEventSignalMessage.Builder builder, EventSignalDTO dto) {
     setCommonEventSignalFields(builder, dto);
   }
 
@@ -843,8 +872,7 @@ public final class ProcessInstanceTriggerProtoMapper {
       case SUCCESS -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_SUCCESS;
       case PROMISE -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_PROMISE;
       case TIMEOUT -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_TIMEOUT;
-      case ESCALATION ->
-          io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_ESCALATION;
+      case ESCALATION -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_ESCALATION;
       case ERROR -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_ERROR;
       case INCIDENT -> io.taktx.proto.ExternalTaskResponseType.EXTERNAL_TASK_RESPONSE_INCIDENT;
     };
@@ -906,7 +934,10 @@ public final class ProcessInstanceTriggerProtoMapper {
   }
 
   private static Uuid toProto(UUID uuid) {
-    return Uuid.newBuilder().setHigh(uuid.getMostSignificantBits()).setLow(uuid.getLeastSignificantBits()).build();
+    return Uuid.newBuilder()
+        .setHigh(uuid.getMostSignificantBits())
+        .setLow(uuid.getLeastSignificantBits())
+        .build();
   }
 
   private static UUID toDto(Uuid uuid) {
@@ -925,7 +956,9 @@ public final class ProcessInstanceTriggerProtoMapper {
   }
 
   private static VarMap toProto(VariablesDTO variables) {
-    return VarMap.newBuilder().putAllEntries(VariableValueDtoMapper.toVariableMap(variables)).build();
+    return VarMap.newBuilder()
+        .putAllEntries(VariableValueDtoMapper.toVariableMap(variables))
+        .build();
   }
 
   private static VariablesDTO toVariablesDto(VarMap variables) {
@@ -938,5 +971,3 @@ public final class ProcessInstanceTriggerProtoMapper {
     return value == null || value.isEmpty() ? null : value;
   }
 }
-
-

@@ -10,5 +10,4 @@ package io.taktx.engine.pi.testengine;
 
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 
-public class ProcessInstanceTriggerDeserializer
-    extends ProcessInstanceTriggerDtoDeserializer {}
+public class ProcessInstanceTriggerDeserializer extends ProcessInstanceTriggerDtoDeserializer {}

@@ -596,8 +596,8 @@ class SecurityIntegrationTest {
             Date.from(Instant.now().plusSeconds(300)));
     UUID instanceId =
         engine
-        .getTaktClient()
-        .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+            .getTaktClient()
+            .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
     engine.waitForNewProcessInstance();
     engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);

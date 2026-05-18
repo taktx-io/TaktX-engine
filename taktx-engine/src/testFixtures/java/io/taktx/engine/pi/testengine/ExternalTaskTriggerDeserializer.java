@@ -10,8 +10,7 @@ package io.taktx.engine.pi.testengine;
 
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 
-public class ExternalTaskTriggerDeserializer
-    extends ExternalTaskTriggerProtoDeserializer {
+public class ExternalTaskTriggerDeserializer extends ExternalTaskTriggerProtoDeserializer {
 
   public ExternalTaskTriggerDeserializer() {
     super();

@@ -17,4 +17,3 @@ public class SigningKeyDeserializer extends ProtoDeserializer<SigningKeyMessage>
     return SigningKeyMessage.parser();
   }
 }
-

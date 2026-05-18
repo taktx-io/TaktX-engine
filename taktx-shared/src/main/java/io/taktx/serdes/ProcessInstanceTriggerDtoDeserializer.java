@@ -23,10 +23,10 @@ public class ProcessInstanceTriggerDtoDeserializer
       return null;
     }
     try {
-      return ProcessInstanceTriggerProtoMapper.toDto(ProcessInstanceTriggerEnvelope.parseFrom(data));
+      return ProcessInstanceTriggerProtoMapper.toDto(
+          ProcessInstanceTriggerEnvelope.parseFrom(data));
     } catch (InvalidProtocolBufferException e) {
       throw new SerializationException("Failed to deserialize ProcessInstanceTriggerEnvelope", e);
     }
   }
 }
-

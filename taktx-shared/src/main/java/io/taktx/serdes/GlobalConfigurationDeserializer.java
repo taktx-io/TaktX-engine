@@ -10,12 +10,10 @@ package io.taktx.serdes;
 import com.google.protobuf.Parser;
 import io.taktx.proto.GlobalConfigurationMessage;
 
-public class GlobalConfigurationDeserializer
-    extends ProtoDeserializer<GlobalConfigurationMessage> {
+public class GlobalConfigurationDeserializer extends ProtoDeserializer<GlobalConfigurationMessage> {
 
   @Override
   protected Parser<GlobalConfigurationMessage> parser() {
     return GlobalConfigurationMessage.parser();
   }
 }
-

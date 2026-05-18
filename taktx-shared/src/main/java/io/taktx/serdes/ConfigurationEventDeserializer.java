@@ -17,4 +17,3 @@ public class ConfigurationEventDeserializer extends ProtoDeserializer<Configurat
     return ConfigurationEventMessage.parser();
   }
 }
-

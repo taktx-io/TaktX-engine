@@ -13,9 +13,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import io.taktx.proto.AbortTriggerMessage;
+import io.taktx.proto.CleanupPolicy;
 import io.taktx.proto.ConfigurationEventMessage;
 import io.taktx.proto.ConfigurationEventType;
-import io.taktx.proto.CleanupPolicy;
 import io.taktx.proto.DefinitionMessageEventTriggerMessage;
 import io.taktx.proto.DefinitionsKeyMessage;
 import io.taktx.proto.DefinitionsTriggerEnvelope;
@@ -29,7 +29,6 @@ import io.taktx.proto.DmnDefinitionStateEnum;
 import io.taktx.proto.DmnValidationMode;
 import io.taktx.proto.ExecutionState;
 import io.taktx.proto.FlowNodeInstanceEnvelope;
-import io.taktx.proto.FlowNodeInstanceMessage;
 import io.taktx.proto.FlowNodeInstanceUpdateMessage;
 import io.taktx.proto.GlobalConfigurationMessage;
 import io.taktx.proto.InstanceUpdateEnvelope;
@@ -50,6 +49,7 @@ import io.taktx.proto.SignalEnvelope;
 import io.taktx.proto.SignalMessage;
 import io.taktx.proto.SigningKeyMessage;
 import io.taktx.proto.StartEventInstanceMessage;
+import io.taktx.proto.TaskInstanceMessage;
 import io.taktx.proto.TopicMetaMessage;
 import io.taktx.proto.UserTaskTriggerMessage;
 import io.taktx.proto.XmlDefinitionsMessage;
@@ -117,7 +117,14 @@ class ProtoSerdesTest {
             InstanceUpdateEnvelope.newBuilder()
                 .setFlowNode(
                     FlowNodeInstanceUpdateMessage.newBuilder()
-                        .setFlowNodeInstance(com.google.protobuf.ByteString.copyFromUtf8("task-a"))
+                        .setFlowNodeInstance(
+                            FlowNodeInstanceEnvelope.newBuilder()
+                                .setTask(
+                                    TaskInstanceMessage.newBuilder()
+                                        .setElementId("task-a")
+                                        .setState(ExecutionState.EXECUTION_STATE_ACTIVE)
+                                        .build())
+                                .build())
                         .setProcessTime(42L)
                         .build())
                 .build(),
@@ -201,7 +208,8 @@ class ProtoSerdesTest {
             "configurationEvent",
             ConfigurationEventMessage.newBuilder()
                 .setEventType(ConfigurationEventType.CONFIGURATION_UPDATE)
-                .setConfiguration(GlobalConfigurationMessage.newBuilder().setSigningEnabled(true).build())
+                .setConfiguration(
+                    GlobalConfigurationMessage.newBuilder().setSigningEnabled(true).build())
                 .setTimestampMs(99L)
                 .build(),
             new ConfigurationEventDeserializer()),
@@ -244,7 +252,8 @@ class ProtoSerdesTest {
         Arguments.of(
             "dmnDefinition",
             DmnDefinitionMessage.newBuilder()
-                .setDefinitions(ParsedDmnDefinitionsMessage.newBuilder().setName("eligibility").build())
+                .setDefinitions(
+                    ParsedDmnDefinitionsMessage.newBuilder().setName("eligibility").build())
                 .setVersion(1)
                 .setState(DmnDefinitionStateEnum.DMN_DEFINITION_STATE_ACTIVE)
                 .build(),
@@ -272,5 +281,3 @@ class ProtoSerdesTest {
     return ((Deserializer<MessageLite>) deserializer).deserialize(TOPIC, data);
   }
 }
-
-
