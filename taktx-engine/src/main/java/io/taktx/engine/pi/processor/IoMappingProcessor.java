@@ -94,7 +94,7 @@ public class IoMappingProcessor {
     for (IoVariableMapping mapping : mappings) {
       String varName = mapping.getTarget();
       VariableValue value =
-          feelExpressionHandler.processFeelExpressionValue(mapping.getSource(), source);
+          feelExpressionHandler.processFeelExpression(mapping.getSource(), source);
       setNestedVariable(target, varName, value);
     }
   }
@@ -113,7 +113,8 @@ public class IoMappingProcessor {
     setNestedValue(rootObject, pathParts, 1, value == null ? Variables.nullValue() : value);
 
     variables.put(
-        rootVarName, VariableValue.newBuilder().setMapValue(Variables.toVarMap(rootObject)).build());
+        rootVarName,
+        VariableValue.newBuilder().setMapValue(Variables.toVarMap(rootObject)).build());
   }
 
   private void setNestedValue(

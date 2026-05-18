@@ -14,10 +14,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.DoubleNode;
-import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.dto.DmnCollectOperator;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDecisionTableDTO;
@@ -29,6 +25,9 @@ import io.taktx.dto.DmnRuleDTO;
 import io.taktx.dto.DmnValidationMode;
 import io.taktx.engine.feel.FeelEngineProvider;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
+import io.taktx.variables.Variables;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,8 +40,12 @@ class DmnEvaluatorImplTest {
 
   @BeforeEach
   void setUp() {
-    evaluator = new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper());
+    evaluator = new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API);
     variables = VariableScope.empty(null, null);
+  }
+
+  private static JsonNode asJson(VariableValue value) {
+    return VariableValueDtoMapper.toJsonNode(value);
   }
 
   // ── helper builders ───────────────────────────────────────────────────────
@@ -78,7 +81,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void unique_singleMatch_returnsOutputValue() {
-    variables.put("category", new TextNode("Premium"));
+    variables.put("category", Variables.of("Premium"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -88,14 +91,14 @@ class DmnEvaluatorImplTest {
                 rule(List.of("\"Premium\""), List.of("0.2")),
                 rule(List.of("\"Standard\""), List.of("0.1"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(0.2);
   }
 
   @Test
   void unique_noMatch_returnsNull() {
-    variables.put("category", new TextNode("Unknown"));
+    variables.put("category", Variables.of("Unknown"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -103,14 +106,14 @@ class DmnEvaluatorImplTest {
             List.of(output("discount")),
             List.of(rule(List.of("\"Premium\""), List.of("0.2"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isNull()).isTrue();
   }
 
   @Test
   void unique_wildcardInput_alwaysMatches() {
-    variables.put("x", new IntNode(99));
+    variables.put("x", Variables.of(99L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -118,7 +121,7 @@ class DmnEvaluatorImplTest {
             List.of(output("result")),
             List.of(rule(List.of(""), List.of("\"any\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("any");
   }
@@ -127,7 +130,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void first_multipleMatches_returnsFirst() {
-    variables.put("val", new IntNode(5));
+    variables.put("val", Variables.of(5L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.FIRST,
@@ -137,7 +140,7 @@ class DmnEvaluatorImplTest {
                 rule(List.of(">3"), List.of("\"high\"")),
                 rule(List.of(">1"), List.of("\"medium\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("high");
   }
@@ -146,7 +149,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void any_returnsFirstMatchedRow() {
-    variables.put("active", new TextNode("true"));
+    variables.put("active", Variables.of("true"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.ANY,
@@ -156,7 +159,7 @@ class DmnEvaluatorImplTest {
                 rule(List.of("\"true\""), List.of("\"yes\"")),
                 rule(List.of("\"true\""), List.of("\"yes\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("yes");
   }
@@ -165,7 +168,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void ruleOrder_allMatchingRules_returnsArray() {
-    variables.put("n", new IntNode(10));
+    variables.put("n", Variables.of(10L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.RULE_ORDER,
@@ -175,7 +178,7 @@ class DmnEvaluatorImplTest {
                 rule(List.of(">5"), List.of("\"big\"")),
                 rule(List.of(">2"), List.of("\"medium\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isArray()).isTrue();
     assertThat(result.size()).isEqualTo(2);
@@ -187,7 +190,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void collectSum_sumsOutputValues() {
-    variables.put("active", new TextNode("yes"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         new DmnDecisionTableDTO(
             "dt",
@@ -198,14 +201,14 @@ class DmnEvaluatorImplTest {
             List.of(
                 rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(30.0);
   }
 
   @Test
   void collectCount_countsMatchingRows() {
-    variables.put("active", new TextNode("yes"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         new DmnDecisionTableDTO(
             "dt",
@@ -216,14 +219,14 @@ class DmnEvaluatorImplTest {
             List.of(
                 rule(List.of("\"yes\""), List.of("10")), rule(List.of("\"yes\""), List.of("20"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(2.0);
   }
 
   @Test
   void collectMin_returnsMinValue() {
-    variables.put("active", new TextNode("yes"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         new DmnDecisionTableDTO(
             "dt",
@@ -234,14 +237,14 @@ class DmnEvaluatorImplTest {
             List.of(
                 rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(3.0);
   }
 
   @Test
   void collectMax_returnsMaxValue() {
-    variables.put("active", new TextNode("yes"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         new DmnDecisionTableDTO(
             "dt",
@@ -252,14 +255,14 @@ class DmnEvaluatorImplTest {
             List.of(
                 rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(5.0);
   }
 
   @Test
   void collectNone_returnsArray() {
-    variables.put("active", new TextNode("yes"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         new DmnDecisionTableDTO(
             "dt",
@@ -270,7 +273,7 @@ class DmnEvaluatorImplTest {
             List.of(
                 rule(List.of("\"yes\""), List.of("5")), rule(List.of("\"yes\""), List.of("3"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isArray()).isTrue();
     assertThat(result.size()).isEqualTo(2);
@@ -280,7 +283,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void priority_returnsFirstMatchedRow() {
-    variables.put("status", new TextNode("Gold"));
+    variables.put("status", Variables.of("Gold"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.PRIORITY,
@@ -290,7 +293,7 @@ class DmnEvaluatorImplTest {
                 rule(List.of("\"Gold\""), List.of("0.3")),
                 rule(List.of("\"Gold\""), List.of("0.2"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(0.3);
   }
@@ -299,7 +302,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void outputOrder_allMatchingRules_returnsArrayInDefinedOrder() {
-    variables.put("n", new IntNode(10));
+    variables.put("n", Variables.of(10L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.OUTPUT_ORDER,
@@ -309,7 +312,7 @@ class DmnEvaluatorImplTest {
                 rule(List.of(">5"), List.of("\"big\"")),
                 rule(List.of(">2"), List.of("\"medium\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isArray()).isTrue();
     assertThat(result.size()).isEqualTo(2);
@@ -319,7 +322,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void outputOrder_noMatch_returnsNull() {
-    variables.put("n", new IntNode(1));
+    variables.put("n", Variables.of(1L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.OUTPUT_ORDER,
@@ -327,7 +330,7 @@ class DmnEvaluatorImplTest {
             List.of(output("label")),
             List.of(rule(List.of(">5"), List.of("\"big\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -336,7 +339,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void multipleOutputColumns_returnsObjectNode() {
-    variables.put("tier", new TextNode("Gold"));
+    variables.put("tier", Variables.of("Gold"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -344,7 +347,7 @@ class DmnEvaluatorImplTest {
             List.of(output("discount"), output("limit")),
             List.of(rule(List.of("\"Gold\""), List.of("0.3", "1000"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isObject()).isTrue();
     assertThat(result.get("discount").doubleValue()).isEqualTo(0.3);
@@ -355,8 +358,8 @@ class DmnEvaluatorImplTest {
 
   @Test
   void multipleInputColumns_allMatch_returnsOutput() {
-    variables.put("tier", new TextNode("Gold"));
-    variables.put("active", new TextNode("yes"));
+    variables.put("tier", Variables.of("Gold"));
+    variables.put("active", Variables.of("yes"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -364,15 +367,15 @@ class DmnEvaluatorImplTest {
             List.of(output("discount")),
             List.of(rule(List.of("\"Gold\"", "\"yes\""), List.of("0.3"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(0.3);
   }
 
   @Test
   void multipleInputColumns_secondInputDoesNotMatch_returnsNull() {
-    variables.put("tier", new TextNode("Gold"));
-    variables.put("active", new TextNode("no"));
+    variables.put("tier", Variables.of("Gold"));
+    variables.put("active", Variables.of("no"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -380,7 +383,7 @@ class DmnEvaluatorImplTest {
             List.of(output("discount")),
             List.of(rule(List.of("\"Gold\"", "\"yes\""), List.of("0.3"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -389,7 +392,7 @@ class DmnEvaluatorImplTest {
 
   @Test
   void notUnaryTest_excludesSingleValue_matchWhenDifferent() {
-    variables.put("tier", new TextNode("Silver"));
+    variables.put("tier", Variables.of("Silver"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -397,14 +400,14 @@ class DmnEvaluatorImplTest {
             List.of(output("result")),
             List.of(rule(List.of("not(\"Gold\")"), List.of("\"non-gold\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("non-gold");
   }
 
   @Test
   void notUnaryTest_excludesTwoValues_matchWhenNeitherExcluded() {
-    variables.put("tier", new TextNode("Bronze"));
+    variables.put("tier", Variables.of("Bronze"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -412,14 +415,14 @@ class DmnEvaluatorImplTest {
             List.of(output("result")),
             List.of(rule(List.of("not(\"Gold\",\"Silver\")"), List.of("\"other\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("other");
   }
 
   @Test
   void notUnaryTest_excludesTwoValues_noMatchWhenInputIsExcluded() {
-    variables.put("tier", new TextNode("Gold"));
+    variables.put("tier", Variables.of("Gold"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -427,7 +430,7 @@ class DmnEvaluatorImplTest {
             List.of(output("result")),
             List.of(rule(List.of("not(\"Gold\",\"Silver\")"), List.of("\"other\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -437,8 +440,8 @@ class DmnEvaluatorImplTest {
   @Test
   void outputFeelExpression_arithmeticOnVariable_returnsComputedValue() {
     // Output entry is a FEEL expression referencing an input variable, not a plain literal
-    variables.put("basePrice", new DoubleNode(100.0));
-    variables.put("tier", new TextNode("Gold"));
+    variables.put("basePrice", Variables.of(100.0));
+    variables.put("tier", Variables.of("Gold"));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -446,14 +449,14 @@ class DmnEvaluatorImplTest {
             List.of(output("finalPrice")),
             List.of(rule(List.of("\"Gold\""), List.of("basePrice * 0.7"))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.doubleValue()).isEqualTo(70.0);
   }
 
   @Test
   void outputFeelExpression_conditionalExpression_returnsCorrectBranch() {
-    variables.put("score", new IntNode(85));
+    variables.put("score", Variables.of(85L));
     DmnDecisionTableDTO dt =
         table(
             DmnHitPolicy.UNIQUE,
@@ -461,7 +464,7 @@ class DmnEvaluatorImplTest {
             List.of(output("grade")),
             List.of(rule(List.of(">= 0"), List.of("if score >= 90 then \"A\" else \"B\""))));
 
-    JsonNode result = evaluator.evaluate(decisionWithTable(dt), variables);
+    JsonNode result = asJson(evaluator.evaluate(decisionWithTable(dt), variables));
 
     assertThat(result.asText()).isEqualTo("B");
   }
@@ -470,11 +473,11 @@ class DmnEvaluatorImplTest {
 
   @Test
   void literalExpression_evaluatesFeelExpression() {
-    variables.put("x", new IntNode(5));
+    variables.put("x", Variables.of(5L));
     DmnLiteralExpressionDTO le = new DmnLiteralExpressionDTO(null, "=x * 2", null);
     DmnDecisionDTO d = new DmnDecisionDTO("decision", null, null, le, null);
 
-    JsonNode result = evaluator.evaluate(d, variables);
+    JsonNode result = asJson(evaluator.evaluate(d, variables));
 
     assertThat(result.intValue()).isEqualTo(10);
   }
@@ -525,18 +528,18 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.2);
 
-    variables.put("loyaltyPoints", new IntNode(750));
-    result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(750L));
+    result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.1);
 
-    variables.put("loyaltyPoints", new IntNode(100));
-    result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(100L));
+    result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.05);
   }
 
@@ -571,18 +574,18 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.2);
 
-    variables.put("loyaltyPoints", new IntNode(750));
-    result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(750L));
+    result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.1);
 
-    variables.put("loyaltyPoints", new IntNode(100));
-    result = drgEvaluator.evaluate(discountDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(100L));
+    result = asJson(drgEvaluator.evaluate(discountDecision, variables));
     assertThat(result.doubleValue()).isEqualTo(0.05);
   }
 
@@ -611,10 +614,10 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.isObject()).isTrue();
     assertThat(result.get("category").asText()).isEqualTo("Premium");
@@ -648,10 +651,10 @@ class DmnEvaluatorImplTest {
         .thenReturn(Optional.of(candidatesDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.doubleValue()).isEqualTo(0.2);
   }
@@ -684,10 +687,10 @@ class DmnEvaluatorImplTest {
         .thenReturn(Optional.of(candidatesDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.asText()).isEqualTo("Premium");
   }
@@ -715,10 +718,10 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -746,10 +749,10 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(100));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(100L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -778,12 +781,9 @@ class DmnEvaluatorImplTest {
 
     DmnEvaluatorImpl drgEvaluator =
         new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API,
-            new ObjectMapper(),
-            resolver,
-            DmnValidationMode.STRICT);
+            FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
+    variables.put("loyaltyPoints", Variables.of(1500L));
 
     assertThatThrownBy(() -> drgEvaluator.evaluate(downstreamDecision, variables))
         .isInstanceOf(DmnValidationException.class)
@@ -813,14 +813,10 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API,
-            new ObjectMapper(),
-            resolver,
-            DmnValidationMode.WARN);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.WARN);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
-    JsonNode result = drgEvaluator.evaluate(downstreamDecision, variables);
+    variables.put("loyaltyPoints", Variables.of(1500L));
+    JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
 
     assertThat(result.isNull()).isTrue();
   }
@@ -835,10 +831,9 @@ class DmnEvaluatorImplTest {
             List.of(rule(List.of(">= 1000"), List.of("0.2"))));
 
     DmnEvaluatorImpl strictEvaluator =
-        new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), null, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
 
-    variables.put("loyaltyPoints", new TextNode("not-a-number"));
+    variables.put("loyaltyPoints", Variables.of("not-a-number"));
 
     assertThatThrownBy(() -> strictEvaluator.evaluate(decisionWithTable(dt), variables))
         .isInstanceOf(DmnValidationException.class)
@@ -874,12 +869,9 @@ class DmnEvaluatorImplTest {
 
     DmnEvaluatorImpl drgEvaluator =
         new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API,
-            new ObjectMapper(),
-            resolver,
-            DmnValidationMode.STRICT);
+            FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
 
-    variables.put("loyaltyPoints", new IntNode(1500));
+    variables.put("loyaltyPoints", Variables.of(1500L));
 
     assertThatThrownBy(() -> drgEvaluator.evaluate(downstreamDecision, variables))
         .isInstanceOf(DmnValidationException.class)
@@ -893,8 +885,7 @@ class DmnEvaluatorImplTest {
             "decision", null, null, new DmnLiteralExpressionDTO(null, "=if then", null), null);
 
     DmnEvaluatorImpl strictEvaluator =
-        new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), null, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
 
     assertThatThrownBy(() -> strictEvaluator.evaluate(decision, variables))
         .isInstanceOf(DmnValidationException.class)
@@ -926,9 +917,9 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
-    variables.put("loyaltyPoints", new IntNode(999));
+    variables.put("loyaltyPoints", Variables.of(999L));
     drgEvaluator.evaluate(discountDecision, variables);
 
     // The intermediate DRG result must not have been written into the process variable scope
@@ -958,7 +949,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("A")).thenReturn(Optional.of(decisionA));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, new ObjectMapper(), resolver);
+        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
 
     assertThatThrownBy(() -> drgEvaluator.evaluate(decisionA, variables))
         .isInstanceOf(IllegalStateException.class)

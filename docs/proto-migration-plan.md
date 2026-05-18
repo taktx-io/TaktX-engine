@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅; active: PROTO-3.1 (parallel: PROTO-2.2 stabilization / PROTO-2.3 prep)  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅; active: PROTO-3.1 (parallel: PROTO-2.3 verification)  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -275,7 +275,7 @@ public final class Variables {
 
 ### PROTO-2.2 — Replace `VariablesDTO` references in the engine model layer
 
-**Status:** 🔄 In Progress — internal engine variable storage is now proto-backed; boundary cleanup remains
+**Status:** ✅ Complete
 
 **Description**  
 The engine's internal `VariableScope` model and 35 files that reference `VariablesDTO`/`JsonNode` must be updated to use `Map<String, VariableValue>` (or a thin `VariableScope` wrapper around it).
@@ -290,20 +290,14 @@ Key files:
 - ✅ `VariableScope` now stores `Map<String, VariableValue>` internally and the Kafka variable state store value type has been migrated to `VariableValue`.
 - ✅ Core engine processors now operate on proto-backed values internally, including I/O mapping, activity iteration handling, multi-instance processing, DMN result propagation, FEEL-based script/business-rule/gateway/task metadata evaluation, timer/message/signal resolution, and call activity target resolution.
 - ✅ `ActivityInstance.inputElement` / `outputElement` are now stored as `VariableValue` in the engine model.
-- ✅ Compatibility bridge added via `VariableValueJsonMapper` so existing DTO and test-facing `JsonNode` boundaries can continue to compile while the migration is completed incrementally.
+- ✅ The legacy engine-local bridge was removed from `taktx-engine`; remaining DTO/Jackson conversion is now isolated in shared helpers used only at module boundaries.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:compileJava :taktx-engine:compileTestJava --console=plain` passes.
-- ✅ Verified on 2026-05-18: focused regression tests pass for `IoMappingProcessorTest`, `ActivityInstanceProcessorTest`, `FeelExpressionHandlerImplTest`, and `DmnEvaluatorImplTest`.
-
-**Additional cleanup still required before this story can be closed**
-- [ ] Remove the remaining `VariablesDTO` / `JsonNode` compatibility references from `taktx-engine/src/main/java` so the acceptance grep is truly green, not just the compile.
-- [ ] Finish the FEEL/DMN boundary cleanup: decide whether the legacy `JsonNode` methods stay only as temporary adapters or are fully removed as part of PROTO-2.3, then simplify the interfaces accordingly.
-- [ ] Remove temporary bridging code once all call sites are migrated, especially `VariableScope.put(String, JsonNode)` and any `VariableValueJsonMapper` usage that exists only to preserve legacy engine-internal behavior.
-- [ ] Complete the DTO/proto edge cleanup for places still carrying legacy variable shapes (for example shared DTO fields and engine entry points that still accept `VariablesDTO`).
-- [ ] Run a broader engine regression pass after the remaining compatibility removals, not just compile/focused tests, to confirm variable propagation still works across end-to-end BPMN scenarios.
+- ✅ Verified on 2026-05-18: focused regression tests pass for `IoMappingProcessorTest`, `ActivityInstanceProcessorTest`, `CallActivityInstanceProcessorTest`, `SubProcessInstanceProcessorTest`, `SubscriptionsTest`, `FeelExpressionHandlerImplTest`, and `DmnEvaluatorImplTest`.
+- ✅ Verified on 2026-05-18: additional impacted processor tests pass for `MultiInstanceProcessorTest`, `ThrowEventInstanceProcessorTest`, `GatewayInstanceProcessorTest`, `GatewayFeelNullHandlingTest`, `UserTaskFeelNullHandlingSimpleTest`, and `UserTaskFeelNullHandlingTest`.
 
 **Acceptance criteria**
-- [ ] `grep -r "VariablesDTO\|JsonNode" taktx-engine/src/main/java` returns zero results.
-- [ ] All existing unit tests in `taktx-engine/src/test` that cover variable propagation and I/O mapping still pass.
+- [x] `grep -r "VariablesDTO\|JsonNode" taktx-engine/src/main/java` returns zero results.
+- [x] All existing unit tests in `taktx-engine/src/test` that cover variable propagation and I/O mapping still pass.
 
 **Dependencies:** PROTO-2.1  
 **Estimate:** 2 days
@@ -312,7 +306,7 @@ Key files:
 
 ### PROTO-2.3 — FEEL engine adapter: `VariableValue` ↔ FEEL context
 
-**Status:** 🔄 Partially started during PROTO-2.2 — internals migrated, public boundary not yet cleaned up
+**Status:** 🔄 In Progress — engine FEEL/DMN boundaries are now proto-native; remaining story verification is broader than the engine-only cleanup
 
 **Description**  
 `FeelExpressionHandlerImpl` must be rewritten to work without `JsonNode` and `ObjectMapper`. The FEEL engine (`camunda-feel`) takes and returns Scala `Object` values. The adapter layer converts:
@@ -328,8 +322,8 @@ Remove the `ObjectMapper` constructor parameter and field from `FeelExpressionHa
 
 **Current note (2026-05-18)**
 - `FeelExpressionHandlerImpl` already evaluates expressions internally as `VariableValue` and uses `Variables.toJavaObject(...)` for FEEL context construction.
-- Temporary legacy compatibility methods returning `JsonNode` are still present at the interface boundary to keep existing tests and call sites compiling while PROTO-2.2 is being stabilized.
-- DMN followed the same pattern (`evaluateValue(...)` internally, `JsonNode` adapter retained at the boundary), so the final cleanup for both should be planned together.
+- The engine-facing FEEL/DMN APIs now return `VariableValue` directly; legacy `JsonNode` engine-main adapters were removed during PROTO-2.2 cleanup.
+- `FeelExpressionHandlerImpl` no longer carries the unused `ObjectMapper` constructor dependency.
 
 **Acceptance criteria**
 - [ ] Unit test: `FeelExpressionHandlerImpl.processFeelExpression("= amount + 10", scope)` where `amount = 90L` returns a `VariableValue` with `long_val = 100`.

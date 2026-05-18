@@ -12,7 +12,6 @@ import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventBasedGateway;
 import io.taktx.engine.pd.model.EventSignal;
@@ -30,6 +29,8 @@ import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class ScopeProcessor {
   public Void processStart(
       List<Long> parentElementInstanceIdPath,
       String elementId,
-      VariablesDTO variables,
+      Map<String, VariableValue> variables,
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope) {
@@ -93,7 +94,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 parentElementInstanceIdPath,
                 null,
-                VariablesDTO.empty());
+                VariableValueDtoMapper.emptyVariables());
         scope
             .getDirectInstanceResult()
             .addContinueInstance(
@@ -223,7 +224,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 trigger.getEventSignal().getElementInstanceIdPath(),
                 null,
-                VariablesDTO.empty());
+                VariableValueDtoMapper.emptyVariables());
 
         scope
             .getDirectInstanceResult()
@@ -272,7 +273,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 trigger.getElementInstanceIdPath(),
                 null,
-                VariablesDTO.empty());
+                VariableValueDtoMapper.emptyVariables());
         scope
             .getDirectInstanceResult()
             .addContinueInstance(
@@ -470,7 +471,10 @@ public class ScopeProcessor {
   }
 
   private static void createNewInstanceAndAddToDirectInstanceResult(
-      Scope scope, String elementId, VariableScope parentVariableScope, VariablesDTO variables) {
+      Scope scope,
+      String elementId,
+      VariableScope parentVariableScope,
+      Map<String, VariableValue> variables) {
     FlowNode flowNode = scope.getFlowElements().getStartNode(elementId);
 
     if (flowNode instanceof StartEvent startEvent
@@ -540,7 +544,7 @@ public class ScopeProcessor {
 
   public Void processSetVariables(
       List<Long> parentElementInstanceIdPath,
-      VariablesDTO variables,
+      Map<String, VariableValue> variables,
       ProcessInstanceProcessingContext processInstanceProcessingContext,
       Scope scope,
       VariableScope variableScope) {

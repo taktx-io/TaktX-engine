@@ -78,7 +78,7 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Simulate FEEL expression returning null (missing variable)
-    when(feelExpressionHandler.processFeelExpressionValue("missingVariable", variableScope))
+    when(feelExpressionHandler.processFeelExpression("missingVariable", variableScope))
         .thenReturn(null);
 
     // Should NOT throw NPE, should handle gracefully
@@ -105,9 +105,9 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // Due date returns null, follow-up is valid
-    when(feelExpressionHandler.processFeelExpressionValue("invalidExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
         .thenReturn(null);
-    when(feelExpressionHandler.processFeelExpressionValue("P1D", variableScope))
+    when(feelExpressionHandler.processFeelExpression("P1D", variableScope))
         .thenReturn(Variables.of("P1D"));
 
     assertDoesNotThrow(
@@ -130,7 +130,7 @@ class UserTaskFeelNullHandlingTest {
     when(userTask.getPriorityDefinition()).thenReturn(priorityDef);
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
-    when(feelExpressionHandler.processFeelExpressionValue("unknownVariable", variableScope))
+    when(feelExpressionHandler.processFeelExpression("unknownVariable", variableScope))
         .thenReturn(null);
 
     assertDoesNotThrow(
@@ -159,7 +159,7 @@ class UserTaskFeelNullHandlingTest {
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     // All expressions return null
-    when(feelExpressionHandler.processFeelExpressionValue(anyString(), eq(variableScope)))
+    when(feelExpressionHandler.processFeelExpression(anyString(), eq(variableScope)))
         .thenReturn(null);
 
     assertDoesNotThrow(

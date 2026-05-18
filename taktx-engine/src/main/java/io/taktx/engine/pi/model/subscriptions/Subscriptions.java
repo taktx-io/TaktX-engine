@@ -27,6 +27,7 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.engine.pi.model.WithScope;
+import io.taktx.variables.VariableValueDtoMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -255,7 +256,7 @@ public class Subscriptions {
               scope.getProcessInstanceId(),
               flowNodeInstance.createKeyPath(),
               null,
-              event.getVariables());
+              VariableValueDtoMapper.toVariablesDto(event.getVariables()));
       ContinueFlowNodeInstanceInfo continueInfo =
           new ContinueFlowNodeInstanceInfo(flowNodeInstance, trigger, childVariableScope);
       scope.getDirectInstanceResult().addContinueInstance(continueInfo);

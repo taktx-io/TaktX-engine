@@ -11,10 +11,8 @@ package io.taktx.engine.pi.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.InputOutputMapping;
@@ -57,8 +55,8 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(true);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(variableScope.scopeToDTO()).thenReturn(new VariablesDTO());
-    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+    when(variableScope.scopeToMap()).thenReturn(java.util.Map.of());
+    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
@@ -85,22 +83,22 @@ class CallActivityInstanceProcessorTest {
     when(callActivity.isPropagateAllChildVariables()).thenReturn(false);
     when(callActivity.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of());
-    when(variableScope.scopeAndParentsToDto()).thenReturn(new VariablesDTO());
-    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+    when(variableScope.scopeAndParentsToMap()).thenReturn(java.util.Map.of());
+    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(Variables.of("childProcessId"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 
     processor.processStartSpecificActivityInstance(
         processingContext, scope, variableScope, callActivityInstance, "flow1");
 
-    verify(variableScope).scopeAndParentsToDto();
+    verify(variableScope).scopeAndParentsToMap();
   }
 
   @Test
   void processStartSpecificActivityInstance_shouldAbortWhenCalledElementIsNull() {
     when(callActivityInstance.getFlowNode()).thenReturn(callActivity);
     when(callActivity.getCalledElement()).thenReturn("childProcess");
-    when(feelExpressionHandler.processFeelExpressionValue("childProcess", variableScope))
+    when(feelExpressionHandler.processFeelExpression("childProcess", variableScope))
         .thenReturn(Variables.nullValue());
 
     assertThrows(

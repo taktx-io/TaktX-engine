@@ -46,7 +46,7 @@ public class MessageSubscription extends Subscription {
 
     String correlationKeyExpression = message.correlationKey();
     VariableValue correlationKeyValue =
-        feelExpressionHandler.processFeelExpressionValue(correlationKeyExpression, variableScope);
+        feelExpressionHandler.processFeelExpression(correlationKeyExpression, variableScope);
     if (correlationKeyValue == null
         || correlationKeyValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || correlationKeyValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {

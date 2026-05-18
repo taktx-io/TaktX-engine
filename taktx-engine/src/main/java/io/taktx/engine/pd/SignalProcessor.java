@@ -21,11 +21,11 @@ import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
 import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
+import io.taktx.variables.VariableValueDtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -195,7 +195,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
                     subscription.key.getElementId(),
                     null,
                     subscription.key.getProcessDefinitionKey(),
-                    VariablesDTO.empty());
+                    VariableValueDtoMapper.emptyVariables());
             context.forward(new Record<>(processInstanceId, startCommand, clock.millis()));
           });
     }
@@ -218,7 +218,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
             SignalEventSignalDTO event = new SignalEventSignalDTO();
             event.setName(signalDTO.getSignalName());
             event.setElementInstanceIdPath(elementInstanceIdPath);
-            event.setVariables(VariablesDTO.empty());
+            event.setVariables(VariableValueDtoMapper.emptyVariables());
             EventSignalTriggerDTO eventSignalTrigger =
                 new EventSignalTriggerDTO(processInstanceId, event);
             context.forward(new Record<>(processInstanceId, eventSignalTrigger, clock.millis()));

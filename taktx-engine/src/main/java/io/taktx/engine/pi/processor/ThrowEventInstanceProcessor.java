@@ -10,7 +10,6 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
@@ -28,8 +27,10 @@ import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.time.Clock;
+import java.util.Map;
 import java.util.Optional;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +80,7 @@ public abstract class ThrowEventInstanceProcessor<
                     flowNodeInstance, "SignalEventDefinition has no referenced signal");
               }
               VariableValue signalNameValue =
-                  feelExpressionHandler.processFeelExpressionValue(
+                  feelExpressionHandler.processFeelExpression(
                       referencedSignal.name(), variableScope);
               if (signalNameValue == null
                   || signalNameValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
@@ -103,7 +104,7 @@ public abstract class ThrowEventInstanceProcessor<
                       flowNodeInstance,
                       errorEventDefinition.getReferencedError().code(),
                       "",
-                      VariablesDTO.empty());
+                      Map.of());
               scope.getDirectInstanceResult().addEvent(errorEvent);
             });
 
@@ -117,7 +118,7 @@ public abstract class ThrowEventInstanceProcessor<
                       flowNodeInstance,
                       errorEventDefinition.getReferencedEscalation().code(),
                       "",
-                      VariablesDTO.empty());
+                      Map.of());
               scope.getDirectInstanceResult().addEvent(escalationEventSignal);
             });
 
@@ -147,7 +148,7 @@ public abstract class ThrowEventInstanceProcessor<
                             scope.getProcessInstanceId(),
                             catchEventInstance.createKeyPath(),
                             null,
-                            childVariableScope.scopeToDTO());
+                            VariableValueDtoMapper.toVariablesDto(childVariableScope.scopeToMap()));
                     ContinueFlowNodeInstanceInfo continueFlowNodeInstanceInfo =
                         new ContinueFlowNodeInstanceInfo(
                             catchEventInstance, trigger, childVariableScope);

@@ -75,9 +75,9 @@ class GatewayFeelNullHandlingTest {
     when(flow2.getCondition()).thenReturn(condition2);
 
     // Simulate FEEL expression returning null (e.g., missing variable)
-    when(feelExpressionHandler.processFeelExpressionValue("invalidExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpression("invalidExpression", variableScope))
         .thenReturn(null);
-    when(feelExpressionHandler.processFeelExpressionValue("validExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpression("validExpression", variableScope))
         .thenReturn(Variables.of(true));
 
     processor.setCanTrigger(true);
@@ -107,7 +107,7 @@ class GatewayFeelNullHandlingTest {
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
 
     // All conditions return null
-    when(feelExpressionHandler.processFeelExpressionValue("badExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
         .thenReturn(null);
 
     processor.setCanTrigger(true);
@@ -133,7 +133,7 @@ class GatewayFeelNullHandlingTest {
     when(gateway.getId()).thenReturn("gateway1");
     when(flow1.getCondition()).thenReturn(condition1);
 
-    when(feelExpressionHandler.processFeelExpressionValue("badExpression", variableScope))
+    when(feelExpressionHandler.processFeelExpression("badExpression", variableScope))
         .thenReturn(null);
 
     processor.setCanTrigger(true);

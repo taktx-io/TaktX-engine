@@ -46,11 +46,11 @@ class UserTaskFeelNullHandlingSimpleTest {
     when(assignmentDefinition.getCandidateUsers()).thenReturn("someUser");
 
     // Simulate FEEL expression returning null for first field
-    when(feelExpressionHandler.processFeelExpressionValue("missingVariable", variableScope))
+    when(feelExpressionHandler.processFeelExpression("missingVariable", variableScope))
         .thenReturn(null);
-    when(feelExpressionHandler.processFeelExpressionValue("someGroup", variableScope))
+    when(feelExpressionHandler.processFeelExpression("someGroup", variableScope))
         .thenReturn(Variables.of("group1"));
-    when(feelExpressionHandler.processFeelExpressionValue("someUser", variableScope))
+    when(feelExpressionHandler.processFeelExpression("someUser", variableScope))
         .thenReturn(Variables.of("user1"));
 
     // This should NOT throw NPE

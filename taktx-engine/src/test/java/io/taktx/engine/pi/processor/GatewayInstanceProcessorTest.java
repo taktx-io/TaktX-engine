@@ -93,9 +93,9 @@ class GatewayInstanceProcessorTest {
     when(gateway.getOutGoingSequenceFlows()).thenReturn(Set.of(flow1, flow2));
     when(flow1.getCondition()).thenReturn(condition1);
     when(flow2.getCondition()).thenReturn(condition2);
-    when(feelExpressionHandler.processFeelExpressionValue("x > 5", variableScope))
+    when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
         .thenReturn(Variables.of(true));
-    when(feelExpressionHandler.processFeelExpressionValue("y < 10", variableScope))
+    when(feelExpressionHandler.processFeelExpression("y < 10", variableScope))
         .thenReturn(Variables.of(false));
 
     processor.setCanTrigger(true);
@@ -120,7 +120,7 @@ class GatewayInstanceProcessorTest {
     when(gateway.getDefaultSequenceFlow()).thenReturn(defaultFlow);
     when(flow1.getCondition()).thenReturn(condition1);
     when(defaultFlow.getCondition()).thenReturn(FlowConditionDTO.NONE);
-    when(feelExpressionHandler.processFeelExpressionValue("x > 5", variableScope))
+    when(feelExpressionHandler.processFeelExpression("x > 5", variableScope))
         .thenReturn(Variables.of(false));
 
     processor.setCanTrigger(true);

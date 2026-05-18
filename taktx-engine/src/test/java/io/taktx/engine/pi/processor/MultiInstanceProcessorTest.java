@@ -77,7 +77,7 @@ class MultiInstanceProcessorTest {
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(feelExpressionHandler.processFeelExpressionValue("inputCollection", variableScope))
+    when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
         .thenReturn(Variables.of(java.util.List.of()));
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);
@@ -94,7 +94,7 @@ class MultiInstanceProcessorTest {
     when(multiInstanceInstance.getFlowNode()).thenReturn(activity);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getInputCollection()).thenReturn("inputCollection");
-    when(feelExpressionHandler.processFeelExpressionValue("inputCollection", variableScope))
+    when(feelExpressionHandler.processFeelExpression("inputCollection", variableScope))
         .thenReturn(null);
     when(scope.selectChildScope(multiInstanceInstance, flowElements)).thenReturn(subScope);
     when(scope.getFlowElements()).thenReturn(flowElements);

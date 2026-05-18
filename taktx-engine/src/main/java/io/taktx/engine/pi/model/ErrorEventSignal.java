@@ -8,8 +8,9 @@
 
 package io.taktx.engine.pi.model;
 
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.EventSignal;
+import io.taktx.proto.VariableValue;
+import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -22,7 +23,10 @@ public class ErrorEventSignal extends EventSignal {
   private String message;
 
   public ErrorEventSignal(
-      FlowNodeInstance<?> fLowNodeInstance, String code, String message, VariablesDTO variables) {
+      FlowNodeInstance<?> fLowNodeInstance,
+      String code,
+      String message,
+      Map<String, VariableValue> variables) {
     super(fLowNodeInstance, variables);
     this.code = code;
     this.message = message;

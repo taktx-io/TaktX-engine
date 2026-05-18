@@ -32,7 +32,6 @@ import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.pd.Stores;
@@ -52,6 +51,7 @@ import io.taktx.engine.security.EngineAuthorizationService;
 import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.proto.VariableValue;
 import io.taktx.security.AuthorizationTokenException;
+import io.taktx.variables.VariableValueDtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -378,7 +378,7 @@ public class ProcessInstanceProcessor
         new Scope(
             null, processInstanceId, null, flowElements, instanceMapper, flowNodeInstanceStore);
     VariableScope variableScope = VariableScope.empty(processInstanceId, variablesStore);
-    variableScope.merge(startCommand.getVariables());
+    variableScope.merge(VariableValueDtoMapper.toVariableMap(startCommand.getVariables()));
     variableScopeThreadLocal.set(variableScope);
 
     Set<IoVariableMapping> ioVariableMappings = dtoMapper.map(startCommand.getOutputMappings());
@@ -417,7 +417,7 @@ public class ProcessInstanceProcessor
             scopeProcessor.processStart(
                 Collections.emptyList(),
                 startEventId,
-                VariablesDTO.empty(),
+                Map.of(),
                 processInstanceProcessingContext,
                 scope,
                 variableScope));
@@ -455,7 +455,7 @@ public class ProcessInstanceProcessor
             .scope(scopeDTO)
             .build();
 
-    VariablesDTO variables = variableScope.scopeToDTO();
+    var variables = VariableValueDtoMapper.toVariablesDto(variableScope.scopeToMap());
 
     return new InstanceUpdate(
         processInstance.getProcessInstanceId(),
@@ -477,7 +477,7 @@ public class ProcessInstanceProcessor
             .scope(scopeDTO)
             .build();
 
-    VariablesDTO variables = variableScope.scopeToDTO();
+    var variables = VariableValueDtoMapper.toVariablesDto(variableScope.scopeToMap());
 
     Long processStartTime =
         scope.isStateChanged() && scope.getState() == ExecutionState.ACTIVE ? clock.millis() : null;
@@ -522,7 +522,7 @@ public class ProcessInstanceProcessor
           () ->
               scopeProcessor.processSetVariables(
                   trigger.getParentElementInstanceIdPath(),
-                  trigger.getVariables(),
+                  VariableValueDtoMapper.toVariableMap(trigger.getVariables()),
                   processInstanceProcessingContext,
                   processInstance.getScope(),
                   variableScopeThreadLocal.get()));
@@ -555,7 +555,7 @@ public class ProcessInstanceProcessor
               scopeProcessor.processStart(
                   trigger.getParentElementInstanceIdPath(),
                   trigger.getElementId(),
-                  trigger.getVariables(),
+                  VariableValueDtoMapper.toVariableMap(trigger.getVariables()),
                   processInstanceProcessingContext,
                   processInstance.getScope(),
                   variableScopeThreadLocal.get()));
@@ -816,16 +816,18 @@ public class ProcessInstanceProcessor
   private void continueParentInstance(
       InstanceResult instanceResult, ProcessInstance processInstance, VariableScope variableScope) {
     if (processInstance.getParentProcessInstanceId() != null) {
-      VariablesDTO variables;
+      var variables =
+          processInstance.isPropagateAllToParent()
+              ? VariableValueDtoMapper.toVariablesDto(
+                  variableScope.retrieveAndFlattenAllVariables())
+              : null;
 
-      if (processInstance.isPropagateAllToParent()) {
-        variables = VariableValueJsonMapper.toVariablesDTO(variableScope.retrieveAndFlattenAllVariables());
-      } else {
+      if (!processInstance.isPropagateAllToParent()) {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             variableScope, outputVariables, processInstance.getOutputMappings());
-        variables = outputVariables.scopeToDTO();
+        variables = VariableValueDtoMapper.toVariablesDto(outputVariables.scopeToMap());
       }
 
       instanceResult.addContinuation(
@@ -843,15 +845,17 @@ public class ProcessInstanceProcessor
       VariableScope variableScope,
       EventSignalDTO eventSignal) {
     if (processInstance.getParentProcessInstanceId() != null) {
-      VariablesDTO variables;
-      if (processInstance.isPropagateAllToParent()) {
-        variables = VariableValueJsonMapper.toVariablesDTO(variableScope.retrieveAndFlattenAllVariables());
-      } else {
+      var variables =
+          processInstance.isPropagateAllToParent()
+              ? VariableValueDtoMapper.toVariablesDto(
+                  variableScope.retrieveAndFlattenAllVariables())
+              : null;
+      if (!processInstance.isPropagateAllToParent()) {
         VariableScope outputVariables =
             VariableScope.empty(processInstance.getProcessInstanceId(), variablesStore);
         ioMappingProcessor.addVariables(
             outputVariables, variableScope.getParentScope(), processInstance.getOutputMappings());
-        variables = outputVariables.scopeToDTO();
+        variables = VariableValueDtoMapper.toVariablesDto(outputVariables.scopeToMap());
       }
       eventSignal.getVariables().getVariables().forEach(variables::put);
       eventSignal.setVariables(variables);

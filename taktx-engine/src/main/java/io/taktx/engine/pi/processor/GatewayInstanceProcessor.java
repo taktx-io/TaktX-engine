@@ -87,7 +87,7 @@ public abstract class GatewayInstanceProcessor<
               .filter(
                   sequenceFlow -> {
                     VariableValue result =
-                        feelExpressionHandler.processFeelExpressionValue(
+                        feelExpressionHandler.processFeelExpression(
                             sequenceFlow.getCondition().getExpression(), variableScope);
                     return result != null
                         && result.getKindCase() == VariableValue.KindCase.BOOL_VALUE

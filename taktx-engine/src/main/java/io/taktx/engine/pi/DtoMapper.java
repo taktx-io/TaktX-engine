@@ -88,6 +88,7 @@ import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.MessageEventSignal;
 import io.taktx.engine.pi.model.SignalEventSignal;
 import io.taktx.engine.pi.model.TimerEventSignal;
+import io.taktx.variables.VariableValueDtoMapper;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 import org.mapstruct.Builder;
@@ -97,7 +98,7 @@ import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
 
-@Mapper(builder = @Builder())
+@Mapper(builder = @Builder(), uses = VariableValueDtoMapper.class)
 public interface DtoMapper {
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)

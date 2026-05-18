@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
@@ -19,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Map;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -53,7 +53,10 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
               trigger,
               false,
               null,
-              "Malformed " + Constants.HEADER_ENGINE_SIGNATURE + " header (expected '<keyId>.<base64sig>'): " + headerValue)
+              "Malformed "
+                  + Constants.HEADER_ENGINE_SIGNATURE
+                  + " header (expected '<keyId>.<base64sig>'): "
+                  + headerValue)
           .withReplayRoutingKeyHint(replayRoutingKeyHint);
     }
     String keyId = headerValue.substring(0, dot);
@@ -121,7 +124,7 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
         return "jwt:" + sha256(rawJwt);
       }
       byte[] decodedPayload = Base64.getUrlDecoder().decode(parts[1]);
-      JsonNode payload = JSON_OBJECT_MAPPER.readTree(decodedPayload);
+      Map<?, ?> payload = JSON_OBJECT_MAPPER.readValue(decodedPayload, Map.class);
       String issuer = textValue(payload, "iss");
       String auditId = textValue(payload, "auditId");
       if (issuer != null && !issuer.isBlank() && auditId != null && !auditId.isBlank()) {
@@ -133,9 +136,9 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
     return "jwt:" + sha256(rawJwt);
   }
 
-  private static String textValue(JsonNode payload, String fieldName) {
-    JsonNode node = payload == null ? null : payload.get(fieldName);
-    return node == null || node.isNull() ? null : node.asText(null);
+  private static String textValue(Map<?, ?> payload, String fieldName) {
+    Object node = payload == null ? null : payload.get(fieldName);
+    return node == null ? null : String.valueOf(node);
   }
 
   private static String sha256(String value) {

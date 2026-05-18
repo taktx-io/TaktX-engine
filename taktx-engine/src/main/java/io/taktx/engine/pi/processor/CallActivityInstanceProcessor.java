@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.CallActivity;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -59,7 +58,7 @@ public class CallActivityInstanceProcessor
     CallActivity flowNode = callActivityInstance.getFlowNode();
 
     VariableValue calledElementValue =
-        feelExpressionHandler.processFeelExpressionValue(flowNode.getCalledElement(), variableScope);
+        feelExpressionHandler.processFeelExpression(flowNode.getCalledElement(), variableScope);
     if (calledElementValue == null
         || calledElementValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || calledElementValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
@@ -67,12 +66,10 @@ public class CallActivityInstanceProcessor
           callActivityInstance, "Called element expression returned null");
     }
 
-    VariablesDTO commandVariables;
-    if (callActivityInstance.getFlowNode().isPropagateAllParentVariables()) {
-      commandVariables = variableScope.scopeAndParentsToDto();
-    } else {
-      commandVariables = variableScope.scopeToDTO();
-    }
+    var commandVariables =
+        callActivityInstance.getFlowNode().isPropagateAllParentVariables()
+            ? variableScope.scopeAndParentsToMap()
+            : variableScope.scopeToMap();
 
     processInstanceProcessingContext
         .getInstanceResult()

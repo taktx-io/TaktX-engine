@@ -51,9 +51,9 @@ class IoMappingProcessorTest {
 
     when(element.getIoMapping()).thenReturn(ioMapping);
     when(ioMapping.getOutputMappings()).thenReturn(Set.of(mapping1, mapping2));
-    when(feelExpressionHandler.processFeelExpressionValue("sourceExpr1", variableScope))
+    when(feelExpressionHandler.processFeelExpression("sourceExpr1", variableScope))
         .thenReturn(Variables.of("value1"));
-    when(feelExpressionHandler.processFeelExpressionValue("sourceExpr2", variableScope))
+    when(feelExpressionHandler.processFeelExpression("sourceExpr2", variableScope))
         .thenReturn(Variables.of("value2"));
 
     processor.processOutputMappings(element, variableScope);

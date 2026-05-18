@@ -78,7 +78,7 @@ public class MultiInstanceProcessor
     Activity activity = multiInstanceInstance.getFlowNode();
 
     VariableValue inputCollection =
-        feelExpressionHandler.processFeelExpressionValue(
+        feelExpressionHandler.processFeelExpression(
             activity.getLoopCharacteristics().getInputCollection(), variableScope);
 
     if (inputCollection == null

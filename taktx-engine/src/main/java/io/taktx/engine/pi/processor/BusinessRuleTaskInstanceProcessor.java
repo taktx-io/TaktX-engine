@@ -73,7 +73,7 @@ public class BusinessRuleTaskInstanceProcessor
                         flownodeInstance,
                         "DMN decision '" + decisionId + "' not found in any deployed DMN"));
 
-    VariableValue result = dmnEvaluator.evaluateValue(decision, variableScope);
+    VariableValue result = dmnEvaluator.evaluate(decision, variableScope);
 
     if (resultVariable != null && !resultVariable.isBlank()) {
       variableScope.put(resultVariable, result);

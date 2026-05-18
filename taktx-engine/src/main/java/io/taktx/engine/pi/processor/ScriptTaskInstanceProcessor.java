@@ -50,8 +50,7 @@ public class ScriptTaskInstanceProcessor
     ScriptType scriptType = flownodeInstance.getFlowNode().getScriptType();
     if (scriptType == ScriptType.FEEL) {
       String expression = flownodeInstance.getFlowNode().getScriptExpressions().getFirst();
-      VariableValue value =
-          feelExpressionHandler.processFeelExpressionValue(expression, variableScope);
+      VariableValue value = feelExpressionHandler.processFeelExpression(expression, variableScope);
       variableScope.put(flownodeInstance.getFlowNode().getResultVariableName(), value);
       flownodeInstance.setState(ExecutionState.COMPLETED);
     } else if (scriptType == ScriptType.JOBWORKER) {

@@ -8,8 +8,6 @@
 
 package io.taktx.engine.dmn;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.DmnCollectOperator;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDecisionTableDTO;
@@ -21,7 +19,6 @@ import io.taktx.dto.DmnRuleDTO;
 import io.taktx.dto.DmnValidationMode;
 import io.taktx.engine.config.GlobalConfigStore;
 import io.taktx.engine.config.TaktConfiguration;
-import io.taktx.engine.pi.VariableValueJsonMapper;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VarList;
 import io.taktx.proto.VariableValue;
@@ -81,13 +78,11 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   @Inject
   public DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       GlobalConfigStore globalConfigStore,
       TaktConfiguration taktConfiguration) {
     this(
         feelEngineApi,
-        objectMapper,
         decisionResolver,
         globalConfigStore,
         taktConfiguration != null
@@ -97,7 +92,6 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
   private DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       GlobalConfigStore globalConfigStore,
       DmnValidationMode configuredValidationMode) {
@@ -109,34 +103,25 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
   }
 
   /** Convenience constructor for unit tests — DRG chaining is disabled (resolver is null). */
-  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, ObjectMapper objectMapper) {
-    this(feelEngineApi, objectMapper, null, null, DmnValidationMode.PERMISSIVE);
+  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi) {
+    this(feelEngineApi, null, null, DmnValidationMode.PERMISSIVE);
   }
 
   /** Convenience constructor for unit tests with DRG chaining support. */
-  public DmnEvaluatorImpl(
-      FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
-      DmnDecisionResolver decisionResolver) {
-    this(feelEngineApi, objectMapper, decisionResolver, null, DmnValidationMode.PERMISSIVE);
+  public DmnEvaluatorImpl(FeelEngineApi feelEngineApi, DmnDecisionResolver decisionResolver) {
+    this(feelEngineApi, decisionResolver, null, DmnValidationMode.PERMISSIVE);
   }
 
   /** Convenience constructor for unit tests with an explicit validation mode. */
   public DmnEvaluatorImpl(
       FeelEngineApi feelEngineApi,
-      ObjectMapper objectMapper,
       DmnDecisionResolver decisionResolver,
       DmnValidationMode validationMode) {
-    this(feelEngineApi, objectMapper, decisionResolver, null, validationMode);
+    this(feelEngineApi, decisionResolver, null, validationMode);
   }
 
   @Override
-  public JsonNode evaluate(DmnDecisionDTO decision, VariableScope variables) {
-    return VariableValueJsonMapper.toJsonNode(evaluateValue(decision, variables));
-  }
-
-  @Override
-  public VariableValue evaluateValue(DmnDecisionDTO decision, VariableScope variables) {
+  public VariableValue evaluate(DmnDecisionDTO decision, VariableScope variables) {
     return evaluateDecision(decision, variables, new HashMap<>(), new LinkedHashSet<>());
   }
 
@@ -252,7 +237,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
         continue;
       }
       DmnInputClauseDTO clause = inputs.get(i);
-      VariableValue inputValue = evaluateFeelOutputExpression(clause.getInputExpression(), variables);
+      VariableValue inputValue =
+          evaluateFeelOutputExpression(clause.getInputExpression(), variables);
       if (!validateTypeRef(
           clause.getTypeRef(),
           inputValue,
@@ -309,7 +295,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     if (matched.isEmpty()) {
       return Variables.nullValue();
     }
-    return flattenSingleOutput(matched.get(0), table);
+    return flattenSingleOutput(matched.getFirst(), table);
   }
 
   private VariableValue handleAny(
@@ -317,7 +303,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
     if (matched.isEmpty()) {
       return Variables.nullValue();
     }
-    return flattenSingleOutput(matched.get(0), table);
+    return flattenSingleOutput(matched.getFirst(), table);
   }
 
   private VariableValue handleRuleOrder(
@@ -358,7 +344,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       return handleRuleOrder(matched, table);
     }
 
-    String outputName = table.getOutputs().isEmpty() ? null : table.getOutputs().getFirst().getName();
+    String outputName =
+        table.getOutputs().isEmpty() ? null : table.getOutputs().getFirst().getName();
 
     List<Double> values = new ArrayList<>();
     for (Map<String, VariableValue> row : matched) {
@@ -368,7 +355,7 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
           case LONG_VALUE -> values.add((double) value.getLongValue());
           case DOUBLE_VALUE -> values.add(value.getDoubleValue());
           default -> {
-            // Ignore non-numeric collect values to match the previous permissive JsonNode handling.
+            // Ignore non-numeric collect values to match the previous permissive legacy handling.
           }
         }
       }
@@ -420,7 +407,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
       return handleUnaryFailure("Failed to parse FEEL unary test: " + unaryTest, null);
     }
     EvaluationResult result =
-        feelEngineApi.evaluateWithInput(parsed, Variables.toJavaObject(inputValue), buildContext(variables));
+        feelEngineApi.evaluateWithInput(
+            parsed, Variables.toJavaObject(inputValue), buildContext(variables));
     if (result.isSuccess()) {
       Object val = ((SuccessfulEvaluationResult) result).result();
       return Boolean.TRUE.equals(val);

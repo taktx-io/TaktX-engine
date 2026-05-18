@@ -8,11 +8,8 @@
 
 package io.taktx.engine.pi.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.FlowNodeInstanceKeyDTO;
 import io.taktx.dto.VariableKeyDTO;
-import io.taktx.dto.VariablesDTO;
-import io.taktx.engine.pi.VariableValueJsonMapper;
 import io.taktx.proto.VariableValue;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,23 +76,15 @@ public class VariableScope {
     variables.put(key, value);
   }
 
-  public void put(String key, JsonNode value) {
-    put(key, VariableValueJsonMapper.toVariableValue(value));
-  }
-
-  public void merge(VariablesDTO variables) {
-    merge(VariableValueJsonMapper.toVariableMap(variables));
-  }
-
   public void merge(Map<String, VariableValue> variables) {
     dirtyVariables.addAll(variables.keySet());
     this.variables.putAll(variables);
   }
 
-  public VariablesDTO scopeToDTO() {
+  public Map<String, VariableValue> scopeToMap() {
     Map<String, VariableValue> dirtyVariablesMap = new HashMap<>(variables);
     getDirtyVariables().forEach(key -> dirtyVariablesMap.put(key, variables.get(key)));
-    return VariableValueJsonMapper.toVariablesDTO(dirtyVariablesMap);
+    return dirtyVariablesMap;
   }
 
   public Map<String, VariableValue> retrieveAndFlattenAllVariables() {
@@ -169,19 +158,11 @@ public class VariableScope {
         k -> new VariableScope(this, instanceWithInstanceId, processInstanceId, variableStore));
   }
 
-  public VariablesDTO scopeAndParentsToDto() {
-    VariablesDTO dto = VariableValueJsonMapper.toVariablesDTO(retrieveAllInScope());
+  public Map<String, VariableValue> scopeAndParentsToMap() {
+    Map<String, VariableValue> variablesInScope = new HashMap<>(retrieveAllInScope());
     if (parentScope != null) {
-      VariablesDTO parentVariablesDTO = parentScope.scopeAndParentsToDto();
-      parentVariablesDTO
-          .getVariables()
-          .forEach(
-              (key, value) -> {
-                if (dto.get(key) == null) {
-                  dto.put(key, value);
-                }
-              });
+      parentScope.scopeAndParentsToMap().forEach(variablesInScope::putIfAbsent);
     }
-    return dto;
+    return variablesInScope;
   }
 }

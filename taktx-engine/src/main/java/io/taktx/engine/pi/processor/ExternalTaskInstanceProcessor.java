@@ -15,7 +15,6 @@ import io.taktx.dto.ExecutionState;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.RepeatDuration;
 import io.taktx.engine.pd.model.ExternalTask;
@@ -32,6 +31,7 @@ import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Duration;
@@ -109,7 +109,7 @@ public abstract class ExternalTaskInstanceProcessor<
           scope.getDirectInstanceResult(),
           externalTaskInstance,
           responseResult,
-          trigger.getVariables());
+          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
     } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
         || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleErrorOrTimeout(
@@ -119,7 +119,7 @@ public abstract class ExternalTaskInstanceProcessor<
           variableScope,
           externalTaskInstance.getFlowNode().getHeaders(),
           responseResult,
-          trigger.getVariables());
+          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
     }
   }
 
@@ -130,7 +130,7 @@ public abstract class ExternalTaskInstanceProcessor<
       VariableScope variableScope,
       Map<String, String> headers,
       ExternalTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     E externalTask = externalTaskInstance.getFlowNode();
     if (externalTask.getRetries() != null) {
       handleRetries(
@@ -157,10 +157,10 @@ public abstract class ExternalTaskInstanceProcessor<
       Map<String, String> headers,
       ExternalTaskResponseResultDTO responseResult,
       E externalTask,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     // We have some kind of retry definition
     VariableValue retryValue =
-        feelExpressionHandler.processFeelExpressionValue(externalTask.getRetries(), variableScope);
+        feelExpressionHandler.processFeelExpression(externalTask.getRetries(), variableScope);
 
     if (retryValue == null
         || retryValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
@@ -184,7 +184,7 @@ public abstract class ExternalTaskInstanceProcessor<
           log.warn("Retry count {} exceeds maximum, capping at 1000", retries);
           retries = 1000;
         }
-      } catch (NumberFormatException e) {
+      } catch (NumberFormatException _) {
         log.error("Invalid retry count format: {}", retryString);
         retries = -1; // Will fail the task
       }
@@ -194,7 +194,7 @@ public abstract class ExternalTaskInstanceProcessor<
         RepeatDuration repeatDuration = RepeatDuration.parse(retryString);
         retries = repeatDuration.getRepetitions();
         backoff = Optional.ofNullable(repeatDuration.getDuration());
-      } catch (DateTimeParseException e) {
+      } catch (DateTimeParseException _) {
         // Definition is not a valid repeat duration, since retries is still set
         // to -1 it will fail the task and the process instanceToContinue
       }
@@ -241,7 +241,7 @@ public abstract class ExternalTaskInstanceProcessor<
           DirectInstanceResult directInstanceResult,
           I externalTaskInstance,
           ExternalTaskResponseResultDTO responseResult,
-          VariablesDTO variables) {
+          Map<String, VariableValue> variables) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
             externalTaskInstance,
@@ -255,7 +255,7 @@ public abstract class ExternalTaskInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
       ExternalTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
     handleNoMoreRetries(directInstanceResult, externalTaskInstance, responseResult, variables);
   }
@@ -265,7 +265,7 @@ public abstract class ExternalTaskInstanceProcessor<
       DirectInstanceResult directInstanceResult,
       I externalTaskInstance,
       ExternalTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     cancelTimeoutScheduledTrigger(instanceResult, externalTaskInstance);
     directInstanceResult.addEvent(
         new EscalationEventSignal(
@@ -320,7 +320,7 @@ public abstract class ExternalTaskInstanceProcessor<
   private String getExternalTaskId(
       I flownodeInstance, String workerDefinition, VariableScope variables) {
     VariableValue workerValue =
-        feelExpressionHandler.processFeelExpressionValue(workerDefinition, variables);
+        feelExpressionHandler.processFeelExpression(workerDefinition, variables);
     if (workerValue == null
         || workerValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || workerValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
@@ -383,7 +383,7 @@ public abstract class ExternalTaskInstanceProcessor<
               "Topic not created",
               "Topic not created" + externalTaskId,
               -1L),
-          VariablesDTO.empty());
+          Map.of());
       return true;
     }
     return false;

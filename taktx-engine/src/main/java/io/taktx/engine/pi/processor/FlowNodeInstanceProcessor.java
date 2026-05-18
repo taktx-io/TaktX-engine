@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
@@ -25,10 +24,13 @@ import io.taktx.engine.pi.model.ProcessInstance;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -112,7 +114,7 @@ public abstract class FlowNodeInstanceProcessor<
       Scope scope,
       FlowNodeInstance<?> flowNodeInstance,
       VariableScope variableScope,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
 
     long now = clock.instant().toEpochMilli();
 
@@ -145,7 +147,7 @@ public abstract class FlowNodeInstanceProcessor<
 
     processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesContinued();
 
-    variableScope.merge(trigger.getVariables());
+    variableScope.merge(VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
 
     long now = clock.instant().toEpochMilli();
 
@@ -308,7 +310,7 @@ public abstract class FlowNodeInstanceProcessor<
       List<String> outputSequenceFlowIds) {
     List<Long> elementInstanceIdPath = flowNodeInstance.createKeyPath();
 
-    VariablesDTO variablesDTO = variableScope.scopeToDTO();
+    var variablesDTO = VariableValueDtoMapper.toVariablesDto(variableScope.scopeToMap());
     FlowNodeInstanceDTO flowNodeInstanceDTO =
         processInstanceMapper.map((FlowNodeInstance<?>) flowNodeInstance, scope.getFlowElements());
     String elementId =

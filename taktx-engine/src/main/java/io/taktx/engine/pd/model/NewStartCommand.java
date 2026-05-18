@@ -8,8 +8,9 @@
 
 package io.taktx.engine.pd.model;
 
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pi.model.FlowNodeInstance;
+import io.taktx.proto.VariableValue;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,6 +19,6 @@ public record NewStartCommand(
     FlowNode flowNode,
     FlowNodeInstance<?> instance,
     String calledElement,
-    VariablesDTO variables,
+    Map<String, VariableValue> variables,
     boolean propagateAllToParent,
     Set<IoVariableMapping> outputMappings) {}

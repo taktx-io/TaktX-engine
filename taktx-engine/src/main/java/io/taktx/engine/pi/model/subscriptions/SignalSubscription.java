@@ -42,7 +42,7 @@ public class SignalSubscription extends Subscription {
     }
 
     VariableValue signalNameValue =
-        feelExpressionHandler.processFeelExpressionValue(
+        feelExpressionHandler.processFeelExpression(
             signalEventDefinition.getReferencedSignal().name(), variableScope);
 
     if (signalNameValue == null

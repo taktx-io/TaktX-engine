@@ -94,7 +94,7 @@ class ActivityInstanceProcessorTest {
     LoopCharacteristics loopCharacteristics = mock(LoopCharacteristics.class);
     when(activity.getLoopCharacteristics()).thenReturn(loopCharacteristics);
     when(loopCharacteristics.getOutputElement()).thenReturn("outputVar");
-    when(feelExpressionHandler.processFeelExpressionValue("outputVar", variableScope))
+    when(feelExpressionHandler.processFeelExpression("outputVar", variableScope))
         .thenReturn(Variables.of("outputValue"));
 
     processor.processContinueSpecificFlowNodeInstance(

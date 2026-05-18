@@ -90,7 +90,7 @@ class ThrowEventInstanceProcessorTest {
     when(throwEvent.getErrorEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getEscalationEventDefinition()).thenReturn(Optional.empty());
     when(throwEvent.getLinkventDefinition()).thenReturn(Optional.empty());
-    when(feelExpressionHandler.processFeelExpressionValue("signalName", variableScope))
+    when(feelExpressionHandler.processFeelExpression("signalName", variableScope))
         .thenReturn(Variables.of("resolvedSignalName"));
     when(processingContext.getInstanceResult()).thenReturn(instanceResult);
 

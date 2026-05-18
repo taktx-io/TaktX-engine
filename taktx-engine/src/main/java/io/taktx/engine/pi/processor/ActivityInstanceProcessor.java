@@ -50,7 +50,7 @@ public abstract class ActivityInstanceProcessor<
       String inputFlowId) {
 
     if (flownodeInstance.isIteration()) {
-      variableScope.put("loopCnt", Variables.of((long) flownodeInstance.getLoopCnt()));
+      variableScope.put("loopCnt", Variables.of(flownodeInstance.getLoopCnt()));
       variableScope.put(
           flownodeInstance.getFlowNode().getLoopCharacteristics().getInputElement(),
           flownodeInstance.getInputElement());
@@ -154,7 +154,7 @@ public abstract class ActivityInstanceProcessor<
         String outputElement = flowNode.getLoopCharacteristics().getOutputElement();
         if (outputElement != null) {
           VariableValue outputValue =
-              feelExpressionHandler.processFeelExpressionValue(outputElement, variableScope);
+              feelExpressionHandler.processFeelExpression(outputElement, variableScope);
           if (outputValue != null) {
             flownodeInstance.setOutputElement(outputValue);
           }

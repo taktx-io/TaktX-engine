@@ -8,9 +8,6 @@
 
 package io.taktx.engine.feel;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.taktx.engine.pi.VariableValueJsonMapper;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
@@ -42,17 +39,12 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
   private final FeelEngineProvider feelEngineProvider;
   private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();
 
-  public FeelExpressionHandlerImpl(
-      FeelEngineProvider feelEngineProvider, ObjectMapper objectMapper) {
+  public FeelExpressionHandlerImpl(FeelEngineProvider feelEngineProvider) {
     this.feelEngineProvider = feelEngineProvider;
   }
 
-  public JsonNode processFeelExpression(String expression, VariableScope variables) {
-    return VariableValueJsonMapper.toJsonNode(processFeelExpressionValue(expression, variables));
-  }
-
   @Override
-  public VariableValue processFeelExpressionValue(String expression, VariableScope variables) {
+  public VariableValue processFeelExpression(String expression, VariableScope variables) {
     VariableValue resultNode;
     expression = expression == null ? "" : expression.trim();
     if (expression.startsWith("=")) {
@@ -89,7 +81,7 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
           @Override
           public Iterable<String> keys() {
-            log.error("THe keys method is called although not all variables might be available");
+            log.error("The keys method is called although not all variables might be available");
             return CollectionConverters.SetHasAsScala(variables.getVariables().keySet()).asScala();
           }
         };

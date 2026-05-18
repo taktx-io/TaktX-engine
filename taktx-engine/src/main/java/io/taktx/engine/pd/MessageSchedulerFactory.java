@@ -57,7 +57,7 @@ public class MessageSchedulerFactory {
       long now) {
 
     VariableValue durationValue =
-        feelExpressionHandler.processFeelExpressionValue(
+        feelExpressionHandler.processFeelExpression(
             timerEventDefinition.getTimeDuration(), variables);
     if (durationValue == null
         || durationValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
@@ -79,8 +79,7 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
     VariableValue timeDateValue =
-        feelExpressionHandler.processFeelExpressionValue(
-            timerEventDefinition.getTimeDate(), variables);
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeDate(), variables);
     if (timeDateValue == null
         || timeDateValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || timeDateValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
@@ -109,8 +108,7 @@ public class MessageSchedulerFactory {
       long now) {
 
     VariableValue timeCycleValue =
-        feelExpressionHandler.processFeelExpressionValue(
-            timerEventDefinition.getTimeCycle(), variables);
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
     if (timeCycleValue == null
         || timeCycleValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || timeCycleValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
@@ -130,8 +128,7 @@ public class MessageSchedulerFactory {
       VariableScope variables,
       long now) {
     VariableValue timeCycleValue =
-        feelExpressionHandler.processFeelExpressionValue(
-            timerEventDefinition.getTimeCycle(), variables);
+        feelExpressionHandler.processFeelExpression(timerEventDefinition.getTimeCycle(), variables);
     if (timeCycleValue == null
         || timeCycleValue.getKindCase() == VariableValue.KindCase.NULL_VALUE
         || timeCycleValue.getKindCase() == VariableValue.KindCase.KIND_NOT_SET) {
@@ -152,7 +149,7 @@ public class MessageSchedulerFactory {
       CronParser parser = new CronParser(cronDefinition);
       parser.parse(timeCycle);
       return true;
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       return false;
     }
   }

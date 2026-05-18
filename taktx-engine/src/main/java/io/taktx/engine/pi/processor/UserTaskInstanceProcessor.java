@@ -18,7 +18,6 @@ import io.taktx.dto.TaskScheduleDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.UserTask;
 import io.taktx.engine.pi.DirectInstanceResult;
@@ -31,9 +30,11 @@ import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
+import io.taktx.variables.VariableValueDtoMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
+import java.util.Map;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -82,7 +83,7 @@ public class UserTaskInstanceProcessor
       VariableScope flowNodeInstanceVariablesn, PriorityDefinition priorityDefinition) {
     if (priorityDefinition != null) {
       VariableValue priorityNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               priorityDefinition.getPriority(), flowNodeInstanceVariablesn);
       String priority = stringValue(priorityNode);
       return new PriorityDefinitionDTO(priority);
@@ -95,12 +96,12 @@ public class UserTaskInstanceProcessor
       VariableScope flowNodeInstanceVariables, TaskSchedule taskSchedule) {
     if (taskSchedule != null) {
       VariableValue dueDateNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               taskSchedule.getDueDate(), flowNodeInstanceVariables);
       String dueDate = stringValue(dueDateNode);
 
       VariableValue followupDateNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               taskSchedule.getFollowUpDate(), flowNodeInstanceVariables);
       String followupDate = stringValue(followupDateNode);
 
@@ -114,17 +115,17 @@ public class UserTaskInstanceProcessor
       VariableScope flowNodeInstanceVariables, AssignmentDefinition assignmentDefinition) {
     if (assignmentDefinition != null) {
       VariableValue assigneeNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getAssignee(), flowNodeInstanceVariables);
       String assignee = stringValue(assigneeNode);
 
       VariableValue candidateGroupsNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getCandidateGroups(), flowNodeInstanceVariables);
       String candidateGroups = stringValue(candidateGroupsNode);
 
       VariableValue candidateUsersNode =
-          feelExpressionHandler.processFeelExpressionValue(
+          feelExpressionHandler.processFeelExpression(
               assignmentDefinition.getCandidateUsers(), flowNodeInstanceVariables);
       String candidateUsers = stringValue(candidateUsersNode);
 
@@ -151,13 +152,13 @@ public class UserTaskInstanceProcessor
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          trigger.getVariables());
+          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
     } else if (UserTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          trigger.getVariables());
+          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
     }
   }
 
@@ -165,7 +166,7 @@ public class UserTaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
       UserTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     directInstanceResult.addEvent(
         new EscalationEventSignal(
             userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
@@ -175,7 +176,7 @@ public class UserTaskInstanceProcessor
       DirectInstanceResult directInstanceResult,
       UserTaskInstance userTaskInstance,
       UserTaskResponseResultDTO responseResult,
-      VariablesDTO variables) {
+      Map<String, VariableValue> variables) {
     directInstanceResult.addEvent(
         new ErrorEventSignal(
             userTaskInstance, responseResult.getCode(), responseResult.getMessage(), variables));
