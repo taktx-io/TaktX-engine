@@ -713,9 +713,7 @@ class SecurityIntegrationTest {
                   rawExternalTaskTriggers.stream()
                       .anyMatch(
                           r -> r.headers().lastHeader(Constants.HEADER_ENGINE_SIGNATURE) != null);
-              assertThat(hasSigned)
-                  .as("External-task trigger record must carry tx-sig")
-                  .isTrue();
+              assertThat(hasSigned).as("External-task trigger record must carry tx-sig").isTrue();
             });
 
     // Also verify the signature is cryptographically valid
