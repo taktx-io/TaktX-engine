@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅; active: PROTO-3.1 (parallel: PROTO-2.3 verification)  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅; active: PROTO-3.1  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -306,7 +306,7 @@ Key files:
 
 ### PROTO-2.3 — FEEL engine adapter: `VariableValue` ↔ FEEL context
 
-**Status:** 🔄 In Progress — engine FEEL/DMN boundaries are now proto-native; remaining story verification is broader than the engine-only cleanup
+**Status:** ✅ Complete
 
 **Description**  
 `FeelExpressionHandlerImpl` must be rewritten to work without `JsonNode` and `ObjectMapper`. The FEEL engine (`camunda-feel`) takes and returns Scala `Object` values. The adapter layer converts:
@@ -324,13 +324,15 @@ Remove the `ObjectMapper` constructor parameter and field from `FeelExpressionHa
 - `FeelExpressionHandlerImpl` already evaluates expressions internally as `VariableValue` and uses `Variables.toJavaObject(...)` for FEEL context construction.
 - The engine-facing FEEL/DMN APIs now return `VariableValue` directly; legacy `JsonNode` engine-main adapters were removed during PROTO-2.2 cleanup.
 - `FeelExpressionHandlerImpl` no longer carries the unused `ObjectMapper` constructor dependency.
+- Verified on 2026-05-18: `FeelExpressionHandlerImplTest` covers string, integer arithmetic, map, range, and array access with `VariableValue` assertions.
+- Verified on 2026-05-18: the existing script-task BPMN integration test `ScriptTaskTest` passes.
 
 **Acceptance criteria**
-- [ ] Unit test: `FeelExpressionHandlerImpl.processFeelExpression("= amount + 10", scope)` where `amount = 90L` returns a `VariableValue` with `long_val = 100`.
-- [ ] Unit test: FEEL expression returning a string returns `VariableValue` with `string_val`.
-- [ ] Unit test: FEEL expression returning a map returns `VariableValue` with `map_val`.
-- [ ] Integration test in the existing BPMN test suite for a process with a Script Task using FEEL expressions still passes.
-- [ ] No `ObjectMapper` reference inside `FeelExpressionHandlerImpl`.
+- [x] Unit test: `FeelExpressionHandlerImpl.processFeelExpression("= amount + 10", scope)` where `amount = 90L` returns a `VariableValue` with `long_val = 100`.
+- [x] Unit test: FEEL expression returning a string returns `VariableValue` with `string_val`.
+- [x] Unit test: FEEL expression returning a map returns `VariableValue` with `map_val`.
+- [x] Integration test in the existing BPMN test suite for a process with a Script Task using FEEL expressions still passes.
+- [x] No `ObjectMapper` reference inside `FeelExpressionHandlerImpl`.
 
 **Dependencies:** PROTO-2.1, PROTO-2.2  
 **Estimate:** 1 day

@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.engine.pi.model.VariableScope;
+import io.taktx.proto.VariableValue;
 import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.util.List;
@@ -33,10 +34,38 @@ class FeelExpressionHandlerImplTest {
   void testSimpleFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
-    JsonNode jsonNode =
-        VariableValueDtoMapper.toJsonNode(
-            expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty(null, null)));
-    assertThat(jsonNode.asText()).isEqualTo("test");
+    VariableValue value =
+        expressionHandler.processFeelExpression("=\"test\"", VariableScope.empty(null, null));
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.STRING_VALUE);
+    assertThat(value.getStringValue()).isEqualTo("test");
+  }
+
+  @Test
+  void testArithmeticFeelReturnsLongVariableValue() {
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider());
+    VariableScope vars = VariableScope.empty(null, null);
+    vars.put("amount", Variables.of(90L));
+
+    VariableValue value = expressionHandler.processFeelExpression("= amount + 10", vars);
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.LONG_VALUE);
+    assertThat(value.getLongValue()).isEqualTo(100L);
+  }
+
+  @Test
+  void testMapFeelReturnsMapVariableValue() {
+    FeelExpressionHandlerImpl expressionHandler =
+        new FeelExpressionHandlerImpl(new FeelEngineProvider());
+
+    VariableValue value =
+        expressionHandler.processFeelExpression(
+            "={ status: \"ok\", amount: 100 }", VariableScope.empty(null, null));
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.MAP_VALUE);
+    assertThat(Variables.toJavaObject(value))
+        .isEqualTo(java.util.Map.of("status", "ok", "amount", 100L));
   }
 
   @Test
