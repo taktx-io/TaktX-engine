@@ -95,6 +95,9 @@ import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
 import io.taktx.serdes.FlowNodeInstanceProtoMapper;
 import io.taktx.serdes.InstanceUpdateDtoDeserializer;
 import io.taktx.serdes.InstanceUpdateProtoMapper;
+import io.taktx.serdes.MessageEventDtoDeserializer;
+import io.taktx.serdes.MessageEventKeyDtoDeserializer;
+import io.taktx.serdes.MessageEventProtoMapper;
 import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
@@ -135,8 +138,11 @@ public class TopologyProducer {
   private static final long TOPIC_META_REQUEST_DEDUP_RETENTION_MS =
       Duration.ofMinutes(2).toMillis();
 
-  public static final ObjectMapperSerde<MessageEventDTO> MESSAGE_EVENT_SERDE =
-      new ObjectMapperSerde<>(MessageEventDTO.class);
+  public static final Serde<MessageEventDTO> MESSAGE_EVENT_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
+          new MessageEventDtoDeserializer());
   public static final Serde<SignalInstanceSubscriptionKeyDTO>
       SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE =
           new ObjectMapperSerde<>(SignalInstanceSubscriptionKeyDTO.class);
@@ -155,8 +161,11 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(ProcessDefinitionKey.class);
   public static final ObjectMapperSerde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
       new ObjectMapperSerde<>(ScheduleKeyDTO.class);
-  public static final ObjectMapperSerde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
-      new ObjectMapperSerde<>(MessageEventKeyDTO.class);
+  public static final Serde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
+          new MessageEventKeyDtoDeserializer());
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
   public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);

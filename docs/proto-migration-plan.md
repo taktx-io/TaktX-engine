@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅; active: PROTO-4.6  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅; active: PROTO-4.7  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -608,14 +608,25 @@ Delete `BaseElementTypeIdResolver.java` and `DefinitionsTriggerTypeIdResolver.ja
 
 ### PROTO-4.6 — Migrate `MessageEvent` family
 
+**Status:** ✅ Complete
+
 **Description**  
 Replace `MessageEventDTO` hierarchy (6 types, dispatched by `MessageEventTypeIdResolver`) with `MessageEventEnvelope` proto. Update `MessageEventProcessor`, `CorrelationMessageSubscriptions`, `DefinitionMessageSubscriptions`.
 
 Delete `MessageEventTypeIdResolver.java`.
 
+**Implementation notes (2026-05-18)**
+- ✅ Added shared DTO↔proto mapping and DTO deserialization for all 6 `MessageEventDTO` variants plus `MessageEventKeyDTO` via `MessageEventProtoMapper`, `MessageEventDtoDeserializer`, and `MessageEventKeyDtoDeserializer` in `taktx-shared`.
+- ✅ Switched engine `TopologyProducer.MESSAGE_EVENT_SERDE` / `MESSAGE_EVENT_KEY_SERDE`, client `MessageEventSerializer` / `MessageEventKeySerializer`, and the raw engine test-fixture message-event consumers from Jackson/CBOR to protobuf bytes.
+- ✅ Removed obsolete Jackson polymorphic wiring from `MessageEventDTO`, deleted `MessageEventTypeIdResolver.java`, and dropped the no-longer-needed `MessageEventDTO` base-type allowance from the engine CBOR `ObjectMapper` provider.
+- ✅ Added focused round-trip coverage in `taktx-shared/src/test/java/io/taktx/serdes/MessageEventProtoMapperTest.java` for all 6 message-event variants and the protobuf key path.
+- ✅ Updated client serializer coverage so `MessageEventSerializerTest` / `MessageEventKeySerializerTest` now assert parseable protobuf bytes rather than legacy `JsonSerializer` internals.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.MessageEventProtoMapperTest :taktx-client:test --tests io.taktx.client.serdes.MessageEventSerializerTest --tests io.taktx.client.serdes.MessageEventKeySerializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.MessageEventProcessorDlqTest :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.ProcessInstanceProcessorTest.testMessageStartEvent --tests io.taktx.engine.pi.integration.ProcessInstanceProcessorTest.testReceiveTask --tests io.taktx.engine.pi.integration.IntermediateEventsTest.testMessageIntermediateCatch --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: each of the 6 message event types round-trips.
-- [ ] Integration test: message correlation (start event and intermediate catch event) works end-to-end.
+- [x] Unit test: each of the 6 message event types round-trips.
+- [x] Integration test: message correlation (start event and intermediate catch event) works end-to-end.
 
 **Dependencies:** PROTO-4.5  
 **Estimate:** 0.5 day

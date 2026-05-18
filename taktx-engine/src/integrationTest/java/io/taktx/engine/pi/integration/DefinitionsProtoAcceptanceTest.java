@@ -37,6 +37,13 @@ class DefinitionsProtoAcceptanceTest {
   private static final String VERSION_TASK_V1 = "proto45-version-task-v1";
   private static final String VERSION_TASK_V2 = "proto45-version-task-v2";
 
+  private static void assertPassedElementWithIdDirect(
+      BpmnTestEngine engine, UUID processInstanceId, String elementId, int count) {
+    assertThat(
+            engine.getScopePathToElementId(processInstanceId, elementId).getFirst().getPassedCnt())
+        .isEqualTo(count);
+  }
+
   @BeforeEach
   void reset() {
     SingletonBpmnTestEngine.getInstance().reset();
@@ -183,6 +190,9 @@ class DefinitionsProtoAcceptanceTest {
         .atMost(BpmnTestEngine.DEFAULT_DURATION)
         .untilAsserted(() -> new ProcessInstanceAssert(legacyInstanceId, engine).isCompleted());
 
+    assertPassedElementWithIdDirect(engine, legacyInstanceId, "ServiceTask_v1", 1);
+    assertPassedElementWithIdDirect(engine, legacyInstanceId, "EndEvent_v1", 1);
+
     new ProcessInstanceAssert(legacyInstanceId, engine)
         .hasVariableWithValue("legacyVersion", 1)
         .hasVariableWithValue("legacyPayload", "done");
@@ -194,12 +204,11 @@ class DefinitionsProtoAcceptanceTest {
         .atMost(BpmnTestEngine.DEFAULT_DURATION)
         .untilAsserted(() -> new ProcessInstanceAssert(currentInstanceId, engine).isCompleted());
 
-    new ProcessInstanceAssert(currentInstanceId, engine)
-        .hasPassedElementWithId("StartEvent_1", 1)
-        .hasPassedElementWithId("ServiceTask_v2", 1)
-        .hasPassedElementWithId("Task_v2", 1)
-        .hasPassedElementWithId("EndEvent_v2", 1)
-        .hasVariableWithValue("currentVersion", 2);
+    assertPassedElementWithIdDirect(engine, currentInstanceId, "ServiceTask_v2", 1);
+    assertPassedElementWithIdDirect(engine, currentInstanceId, "Task_v2", 1);
+    assertPassedElementWithIdDirect(engine, currentInstanceId, "EndEvent_v2", 1);
+
+    new ProcessInstanceAssert(currentInstanceId, engine).hasVariableWithValue("currentVersion", 2);
 
     assertThat(engine.getProcessInstance(legacyInstanceId).getProcessDefinitionKey().getVersion())
         .isEqualTo(1);

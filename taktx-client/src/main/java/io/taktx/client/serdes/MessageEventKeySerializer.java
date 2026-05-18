@@ -8,13 +8,29 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.MessageEventKeyDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.proto.MessageEventKeyMessage;
+import io.taktx.serdes.MessageEventProtoMapper;
+import io.taktx.serdes.ProtoSerializer;
+import java.util.Map;
+import org.apache.kafka.common.serialization.Serializer;
 
-/** A JSON serializer for MessageEventKeyDTO objects. */
-public class MessageEventKeySerializer extends JsonSerializer<MessageEventKeyDTO> {
+/** A protobuf serializer for {@link MessageEventKeyDTO} objects. */
+public class MessageEventKeySerializer implements Serializer<MessageEventKeyDTO> {
 
-  /** Constructor for MessageEventKeySerializer. */
-  public MessageEventKeySerializer() {
-    super(MessageEventKeyDTO.class);
+  private final ProtoSerializer<MessageEventKeyMessage> delegate = new ProtoSerializer<>();
+
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    delegate.configure(configs, isKey);
+  }
+
+  @Override
+  public byte[] serialize(String topic, MessageEventKeyDTO data) {
+    return delegate.serialize(topic, data == null ? null : MessageEventProtoMapper.toProto(data));
+  }
+
+  @Override
+  public void close() {
+    delegate.close();
   }
 }

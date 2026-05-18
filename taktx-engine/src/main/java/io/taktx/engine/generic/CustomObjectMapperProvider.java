@@ -17,7 +17,6 @@ import io.quarkus.arc.All;
 import io.quarkus.jackson.ObjectMapperCustomizer;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.InstanceUpdateDTO;
-import io.taktx.dto.MessageEventDTO;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.SchedulableMessageDTO;
@@ -44,7 +43,6 @@ public class CustomObjectMapperProvider {
             .allowIfBaseType(MessageScheduleDTO.class)
             .allowIfBaseType(ProcessInstanceTriggerDTO.class)
             .allowIfBaseType(FlowNodeInstanceDTO.class)
-            .allowIfBaseType(MessageEventDTO.class)
             .allowIfBaseType(InstanceUpdateDTO.class)
             .build();
 

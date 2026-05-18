@@ -10,14 +10,19 @@ package io.taktx.client.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.MessageEventKeyDTO;
+import io.taktx.proto.MessageEventKeyMessage;
 import org.junit.jupiter.api.Test;
 
 class MessageEventKeySerializerTest {
 
   @Test
-  void testConstruct() {
+  void serialize_writesMessageEventKeyProtoBytes() throws Exception {
     try (MessageEventKeySerializer serializer = new MessageEventKeySerializer()) {
-      assertThat(serializer.getClazz()).isEqualTo(MessageEventKeyDTO.class);
+      byte[] bytes =
+          serializer.serialize("message-topic", new MessageEventKeyDTO("payment.received"));
+
+      assertThat(MessageEventKeyMessage.parseFrom(bytes).getMessageName())
+          .isEqualTo("payment.received");
     }
   }
 }
