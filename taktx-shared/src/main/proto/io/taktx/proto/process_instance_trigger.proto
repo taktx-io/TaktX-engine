@@ -98,7 +98,7 @@ message EventSignalTriggerMessage {
   Uuid process_instance_id = 1;
   CommandTrustMetadataMessage current_trust_metadata = 2;
   CommandTrustMetadataMessage origin_trust_metadata = 3;
-  EventSignalMessage event_signal = 4;
+  EventSignalEnvelope event_signal = 4;
 }
 
 // Java: ExternalTaskResponseResultDTO
@@ -106,7 +106,7 @@ message ExternalTaskResponseResultMessage {
   ExternalTaskResponseType response_type = 1;
   string code = 2;
   string message = 3;
-  bool allow_retry = 4;
+  optional bool allow_retry = 4;
   sint64 timeout = 5;
   repeated string stacktrace = 6;
 }

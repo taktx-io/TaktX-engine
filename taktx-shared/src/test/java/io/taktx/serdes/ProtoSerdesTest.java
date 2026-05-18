@@ -44,8 +44,8 @@ import io.taktx.proto.ProcessDefinitionMessage;
 import io.taktx.proto.ProcessDefinitionStateEnum;
 import io.taktx.proto.ProcessInstanceMessage;
 import io.taktx.proto.ProcessInstanceTriggerEnvelope;
-import io.taktx.proto.ProcessInstanceTriggerMessage;
 import io.taktx.proto.ReplayProtectionMode;
+import io.taktx.proto.SchedulableMessageEnvelope;
 import io.taktx.proto.SignalEnvelope;
 import io.taktx.proto.SignalMessage;
 import io.taktx.proto.SigningKeyMessage;
@@ -180,7 +180,13 @@ class ProtoSerdesTest {
             MessageScheduleEnvelope.newBuilder()
                 .setOneTime(
                     OneTimeScheduleMessage.newBuilder()
-                        .setMessage(ProcessInstanceTriggerMessage.newBuilder().build())
+                        .setMessage(
+                            SchedulableMessageEnvelope.newBuilder()
+                                .setProcessInstanceTrigger(
+                                    ProcessInstanceTriggerEnvelope.newBuilder()
+                                        .setAbort(AbortTriggerMessage.newBuilder().build())
+                                        .build())
+                                .build())
                         .setWhen(123L)
                         .build())
                 .build(),

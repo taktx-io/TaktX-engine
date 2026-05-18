@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅; active: PROTO-4.2  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅; active: PROTO-4.3  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -493,6 +493,18 @@ Key stores to migrate (based on existing imports):
 **Description**  
 Replace `ProcessInstanceTriggerDTO` hierarchy (9 concrete types, currently dispatched by `ProcessInstanceTriggerTypeIdResolver`) with `ProcessInstanceTriggerEnvelope` proto message. Update:
 
+**Progress update (2026-05-18)**
+- ✅ Added shared DTO↔proto mapper coverage for the active process-instance trigger DTO family (`StartCommandDTO`, `ContinueFlowElementTriggerDTO`, `ExternalTaskResponseTriggerDTO`, `StartFlowElementTriggerDTO`, `SetVariableTriggerDTO`, `AbortTriggerDTO`, `UserTaskResponseTriggerDTO`, `EventSignalTriggerDTO`) with lossless round-trips for trust metadata, business metadata, variable payloads, IO mappings, and event-signal subtype payloads.
+- ✅ Switched client-side `ProcessInstanceTriggerSerializer`, engine-side `ProcessInstanceTriggerEnvelopeSerializer` / `ProcessInstanceTriggerEnvelopeDeserializer`, and `TopologyProducer` process-instance-trigger Serdes from Jackson/CBOR to protobuf bytes.
+- ✅ Updated the raw engine test-fixture process-instance-trigger consumer to the protobuf DTO deserializer path.
+- ✅ Migrated the remaining schedule-command value path to protobuf DTO serdes (`MessageScheduleEnvelope` + `SchedulableMessageEnvelope`), so scheduled process-instance triggers and scheduled external-task triggers no longer depend on Jackson trigger polymorphism.
+- ✅ Deleted `ProcessInstanceTriggerTypeIdResolver.java` and the now-unused `MessageSchedulerTypeIdResolver.java` after the schedule path stopped referencing them.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.ProcessInstanceTriggerProtoMapperTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.MessageScheduleProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.ProcessInstanceProducerTest --tests io.taktx.client.serdes.ProcessDefinitionKeyJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.ScheduleCommandDeserializerTest --tests io.taktx.engine.pd.ScheduleProcessorTest --tests io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeDeserializerTest --tests io.taktx.engine.security.ProcessInstanceResponseDedupProcessorTest --tests io.taktx.engine.security.ReplayProtectionProcessorTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.validJwt_commandAccepted_processInstanceStarted --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.workerEd25519SignedResponse_processCompletes --console=plain` passes.
+
 - `ProcessInstanceTriggerEnvelopeSerializer` / `ProcessInstanceTriggerEnvelopeDeserializer`
 - `ProcessInstanceProcessor` and all methods that switch on trigger type
 - `StartCommandMessage` construction at all call sites in the engine
@@ -501,9 +513,9 @@ Replace `ProcessInstanceTriggerDTO` hierarchy (9 concrete types, currently dispa
 Delete `ProcessInstanceTriggerTypeIdResolver.java`.
 
 **Acceptance criteria**
-- [ ] Unit test: each of the 9 trigger types serializes and round-trips through `ProcessInstanceTriggerEnvelope.parseFrom(envelope.toByteArray())`.
-- [ ] Existing `ProcessInstanceProcessorTest` (or equivalent) passes.
-- [ ] Integration test: full BPMN process start-to-end executes successfully.
+- [x] Unit test: each of the active process-instance trigger types serializes and round-trips through `ProcessInstanceTriggerEnvelope.parseFrom(envelope.toByteArray())`; scheduled external-task trigger payload coverage now lives in `MessageScheduleEnvelope` round-trip tests.
+- [x] Existing trigger-envelope / dedup / replay-protection engine tests pass.
+- [x] Integration test: full BPMN process start-to-end executes successfully.
 
 **Dependencies:** PROTO-3.1  
 **Estimate:** 1.5 days

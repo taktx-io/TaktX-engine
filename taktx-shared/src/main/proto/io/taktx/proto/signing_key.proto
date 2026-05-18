@@ -12,6 +12,7 @@ enum CommandTrustVerificationResult {
   SIGNATURE_VERIFIED = 2;
   ENGINE_SIGNED = 3;
   AUTHORIZATION_DISABLED = 4;
+  LICENSE_BYPASSED = 5;
 }
 
 // Java: SigningKeyDTO.KeyStatus (inner enum)
@@ -34,13 +35,14 @@ enum CommandAuthMethod {
   COMMAND_AUTH_JWT                 = 1;
   COMMAND_AUTH_ED25519             = 2;
   COMMAND_AUTH_JWT_AND_ED25519     = 3;
+  COMMAND_AUTH_NONE                = 4;
 }
 
 // Java: CommandTrustMetadataDTO
 message CommandTrustMetadataMessage {
   CommandAuthMethod              auth_method          = 1;
   CommandTrustVerificationResult verification_result  = 2;
-  bool                           trusted              = 3;
+  optional bool                  trusted              = 3;
   string                         user_id              = 4;
   string                         issuer               = 5;
   string                         signer_key_id        = 6;

@@ -8,13 +8,12 @@
 
 package io.taktx.engine.pi;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
-import io.taktx.jackson.TaktxObjectMappers;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,8 +26,8 @@ import org.apache.kafka.common.serialization.Deserializer;
 public class ProcessInstanceTriggerEnvelopeDeserializer
     implements Deserializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = TaktxObjectMappers.cbor();
-  private static final ObjectMapper JSON_OBJECT_MAPPER = new ObjectMapper();
+  private static final com.fasterxml.jackson.databind.ObjectMapper JSON_OBJECT_MAPPER =
+      new com.fasterxml.jackson.databind.ObjectMapper();
 
   @Override
   public ProcessInstanceTriggerEnvelope deserialize(String topic, byte[] data) {
@@ -161,8 +160,9 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       return null;
     }
     try {
-      return OBJECT_MAPPER.readValue(data, ProcessInstanceTriggerDTO.class);
-    } catch (IOException _) {
+      return ProcessInstanceTriggerProtoMapper.toDto(
+          io.taktx.proto.ProcessInstanceTriggerEnvelope.parseFrom(data));
+    } catch (InvalidProtocolBufferException _) {
       // Fall back to null, or partial object later
       return null;
     }

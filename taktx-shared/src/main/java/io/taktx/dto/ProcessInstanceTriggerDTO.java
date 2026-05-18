@@ -7,14 +7,8 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.taktx.ProcessInstanceTriggerTypeIdResolver;
 import jakarta.annotation.Nullable;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -23,9 +17,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@JsonTypeInfo(use = Id.CUSTOM, property = "c")
-@JsonTypeIdResolver(ProcessInstanceTriggerTypeIdResolver.class)
-@JsonFormat(shape = Shape.ARRAY)
 @ToString
 @Getter
 @Setter

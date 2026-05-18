@@ -8,9 +8,9 @@
 
 package io.taktx.engine.pd;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.dto.Constants;
 import io.taktx.dto.MessageScheduleDTO;
+import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import java.nio.charset.StandardCharsets;
@@ -21,8 +21,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 
 public class ScheduleCommandDeserializer implements Deserializer<MessageScheduleDTO> {
 
-  private final Deserializer<MessageScheduleDTO> delegate =
-      new ObjectMapperSerde<>(MessageScheduleDTO.class).deserializer();
+  private final Deserializer<MessageScheduleDTO> delegate = new MessageScheduleDtoDeserializer();
 
   @Override
   public MessageScheduleDTO deserialize(String topic, byte[] data) {

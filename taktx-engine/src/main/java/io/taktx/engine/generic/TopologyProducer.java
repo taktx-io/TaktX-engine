@@ -88,6 +88,10 @@ import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
+import io.taktx.serdes.MessageScheduleDtoDeserializer;
+import io.taktx.serdes.MessageScheduleProtoMapper;
+import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.SigningSerializer;
@@ -151,21 +155,20 @@ public class TopologyProducer {
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
   public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
-  public static final ObjectMapperSerde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
-      new ObjectMapperSerde<>(MessageScheduleDTO.class);
-  public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
+  public static final Serde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       Serdes.serdeFrom(
-          new SigningSerializer<>(MESSAGE_SCHEDULE_SERDE.serializer()),
-          MESSAGE_SCHEDULE_SERDE.deserializer());
+          new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
+          new MessageScheduleDtoDeserializer());
+  public static final Serde<MessageScheduleDTO> SIGNED_MESSAGE_SCHEDULE_SERDE =
+      MESSAGE_SCHEDULE_SERDE;
   public static final Serde<MessageScheduleDTO> SCHEDULE_COMMAND_INPUT_SERDE =
-      Serdes.serdeFrom(MESSAGE_SCHEDULE_SERDE.serializer(), new ScheduleCommandDeserializer());
-  public static final ObjectMapperSerde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceTriggerDTO.class) {
-        @Override
-        public Serializer<ProcessInstanceTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
+          new ScheduleCommandDeserializer());
+  public static final Serde<ProcessInstanceTriggerDTO> PROCESS_INSTANCE_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
+          new ProcessInstanceTriggerDtoDeserializer());
   public static final Serde<ProcessInstanceTriggerEnvelope>
       PROCESS_INSTANCE_TRIGGER_ENVELOPE_SERDE =
           Serdes.serdeFrom(

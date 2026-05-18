@@ -11,13 +11,13 @@ package io.taktx.engine.pd;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.dto.Constants;
 import io.taktx.dto.MessageScheduleDTO;
 import io.taktx.dto.OneTimeScheduleDTO;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.serdes.MessageScheduleProtoMapper;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
@@ -92,10 +92,7 @@ class ScheduleCommandDeserializerTest {
   }
 
   private byte[] serialize(MessageScheduleDTO schedule) {
-    try (ObjectMapperSerde<MessageScheduleDTO> serde =
-        new ObjectMapperSerde<>(MessageScheduleDTO.class)) {
-      return serde.serializer().serialize(TOPIC, schedule);
-    }
+    return MessageScheduleProtoMapper.toProto(schedule).toByteArray();
   }
 
   private OneTimeScheduleDTO oneTimeSchedule() {

@@ -26,6 +26,14 @@ message MessageScheduleEnvelope {
   }
 }
 
+// Java: SchedulableMessageDTO hierarchy
+message SchedulableMessageEnvelope {
+  oneof message {
+    ProcessInstanceTriggerEnvelope process_instance_trigger = 1;
+    ExternalTaskTriggerMessage     external_task_trigger    = 2;
+  }
+}
+
 enum TimeBucket {
   MINUTE = 0;
   HOURLY = 1;
@@ -43,7 +51,7 @@ message DefinitionScheduleKeyMessage {
 
 // Java: FixedRateMessageScheduleDTO
 message FixedRateMessageScheduleMessage {
-  ProcessInstanceTriggerMessage message = 1;
+  SchedulableMessageEnvelope message = 1;
   sint64 instantiation_time = 2;
   sint64 period = 3;
   int32 repetitions = 4;
@@ -59,20 +67,20 @@ message InstanceScheduleKeyMessage {
 
 // Java: MessageScheduleDTO (abstract)
 message MessageScheduleMessage {
-  ProcessInstanceTriggerMessage message = 1;
+  SchedulableMessageEnvelope message = 1;
   sint64 instantiation_time = 2;
 }
 
 // Java: OneTimeScheduleDTO
 message OneTimeScheduleMessage {
-  ProcessInstanceTriggerMessage message = 1;
+  SchedulableMessageEnvelope message = 1;
   sint64 instantiation_time = 2;
   sint64 when = 3;
 }
 
 // Java: RecurringMessageScheduleDTO
 message RecurringMessageScheduleMessage {
-  ProcessInstanceTriggerMessage message = 1;
+  SchedulableMessageEnvelope message = 1;
   sint64 instantiation_time = 2;
   string cron = 3;
 }
