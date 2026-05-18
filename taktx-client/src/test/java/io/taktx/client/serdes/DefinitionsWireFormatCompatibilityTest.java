@@ -11,10 +11,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.DmnDefinitionsTriggerDTO;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
+import io.taktx.serdes.DefinitionsProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class DefinitionsWireFormatCompatibilityTest {
@@ -22,7 +22,7 @@ class DefinitionsWireFormatCompatibilityTest {
   private static final ObjectMapper ENGINE_CBOR = new ObjectMapper(new CBORFactory());
 
   @Test
-  void xmlDefinitionSerializer_producesEngineReadableCbor() throws Exception {
+  void xmlDefinitionSerializer_producesEngineReadableProto() throws Exception {
     XmlDefinitionsDTO dto = new XmlDefinitionsDTO("<definitions id=\"demo\"/>");
 
     byte[] payload;
@@ -30,10 +30,10 @@ class DefinitionsWireFormatCompatibilityTest {
       payload = serializer.serialize("definitions", dto);
     }
 
-    DefinitionsTriggerDTO decoded = ENGINE_CBOR.readValue(payload, DefinitionsTriggerDTO.class);
-
-    assertThat(decoded).isInstanceOf(XmlDefinitionsDTO.class);
-    assertThat(decoded).isEqualTo(dto);
+    assertThat(
+            DefinitionsProtoMapper.toDto(
+                io.taktx.proto.DefinitionsTriggerEnvelope.parseFrom(payload)))
+        .isEqualTo(dto);
   }
 
   @Test

@@ -10,13 +10,21 @@ package io.taktx.client.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.XmlDefinitionsDTO;
+import io.taktx.serdes.DefinitionsProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class XmlDefinitionSerializerTest {
   @Test
-  void testConstruct() {
+  void serialize_writesDefinitionsTriggerEnvelope() throws Exception {
+    XmlDefinitionsDTO dto = new XmlDefinitionsDTO("<definitions id=\"demo\"/>");
+
     try (XmlDefinitionSerializer serializer = new XmlDefinitionSerializer()) {
-      assertThat(serializer.getClazz()).isEqualTo(XmlDefinitionsDTO.class);
+      byte[] payload = serializer.serialize("definitions", dto);
+
+      assertThat(
+              DefinitionsProtoMapper.toDto(
+                  io.taktx.proto.DefinitionsTriggerEnvelope.parseFrom(payload)))
+          .isEqualTo(dto);
     }
   }
 }

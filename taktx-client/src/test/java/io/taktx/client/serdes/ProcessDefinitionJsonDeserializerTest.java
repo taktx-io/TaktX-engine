@@ -9,14 +9,33 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.taktx.dto.DefinitionsKey;
+import io.taktx.dto.ParsedDefinitionsDTO;
+import io.taktx.dto.ProcessDTO;
 import io.taktx.dto.ProcessDefinitionDTO;
+import io.taktx.dto.ProcessDefinitionStateEnum;
+import io.taktx.serdes.DefinitionsProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class ProcessDefinitionJsonDeserializerTest {
   @Test
-  void testConstruct() {
+  void deserialize_readsProcessDefinitionMessage() {
+    ProcessDefinitionDTO dto =
+        new ProcessDefinitionDTO(
+            new ParsedDefinitionsDTO(
+                new DefinitionsKey("orders", "hash-123"),
+                ProcessDTO.NONE,
+                java.util.Map.of(),
+                java.util.Map.of(),
+                java.util.Map.of(),
+                java.util.Map.of()),
+            3,
+            ProcessDefinitionStateEnum.ACTIVE);
+
     try (ProcessDefinitionJsonDeserializer deserializer = new ProcessDefinitionJsonDeserializer()) {
-      assertThat(deserializer.getClazz()).isEqualTo(ProcessDefinitionDTO.class);
+      byte[] payload = DefinitionsProtoMapper.toProto(dto).toByteArray();
+
+      assertThat(deserializer.deserialize("process-definitions", payload)).isEqualTo(dto);
     }
   }
 }

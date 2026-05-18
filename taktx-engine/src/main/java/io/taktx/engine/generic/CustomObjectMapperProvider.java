@@ -15,8 +15,6 @@ import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.quarkus.arc.All;
 import io.quarkus.jackson.ObjectMapperCustomizer;
-import io.taktx.dto.BaseElementDTO;
-import io.taktx.dto.DefinitionsTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.dto.MessageEventDTO;
@@ -42,8 +40,6 @@ public class CustomObjectMapperProvider {
 
     PolymorphicTypeValidator ptv =
         BasicPolymorphicTypeValidator.builder()
-            .allowIfBaseType(DefinitionsTriggerDTO.class)
-            .allowIfBaseType(BaseElementDTO.class)
             .allowIfBaseType(SchedulableMessageDTO.class)
             .allowIfBaseType(MessageScheduleDTO.class)
             .allowIfBaseType(ProcessInstanceTriggerDTO.class)

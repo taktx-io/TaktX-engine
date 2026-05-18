@@ -580,9 +580,21 @@ Replace `DefinitionsTriggerDTO` + `ParsedDefinitionsDTO` + the full `BaseElement
 
 Delete `BaseElementTypeIdResolver.java` and `DefinitionsTriggerTypeIdResolver.java`.
 
+**Implementation notes (2026-05-18)**
+- `definitions.proto` now stores concrete `FlowElementsDTO` values and event definitions via `BaseElementEnvelope`, enabling lossless round-trips for the BPMN element hierarchy.
+- Added shared `DefinitionsProtoMapper`, `DefinitionsTriggerDtoDeserializer`, and `ProcessDefinitionDtoDeserializer` in `taktx-shared`.
+- Switched engine `DefinitionsTriggerDTO` and `ProcessDefinitionDTO` Kafka serdes in `taktx-engine/src/main/java/io/taktx/engine/generic/TopologyProducer.java` from CBOR/Jackson to protobuf.
+- Switched client BPMN deployment/consumption serdes (`XmlDefinitionSerializer`, `ProcessDefinitionJsonDeserializer`) to the protobuf path.
+- Removed Jackson type-id wiring from `BaseElementDTO` / `DefinitionsTriggerDTO` and deleted `BaseElementTypeIdResolver.java` / `DefinitionsTriggerTypeIdResolver.java`.
+- Hardened `InstanceUpdateProtoMapper` against null output-sequence-flow ids uncovered by the expanded BPMN integration slice.
+
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.DefinitionsProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.XmlDefinitionSerializerTest --tests io.taktx.client.serdes.ProcessDefinitionJsonDeserializerTest --tests io.taktx.client.serdes.DefinitionsWireFormatCompatibilityTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.TaskTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.GatewayTest --tests io.taktx.engine.pi.integration.BoundaryEventsTest --tests io.taktx.engine.pi.integration.BusinessRuleTaskTest --tests io.taktx.engine.pi.integration.ScriptTaskTest --tests io.taktx.engine.pi.integration.EventSubprocessTest --tests io.taktx.engine.pi.integration.IntermediateEventsTest --tests io.taktx.engine.pi.integration.ErrorsTest --tests io.taktx.engine.pi.integration.EscalationsTest --tests io.taktx.engine.pi.integration.SignalsTest --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: a `ParsedDefinitionsMessage` containing a process with all 27 element types round-trips without data loss.
-- [ ] Unit test: `ServiceTaskMessage`, `UserTaskMessage`, `SubProcessMessage`, `CallActivityMessage` field coverage.
+- [x] Unit test: a `ParsedDefinitionsMessage` containing a process with all 27 element types round-trips without data loss.
+- [x] Unit test: `ServiceTaskMessage`, `UserTaskMessage`, `SubProcessMessage`, `CallActivityMessage` field coverage.
 - [ ] Integration test: deploy a BPMN with all supported element types; execute a process instance from start to end.
 - [ ] Integration test: redeploy a BPMN (version bump) and existing instances continue correctly.
 

@@ -48,6 +48,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -102,7 +103,8 @@ public final class InstanceUpdateProtoMapper {
       builder.setInputSequenceFlowId(dto.getInputSequenceFlowId());
     }
     if (dto.getOutputSequenceFlowIds() != null) {
-      builder.addAllOutputSequenceFlowIds(dto.getOutputSequenceFlowIds());
+      builder.addAllOutputSequenceFlowIds(
+          dto.getOutputSequenceFlowIds().stream().filter(Objects::nonNull).toList());
     }
     return builder.build();
   }

@@ -7,14 +7,7 @@
  */
 package io.taktx.client.serdes;
 
-import io.taktx.dto.ProcessDefinitionDTO;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 
-/** A JSON deserializer for ProcessDefinitionDTO objects. */
-public class ProcessDefinitionJsonDeserializer extends JsonDeserializer<ProcessDefinitionDTO> {
-
-  /** Constructor for ProcessDefinitionJsonDeserializer. */
-  public ProcessDefinitionJsonDeserializer() {
-    super(ProcessDefinitionDTO.class, false);
-  }
-}
+/** Backward-compatible client deserializer for protobuf-backed process definitions. */
+public class ProcessDefinitionJsonDeserializer extends ProcessDefinitionDtoDeserializer {}

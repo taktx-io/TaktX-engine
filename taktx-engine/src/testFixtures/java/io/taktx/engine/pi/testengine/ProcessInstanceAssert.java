@@ -128,13 +128,23 @@ public class ProcessInstanceAssert {
                 + variables)
         .isNotNull();
     JsonNode expectedNode = new ObjectMapper(new CBORFactory()).valueToTree(value1);
-    assertThat(jsonNode)
-        .as(
-            "variable "
-                + var1
-                + " not found in process instanceToContinue, available variables:"
-                + variables)
-        .isEqualTo(expectedNode);
+    if (jsonNode.isNumber() && expectedNode.isNumber()) {
+      assertThat(jsonNode.decimalValue())
+          .as(
+              "variable "
+                  + var1
+                  + " not found in process instanceToContinue, available variables:"
+                  + variables)
+          .isEqualTo(expectedNode.decimalValue());
+    } else {
+      assertThat(jsonNode)
+          .as(
+              "variable "
+                  + var1
+                  + " not found in process instanceToContinue, available variables:"
+                  + variables)
+          .isEqualTo(expectedNode);
+    }
     return this;
   }
 

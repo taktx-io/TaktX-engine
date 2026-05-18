@@ -72,10 +72,12 @@ enum ScriptType {
   PHP = 10;
   SHELL = 11;
   JUEL = 12;
+  UNKNOWN = 13;
 }
 
 enum UserTaskTypeEnum {
-  ZEEBE = 0;
+  USER_TASK_TYPE_ZEEBE = 0;
+  USER_TASK_TYPE_JOBWORKER = 1;
 }
 
 // Java: ActivityDTO (abstract)
@@ -110,7 +112,7 @@ message BoundaryEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
   string attached_to_ref = 8;
   bool cancel_activity = 9;
 }
@@ -150,7 +152,7 @@ message CatchEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
 }
 
 // Java: DefinitionsTriggerDTO (abstract)
@@ -166,7 +168,7 @@ message EndEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
 }
 
 // Java: ErrorDTO
@@ -259,7 +261,7 @@ message FlowElementMessage {
 
 // Java: FlowElementsDTO
 message FlowElementsMessage {
-  map<string, FlowElementMessage> elements = 1;
+  map<string, BaseElementEnvelope> elements = 1;
 }
 
 // Java: FlowNodeDTO (abstract)
@@ -291,7 +293,7 @@ message IntermediateCatchEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
 }
 
 // Java: IntermediateThrowEventDTO
@@ -302,7 +304,7 @@ message IntermediateThrowEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
 }
 
 // Java: LinkEventDefinitionDTO
@@ -515,7 +517,7 @@ message StartEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
   bool interrupting = 8;
 }
 
@@ -563,7 +565,7 @@ message ThrowEventMessage {
   repeated string incoming = 4;
   repeated string outgoing = 5;
   InputOutputMappingMessage io_mapping = 6;
-  repeated EventDefinitionMessage event_definitions = 7;
+  repeated BaseElementEnvelope event_definitions = 7;
 }
 
 // Java: TimerEventDefinitionDTO

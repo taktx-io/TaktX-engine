@@ -87,6 +87,8 @@ import io.taktx.engine.topicmanagement.DynamicTopicManager;
 import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
+import io.taktx.serdes.DefinitionsProtoMapper;
+import io.taktx.serdes.DefinitionsTriggerDtoDeserializer;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
@@ -95,6 +97,7 @@ import io.taktx.serdes.InstanceUpdateDtoDeserializer;
 import io.taktx.serdes.InstanceUpdateProtoMapper;
 import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.serdes.MessageScheduleProtoMapper;
+import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
@@ -183,8 +186,10 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
       new ObjectMapperSerde<>(XmlDmnDefinitionsDTO.class);
 
-  public static final ObjectMapperSerde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinitionDTO.class);
+  public static final Serde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          new ProcessDefinitionDtoDeserializer());
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
   public static final Serde<VariableValue> VARIABLES_SERDE =
       Serdes.serdeFrom(
@@ -199,8 +204,10 @@ public class TopologyProducer {
               throw new SerializationException("Failed to deserialize VariableValue", e);
             }
           });
-  public static final ObjectMapperSerde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(DefinitionsTriggerDTO.class);
+  public static final Serde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          new DefinitionsTriggerDtoDeserializer());
   public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       new ObjectMapperSerde<>(ProcessInstanceDTO.class);
   public static final Serde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
