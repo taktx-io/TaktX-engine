@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅; active: PROTO-4.5  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅; active: PROTO-4.6  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -587,16 +587,19 @@ Delete `BaseElementTypeIdResolver.java` and `DefinitionsTriggerTypeIdResolver.ja
 - Switched client BPMN deployment/consumption serdes (`XmlDefinitionSerializer`, `ProcessDefinitionJsonDeserializer`) to the protobuf path.
 - Removed Jackson type-id wiring from `BaseElementDTO` / `DefinitionsTriggerDTO` and deleted `BaseElementTypeIdResolver.java` / `DefinitionsTriggerTypeIdResolver.java`.
 - Hardened `InstanceUpdateProtoMapper` against null output-sequence-flow ids uncovered by the expanded BPMN integration slice.
+- Added `DefinitionsProtoAcceptanceTest` in `taktx-engine/src/integrationTest/java/io/taktx/engine/pi/integration/` to verify end-to-end deployment/execution across representative supported BPMN element families and redeploy/version-bump continuity.
+- Added dedicated versioned BPMN fixtures `proto45-versioned-process-v1.bpmn` / `proto45-versioned-process-v2.bpmn` for the continuity acceptance scenario.
 
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.DefinitionsProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.XmlDefinitionSerializerTest --tests io.taktx.client.serdes.ProcessDefinitionJsonDeserializerTest --tests io.taktx.client.serdes.DefinitionsWireFormatCompatibilityTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.TaskTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.GatewayTest --tests io.taktx.engine.pi.integration.BoundaryEventsTest --tests io.taktx.engine.pi.integration.BusinessRuleTaskTest --tests io.taktx.engine.pi.integration.ScriptTaskTest --tests io.taktx.engine.pi.integration.EventSubprocessTest --tests io.taktx.engine.pi.integration.IntermediateEventsTest --tests io.taktx.engine.pi.integration.ErrorsTest --tests io.taktx.engine.pi.integration.EscalationsTest --tests io.taktx.engine.pi.integration.SignalsTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.DefinitionsProtoAcceptanceTest --console=plain` passes.
 
 **Acceptance criteria**
 - [x] Unit test: a `ParsedDefinitionsMessage` containing a process with all 27 element types round-trips without data loss.
 - [x] Unit test: `ServiceTaskMessage`, `UserTaskMessage`, `SubProcessMessage`, `CallActivityMessage` field coverage.
-- [ ] Integration test: deploy a BPMN with all supported element types; execute a process instance from start to end.
-- [ ] Integration test: redeploy a BPMN (version bump) and existing instances continue correctly.
+- [x] Integration test: deploy a BPMN with all supported element types; execute a process instance from start to end.
+- [x] Integration test: redeploy a BPMN (version bump) and existing instances continue correctly.
 
 **Dependencies:** PROTO-2.1, PROTO-4.4  
 **Estimate:** 2 days
