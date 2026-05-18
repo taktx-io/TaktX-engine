@@ -106,6 +106,7 @@ import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.SignalDtoDeserializer;
 import io.taktx.serdes.SignalProtoMapper;
+import io.taktx.serdes.UserTaskResponseTriggerProtoDeserializer;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
 import io.taktx.serdes.ZippedStringSerde;
@@ -240,8 +241,10 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),
           new UserTaskTriggerProtoDeserializer());
-  public static final ObjectMapperSerde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
-      new ObjectMapperSerde<>(UserTaskResponseTriggerDTO.class);
+  public static final Serde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
+          new UserTaskResponseTriggerProtoDeserializer());
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =

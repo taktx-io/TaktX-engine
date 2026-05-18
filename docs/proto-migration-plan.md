@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅; active: PROTO-4.8  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅; active: PROTO-4.9  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -663,14 +663,28 @@ Delete `SignalTypeIdResolver.java`.
 
 ### PROTO-4.8 — Migrate `UserTask` and `ExternalTask` families
 
+**Status:** ✅ Complete
+
 **Description**  
 Replace `UserTaskTriggerDTO`, `UserTaskResponseTriggerDTO`, `UserTaskResponseResultDTO`, `ExternalTaskTriggerDTO`, `ExternalTaskResponseTriggerDTO`, `ExternalTaskResponseResultDTO` with proto equivalents. Update `UserTaskResponseProcessor`.
 
+**Implementation notes (2026-05-18)**
+- ✅ Audited the repo before editing: worker-facing protobuf serdes for `UserTaskTriggerDTO` / `ExternalTaskTriggerDTO` and process-instance-trigger envelope handling for `UserTaskResponseTriggerDTO` / `ExternalTaskResponseTriggerDTO` were already complete from PROTO-4.2, so the remaining gaps were limited to response publishing, the `usertasks-response` ingress serde, legacy alias deserializers, and acceptance coverage.
+- ✅ Switched client worker-response emission (`ProcessInstanceResponder`, `TaktXClient`) from the legacy generic `SigningSerializer` path to `ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto)` so user-task and external-task completions are signed over protobuf bytes.
+- ✅ Removed the remaining direct Jackson object-to-variable conversion from `UserTaskInstanceResponder` / `ExternalTaskInstanceResponder`; they now build `VariablesDTO` via existing shared helpers while preserving the current public API until PROTO-5.1.
+- ✅ Replaced `TopologyProducer.USER_TASK_RESPONSE_SERDE` with a protobuf-backed serde and added shared `UserTaskResponseTriggerProtoDeserializer` so the `usertasks-response` ingress path no longer depends on `ObjectMapperSerde<UserTaskResponseTriggerDTO>`.
+- ✅ Converted the legacy-named client aliases `UserTaskTriggerJsonDeserializer` / `ExternalTaskTriggerJsonDeserializer` into protobuf-backed delegates, keeping class names stable for existing configuration and tests while removing the remaining worker-trigger dependency on the shared Jackson base deserializer.
+- ✅ Added focused protobuf coverage in `UserTaskResponseTriggerProtoDeserializerTest`, `UserTaskTriggerJsonDeserializerTest`, and enhanced `ExternalTaskTriggerJsonDeserializerTest`.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.WorkerTriggerProtoSerdesTest --tests io.taktx.serdes.ProcessInstanceTriggerProtoMapperTest --tests io.taktx.serdes.UserTaskResponseTriggerProtoDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializerTest --tests io.taktx.client.serdes.UserTaskTriggerJsonDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.UserTaskResponseProcessorDlqTest --tests io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: `UserTaskTriggerMessage` round-trips including `AssignmentDefinitionMessage`, `PriorityDefinitionMessage`, `TaskScheduleMessage`.
-- [ ] Unit test: `UserTaskResponseTriggerMessage` with variables round-trips.
-- [ ] Integration test: user task claim + complete cycle works end-to-end.
-- [ ] Integration test: external task fetch + complete with output variables works end-to-end.
+- [x] Unit test: `UserTaskTriggerMessage` round-trips including `AssignmentDefinitionMessage`, `PriorityDefinitionMessage`, `TaskScheduleMessage`.
+- [x] Unit test: `UserTaskResponseTriggerMessage` with variables round-trips.
+- [x] Integration test: user task claim + complete cycle works end-to-end.
+- [x] Integration test: external task fetch + complete with output variables works end-to-end.
 
 **Dependencies:** PROTO-4.5  
 **Estimate:** 1 day

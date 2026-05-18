@@ -19,9 +19,9 @@ import org.apache.kafka.common.serialization.Deserializer;
 /**
  * Fault-tolerant deserializer for {@link UserTaskTriggerDTO}.
  *
- * <p>Decodes the CBOR body first, then verifies the signature independently. A signature failure
- * returns a {@link io.taktx.serdes.DeserializationResult} that still carries the decoded payload so
- * the consumer can route a BPMN error back to the correct process instance.
+ * <p>Decodes the protobuf body first, then verifies the signature independently. A signature
+ * failure returns a {@link io.taktx.serdes.DeserializationResult} that still carries the decoded
+ * payload so the consumer can route a BPMN error back to the correct process instance.
  */
 public class FaultTolerantUserTaskTriggerDeserializer
     implements Deserializer<DeserializationResult<UserTaskTriggerDTO>> {

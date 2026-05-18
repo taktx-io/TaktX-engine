@@ -26,8 +26,9 @@ import org.apache.kafka.streams.processor.api.Record;
 
 /**
  * Processor for the {@code usertasks-response} ingress topic. On success, forwards the {@link
- * UserTaskResponseTriggerDTO} to the process-instance trigger stream. On decode failure (null
- * value) or processing exception, emits a {@link UserTaskResponseDlqEntryDTO} to DLQ.
+ * UserTaskResponseTriggerDTO} to the process-instance trigger stream. On deserializer failure
+ * (surfacing here as a null value) or processing exception, emits a {@link
+ * UserTaskResponseDlqEntryDTO} to DLQ.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -50,11 +51,11 @@ public class UserTaskResponseProcessor
   @Override
   public void process(Record<UUID, UserTaskResponseTriggerDTO> userTaskResponseTriggerRecord) {
     if (userTaskResponseTriggerRecord.value() == null) {
-      log.warn("⚠ Null payload on usertasks-response, routing to DLQ");
+      log.warn("⚠ Null decoded payload on usertasks-response, routing to DLQ");
       emitUserTaskResponseDlq(
           userTaskResponseTriggerRecord,
           "CBOR_DECODE_ERROR",
-          "Null payload for usertasks-response record",
+          "Null decoded payload for usertasks-response record",
           "DESERIALIZER");
       return;
     }

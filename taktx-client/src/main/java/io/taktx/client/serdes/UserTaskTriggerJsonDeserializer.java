@@ -8,12 +8,36 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.UserTaskTriggerDTO;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
+import java.util.Map;
+import org.apache.kafka.common.serialization.Deserializer;
 
-/** A JSON deserializer for UserTaskTriggerDTO objects. */
-public class UserTaskTriggerJsonDeserializer extends JsonDeserializer<UserTaskTriggerDTO> {
-  /** Constructor for UserTaskTriggerJsonDeserializer. */
-  public UserTaskTriggerJsonDeserializer() {
-    super(UserTaskTriggerDTO.class, true);
+/**
+ * Backward-compatible alias for the protobuf user-task trigger deserializer.
+ *
+ * <p>The class name is kept for existing client configuration and tests while the wire format is
+ * now protobuf.
+ */
+public class UserTaskTriggerJsonDeserializer implements Deserializer<UserTaskTriggerDTO> {
+
+  private final UserTaskTriggerProtoDeserializer delegate = new UserTaskTriggerProtoDeserializer();
+
+  public Class<UserTaskTriggerDTO> getClazz() {
+    return UserTaskTriggerDTO.class;
+  }
+
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    delegate.configure(configs, isKey);
+  }
+
+  @Override
+  public UserTaskTriggerDTO deserialize(String topic, byte[] data) {
+    return delegate.deserialize(topic, data);
+  }
+
+  @Override
+  public void close() {
+    delegate.close();
   }
 }

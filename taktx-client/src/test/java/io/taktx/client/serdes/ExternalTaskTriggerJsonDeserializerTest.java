@@ -10,13 +10,35 @@ package io.taktx.client.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.ProcessDefinitionKey;
+import io.taktx.dto.VariablesDTO;
+import io.taktx.serdes.ExternalTaskTriggerProtoSerializer;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ExternalTaskTriggerJsonDeserializerTest {
   @Test
-  void testConstruct() {
+  void decodesProtoPayloadsViaLegacyAlias() {
+    ExternalTaskTriggerDTO dto =
+        new ExternalTaskTriggerDTO(
+            UUID.fromString("99999999-9999-9999-9999-999999999999"),
+            new ProcessDefinitionKey("shipping", 4),
+            "ship-job",
+            "shipTask",
+            List.of(7L, 8L),
+            VariablesDTO.of("approved", true),
+            Map.of("worker", "warehouse"));
+
     try (ExternalTaskTriggerJsonDeserializer deserializer =
-        new ExternalTaskTriggerJsonDeserializer()) {
+            new ExternalTaskTriggerJsonDeserializer();
+        ExternalTaskTriggerProtoSerializer serializer = new ExternalTaskTriggerProtoSerializer()) {
+      assertThat(
+              deserializer.deserialize(
+                  "external-task-trigger", serializer.serialize("external-task-trigger", dto)))
+          .usingRecursiveComparison()
+          .isEqualTo(dto);
       assertThat(deserializer.getClazz()).isEqualTo(ExternalTaskTriggerDTO.class);
     }
   }

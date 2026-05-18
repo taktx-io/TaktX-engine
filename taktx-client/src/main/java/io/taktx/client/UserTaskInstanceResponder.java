@@ -7,17 +7,12 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory removed in PROTO-1.2; class is replaced in PROTO-5.1.
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,7 +25,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  */
 public class UserTaskInstanceResponder {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter;
   private final String topicName;
   private final UUID processInstanceId;
@@ -60,8 +54,7 @@ public class UserTaskInstanceResponder {
 
   /** Sends a success response with no variables. */
   public void respondSuccess() {
-    Map<String, JsonNode> variablesMap = new HashMap<>();
-    respondSuccess(variablesMap);
+    respondSuccess(VariablesDTO.empty());
   }
 
   /**
@@ -70,20 +63,20 @@ public class UserTaskInstanceResponder {
    * @param variable the variables to include in the response, can be null
    */
   public void respondSuccess(Object variable) {
-    Map<String, JsonNode> variablesMap =
-        variable == null
-            ? Map.of()
-            : OBJECT_MAPPER.convertValue(
-                variable, new TypeReference<LinkedHashMap<String, JsonNode>>() {});
-    respondSuccess(variablesMap);
+    respondSuccess(toVariables(variable));
   }
 
   /**
    * Sends a success response with the provided variables map.
    *
-   * @param variablesMap the map of variable names to JsonNode values
+   * @param variablesMap the map of variable names to variable values
    */
   public void respondSuccess(Map<String, JsonNode> variablesMap) {
+    respondSuccess(
+        variablesMap == null ? VariablesDTO.empty() : VariablesDTO.ofJsonMap(variablesMap));
+  }
+
+  private void respondSuccess(VariablesDTO variables) {
     UserTaskResponseResultDTO userTaskResponseResult =
         new UserTaskResponseResultDTO(UserTaskResponseType.COMPLETED, null, null);
     UserTaskResponseTriggerDTO processInstanceTrigger =
@@ -92,8 +85,16 @@ public class UserTaskInstanceResponder {
             elementInstanceIdPath,
             UUID.randomUUID().toString(),
             userTaskResponseResult,
-            new VariablesDTO(variablesMap));
+            variables);
     sendSigned(processInstanceTrigger);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static VariablesDTO toVariables(Object variable) {
+    if (variable == null) {
+      return VariablesDTO.empty();
+    }
+    return VariablesDTO.ofObjectMap(VariablesDTO.OBJECT_MAPPER.convertValue(variable, Map.class));
   }
 
   /**
@@ -153,10 +154,10 @@ public class UserTaskInstanceResponder {
     respondError(code, message, VariablesDTO.empty());
   }
 
-  private void sendSigned(UserTaskResponseTriggerDTO trigger) {
+  private void sendSigned(UserTaskResponseTriggerDTO responseDto) {
     beforeSendHook.run();
     ProducerRecord<UUID, ProcessInstanceTriggerDTO> record =
-        new ProducerRecord<>(topicName, trigger.getProcessInstanceId(), trigger);
+        new ProducerRecord<>(topicName, responseDto.getProcessInstanceId(), responseDto);
     responseEmitter.send(record);
   }
 }

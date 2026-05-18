@@ -8,12 +8,37 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+import java.util.Map;
+import org.apache.kafka.common.serialization.Deserializer;
 
-/** A JSON deserializer for ExternalTaskTriggerDTO objects. */
-public class ExternalTaskTriggerJsonDeserializer extends JsonDeserializer<ExternalTaskTriggerDTO> {
-  /** Constructor for ExternalTaskTriggerJsonDeserializer. */
-  public ExternalTaskTriggerJsonDeserializer() {
-    super(ExternalTaskTriggerDTO.class, true);
+/**
+ * Backward-compatible alias for the protobuf external-task trigger deserializer.
+ *
+ * <p>The class name is kept for existing client configuration and tests while the wire format is
+ * now protobuf.
+ */
+public class ExternalTaskTriggerJsonDeserializer implements Deserializer<ExternalTaskTriggerDTO> {
+
+  private final ExternalTaskTriggerProtoDeserializer delegate =
+      new ExternalTaskTriggerProtoDeserializer();
+
+  public Class<ExternalTaskTriggerDTO> getClazz() {
+    return ExternalTaskTriggerDTO.class;
+  }
+
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    delegate.configure(configs, isKey);
+  }
+
+  @Override
+  public ExternalTaskTriggerDTO deserialize(String topic, byte[] data) {
+    return delegate.deserialize(topic, data);
+  }
+
+  @Override
+  public void close() {
+    delegate.close();
   }
 }

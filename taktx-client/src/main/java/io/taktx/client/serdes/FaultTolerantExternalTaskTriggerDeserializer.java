@@ -19,10 +19,10 @@ import org.apache.kafka.common.serialization.Deserializer;
 /**
  * Fault-tolerant deserializer for {@link ExternalTaskTriggerDTO}.
  *
- * <p>Always decodes the CBOR body first. Signature verification is attempted afterwards and, if it
- * fails, the decoded body is still returned inside a {@link DeserializationResult} so the consumer
- * can use the {@code processInstanceId} and {@code elementInstanceIdPath} to report a BPMN error or
- * incident back to the engine rather than leaving the task silently stuck.
+ * <p>Always decodes the protobuf body first. Signature verification is attempted afterwards and, if
+ * it fails, the decoded body is still returned inside a {@link DeserializationResult} so the
+ * consumer can use the {@code processInstanceId} and {@code elementInstanceIdPath} to report a BPMN
+ * error or incident back to the engine rather than leaving the task silently stuck.
  */
 public class FaultTolerantExternalTaskTriggerDeserializer
     implements Deserializer<DeserializationResult<ExternalTaskTriggerDTO>> {

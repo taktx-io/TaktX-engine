@@ -16,7 +16,6 @@ import io.taktx.client.auth.OpenIdClientCredentialsTokenProvider;
 import io.taktx.client.dlq.DlqEntryConsumer;
 import io.taktx.client.dlq.DlqReplayCommandProducer;
 import io.taktx.client.dlq.DlqReplayResultConsumer;
-import io.taktx.client.serdes.ProcessInstanceTriggerSerializer;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
 import io.taktx.dto.DlqEnvelope;
@@ -45,7 +44,8 @@ import io.taktx.security.SigningKeyRegistrar;
 import io.taktx.security.SigningKeysStore;
 import io.taktx.security.SigningKeysStoreHolder;
 import io.taktx.security.SigningServiceHolder;
-import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
 import io.taktx.util.TaktPropertiesHelper;
 import jakarta.annotation.Nullable;
@@ -1241,12 +1241,12 @@ public class TaktXClient {
           resolveAuthorizationTokenProvider(properties);
       String effectiveRegistrationSignature = resolveWorkerKeyRegistrationSignature(properties);
 
-      // Wrap the value serializer with SigningSerializer so signing happens in one pass
+      // Wrap the value serializer with ProtoSigningSerializer so signing happens in one pass.
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> processInstanceTriggerEmitter =
           new KafkaProducer<>(
               taktPropertiesHelper.getKafkaProducerProperties(),
               new io.taktx.util.TaktUUIDSerializer(),
-              new SigningSerializer<>(new ProcessInstanceTriggerSerializer()));
+              new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto));
 
       ProcessInstanceResponder externalTaskResponder =
           new ProcessInstanceResponder(taktPropertiesHelper, processInstanceTriggerEmitter);
