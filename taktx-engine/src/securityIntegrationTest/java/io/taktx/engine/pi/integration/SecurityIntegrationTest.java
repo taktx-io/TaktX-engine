@@ -69,7 +69,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -582,7 +581,6 @@ class SecurityIntegrationTest {
   // ── Outbound signing tests ─────────────────────────────────────────────────
 
   @Test
-  @Disabled
   void timerContinuationAfterWorkerResponse_isAttributedToEngine() throws IOException {
     engine
         .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
@@ -596,7 +594,8 @@ class SecurityIntegrationTest {
             UUID.randomUUID().toString(),
             "user-1",
             Date.from(Instant.now().plusSeconds(300)));
-    engine
+    UUID instanceId =
+        engine
         .getTaktClient()
         .startProcess(SERVICE_TASK_THEN_TIMER_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
 
@@ -611,6 +610,7 @@ class SecurityIntegrationTest {
             () ->
                 assertThat(
                         rawInstanceUpdates.stream()
+                            .filter(currentRecord -> instanceId.equals(currentRecord.key()))
                             .map(ConsumerRecord::value)
                             .filter(
                                 update ->
@@ -619,6 +619,14 @@ class SecurityIntegrationTest {
                                             update.getCurrentTrustMetadata().getSignerKeyId()))
                             .findFirst())
                     .isPresent());
+
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getScopeWithElementId(instanceId, "CatchEvent_1"))
+                    .anyMatch(io.taktx.dto.FlowNodeInstanceDTO::isActive));
+    engine.waitFor(Duration.ofMillis(500));
 
     rawInstanceUpdates.clear();
 
@@ -631,6 +639,7 @@ class SecurityIntegrationTest {
             () -> {
               InstanceUpdateDTO found =
                   rawInstanceUpdates.stream()
+                      .filter(currentRecord -> instanceId.equals(currentRecord.key()))
                       .map(ConsumerRecord::value)
                       .filter(
                           update ->
@@ -652,7 +661,7 @@ class SecurityIntegrationTest {
             CommandTrustMetadataDTO::getSignerOwner)
         .containsExactly(
             CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
             SecurityTestConfigResource.engineKeyId,
             "engine");
@@ -665,10 +674,10 @@ class SecurityIntegrationTest {
             CommandTrustMetadataDTO::getSignerOwner)
         .containsExactly(
             CommandAuthMethod.ED25519,
-            CommandTrustVerificationResult.SIGNATURE_VERIFIED,
+            CommandTrustVerificationResult.ENGINE_SIGNED,
             true,
-            WORKER_KEY_ID,
-            "worker");
+            SecurityTestConfigResource.engineKeyId,
+            "engine");
   }
 
   /**

@@ -8,8 +8,8 @@
 package io.taktx.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory removed in PROTO-1.2; this entire class will be deleted in PROTO-1.3.
 import io.taktx.dto.Constants;
+import io.taktx.jackson.TaktxObjectMappers;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.RuntimeConfigurationHolder;
@@ -69,7 +69,7 @@ public abstract class JsonDeserializer<T> implements Deserializer<T> {
    */
   public static final String SIGNING_REQUIRED_CONFIG = "taktx.security.signing.enabled";
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TaktxObjectMappers.cbor();
   private static final Logger log = LoggerFactory.getLogger(JsonDeserializer.class);
 
   private final Class<T> clazz;

@@ -5,15 +5,16 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
+package io.taktx.serdes;
 
-package io.taktx.engine.pi.testengine;
+import com.google.protobuf.Parser;
+import io.taktx.proto.MessageEventEnvelope;
 
-import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+public class MessageEventDeserializer extends ProtoDeserializer<MessageEventEnvelope> {
 
-public class ExternalTaskTriggerDeserializer
-    extends ExternalTaskTriggerProtoDeserializer {
-
-  public ExternalTaskTriggerDeserializer() {
-    super();
+  @Override
+  protected Parser<MessageEventEnvelope> parser() {
+    return MessageEventEnvelope.parser();
   }
 }
+

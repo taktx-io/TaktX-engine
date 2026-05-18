@@ -8,8 +8,8 @@
 package io.taktx.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: JavaTimeModule removed in PROTO-1.2; class is updated in PROTO-5.1.
 import io.taktx.dto.ConfigurationEventDTO;
+import io.taktx.jackson.TaktxObjectMappers;
 import io.taktx.security.RuntimeConfigurationHolder;
 import java.time.Duration;
 import java.util.List;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 public final class RuntimeConfigurationStore implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(RuntimeConfigurationStore.class);
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TaktxObjectMappers.json();
   private static final String CONFIG_KEY = "config";
 
   private final KafkaConsumer<String, byte[]> consumer;

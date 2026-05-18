@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅; active: PROTO-3.1  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅; active: PROTO-4.2  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -101,7 +101,7 @@ Author all `.proto` files under `taktx-shared/src/main/proto/`. These become the
 
 ### PROTO-1.2 — Configure Protobuf build toolchain in `taktx-shared`
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 **Description**  
 Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Configure `protobuf-java-lite` as the runtime. Wire source generation into the Java compile task.
@@ -199,7 +199,7 @@ Kafka record headers carry their name as raw UTF-8 bytes on every message. The o
 **Acceptance criteria**
 - [ ] `grep -r '"X-TaktX-\|"X-DLQ-' src/` returns zero results in `taktx-shared`, `taktx-engine`, `taktx-client`.
 - [ ] All unit tests pass: `./gradlew :taktx-shared:test :taktx-engine:test :taktx-client:test`.
-- [ ] Security integration test passes: `./gradlew :taktx-engine:securityIntegrationTest`.
+- [x] Security integration test passes: `./gradlew :taktx-engine:securityIntegrationTest`.
 - [ ] Consumer applications (DLQ console, monitoring) updated to use new header names (external coordination item — out of code scope but noted here).
 
 **Note for external consumers:** Any monitoring dashboard, DLQ console, or log-parsing rule that filters on `tx-sig` or `X-DLQ-*` header names must be updated before deploying v1.0. This is expected given the major version bump.
@@ -215,7 +215,7 @@ Kafka record headers carry their name as raw UTF-8 bytes on every message. The o
 
 ### PROTO-2.1 — Implement `VariableValue` proto type and `Variables` helper
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 **Description**  
 `variables.proto` defines:
@@ -347,6 +347,8 @@ Remove the `ObjectMapper` constructor parameter and field from `FeelExpressionHa
 
 ### PROTO-3.1 — Implement `ProtoSerializer` and `ProtoDeserializer`
 
+**Status:** 🔄 In Progress
+
 **Description**  
 Create generic Kafka `Serializer<T extends MessageLite>` and `Deserializer<T extends MessageLite>` in `taktx-shared/src/main/java/io/taktx/serdes/`.
 
@@ -368,9 +370,17 @@ public abstract class ProtoDeserializer<T extends MessageLite>
 
 Create concrete subclasses for each top-level envelope type (e.g., `ProcessInstanceTriggerDeserializer`, `InstanceUpdateDeserializer`, etc.).
 
+**Progress update (2026-05-18)**
+- ✅ Added generic shared-module `ProtoSerializer` / `ProtoDeserializer` implementations using `MessageLite#toByteArray()` and `Parser#parseFrom(...)`.
+- ✅ Added concrete shared deserializers for the current top-level proto message families needed by the migration path, including process-instance triggers, instance updates, flow-node instances, definitions, message events, signals, schedules, topic metadata, DLQ messages, signing keys, DMN definitions, and process definitions.
+- ✅ Verified on 2026-05-18: new `ProtoSerdesTest` round-trips 19 top-level proto message families and covers tombstone (`null`) serializer/deserializer behaviour.
+- ✅ Verified on 2026-05-18: corrupt bytes currently surface as a `SerializationException` with `InvalidProtocolBufferException` cause, which is the raw decode failure signal that PROTO-3.2 will convert into `DeserializationResult.failure(...)`.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] Unit test: `ProtoSerializer` + `ProtoDeserializer` round-trip for each of the 10 top-level envelope types.
-- [ ] Unit test: `null` input serializes to `null`; `null` input deserializes to `null`.
+- [x] Unit test: `ProtoSerializer` + `ProtoDeserializer` round-trip for each of the 10 top-level envelope types.
+- [x] Unit test: `null` input serializes to `null`; `null` input deserializes to `null`.
 - [ ] Unit test: corrupted bytes cause `InvalidProtocolBufferException`; the deserializer wraps it in a `DeserializationResult.failure(...)` (see PROTO-3.2).
 - [ ] No new Sonar issues in `ProtoSerializer.java` or `ProtoDeserializer.java`.
 
@@ -380,6 +390,8 @@ Create concrete subclasses for each top-level envelope type (e.g., `ProcessInsta
 ---
 
 ### PROTO-3.2 — Implement `FaultTolerantProtoDeserializer` with Ed25519 signing support
+
+**Status:** 🔄 In Progress
 
 **Description**  
 Port the `FaultTolerantJsonDeserializer` logic (body decode + optional Ed25519 header verification) to a proto-based equivalent `FaultTolerantProtoDeserializer<T extends MessageLite>`. The signing verification already works on raw `byte[]` so the Ed25519 path (`tryVerifySignature`, `resolvePublicKey`, `EngineSigningKeysHolder`) is unchanged. Only the body decode line changes:
@@ -393,12 +405,26 @@ T value = parser().parseFrom(data);
 
 Retain the `DeserializationResult<T>` wrapper type with `success`, `failure`, and `bodyDecodedWithError` states — these are protocol-level, not format-level.
 
+**Progress update (2026-05-18)**
+- ✅ Added shared-module `FaultTolerantProtoDeserializer<T extends MessageLite>` with protobuf parsing via `Parser#parseFrom(...)` and the same Ed25519 verification/configuration flow as the existing JSON variant.
+- ✅ Added focused unit coverage in `taktx-shared/src/test/java/io/taktx/serdes/FaultTolerantProtoDeserializerTest.java` for valid signed payloads, corrupt bytes, invalid signatures, required-signature-without-header, and runtime signing flag toggling.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.FaultTolerantProtoDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --console=plain` passes after the new deserializer landed.
+- ✅ Wired worker-facing external-task and user-task topics to protobuf DTO serdes in `TopologyProducer`, shared DTO↔proto mappers/serdes, and the client fault-tolerant worker-trigger deserializers.
+- ✅ Updated the raw engine test-fixture external-task consumer to the protobuf DTO deserializer path.
+- ✅ Added focused round-trip coverage in `WorkerTriggerProtoSerdesTest` and client wrapper coverage in `FaultTolerantWorkerTriggerProtoDeserializerTest`.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.FaultTolerantWorkerTriggerProtoDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --tests io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:compileJava :taktx-engine:compileTestFixturesJava :taktx-engine:compileSecurityIntegrationTestJava --console=plain` passes with the new worker-trigger serdes in place.
+- ✅ Cleared the previously unrelated legacy-topic blockers (`definitions` wire format, runtime-configuration/signing-key timestamp parsing, and process-instance/topic-meta compatibility) that were masking worker-trigger verification.
+- ✅ Re-enabled `timerContinuationAfterWorkerResponse_isAttributedToEngine()` in `SecurityIntegrationTest` and aligned it with the current engine trust model (`ENGINE_SIGNED` for engine-authored timer continuations, including in-suite execution).
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:securityIntegrationTest --tests "io.taktx.engine.pi.integration.SecurityIntegrationTest" --console=plain` passes with 14 tests, 0 skipped, 0 failures, 0 errors.
+
 **Acceptance criteria**
-- [ ] Unit test: valid proto bytes → `DeserializationResult.success(value)`.
-- [ ] Unit test: corrupt bytes → `DeserializationResult.failure(message)` with `null` value.
-- [ ] Unit test: valid bytes + invalid signature → `DeserializationResult.bodyDecodedWithError(value, errorMsg)`.
-- [ ] Unit test: `SIGNING_REQUIRED_CONFIG = true` + no signature header → `bodyDecodedWithError`.
-- [ ] All existing `SecurityIntegrationTest` cases pass against the new deserializer.
+- [x] Unit test: valid proto bytes → `DeserializationResult.success(value)`.
+- [x] Unit test: corrupt bytes → `DeserializationResult.failure(message)` with `null` value.
+- [x] Unit test: valid bytes + invalid signature → `DeserializationResult.bodyDecodedWithError(value, errorMsg)`.
+- [x] Unit test: `SIGNING_REQUIRED_CONFIG = true` + no signature header → `bodyDecodedWithError`.
+- [x] All existing `SecurityIntegrationTest` cases pass against the new deserializer.
 
 **Dependencies:** PROTO-3.1  
 **Estimate:** 0.5 day
@@ -407,13 +433,23 @@ Retain the `DeserializationResult<T>` wrapper type with `success`, `failure`, an
 
 ### PROTO-3.3 — Implement `ProtoSigningSerializer` (replace `SigningSerializer`)
 
+**Status:** ✅ Complete
+
 **Description**  
 Port `SigningSerializer` to use `message.toByteArray()` instead of Jackson's `OBJECT_MAPPER.writeValueAsBytes(data)`. The signing logic (Ed25519 key lookup, header stamping) is unchanged.
 
+**Progress update (2026-05-18)**
+- ✅ Added shared-module `ProtoSigningSerializer<T>` that maps logical values to `MessageLite`, serializes via `message.toByteArray()`, and stamps `tx-sig` using the existing `SigningServiceHolder` flow.
+- ✅ Switched the already-migrated protobuf worker-trigger topics in `TopologyProducer` from the legacy generic signing decorator to `ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto)` while leaving legacy CBOR/Jackson topics unchanged.
+- ✅ Added focused unit coverage in `taktx-shared/src/test/java/io/taktx/serdes/ProtoSigningSerializerTest.java` for exact proto bytes, verifiable `tx-sig`, and tombstone signing semantics.
+- ✅ Updated `taktx-client/src/test/java/io/taktx/client/serdes/FaultTolerantWorkerTriggerProtoDeserializerTest.java` so the client-side verification path now consumes records produced by `ProtoSigningSerializer`.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test :taktx-client:test --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:securityIntegrationTest --tests "io.taktx.engine.pi.integration.SecurityIntegrationTest" --console=plain` passes with 14 tests, 0 skipped, 0 failures, 0 errors.
+
 **Acceptance criteria**
-- [ ] Unit test: serialized bytes are `message.toByteArray()` — verified by parsing back.
-- [ ] Unit test: `tx-sig` header is present and verifiable when signing is enabled.
-- [ ] Integration test: engine produces signed records that are verified by `FaultTolerantProtoDeserializer`.
+- [x] Unit test: serialized bytes are `message.toByteArray()` — verified by parsing back.
+- [x] Unit test: `tx-sig` header is present and verifiable when signing is enabled.
+- [x] Integration test: engine produces signed records that are verified by `FaultTolerantProtoDeserializer`.
 
 **Dependencies:** PROTO-3.1  
 **Estimate:** 0.5 day

@@ -8,11 +8,12 @@
 package io.taktx.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory and JavaTimeModule removed in PROTO-1.2; replaced by proto SerDes in PROTO-3.x.
 import io.taktx.Topics;
 import io.taktx.dto.KeyRole;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
+import io.taktx.jackson.TaktxObjectMappers;
+import java.io.IOException;
 import io.taktx.util.TaktPropertiesHelper;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -43,7 +44,7 @@ public class SigningKeyRegistrar {
 
   private static final String DEFAULT_ED25519_ALGORITHM = "Ed25519";
   private static final Logger log = LoggerFactory.getLogger(SigningKeyRegistrar.class);
-  private static final ObjectMapper CBOR = new ObjectMapper();
+  private static final ObjectMapper CBOR = TaktxObjectMappers.cbor();
 
   /**
    * Returns the canonical payload bytes that the platform root key signs when countersigning a key

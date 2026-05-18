@@ -16,7 +16,6 @@ import io.taktx.client.ExternalTaskTriggerConsumer;
 import io.taktx.client.InstanceUpdateRecord;
 import io.taktx.client.TaktXClient;
 import io.taktx.client.UserTaskTriggerConsumer;
-import io.taktx.client.serdes.TopicMetaJsonDeserializer;
 import io.taktx.dto.ActivityInstanceDTO;
 import io.taktx.dto.Constants;
 import io.taktx.dto.CorrelationMessageEventTriggerDTO;
@@ -235,7 +234,7 @@ public class BpmnTestEngine {
             "test-group-topic-meta-" + UUID.randomUUID(),
             TOPIC_TEST_PREFIX + Topics.TOPIC_META_ACTUAL_TOPIC.getTopicName(),
             StringDeserializer.class.getName(),
-            TopicMetaJsonDeserializer.class.getName(),
+            TopicMetaDeserializer.class.getName(),
             this::consumeTopicMeta);
   }
 

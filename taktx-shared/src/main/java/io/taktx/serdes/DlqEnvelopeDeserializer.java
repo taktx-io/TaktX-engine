@@ -5,15 +5,16 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
+package io.taktx.serdes;
 
-package io.taktx.engine.pi.testengine;
+import com.google.protobuf.Parser;
+import io.taktx.proto.DlqEnvelope;
 
-import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+public class DlqEnvelopeDeserializer extends ProtoDeserializer<DlqEnvelope> {
 
-public class ExternalTaskTriggerDeserializer
-    extends ExternalTaskTriggerProtoDeserializer {
-
-  public ExternalTaskTriggerDeserializer() {
-    super();
+  @Override
+  protected Parser<DlqEnvelope> parser() {
+    return DlqEnvelope.parser();
   }
 }
+

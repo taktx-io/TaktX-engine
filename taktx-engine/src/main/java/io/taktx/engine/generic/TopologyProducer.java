@@ -88,7 +88,11 @@ import io.taktx.engine.topicmanagement.RequestedTopicValidator;
 import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
+import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
+import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
+import io.taktx.serdes.WorkerTriggerProtoMapper;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -203,20 +207,14 @@ public class TopologyProducer {
       };
   public static final ObjectMapperSerde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       new ObjectMapperSerde<>(FlowNodeInstanceDTO.class);
-  public static final ObjectMapperSerde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(ExternalTaskTriggerDTO.class) {
-        @Override
-        public Serializer<ExternalTaskTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
-  public static final ObjectMapperSerde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(UserTaskTriggerDTO.class) {
-        @Override
-        public Serializer<UserTaskTriggerDTO> serializer() {
-          return new SigningSerializer<>(super.serializer());
-        }
-      };
+  public static final Serde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),
+          new ExternalTaskTriggerProtoDeserializer());
+  public static final Serde<UserTaskTriggerDTO> USER_TASK_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          new ProtoSigningSerializer<>(WorkerTriggerProtoMapper::toProto),
+          new UserTaskTriggerProtoDeserializer());
   public static final ObjectMapperSerde<UserTaskResponseTriggerDTO> USER_TASK_RESPONSE_SERDE =
       new ObjectMapperSerde<>(UserTaskResponseTriggerDTO.class);
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =

@@ -11,6 +11,7 @@ package io.taktx.engine.pi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
+import io.taktx.jackson.TaktxObjectMappers;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import java.io.IOException;
@@ -26,7 +27,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 public class ProcessInstanceTriggerEnvelopeDeserializer
     implements Deserializer<ProcessInstanceTriggerEnvelope> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TaktxObjectMappers.cbor();
   private static final ObjectMapper JSON_OBJECT_MAPPER = new ObjectMapper();
 
   @Override
