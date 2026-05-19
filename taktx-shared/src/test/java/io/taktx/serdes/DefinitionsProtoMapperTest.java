@@ -219,7 +219,7 @@ class DefinitionsProtoMapperTest {
         Arguments.of("callActivity", sampleCallActivity()));
   }
 
-  private static ParsedDefinitionsDTO sampleParsedDefinitions() {
+  static ParsedDefinitionsDTO sampleParsedDefinitions() {
     Map<String, FlowElementDTO> elements = new LinkedHashMap<>();
 
     StartEventDTO startEvent =

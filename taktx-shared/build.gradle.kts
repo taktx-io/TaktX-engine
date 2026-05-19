@@ -14,6 +14,16 @@ java {
     }
 }
 
+val goldenTestSourceSet = sourceSets.create("goldenTest") {
+    java.srcDir("src/goldenTest/java")
+    resources.srcDir("src/test/resources")
+    compileClasspath += sourceSets["main"].output + sourceSets["test"].output + sourceSets["test"].compileClasspath
+    runtimeClasspath += output + sourceSets["main"].output + sourceSets["test"].output + sourceSets["test"].runtimeClasspath
+}
+
+configurations[goldenTestSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[goldenTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+
 tasks {
     withType<JavaCompile>().configureEach {
         options.release = 21
@@ -75,6 +85,20 @@ protobuf {
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+}
+
+val goldenTest by tasks.registering(Test::class) {
+    description = "Runs golden protobuf compatibility tests"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    useJUnitPlatform()
+    testClassesDirs = goldenTestSourceSet.output.classesDirs
+    classpath = goldenTestSourceSet.runtimeClasspath
+    systemProperty("updateGoldens", System.getProperty("updateGoldens", "false"))
+    shouldRunAfter(tasks.test)
+}
+
+tasks.named("check") {
+    dependsOn(goldenTest)
 }
 
 tasks.jacocoTestReport {

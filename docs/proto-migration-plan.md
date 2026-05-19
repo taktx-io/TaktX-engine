@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-1.3 ✅ PROTO-1.4 ✅ PROTO-1.5 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-1.3 ✅ PROTO-1.4 ✅ PROTO-1.5 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅ PROTO-6.1 ✅ PROTO-6.2 ✅  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -914,6 +914,8 @@ Same as PROTO-5.3 for Spring Boot 4 / Spring Framework 7.
 
 ### PROTO-6.1 — Golden-bytes round-trip test suite (`taktx-shared`)
 
+**Status:** ✅ Complete (2026-05-19)
+
 **Description**  
 For each top-level proto envelope type, create a test that:
 1. Constructs a fully-populated instance (all fields set, no defaults).
@@ -924,9 +926,15 @@ For each top-level proto envelope type, create a test that:
 6. On CI, a separate test reads each golden file and asserts it still parses to the expected type (backward parse compatibility guard).
 
 **Acceptance criteria**
-- [ ] Golden files exist for: `ProcessInstanceTriggerEnvelope`, `InstanceUpdateEnvelope`, `FlowNodeInstanceEnvelope`, `ProcessInstanceMessage`, `ParsedDefinitionsMessage`, `MessageEventEnvelope`, `SignalEnvelope`, `UserTaskTriggerMessage`, `DlqEnvelopeMessage`, `GlobalConfigurationMessage`, `SigningKeyMessage`.
-- [ ] Each golden file test fails immediately if a field number is changed (proto parsing would silently misroute the value to the wrong field).
-- [ ] CI job runs golden tests in a separate task (`goldenTest`) that can be run independently.
+- [x] Golden files exist for: `ProcessInstanceTriggerEnvelope`, `InstanceUpdateEnvelope`, `FlowNodeInstanceEnvelope`, `ProcessInstanceMessage`, `ParsedDefinitionsMessage`, `MessageEventEnvelope`, `SignalEnvelope`, `UserTaskTriggerMessage`, `DlqEnvelope` (plan label `DlqEnvelopeMessage`), `GlobalConfigurationMessage`, `SigningKeyMessage`.
+- [x] Each golden file test fails immediately if a field number is changed (proto parsing would silently misroute the value to the wrong field).
+- [x] CI job runs golden tests in a separate task (`goldenTest`) that can be run independently.
+
+**Implementation notes (2026-05-19)**
+- ✅ Added `taktx-shared:goldenTest` as a dedicated source set / Gradle task with committed `.bin` fixtures under `taktx-shared/src/test/resources/golden/`.
+- ✅ Added reusable rich fixture builders in `taktx-shared/src/test/java/io/taktx/serdes/GoldenFixtureSamples.java` and a read-only compatibility suite in `taktx-shared/src/goldenTest/java/io/taktx/serdes/ProtoGoldenCompatibilityTest.java`.
+- ✅ The golden suite compares current serialized bytes byte-for-byte with the committed fixtures, enforces size bounds, and reparses each fixture to the expected protobuf type.
+- ✅ Verified on 2026-05-19: `./gradlew :taktx-shared:goldenTest --console=plain` passes.
 
 **Dependencies:** E3 complete  
 **Estimate:** 1.5 days
@@ -934,6 +942,8 @@ For each top-level proto envelope type, create a test that:
 ---
 
 ### PROTO-6.2 — Proto field-number stability lint rule
+
+**Status:** ✅ Complete (2026-05-19)
 
 **Description**  
 Add a `check_proto_field_numbers.py` script (similar to the existing `check_headers.py`) that:
@@ -943,8 +953,14 @@ Add a `check_proto_field_numbers.py` script (similar to the existing `check_head
 - Runs as part of the Spotless check or as a separate `protoCheck` Gradle task.
 
 **Acceptance criteria**
-- [ ] CI fails if a `.proto` file has a duplicate field number or a `reserved` omission.
-- [ ] Script is documented in `CONTRIBUTING.md`.
+- [x] CI fails if a `.proto` file has a duplicate field number or a `reserved` omission.
+- [x] Script is documented in `CONTRIBUTING.md`.
+
+**Implementation notes (2026-05-19)**
+- ✅ Added `scripts/check_proto_field_numbers.py` to lint all repository `.proto` files for duplicate field numbers, duplicate field names, reserved-name/number collisions, and overlapping `reserved` ranges.
+- ✅ Added a root `protoCheck` Gradle verification task and wired it into the standard `check` lifecycle.
+- ✅ Documented `./gradlew protoCheck` in `CONTRIBUTING.md`.
+- ✅ Verified on 2026-05-19: `./gradlew protoCheck --console=plain` passes.
 
 **Dependencies:** PROTO-1.1  
 **Estimate:** 0.5 day

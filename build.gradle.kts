@@ -102,6 +102,17 @@ tasks.register<Exec>("generateCoverageBadges") {
     }
 }
 
+tasks.register<Exec>("protoCheck") {
+    group = "verification"
+    description = "Validates protobuf field-number stability and reserved declarations"
+    workingDir = projectDir
+    commandLine("python3", "${projectDir}/scripts/check_proto_field_numbers.py")
+}
+
+tasks.named("check") {
+    dependsOn("protoCheck")
+}
+
 val allSubprojectChecks = subprojects.map { "${it.path}:check" }
 
 val allJacocoReports = subprojects.map { "${it.path}:jacocoTestReport" }

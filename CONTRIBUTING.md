@@ -93,6 +93,12 @@ docker compose -f docker/docker-compose.yaml up -d
 4. **Run tests**:
    ```bash
    ./gradlew test
+
+   # Shared-module golden wire-compatibility fixtures
+   ./gradlew :taktx-shared:goldenTest
+
+   # Protobuf field-number / reserved-declaration lint
+   ./gradlew protoCheck
    ```
 
 5. Commit your changes (see [Commit Message Conventions](#commit-message-conventions)).
@@ -125,6 +131,8 @@ Spotless enforces this automatically — `spotlessApply` will add or correct hea
 ## Testing
 
 - **Unit tests**: Located in `src/test/java`. Run with `./gradlew test`.
+- **Golden protobuf compatibility tests**: Run `./gradlew :taktx-shared:goldenTest` to verify the committed golden `.bin` fixtures still match the current protobuf wire format.
+- **Proto lint**: Run `./gradlew protoCheck` to validate `.proto` field-number stability and reserved declarations before opening a PR.
 - **Integration tests**: Use [Testcontainers](https://testcontainers.com/) and require Docker to be running. They are included in `./gradlew test`.
 - **Coverage**: JaCoCo reports are generated at `<module>/build/reports/jacoco/`. Coverage badges in `badges/` are auto-updated in CI.
 
