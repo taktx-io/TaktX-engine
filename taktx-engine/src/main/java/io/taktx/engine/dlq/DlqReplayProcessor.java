@@ -44,8 +44,8 @@ import org.apache.kafka.streams.processor.api.Record;
  *   <li><b>ENGINE signing (DLQ-012)</b>: the corrected payload is signed with the engine's active
  *       Ed25519 key. {@code replaySigner} and {@code replaySignatureKeyId} are populated in the
  *       emitted {@link DlqReplayResult}.
- *   <li><b>Lineage headers</b>: every forwarded record carries {@code X-DLQ-Lineage-Ref}, {@code
- *       X-DLQ-Correction-Id} and {@code X-DLQ-Source-Offset}.
+ *   <li><b>Lineage headers</b>: every forwarded record carries {@code dlq-lin}, {@code dlq-cid} and
+ *       {@code dlq-off}.
  *   <li><b>Dry-run (DLQ-014)</b>: when {@code command.isDryRun() == true} all validation steps run
  *       but no {@link DlqReplayForwardRecord} is emitted; only a result with status {@code
  *       DRY_RUN_PASSED} or {@code DRY_RUN_FAILED} is produced.
@@ -248,7 +248,7 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
     Map<String, byte[]> headers = new HashMap<>();
 
     // Decode operator-provided corrected headers (Map<String, String> where values are base64).
-    // Skip any existing X-TaktX-Signature — we replace it with a fresh ENGINE signature.
+    // Skip any existing tx-sig header — we replace it with a fresh ENGINE signature.
     if (command.getCorrectedHeaders() != null) {
       command
           .getCorrectedHeaders()

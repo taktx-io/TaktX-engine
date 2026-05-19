@@ -203,7 +203,7 @@ class DlqReplayProcessorTest {
 
   @Test
   void process_lineageHeadersAttachedToForwardRecord() {
-    // DLQ-T04: X-DLQ-Lineage-Ref, X-DLQ-Correction-Id, X-DLQ-Source-Offset present
+    // DLQ-T04: dlq-lin, dlq-cid, dlq-off present
     DlqLineageDTO lineage = new DlqLineageDTO();
     lineage.setSourceOffset(12345L);
     lineage.setSourceTopic("process-instance");

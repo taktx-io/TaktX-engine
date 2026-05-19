@@ -42,9 +42,9 @@ public class DlqReplayResult {
   @Nullable private String lineageRef;
 
   /**
-   * Unique ID generated per replay attempt; matches the {@code X-DLQ-Correction-Id} header stamped
-   * on the forwarded record. Use this to correlate the replay result with the record that arrived
-   * on the target ingress topic.
+   * Unique ID generated per replay attempt; matches the {@code dlq-cid} header stamped on the
+   * forwarded record. Use this to correlate the replay result with the record that arrived on the
+   * target ingress topic.
    */
   @Nullable private String correctionId;
 }

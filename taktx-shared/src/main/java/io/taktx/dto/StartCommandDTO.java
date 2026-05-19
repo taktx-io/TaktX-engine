@@ -16,6 +16,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+/**
+ * Start-command DTO backed by {@code process_instance_trigger.proto} / {@code StartCommandMessage}.
+ * Business metadata maps to {@code business_key = 11} and {@code tags = 12}.
+ */
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
@@ -36,7 +40,7 @@ public class StartCommandDTO extends ProcessInstanceTriggerDTO {
 
   private Set<IoVariableMappingDTO> outputMappings;
 
-  // Business metadata — appended last for CBOR array backward compatibility
+  // Proto mapping: process_instance_trigger.proto / StartCommandMessage.business_key = 11
   @Nullable private String businessKey;
 
   private Set<String> tags;

@@ -10,19 +10,20 @@ package io.taktx.engine.pi.testengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 public class ProcessInstanceAssert {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final UUID processInstanceId;
   private final BpmnTestEngine bpmnTestEngine;
@@ -103,8 +104,8 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert doesNotHaveVariable(String var1) {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceId);
-    JsonNode jsonNode = variables.get(var1);
-    assertThat(jsonNode).isNull();
+    VariableValue variableValue = variables.get(var1);
+    assertThat(variableValue).isNull();
     return this;
   }
 
@@ -119,17 +120,19 @@ public class ProcessInstanceAssert {
 
   public ProcessInstanceAssert hasVariableWithValue(String var1, Object value1) {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceId);
-    JsonNode jsonNode = variables.get(var1);
-    assertThat(jsonNode)
+    VariableValue variableValue = variables.get(var1);
+    assertThat(variableValue)
         .as(
             "variable "
                 + var1
                 + " not found in process instanceToContinue, available variables:"
                 + variables)
         .isNotNull();
-    JsonNode expectedNode = new ObjectMapper(new CBORFactory()).valueToTree(value1);
-    if (jsonNode.isNumber() && expectedNode.isNumber()) {
-      assertThat(jsonNode.decimalValue())
+    Object actualValue = Variables.toJavaObject(variableValue);
+    var actualNode = OBJECT_MAPPER.valueToTree(actualValue);
+    var expectedNode = OBJECT_MAPPER.valueToTree(value1);
+    if (actualNode.isNumber() && expectedNode.isNumber()) {
+      assertThat(actualNode.decimalValue())
           .as(
               "variable "
                   + var1
@@ -137,7 +140,7 @@ public class ProcessInstanceAssert {
                   + variables)
           .isEqualTo(expectedNode.decimalValue());
     } else {
-      assertThat(jsonNode)
+      assertThat(actualNode)
           .as(
               "variable "
                   + var1
@@ -164,21 +167,21 @@ public class ProcessInstanceAssert {
     return this;
   }
 
-  public ProcessInstanceAssert hasVariableMatching(String var1, Consumer<Object> consumer)
-      throws JsonProcessingException {
+  public ProcessInstanceAssert hasVariableMatching(String var1, Consumer<Object> consumer) {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceId);
-    JsonNode jsonNode = variables.get(var1);
-    consumer.accept(new ObjectMapper(new CBORFactory()).treeToValue(jsonNode, Object.class));
+    VariableValue variableValue = variables.get(var1);
+    assertThat(variableValue).isNotNull();
+    consumer.accept(Variables.toJavaObject(variableValue));
     return this;
   }
 
-  public ProcessInstanceAssert hasCollectioneMatching(String var1, Consumer<List> consumer)
-      throws JsonProcessingException {
+  public ProcessInstanceAssert hasCollectioneMatching(String var1, Consumer<List<?>> consumer) {
     VariablesDTO variables = bpmnTestEngine.getVariables(processInstanceId);
-    JsonNode jsonNode = variables.get(var1);
-    assertThat(jsonNode.isArray()).isTrue();
-    List t = new ObjectMapper(new CBORFactory()).treeToValue(jsonNode, List.class);
-    consumer.accept(t);
+    VariableValue variableValue = variables.get(var1);
+    assertThat(variableValue).isNotNull();
+    Object collection = Variables.toJavaObject(variableValue);
+    assertThat(collection).isInstanceOf(List.class);
+    consumer.accept((List<?>) collection);
     return this;
   }
 

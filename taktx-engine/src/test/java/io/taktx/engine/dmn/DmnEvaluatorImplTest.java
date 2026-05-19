@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.DmnCollectOperator;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDecisionTableDTO;
@@ -26,7 +27,6 @@ import io.taktx.dto.DmnValidationMode;
 import io.taktx.engine.feel.FeelEngineProvider;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +37,7 @@ class DmnEvaluatorImplTest {
 
   private static final org.camunda.feel.api.FeelEngineApi FEEL_ENGINE_API =
       new FeelEngineProvider().getFeelEngineApi();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private DmnEvaluatorImpl evaluator;
   private VariableScope variables;
@@ -48,7 +49,7 @@ class DmnEvaluatorImplTest {
   }
 
   private static JsonNode asJson(VariableValue value) {
-    return VariableValueDtoMapper.toJsonNode(value);
+    return OBJECT_MAPPER.valueToTree(Variables.toJavaObject(value));
   }
 
   // ── helper builders ───────────────────────────────────────────────────────

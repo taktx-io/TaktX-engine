@@ -49,12 +49,12 @@ import org.apache.kafka.streams.KafkaStreams;
  * <p>Two validation paths:
  *
  * <ul>
- *   <li>{@code X-TaktX-Authorization} (RS256 JWT) — used by Console/Platform for start-process and
- *       abort commands; validates claims and expiry. Durable replay protection is enforced by
- *       {@link ReplayProtectionProcessor} upstream in the Kafka Streams topology.
- *   <li>{@code X-TaktX-Signature} (Ed25519) — used by worker processes for task responses and by
- *       the engine itself for internal sub-process/call-activity triggers. Key resolution, revoke
- *       checks, and trust-policy evaluation are delegated to {@link VerificationCore}.
+ *   <li>{@code tx-auth} (RS256 JWT) — used by Console/Platform for start-process and abort
+ *       commands; validates claims and expiry. Durable replay protection is enforced by {@link
+ *       ReplayProtectionProcessor} upstream in the Kafka Streams topology.
+ *   <li>{@code tx-sig} (Ed25519) — used by worker processes for task responses and by the engine
+ *       itself for internal sub-process/call-activity triggers. Key resolution, revoke checks, and
+ *       trust-policy evaluation are delegated to {@link VerificationCore}.
  * </ul>
  *
  * <p>When authorization is disabled in the latest {@link GlobalConfigurationDTO}, returns {@code
@@ -154,7 +154,7 @@ public class EngineAuthorizationService {
   /**
    * Resolves the base64-encoded Ed25519 public key for the given keyId from the {@code
    * taktx-signing-keys} KTable. Returns {@code null} for unknown or REVOKED keys. Used by {@link
-   * io.taktx.serdes.JsonDeserializer} via {@link EngineSigningKeysHolder}.
+   * io.taktx.serdes.ProtoDeserializer} via {@link EngineSigningKeysHolder}.
    */
   private String resolvePublicKeyFromKTable(String keyId) {
     SigningKeyDTO entry = verificationCore.resolveKey(keyId);
@@ -300,8 +300,8 @@ public class EngineAuthorizationService {
    * is applied until an operator explicitly enables it via the {@code taktx-configuration} topic.
    *
    * <p>When security is active, delegates key resolution, revoke check, and trust-policy evaluation
-   * to {@link VerificationCore}. A request must carry a valid {@code X-TaktX-Signature} whose key
-   * resolves to a trusted {@code CLIENT}-or-higher role.
+   * to {@link VerificationCore}. A request must carry a valid {@code tx-sig} whose key resolves to
+   * a trusted {@code CLIENT}-or-higher role.
    */
   public SigningKeyDTO authorizeTopicMetaRequest(Headers headers, TopicMetaDTO request) {
     GlobalConfigurationDTO cfg = effectiveConfig();
@@ -337,8 +337,8 @@ public class EngineAuthorizationService {
    * is applied until an operator explicitly enables it via the {@code taktx-configuration} topic.
    *
    * <p>When security is active, delegates key resolution, revoke check, and trust-policy evaluation
-   * to {@link VerificationCore}. Requires a valid {@code X-TaktX-Signature} whose signing key
-   * resolves to a trusted {@code ENGINE} role.
+   * to {@link VerificationCore}. Requires a valid {@code tx-sig} whose signing key resolves to a
+   * trusted {@code ENGINE} role.
    */
   public SigningKeyDTO authorizeScheduleCommand(
       Headers headers, ScheduleKeyDTO scheduleKey, MessageScheduleDTO schedule) {

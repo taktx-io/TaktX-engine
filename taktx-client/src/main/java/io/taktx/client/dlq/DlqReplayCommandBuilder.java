@@ -166,8 +166,8 @@ public class DlqReplayCommandBuilder {
    * Sets the corrected Kafka headers snapshot. Values must be base64-encoded strings — the engine
    * replay processor decodes them before attaching to the forwarded record.
    *
-   * <p>The engine always replaces {@code X-TaktX-Signature} with a fresh ENGINE-signed value; there
-   * is no need to include it here.
+   * <p>The engine always replaces {@code tx-sig} with a fresh ENGINE-signed value; there is no need
+   * to include it here.
    *
    * @param correctedHeaders map of header name → base64-encoded header value
    * @return this builder

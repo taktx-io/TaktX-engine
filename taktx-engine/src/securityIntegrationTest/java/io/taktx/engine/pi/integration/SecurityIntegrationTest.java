@@ -81,13 +81,12 @@ import org.junit.jupiter.api.Test;
  * <p>Two signing paths exist in the engine:
  *
  * <ul>
- *   <li><b>JWT / RS256</b> ({@code X-TaktX-Authorization}) — used by Console, Platform, and
- *       Ingester for {@code StartCommandDTO}, {@code AbortTriggerDTO}, and {@code
- *       SetVariableTriggerDTO}.
- *   <li><b>Ed25519</b> ({@code X-TaktX-Signature}) — used by workers, user-task handlers, and
- *       engine-internal commands (sub-process / call-activity starts). The deserializer verifies
- *       the signature; {@link io.taktx.engine.security.EngineAuthorizationService} only logs and
- *       passes it through.
+ *   <li><b>JWT / RS256</b> ({@code tx-auth}) — used by Console, Platform, and Ingester for {@code
+ *       StartCommandDTO}, {@code AbortTriggerDTO}, and {@code SetVariableTriggerDTO}.
+ *   <li><b>Ed25519</b> ({@code tx-sig}) — used by workers, user-task handlers, and engine-internal
+ *       commands (sub-process / call-activity starts). The deserializer verifies the signature;
+ *       {@link io.taktx.engine.security.EngineAuthorizationService} only logs and passes it
+ *       through.
  * </ul>
  *
  * <p>These tests run against a real embedded Kafka broker (Quarkus dev-services) and a fully
@@ -109,8 +108,8 @@ import org.junit.jupiter.api.Test;
  *   <li>Ed25519 inbound path: worker-signed external-task response → process completes
  *   <li>Ed25519 inbound path: engine-internal signed start (sub-process) → child process accepted
  *   <li>Ed25519 inbound path: revoked worker key → response dropped, process stays blocked
- *   <li>Outbound signing: instance-update records carry a valid {@code X-TaktX-Signature} header
- *   <li>Outbound signing: external-task trigger records carry a valid {@code X-TaktX-Signature}
+ *   <li>Outbound signing: instance-update records carry a valid {@code tx-sig} header
+ *   <li>Outbound signing: external-task trigger records carry a valid {@code tx-sig}
  * </ul>
  */
 @QuarkusTest
@@ -366,16 +365,15 @@ class SecurityIntegrationTest {
   }
 
   /**
-   * A {@code StartCommandDTO} sent with no {@code X-TaktX-Authorization} and no {@code
-   * X-TaktX-Signature} header must be rejected by the engine — the process instance must never
-   * appear in the instance map.
+   * A {@code StartCommandDTO} sent with no {@code tx-auth} and no {@code tx-sig} header must be
+   * rejected by the engine — the process instance must never appear in the instance map.
    *
    * <p>We bypass {@link io.taktx.client.TaktXClient} deliberately: the client's {@code
-   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.SigningSerializer} which
-   * automatically attaches an {@code X-TaktX-Signature} header via {@link
+   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.ProtoSigningSerializer} which
+   * automatically attaches a {@code tx-sig} header via {@link
    * io.taktx.security.SigningServiceHolder}. Using the client would therefore exercise the Ed25519
    * path, not the missing-header path. Instead we produce the record with a plain {@link
-   * KafkaProducer} using the raw CBOR serializer so no header is ever attached.
+   * KafkaProducer} using the raw protobuf serializer so no header is ever attached.
    */
   @Test
   void missingAuthHeader_commandRejected_noProcessInstanceStarted() throws IOException {
@@ -458,9 +456,9 @@ class SecurityIntegrationTest {
    * JWT — the process should complete normally.
    *
    * <p>The {@link #workerClient} has {@code WORKER_KEY_ID} registered in the signing-keys KTable.
-   * Its {@code SigningSerializer} attaches {@code X-TaktX-Signature} to every {@code
-   * ContinueFlowElementTriggerDTO}. The engine's {@code JsonDeserializer} verifies it via the
-   * KTable; {@code EngineAuthorizationService} logs and passes it through.
+   * Its {@code ProtoSigningSerializer} attaches {@code tx-sig} to every {@code
+   * ContinueFlowElementTriggerDTO}. The engine's protobuf deserializer verifies it via the KTable;
+   * {@code EngineAuthorizationService} logs and passes it through.
    */
   @Test
   void workerEd25519SignedResponse_processCompletes() throws IOException {
@@ -498,8 +496,8 @@ class SecurityIntegrationTest {
 
   /**
    * Engine-internal {@code StartCommandDTO} messages (e.g. those emitted by the engine itself when
-   * entering a sub-process scope) carry the engine's own {@code X-TaktX-Signature}. The engine
-   * should accept them via the Ed25519 passthrough path — no JWT required.
+   * entering a sub-process scope) carry the engine's own {@code tx-sig}. The engine should accept
+   * them via the Ed25519 passthrough path — no JWT required.
    *
    * <p>The sub-process BPMN causes the engine to emit a signed {@code StartFlowElementTriggerDTO}
    * for the sub-process scope. That trigger is consumed back on the {@code
@@ -788,7 +786,7 @@ class SecurityIntegrationTest {
 
   /**
    * External-task trigger records written by the engine to the worker topic must also carry the
-   * {@code X-TaktX-Signature} header signed with the engine's Ed25519 key.
+   * {@code tx-sig} header signed with the engine's Ed25519 key.
    */
   @Test
   void externalTaskTriggerRecord_hasSignatureHeader() throws IOException {
@@ -949,7 +947,7 @@ class SecurityIntegrationTest {
     // In the security test profile both signingEnabled=true and engineRequiresAuthorization=true
     // are active from @BeforeAll. The BpmnTestEngine's TaktXClient does not own a signing
     // identity but uses the engine's global SigningServiceHolder (set by MessageSigningService),
-    // so every outbound start command gets both a JWT header AND an X-TaktX-Signature header.
+    // so every outbound start command gets both a JWT header AND a tx-sig header.
     // EngineAuthorizationService combines them into JWT_AND_ED25519 — this is correct behaviour.
     AtomicReference<InstanceUpdateDTO> trustedUpdate = new AtomicReference<>();
     await()
@@ -1395,13 +1393,12 @@ class SecurityIntegrationTest {
   /**
    * Sends a {@link io.taktx.dto.StartCommandDTO} with no headers to the {@code
    * process-instance-trigger} topic using a plain {@link KafkaProducer}, simulating an external
-   * caller that omits both {@code X-TaktX-Authorization} and {@code X-TaktX-Signature}.
+   * caller that omits both {@code tx-auth} and {@code tx-sig}.
    *
    * <p>We bypass {@link io.taktx.client.TaktXClient} deliberately: its {@code
-   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.SigningSerializer} that
-   * automatically attaches {@code X-TaktX-Signature} via {@link
-   * io.taktx.security.SigningServiceHolder}. A plain producer with no interceptors guarantees a
-   * completely header-free record.
+   * processInstanceTriggerEmitter} wraps a {@link io.taktx.serdes.ProtoSigningSerializer} that
+   * automatically attaches {@code tx-sig} via {@link io.taktx.security.SigningServiceHolder}. A
+   * plain producer with no interceptors guarantees a completely header-free record.
    */
   private UUID sendUnsignedStartCommand(String processDefinitionId) {
     return sendStartCommandWithSignatureHeader(processDefinitionId, null);

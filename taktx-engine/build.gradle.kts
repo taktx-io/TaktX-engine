@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.cronutils)
     implementation(libs.caffeine)
     implementation(libs.mapstruct)
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
 
     compileOnly(libs.lombok)
 
@@ -64,6 +66,8 @@ dependencies {
     testImplementation(libs.testcontainersKafka)
     testImplementation(libs.testcontainersJunitJupiter)
     testImplementation(libs.awaitility)
+    testRuntimeOnly(libs.jjwt.impl)
+    testRuntimeOnly(libs.jjwt.jackson)
 
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.mapstruct.processor)

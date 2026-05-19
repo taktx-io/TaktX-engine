@@ -132,7 +132,7 @@ public class BpmnTestEngine {
 
   /**
    * Initialises with a known engine Ed25519 public key. Use this overload in security tests so the
-   * client-side {@link io.taktx.serdes.JsonDeserializer} can verify engine-signed records.
+   * client-side protobuf deserializers can verify engine-signed records.
    */
   public void init(String enginePublicKeyBase64) {
     doInit(enginePublicKeyBase64);
@@ -186,7 +186,7 @@ public class BpmnTestEngine {
     // overwrite the engine's SigningServiceHolder registration.
     if (enginePublicKeyBase64 != null) {
       kakaProperties.put(
-          io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
+          io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, enginePublicKeyBase64);
     }
 
     SigningIdentity topicRequestSigningIdentity = createTopicRequestSigningIdentity();

@@ -284,8 +284,8 @@ class SigningRoundTripTest {
   }
 
   /**
-   * Returns headers with the X-TaktX-Signature that ProtoSigningSerializer attached. Captures them
-   * by running through ProtoSigningSerializer once more.
+   * Returns headers with the tx-sig value that ProtoSigningSerializer attached. Captures them by
+   * running through ProtoSigningSerializer once more.
    */
   private Headers captureHeaders(InstanceUpdateDTO dto) {
     try (ProtoSigningSerializer<InstanceUpdateDTO> signingSerializer =

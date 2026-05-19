@@ -11,9 +11,8 @@ package io.taktx.security;
  * Holds the Ed25519 signing identity for a worker process.
  *
  * <p>When present, every outgoing Kafka response record is signed with the worker's private key and
- * the {@code X-TaktX-Signature: <keyId>.<base64sig>} header is attached. The engine verifies this
- * header using the public key it looks up by {@code keyId} from the {@code taktx-signing-keys}
- * KTable.
+ * the {@code tx-sig: <keyId>.<base64sig>} header is attached. The engine verifies this header using
+ * the public key it looks up by {@code keyId} from the {@code taktx-signing-keys} KTable.
  *
  * <h3>Required configuration for a worker client</h3>
  *

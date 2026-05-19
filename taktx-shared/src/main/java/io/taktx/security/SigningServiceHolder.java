@@ -16,9 +16,9 @@ package io.taktx.security;
  * serialize()} without needing constructor injection — even though Kafka instantiates serializers
  * reflectively.
  *
- * <p>The signing function receives the serialised payload bytes and returns the full {@code
- * X-TaktX-Signature} header value (e.g. {@code "engine-key-1.<base64sig>"}), or {@code null} if
- * signing is disabled or not yet configured.
+ * <p>The signing function receives the serialised payload bytes and returns the full {@code tx-sig}
+ * header value (e.g. {@code "engine-key-1.<base64sig>"}), or {@code null} if signing is disabled or
+ * not yet configured.
  */
 public final class SigningServiceHolder {
 
