@@ -13,6 +13,7 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class VariableParameterResolverTest {
@@ -41,4 +42,48 @@ class VariableParameterResolverTest {
 
     assertThat(resolver.resolve(trigger)).isEqualTo("test");
   }
+
+  @Test
+  void resolvesCustomObjectFromSingleVariable() {
+    VariableParameterResolver resolver = new VariableParameterResolver(OrderContext.class, "order");
+    ExternalTaskTriggerDTO trigger =
+        ExternalTaskTriggerDTO.builder()
+            .variables(
+                VariablesDTO.ofVariableMap(
+                    Variables.map(
+                        "order",
+                        new OrderContext("INV-1", Instant.parse("2026-05-19T10:15:30Z")))))
+            .build();
+
+    Object resolved = resolver.resolve(trigger);
+
+    assertThat(resolved)
+        .isEqualTo(new OrderContext("INV-1", Instant.parse("2026-05-19T10:15:30Z")));
+  }
+
+  @Test
+  void resolvesFullVariableScopeIntoCustomObject() {
+    VariablesObjectParameterResolver resolver = new VariablesObjectParameterResolver(OrderWorkerInput.class);
+    ExternalTaskTriggerDTO trigger =
+        ExternalTaskTriggerDTO.builder()
+            .variables(
+                VariablesDTO.ofVariableMap(
+                    Variables.map(
+                        "invoiceId",
+                        "INV-1",
+                        "createdAt",
+                        Instant.parse("2026-05-19T10:15:30Z"),
+                        "approved",
+                        true)))
+            .build();
+
+    Object resolved = resolver.resolve(trigger);
+
+    assertThat(resolved)
+        .isEqualTo(new OrderWorkerInput("INV-1", Instant.parse("2026-05-19T10:15:30Z"), true));
+  }
+
+  record OrderContext(String invoiceId, Instant createdAt) {}
+
+  record OrderWorkerInput(String invoiceId, Instant createdAt, boolean approved) {}
 }

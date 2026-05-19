@@ -85,32 +85,7 @@ public final class Variables {
    * @throws IllegalArgumentException for unsupported types
    */
   public static VariableValue of(Object javaValue) {
-    if (javaValue == null) return nullValue();
-    if (javaValue instanceof Boolean b) return of(b.booleanValue());
-    if (javaValue instanceof Long l) return of(l.longValue());
-    if (javaValue instanceof Integer i) return of((long) i.intValue());
-    if (javaValue instanceof Short s) return of((long) s.shortValue());
-    if (javaValue instanceof Byte by) return of((long) by.byteValue());
-    if (javaValue instanceof Double d) return of(d.doubleValue());
-    if (javaValue instanceof Float f) return of((double) f.floatValue());
-    if (javaValue instanceof String s) return of(s);
-    if (javaValue instanceof byte[] ba) return of(ba);
-    if (javaValue instanceof List<?> list) {
-      VarList.Builder lb = VarList.newBuilder();
-      for (Object item : list) {
-        lb.addItems(of(item));
-      }
-      return VariableValue.newBuilder().setListValue(lb.build()).build();
-    }
-    if (javaValue instanceof Map<?, ?> map) {
-      VarMap.Builder mb = VarMap.newBuilder();
-      for (Map.Entry<?, ?> e : map.entrySet()) {
-        mb.putEntries(String.valueOf(e.getKey()), of(e.getValue()));
-      }
-      return VariableValue.newBuilder().setMapValue(mb.build()).build();
-    }
-    throw new IllegalArgumentException(
-        "Cannot convert " + javaValue.getClass().getName() + " to VariableValue");
+    return VariableObjectMapper.toVariableValue(javaValue);
   }
 
   // ── Map convenience builders (up to 5 pairs) ────────────────────────────
@@ -239,5 +214,15 @@ public final class Variables {
     VarMap.Builder b = VarMap.newBuilder();
     entries.forEach(b::putEntries);
     return b.build();
+  }
+
+  /** Decodes a {@link VariableValue} into the requested Java target type. */
+  public static <T> T toTypedObject(VariableValue value, Class<T> targetType) {
+    return targetType.cast(VariableObjectMapper.fromVariableValue(value, targetType));
+  }
+
+  /** Decodes a variable map into the requested Java target type. */
+  public static <T> T toTypedObject(Map<String, VariableValue> variables, Class<T> targetType) {
+    return VariableObjectMapper.fromVariableMap(variables, targetType);
   }
 }

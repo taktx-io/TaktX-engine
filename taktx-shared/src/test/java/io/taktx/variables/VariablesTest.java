@@ -12,8 +12,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.taktx.proto.VarMap;
 import io.taktx.proto.VariableValue;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class VariablesTest {
@@ -92,10 +94,7 @@ class VariablesTest {
 
   @Test
   void nestedVarMap_containingVarList_containingSint64_roundTrips() throws Exception {
-    // Build: { "numbers": [1, 2, 3] }
     VariableValue inner1 = Variables.of(1L);
-    VariableValue inner2 = Variables.of(2L);
-    VariableValue inner3 = Variables.of(3L);
 
     VariableValue list = Variables.of(List.of(1L, 2L, 3L));
     VariableValue map =
@@ -208,21 +207,68 @@ class VariablesTest {
   }
 
   @Test
+  void of_object_handlesJavaBean() {
+    VariableValue value = Variables.of(new TestBean("alpha", 7, UUID.fromString("123e4567-e89b-12d3-a456-426614174000")));
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.MAP_VALUE);
+    assertThat(Variables.toJavaObject(value))
+        .isEqualTo(
+            Map.of(
+                "count", 7L,
+                "id", "123e4567-e89b-12d3-a456-426614174000",
+                "name", "alpha"));
+  }
+
+  @Test
+  void of_object_handlesRecordAndInstantLeafType() {
+    TestRecord input = new TestRecord("beta", Instant.parse("2026-05-19T10:15:30Z"));
+
+    VariableValue value = Variables.of(input);
+
+    assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.MAP_VALUE);
+    assertThat(Variables.toJavaObject(value))
+        .isEqualTo(Map.of("createdAt", "2026-05-19T10:15:30Z", "name", "beta"));
+  }
+
+  @Test
   void of_object_throwsForUnsupportedType() {
-    assertThatThrownBy(() -> Variables.of(new Object()))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Cannot convert");
+    Object unsupported = new Object();
+    assertThatThrownBy(() -> Variables.of(unsupported)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void toTypedObject_reconstructsBeanFromVariableMap() {
+    Map<String, VariableValue> variables =
+        Variables.map(
+            "name",
+            "alpha",
+            "count",
+            7,
+            "id",
+            UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+    TestBean bean = Variables.toTypedObject(variables, TestBean.class);
+
+    assertThat(bean.getName()).isEqualTo("alpha");
+    assertThat(bean.getCount()).isEqualTo(7);
+    assertThat(bean.getId()).isEqualTo(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+  }
+
+  @Test
+  void toTypedObject_reconstructsRecordFromVariableMap() {
+    Map<String, VariableValue> variables =
+        Variables.map("name", "beta", "createdAt", Instant.parse("2026-05-19T10:15:30Z"));
+
+    TestRecord typedRecord = Variables.toTypedObject(variables, TestRecord.class);
+
+    assertThat(typedRecord)
+        .isEqualTo(new TestRecord("beta", Instant.parse("2026-05-19T10:15:30Z")));
   }
 
   // ── Size assertion ───────────────────────────────────────────────────────
 
   @Test
   void threeTypicalVariables_encodeBelowFortyBytes() {
-    // {"amount": 100, "name": "Alice", "active": true}
-    // Proto map encoding: each entry = outer_tag(1) + outer_len(1) + key_field(key_len+2) +
-    // value_field(value_msg_len+2). Calculated: ~46 bytes for these key names and values.
-    // Compare: equivalent JSON {"amount":100,"name":"Alice","active":true} = 38 bytes just for
-    // the raw text, without any type info or nesting wrappers.
     Map<String, VariableValue> vars =
         Variables.map("amount", 100L, "name", "Alice", "active", true);
 
@@ -248,4 +294,45 @@ class VariablesTest {
     assertThat(Variables.map("a", 1L, "b", 2L, "c", 3L, "d", 4L, "e", 5L))
         .containsOnlyKeys("a", "b", "c", "d", "e");
   }
+
+  static final class TestBean {
+
+    private String name;
+    private int count;
+    private UUID id;
+
+    TestBean() {}
+
+    TestBean(String name, int count, UUID id) {
+      this.name = name;
+      this.count = count;
+      this.id = id;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+
+    public int getCount() {
+      return count;
+    }
+
+    public void setCount(int count) {
+      this.count = count;
+    }
+
+    public UUID getId() {
+      return id;
+    }
+
+    public void setId(UUID id) {
+      this.id = id;
+    }
+  }
+
+  record TestRecord(String name, Instant createdAt) {}
 }

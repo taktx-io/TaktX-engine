@@ -21,11 +21,10 @@ import org.junit.jupiter.api.Test;
 class DefaultTaktParameterResolverFactoryTest {
 
   private DefaultParameterResolverFactory factory;
-  private ProcessInstanceResponder externalTaskResponder;
 
   @BeforeEach
   void setUp() {
-    externalTaskResponder = mock(ProcessInstanceResponder.class);
+    ProcessInstanceResponder externalTaskResponder = mock(ProcessInstanceResponder.class);
     factory = new DefaultParameterResolverFactory(externalTaskResponder);
   }
 
@@ -96,10 +95,11 @@ class DefaultTaktParameterResolverFactoryTest {
     ParameterResolver resolver = factory.create(parameter);
 
     // Then
-    assertThat(resolver).isInstanceOf(VariableParameterResolver.class);
+    assertThat(resolver).isInstanceOf(VariablesObjectParameterResolver.class);
   }
 
   // Test service with methods that have different parameter types
+  @SuppressWarnings("unused")
   static class TestService {
     void methodWithExternalTaskTriggerDTO(ExternalTaskTriggerDTO dto) {
       // Empty Method for testing purpose
@@ -126,6 +126,7 @@ class DefaultTaktParameterResolverFactoryTest {
     }
   }
 
+  @SuppressWarnings("unused")
   static class TestDto {
     private String value;
   }

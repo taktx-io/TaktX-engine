@@ -83,8 +83,9 @@ class MultiInstanceTest {
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
         .waitUntilDone()
         .assertThatProcess()
-        .hasCollectioneMatching(
-            "outputCollection", oc -> assertThat(oc).containsExactly("axxx0", "bxxx1", "cxxx2"))
+        .hasVariableMatching(
+            "outputCollection",
+            val -> assertThat(val).asInstanceOf(LIST).containsExactly("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("task-callactivity-multiinstance-sequential:StartEvent_1")
         .hasInstantiatedElementWithId(
             "task-callactivity-multiinstance-sequential:callactivity-id/callactivity-id",
@@ -108,9 +109,12 @@ class MultiInstanceTest {
                 "inputCollection", List.of("a", "b", "c"), "calledActivity", "calledActivity"))
         .waitUntilDone()
         .assertThatProcess()
-        .hasCollectioneMatching(
+        .hasVariableMatching(
             "outputCollection",
-            oc -> assertThat(oc).containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
+            val ->
+                assertThat(val)
+                    .asInstanceOf(LIST)
+                    .containsExactlyInAnyOrder("axxx0", "bxxx1", "cxxx2"))
         .hasInstantiatedElementWithId("task-callactivity-multiinstance-parallel:StartEvent_1")
         .hasInstantiatedElementWithId(
             "task-callactivity-multiinstance-parallel:callactivity-id/callactivity-id",

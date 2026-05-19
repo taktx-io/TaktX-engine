@@ -10,6 +10,7 @@ package io.taktx.client;
 import io.taktx.client.annotation.CustomHeaders;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
@@ -32,9 +33,10 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
 
   @Override
   public ParameterResolver create(Parameter parameter) {
-    if (parameter.getType().isAssignableFrom(ExternalTaskTriggerDTO.class)) {
+    Class<?> parameterType = parameter.getType();
+    if (ExternalTaskTriggerDTO.class.isAssignableFrom(parameterType)) {
       return new ExternalTaskTriggerDTOParameterResolver();
-    } else if (parameter.getType().isAssignableFrom(ExternalTaskInstanceResponder.class)) {
+    } else if (ExternalTaskInstanceResponder.class.isAssignableFrom(parameterType)) {
       return new ExternalTaskInstanceResponderParameterResolver(externalTaskResponder);
     } else if (parameter.getAnnotation(Variable.class) != null) {
       Variable variableAnnotation = parameter.getAnnotation(Variable.class);
@@ -43,10 +45,14 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
       return new VariableParameterResolver(parameter.getType(), name);
     } else if (parameter.getAnnotation(CustomHeaders.class) != null) {
       return new HeadersParameterResolver(parameter.getType());
-    } else if (parameter.getType().isAssignableFrom(Map.class)) {
+    } else if (Map.class.isAssignableFrom(parameterType)) {
       return new MapParameterResolver();
+    } else if (VariablesDTO.class.isAssignableFrom(parameterType)) {
+      return new VariablesObjectParameterResolver(parameterType);
+    } else if (ClientValueMapper.isSimpleValue(parameterType)) {
+      return new VariableParameterResolver(parameterType, parameter.getName());
     } else {
-      return new VariableParameterResolver(parameter.getType(), parameter.getName());
+      return new VariablesObjectParameterResolver(parameterType);
     }
   }
 }

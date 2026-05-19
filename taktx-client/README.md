@@ -138,10 +138,9 @@ try (InputStream is = getClass().getResourceAsStream("/processes/invoice.bpmn"))
 ### Annotation-based (recommended)
 
 ```java
-@ExternalTask("invoice-payment")
 public class InvoicePaymentWorker {
 
-    @Execute
+    @JobWorker(type = "invoice-payment")
     public ExternalTaskResult process(ExternalTaskTriggerDTO trigger) {
         String invoiceId = trigger.getVariables().get("invoiceId");
         // … do work …
@@ -149,6 +148,44 @@ public class InvoicePaymentWorker {
     }
 }
 ```
+
+### Worker parameter binding
+
+Annotation-based workers can bind task data directly to method parameters:
+
+```java
+public record InvoiceRequest(String invoiceId, Instant createdAt, boolean retryAllowed) {}
+
+public class InvoicePaymentWorker {
+
+    @JobWorker(type = "invoice-payment")
+    public VariablesDTO process(
+            InvoiceRequest request,
+            @Variable("amount") long amount,
+            @CustomHeaders Map<String, String> headers,
+            ExternalTaskInstanceResponder responder) {
+        // request is populated from the full variable scope
+        // amount is populated from a single named variable
+        // headers contains the custom Kafka/process headers
+        return VariablesDTO.of("paid", amount > 0);
+    }
+}
+```
+
+Binding rules for annotation-based external-task workers:
+
+- `ExternalTaskTriggerDTO` → the raw trigger object
+- `ExternalTaskInstanceResponder` → responder bound to the current task instance
+- `@CustomHeaders Map<String, String>` or a typed header DTO → custom headers
+- `Map<String, Object>` → all variables as plain Java values
+- `VariablesDTO` → the full raw variable scope
+- `@Variable("name") SomeType` → a single named variable, converted to `SomeType`
+- unannotated simple types (`String`, numbers, `boolean`, `UUID`, enums, time types, …) → variable by parameter name
+- unannotated complex types (records / beans) → full variable scope mapped into that object
+
+For complex object binding, prefer Java `record`s. Regular Java beans are also supported when they have a no-arg constructor plus setters for the properties you want populated.
+
+Supported built-in leaf conversions include `UUID`, enums, `Instant`, `LocalDate`, `LocalDateTime`, `OffsetDateTime`, `ZonedDateTime`, `Duration`, `URI`, `URL`, `BigInteger`, and `BigDecimal`.
 
 Register all workers with:
 

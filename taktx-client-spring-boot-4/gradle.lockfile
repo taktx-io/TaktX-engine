@@ -3,11 +3,11 @@
 # This file is expected to be part of source control.
 at.yawk.lz4:lz4-java:1.10.1=testRuntimeClasspath
 com.cronutils:cron-utils:9.2.1=testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-annotations:2.21=compileClasspath,testCompileClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.21.3=compileClasspath,testCompileClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.21.3=compileClasspath,testCompileClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-annotations:2.21=testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.21.3=testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.21.3=testRuntimeClasspath
 com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.21.3=testRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.21.3=compileClasspath,testCompileClasspath,testRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.21.3=testRuntimeClasspath
 com.github.luben:zstd-jni:1.5.6-10=testRuntimeClasspath
 com.google.code.findbugs:jsr305:3.0.2=spotless865459188
 com.google.errorprone:error_prone_annotations:2.21.1=spotless865459188
