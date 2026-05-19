@@ -8,13 +8,33 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.DmnDefinitionKey;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.jackson.TaktxObjectMappers;
+import java.io.IOException;
+import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.serialization.Deserializer;
 
-/** A JSON deserializer for {@link DmnDefinitionKey} objects. */
-public class DmnDefinitionKeyJsonDeserializer extends JsonDeserializer<DmnDefinitionKey> {
+/** Deserializes DMN definition keys from the current protobuf format and legacy CBOR fallback. */
+public class DmnDefinitionKeyJsonDeserializer implements Deserializer<DmnDefinitionKey> {
 
-  /** Constructor for DmnDefinitionKeyJsonDeserializer. */
-  public DmnDefinitionKeyJsonDeserializer() {
-    super(DmnDefinitionKey.class, false);
+  private final io.taktx.serdes.DmnDefinitionKeyDtoDeserializer delegate =
+      new io.taktx.serdes.DmnDefinitionKeyDtoDeserializer();
+
+  @Override
+  public DmnDefinitionKey deserialize(String topic, byte[] data) {
+    if (data == null) {
+      return null;
+    }
+
+    try {
+      return delegate.deserialize(topic, data);
+    } catch (RuntimeException protoFailure) {
+      try {
+        return TaktxObjectMappers.cbor().readValue(data, DmnDefinitionKey.class);
+      } catch (IOException legacyFailure) {
+        throw new SerializationException(
+            "Failed to deserialize DmnDefinitionKey from protobuf or legacy CBOR key format",
+            legacyFailure);
+      }
+    }
   }
 }

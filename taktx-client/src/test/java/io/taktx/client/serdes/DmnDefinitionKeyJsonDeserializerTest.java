@@ -10,14 +10,35 @@ package io.taktx.client.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.DmnDefinitionKey;
+import io.taktx.jackson.TaktxObjectMappers;
+import io.taktx.serdes.DmnDefinitionKeyProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class DmnDefinitionKeyJsonDeserializerTest {
 
   @Test
-  void testConstruct() {
+  void deserializesCurrentProtoKeyFormat() {
+    DmnDefinitionKey original = new DmnDefinitionKey("decision-table", 4);
+    byte[] bytes = DmnDefinitionKeyProtoMapper.toProto(original).toByteArray();
+
+    DmnDefinitionKey decoded;
     try (DmnDefinitionKeyJsonDeserializer deserializer = new DmnDefinitionKeyJsonDeserializer()) {
-      assertThat(deserializer.getClazz()).isEqualTo(DmnDefinitionKey.class);
+      decoded = deserializer.deserialize("topic", bytes);
     }
+
+    assertThat(decoded).isEqualTo(original);
+  }
+
+  @Test
+  void deserializesLegacyCborKeyFormat() throws Exception {
+    DmnDefinitionKey original = new DmnDefinitionKey("legacy-decision", 2);
+    byte[] bytes = TaktxObjectMappers.cbor().writeValueAsBytes(original);
+
+    DmnDefinitionKey decoded;
+    try (DmnDefinitionKeyJsonDeserializer deserializer = new DmnDefinitionKeyJsonDeserializer()) {
+      decoded = deserializer.deserialize("topic", bytes);
+    }
+
+    assertThat(decoded).isEqualTo(original);
   }
 }

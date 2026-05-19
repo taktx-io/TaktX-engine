@@ -16,7 +16,7 @@ public class TaktUUIDDeserializer implements Deserializer<UUID> {
 
   @Override
   public UUID deserialize(String topic, byte[] bytes) {
-    return bytes == null ? null : fromBytes(bytes);
+    return fromBytes(bytes);
   }
 
   public static UUID fromBytes(byte[] bytes) {

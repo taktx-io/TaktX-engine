@@ -10,7 +10,6 @@ package io.taktx.engine.generic;
 
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.Topics;
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.Constants;
@@ -94,6 +93,8 @@ import io.taktx.serdes.DlqProtoMapper;
 import io.taktx.serdes.DlqReplayCommandDtoDeserializer;
 import io.taktx.serdes.DlqReplayResultDtoDeserializer;
 import io.taktx.serdes.DmnDefinitionDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionKeyDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionKeyProtoMapper;
 import io.taktx.serdes.DmnDefinitionsProtoMapper;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
@@ -107,6 +108,8 @@ import io.taktx.serdes.MessageEventProtoMapper;
 import io.taktx.serdes.MessageScheduleDtoDeserializer;
 import io.taktx.serdes.MessageScheduleProtoMapper;
 import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceDtoDeserializer;
+import io.taktx.serdes.ProcessInstanceProtoMapper;
 import io.taktx.serdes.ProcessInstanceTriggerDtoDeserializer;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
@@ -131,7 +134,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.common.errors.SerializationException;
@@ -170,12 +172,10 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           (topic, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
           new SignalDtoDeserializer());
-  public static final ObjectMapperSerde<DefinitionMessageSubscriptions>
-      DEFINITION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(DefinitionMessageSubscriptions.class);
-  public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
-      CORRELATION_SUBSCRIPTIONS_SERDE =
-          new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
+  public static final Serde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
+      new DefinitionMessageSubscriptionsSerde();
+  public static final Serde<CorrelationMessageSubscriptions> CORRELATION_SUBSCRIPTIONS_SERDE =
+      new CorrelationMessageSubscriptionsSerde();
   public static final Serde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
       new ProcessDefinitionKeySerde();
   public static final Serde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
@@ -207,8 +207,11 @@ public class TopologyProducer {
           Serdes.serdeFrom(
               new ProcessInstanceTriggerEnvelopeSerializer(),
               new ProcessInstanceTriggerEnvelopeDeserializer());
-  public static final ObjectMapperSerde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
-      new ObjectMapperSerde<>(DmnDefinitionKey.class);
+  public static final Serde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : DmnDefinitionKeyProtoMapper.toProto(data).toByteArray(),
+          new DmnDefinitionKeyDtoDeserializer());
   public static final Serde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
       Serdes.serdeFrom(
           (topic, data) ->
@@ -242,8 +245,11 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           (topic, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
           new DefinitionsTriggerDtoDeserializer());
-  public static final ObjectMapperSerde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
-      new ObjectMapperSerde<>(ProcessInstanceDTO.class);
+  public static final Serde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : ProcessInstanceProtoMapper.toProto(data).toByteArray(),
+          new ProcessInstanceDtoDeserializer());
   public static final Serde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(InstanceUpdateProtoMapper::toProto),
@@ -265,9 +271,9 @@ public class TopologyProducer {
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto),
           new UserTaskResponseTriggerProtoDeserializer());
-  public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
-      new ObjectMapperSerde<>(StartCommandDTO.class);
   private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE = new VariableKeySerde();
+  private static final Serde<java.util.Map<String, Integer>> HASH_VERSION_MAP_SERDE =
+      new HashVersionMapSerde();
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       Serdes.serdeFrom(
@@ -402,8 +408,7 @@ public class TopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.DMN_VERSION_BY_HASH),
             Serdes.String(),
-            new ObjectMapperSerde<>(
-                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+            HASH_VERSION_MAP_SERDE));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.DMN_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
@@ -467,8 +472,7 @@ public class TopologyProducer {
         keyValueStoreBuilder(
             keyValueStoreSupplier.get(Stores.VERSION_BY_HASH),
             Serdes.String(),
-            new ObjectMapperSerde<>(
-                (Class<HashMap<String, Integer>>) new HashMap<String, Integer>().getClass())));
+            HASH_VERSION_MAP_SERDE));
 
     builder.globalTable(
         taktConfiguration.getPrefixed(Topics.PROCESS_DEFINITION_ACTIVATION_TOPIC.getTopicName()),
@@ -762,15 +766,6 @@ public class TopologyProducer {
                                     + value.getExternalTaskId(),
                             Produced.with(
                                 PROCESS_INSTANCE_KEY_SERDE, EXTERNAL_TASK_TRIGGER_SERDE))))
-        .branch(
-            (_, value) -> value instanceof StartCommandDTO,
-            Branched.withConsumer(
-                ks ->
-                    ks.map((key, value) -> KeyValue.pair((String) key, (StartCommandDTO) value))
-                        .to(
-                            taktConfiguration.getPrefixed(
-                                Topics.PROCESS_DEFINITIONS_TRIGGER_TOPIC.getTopicName()),
-                            Produced.with(Serdes.String(), START_COMMAND_SERDE))))
         .branch(
             (key, _) -> key instanceof ScheduleKeyDTO,
             Branched.withConsumer(

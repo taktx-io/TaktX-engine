@@ -16,6 +16,7 @@ import org.apache.kafka.common.serialization.Serializer;
 public abstract class ProtoMappedSerializer<T> implements Serializer<T> {
 
   private final Class<T> clazz;
+  private final ProtoSerializer<MessageLite> delegate = new ProtoSerializer<>();
 
   protected ProtoMappedSerializer(Class<T> clazz) {
     this.clazz = clazz;
@@ -25,6 +26,6 @@ public abstract class ProtoMappedSerializer<T> implements Serializer<T> {
 
   @Override
   public byte[] serialize(String topic, T data) {
-    return data == null ? null : toProto(data).toByteArray();
+    return delegate.serialize(topic, data == null ? null : toProto(data));
   }
 }

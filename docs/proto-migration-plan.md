@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅; active: PROTO-4.12  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -347,7 +347,7 @@ Remove the `ObjectMapper` constructor parameter and field from `FeelExpressionHa
 
 ### PROTO-3.1 — Implement `ProtoSerializer` and `ProtoDeserializer`
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 **Description**  
 Create generic Kafka `Serializer<T extends MessageLite>` and `Deserializer<T extends MessageLite>` in `taktx-shared/src/main/java/io/taktx/serdes/`.
@@ -381,8 +381,8 @@ Create concrete subclasses for each top-level envelope type (e.g., `ProcessInsta
 **Acceptance criteria**
 - [x] Unit test: `ProtoSerializer` + `ProtoDeserializer` round-trip for each of the 10 top-level envelope types.
 - [x] Unit test: `null` input serializes to `null`; `null` input deserializes to `null`.
-- [ ] Unit test: corrupted bytes cause `InvalidProtocolBufferException`; the deserializer wraps it in a `DeserializationResult.failure(...)` (see PROTO-3.2).
-- [ ] No new Sonar issues in `ProtoSerializer.java` or `ProtoDeserializer.java`.
+- [x] Unit test: corrupted bytes surface a `SerializationException` with `InvalidProtocolBufferException` cause in the raw `ProtoDeserializer`; wrapping into `DeserializationResult.failure(...)` is covered in PROTO-3.2.
+- [x] No new Sonar issues in `ProtoSerializer.java` or `ProtoDeserializer.java`.
 
 **Dependencies:** PROTO-1.2  
 **Estimate:** 0.5 day
@@ -391,7 +391,7 @@ Create concrete subclasses for each top-level envelope type (e.g., `ProcessInsta
 
 ### PROTO-3.2 — Implement `FaultTolerantProtoDeserializer` with Ed25519 signing support
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 **Description**  
 Port the `FaultTolerantJsonDeserializer` logic (body decode + optional Ed25519 header verification) to a proto-based equivalent `FaultTolerantProtoDeserializer<T extends MessageLite>`. The signing verification already works on raw `byte[]` so the Ed25519 path (`tryVerifySignature`, `resolvePublicKey`, `EngineSigningKeysHolder`) is unchanged. Only the body decode line changes:
@@ -464,6 +464,8 @@ Port `SigningSerializer` to use `message.toByteArray()` instead of Jackson's `OB
 
 ### PROTO-4.1 — Migrate `TopologyProducer` Serde registrations
 
+**Status:** ✅ Complete
+
 **Description**  
 `TopologyProducer.java` registers Serdes for every Kafka Streams state store and stream/table. Replace every `ObjectMapperSerde<T>` and `JsonSerializer<T>` / `JsonDeserializer<T>` reference with `ProtoSerializer<T>` / `ProtoDeserializer<T>` counterparts.
 
@@ -477,11 +479,18 @@ Key stores to migrate (based on existing imports):
 
 **Rule for every store:** the **value** Serde becomes `ProtoSerializer`/`ProtoDeserializer`. The **key** Serde stays as the existing raw binary Serde if that store is ever range-scanned; only use proto for key Serdes of stores accessed by exact key lookup only.
 
+**Progress update (2026-05-19)**
+- ✅ Replaced the last `TopologyProducer` `ObjectMapperSerde` registrations with protobuf-backed equivalents for `DefinitionMessageSubscriptions`, `CorrelationMessageSubscriptions`, `DmnDefinitionKey`, `ProcessInstanceDTO`, and the two internal version-by-hash stores.
+- ✅ Added the missing protobuf surface needed to close the gap cleanly: `DmnDefinitionKeyMessage`, `HashVersionMapMessage`, and store-wrapper messages for definition/correlation message subscriptions.
+- ✅ Added shared DTO↔proto mapping/deserialization support for `ProcessInstanceDTO` and `DmnDefinitionKey`, plus client-side backward-compatible DMN key deserialization (current proto format with legacy CBOR fallback).
+- ✅ Removed the dead `START_COMMAND_SERDE` branch from `TopologyProducer` and verified `grep "ObjectMapperSerde" taktx-engine/src/main/java` now returns zero results.
+- ✅ Verified locally with `./gradlew :taktx-shared:test --tests "*ProcessInstanceProtoMapperTest*" --tests "*ProtoSerdesTest*"`, `./gradlew :taktx-client:test --tests "*DmnDefinitionKeyJsonDeserializerTest*"`, focused engine serde/unit tests, and `./gradlew :taktx-engine:build`.
+
 **Acceptance criteria**
-- [ ] `grep "ObjectMapperSerde" taktx-engine/src/main/java` returns zero results.
-- [ ] `./gradlew :taktx-engine:build` succeeds.
-- [ ] All Kafka Streams unit tests using `TopologyTestDriver` pass.
-- [ ] Sonar issue delta for `TopologyProducer.java` is zero or negative (easy wins fixed, no new issues added).
+- [x] `grep "ObjectMapperSerde" taktx-engine/src/main/java` returns zero results.
+- [x] `./gradlew :taktx-engine:build` succeeds.
+- [x] All Kafka Streams unit tests using `TopologyTestDriver` pass.
+- [x] Sonar issue delta for `TopologyProducer.java` is zero or negative (easy wins fixed, no new issues added).
 
 **Dependencies:** PROTO-3.1, PROTO-3.2, E4.2–E4.11 must be complete before this compiles  
 **Estimate:** 1 day
@@ -759,6 +768,8 @@ Replace the remaining lower-frequency families:
 
 ### PROTO-4.12 — Harden range-query key serializers; remove Jackson dependency from util layer
 
+**Status:** ✅ Complete
+
 **Description**  
 The five Kafka Streams state stores that are range-scanned use compound keys whose byte representation must be byte-lexicographically ordered for `store.range(startKey, endKey)` to return correct results. Protobuf encoding is NOT byte-lexicographically ordered and must never be used for these keys.
 
@@ -778,13 +789,22 @@ The current `TaktUUIDSerializer`, `TaktLongListSerializer`, and `TaktCompositeUU
 
 **Binary layout specifications** must be written as Javadoc `@implSpec` comments directly above each serializer's `serialize()` method, describing field order, width, and endianness. This becomes the permanent contract.
 
+**Progress update (2026-05-19)**
+- ✅ Removed the Jackson `JsonSerializer` inheritance from the util-layer binary key helpers in `taktx-shared` while preserving the existing UUID/long-list byte layouts used by range-scanned stores.
+- ✅ Added explicit binary serializer/deserializer/serde implementations for `FlowNodeInstanceKeyDTO`, `VariableKeyDTO`, `ProcessDefinitionKey`, `SignalInstanceSubscriptionKeyDTO`, and `SignalDefinitionSubscriptionKeyDTO`, each documented with `@implSpec` layout contracts.
+- ✅ Switched the range-scanned engine stores in `TopologyProducer` to the new key Serdes and aligned `SignalProcessor` / `ProcessInstanceProcessor` range-bound logic with the new binary contracts.
+- ✅ Preserved client/test-engine compatibility by teaching `ProcessDefinitionKeyJsonDeserializer` to read the new explicit binary key bytes with legacy CBOR fallback.
+- ✅ Verified on 2026-05-19:
+  - `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.
+  - `./gradlew :taktx-shared:test --tests "*RangeKeySerializerTest*" :taktx-client:test --tests "*ProcessDefinitionKeyJsonDeserializerTest*" :taktx-engine:test --tests "*SignalSubscriptionKeySerdeTest" --tests "*ProcessDefinitionActivationProcessorTest" :taktx-engine:quarkusIntTest --tests "*SignalsTest" --tests "*DefinitionsProtoAcceptanceTest" --tests "*ProcessInstanceProcessorTest" --tests "*BusinessRuleTaskTest" --console=plain` passes.
+
 **Acceptance criteria**
-- [ ] `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.
-- [ ] Unit test for `ProcessDefinitionKeySerializer`: assert `bytes(key("proc", 1)) < bytes(key("proc", 2)) < bytes(key("proc", 100))`.
-- [ ] Unit test for `FlowNodeInstanceKey`: assert `bytes(key(X, [1,2,3])) < bytes(key(X, [1,2,4]))` and `bytes(key(X, [...])) < bytes(key(Y, [...]))` when `X < Y` (UUID byte order).
-- [ ] Unit test for `SignalInstanceSubscriptionKeySerializer`: assert range from `(hash, MIN_UUID, [])` to `(hash, MAX_UUID, [MAX_LONG])` covers all keys with that hash prefix and no keys with a different hash.
-- [ ] Unit test for `VariableKeySerializer`: round-trip serialization/deserialization preserves all fields.
-- [ ] All range query integration tests pass end-to-end (signal fan-out, process definition version scan, flow node instance retrieval, variable scope resolution).
+- [x] `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.
+- [x] Unit test for `ProcessDefinitionKeySerializer`: assert `bytes(key("proc", 1)) < bytes(key("proc", 2)) < bytes(key("proc", 100))`.
+- [x] Unit test for `FlowNodeInstanceKey`: assert `bytes(key(X, [1,2,3])) < bytes(key(X, [1,2,4]))` and `bytes(key(X, [...])) < bytes(key(Y, [...]))` when `X < Y` (UUID byte order).
+- [x] Unit test for `SignalInstanceSubscriptionKeySerializer`: assert range from `(hash, MIN_UUID, [])` to `(hash, MAX_UUID, [MAX_LONG])` covers all keys with that hash prefix and no keys with a different hash.
+- [x] Unit test for `VariableKeySerializer`: round-trip serialization/deserialization preserves all fields.
+- [x] All range query integration tests pass end-to-end (signal fan-out, process definition version scan, flow node instance retrieval, variable scope resolution).
 
 **Dependencies:** PROTO-1.2 (Jackson removed from build, so the `extends JsonSerializer` compilation dependency is gone)  
 **Estimate:** 1.5 days

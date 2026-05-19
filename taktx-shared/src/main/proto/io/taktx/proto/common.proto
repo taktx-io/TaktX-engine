@@ -34,6 +34,17 @@ message DmnDefinitionsKeyMessage {
   string hash              = 2;
 }
 
+// Replaces DmnDefinitionKey for exact-key Kafka topics/stores.
+message DmnDefinitionKeyMessage {
+  string dmn_definition_id = 1;
+  int32  version           = 2;
+}
+
+// Internal store wrapper for definition-hash -> version lookups.
+message HashVersionMapMessage {
+  map<string, int32> versions_by_hash = 1;
+}
+
 // Replaces IncidentInfoDTO
 message IncidentInfoMessage {
   repeated sint64 element_instance_id_path = 1;
