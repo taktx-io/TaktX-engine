@@ -97,6 +97,22 @@ val goldenTest by tasks.registering(Test::class) {
     shouldRunAfter(tasks.test)
 }
 
+val variableSizeBenchmark by tasks.registering(Test::class) {
+    description = "Runs the VariableValue/VarMap size benchmark against saved legacy CBOR fixtures"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching("io.taktx.variables.VariablesEncodingBenchmarkTest")
+        includeTestsMatching("io.taktx.serdes.ProtoPayloadSizeExplorationTest")
+    }
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    shouldRunAfter(tasks.test)
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
 tasks.named("check") {
     dependsOn(goldenTest)
 }
