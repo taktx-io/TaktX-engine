@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +18,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 @NoArgsConstructor
 @ToString
-@RegisterForReflection
 public abstract class MessageEventDTO {
   private String messageName;
 
@@ -28,7 +25,6 @@ public abstract class MessageEventDTO {
     this.messageName = messageName;
   }
 
-  @JsonIgnore
   public MessageEventKeyDTO toMessageEventKey() {
     return new MessageEventKeyDTO(messageName);
   }

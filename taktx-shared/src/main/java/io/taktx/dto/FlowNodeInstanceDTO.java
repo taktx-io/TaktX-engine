@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,7 +16,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
-@RegisterForReflection
 public abstract class FlowNodeInstanceDTO {
   private ExecutionState state;
 
@@ -34,17 +31,14 @@ public abstract class FlowNodeInstanceDTO {
 
   private boolean incident;
 
-  @JsonIgnore
   public boolean isActive() {
     return state == ExecutionState.ACTIVE;
   }
 
-  @JsonIgnore
   public boolean isAborted() {
     return state == ExecutionState.ABORTED;
   }
 
-  @JsonIgnore
   public boolean isCompleted() {
     return state == ExecutionState.COMPLETED;
   }

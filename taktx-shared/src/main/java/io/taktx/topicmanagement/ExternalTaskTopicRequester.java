@@ -11,8 +11,8 @@ import io.taktx.CleanupPolicy;
 import io.taktx.Topics;
 import io.taktx.dto.Constants;
 import io.taktx.dto.TopicMetaDTO;
-import io.taktx.serdes.ExternalTaskMetaSerializer;
-import io.taktx.serdes.SigningSerializer;
+import io.taktx.serdes.ProtoSigningSerializer;
+import io.taktx.serdes.TopicMetaProtoMapper;
 import io.taktx.util.TaktPropertiesHelper;
 import java.util.UUID;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -30,7 +30,7 @@ public class ExternalTaskTopicRequester {
         new KafkaProducer<>(
             taktPropertiesHelper.getKafkaProducerProperties(),
             new StringSerializer(),
-            new SigningSerializer<>(new ExternalTaskMetaSerializer())));
+            new ProtoSigningSerializer<>(TopicMetaProtoMapper::toProto)));
   }
 
   ExternalTaskTopicRequester(

@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,7 +17,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@RegisterForReflection
 public class EventSignalTriggerDTO extends ProcessInstanceTriggerDTO {
 
   private EventSignalDTO eventSignal;

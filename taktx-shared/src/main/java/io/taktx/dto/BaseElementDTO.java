@@ -7,17 +7,13 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @EqualsAndHashCode
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @NoArgsConstructor
-@RegisterForReflection
 public abstract class BaseElementDTO {
   private String id;
 

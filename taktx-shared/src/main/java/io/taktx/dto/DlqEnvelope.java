@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -17,7 +16,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@RegisterForReflection
 public class DlqEnvelope {
   private String sourceTopic;
   @Nullable private byte[] keyBytes;

@@ -29,6 +29,7 @@ import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 import io.taktx.proto.InstanceUpdateEnvelope;
+import io.taktx.variables.Variables;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -92,8 +93,8 @@ class InstanceUpdateProtoMapperTest {
     task.setIncident(false);
     task.setIteration(true);
     task.setNextIterationId(102L);
-    task.setInputElement(VariablesDTO.OBJECT_MAPPER.valueToTree(Map.of("input", "value")));
-    task.setOutputElement(VariablesDTO.OBJECT_MAPPER.valueToTree(Map.of("result", 42L)));
+    task.setInputElement(Variables.of(Map.of("input", "value")));
+    task.setOutputElement(Variables.of(Map.of("result", 42L)));
     task.setLoopCnt(3);
 
     FlowNodeInstanceUpdateDTO flowNodeUpdate =

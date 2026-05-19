@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -18,7 +16,6 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RegisterForReflection
 public abstract class CatchEventDTO extends EventDTO {
   protected Set<EventDefinitionDTO> eventDefinitions;
 
@@ -34,7 +31,6 @@ public abstract class CatchEventDTO extends EventDTO {
     this.eventDefinitions = eventDefinitions;
   }
 
-  @JsonIgnore
   public Set<TimerEventDefinitionDTO> getTimerEventDefinitions() {
     return eventDefinitions.stream()
         .filter(TimerEventDefinitionDTO.class::isInstance)
@@ -42,7 +38,6 @@ public abstract class CatchEventDTO extends EventDTO {
         .collect(Collectors.toSet());
   }
 
-  @JsonIgnore
   public Set<MessageEventDefinitionDTO> getMessageventDefinitions() {
     return eventDefinitions.stream()
         .filter(MessageEventDefinitionDTO.class::isInstance)
@@ -50,7 +45,6 @@ public abstract class CatchEventDTO extends EventDTO {
         .collect(Collectors.toSet());
   }
 
-  @JsonIgnore
   public Set<SignalEventDefinitionDTO> getSignalDefinitions() {
     return eventDefinitions.stream()
         .filter(SignalEventDefinitionDTO.class::isInstance)

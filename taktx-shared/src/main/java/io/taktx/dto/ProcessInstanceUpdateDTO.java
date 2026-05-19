@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
@@ -21,7 +20,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RegisterForReflection
 public class ProcessInstanceUpdateDTO extends InstanceUpdateDTO {
   private UUID parentProcessInstanceId;
 

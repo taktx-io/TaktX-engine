@@ -39,12 +39,12 @@ import io.taktx.dto.SubscriptionsDTO;
 import io.taktx.dto.TaskInstanceDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.UserTaskInstanceDTO;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.subscriptions.MessageSubscriptionDTO;
 import io.taktx.dto.subscriptions.SignalSubscriptionDTO;
 import io.taktx.dto.subscriptions.SubScriptionType;
 import io.taktx.dto.subscriptions.TimerSubscriptionDTO;
 import io.taktx.proto.FlowNodeInstanceEnvelope;
+import io.taktx.variables.Variables;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -179,12 +179,8 @@ class FlowNodeInstanceProtoMapperTest {
     base(dto, elementInstanceId, elementId);
     dto.setIteration(true);
     dto.setNextIterationId(elementInstanceId + 1000L);
-    dto.setInputElement(
-        VariablesDTO.OBJECT_MAPPER.valueToTree(
-            Map.of("input", elementId, "count", elementInstanceId)));
-    dto.setOutputElement(
-        VariablesDTO.OBJECT_MAPPER.valueToTree(
-            Map.of("result", true, "sequence", elementInstanceId + 1L)));
+    dto.setInputElement(Variables.of(Map.of("input", elementId, "count", elementInstanceId)));
+    dto.setOutputElement(Variables.of(Map.of("result", true, "sequence", elementInstanceId + 1L)));
     dto.setLoopCnt((int) (elementInstanceId % 5));
     return dto;
   }

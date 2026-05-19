@@ -7,11 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum ExecutionState {
   // For scope: Scope is created but no child node has started yet.
   // For flow node: Node instance is created, but not yet started.
@@ -32,12 +27,10 @@ public enum ExecutionState {
     this.code = code;
   }
 
-  @JsonValue
   public String getCode() {
     return code;
   }
 
-  @JsonIgnore
   public boolean isDone() {
     return this == COMPLETED || this == ABORTED;
   }

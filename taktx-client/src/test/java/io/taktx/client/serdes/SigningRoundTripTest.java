@@ -92,7 +92,7 @@ class SigningRoundTripTest {
     // Worker side: deserialize with signature verification
     try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
 
       // Must not throw — bytes and signature are consistent
@@ -175,7 +175,7 @@ class SigningRoundTripTest {
 
     try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
       assertThatThrownBy(() -> deserializer.deserialize(TOPIC, headers, tampered))
           .isInstanceOf(IllegalStateException.class)
@@ -215,7 +215,8 @@ class SigningRoundTripTest {
       KeyPair other = SigningKeyGenerator.generate();
       String otherPublicKey = SigningKeyGenerator.encodePublicKey(other.getPublic());
       deserializer.configure(
-          Map.of(io.taktx.serdes.JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG, otherPublicKey), false);
+          Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, otherPublicKey),
+          false);
       assertThatThrownBy(() -> deserializer.deserialize(TOPIC, headers, bytes))
           .isInstanceOf(IllegalStateException.class);
     }

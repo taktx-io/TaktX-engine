@@ -32,8 +32,9 @@ import org.slf4j.LoggerFactory;
 @Getter
 public class InstanceUpdateDtoDeserializer implements Deserializer<InstanceUpdateDTO> {
 
-  public static final String ENGINE_PUBLIC_KEY_CONFIG = JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG;
-  public static final String SIGNING_REQUIRED_CONFIG = JsonDeserializer.SIGNING_REQUIRED_CONFIG;
+  public static final String ENGINE_PUBLIC_KEY_CONFIG =
+      ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG;
+  public static final String SIGNING_REQUIRED_CONFIG = ProtoDtoDeserializer.SIGNING_REQUIRED_CONFIG;
 
   private static final Logger log = LoggerFactory.getLogger(InstanceUpdateDtoDeserializer.class);
 

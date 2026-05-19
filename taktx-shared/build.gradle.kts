@@ -33,12 +33,9 @@ tasks {
 }
 
 dependencies {
-    api(libs.jackson.databind)
-    implementation(libs.jackson.cbor)
     api(libs.jjwt.api)
     api(libs.protobuf.javalite)
-    implementation(libs.jjwt.impl)
-    implementation(libs.jjwt.jackson)
+    runtimeOnly(libs.jjwt.impl)
 
     implementation(libs.kafka.clients)
     implementation(libs.cronutils)
@@ -49,9 +46,11 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.jjwt.impl)
+    testRuntimeOnly(libs.jjwt.jackson)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
-    // Legacy jsr310 kept for existing tests only — removed in PROTO-1.3 alongside test cleanup.
+    // Legacy jsr310 kept for existing tests only — removed in follow-up test cleanup.
     testImplementation(libs.jackson.datatype.jsr310)
 //    testImplementation(libs.jackson.annotations)
     testImplementation(libs.reflections)

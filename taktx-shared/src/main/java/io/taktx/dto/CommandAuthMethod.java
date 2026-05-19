@@ -7,9 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum CommandAuthMethod {
   /** JWT-only authorization — {@code tx-auth} verified, no Ed25519 header present. */
   JWT,

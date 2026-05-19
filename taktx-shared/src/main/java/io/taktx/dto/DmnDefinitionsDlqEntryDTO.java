@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,7 +19,6 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@RegisterForReflection
 public class DmnDefinitionsDlqEntryDTO extends DlqEntryDTO {
   private String dmnDefinitionId;
   private XmlDmnDefinitionsDTO value;

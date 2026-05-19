@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -21,7 +20,6 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@RegisterForReflection
 public class ProcessInstanceDlqEntryDTO extends DlqEntryDTO {
   private UUID processInstanceId;
   private ProcessInstanceTriggerDTO trigger;

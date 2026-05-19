@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,7 +19,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode
 @ToString
-@RegisterForReflection
 public abstract class InstanceUpdateDTO {
   /**
    * Structured trust data for the command currently being processed when this update was emitted.

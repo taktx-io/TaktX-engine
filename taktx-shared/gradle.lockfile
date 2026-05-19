@@ -3,12 +3,11 @@
 # This file is expected to be part of source control.
 at.yawk.lz4:lz4-java:1.10.1=compileProtoPath,runtimeClasspath,testCompileProtoPath,testRuntimeClasspath
 com.cronutils:cron-utils:9.2.1=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-annotations:2.21=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.21.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.21.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.21.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-annotations:2.21=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
 com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.21.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
 com.github.luben:zstd-jni:1.5.6-10=compileProtoPath,runtimeClasspath,testCompileProtoPath,testRuntimeClasspath
 com.google.code.findbugs:jsr305:3.0.2=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
 com.google.protobuf:protobuf-javalite:4.29.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
@@ -19,8 +18,8 @@ com.sun.xml.bind.external:relaxng-datatype:4.0.6=xjc
 com.sun.xml.bind.external:rngom:4.0.6=xjc
 com.sun.xml.dtd-parser:dtd-parser:1.5.1=xjc
 io.jsonwebtoken:jjwt-api:0.13.0=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-io.jsonwebtoken:jjwt-impl:0.13.0=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-io.jsonwebtoken:jjwt-jackson:0.13.0=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+io.jsonwebtoken:jjwt-impl:0.13.0=runtimeClasspath,testRuntimeClasspath
+io.jsonwebtoken:jjwt-jackson:0.13.0=testRuntimeClasspath
 io.quarkus:quarkus-bootstrap-runner:3.35.3=compileClasspath,compileProtoPath
 io.quarkus:quarkus-classloader-commons:3.35.3=compileClasspath,compileProtoPath
 io.quarkus:quarkus-core:3.35.3=compileClasspath,compileProtoPath

@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import lombok.*;
 
@@ -23,8 +21,6 @@ import lombok.*;
 @Builder
 @EqualsAndHashCode
 @ToString
-@RegisterForReflection
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class GlobalConfigurationDTO {
   @Builder.Default private boolean signingEnabled = false;
   @Builder.Default private boolean engineRequiresAuthorization = false;

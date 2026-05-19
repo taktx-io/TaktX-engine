@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -21,7 +20,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-@RegisterForReflection
 public class CancelInstanceSignalSubscriptionDTO extends SignalDTO {
 
   private UUID processInstanceId;

@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-1.3 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -128,10 +128,12 @@ Add `com.google.protobuf` Gradle plugin to `taktx-shared/build.gradle.kts`. Conf
 
 ### PROTO-1.3 — Remove Jackson from `taktx-shared` and `taktx-client`
 
-**Status:** ⏳ Blocked — depends on E2 (complete) and E3 (complete)
+**Status:** ✅ Complete (2026-05-19)
 
 **Description**  
-Complete Jackson removal from the two public library modules. This includes removing `VariablesDTO` (replaced in E2), all `@JsonFormat`, `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonInclude`, `@JsonIgnore` annotations, all 8 `*TypeIdResolver` classes, and `JsonSerializer`/`JsonDeserializer`/`FaultTolerantJsonDeserializer` (replaced in E3).
+Complete Jackson removal from the two public library modules. This includes removing Jackson-only annotations and infrastructure (`@JsonFormat`, `@JsonTypeInfo`, `@JsonTypeIdResolver`, `@JsonInclude`, `@JsonIgnore`, shared JSON serdes, object-mapper wiring, and the old resolver classes), switching client/shared serialization to protobuf-backed implementations from E2/E3, and removing Quarkus `@RegisterForReflection` usage that was only needed for the old Jackson path.
+
+Public `io.taktx.dto.*` types remain in place as the compatibility API surface for now, but they are no longer Jackson-backed and no Jackson runtime dependency remains in either module.
 
 **Scope**
 - Delete `taktx-shared/src/main/java/io/taktx/serdes/JsonSerializer.java`
@@ -139,7 +141,7 @@ Complete Jackson removal from the two public library modules. This includes remo
 - Delete `taktx-shared/src/main/java/io/taktx/serdes/FaultTolerantJsonDeserializer.java`
 - Delete `taktx-shared/src/main/java/io/taktx/serdes/SigningSerializer.java` (replaced in E3)
 - Delete all 8 `*TypeIdResolver.java` files in `taktx-shared/src/main/java/io/taktx/`
-- Delete all DTO classes in `taktx-shared/src/main/java/io/taktx/dto/` (202 files — replaced by generated proto classes + thin wrapper helpers)
+- Keep the public `io.taktx.dto.*` compatibility types for now, but remove all Jackson coupling from them and from the surrounding serializers/deserializers
 - Remove all Jackson `api`/`implementation` declarations from `taktx-shared/build.gradle.kts` (except `jackson-databind` which stays as `testImplementation` only until tests are updated in E6)
 - Remove `jackson-cbor`, `jackson-datatype-jsr310` from `taktx-client/build.gradle.kts`
 - Remove `@RegisterForReflection` annotations (Quarkus-specific — proto-generated classes do not need them; reflection is registered differently in E4.11)
@@ -148,9 +150,9 @@ Complete Jackson removal from the two public library modules. This includes remo
 **Note:** This item should be done as a single commit after E2 and E3 are complete so the build does not break mid-way.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-shared:build :taktx-client:build` succeeds.
-- [ ] `grep -r "CBORFactory\|JsonFormat\|JsonTypeInfo\|TypeIdResolver\|ObjectMapper" taktx-shared/src/main taktx-client/src/main` returns zero results.
-- [ ] No Jackson runtime JARs appear in `taktx-shared` or `taktx-client` runtime classpaths.
+- [x] `./gradlew :taktx-shared:build :taktx-client:build` succeeds.
+- [x] `grep -r "CBORFactory\|JsonFormat\|JsonTypeInfo\|TypeIdResolver\|ObjectMapper" taktx-shared/src/main taktx-client/src/main` returns zero results.
+- [x] No Jackson runtime JARs appear in `taktx-shared` or `taktx-client` runtime classpaths.
 
 **Dependencies:** E2 (complete), E3 (complete)  
 **Estimate:** 1 day

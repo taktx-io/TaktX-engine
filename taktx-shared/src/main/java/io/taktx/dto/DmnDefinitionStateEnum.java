@@ -7,10 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum DmnDefinitionStateEnum {
   ACTIVE("A"),
   INACTIVE("I");
@@ -21,7 +17,6 @@ public enum DmnDefinitionStateEnum {
     this.code = code;
   }
 
-  @JsonValue
   public String getCode() {
     return code;
   }

@@ -8,13 +8,19 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.StartCommandDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import io.taktx.serdes.ProtoMappedSerializer;
 
-/** A JSON serializer for StartCommandDTO objects. */
-public class StartCommandSerializer extends JsonSerializer<StartCommandDTO> {
+/** A protobuf serializer for StartCommandDTO objects. */
+public class StartCommandSerializer extends ProtoMappedSerializer<StartCommandDTO> {
 
   /** Constructor for StartCommandSerializer. */
   public StartCommandSerializer() {
     super(StartCommandDTO.class);
+  }
+
+  @Override
+  protected com.google.protobuf.MessageLite toProto(StartCommandDTO data) {
+    return ProcessInstanceTriggerProtoMapper.toProto(data);
   }
 }

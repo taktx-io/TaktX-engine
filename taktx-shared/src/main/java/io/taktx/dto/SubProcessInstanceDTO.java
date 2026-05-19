@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,6 @@ import lombok.ToString;
 @ToString(callSuper = true)
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@RegisterForReflection
 public class SubProcessInstanceDTO extends ActivityInstanceDTO implements WithFlowNodeInstancesDTO {
 
   private ScopeDTO scope;

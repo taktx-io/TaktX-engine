@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.Nullable;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -22,7 +20,6 @@ import lombok.ToString;
 @Setter
 @EqualsAndHashCode
 @NoArgsConstructor
-@RegisterForReflection
 public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO {
 
   private UUID processInstanceId;
@@ -36,13 +33,11 @@ public abstract class ProcessInstanceTriggerDTO implements SchedulableMessageDTO
   }
 
   @Deprecated
-  @JsonIgnore
   public CommandTrustMetadataDTO getCommandTrustMetadata() {
     return currentTrustMetadata;
   }
 
   @Deprecated
-  @JsonIgnore
   public void setCommandTrustMetadata(CommandTrustMetadataDTO commandTrustMetadata) {
     this.currentTrustMetadata = commandTrustMetadata;
   }

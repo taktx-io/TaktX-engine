@@ -9,10 +9,10 @@ package io.taktx.security;
 
 /**
  * Process-wide holder for the Ed25519 signing function used by {@link
- * io.taktx.serdes.SigningSerializer}.
+ * io.taktx.serdes.ProtoSigningSerializer}.
  *
  * <p>Registered once at engine startup by {@code MessageSigningService} and at worker startup by
- * {@code TaktXClient}. The {@link io.taktx.serdes.SigningSerializer} picks it up in {@code
+ * {@code TaktXClient}. The {@link io.taktx.serdes.ProtoSigningSerializer} picks it up in {@code
  * serialize()} without needing constructor injection — even though Kafka instantiates serializers
  * reflectively.
  *

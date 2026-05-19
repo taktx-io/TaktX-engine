@@ -14,7 +14,6 @@ import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -28,7 +27,6 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RegisterForReflection
 public class RecurringMessageScheduleDTO extends MessageScheduleDTO {
   private static final CronDefinition CRON_DEFINITION =
       CronDefinitionBuilder.instanceDefinitionFor(QUARTZ);

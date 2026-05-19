@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,7 +17,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-@RegisterForReflection
 public class IncidentInfoDTO {
   private List<Long> elementInstanceIdPath;
   private String message;
@@ -31,6 +28,5 @@ public class IncidentInfoDTO {
    * failure that also produced a DLQ entry. Null when no corresponding DLQ entry exists. Use this
    * to navigate directly from an incident to the matching DLQ entry in the console.
    */
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String dlqEntryRef;
 }

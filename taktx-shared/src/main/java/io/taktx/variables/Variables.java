@@ -19,8 +19,8 @@ import java.util.Map;
 /**
  * Factory and conversion utilities for {@link VariableValue} proto messages.
  *
- * <p>Replaces {@code VariablesDTO.of(...)} and {@code ObjectMapper.valueToTree(...)} at every call
- * site. All methods are null-safe: a Java {@code null} input produces a {@link #nullValue()}.
+ * <p>Replaces the legacy variable-tree conversion helpers at every call site. All methods are
+ * null-safe: a Java {@code null} input produces a {@link #nullValue()}.
  *
  * <p>Use {@link #of(Object)} to convert arbitrary Java objects (Map, List, primitives, null) to the
  * proto representation. Use {@link #toJavaObject(VariableValue)} to convert back for FEEL/DMN

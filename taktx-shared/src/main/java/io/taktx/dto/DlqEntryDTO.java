@@ -7,11 +7,9 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @EqualsAndHashCode
 @NoArgsConstructor
-@RegisterForReflection
 public abstract class DlqEntryDTO {}

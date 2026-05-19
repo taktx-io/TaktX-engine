@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
 /**
  * Machine-readable role for a signing key, determining what operations the key is trusted to
  * authorize.
@@ -18,7 +16,6 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  *
  * <p>Trust hierarchy: {@code PLATFORM ⊇ ENGINE ⊇ CLIENT}.
  */
-@RegisterForReflection
 public enum KeyRole {
   /**
    * Engine key — trusted to authorize entry commands (StartCommandDTO, AbortTriggerDTO,

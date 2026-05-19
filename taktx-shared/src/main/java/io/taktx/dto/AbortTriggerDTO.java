@@ -7,7 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.UUID;
 import lombok.EqualsAndHashCode;
@@ -19,7 +18,6 @@ import lombok.ToString;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@RegisterForReflection
 public class AbortTriggerDTO extends ProcessInstanceTriggerDTO {
   private List<Long> elementInstanceIdPath;
 

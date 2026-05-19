@@ -98,7 +98,6 @@ import io.taktx.proto.ThrowEventInstanceMessage;
 import io.taktx.proto.TimerSubscriptionMessage;
 import io.taktx.proto.UserTaskInstanceMessage;
 import io.taktx.proto.Uuid;
-import io.taktx.variables.VariableValueDtoMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -572,10 +571,10 @@ public final class FlowNodeInstanceProtoMapper {
     builder.setIteration(dto.isIteration());
     builder.setNextIterationId(dto.getNextIterationId());
     if (dto.getInputElement() != null) {
-      builder.setInputElement(VariableValueDtoMapper.toVariableValue(dto.getInputElement()));
+      builder.setInputElement(dto.getInputElement());
     }
     if (dto.getOutputElement() != null) {
-      builder.setOutputElement(VariableValueDtoMapper.toVariableValue(dto.getOutputElement()));
+      builder.setOutputElement(dto.getOutputElement());
     }
     builder.setLoopCnt(dto.getLoopCnt());
     return builder.build();
@@ -611,14 +610,8 @@ public final class FlowNodeInstanceProtoMapper {
     applyBase(dto, parseBase(message, FlowNodeInstanceMessage.parser(), "FlowNodeInstanceMessage"));
     dto.setIteration(message.getIteration());
     dto.setNextIterationId(message.getNextIterationId());
-    dto.setInputElement(
-        message.hasInputElement()
-            ? VariableValueDtoMapper.toJsonNode(message.getInputElement())
-            : null);
-    dto.setOutputElement(
-        message.hasOutputElement()
-            ? VariableValueDtoMapper.toJsonNode(message.getOutputElement())
-            : null);
+    dto.setInputElement(message.hasInputElement() ? message.getInputElement() : null);
+    dto.setOutputElement(message.hasOutputElement() ? message.getOutputElement() : null);
     dto.setLoopCnt(message.getLoopCnt());
   }
 

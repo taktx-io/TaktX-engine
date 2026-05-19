@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,8 +16,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @NoArgsConstructor
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
-@RegisterForReflection
 public class DmnDefinitionKey implements Comparable<DmnDefinitionKey> {
   private String dmnDefinitionId;
   private Integer version;

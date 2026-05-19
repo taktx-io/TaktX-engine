@@ -7,10 +7,8 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.UUID;
 
-@RegisterForReflection
 public interface SchedulableMessageDTO {
   UUID getProcessInstanceId();
 

@@ -7,13 +7,11 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @Getter
-@RegisterForReflection
 public abstract class MessageScheduleDTO {
 
   protected SchedulableMessageDTO message;

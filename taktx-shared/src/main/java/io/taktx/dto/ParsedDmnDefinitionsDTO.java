@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,8 +21,6 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
-@RegisterForReflection
 public class ParsedDmnDefinitionsDTO {
   private DmnDefinitionsKey definitionsKey;
   private String name;

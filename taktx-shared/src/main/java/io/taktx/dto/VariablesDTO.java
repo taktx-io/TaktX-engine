@@ -7,37 +7,29 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory removed in PROTO-1.2; this class is replaced by proto VariableValue in
-// PROTO-2.1.
-import io.quarkus.runtime.annotations.RegisterForReflection;
+import io.taktx.proto.VariableValue;
+import io.taktx.variables.Variables;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 @Getter
-@Setter
 @ToString
 @NoArgsConstructor
 @EqualsAndHashCode
-@JsonFormat(shape = Shape.ARRAY)
-@RegisterForReflection
 public class VariablesDTO {
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private Map<String, VariableValue> variables = new HashMap<>();
 
-  private Map<String, JsonNode> variables;
+  public VariablesDTO(Map<String, VariableValue> variables) {
+    setVariables(variables);
+  }
 
-  public VariablesDTO(Map<String, JsonNode> variables) {
-    this.variables = new HashMap<>(variables);
+  public void setVariables(Map<String, VariableValue> variables) {
+    this.variables = normalizeVariables(variables);
   }
 
   public static VariablesDTO empty() {
@@ -45,42 +37,56 @@ public class VariablesDTO {
   }
 
   public static VariablesDTO of(String key, Object value) {
-    return new VariablesDTO(Map.of(key, OBJECT_MAPPER.valueToTree(value)));
+    return new VariablesDTO(Map.of(key, Variables.of(value)));
   }
 
   public static VariablesDTO ofObjectMap(Map<String, Object> variables) {
-    Map<String, JsonNode> variablesMap = OBJECT_MAPPER.convertValue(variables, Map.class);
+    Map<String, VariableValue> variablesMap = new HashMap<>();
+    if (variables != null) {
+      variables.forEach((key, value) -> variablesMap.put(key, Variables.of(value)));
+    }
     return new VariablesDTO(variablesMap);
   }
 
-  public static VariablesDTO ofJsonMap(Map<String, JsonNode> variables) {
+  public static VariablesDTO ofVariableMap(Map<String, VariableValue> variables) {
     return new VariablesDTO(variables);
   }
 
   public static VariablesDTO of(String key, Object value, String key2, Object value2) {
-    return new VariablesDTO(
-        Map.of(key, OBJECT_MAPPER.valueToTree(value), key2, OBJECT_MAPPER.valueToTree(value2)));
+    return new VariablesDTO(Map.of(key, Variables.of(value), key2, Variables.of(value2)));
   }
 
   public static VariablesDTO of(
       String key, Object value, String key2, Object value2, String key3, Object value3) {
-    JsonNode v1 = OBJECT_MAPPER.valueToTree(value);
-    JsonNode v2 = OBJECT_MAPPER.valueToTree(value2);
-    JsonNode v3 = OBJECT_MAPPER.valueToTree(value3);
-    return new VariablesDTO(Map.of(key, v1, key2, v2, key3, v3));
+    return new VariablesDTO(
+        Map.of(key, Variables.of(value), key2, Variables.of(value2), key3, Variables.of(value3)));
   }
 
-  public void put(String key, JsonNode value) {
-    variables.put(key, value);
+  public void put(String key, VariableValue value) {
+    variables.put(key, normalize(value));
   }
 
-  @JsonIgnore
-  public JsonNode get(String key) {
+  public VariableValue get(String key) {
     return variables.get(key);
   }
 
-  @JsonIgnore
   public boolean containsKey(String key) {
     return variables.containsKey(key);
+  }
+
+  private static Map<String, VariableValue> normalizeVariables(
+      Map<String, VariableValue> variables) {
+    HashMap<String, VariableValue> normalized = new HashMap<>();
+    if (variables != null) {
+      variables.forEach((key, value) -> normalized.put(key, normalize(value)));
+    }
+    return normalized;
+  }
+
+  private static VariableValue normalize(VariableValue value) {
+    if (value != null) {
+      value.getSerializedSize();
+    }
+    return value;
   }
 }

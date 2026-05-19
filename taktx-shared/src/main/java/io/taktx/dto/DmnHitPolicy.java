@@ -7,9 +7,6 @@
  */
 package io.taktx.dto;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public enum DmnHitPolicy {
   UNIQUE,
   FIRST,

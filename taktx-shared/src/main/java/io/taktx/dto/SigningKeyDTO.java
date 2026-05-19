@@ -7,8 +7,6 @@
  */
 package io.taktx.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.time.Instant;
 import lombok.*;
 
@@ -31,8 +29,6 @@ import lombok.*;
 @Builder
 @EqualsAndHashCode
 @ToString
-@RegisterForReflection
-@JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public class SigningKeyDTO {
 
   /** Lifecycle status of a distributed public key. */
