@@ -147,7 +147,8 @@ public abstract class FlowNodeInstanceProcessor<
 
     processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesContinued();
 
-    variableScope.merge(trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
+    variableScope.merge(
+        trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
 
     long now = clock.instant().toEpochMilli();
 

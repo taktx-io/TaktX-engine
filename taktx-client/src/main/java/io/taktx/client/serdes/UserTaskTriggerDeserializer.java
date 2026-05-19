@@ -36,5 +36,3 @@ public class UserTaskTriggerDeserializer implements Deserializer<UserTaskTrigger
     delegate.close();
   }
 }
-
-

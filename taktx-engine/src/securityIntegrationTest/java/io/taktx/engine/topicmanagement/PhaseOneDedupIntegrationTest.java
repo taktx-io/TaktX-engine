@@ -77,6 +77,7 @@ class PhaseOneDedupIntegrationTest {
   private static final String TENANT = "test-tenant";
   private static final String NAMESPACE = "default";
   private static final String LOCAL_PREFIX = TENANT + "." + NAMESPACE + ".";
+
   @Container
   private static final ConfluentKafkaContainer KAFKA =
       new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
@@ -355,7 +356,8 @@ class PhaseOneDedupIntegrationTest {
         .to(
             outputTopic,
             Produced.with(
-                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
+                TopologyProducer.TOPIC_META_KEY_SERDE,
+                TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
 
     return builder.build();
   }

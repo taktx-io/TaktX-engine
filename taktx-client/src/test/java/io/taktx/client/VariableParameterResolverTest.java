@@ -51,8 +51,7 @@ class VariableParameterResolverTest {
             .variables(
                 VariablesDTO.ofVariableMap(
                     Variables.map(
-                        "order",
-                        new OrderContext("INV-1", Instant.parse("2026-05-19T10:15:30Z")))))
+                        "order", new OrderContext("INV-1", Instant.parse("2026-05-19T10:15:30Z")))))
             .build();
 
     Object resolved = resolver.resolve(trigger);
@@ -63,7 +62,8 @@ class VariableParameterResolverTest {
 
   @Test
   void resolvesFullVariableScopeIntoCustomObject() {
-    VariablesObjectParameterResolver resolver = new VariablesObjectParameterResolver(OrderWorkerInput.class);
+    VariablesObjectParameterResolver resolver =
+        new VariablesObjectParameterResolver(OrderWorkerInput.class);
     ExternalTaskTriggerDTO trigger =
         ExternalTaskTriggerDTO.builder()
             .variables(

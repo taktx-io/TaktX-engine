@@ -51,7 +51,8 @@ public final class TopicMetaDlqEntryProtoMapper {
 
   private static Map<String, byte[]> toHeaders(Map<String, ByteString> headers) {
     Map<String, byte[]> mappedHeaders = new LinkedHashMap<>();
-    headers.forEach((key, value) -> mappedHeaders.put(key, value == null ? null : value.toByteArray()));
+    headers.forEach(
+        (key, value) -> mappedHeaders.put(key, value == null ? null : value.toByteArray()));
     return mappedHeaders;
   }
 
@@ -66,4 +67,3 @@ public final class TopicMetaDlqEntryProtoMapper {
     return value.toByteArray();
   }
 }
-

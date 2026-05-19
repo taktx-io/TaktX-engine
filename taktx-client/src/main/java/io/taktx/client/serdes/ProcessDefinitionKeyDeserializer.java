@@ -18,4 +18,3 @@ public class ProcessDefinitionKeyDeserializer implements Deserializer<ProcessDef
     return data == null ? null : io.taktx.util.ProcessDefinitionKeyDeserializer.fromBytes(data);
   }
 }
-

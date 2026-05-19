@@ -21,4 +21,3 @@ public class DmnDefinitionKeyDeserializer implements Deserializer<DmnDefinitionK
     return delegate.deserialize(topic, data);
   }
 }
-

@@ -31,8 +31,8 @@ import io.taktx.dto.ScopeDTO;
 import io.taktx.dto.SetVariableTriggerDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.StartFlowElementTriggerDTO;
-import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.VariableKeyDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.pd.Stores;
@@ -379,7 +379,9 @@ public class ProcessInstanceProcessor
             null, processInstanceId, null, flowElements, instanceMapper, flowNodeInstanceStore);
     VariableScope variableScope = VariableScope.empty(processInstanceId, variablesStore);
     variableScope.merge(
-        startCommand.getVariables() == null ? Map.of() : startCommand.getVariables().getVariables());
+        startCommand.getVariables() == null
+            ? Map.of()
+            : startCommand.getVariables().getVariables());
     variableScopeThreadLocal.set(variableScope);
 
     Set<IoVariableMapping> ioVariableMappings = dtoMapper.map(startCommand.getOutputMappings());

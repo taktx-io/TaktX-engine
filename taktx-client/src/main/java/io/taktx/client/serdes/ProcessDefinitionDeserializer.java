@@ -11,4 +11,3 @@ import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 
 /** Client deserializer for protobuf-backed process definitions. */
 public class ProcessDefinitionDeserializer extends ProcessDefinitionDtoDeserializer {}
-

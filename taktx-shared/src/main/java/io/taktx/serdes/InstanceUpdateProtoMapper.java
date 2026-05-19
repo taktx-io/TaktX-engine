@@ -571,9 +571,7 @@ public final class InstanceUpdateProtoMapper {
       InstanceScheduleKeyMessage message) {
     return new InstanceScheduleKeyDTO(
         message.hasProcessInstanceId() ? toDto(message.getProcessInstanceId()) : null,
-        message.getElementInstanceIdPathCount() == 0
-            ? null
-            : new ArrayList<>(message.getElementInstanceIdPathList()),
+        new ArrayList<>(message.getElementInstanceIdPathList()),
         emptyToNull(message.getElementId()),
         toDto(message.getTimeBucket()));
   }

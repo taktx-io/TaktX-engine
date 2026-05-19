@@ -123,7 +123,8 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
       if (parts.length < 2) {
         return "jwt:" + sha256(rawJwt);
       }
-      String decodedPayload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+      String decodedPayload =
+          new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
       String issuer = textValue(decodedPayload, "iss");
       String auditId = textValue(decodedPayload, "auditId");
       if (issuer != null && !issuer.isBlank() && auditId != null && !auditId.isBlank()) {
@@ -170,7 +171,9 @@ public class ProcessInstanceTriggerEnvelopeDeserializer
         case 'u' -> {
           if (index + 4 >= value.length()) {
             throw new IllegalArgumentException(
-                "Invalid JSON unicode escape: " + JSON_UNICODE_ESCAPE_PREFIX + value.substring(index + 1));
+                "Invalid JSON unicode escape: "
+                    + JSON_UNICODE_ESCAPE_PREFIX
+                    + value.substring(index + 1));
           }
           String hex = value.substring(index + 1, index + 5);
           result.append((char) Integer.parseInt(hex, 16));

@@ -192,10 +192,7 @@ public class ProcessInstanceUpdateConsumer {
         strategy == InstanceUpdateStartStrategy.EARLIEST ? "earliest" : "latest";
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            groupId,
-            TaktUUIDDeserializer.class,
-            InstanceUpdateDeserializer.class,
-            autoOffsetReset);
+            groupId, TaktUUIDDeserializer.class, InstanceUpdateDeserializer.class, autoOffsetReset);
     return new KafkaConsumer<>(props);
   }
 }

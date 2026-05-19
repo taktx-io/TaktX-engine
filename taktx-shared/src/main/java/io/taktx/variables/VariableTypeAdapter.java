@@ -12,9 +12,9 @@ import io.taktx.proto.VariableValue;
 /**
  * Pluggable adapter for Java leaf types that should map to and from {@link VariableValue}.
  *
- * <p>Adapters are intended for scalar-like value types such as {@code UUID} or {@code Instant}. They
- * are consulted before reflective bean mapping. Implementations should therefore be deterministic,
- * fast, and side-effect free.
+ * <p>Adapters are intended for scalar-like value types such as {@code UUID} or {@code Instant}.
+ * They are consulted before reflective bean mapping. Implementations should therefore be
+ * deterministic, fast, and side-effect free.
  */
 public interface VariableTypeAdapter {
 
@@ -27,4 +27,3 @@ public interface VariableTypeAdapter {
   /** Decodes a plain Java value into the requested target type. */
   Object fromJavaObject(Object value, Class<?> targetType);
 }
-

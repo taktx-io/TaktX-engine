@@ -16,7 +16,6 @@ public class MapParameterResolver implements ParameterResolver {
     // Default constructor used by the resolver factory.
   }
 
-
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     return ClientValueMapper.toPlainJavaMap(externalTaskTriggerDTO.getVariables());

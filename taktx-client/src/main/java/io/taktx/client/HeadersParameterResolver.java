@@ -27,7 +27,6 @@ public class HeadersParameterResolver implements ParameterResolver {
     this.type = type;
   }
 
-
   /**
    * Resolves the parameter by extracting headers.
    *

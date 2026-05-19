@@ -78,8 +78,7 @@ class SigningRoundTripTest {
 
   /**
    * Full round trip: ProtoSigningSerializer signs the protobuf bytes → InstanceUpdateDeserializer
-   * verifies and deserializes. This is the exact path a live worker
-   * takes.
+   * verifies and deserializes. This is the exact path a live worker takes.
    */
   @Test
   void signingSerializer_to_instanceUpdateDeserializer_roundTrip() {

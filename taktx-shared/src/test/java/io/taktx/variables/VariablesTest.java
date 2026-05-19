@@ -208,7 +208,9 @@ class VariablesTest {
 
   @Test
   void of_object_handlesJavaBean() {
-    VariableValue value = Variables.of(new TestBean("alpha", 7, UUID.fromString("123e4567-e89b-12d3-a456-426614174000")));
+    VariableValue value =
+        Variables.of(
+            new TestBean("alpha", 7, UUID.fromString("123e4567-e89b-12d3-a456-426614174000")));
 
     assertThat(value.getKindCase()).isEqualTo(VariableValue.KindCase.MAP_VALUE);
     assertThat(Variables.toJavaObject(value))
@@ -233,7 +235,8 @@ class VariablesTest {
   @Test
   void of_object_throwsForUnsupportedType() {
     Object unsupported = new Object();
-    assertThatThrownBy(() -> Variables.of(unsupported)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> Variables.of(unsupported))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

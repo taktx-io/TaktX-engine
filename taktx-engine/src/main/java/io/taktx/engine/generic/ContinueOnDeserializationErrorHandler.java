@@ -19,10 +19,9 @@ import org.slf4j.LoggerFactory;
  * Kafka Streams deserialization exception handler that logs the poison record and continues
  * processing, rather than stopping the stream thread.
  *
- * <p>A deserialization failure in Kafka Streams (e.g. a corrupt protobuf payload, a
- * null/malformed UUID key, or a signing-aware Serde rejection) would by default stop the affected
- * stream thread with
- * the built-in {@code LogAndFailExceptionHandler}. This handler logs full details about the
+ * <p>A deserialization failure in Kafka Streams (e.g. a corrupt protobuf payload, a null/malformed
+ * UUID key, or a signing-aware Serde rejection) would by default stop the affected stream thread
+ * with the built-in {@code LogAndFailExceptionHandler}. This handler logs full details about the
  * offending record and tells Kafka Streams to skip it, keeping the engine alive.
  *
  * <p>Configure via {@code application.properties} using the raw Kafka Streams property key (the

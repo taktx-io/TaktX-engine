@@ -14,8 +14,6 @@ import io.taktx.serdes.TopicMetaDtoDeserializer;
 public class TopicMetaDeserializer extends TopicMetaDtoDeserializer {
 
   public Class<TopicMetaDTO> getClazz() {
-	return TopicMetaDTO.class;
+    return TopicMetaDTO.class;
   }
 }
-
-

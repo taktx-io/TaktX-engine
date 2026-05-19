@@ -21,4 +21,3 @@ public class DlqEnvelopeDeserializer implements Deserializer<DlqEnvelope> {
     return delegate.deserialize(topic, data);
   }
 }
-

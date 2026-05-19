@@ -22,4 +22,3 @@ public class TopicMetaDlqEntrySerializer extends ProtoMappedSerializer<TopicMeta
     return TopicMetaDlqEntryProtoMapper.toProto(data);
   }
 }
-

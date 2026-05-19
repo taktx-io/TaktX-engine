@@ -27,7 +27,8 @@ class FeelExpressionHandlerImplTest {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
     Object result =
-        asJavaObject(expressionHandler.processFeelExpression("test", VariableScope.empty(null, null)));
+        asJavaObject(
+            expressionHandler.processFeelExpression("test", VariableScope.empty(null, null)));
     assertThat(result).isEqualTo("test");
   }
 
@@ -95,7 +96,8 @@ class FeelExpressionHandlerImplTest {
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
     VariableScope vars = VariableScope.empty(null, null);
 
-    Object result = asJavaObject(expressionHandler.processFeelExpression("=for i in 1..100 return i", vars));
+    Object result =
+        asJavaObject(expressionHandler.processFeelExpression("=for i in 1..100 return i", vars));
     assertThat(result).isInstanceOf(List.class);
     assertThat((List<?>) result).hasSize(100);
   }

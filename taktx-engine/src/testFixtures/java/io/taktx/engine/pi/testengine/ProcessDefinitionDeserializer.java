@@ -9,6 +9,5 @@
 package io.taktx.engine.pi.testengine;
 
 import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
-import io.taktx.dto.ProcessDefinitionDTO;
 
 public class ProcessDefinitionDeserializer extends ProcessDefinitionDtoDeserializer {}

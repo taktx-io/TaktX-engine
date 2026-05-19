@@ -118,6 +118,16 @@ class InstanceUpdateProtoMapperTest {
             "boundary-timer-1",
             TimeBucket.MINUTE));
 
+    TimerSubscriptionDTO processLevelTimerSubscription = new TimerSubscriptionDTO();
+    processLevelTimerSubscription.setSubScriptionType(SubScriptionType.STARTING);
+    processLevelTimerSubscription.setElementId("process-level-timer-1");
+    processLevelTimerSubscription.setScheduledKey(
+        new InstanceScheduleKeyDTO(
+            UUID.fromString("33333333-3333-3333-3333-333333333333"),
+            List.of(),
+            "process-level-timer-1",
+            TimeBucket.MINUTE));
+
     MessageSubscriptionDTO messageSubscription = new MessageSubscriptionDTO();
     messageSubscription.setSubScriptionType(SubScriptionType.STARTING);
     messageSubscription.setElementId("message-catch-1");
@@ -133,7 +143,7 @@ class InstanceUpdateProtoMapperTest {
     subscriptions.setInstanceSubscriptions(
         new LinkedHashMap<>(
             Map.of(
-                -1L, List.of(messageSubscription),
+                -1L, List.of(messageSubscription, processLevelTimerSubscription),
                 200L, List.of(timerSubscription, signalSubscription))));
 
     ScopeDTO scope =

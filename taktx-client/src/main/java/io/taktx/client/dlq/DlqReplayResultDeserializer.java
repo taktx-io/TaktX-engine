@@ -21,4 +21,3 @@ public class DlqReplayResultDeserializer implements Deserializer<DlqReplayResult
     return delegate.deserialize(topic, data);
   }
 }
-

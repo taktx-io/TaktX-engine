@@ -14,8 +14,6 @@ import io.taktx.serdes.InstanceUpdateDtoDeserializer;
 public class InstanceUpdateDeserializer extends InstanceUpdateDtoDeserializer {
 
   public Class<InstanceUpdateDTO> getClazz() {
-	return InstanceUpdateDTO.class;
+    return InstanceUpdateDTO.class;
   }
 }
-
-

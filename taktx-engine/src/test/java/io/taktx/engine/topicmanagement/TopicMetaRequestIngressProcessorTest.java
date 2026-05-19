@@ -55,6 +55,7 @@ class TopicMetaRequestIngressProcessorTest {
   private static final String OUTPUT_TOPIC = "topic-meta-requested-dlq-output";
   private static final String LOCAL_PREFIX = "acme.prod.";
   private static final String REQUESTED_TOPIC = LOCAL_PREFIX + "topic-meta-requested";
+
   @Test
   void authorizedValidRequest_isHandedOffToDynamicTopicManager() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
@@ -238,7 +239,8 @@ class TopicMetaRequestIngressProcessorTest {
         .to(
             OUTPUT_TOPIC,
             Produced.with(
-                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
+                TopologyProducer.TOPIC_META_KEY_SERDE,
+                TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
 
     Properties props = new Properties();
     props.put(

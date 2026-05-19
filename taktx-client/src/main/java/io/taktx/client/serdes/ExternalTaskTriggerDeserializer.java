@@ -37,5 +37,3 @@ public class ExternalTaskTriggerDeserializer implements Deserializer<ExternalTas
     delegate.close();
   }
 }
-
-

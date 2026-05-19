@@ -55,11 +55,18 @@ class ProcessInstanceProtoMapperTest {
         new InstanceScheduleKeyDTO(
             processInstanceId, List.of(9L, 10L), "timer-boundary-1", TimeBucket.MINUTE));
 
+    TimerSubscriptionDTO processLevelTimerSubscription = new TimerSubscriptionDTO();
+    processLevelTimerSubscription.setSubScriptionType(SubScriptionType.STARTING);
+    processLevelTimerSubscription.setElementId("process-level-timer-1");
+    processLevelTimerSubscription.setScheduledKey(
+        new InstanceScheduleKeyDTO(
+            processInstanceId, List.of(), "process-level-timer-1", TimeBucket.MINUTE));
+
     SubscriptionsDTO subscriptions = new SubscriptionsDTO();
     subscriptions.setInstanceSubscriptions(
         new LinkedHashMap<>(
             Map.of(
-                -1L, List.of(messageSubscription),
+                -1L, List.of(messageSubscription, processLevelTimerSubscription),
                 200L, List.of(timerSubscription, signalSubscription))));
 
     ScopeDTO scope =
@@ -95,5 +102,12 @@ class ProcessInstanceProtoMapperTest {
         ProcessInstanceProtoMapper.toDto(ProcessInstanceProtoMapper.toProto(original));
 
     assertThat(decoded).isEqualTo(original);
+    TimerSubscriptionDTO decodedProcessLevelTimer =
+        (TimerSubscriptionDTO)
+            decoded.getScope().getSubscriptions().getInstanceSubscriptions().get(-1L).stream()
+                .filter(TimerSubscriptionDTO.class::isInstance)
+                .findFirst()
+                .orElseThrow();
+    assertThat(decodedProcessLevelTimer.getScheduledKey().getElementInstanceIdPath()).isEmpty();
   }
 }

@@ -159,7 +159,8 @@ public final class VariableObjectMapper {
     }
     if (boxedTargetType.isEnum()) {
       @SuppressWarnings({"rawtypes", "unchecked"})
-      Object enumValue = Enum.valueOf((Class<? extends Enum>) boxedTargetType, String.valueOf(value));
+      Object enumValue =
+          Enum.valueOf((Class<? extends Enum>) boxedTargetType, String.valueOf(value));
       return enumValue;
     }
     if (Map.class.isAssignableFrom(boxedTargetType) && value instanceof Map<?, ?>) {
@@ -235,7 +236,8 @@ public final class VariableObjectMapper {
     }
     if (value instanceof Map<?, ?> map) {
       LinkedHashMap<String, VariableValue> result = new LinkedHashMap<>();
-      map.forEach((key, mapValue) -> result.put(String.valueOf(key), toVariableValue(mapValue, visiting)));
+      map.forEach(
+          (key, mapValue) -> result.put(String.valueOf(key), toVariableValue(mapValue, visiting)));
       return VariableValue.newBuilder().setMapValue(Variables.toVarMap(result)).build();
     }
 
@@ -256,7 +258,8 @@ public final class VariableObjectMapper {
     }
     if (source instanceof Map<?, ?> map) {
       LinkedHashMap<String, VariableValue> result = new LinkedHashMap<>();
-      map.forEach((key, value) -> result.put(String.valueOf(key), toVariableValue(value, visiting)));
+      map.forEach(
+          (key, value) -> result.put(String.valueOf(key), toVariableValue(value, visiting)));
       return result;
     }
     enter(source, visiting);
@@ -295,7 +298,8 @@ public final class VariableObjectMapper {
   private static BeanMetadata inspectRecord(Class<?> type) {
     RecordComponent[] components = type.getRecordComponents();
     Constructor<?> canonicalConstructor =
-        findRecordConstructor(type, Arrays.stream(components).map(RecordComponent::getType).toArray(Class[]::new));
+        findRecordConstructor(
+            type, Arrays.stream(components).map(RecordComponent::getType).toArray(Class[]::new));
 
     List<PropertyReader> readers = new ArrayList<>(components.length);
     LinkedHashMap<String, RecordComponentBinding> bindings = new LinkedHashMap<>();
@@ -304,7 +308,8 @@ public final class VariableObjectMapper {
       Method accessor = makeAccessible(component.getAccessor());
       readers.add(new PropertyReader(component.getName(), accessor));
       bindings.put(
-          component.getName(), new RecordComponentBinding(i, component.getType(), component.getName()));
+          component.getName(),
+          new RecordComponentBinding(i, component.getType(), component.getName()));
     }
     readers.sort((left, right) -> left.name.compareTo(right.name));
     return new RecordBeanMetadata(readers, canonicalConstructor, bindings, components.length);
@@ -313,7 +318,8 @@ public final class VariableObjectMapper {
   private static BeanMetadata inspectBean(Class<?> type) {
     try {
       Constructor<?> constructor = findNoArgsConstructor(type);
-      PropertyDescriptor[] descriptors = Introspector.getBeanInfo(type, Object.class).getPropertyDescriptors();
+      PropertyDescriptor[] descriptors =
+          Introspector.getBeanInfo(type, Object.class).getPropertyDescriptors();
       List<PropertyReader> readers = new ArrayList<>();
       LinkedHashMap<String, BeanWriter> writers = new LinkedHashMap<>();
       for (PropertyDescriptor descriptor : descriptors) {
@@ -324,11 +330,13 @@ public final class VariableObjectMapper {
         Method writeMethod = descriptor.getWriteMethod();
         if (writeMethod != null) {
           writers.put(
-              descriptor.getName(), new BeanWriter(makeAccessible(writeMethod), descriptor.getPropertyType()));
+              descriptor.getName(),
+              new BeanWriter(makeAccessible(writeMethod), descriptor.getPropertyType()));
         }
       }
       if (readers.isEmpty()) {
-        throw new IllegalArgumentException("No readable bean properties found on " + type.getName());
+        throw new IllegalArgumentException(
+            "No readable bean properties found on " + type.getName());
       }
       readers.sort((left, right) -> left.name.compareTo(right.name));
       return new JavaBeanMetadata(readers, constructor, writers, type);
@@ -349,11 +357,13 @@ public final class VariableObjectMapper {
     try {
       return makeAccessible(type.getDeclaredConstructor(parameterTypes));
     } catch (ReflectiveOperationException e) {
-      throw new IllegalArgumentException("Cannot access canonical record constructor for " + type.getName(), e);
+      throw new IllegalArgumentException(
+          "Cannot access canonical record constructor for " + type.getName(), e);
     }
   }
 
-  private static <T extends java.lang.reflect.AccessibleObject> T makeAccessible(T accessibleObject) {
+  private static <T extends java.lang.reflect.AccessibleObject> T makeAccessible(
+      T accessibleObject) {
     accessibleObject.setAccessible(true);
     return accessibleObject;
   }
@@ -373,7 +383,9 @@ public final class VariableObjectMapper {
     if (bean instanceof Map<?, ?> map) {
       return normalizeMap(map);
     }
-    if (isSimpleValueType(bean.getClass()) || bean.getClass().isArray() || bean instanceof Collection<?>) {
+    if (isSimpleValueType(bean.getClass())
+        || bean.getClass().isArray()
+        || bean instanceof Collection<?>) {
       throw new IllegalArgumentException(
           "Expected a bean/record/map for variable mapping but got " + bean.getClass().getName());
     }
@@ -446,141 +458,152 @@ public final class VariableObjectMapper {
   }
 
   private static void registerDefaultAdapters() {
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(UUID.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(UUID.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return UUID.fromString(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(Instant.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(((Instant) value).toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return UUID.fromString(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(Instant.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(((Instant) value).toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return Instant.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(LocalDate.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return Instant.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(LocalDate.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return LocalDate.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(LocalDateTime.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return LocalDate.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(LocalDateTime.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return LocalDateTime.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(OffsetDateTime.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return LocalDateTime.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(OffsetDateTime.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return OffsetDateTime.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(ZonedDateTime.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return OffsetDateTime.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(ZonedDateTime.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return ZonedDateTime.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(Duration.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return ZonedDateTime.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(Duration.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        return Duration.parse(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(URI.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            return Duration.parse(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(URI.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        try {
-          return new URI(String.valueOf(value));
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException("Cannot convert value '" + value + "' to URI", e);
-        }
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(URL.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(value.toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            try {
+              return new URI(String.valueOf(value));
+            } catch (URISyntaxException e) {
+              throw new IllegalArgumentException("Cannot convert value '" + value + "' to URI", e);
+            }
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(URL.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(value.toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        try {
-          return new URL(String.valueOf(value));
-        } catch (MalformedURLException e) {
-          throw new IllegalArgumentException("Cannot convert value '" + value + "' to URL", e);
-        }
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(BigInteger.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(((BigInteger) value).toString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            try {
+              return new URL(String.valueOf(value));
+            } catch (MalformedURLException e) {
+              throw new IllegalArgumentException("Cannot convert value '" + value + "' to URL", e);
+            }
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(BigInteger.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(((BigInteger) value).toString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        if (value instanceof Number number) {
-          return BigInteger.valueOf(number.longValue());
-        }
-        return new BigInteger(String.valueOf(value));
-      }
-    });
-    TYPE_ADAPTERS.add(new ExactTypeAdapter(BigDecimal.class) {
-      @Override
-      public VariableValue toVariableValue(Object value) {
-        return Variables.of(((BigDecimal) value).toPlainString());
-      }
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            if (value instanceof Number number) {
+              return BigInteger.valueOf(number.longValue());
+            }
+            return new BigInteger(String.valueOf(value));
+          }
+        });
+    TYPE_ADAPTERS.add(
+        new ExactTypeAdapter(BigDecimal.class) {
+          @Override
+          public VariableValue toVariableValue(Object value) {
+            return Variables.of(((BigDecimal) value).toPlainString());
+          }
 
-      @Override
-      public Object fromJavaObject(Object value, Class<?> targetType) {
-        if (value instanceof BigDecimal decimal) {
-          return decimal;
-        }
-        return new BigDecimal(String.valueOf(value));
-      }
-    });
+          @Override
+          public Object fromJavaObject(Object value, Class<?> targetType) {
+            if (value instanceof BigDecimal decimal) {
+              return decimal;
+            }
+            return new BigDecimal(String.valueOf(value));
+          }
+        });
   }
 
   private abstract static class ExactTypeAdapter implements VariableTypeAdapter {
@@ -605,7 +628,8 @@ public final class VariableObjectMapper {
       this.readers = readers;
     }
 
-    private Map<String, VariableValue> read(Object source, IdentityHashMap<Object, Boolean> visiting) {
+    private Map<String, VariableValue> read(
+        Object source, IdentityHashMap<Object, Boolean> visiting) {
       LinkedHashMap<String, VariableValue> values = new LinkedHashMap<>();
       for (PropertyReader reader : readers) {
         try {
@@ -648,7 +672,11 @@ public final class VariableObjectMapper {
         return constructor.newInstance(arguments);
       } catch (ReflectiveOperationException e) {
         throw new IllegalArgumentException(
-            "Cannot map " + source.getClass().getName() + " to " + constructor.getDeclaringClass().getName(), e);
+            "Cannot map "
+                + source.getClass().getName()
+                + " to "
+                + constructor.getDeclaringClass().getName(),
+            e);
       }
     }
   }
@@ -674,7 +702,11 @@ public final class VariableObjectMapper {
     Object instantiate(Map<String, Object> source) {
       if (constructor == null) {
         throw new IllegalArgumentException(
-            "Cannot map " + source.getClass().getName() + " to " + type.getName() + ": no no-arg constructor available");
+            "Cannot map "
+                + source.getClass().getName()
+                + " to "
+                + type.getName()
+                + ": no no-arg constructor available");
       }
       try {
         Object instance = constructor.newInstance();
@@ -700,8 +732,3 @@ public final class VariableObjectMapper {
 
   private record RecordComponentBinding(int index, Class<?> type, String name) {}
 }
-
-
-
-
-

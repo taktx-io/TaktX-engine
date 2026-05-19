@@ -22,8 +22,9 @@ public class VariablesObjectParameterResolver implements ParameterResolver {
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     VariablesDTO variables =
-        externalTaskTriggerDTO == null ? VariablesDTO.empty() : externalTaskTriggerDTO.getVariables();
+        externalTaskTriggerDTO == null
+            ? VariablesDTO.empty()
+            : externalTaskTriggerDTO.getVariables();
     return ClientValueMapper.fromVariablesDto(variables, type);
   }
 }
-
