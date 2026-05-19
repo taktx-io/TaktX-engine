@@ -10,9 +10,6 @@ package io.taktx.engine.pi.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.Jwts;
 import io.quarkus.arc.Arc;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -46,6 +43,12 @@ import io.taktx.engine.pi.testengine.KafkaConsumerUtil;
 import io.taktx.security.Ed25519Service;
 import io.taktx.security.EngineSigningKeysHolder;
 import io.taktx.security.SigningKeyGenerator;
+import io.taktx.security.SigningKeyRegistrar;
+import io.taktx.security.SigningKeysStore;
+import io.taktx.security.SigningKeysStoreHolder;
+import io.taktx.serdes.ConfigurationProtoMapper;
+import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
+import io.taktx.serdes.SigningKeyProtoMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -115,11 +118,6 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = SecurityTestConfigResource.class, restrictToAnnotatedClass = true)
 @Tag("security-integration")
 class SecurityIntegrationTest {
-
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .registerModule(new JavaTimeModule())
-          .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private static final String TASK_SINGLE_PROCESS_ID = "task-single";
   private static final String SERVICE_TASK_PROCESS_ID = "service-task-single";
@@ -575,6 +573,114 @@ class SecurityIntegrationTest {
             () ->
                 assertThat(engine.getProcessInstanceMap().get(instanceId).getScope().getState())
                     .as("Process must stay active — revoked response must be rejected")
+                    .isNotEqualTo(ExecutionState.COMPLETED));
+  }
+
+  @Test
+  void signingKeyPublishRotateAndRevokeLifecycle_worksEndToEnd() throws IOException {
+    engine
+        .registerAndSubscribeToExternalTaskIds(SERVICE_TASK_TYPE)
+        .deployProcessDefinitionAndWait("/bpmn/servicetask-single.bpmn");
+
+    String bootstrapServers =
+        ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
+    String signingKeysTopic = prefixed(Topics.SIGNING_KEYS_TOPIC.getTopicName());
+
+    KeyPair legacyKeyPair = SigningKeyGenerator.generate();
+    String legacyKeyId = "rotation-old-" + UUID.randomUUID();
+    String legacyPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(legacyKeyPair.getPrivate());
+    String legacyPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(legacyKeyPair.getPublic());
+    SigningKeyDTO legacyActiveKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyKeyId)
+            .publicKeyBase64(legacyPublicKeyBase64)
+            .algorithm("Ed25519")
+            .createdAt(Instant.now())
+            .status(KeyStatus.ACTIVE)
+            .owner("rotation-old-worker")
+            .build();
+
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyActiveKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.ACTIVE);
+
+    UUID publishedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO publishedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(publishedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+    awaitProcessCompleted(publishedKeyInstanceId);
+
+    KeyPair rotatedKeyPair = SigningKeyGenerator.generate();
+    String rotatedKeyId = "rotation-new-" + UUID.randomUUID();
+    String rotatedPrivateKeyBase64 =
+        SigningKeyGenerator.encodePrivateKey(rotatedKeyPair.getPrivate());
+    String rotatedPublicKeyBase64 = SigningKeyGenerator.encodePublicKey(rotatedKeyPair.getPublic());
+    SigningKeyDTO rotatedActiveKey =
+        SigningKeyDTO.builder()
+            .keyId(rotatedKeyId)
+            .publicKeyBase64(rotatedPublicKeyBase64)
+            .algorithm("Ed25519")
+            .createdAt(Instant.now())
+            .status(KeyStatus.ACTIVE)
+            .owner("rotation-new-worker")
+            .build();
+
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, rotatedActiveKey);
+    awaitSigningKeyStatus(rotatedKeyId, KeyStatus.ACTIVE);
+
+    SigningKeyDTO legacyTrustedKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyActiveKey.getKeyId())
+            .publicKeyBase64(legacyActiveKey.getPublicKeyBase64())
+            .algorithm(legacyActiveKey.getAlgorithm())
+            .createdAt(legacyActiveKey.getCreatedAt())
+            .status(KeyStatus.TRUSTED)
+            .owner(legacyActiveKey.getOwner())
+            .build();
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyTrustedKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.TRUSTED);
+
+    UUID trustedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO trustedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(trustedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+    awaitProcessCompleted(trustedKeyInstanceId);
+
+    UUID rotatedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO rotatedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(rotatedKeyTrigger, rotatedKeyId, rotatedPrivateKeyBase64);
+    awaitProcessCompleted(rotatedKeyInstanceId);
+
+    SigningKeyDTO legacyRevokedKey =
+        SigningKeyDTO.builder()
+            .keyId(legacyActiveKey.getKeyId())
+            .publicKeyBase64(legacyActiveKey.getPublicKeyBase64())
+            .algorithm(legacyActiveKey.getAlgorithm())
+            .createdAt(legacyActiveKey.getCreatedAt())
+            .status(KeyStatus.REVOKED)
+            .owner(legacyActiveKey.getOwner())
+            .build();
+    SigningKeyRegistrar.publishKeyWithStatus(bootstrapServers, signingKeysTopic, legacyRevokedKey);
+    awaitSigningKeyStatus(legacyKeyId, KeyStatus.REVOKED);
+
+    UUID revokedKeyInstanceId = startJwtProtectedProcessAndWaitForExternalTask();
+    ExternalTaskTriggerDTO revokedKeyTrigger =
+        engine.getActiveExternalTaskTrigger(SERVICE_TASK_TYPE);
+    sendSignedExternalTaskResponse(revokedKeyTrigger, legacyKeyId, legacyPrivateKeyBase64);
+
+    await()
+        .during(Duration.ofSeconds(3))
+        .atMost(Duration.ofSeconds(4))
+        .untilAsserted(
+            () ->
+                assertThat(
+                        engine
+                            .getProcessInstanceMap()
+                            .get(revokedKeyInstanceId)
+                            .getScope()
+                            .getState())
+                    .as("Process must stay active after legacy key revocation")
                     .isNotEqualTo(ExecutionState.COMPLETED));
   }
 
@@ -1037,6 +1143,69 @@ class SecurityIntegrationTest {
         .compact();
   }
 
+  private UUID startJwtProtectedProcessAndWaitForExternalTask() {
+    String jwt =
+        buildJwt(
+            "START",
+            SERVICE_TASK_PROCESS_ID,
+            -1,
+            UUID.randomUUID().toString(),
+            "user-rotation",
+            Date.from(Instant.now().plusSeconds(300)));
+    UUID instanceId =
+        engine.getTaktClient().startProcess(SERVICE_TASK_PROCESS_ID, -1, VariablesDTO.empty(), jwt);
+    engine.waitForNewProcessInstance();
+    engine.waitForExternalTaskTrigger(SERVICE_TASK_TYPE);
+    return instanceId;
+  }
+
+  private void sendSignedExternalTaskResponse(
+      ExternalTaskTriggerDTO trigger, String keyId, String privateKeyBase64) {
+    ExternalTaskResponseTriggerDTO response =
+        new ExternalTaskResponseTriggerDTO(
+            trigger.getProcessInstanceId(),
+            trigger.getElementInstanceIdPath(),
+            new ExternalTaskResponseResultDTO(
+                ExternalTaskResponseType.SUCCESS, true, null, null, 0L),
+            VariablesDTO.empty());
+    sendSignedProcessInstanceTrigger(response, keyId, privateKeyBase64);
+  }
+
+  private void awaitProcessCompleted(UUID instanceId) {
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () ->
+                assertThat(engine.getProcessInstanceMap().get(instanceId).getScope().getState())
+                    .isEqualTo(ExecutionState.COMPLETED));
+  }
+
+  private static void awaitSigningKeyStatus(String keyId, KeyStatus expectedStatus) {
+    SigningKeysStore signingKeysStore = SigningKeysStoreHolder.get();
+    if (signingKeysStore != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(
+              () -> {
+                SigningKeyDTO dto = signingKeysStore.get(keyId);
+                return dto != null && dto.getStatus() == expectedStatus;
+              });
+    }
+
+    EngineSigningKeysHolder.KeyResolver keyResolver = EngineSigningKeysHolder.get();
+    if (keyResolver != null) {
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofMillis(200))
+          .until(
+              () ->
+                  expectedStatus == KeyStatus.REVOKED
+                      ? keyResolver.resolvePublicKey(keyId) == null
+                      : keyResolver.resolvePublicKey(keyId) != null);
+    }
+  }
+
   private void sendWorkerResponseWithInjectedTrustMetadata(
       ExternalTaskTriggerDTO trigger,
       CommandTrustMetadataDTO currentTrustMetadata,
@@ -1121,7 +1290,7 @@ class SecurityIntegrationTest {
           new ProducerRecord<>(
               prefixed(Topics.CONFIGURATION_TOPIC.getTopicName()),
               "config",
-              OBJECT_MAPPER.writeValueAsBytes(event)));
+              ConfigurationProtoMapper.toProto(event).toByteArray()));
       producer.flush();
     } catch (Exception e) {
       throw new IllegalStateException("Failed to publish signing configuration", e);
@@ -1144,14 +1313,7 @@ class SecurityIntegrationTest {
             .owner("revoked-worker")
             .build();
 
-    // Re-use SigningKeyRegistrar's CBOR serialisation by going through the raw byte producer path
-    // that SigningKeyRegistrar itself uses internally
     try {
-      com.fasterxml.jackson.databind.ObjectMapper cbor =
-          new com.fasterxml.jackson.databind.ObjectMapper(
-                  new com.fasterxml.jackson.dataformat.cbor.CBORFactory())
-              .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-
       java.util.Properties props = new java.util.Properties();
       props.put("bootstrap.servers", bootstrapServers);
       props.put("acks", "all");
@@ -1160,7 +1322,9 @@ class SecurityIntegrationTest {
               props,
               new StringSerializer(),
               new org.apache.kafka.common.serialization.ByteArraySerializer())) {
-        producer.send(new ProducerRecord<>(topic, keyId, cbor.writeValueAsBytes(revokedDto)));
+        producer.send(
+            new ProducerRecord<>(
+                topic, keyId, SigningKeyProtoMapper.toProto(revokedDto).toByteArray()));
         producer.flush();
       }
     } catch (Exception e) {
@@ -1172,9 +1336,8 @@ class SecurityIntegrationTest {
    * Sends a {@code ExternalTaskResponseTriggerDTO} response signed with the REVOKED worker key,
    * bypassing the {@link TaktXClient} so we can control exactly which keyId is used.
    *
-   * <p>The CBOR payload is serialised with a plain ObjectMapper (no {@link
-   * io.taktx.serdes.SigningSerializer} wrapper) so only our manually-crafted revoked-key signature
-   * header is attached.
+   * <p>The protobuf payload is serialised directly (no signing serializer wrapper) so only our
+   * manually-crafted revoked-key signature header is attached.
    */
   private void sendRevokedWorkerResponse(ExternalTaskTriggerDTO trigger) {
     if (trigger == null) {
@@ -1191,11 +1354,7 @@ class SecurityIntegrationTest {
               result,
               VariablesDTO.empty());
 
-      // Serialise with the plain ObjectMapper (no SigningSerializer wrapping)
-      com.fasterxml.jackson.databind.ObjectMapper cbor =
-          new com.fasterxml.jackson.databind.ObjectMapper(
-              new com.fasterxml.jackson.dataformat.cbor.CBORFactory());
-      byte[] payloadBytes = cbor.writeValueAsBytes(response);
+      byte[] payloadBytes = ProcessInstanceTriggerProtoMapper.toProto(response).toByteArray();
 
       // Sign with the REVOKED key
       byte[] sigBytes = Ed25519Service.sign(payloadBytes, revokedWorkerPrivateKeyBase64);

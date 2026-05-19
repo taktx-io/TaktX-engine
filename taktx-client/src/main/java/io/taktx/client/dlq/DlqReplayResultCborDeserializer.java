@@ -8,25 +8,19 @@
 package io.taktx.client.dlq;
 
 import io.taktx.dto.DlqReplayResult;
-import java.io.IOException;
+import io.taktx.serdes.DlqReplayResultDtoDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 /**
- * CBOR deserializer for {@link DlqReplayResult} records read from the {@code dlq.replay-results}
- * topic.
+ * Backward-compatible deserializer for protobuf-backed {@link DlqReplayResult} records read from
+ * the {@code dlq.replay-results} topic.
  */
 public class DlqReplayResultCborDeserializer implements Deserializer<DlqReplayResult> {
 
+  private final DlqReplayResultDtoDeserializer delegate = new DlqReplayResultDtoDeserializer();
+
   @Override
   public DlqReplayResult deserialize(String topic, byte[] data) {
-    if (data == null) {
-      return null;
-    }
-    try {
-      return DlqClientMapper.INSTANCE.readValue(data, DlqReplayResult.class);
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "Failed to deserialise DlqReplayResult from topic=" + topic + ": " + e.getMessage(), e);
-    }
+    return delegate.deserialize(topic, data);
   }
 }

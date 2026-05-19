@@ -15,35 +15,33 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
 /**
- * Thin KStream processor that converts a {@link DlqReplayForwardRecord} into a raw {@code
- * Record<String, byte[]>} suitable for production to a dynamic Kafka topic.
+ * Thin KStream processor that converts a {@link DlqReplayForwardRecord} into a keyed replay record
+ * while preserving the original replay headers.
  *
- * <p>The output record key is set to the target topic's full prefixed name so that the downstream
- * {@link org.apache.kafka.streams.kstream.TopicNameExtractor} used in {@code
- * TopologyProducer.setupDlqReplayStream()} can route to the correct ingress topic without
- * additional state.
+ * <p>The output record key is the replay command's corrected key bytes. Topic routing is handled
+ * downstream from the {@link DlqReplayForwardRecord#targetTopic()} carried in the value.
  *
  * <p>All headers carried in {@link DlqReplayForwardRecord#headers()} — including the lineage
  * triplet and the fresh engine signature — are propagated onto the outgoing Kafka record.
  */
-public class DlqForwardingProcessor implements Processor<Object, Object, String, byte[]> {
+public class DlqForwardingProcessor
+    implements Processor<Object, Object, byte[], DlqReplayForwardRecord> {
 
-  private ProcessorContext<String, byte[]> context;
+  private ProcessorContext<byte[], DlqReplayForwardRecord> context;
 
   @Override
-  public void init(ProcessorContext<String, byte[]> context) {
+  public void init(ProcessorContext<byte[], DlqReplayForwardRecord> context) {
     this.context = context;
   }
 
   @Override
   public void process(Record<Object, Object> inputRecord) {
-    if (!(inputRecord.value()
-        instanceof
-        DlqReplayForwardRecord(String targetTopic, byte[] payload, Map<String, byte[]> headers))) {
+    if (!(inputRecord.value() instanceof DlqReplayForwardRecord forwardRecord)) {
       return;
     }
-    Headers recordHeaders = buildHeaders(headers);
-    context.forward(new Record<>(targetTopic, payload, inputRecord.timestamp(), recordHeaders));
+    Headers recordHeaders = buildHeaders(forwardRecord.headers());
+    context.forward(
+        new Record<>(forwardRecord.key(), forwardRecord, inputRecord.timestamp(), recordHeaders));
   }
 
   private static Headers buildHeaders(Map<String, byte[]> headersMap) {

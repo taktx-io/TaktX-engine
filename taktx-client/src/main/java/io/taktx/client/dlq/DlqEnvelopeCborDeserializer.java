@@ -8,22 +8,16 @@
 package io.taktx.client.dlq;
 
 import io.taktx.dto.DlqEnvelope;
-import java.io.IOException;
+import io.taktx.serdes.DlqEnvelopeDtoDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/** CBOR deserializer for {@link DlqEnvelope} records read from the {@code dlq} topic. */
+/** Backward-compatible deserializer for protobuf-backed {@link DlqEnvelope} records. */
 public class DlqEnvelopeCborDeserializer implements Deserializer<DlqEnvelope> {
+
+  private final DlqEnvelopeDtoDeserializer delegate = new DlqEnvelopeDtoDeserializer();
 
   @Override
   public DlqEnvelope deserialize(String topic, byte[] data) {
-    if (data == null) {
-      return null;
-    }
-    try {
-      return DlqClientMapper.INSTANCE.readValue(data, DlqEnvelope.class);
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "Failed to deserialise DlqEnvelope from topic=" + topic + ": " + e.getMessage(), e);
-    }
+    return delegate.deserialize(topic, data);
   }
 }

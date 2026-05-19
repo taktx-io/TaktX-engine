@@ -9,9 +9,14 @@ package io.taktx.serdes;
 
 import io.taktx.dto.TopicMetaDTO;
 
-public class ExternalTaskMetaSerializer extends JsonSerializer<TopicMetaDTO> {
+public class ExternalTaskMetaSerializer extends ProtoMappedSerializer<TopicMetaDTO> {
 
   public ExternalTaskMetaSerializer() {
     super(TopicMetaDTO.class);
+  }
+
+  @Override
+  protected com.google.protobuf.MessageLite toProto(TopicMetaDTO data) {
+    return TopicMetaProtoMapper.toProto(data);
   }
 }

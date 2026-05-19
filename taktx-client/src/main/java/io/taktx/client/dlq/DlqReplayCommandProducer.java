@@ -9,8 +9,8 @@ package io.taktx.client.dlq;
 
 import io.taktx.Topics;
 import io.taktx.dto.DlqReplayCommand;
+import io.taktx.serdes.DlqProtoMapper;
 import io.taktx.util.TaktPropertiesHelper;
-import java.io.IOException;
 import java.util.Properties;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -53,26 +53,22 @@ public class DlqReplayCommandProducer {
   }
 
   /**
-   * Serialises {@code command} to JSON and publishes it to the prefixed {@code dlq.replay} topic.
+   * Serialises {@code command} to protobuf and publishes it to the prefixed {@code dlq.replay}
+   * topic.
    *
    * <p>The record key is set to {@link DlqReplayCommand#getDlqEntryRef()} so that operators can
    * correlate results on {@code dlq.replay-results} by the same reference.
    *
    * @param command the replay command to submit; must not be {@code null}
    * @throws IllegalArgumentException if {@code command} is {@code null}
-   * @throws IllegalStateException if JSON serialisation or Kafka send fails
+   * @throws IllegalStateException if protobuf serialisation or Kafka send fails
    */
   public void submit(DlqReplayCommand command) {
     if (command == null) {
       throw new IllegalArgumentException("DlqReplayCommand must not be null");
     }
     String topic = taktPropertiesHelper.getPrefixedTopicName(Topics.DLQ_REPLAY.getTopicName());
-    byte[] valueBytes;
-    try {
-      valueBytes = DlqClientMapper.INSTANCE.writeValueAsBytes(command);
-    } catch (IOException e) {
-      throw new IllegalStateException("Failed to serialise DlqReplayCommand to JSON", e);
-    }
+    byte[] valueBytes = DlqProtoMapper.toProto(command).toByteArray();
     ProducerRecord<String, byte[]> bytesRecord =
         new ProducerRecord<>(topic, command.getDlqEntryRef(), valueBytes);
     producer.send(

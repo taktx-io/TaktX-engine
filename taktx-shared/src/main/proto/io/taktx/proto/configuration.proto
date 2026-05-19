@@ -19,6 +19,7 @@ enum ReplayProtectionMode {
   REPLAY_PROTECTION_MODE_UNSPECIFIED = 0;
   OFF = 1;
   COMPAT = 2;
+  STRICT = 3;
 }
 
 // Java: ConfigurationEventDTO.ConfigurationEventType (inner enum)
@@ -34,7 +35,7 @@ message ConfigurationEventMessage {
   ConfigurationEventType event_type = 1;
   GlobalConfigurationMessage configuration = 2;
   // Java: Instant — epoch milliseconds
-  int64 timestamp_ms = 3;
+  optional int64 timestamp_ms = 3;
   string published_by_instance = 4;
 }
 

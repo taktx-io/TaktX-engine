@@ -218,7 +218,8 @@ public class DlqReplayProcessor implements Processor<String, DlqReplayCommand, O
 
     // ── DLQ-010: Forward replayed record ─────────────────────────────────────
     DlqReplayForwardRecord forwardRecord =
-        new DlqReplayForwardRecord(fullTargetTopic, payload, forwardHeaders);
+        new DlqReplayForwardRecord(
+            fullTargetTopic, command.getCorrectedKeyBytes(), payload, forwardHeaders);
     context.forward(new Record<>(null, forwardRecord, now));
 
     log.info(

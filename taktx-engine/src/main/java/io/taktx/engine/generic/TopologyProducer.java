@@ -89,6 +89,12 @@ import io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessor;
 import io.taktx.proto.VariableValue;
 import io.taktx.serdes.DefinitionsProtoMapper;
 import io.taktx.serdes.DefinitionsTriggerDtoDeserializer;
+import io.taktx.serdes.DlqEnvelopeDtoDeserializer;
+import io.taktx.serdes.DlqProtoMapper;
+import io.taktx.serdes.DlqReplayCommandDtoDeserializer;
+import io.taktx.serdes.DlqReplayResultDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionDtoDeserializer;
+import io.taktx.serdes.DmnDefinitionsProtoMapper;
 import io.taktx.serdes.ExternalTaskMetaDeserializer;
 import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import io.taktx.serdes.FlowNodeInstanceDtoDeserializer;
@@ -108,9 +114,14 @@ import io.taktx.serdes.ScheduleKeyDtoDeserializer;
 import io.taktx.serdes.ScheduleKeyProtoMapper;
 import io.taktx.serdes.SignalDtoDeserializer;
 import io.taktx.serdes.SignalProtoMapper;
+import io.taktx.serdes.SigningKeyDtoDeserializer;
+import io.taktx.serdes.SigningKeyProtoMapper;
+import io.taktx.serdes.TopicMetaDtoDeserializer;
+import io.taktx.serdes.TopicMetaProtoMapper;
 import io.taktx.serdes.UserTaskResponseTriggerProtoDeserializer;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
+import io.taktx.serdes.XmlDmnDefinitionsDtoDeserializer;
 import io.taktx.serdes.ZippedStringSerde;
 import io.taktx.util.TaktUUIDSerde;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -197,10 +208,16 @@ public class TopologyProducer {
               new ProcessInstanceTriggerEnvelopeDeserializer());
   public static final ObjectMapperSerde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
       new ObjectMapperSerde<>(DmnDefinitionKey.class);
-  public static final ObjectMapperSerde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
-      new ObjectMapperSerde<>(DmnDefinitionDTO.class);
-  public static final ObjectMapperSerde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
-      new ObjectMapperSerde<>(XmlDmnDefinitionsDTO.class);
+  public static final Serde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
+          new DmnDefinitionDtoDeserializer());
+  public static final Serde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) ->
+              data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
+          new XmlDmnDefinitionsDtoDeserializer());
 
   public static final Serde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       Serdes.serdeFrom(
@@ -253,17 +270,29 @@ public class TopologyProducer {
       new ObjectMapperSerde<>(VariableKeyDTO.class);
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
-      new ObjectMapperSerde<>(TopicMetaDTO.class);
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : TopicMetaProtoMapper.toProto(data).toByteArray(),
+          new TopicMetaDtoDeserializer());
   public static final Serde<TopicMetaDTO> TOPIC_META_REQUEST_INPUT_SERDE =
       Serdes.serdeFrom(TOPIC_META_SERDE.serializer(), new ExternalTaskMetaDeserializer());
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
-      new ObjectMapperSerde<>(DlqEnvelope.class);
-  public static final ObjectMapperSerde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
-      new ObjectMapperSerde<>(DlqReplayCommand.class);
-  public static final ObjectMapperSerde<DlqReplayResult> DLQ_REPLAY_RESULT_SERDE =
-      new ObjectMapperSerde<>(DlqReplayResult.class);
-  public static final ObjectMapperSerde<SigningKeyDTO> SIGNING_KEY_SERDE =
-      new ObjectMapperSerde<>(SigningKeyDTO.class);
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqEnvelopeDtoDeserializer());
+  public static final Serde<DlqReplayCommand> DLQ_REPLAY_COMMAND_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqReplayCommandDtoDeserializer());
+  public static final Serde<DlqReplayResult> DLQ_REPLAY_RESULT_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),
+          new DlqReplayResultDtoDeserializer());
+  private static final Serde<DlqReplayForwardRecord> DLQ_REPLAY_FORWARD_PAYLOAD_SERDE =
+      Serdes.serdeFrom((topic, data) -> data == null ? null : data.payload(), (_, __) -> null);
+  public static final Serde<SigningKeyDTO> SIGNING_KEY_SERDE =
+      Serdes.serdeFrom(
+          (topic, data) -> data == null ? null : SigningKeyProtoMapper.toProto(data).toByteArray(),
+          new SigningKeyDtoDeserializer());
 
   private static byte[] serializeScheduleKey(String topic, ScheduleKeyDTO data) {
     try {
@@ -1055,8 +1084,8 @@ public class TopologyProducer {
                 ks ->
                     ks.process(DlqForwardingProcessor::new)
                         .to(
-                            (key, value, ctx) -> key,
-                            Produced.with(Serdes.String(), Serdes.ByteArray()))));
+                            (key, value, ctx) -> value.targetTopic(),
+                            Produced.with(Serdes.ByteArray(), DLQ_REPLAY_FORWARD_PAYLOAD_SERDE))));
   }
 
   private String engineInstanceId() {

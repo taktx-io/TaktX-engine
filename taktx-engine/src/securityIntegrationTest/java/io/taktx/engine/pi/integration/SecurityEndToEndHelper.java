@@ -7,13 +7,11 @@
  */
 package io.taktx.engine.pi.integration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.Topics;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.ConfigurationEventDTO.ConfigurationEventType;
 import io.taktx.dto.GlobalConfigurationDTO;
+import io.taktx.serdes.ConfigurationProtoMapper;
 import io.taktx.util.TaktPropertiesHelper;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,11 +30,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
  * so the engine's global config store enables signing/authorization with the given keys trusted.
  */
 final class SecurityEndToEndHelper {
-
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .registerModule(new JavaTimeModule())
-          .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
   private SecurityEndToEndHelper() {}
 
@@ -80,7 +73,8 @@ final class SecurityEndToEndHelper {
               .build();
 
       producer.send(
-          new ProducerRecord<>(configTopic, "config", OBJECT_MAPPER.writeValueAsBytes(event)));
+          new ProducerRecord<>(
+              configTopic, "config", ConfigurationProtoMapper.toProto(event).toByteArray()));
       producer.flush();
     } catch (Exception e) {
       throw new IllegalStateException("Failed to publish security configuration", e);

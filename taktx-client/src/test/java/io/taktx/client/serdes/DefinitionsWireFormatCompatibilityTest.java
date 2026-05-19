@@ -9,17 +9,13 @@ package io.taktx.client.serdes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import io.taktx.dto.DmnDefinitionsTriggerDTO;
 import io.taktx.dto.XmlDefinitionsDTO;
 import io.taktx.dto.XmlDmnDefinitionsDTO;
 import io.taktx.serdes.DefinitionsProtoMapper;
+import io.taktx.serdes.DmnDefinitionsProtoMapper;
 import org.junit.jupiter.api.Test;
 
 class DefinitionsWireFormatCompatibilityTest {
-
-  private static final ObjectMapper ENGINE_CBOR = new ObjectMapper(new CBORFactory());
 
   @Test
   void xmlDefinitionSerializer_producesEngineReadableProto() throws Exception {
@@ -37,7 +33,7 @@ class DefinitionsWireFormatCompatibilityTest {
   }
 
   @Test
-  void xmlDmnDefinitionSerializer_producesEngineReadableCbor() throws Exception {
+  void xmlDmnDefinitionSerializer_producesEngineReadableProto() throws Exception {
     XmlDmnDefinitionsDTO dto = new XmlDmnDefinitionsDTO("<definitions id=\"dmn-demo\"/>");
 
     byte[] payload;
@@ -45,10 +41,9 @@ class DefinitionsWireFormatCompatibilityTest {
       payload = serializer.serialize("dmn-definitions", dto);
     }
 
-    DmnDefinitionsTriggerDTO decoded =
-        ENGINE_CBOR.readValue(payload, DmnDefinitionsTriggerDTO.class);
-
-    assertThat(decoded).isInstanceOf(XmlDmnDefinitionsDTO.class);
-    assertThat(decoded).isEqualTo(dto);
+    assertThat(
+            DmnDefinitionsProtoMapper.toDto(
+                io.taktx.proto.XmlDmnDefinitionsMessage.parseFrom(payload)))
+        .isEqualTo(dto);
   }
 }

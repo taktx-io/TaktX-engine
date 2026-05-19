@@ -7,13 +7,7 @@
  */
 package io.taktx.client.serdes;
 
-import io.taktx.dto.TopicMetaDTO;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.serdes.TopicMetaDtoDeserializer;
 
-/** A JSON deserializer for TopicMetaDTO objects. */
-public class TopicMetaJsonDeserializer extends JsonDeserializer<TopicMetaDTO> {
-  /** Constructor for TopicMetaJsonDeserializer. */
-  public TopicMetaJsonDeserializer() {
-    super(TopicMetaDTO.class, false);
-  }
-}
+/** Backward-compatible client deserializer for protobuf-backed topic metadata. */
+public class TopicMetaJsonDeserializer extends TopicMetaDtoDeserializer {}

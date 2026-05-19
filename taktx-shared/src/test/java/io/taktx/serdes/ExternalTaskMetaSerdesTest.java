@@ -48,9 +48,9 @@ class ExternalTaskMetaSerdesTest {
     try (ExternalTaskMetaDeserializer deserializer = new ExternalTaskMetaDeserializer()) {
       deserializer.configure(
           Map.of(
-              JsonDeserializer.ENGINE_PUBLIC_KEY_CONFIG,
+              ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG,
               publicKeyBase64,
-              JsonDeserializer.SIGNING_REQUIRED_CONFIG,
+              ProtoDtoDeserializer.SIGNING_REQUIRED_CONFIG,
               "true"),
           false);
 

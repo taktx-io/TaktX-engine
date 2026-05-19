@@ -27,6 +27,7 @@ enum KeyRole {
   KEY_ROLE_UNSPECIFIED = 0;
   KEY_ROLE_ENGINE      = 1;
   KEY_ROLE_CLIENT      = 2;
+  KEY_ROLE_PLATFORM    = 3;
 }
 
 // Java: CommandTrustMetadataDTO.CommandAuthMethod (inner enum)
@@ -55,7 +56,7 @@ message SigningKeyMessage {
   string key_id = 1;
   string public_key_base64 = 2;
   string algorithm = 3;
-  sint64 created_at = 4;
+  optional sint64 created_at = 4;
   KeyStatus status = 5;
   string    owner  = 6;
   KeyRole   role   = 7;

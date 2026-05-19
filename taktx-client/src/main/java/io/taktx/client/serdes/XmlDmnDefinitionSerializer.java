@@ -8,13 +8,19 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.XmlDmnDefinitionsDTO;
-import io.taktx.serdes.JsonSerializer;
+import io.taktx.serdes.DmnDefinitionsProtoMapper;
+import io.taktx.serdes.ProtoMappedSerializer;
 
-/** A JSON serializer for {@link XmlDmnDefinitionsDTO} objects. */
-public class XmlDmnDefinitionSerializer extends JsonSerializer<XmlDmnDefinitionsDTO> {
+/** Backward-compatible serializer for protobuf-backed {@link XmlDmnDefinitionsDTO} objects. */
+public class XmlDmnDefinitionSerializer extends ProtoMappedSerializer<XmlDmnDefinitionsDTO> {
 
   /** Constructor for XmlDmnDefinitionSerializer. */
   public XmlDmnDefinitionSerializer() {
     super(XmlDmnDefinitionsDTO.class);
+  }
+
+  @Override
+  protected com.google.protobuf.MessageLite toProto(XmlDmnDefinitionsDTO data) {
+    return DmnDefinitionsProtoMapper.toProto(data);
   }
 }

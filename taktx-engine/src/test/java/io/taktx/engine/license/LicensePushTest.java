@@ -13,12 +13,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taktx.dto.ConfigurationEventDTO;
 import io.taktx.dto.GlobalConfigurationDTO;
 import io.taktx.dto.ReplayProtectionMode;
 import io.taktx.engine.config.GlobalConfigStore;
+import io.taktx.serdes.ConfigurationProtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Properties;
@@ -46,9 +45,6 @@ class LicensePushTest {
 
   private static final String CONFIGURATION_TOPIC = "default.taktx-configuration";
   private static final String STORE_NAME = "license-processor-store";
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper().registerModule(new JavaTimeModule());
-
   private TopologyTestDriver driver;
   private TestInputTopic<String, byte[]> configTopic;
   private LicenseManager licenseManager;
@@ -122,7 +118,7 @@ class LicensePushTest {
             .timestamp(Instant.now())
             .build();
 
-    configTopic.pipeInput("config", OBJECT_MAPPER.writeValueAsBytes(event));
+    configTopic.pipeInput("config", ConfigurationProtoMapper.toProto(event).toByteArray());
 
     assertThat(globalConfigStore.get()).isEqualTo(configuration);
   }

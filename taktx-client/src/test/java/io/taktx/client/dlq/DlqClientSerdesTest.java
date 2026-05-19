@@ -10,33 +10,22 @@ package io.taktx.client.dlq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory/JavaTimeModule removed in PROTO-1.2. These tests will be replaced in PROTO-5.1.
 import io.taktx.dto.DlqEnvelope;
+import io.taktx.dto.DlqLineageDTO;
 import io.taktx.dto.DlqReasonCode;
 import io.taktx.dto.DlqReplayCommand;
 import io.taktx.dto.DlqReplayResult;
 import io.taktx.dto.DlqSeverity;
 import io.taktx.dto.ReplayValidationPolicy;
+import io.taktx.serdes.DlqProtoMapper;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the DLQ client CBOR serdes — verifies round-trip serialisation of {@link
+ * Unit tests for the DLQ client compatibility serdes — verifies round-trip serialisation of {@link
  * DlqEnvelope}, {@link DlqReplayCommand}, and {@link DlqReplayResult}.
- *
- * <p>Cross-boundary tests use an engine-equivalent CBOR {@link ObjectMapper} (plain {@code
- * CBORFactory} + {@code JavaTimeModule}, no {@code @JsonFormat(shape = ARRAY)}) to produce bytes
- * the same way the engine's {@code ObjectMapperSerde} would, then assert the client deserializers
- * can decode them correctly.
  */
 class DlqClientSerdesTest {
-
-  private static final ObjectMapper CLIENT_MAPPER = DlqClientMapper.INSTANCE;
-
-  // NOTE: PROTO-1.2 — engine-side mapper is now plain JSON (CBOR removed); cross-boundary tests
-  // verify JSON round-trips. All DLQ serdes will be replaced with proto in PROTO-5.1.
-  private static final ObjectMapper ENGINE_CBOR = new ObjectMapper();
 
   // ── DlqEnvelopeCborDeserializer — client-side round-trip ─────────────────────
 
@@ -50,11 +39,13 @@ class DlqClientSerdesTest {
     original.setSeverity(DlqSeverity.MEDIUM);
     original.setRejectionTimestampMs(1_714_550_000_000L);
     original.setEngineInstanceId("engine-1");
+    original.setLineage(
+        DlqLineageDTO.builder().sourceTopic("process-instance").sourcePartition(0).build());
 
-    byte[] cbor = CLIENT_MAPPER.writeValueAsBytes(original);
+    byte[] proto = DlqProtoMapper.toProto(original).toByteArray();
 
     DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
-    DlqEnvelope result = deser.deserialize("dlq", cbor);
+    DlqEnvelope result = deser.deserialize("dlq", proto);
 
     assertThat(result.getSourceTopic()).isEqualTo("process-instance");
     assertThat(result.getSourcePartition()).isZero();
@@ -72,7 +63,7 @@ class DlqClientSerdesTest {
   @Test
   void deserializeEnvelope_invalidBytesThrows() {
     DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
-    byte[] bytes = "NOT_CBOR".getBytes(StandardCharsets.UTF_8);
+    byte[] bytes = "NOT_PROTO".getBytes(StandardCharsets.UTF_8);
     assertThatThrownBy(() -> deser.deserialize("dlq", bytes))
         .isInstanceOf(IllegalStateException.class);
   }
@@ -90,8 +81,7 @@ class DlqClientSerdesTest {
     original.setRejectionTimestampMs(1_714_600_000_000L);
     original.setEngineInstanceId("tenant.ns@localhost:8080");
 
-    // Produce bytes the same way the engine's ObjectMapperSerde would.
-    byte[] engineBytes = ENGINE_CBOR.writeValueAsBytes(original);
+    byte[] engineBytes = DlqProtoMapper.toProto(original).toByteArray();
 
     DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
     DlqEnvelope result = deser.deserialize("dlq", engineBytes);
@@ -123,10 +113,10 @@ class DlqClientSerdesTest {
             .correctionId("corr-uuid-1234")
             .build();
 
-    byte[] cbor = CLIENT_MAPPER.writeValueAsBytes(original);
+    byte[] proto = DlqProtoMapper.toProto(original).toByteArray();
 
     DlqReplayResultCborDeserializer deser = new DlqReplayResultCborDeserializer();
-    DlqReplayResult result = deser.deserialize("dlq.replay-results", cbor);
+    DlqReplayResult result = deser.deserialize("dlq.replay-results", proto);
 
     assertThat(result.getStatus()).isEqualTo("SUCCESS");
     assertThat(result.getCorrectionId()).isEqualTo("corr-uuid-1234");
@@ -155,7 +145,7 @@ class DlqClientSerdesTest {
             .correctionId("corr-5678")
             .build();
 
-    byte[] engineBytes = ENGINE_CBOR.writeValueAsBytes(original);
+    byte[] engineBytes = DlqProtoMapper.toProto(original).toByteArray();
 
     DlqReplayResultCborDeserializer deser = new DlqReplayResultCborDeserializer();
     DlqReplayResult result = deser.deserialize("dlq.replay-results", engineBytes);
@@ -181,8 +171,9 @@ class DlqClientSerdesTest {
             .dryRun(true)
             .build();
 
-    byte[] cbor = CLIENT_MAPPER.writeValueAsBytes(original);
-    DlqReplayCommand result = CLIENT_MAPPER.readValue(cbor, DlqReplayCommand.class);
+    byte[] proto = DlqProtoMapper.toProto(original).toByteArray();
+    DlqReplayCommand result =
+        DlqProtoMapper.toDto(io.taktx.proto.DlqReplayCommand.parseFrom(proto));
 
     assertThat(result.getDlqEntryRef()).isEqualTo("process-instance:0:42:sha256:abc");
     assertThat(result.getValidationPolicy()).isEqualTo(ReplayValidationPolicy.STRICT);
@@ -190,9 +181,9 @@ class DlqClientSerdesTest {
   }
 
   /**
-   * Cross-boundary: client serialises a {@link DlqReplayCommand} to CBOR; the engine-equivalent
-   * CBOR mapper must be able to deserialise it (mirrors what {@code DLQ_REPLAY_COMMAND_SERDE} does
-   * on the engine side).
+   * Cross-boundary: client serialises a {@link DlqReplayCommand} to protobuf; the engine-equivalent
+   * protobuf parser must be able to deserialise it (mirrors what {@code DLQ_REPLAY_COMMAND_SERDE}
+   * does on the engine side).
    */
   @Test
   void serializeReplayCommand_clientCborBytes_decodedByEngine() throws Exception {
@@ -206,11 +197,10 @@ class DlqClientSerdesTest {
             .dryRun(false)
             .build();
 
-    // Client writes CBOR — same bytes that DlqReplayCommandProducer will publish.
-    byte[] clientBytes = CLIENT_MAPPER.writeValueAsBytes(original);
+    byte[] clientBytes = DlqProtoMapper.toProto(original).toByteArray();
 
-    // Engine reads with its own CBOR mapper — must decode without error.
-    DlqReplayCommand result = ENGINE_CBOR.readValue(clientBytes, DlqReplayCommand.class);
+    DlqReplayCommand result =
+        DlqProtoMapper.toDto(io.taktx.proto.DlqReplayCommand.parseFrom(clientBytes));
 
     assertThat(result.getDlqEntryRef()).isEqualTo("process-instance:3:10:sha256:xyz");
     assertThat(result.getValidationPolicy()).isEqualTo(ReplayValidationPolicy.OPERATOR_OVERRIDE);

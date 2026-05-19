@@ -18,6 +18,7 @@ enum DlqCaptureStage {
   DLQ_CAPTURE_STAGE_UNSPECIFIED = 0;
   DLQ_CAPTURE_DESERIALIZER      = 1;
   DLQ_CAPTURE_PROCESSOR         = 2;
+  DLQ_CAPTURE_ERROR_HANDLER     = 3;
 }
 
 enum DlqReasonCode {
@@ -46,10 +47,12 @@ enum DlqSeverity {
   DLQ_SEVERITY_LOW         = 1;
   DLQ_SEVERITY_MEDIUM      = 2;
   DLQ_SEVERITY_HIGH        = 3;
+  DLQ_SEVERITY_CRITICAL    = 4;
 }
 
 enum ReplayValidationPolicy {
   REPLAY_VALIDATION_STRICT = 0;
+  REPLAY_VALIDATION_OPERATOR_OVERRIDE = 1;
 }
 
 // Java: DlqEnvelope
@@ -64,12 +67,12 @@ message DlqEnvelope {
   DlqCaptureStage capture_stage          = 8;
   sint64         rejection_timestamp_ms  = 9;
   string         engine_instance_id      = 10;
-  int32          source_partition        = 11;
-  sint64         source_offset           = 12;
-  sint64         source_timestamp_ms     = 13;
+  optional int32 source_partition        = 11;
+  optional sint64 source_offset          = 12;
+  optional sint64 source_timestamp_ms    = 13;
   string         source_message_hash     = 14;
   string         message_type            = 15;
-  int32          schema_version          = 16;
+  optional int32 schema_version          = 16;
   string         decoder_version         = 17;
   string         schema_fingerprint      = 18;
   string         decoded_summary_json    = 19;
@@ -82,9 +85,9 @@ message DlqEnvelope {
 // Java: DlqLineageDTO
 message DlqLineageMessage {
   string source_topic            = 1;
-  int32  source_partition        = 2;
-  sint64 source_offset           = 3;
-  sint64 source_timestamp_ms     = 4;
+  optional int32  source_partition    = 2;
+  optional sint64 source_offset       = 3;
+  optional sint64 source_timestamp_ms = 4;
   string source_message_hash     = 5;
   string source_signature_key_id = 6;
   string source_signature        = 7;
@@ -105,7 +108,7 @@ message DlqReplayCommand {
   string                override_reason         = 11;
   repeated string       changed_fields          = 12;
   bool                  dry_run                 = 13;
-  int32                 expected_schema_version = 14;
+  optional int32        expected_schema_version = 14;
 }
 
 // Java: DlqReplayResult

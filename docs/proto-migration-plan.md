@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅; active: PROTO-4.10  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅; active: PROTO-4.11  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -721,6 +721,8 @@ Delete `MessageSchedulerTypeIdResolver.java` and `ScheduleKeyTypeIdResolver.java
 
 ### PROTO-4.10 — Migrate configuration, signing key, topic meta, and DLQ families
 
+**Status:** ✅ Complete
+
 **Description**  
 Replace the remaining lower-frequency families:
 - `GlobalConfigurationDTO` / `ConfigurationEventDTO` → `GlobalConfigurationMessage` / `ConfigurationEventMessage`
@@ -729,11 +731,26 @@ Replace the remaining lower-frequency families:
 - `DlqEnvelope`, `DlqReplayCommand`, `DlqReplayResult`, `DlqEntryDTO`, `DlqLineageDTO` → proto equivalents
 - `ProcessDefinitionDTO`, `ProcessDefinitionActivationDTO`, `DmnDefinitionDTO`, `DmnDefinitionActivationDTO`, `XmlDefinitionsDTO`, `XmlDmnDefinitionsDTO` → proto equivalents
 
+**Implementation notes (2026-05-19)**
+- ✅ Audited the remaining PROTO-4.10 surfaces before editing and migrated only the still-live Jackson/CBOR paths: configuration topic consumers, signing-key publication/consumption, topic-meta request serdes, DLQ envelope/replay command/replay result serdes, DMN/XML definition deployment paths, and the remaining `TopologyProducer` value serdes for these families.
+- ✅ Added shared DTO↔proto mappers plus protobuf-backed DTO deserializers for configuration, signing key, topic meta, DLQ, DMN definition/XML DMN definition, and reused the existing `DefinitionsProtoMapper` for process definitions.
+- ✅ Updated the proto contracts where the audit found wire-model gaps: missing enum values and `optional` scalar presence for configuration timestamps, signing-key timestamps, DLQ lineage/source coordinates, replay schema version, and DMN enum coverage.
+- ✅ Preserved public compatibility entry points where practical (`TopicMetaJsonDeserializer`, `XmlDmnDefinitionSerializer`, `DlqEnvelopeCborDeserializer`, `DlqReplayResultCborDeserializer`) while switching their implementations to protobuf.
+- ✅ Closed the last live signing-key consumer gap by migrating `SigningKeysStore` from Jackson/CBOR to protobuf after integration logs exposed failed key-table reads.
+- ✅ Hardened the DLQ replay forwarding path so replayed records now preserve corrected Kafka key bytes all the way to the dynamic target topic sink; this was verified with a real malformed-BPMN capture → replay → deploy → start-process cycle.
+- ✅ Verified test commands:
+  - `./gradlew :taktx-shared:test --tests io.taktx.serdes.Proto410MapperTest --tests io.taktx.serdes.DefinitionsProtoMapperTest --tests io.taktx.serdes.ExternalTaskMetaSerdesTest --console=plain`
+  - `./gradlew :taktx-client:test --tests io.taktx.client.dlq.DlqClientSerdesTest --tests io.taktx.client.serdes.DefinitionsWireFormatCompatibilityTest --tests io.taktx.client.serdes.MiscSerdesTest --tests io.taktx.client.DmnDefinitionDeployerTest --console=plain`
+  - `./gradlew :taktx-engine:test --tests io.taktx.engine.license.LicensePushTest --tests io.taktx.engine.topicmanagement.TopicMetaRequestIngressProcessorTest --tests io.taktx.engine.dlq.DlqReplayProcessorTest --tests io.taktx.engine.pd.DmnDefinitionsProcessorDlqTest --console=plain`
+  - `./gradlew :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest --console=plain`
+  - `./gradlew :taktx-engine:securityIntegrationTest --tests io.taktx.engine.topicmanagement.PhaseOneDedupIntegrationTest --console=plain`
+  - `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.DlqReplayEndToEndIntegrationTest --tests io.taktx.engine.pi.integration.DefinitionsProtoAcceptanceTest --console=plain`
+
 **Acceptance criteria**
-- [ ] Unit test: each of the above types round-trips.
-- [ ] Integration test: signing key publish + rotate + revoke lifecycle works.
-- [ ] Integration test: DLQ capture → replay cycle works end-to-end.
-- [ ] Integration test: BPMN deploy → activate → process isolation between versions works.
+- [x] Unit test: each of the above types round-trips.
+- [x] Integration test: signing key publish + rotate + revoke lifecycle works.
+- [x] Integration test: DLQ capture → replay cycle works end-to-end.
+- [x] Integration test: BPMN deploy → activate → process isolation between versions works.
 
 **Dependencies:** PROTO-4.7, PROTO-4.8, PROTO-4.9  
 **Estimate:** 1.5 days
@@ -1003,18 +1020,3 @@ Single-developer estimate assuming full-time focus and no unrelated interruption
 - gRPC transport (this migration is wire-format only; Kafka remains the transport layer).
 - Renaming the `taktx-shared` or `taktx-client` Maven artifact IDs (that is a separate release decision).
 - Changing the binary layout of range-query store keys beyond what is specified in PROTO-4.12. The big-endian raw byte format is deliberately preserved; only the Jackson dependency is removed.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

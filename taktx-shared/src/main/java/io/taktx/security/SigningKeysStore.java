@@ -7,10 +7,10 @@
  */
 package io.taktx.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.SigningKeyDTO.KeyStatus;
-import io.taktx.jackson.TaktxObjectMappers;
+import io.taktx.proto.SigningKeyMessage;
+import io.taktx.serdes.SigningKeyProtoMapper;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,7 +55,6 @@ import org.slf4j.LoggerFactory;
 public class SigningKeysStore implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(SigningKeysStore.class);
-  private static final ObjectMapper CBOR = TaktxObjectMappers.cbor();
 
   private final ConcurrentHashMap<String, SigningKeyDTO> keys = new ConcurrentHashMap<>();
   private final AtomicBoolean ready = new AtomicBoolean(false);
@@ -239,7 +238,8 @@ public class SigningKeysStore implements AutoCloseable {
       return;
     }
     try {
-      SigningKeyDTO dto = CBOR.readValue(consumerRecord.value(), SigningKeyDTO.class);
+      SigningKeyDTO dto =
+          SigningKeyProtoMapper.toDto(SigningKeyMessage.parseFrom(consumerRecord.value()));
       keys.put(dto.getKeyId(), dto);
       log.debug(
           "SigningKeysStore: loaded keyId={} status={} owner={}",
