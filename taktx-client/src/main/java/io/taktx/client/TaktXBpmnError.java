@@ -12,9 +12,16 @@ import io.taktx.dto.VariablesDTO;
 /** Indicates a BPMN error that can be thrown from a worker to signal a BPMN error event. */
 public class TaktXBpmnError extends RuntimeException {
 
+  /** Whether the engine may retry the task after handling this BPMN error. */
   private final boolean allowRetry;
+
+  /** BPMN error code matched against boundary and event-subprocess error handlers. */
   private final String errorCode;
+
+  /** Human-readable BPMN error message recorded with the response. */
   private final String errorMessage;
+
+  /** Optional variables to merge into the process context with the BPMN error response. */
   private final VariablesDTO variables;
 
   /**

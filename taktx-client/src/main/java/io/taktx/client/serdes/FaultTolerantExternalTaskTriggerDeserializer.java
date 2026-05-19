@@ -37,10 +37,16 @@ public class FaultTolerantExternalTaskTriggerDeserializer
         }
       };
 
+  /** Creates a fault-tolerant external-task trigger deserializer. */
   public FaultTolerantExternalTaskTriggerDeserializer() {
     // no-op
   }
 
+  /**
+   * Returns the DTO class produced by this deserializer.
+   *
+   * @return {@link ExternalTaskTriggerDTO}.class
+   */
   public Class<ExternalTaskTriggerDTO> getClazz() {
     return CLAZZ;
   }

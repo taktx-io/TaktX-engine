@@ -22,6 +22,11 @@ public class UserTaskTriggerJsonDeserializer implements Deserializer<UserTaskTri
 
   private final UserTaskTriggerProtoDeserializer delegate = new UserTaskTriggerProtoDeserializer();
 
+  /**
+   * Returns the DTO class produced by this compatibility alias.
+   *
+   * @return {@link UserTaskTriggerDTO}.class
+   */
   public Class<UserTaskTriggerDTO> getClazz() {
     return UserTaskTriggerDTO.class;
   }

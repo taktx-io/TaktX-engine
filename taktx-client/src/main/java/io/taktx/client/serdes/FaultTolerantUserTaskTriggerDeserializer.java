@@ -36,10 +36,16 @@ public class FaultTolerantUserTaskTriggerDeserializer
         }
       };
 
+  /** Creates a fault-tolerant user-task trigger deserializer. */
   public FaultTolerantUserTaskTriggerDeserializer() {
     // no-op
   }
 
+  /**
+   * Returns the DTO class produced by this deserializer.
+   *
+   * @return {@link UserTaskTriggerDTO}.class
+   */
   public Class<UserTaskTriggerDTO> getClazz() {
     return CLAZZ;
   }

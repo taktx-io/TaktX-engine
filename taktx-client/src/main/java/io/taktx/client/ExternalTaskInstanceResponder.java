@@ -32,6 +32,14 @@ public class ExternalTaskInstanceResponder {
   private final List<Long> elementInstanceIdPath;
   private final Runnable beforeSendHook;
 
+  /**
+   * Creates a responder bound to a specific external-task instance.
+   *
+   * @param responseEmitter Kafka producer used to emit response triggers
+   * @param topicName target process-instance trigger topic
+   * @param processInstanceId owning process instance ID
+   * @param elementInstanceIdPath path identifying the external-task element instance
+   */
   public ExternalTaskInstanceResponder(
       KafkaProducer<UUID, ProcessInstanceTriggerDTO> responseEmitter,
       String topicName,

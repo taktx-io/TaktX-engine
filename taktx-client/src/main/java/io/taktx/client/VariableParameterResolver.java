@@ -31,7 +31,13 @@ public class VariableParameterResolver implements ParameterResolver {
     this.name = name;
   }
 
-  /** Backward-compatible constructor retained for callers still passing a mapper instance. */
+  /**
+   * Backward-compatible constructor retained for callers still passing a mapper instance.
+   *
+   * @param ignoredMapper legacy mapper argument that is ignored
+   * @param type the target type to convert the variable to
+   * @param name the name of the variable to extract
+   */
   public VariableParameterResolver(Object ignoredMapper, Class<?> type, String name) {
     this(type, name);
   }

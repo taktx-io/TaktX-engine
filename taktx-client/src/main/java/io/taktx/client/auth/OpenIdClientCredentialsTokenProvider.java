@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 /** OAuth2/OpenID Connect client-credentials token provider backed by the JDK {@link HttpClient}. */
 public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenProvider {
 
+  /** Identifier used in configuration to select this token-provider implementation. */
   public static final String TOKEN_PROVIDER_ID = "openid-client-credentials";
 
   private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(3);
@@ -47,6 +48,16 @@ public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenP
 
   private volatile CachedToken cachedToken;
 
+  /**
+   * Creates a token provider with default timeouts, refresh skew, and client-secret-basic
+   * authentication.
+   *
+   * @param tokenEndpoint OAuth2 token endpoint URI
+   * @param clientId OAuth2 client identifier
+   * @param clientSecret OAuth2 client secret
+   * @param scope optional OAuth2 scope string
+   * @param audience optional audience parameter forwarded to providers that support it
+   */
   public OpenIdClientCredentialsTokenProvider(
       URI tokenEndpoint,
       String clientId,
@@ -109,6 +120,13 @@ public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenP
     }
   }
 
+  /**
+   * Returns whether the supplied properties or environment indicate that OpenID token acquisition
+   * is configured.
+   *
+   * @param properties client properties to inspect
+   * @return {@code true} if either the provider ID or token endpoint is configured
+   */
   public static boolean hasConfiguration(Properties properties) {
     return !firstNonBlank(
                 property(properties, "taktx.authorization.token-provider"),
@@ -122,6 +140,13 @@ public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenP
             .isBlank();
   }
 
+  /**
+   * Builds an OpenID client-credentials token provider from properties and environment overrides.
+   *
+   * @param properties client properties to inspect
+   * @return a configured token provider
+   * @throws IllegalArgumentException if required configuration is missing or invalid
+   */
   public static OpenIdClientCredentialsTokenProvider fromProperties(Properties properties) {
     String tokenProvider =
         firstNonBlank(

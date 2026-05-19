@@ -169,6 +169,7 @@ public class XmlByDmnDefinitionIdConsumer {
    * {@link Optional#empty()} if not yet received.
    *
    * @param decisionId the decision ID to look up (e.g. {@code "discountDecision"})
+   * @return an optional containing the DMN definition key for the decision, if known
    */
   public Optional<DmnDefinitionKey> getDefinitionKeyForDecision(String decisionId) {
     return Optional.ofNullable(decisionIndex.get(decisionId));
@@ -177,6 +178,8 @@ public class XmlByDmnDefinitionIdConsumer {
   /**
    * Returns a read-only snapshot of the full decision → file index. Useful for a console that needs
    * to list all known decisions.
+   *
+   * @return unmodifiable decision-to-definition-key index snapshot
    */
   public Map<String, DmnDefinitionKey> getDecisionIndex() {
     return Collections.unmodifiableMap(decisionIndex);

@@ -9,8 +9,11 @@ package io.taktx.client.auth;
 
 /** Identifies the outbound command scope for which a JWT is requested. */
 public enum CommandAuthorizationScope {
+  /** Authorizes starting a new process instance. */
   START_PROCESS("START"),
+  /** Authorizes aborting a running process or nested element instance. */
   ABORT_PROCESS_INSTANCE("CANCEL"),
+  /** Authorizes updating variables in an existing process scope. */
   SET_VARIABLE("SET_VARIABLE");
   private final String tokenAction;
 
@@ -18,6 +21,11 @@ public enum CommandAuthorizationScope {
     this.tokenAction = tokenAction;
   }
 
+  /**
+   * Returns the action string expected by the downstream token issuer.
+   *
+   * @return token action value to encode in the requested authorization scope
+   */
   public String getTokenAction() {
     return tokenAction;
   }

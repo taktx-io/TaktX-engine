@@ -14,6 +14,11 @@ import org.apache.kafka.common.serialization.Serializer;
 /** A protobuf serializer for {@link ProcessInstanceTriggerDTO} objects. */
 public class ProcessInstanceTriggerSerializer implements Serializer<ProcessInstanceTriggerDTO> {
 
+  /**
+   * Returns the DTO class serialized by this serializer.
+   *
+   * @return {@link ProcessInstanceTriggerDTO}.class
+   */
   public Class<ProcessInstanceTriggerDTO> getClazz() {
     return ProcessInstanceTriggerDTO.class;
   }

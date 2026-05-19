@@ -10,6 +10,7 @@ package io.taktx.client;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.HashMap;
 
+/** Result processor for {@code void} worker methods that emits an empty variable map. */
 public class VoidResultProcessor implements ResultProcessor {
 
   @Override

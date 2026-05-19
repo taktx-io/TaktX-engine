@@ -294,6 +294,8 @@ public class TaktXClient {
   /**
    * Publishes cluster-wide runtime configuration to the {@code taktx-configuration} compacted topic
    * under key {@code "config"}.
+   *
+   * @param configuration runtime configuration to publish
    */
   public void publishGlobalConfig(GlobalConfigurationDTO configuration) {
     publishGlobalConfig(taktPropertiesHelper.getTaktProperties(), configuration);
@@ -302,6 +304,9 @@ public class TaktXClient {
   /**
    * Static convenience overload for publishing runtime configuration without a running client
    * instance.
+   *
+   * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
+   * @param configuration runtime configuration to publish
    */
   public static void publishGlobalConfig(
       Properties properties, GlobalConfigurationDTO configuration) {
@@ -362,8 +367,11 @@ public class TaktXClient {
 
   /**
    * Publishes a public key with an explicit algorithm label such as {@code Ed25519} or {@code RSA}.
-   * /** Publishes a public key with an explicit algorithm label such as {@code Ed25519} or {@code
-   * RSA}.
+   *
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    */
   public void publishSigningKey(
       String keyId, String publicKeyBase64, String owner, String algorithm) {
@@ -374,6 +382,12 @@ public class TaktXClient {
    * Publishes a public key with an explicit algorithm label and role. Use {@link KeyRole#CLIENT}
    * for worker/client keys (the default). Reserved overload for platform tooling that publishes
    * platform-level keys.
+   *
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
+   * @param role trust role under which the key should be published
    */
   public void publishSigningKey(
       String keyId, String publicKeyBase64, String owner, String algorithm, KeyRole role) {
@@ -393,6 +407,11 @@ public class TaktXClient {
    * countersignature, the engine will reject all commands signed by this worker key when anchored
    * mode is active.
    *
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
+   * @param role trust role under which the key should be published
    * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
    *     community mode
    */
@@ -436,13 +455,28 @@ public class TaktXClient {
   /**
    * Static convenience overload with an explicit algorithm label such as {@code Ed25519} or {@code
    * RSA}.
+   *
+   * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
    */
   public static void publishSigningKey(
       Properties properties, String keyId, String publicKeyBase64, String owner, String algorithm) {
     publishSigningKey(properties, keyId, publicKeyBase64, owner, algorithm, KeyRole.CLIENT);
   }
 
-  /** Static convenience overload with an explicit algorithm and role. */
+  /**
+   * Static convenience overload with an explicit algorithm and role.
+   *
+   * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
+   * @param role trust role under which the key should be published
+   */
   public static void publishSigningKey(
       Properties properties,
       String keyId,
@@ -459,6 +493,15 @@ public class TaktXClient {
    * <p>Use this overload in anchored mode. The {@code registrationSignature} must be the
    * base64-encoded RSA/SHA-256 signature produced by the platform root private key over {@code
    * keyId|publicKeyBase64|algorithm|owner|role}. Pass {@code null} in community mode.
+   *
+   * @param properties client/cluster properties used to resolve Kafka connectivity and topic prefix
+   * @param keyId unique identifier for this key
+   * @param publicKeyBase64 X.509 DER public key, base64-encoded
+   * @param owner human-readable owner label
+   * @param algorithm key algorithm label such as {@code Ed25519} or {@code RSA}
+   * @param role trust role under which the key should be published
+   * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
+   *     community mode
    */
   public static void publishSigningKey(
       Properties properties,
@@ -776,6 +819,14 @@ public class TaktXClient {
     return processInstanceProducer.startProcess(process, variables);
   }
 
+  /**
+   * Starts a new process instance of a specific process-definition version.
+   *
+   * @param process the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
+   * @return the UUID of the started process instance
+   */
   public UUID startProcess(String process, int version, VariablesDTO variables) {
     return processInstanceProducer.startProcess(process, version, variables);
   }
@@ -783,7 +834,11 @@ public class TaktXClient {
   /**
    * Starts a new process instance with a Platform Service authorization token.
    *
+   * @param process the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String process, int version, VariablesDTO variables, @Nullable String authorizationToken) {
@@ -793,10 +848,13 @@ public class TaktXClient {
   /**
    * Starts a new process instance with optional business metadata (latest version).
    *
+   * @param process the ID of the process definition to start
+   * @param variables the initial variables for the process instance
    * @param businessKey optional business identifier for this instance; trimmed, empty treated as
    *     {@code null}, max 512 characters
    * @param tags optional immutable operational labels; normalised to lowercase, max 20 tags, max 64
    *     characters each, allowed characters: {@code a-z 0-9 . _ -}
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String process, VariablesDTO variables, @Nullable String businessKey, Set<String> tags) {
@@ -807,10 +865,14 @@ public class TaktXClient {
    * Starts a new process instance with optional business metadata and a Platform Service
    * authorization token.
    *
+   * @param process the ID of the process definition to start
+   * @param version explicit process-definition version, or {@code -1} for latest
+   * @param variables the initial variables for the process instance
    * @param businessKey optional business identifier; see {@link #startProcess(String, VariablesDTO,
    *     String, Set)} for rules
    * @param tags optional immutable operational labels; see above for rules
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
+   * @return the UUID of the started process instance
    */
   public UUID startProcess(
       String process,
@@ -979,6 +1041,8 @@ public class TaktXClient {
   /**
    * Aborts an element instance with a Platform Service authorization token.
    *
+   * @param activeProcessInstanceId the UUID of the active process instance
+   * @param elementInstanceIdPath the path of element instance IDs leading to the element to abort
    * @param authorizationToken RS256 JWT from the Platform Service, or {@code null}
    */
   public void abortElementInstance(
@@ -1352,6 +1416,13 @@ public class TaktXClient {
       return this;
     }
 
+    /**
+     * Sets the result-processor factory used to adapt worker method return values.
+     *
+     * @param resultProcessorFactory factory used to create result processors for worker return
+     *     types
+     * @return this builder
+     */
     public TaktXClientBuilder withResultProcessorFactory(
         ResultProcessorFactory resultProcessorFactory) {
       this.resultProcessorFactory = resultProcessorFactory;
@@ -1369,6 +1440,12 @@ public class TaktXClient {
       return this;
     }
 
+    /**
+     * Overrides the signing-identity source used by the client for worker response signing.
+     *
+     * @param signingIdentitySource signing-identity source to use
+     * @return this builder
+     */
     public TaktXClientBuilder withSigningIdentitySource(
         SigningIdentitySource signingIdentitySource) {
       this.signingIdentitySource = signingIdentitySource;
@@ -1391,6 +1468,7 @@ public class TaktXClient {
      *
      * @param registrationSignature base64-encoded RSA/SHA-256 countersignature, or {@code null} in
      *     community mode
+     * @return this builder
      */
     public TaktXClientBuilder withSigningRegistrationSignature(String registrationSignature) {
       this.workerKeyRegistrationSignature = registrationSignature;
@@ -1407,6 +1485,12 @@ public class TaktXClient {
           System.getenv("TAKTX_SIGNING_REGISTRATION_SIGNATURE"));
     }
 
+    /**
+     * Overrides the authorization-token provider used for entry commands.
+     *
+     * @param authorizationTokenProvider provider used to obtain outbound command JWTs
+     * @return this builder
+     */
     public TaktXClientBuilder withAuthorizationTokenProvider(
         AuthorizationTokenProvider authorizationTokenProvider) {
       this.authorizationTokenProvider = authorizationTokenProvider;

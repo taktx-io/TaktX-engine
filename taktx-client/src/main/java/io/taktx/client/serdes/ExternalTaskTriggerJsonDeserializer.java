@@ -23,6 +23,11 @@ public class ExternalTaskTriggerJsonDeserializer implements Deserializer<Externa
   private final ExternalTaskTriggerProtoDeserializer delegate =
       new ExternalTaskTriggerProtoDeserializer();
 
+  /**
+   * Returns the DTO class produced by this compatibility alias.
+   *
+   * @return {@link ExternalTaskTriggerDTO}.class
+   */
   public Class<ExternalTaskTriggerDTO> getClazz() {
     return ExternalTaskTriggerDTO.class;
   }

@@ -32,9 +32,9 @@ package io.taktx.security;
  * export TAKTX_SIGNING_KEY_ID=my-worker-key-1
  * }</pre>
  *
- * <p>When {@link #fromEnvironment()} is called (by {@link io.taktx.client.TaktXClient} at startup),
- * it reads all three values. {@code TaktXClient.start()} then automatically publishes the public
- * key to the {@code taktx-signing-keys} topic so the engine can verify this worker's responses.
+ * <p>When {@link #fromEnvironment()} is called by the client at startup, it reads all three values.
+ * The client startup flow then automatically publishes the public key to the {@code
+ * taktx-signing-keys} topic so the engine can verify this worker's responses.
  *
  * <p>The public key may be {@code null} if the caller handles key publication separately (e.g.
  * tests that call {@link SigningKeyRegistrar} directly) — in that case auto-publication is skipped.
