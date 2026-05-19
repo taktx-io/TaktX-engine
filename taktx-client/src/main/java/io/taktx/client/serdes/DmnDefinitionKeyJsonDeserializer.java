@@ -8,8 +8,6 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.DmnDefinitionKey;
-import io.taktx.jackson.TaktxObjectMappers;
-import java.io.IOException;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -29,8 +27,8 @@ public class DmnDefinitionKeyJsonDeserializer implements Deserializer<DmnDefinit
       return delegate.deserialize(topic, data);
     } catch (RuntimeException protoFailure) {
       try {
-        return TaktxObjectMappers.cbor().readValue(data, DmnDefinitionKey.class);
-      } catch (IOException legacyFailure) {
+        return LegacyDefinitionKeyCborDecoder.decodeDmnDefinitionKey(data);
+      } catch (RuntimeException legacyFailure) {
         throw new SerializationException(
             "Failed to deserialize DmnDefinitionKey from protobuf or legacy CBOR key format",
             legacyFailure);

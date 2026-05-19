@@ -16,7 +16,7 @@ public class MapParameterResolver implements ParameterResolver {
 
   /** Backward-compatible constructor retained for callers still passing a mapper instance. */
   public MapParameterResolver(Object ignoredMapper) {
-    // Intentionally ignored: mapping is now handled internally without an ObjectMapper.
+    // Intentionally ignored: mapping is now handled internally.
   }
 
   @Override

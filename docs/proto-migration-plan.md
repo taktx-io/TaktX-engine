@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.1 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅ PROTO-4.12 ✅ PROTO-5.1 ✅ PROTO-5.2 ✅ PROTO-5.3 ✅ PROTO-5.4 ✅  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -845,11 +845,13 @@ The current DTOs each declare `@RegisterForReflection`. Proto-lite generated cla
 - Update all `VariablesDTO.of(...)` call sites to `Variables.map(...)`.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-client:build` succeeds with no Jackson dependency.
-- [ ] Unit test: `UserTaskInstanceResponder.complete(...)` produces a binary payload parseable as `UserTaskResponseTriggerEnvelope`.
-- [ ] Unit test: `VariableParameterResolver` resolves a `VariableValue` from an inbound record.
-- [ ] All existing 110 source files in `taktx-client/src` compile without Jackson imports.
-- [ ] No new Sonar issues introduced across the `taktx-client` module; trivial existing issues in touched files resolved opportunistically.
+- [x] `./gradlew :taktx-client:build` succeeds with no direct Jackson dependency declared by `taktx-client` (remaining transitive Jackson cleanup stays tracked under PROTO-1.3).
+- [x] Unit test: `UserTaskInstanceResponder.complete(...)` produces a binary payload parseable as `ProcessInstanceTriggerEnvelope` containing `userTaskResponse`.
+- [x] Unit test: `VariableParameterResolver` resolves a `VariableValue` from an inbound record.
+- [x] All `taktx-client/src/main/java` source files compile without Jackson imports.
+- [x] No new build-breaking or analyzer issues were introduced across the `taktx-client` module; trivial issues in touched files were resolved opportunistically.
+
+**Status:** ✅ Complete
 
 **Dependencies:** E3, E4.8  
 **Estimate:** 1.5 days

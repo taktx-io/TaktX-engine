@@ -10,8 +10,9 @@ package io.taktx.client.serdes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.DmnDefinitionKey;
-import io.taktx.jackson.TaktxObjectMappers;
 import io.taktx.serdes.DmnDefinitionKeyProtoMapper;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 class DmnDefinitionKeyJsonDeserializerTest {
@@ -30,9 +31,9 @@ class DmnDefinitionKeyJsonDeserializerTest {
   }
 
   @Test
-  void deserializesLegacyCborKeyFormat() throws Exception {
+  void deserializesLegacyCborKeyFormat() {
     DmnDefinitionKey original = new DmnDefinitionKey("legacy-decision", 2);
-    byte[] bytes = TaktxObjectMappers.cbor().writeValueAsBytes(original);
+    byte[] bytes = legacyDmnDefinitionKeyBytes();
 
     DmnDefinitionKey decoded;
     try (DmnDefinitionKeyJsonDeserializer deserializer = new DmnDefinitionKeyJsonDeserializer()) {
@@ -40,5 +41,38 @@ class DmnDefinitionKeyJsonDeserializerTest {
     }
 
     assertThat(decoded).isEqualTo(original);
+  }
+
+  private static byte[] legacyDmnDefinitionKeyBytes() {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    output.write(0x82);
+    writeText(output, "legacy-decision");
+    writeInteger(output, 2);
+    return output.toByteArray();
+  }
+
+  private static void writeText(ByteArrayOutputStream output, String value) {
+    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+    writeLength(output, 3, bytes.length);
+    output.writeBytes(bytes);
+  }
+
+  private static void writeInteger(ByteArrayOutputStream output, int value) {
+    if (value >= 0) {
+      writeLength(output, 0, value);
+      return;
+    }
+    writeLength(output, 1, -1L - value);
+  }
+
+  private static void writeLength(ByteArrayOutputStream output, int majorType, long value) {
+    if (value < 24) {
+      output.write((majorType << 5) | (int) value);
+    } else if (value < 256) {
+      output.write((majorType << 5) | 24);
+      output.write((int) value);
+    } else {
+      throw new IllegalArgumentException("Test fixture only supports values smaller than 256");
+    }
   }
 }
