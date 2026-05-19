@@ -13,8 +13,8 @@ import io.taktx.proto.ProcessDefinitionKeyMessage;
 import io.taktx.proto.ProcessInstanceMessage;
 import io.taktx.proto.ProcessInstanceTriggerEnvelope;
 import io.taktx.proto.StartCommandMessage;
-import io.taktx.proto.Uuid;
 import io.taktx.proto.UserTaskTriggerMessage;
+import io.taktx.proto.Uuid;
 import io.taktx.proto.VarMap;
 import io.taktx.variables.Variables;
 import java.util.UUID;
@@ -33,11 +33,14 @@ class ProtoPayloadSizeExplorationTest {
   void oftenUsedEnvelopeSizes_arePrintedForInspection() {
     int processInstanceTriggerSize =
         GoldenFixtureSamples.processInstanceTriggerFixture().message().getSerializedSize();
-    int instanceUpdateSize = GoldenFixtureSamples.instanceUpdateFixture().message().getSerializedSize();
+    int instanceUpdateSize =
+        GoldenFixtureSamples.instanceUpdateFixture().message().getSerializedSize();
     int flowNodeInstanceSize =
         GoldenFixtureSamples.flowNodeInstanceFixture().message().getSerializedSize();
-    int processInstanceSize = GoldenFixtureSamples.processInstanceFixture().message().getSerializedSize();
-    int userTaskTriggerSize = GoldenFixtureSamples.userTaskTriggerFixture().message().getSerializedSize();
+    int processInstanceSize =
+        GoldenFixtureSamples.processInstanceFixture().message().getSerializedSize();
+    int userTaskTriggerSize =
+        GoldenFixtureSamples.userTaskTriggerFixture().message().getSerializedSize();
 
     System.out.printf(
         "Proto payload size report [full fixtures]: process-instance-trigger=%dB instance-update=%dB flow-node-instance=%dB process-instance=%dB user-task-trigger=%dB%n",
@@ -56,8 +59,10 @@ class ProtoPayloadSizeExplorationTest {
 
   @Test
   void sparseMessages_areMuchSmallerThanFullFixturesBecauseAbsentFieldsAreOmitted() {
-    ProcessInstanceTriggerEnvelope fullTrigger = GoldenFixtureSamples.processInstanceTriggerFixture().message();
-    ProcessInstanceMessage fullProcessInstance = GoldenFixtureSamples.processInstanceFixture().message();
+    ProcessInstanceTriggerEnvelope fullTrigger =
+        GoldenFixtureSamples.processInstanceTriggerFixture().message();
+    ProcessInstanceMessage fullProcessInstance =
+        GoldenFixtureSamples.processInstanceFixture().message();
     UserTaskTriggerMessage fullUserTask = GoldenFixtureSamples.userTaskTriggerFixture().message();
 
     ProcessInstanceTriggerEnvelope sparseTrigger =
@@ -92,7 +97,8 @@ class ProtoPayloadSizeExplorationTest {
         fullUserTask.getSerializedSize());
 
     assertThat(sparseTrigger.getSerializedSize()).isLessThan(fullTrigger.getSerializedSize());
-    assertThat(sparseProcessInstance.getSerializedSize()).isLessThan(fullProcessInstance.getSerializedSize());
+    assertThat(sparseProcessInstance.getSerializedSize())
+        .isLessThan(fullProcessInstance.getSerializedSize());
     assertThat(sparseUserTask.getSerializedSize()).isLessThan(fullUserTask.getSerializedSize());
   }
 
@@ -106,11 +112,7 @@ class ProtoPayloadSizeExplorationTest {
 
     System.out.printf(
         "Proto variable presence report: absent-varmap=%dB null=%dB empty-string=%dB false=%dB zero-long=%dB%n",
-        absent.getSerializedSize(),
-        nullValueSize,
-        emptyStringSize,
-        falseValueSize,
-        zeroLongSize);
+        absent.getSerializedSize(), nullValueSize, emptyStringSize, falseValueSize, zeroLongSize);
 
     assertThat(absent.getSerializedSize()).isZero();
     assertThat(nullValueSize).isPositive();
@@ -121,12 +123,16 @@ class ProtoPayloadSizeExplorationTest {
 
   private static Uuid uuid(String raw) {
     UUID uuid = UUID.fromString(raw);
-    return Uuid.newBuilder().setHigh(uuid.getMostSignificantBits()).setLow(uuid.getLeastSignificantBits()).build();
+    return Uuid.newBuilder()
+        .setHigh(uuid.getMostSignificantBits())
+        .setLow(uuid.getLeastSignificantBits())
+        .build();
   }
 
   private static ProcessDefinitionKeyMessage processDefinitionKey(String id) {
-    return ProcessDefinitionKeyMessage.newBuilder().setProcessDefinitionId(id).setVersion(1).build();
+    return ProcessDefinitionKeyMessage.newBuilder()
+        .setProcessDefinitionId(id)
+        .setVersion(1)
+        .build();
   }
 }
-
-

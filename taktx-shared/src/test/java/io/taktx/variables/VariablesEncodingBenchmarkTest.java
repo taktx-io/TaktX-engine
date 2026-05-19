@@ -27,8 +27,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  * <p>This intentionally benchmarks the legacy {@link VariablesDTO} CBOR payloads against the new
  * protobuf {@link VarMap} encoding because the PROTO-2 migration replaced only that variable tree
  * representation. The saved legacy fixtures were reproduced from the actual pre-protobuf
- * `VariablesDTO` class, which used Jackson CBOR with `@JsonFormat(shape = ARRAY)`. Other
- * top-level envelopes are already covered by the golden-wire compatibility suite from PROTO-6.1.
+ * `VariablesDTO` class, which used Jackson CBOR with `@JsonFormat(shape = ARRAY)`. Other top-level
+ * envelopes are already covered by the golden-wire compatibility suite from PROTO-6.1.
  *
  * <p>The benchmark records the empirically measured delta for these compact fixtures and fails only
  * if a future change makes the current protobuf encoding larger than today's baseline.
@@ -137,4 +137,3 @@ class VariablesEncodingBenchmarkTest {
     return values;
   }
 }
-
