@@ -34,12 +34,12 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Covers the path that was broken in production: the engine's {@link ProtoSigningSerializer}
  * signs the protobuf bytes that the Kafka broker stores; the worker's {@link
- * InstanceUpdateJsonDeserializer} receives those exact bytes and verifies the signature before
+ * InstanceUpdateDeserializer} receives those exact bytes and verifies the signature before
  * deserializing.
  *
  * <p>The critical invariant being tested: <em>the bytes that are signed must be identical to the
- * bytes that are verified</em>. Re-serializing a deserialized DTO breaks this invariant because
- * Jackson CBOR does not guarantee byte-for-byte round-trip identity.
+ * bytes that are verified</em>. Re-serializing a deserialized DTO breaks this invariant whenever
+ * protobuf mapping normalizes the message into a semantically equivalent but byte-different form.
  *
  * <p>Also includes a regression test using bytes captured from a live failure (scratch_2.txt).
  */
@@ -77,8 +77,8 @@ class SigningRoundTripTest {
   // ── happy path ─────────────────────────────────────────────────────────────
 
   /**
-   * Full round trip: ProtoSigningSerializer signs the protobuf bytes →
-   * InstanceUpdateJsonDeserializer verifies and deserializes. This is the exact path a live worker
+   * Full round trip: ProtoSigningSerializer signs the protobuf bytes → InstanceUpdateDeserializer
+   * verifies and deserializes. This is the exact path a live worker
    * takes.
    */
   @Test
@@ -90,7 +90,7 @@ class SigningRoundTripTest {
     Headers headers = captureHeaders(dto);
 
     // Worker side: deserialize with signature verification
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       deserializer.configure(
           Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
@@ -112,7 +112,7 @@ class SigningRoundTripTest {
     byte[] originalBytes = serializeAndSign(dto);
     Headers headers = captureHeaders(dto);
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       InstanceUpdateDTO roundTripped = deserializer.deserialize(TOPIC, originalBytes);
       byte[] reSerializedBytes = InstanceUpdateProtoMapper.toProto(roundTripped).toByteArray();
       InstanceUpdateDTO reparsed = deserializer.deserialize(TOPIC, reSerializedBytes);
@@ -173,7 +173,7 @@ class SigningRoundTripTest {
     byte[] tampered = signedBytes.clone();
     tampered[signedBytes.length / 2] = (byte) (tampered[signedBytes.length / 2] ^ 0xFF);
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       deserializer.configure(
           Map.of(io.taktx.serdes.ProtoDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64),
           false);
@@ -194,7 +194,7 @@ class SigningRoundTripTest {
     byte[] bytes = InstanceUpdateProtoMapper.toProto(dto).toByteArray();
     Headers emptyHeaders = new RecordHeaders();
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       deserializer.configure(
           Map.of(InstanceUpdateDtoDeserializer.ENGINE_PUBLIC_KEY_CONFIG, publicKeyBase64), false);
       // Must not throw — absent header = signing disabled / not yet enabled
@@ -210,7 +210,7 @@ class SigningRoundTripTest {
     byte[] bytes = serializeAndSign(dto);
     Headers headers = captureHeaders(dto);
 
-    try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
+    try (InstanceUpdateDeserializer deserializer = new InstanceUpdateDeserializer()) {
       // Configure with a *different* public key — keyId resolves but signature won't match
       KeyPair other = SigningKeyGenerator.generate();
       String otherPublicKey = SigningKeyGenerator.encodePublicKey(other.getPublic());

@@ -154,7 +154,7 @@ public class DlqReplayResultConsumer {
   private KafkaConsumer<String, DlqReplayResult> createConsumer(String groupId) {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
-            groupId, StringDeserializer.class, DlqReplayResultCborDeserializer.class, "latest");
+            groupId, StringDeserializer.class, DlqReplayResultDeserializer.class, "latest");
     return new KafkaConsumer<>(props);
   }
 }

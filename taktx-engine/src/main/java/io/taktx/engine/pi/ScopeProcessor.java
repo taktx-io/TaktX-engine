@@ -10,6 +10,7 @@ package io.taktx.engine.pi;
 
 import io.taktx.dto.AbortTriggerDTO;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.EventSignalTriggerDTO;
 import io.taktx.dto.ExecutionState;
 import io.taktx.engine.feel.FeelExpressionHandler;
@@ -30,7 +31,6 @@ import io.taktx.engine.pi.model.WithScope;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessor;
 import io.taktx.engine.pi.processor.FlowNodeInstanceProcessorProvider;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +94,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 parentElementInstanceIdPath,
                 null,
-                VariableValueDtoMapper.emptyVariables());
+                VariablesDTO.empty());
         scope
             .getDirectInstanceResult()
             .addContinueInstance(
@@ -224,7 +224,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 trigger.getEventSignal().getElementInstanceIdPath(),
                 null,
-                VariableValueDtoMapper.emptyVariables());
+                VariablesDTO.empty());
 
         scope
             .getDirectInstanceResult()
@@ -273,7 +273,7 @@ public class ScopeProcessor {
                 processInstanceProcessingContext.getProcessInstance().getProcessInstanceId(),
                 trigger.getElementInstanceIdPath(),
                 null,
-                VariableValueDtoMapper.emptyVariables());
+                VariablesDTO.empty());
         scope
             .getDirectInstanceResult()
             .addContinueInstance(

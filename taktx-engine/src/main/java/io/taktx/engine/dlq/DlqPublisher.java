@@ -163,7 +163,7 @@ public class DlqPublisher {
         && processInstanceDlqEntry.getTrigger() == null
         && valueBytes != null
         && valueBytes.length > 0) {
-      return DlqReasonCode.CBOR_DECODE_ERROR;
+      return DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR;
     }
     return DlqReasonCode.PROCESSOR_EXCEPTION;
   }
@@ -174,7 +174,7 @@ public class DlqPublisher {
       return reasonTextHint;
     }
 
-    if (reasonCode == DlqReasonCode.CBOR_DECODE_ERROR) {
+    if (reasonCode == DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR) {
       return "Unable to decode process-instance trigger payload";
     }
     return "Processing exception for " + entry.getClass().getSimpleName();

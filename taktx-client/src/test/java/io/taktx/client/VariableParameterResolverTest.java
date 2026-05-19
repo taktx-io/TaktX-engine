@@ -10,8 +10,8 @@ package io.taktx.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,7 @@ class VariableParameterResolverTest {
         new VariableParameterResolver(VariableValue.class, "amount");
     ExternalTaskTriggerDTO trigger =
         ExternalTaskTriggerDTO.builder()
-            .variables(VariableValueDtoMapper.toVariablesDto(Variables.map("amount", 42L)))
+            .variables(VariablesDTO.ofVariableMap(Variables.map("amount", 42L)))
             .build();
 
     Object resolved = resolver.resolve(trigger);
@@ -36,7 +36,7 @@ class VariableParameterResolverTest {
     VariableParameterResolver resolver = new VariableParameterResolver(String.class, "name");
     ExternalTaskTriggerDTO trigger =
         ExternalTaskTriggerDTO.builder()
-            .variables(VariableValueDtoMapper.toVariablesDto(Variables.map("name", "test")))
+            .variables(VariablesDTO.ofVariableMap(Variables.map("name", "test")))
             .build();
 
     assertThat(resolver.resolve(trigger)).isEqualTo("test");

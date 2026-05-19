@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.ProcessDefinitionKeyJsonDeserializer;
+import io.taktx.client.serdes.ProcessDefinitionKeyDeserializer;
 import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.serdes.ZippedStringDeserializer;
 import io.taktx.util.TaktPropertiesHelper;
@@ -123,7 +123,7 @@ public class XmlByProcessDefinitionIdConsumer {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             "xml-by-process-definition-id-consumer-" + UUID.randomUUID(),
-            ProcessDefinitionKeyJsonDeserializer.class,
+            ProcessDefinitionKeyDeserializer.class,
             ZippedStringDeserializer.class,
             "earliest");
     return new KafkaConsumer<>(props);

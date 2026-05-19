@@ -22,12 +22,12 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the DLQ client compatibility serdes — verifies round-trip serialisation of {@link
+ * Unit tests for the DLQ client protobuf serdes — verifies round-trip serialisation of {@link
  * DlqEnvelope}, {@link DlqReplayCommand}, and {@link DlqReplayResult}.
  */
 class DlqClientSerdesTest {
 
-  // ── DlqEnvelopeCborDeserializer — client-side round-trip ─────────────────────
+  // ── DlqEnvelopeDeserializer — client-side round-trip ─────────────────────────
 
   @Test
   void deserializeEnvelope_roundTrip() throws Exception {
@@ -35,7 +35,7 @@ class DlqClientSerdesTest {
     original.setSourceTopic("process-instance");
     original.setSourcePartition(0);
     original.setSourceOffset(42L);
-    original.setReasonCode(DlqReasonCode.CBOR_DECODE_ERROR);
+    original.setReasonCode(DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR);
     original.setSeverity(DlqSeverity.MEDIUM);
     original.setRejectionTimestampMs(1_714_550_000_000L);
     original.setEngineInstanceId("engine-1");
@@ -44,34 +44,34 @@ class DlqClientSerdesTest {
 
     byte[] proto = DlqProtoMapper.toProto(original).toByteArray();
 
-    DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
+    DlqEnvelopeDeserializer deser = new DlqEnvelopeDeserializer();
     DlqEnvelope result = deser.deserialize("dlq", proto);
 
     assertThat(result.getSourceTopic()).isEqualTo("process-instance");
     assertThat(result.getSourcePartition()).isZero();
     assertThat(result.getSourceOffset()).isEqualTo(42L);
-    assertThat(result.getReasonCode()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR);
+    assertThat(result.getReasonCode()).isEqualTo(DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR);
     assertThat(result.getSeverity()).isEqualTo(DlqSeverity.MEDIUM);
   }
 
   @Test
   void deserializeEnvelope_nullReturnsNull() {
-    DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
+    DlqEnvelopeDeserializer deser = new DlqEnvelopeDeserializer();
     assertThat(deser.deserialize("dlq", null)).isNull();
   }
 
   @Test
   void deserializeEnvelope_invalidBytesThrows() {
-    DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
+    DlqEnvelopeDeserializer deser = new DlqEnvelopeDeserializer();
     byte[] bytes = "NOT_PROTO".getBytes(StandardCharsets.UTF_8);
     assertThatThrownBy(() -> deser.deserialize("dlq", bytes))
         .isInstanceOf(IllegalStateException.class);
   }
 
-  // ── DlqEnvelopeCborDeserializer — cross-boundary (engine → client) ────────────
+  // ── DlqEnvelopeDeserializer — cross-boundary (engine → client) ───────────────
 
   @Test
-  void deserializeEnvelope_engineCborBytes_decodedByClient() throws Exception {
+  void deserializeEnvelope_engineProtoBytes_decodedByClient() throws Exception {
     DlqEnvelope original = new DlqEnvelope();
     original.setSourceTopic("process-instance");
     original.setSourcePartition(2);
@@ -83,7 +83,7 @@ class DlqClientSerdesTest {
 
     byte[] engineBytes = DlqProtoMapper.toProto(original).toByteArray();
 
-    DlqEnvelopeCborDeserializer deser = new DlqEnvelopeCborDeserializer();
+    DlqEnvelopeDeserializer deser = new DlqEnvelopeDeserializer();
     DlqEnvelope result = deser.deserialize("dlq", engineBytes);
 
     assertThat(result.getSourceTopic()).isEqualTo("process-instance");
@@ -94,7 +94,7 @@ class DlqClientSerdesTest {
     assertThat(result.getEngineInstanceId()).isEqualTo("tenant.ns@localhost:8080");
   }
 
-  // ── DlqReplayResultCborDeserializer — client-side round-trip ─────────────────
+  // ── DlqReplayResultDeserializer — client-side round-trip ─────────────────────
 
   @Test
   void deserializeReplayResult_roundTrip() throws Exception {
@@ -115,7 +115,7 @@ class DlqClientSerdesTest {
 
     byte[] proto = DlqProtoMapper.toProto(original).toByteArray();
 
-    DlqReplayResultCborDeserializer deser = new DlqReplayResultCborDeserializer();
+    DlqReplayResultDeserializer deser = new DlqReplayResultDeserializer();
     DlqReplayResult result = deser.deserialize("dlq.replay-results", proto);
 
     assertThat(result.getStatus()).isEqualTo("SUCCESS");
@@ -126,14 +126,14 @@ class DlqClientSerdesTest {
 
   @Test
   void deserializeReplayResult_nullReturnsNull() {
-    DlqReplayResultCborDeserializer deser = new DlqReplayResultCborDeserializer();
+    DlqReplayResultDeserializer deser = new DlqReplayResultDeserializer();
     assertThat(deser.deserialize("dlq.replay-results", null)).isNull();
   }
 
-  // ── DlqReplayResultCborDeserializer — cross-boundary (engine → client) ───────
+  // ── DlqReplayResultDeserializer — cross-boundary (engine → client) ───────────
 
   @Test
-  void deserializeReplayResult_engineCborBytes_decodedByClient() throws Exception {
+  void deserializeReplayResult_engineProtoBytes_decodedByClient() throws Exception {
     DlqReplayResult original =
         DlqReplayResult.builder()
             .dlqEntryRef("process-instance:1:77:sha256:def")
@@ -147,7 +147,7 @@ class DlqClientSerdesTest {
 
     byte[] engineBytes = DlqProtoMapper.toProto(original).toByteArray();
 
-    DlqReplayResultCborDeserializer deser = new DlqReplayResultCborDeserializer();
+    DlqReplayResultDeserializer deser = new DlqReplayResultDeserializer();
     DlqReplayResult result = deser.deserialize("dlq.replay-results", engineBytes);
 
     assertThat(result.getDlqEntryRef()).isEqualTo("process-instance:1:77:sha256:def");
@@ -186,7 +186,7 @@ class DlqClientSerdesTest {
    * does on the engine side).
    */
   @Test
-  void serializeReplayCommand_clientCborBytes_decodedByEngine() throws Exception {
+  void serializeReplayCommand_clientProtoBytes_decodedByEngine() throws Exception {
     DlqReplayCommand original =
         DlqReplayCommand.builder()
             .dlqEntryRef("process-instance:3:10:sha256:xyz")

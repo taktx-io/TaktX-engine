@@ -11,6 +11,7 @@ package io.taktx.engine.pi.processor;
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.FlowNodeInstanceUpdateDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.FlowNode;
 import io.taktx.engine.pd.model.Gateway;
 import io.taktx.engine.pd.model.SequenceFlow;
@@ -25,7 +26,6 @@ import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -147,7 +147,7 @@ public abstract class FlowNodeInstanceProcessor<
 
     processInstanceProcessingContext.getProcessingStatistics().increaseFlowNodesContinued();
 
-    variableScope.merge(VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
+    variableScope.merge(trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
 
     long now = clock.instant().toEpochMilli();
 
@@ -310,7 +310,7 @@ public abstract class FlowNodeInstanceProcessor<
       List<String> outputSequenceFlowIds) {
     List<Long> elementInstanceIdPath = flowNodeInstance.createKeyPath();
 
-    var variablesDTO = VariableValueDtoMapper.toVariablesDto(variableScope.scopeToMap());
+    VariablesDTO variablesDTO = VariablesDTO.ofVariableMap(variableScope.scopeToMap());
     FlowNodeInstanceDTO flowNodeInstanceDTO =
         processInstanceMapper.map((FlowNodeInstance<?>) flowNodeInstance, scope.getFlowElements());
     String elementId =

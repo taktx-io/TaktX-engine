@@ -12,21 +12,11 @@ import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import java.util.Map;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/**
- * Backward-compatible alias for the protobuf user-task trigger deserializer.
- *
- * <p>The class name is kept for existing client configuration and tests while the wire format is
- * now protobuf.
- */
-public class UserTaskTriggerJsonDeserializer implements Deserializer<UserTaskTriggerDTO> {
+/** Client deserializer for protobuf-backed user-task triggers. */
+public class UserTaskTriggerDeserializer implements Deserializer<UserTaskTriggerDTO> {
 
   private final UserTaskTriggerProtoDeserializer delegate = new UserTaskTriggerProtoDeserializer();
 
-  /**
-   * Returns the DTO class produced by this compatibility alias.
-   *
-   * @return {@link UserTaskTriggerDTO}.class
-   */
   public Class<UserTaskTriggerDTO> getClazz() {
     return UserTaskTriggerDTO.class;
   }
@@ -46,3 +36,5 @@ public class UserTaskTriggerJsonDeserializer implements Deserializer<UserTaskTri
     delegate.close();
   }
 }
+
+

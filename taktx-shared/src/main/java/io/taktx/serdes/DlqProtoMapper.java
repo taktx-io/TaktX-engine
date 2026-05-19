@@ -350,8 +350,9 @@ public final class DlqProtoMapper {
 
   private static io.taktx.proto.DlqReasonCode toProto(DlqReasonCode reasonCode) {
     return switch (reasonCode) {
-      case CBOR_DECODE_ERROR -> io.taktx.proto.DlqReasonCode.DLQ_REASON_CBOR_DECODE_ERROR;
-      case CBOR_TYPE_MISMATCH -> io.taktx.proto.DlqReasonCode.DLQ_REASON_CBOR_TYPE_MISMATCH;
+      case PAYLOAD_DESERIALIZATION_ERROR ->
+          io.taktx.proto.DlqReasonCode.DLQ_REASON_PAYLOAD_DESERIALIZATION_ERROR;
+      case PAYLOAD_TYPE_MISMATCH -> io.taktx.proto.DlqReasonCode.DLQ_REASON_PAYLOAD_TYPE_MISMATCH;
       case SIGNATURE_MISSING -> io.taktx.proto.DlqReasonCode.DLQ_REASON_SIGNATURE_MISSING;
       case SIGNATURE_MALFORMED -> io.taktx.proto.DlqReasonCode.DLQ_REASON_SIGNATURE_MALFORMED;
       case SIGNATURE_KEY_UNKNOWN -> io.taktx.proto.DlqReasonCode.DLQ_REASON_SIGNATURE_KEY_UNKNOWN;
@@ -373,8 +374,8 @@ public final class DlqProtoMapper {
 
   private static DlqReasonCode toDto(io.taktx.proto.DlqReasonCode reasonCode) {
     return switch (reasonCode) {
-      case DLQ_REASON_CBOR_DECODE_ERROR -> DlqReasonCode.CBOR_DECODE_ERROR;
-      case DLQ_REASON_CBOR_TYPE_MISMATCH -> DlqReasonCode.CBOR_TYPE_MISMATCH;
+      case DLQ_REASON_PAYLOAD_DESERIALIZATION_ERROR -> DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR;
+      case DLQ_REASON_PAYLOAD_TYPE_MISMATCH -> DlqReasonCode.PAYLOAD_TYPE_MISMATCH;
       case DLQ_REASON_SIGNATURE_MISSING -> DlqReasonCode.SIGNATURE_MISSING;
       case DLQ_REASON_SIGNATURE_MALFORMED -> DlqReasonCode.SIGNATURE_MALFORMED;
       case DLQ_REASON_SIGNATURE_KEY_UNKNOWN -> DlqReasonCode.SIGNATURE_KEY_UNKNOWN;

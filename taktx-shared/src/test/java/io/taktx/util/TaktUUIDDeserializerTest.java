@@ -76,7 +76,7 @@ class TaktUUIDDeserializerTest {
 
   @Test
   void deserialize_garbageString_throwsSerializationException() {
-    byte[] garbage = "not-valid-cbor".getBytes();
+    byte[] garbage = "not-valid-uuid-bytes".getBytes();
     assertThatThrownBy(() -> deserializer.deserialize("acme.default.process-instance", garbage))
         .isInstanceOf(SerializationException.class)
         .hasMessageContaining("expected 16 bytes but got");

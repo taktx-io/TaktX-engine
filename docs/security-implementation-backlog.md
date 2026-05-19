@@ -444,7 +444,7 @@ APIs now auto-populate `messageId` via `UUID.randomUUID().toString()` in
 `ExternalTaskInstanceResponder`, `UserTaskInstanceResponder`, and `ExternalTaskTopicRequester`.
 
 **Acceptance criteria:**
-- Field added and CBOR-serializable.
+- Field added and protobuf-serializable.
 - Producer-side helper APIs auto-populate `messageId` via `UUID.randomUUID()` when not set.
 - Serialization round-trip test.
 

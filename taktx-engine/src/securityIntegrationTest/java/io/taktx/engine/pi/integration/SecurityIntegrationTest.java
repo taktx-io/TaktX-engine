@@ -533,9 +533,9 @@ class SecurityIntegrationTest {
   }
 
   /**
-   * A worker response signed with a <em>revoked</em> key must be dropped by the engine's {@code
-   * JsonDeserializer} — the key is in the KTable with {@code REVOKED} status, so {@code
-   * resolvePublicKeyFromKTable} returns {@code null} and the deserializer throws. The process
+   * A worker response signed with a <em>revoked</em> key must be dropped by the engine's trigger
+   * deserializer — the key is in the KTable with {@code REVOKED} status, so {@code
+   * resolvePublicKeyFromKTable} returns {@code null} and deserialization fails. The process
    * instance should stay blocked (never complete).
    */
   @Test
@@ -1419,8 +1419,8 @@ class SecurityIntegrationTest {
         ConfigProvider.getConfig().getValue("kafka.bootstrap.servers", String.class);
     String topic = prefixed(Topics.PROCESS_INSTANCE_TRIGGER_TOPIC.getTopicName());
 
-    // Serialise via the no-Headers overload — SigningSerializer only signs in the Headers overload,
-    // so calling serialize(topic, value) always returns plain CBOR bytes with no side-effects.
+    // Serialize via the no-Headers overload — SigningSerializer only signs in the Headers overload,
+    // so calling serialize(topic, value) always returns plain protobuf bytes with no side-effects.
     byte[] payload;
     try (io.taktx.client.serdes.ProcessInstanceTriggerSerializer rawSerializer =
         new io.taktx.client.serdes.ProcessInstanceTriggerSerializer()) {

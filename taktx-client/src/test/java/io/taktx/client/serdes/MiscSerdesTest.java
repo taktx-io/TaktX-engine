@@ -17,15 +17,15 @@ import org.junit.jupiter.api.Test;
 class MiscSerdesTest {
 
   @Test
-  void topicMetaJsonDeserializer_hasCorrectClass() {
-    try (TopicMetaJsonDeserializer d = new TopicMetaJsonDeserializer()) {
+  void topicMetaDeserializer_hasCorrectClass() {
+    try (TopicMetaDeserializer d = new TopicMetaDeserializer()) {
       assertThat(d.getClazz()).isEqualTo(TopicMetaDTO.class);
     }
   }
 
   @Test
-  void userTaskTriggerJsonDeserializer_hasCorrectClass() {
-    try (UserTaskTriggerJsonDeserializer d = new UserTaskTriggerJsonDeserializer()) {
+  void userTaskTriggerDeserializer_hasCorrectClass() {
+    try (UserTaskTriggerDeserializer d = new UserTaskTriggerDeserializer()) {
       assertThat(d.getClazz()).isEqualTo(UserTaskTriggerDTO.class);
     }
   }

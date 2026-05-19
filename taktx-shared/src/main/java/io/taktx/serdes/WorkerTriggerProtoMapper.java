@@ -22,7 +22,6 @@ import io.taktx.proto.TaskScheduleMessage;
 import io.taktx.proto.UserTaskTriggerMessage;
 import io.taktx.proto.Uuid;
 import io.taktx.proto.VarMap;
-import io.taktx.variables.VariableValueDtoMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -186,14 +185,14 @@ public final class WorkerTriggerProtoMapper {
 
   private static VarMap toProto(VariablesDTO variables) {
     return VarMap.newBuilder()
-        .putAllEntries(VariableValueDtoMapper.toVariableMap(variables))
+        .putAllEntries(variables == null ? Map.of() : variables.getVariables())
         .build();
   }
 
   private static VariablesDTO toVariablesDto(VarMap variables) {
     Map<String, io.taktx.proto.VariableValue> entries =
         variables == null ? Map.of() : variables.getEntriesMap();
-    return VariableValueDtoMapper.toVariablesDto(entries);
+    return VariablesDTO.ofVariableMap(entries);
   }
 
   private static String emptyToNull(String value) {

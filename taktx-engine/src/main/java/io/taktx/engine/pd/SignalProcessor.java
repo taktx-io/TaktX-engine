@@ -21,11 +21,11 @@ import io.taktx.dto.SignalDTO;
 import io.taktx.dto.SignalDlqEntryDTO;
 import io.taktx.dto.SignalEventSignalDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.dlq.DlqHeaders;
 import io.taktx.engine.generic.SignalDefinitionSubscriptionKeyDTO;
 import io.taktx.engine.generic.SignalInstanceSubscriptionKeyDTO;
-import io.taktx.variables.VariableValueDtoMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -88,7 +88,10 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
   public void process(Record<String, SignalDTO> singalRecord) {
     if (singalRecord.value() == null) {
       emitSignalDlq(
-          singalRecord, "CBOR_DECODE_ERROR", "Null payload for signals record", "DESERIALIZER");
+          singalRecord,
+          "PAYLOAD_DESERIALIZATION_ERROR",
+          "Null payload for signals record",
+          "DESERIALIZER");
       return;
     }
     try {
@@ -220,7 +223,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
             SignalEventSignalDTO event = new SignalEventSignalDTO();
             event.setName(signalDTO.getSignalName());
             event.setElementInstanceIdPath(elementInstanceIdPath);
-            event.setVariables(VariableValueDtoMapper.emptyVariables());
+            event.setVariables(VariablesDTO.empty());
             EventSignalTriggerDTO eventSignalTrigger =
                 new EventSignalTriggerDTO(processInstanceId, event);
             context.forward(new Record<>(processInstanceId, eventSignalTrigger, clock.millis()));
@@ -241,7 +244,7 @@ public class SignalProcessor implements Processor<String, SignalDTO, Object, Obj
             subscription.key.getElementId(),
             null,
             subscription.key.getProcessDefinitionKey(),
-            VariableValueDtoMapper.emptyVariables());
+            VariablesDTO.empty());
     context.forward(new Record<>(processInstanceId, startCommand, clock.millis()));
   }
 }

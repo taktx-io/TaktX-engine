@@ -26,7 +26,7 @@ class DlqEnvelopeTest {
             null,
             new byte[] {1, 2, 3},
             Map.of("header-a", "value-a"),
-            DlqReasonCode.CBOR_DECODE_ERROR,
+            DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR,
             "decode failed",
             DlqSeverity.MEDIUM,
             DlqCaptureStage.DESERIALIZER,
@@ -47,7 +47,7 @@ class DlqEnvelopeTest {
             "kid-1");
 
     assertThat(envelope.getSourceTopic()).isEqualTo("process-instance");
-    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.CBOR_DECODE_ERROR);
+    assertThat(envelope.getReasonCode()).isEqualTo(DlqReasonCode.PAYLOAD_DESERIALIZATION_ERROR);
     assertThat(envelope.getCaptureStage()).isEqualTo(DlqCaptureStage.DESERIALIZER);
     assertThat(envelope.getLineage()).isEqualTo(lineage);
     assertThat(envelope.getReplaySigner()).isEqualTo("engine-1");

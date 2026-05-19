@@ -30,7 +30,6 @@ import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.UserTaskInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Clock;
@@ -152,13 +151,13 @@ public class UserTaskInstanceProcessor
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     } else if (UserTaskResponseType.ESCALATION == responseResult.getResponseType()) {
       handleEscalation(
           scope.getDirectInstanceResult(),
           userTaskInstance,
           responseResult,
-          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     }
   }
 

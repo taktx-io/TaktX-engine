@@ -11,8 +11,8 @@ import io.taktx.dto.DlqEnvelope;
 import io.taktx.serdes.DlqEnvelopeDtoDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/** Backward-compatible deserializer for protobuf-backed {@link DlqEnvelope} records. */
-public class DlqEnvelopeCborDeserializer implements Deserializer<DlqEnvelope> {
+/** Deserializes protobuf-backed DLQ envelopes. */
+public class DlqEnvelopeDeserializer implements Deserializer<DlqEnvelope> {
 
   private final DlqEnvelopeDtoDeserializer delegate = new DlqEnvelopeDtoDeserializer();
 
@@ -21,3 +21,4 @@ public class DlqEnvelopeCborDeserializer implements Deserializer<DlqEnvelope> {
     return delegate.deserialize(topic, data);
   }
 }
+

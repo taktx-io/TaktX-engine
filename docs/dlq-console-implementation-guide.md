@@ -405,8 +405,8 @@ Authoritative values from `DlqReasonCode`:
 
 | Reason code | Default severity | Meaning |
 |---|---|---|
-| `CBOR_DECODE_ERROR` | `MEDIUM` | Payload could not be decoded |
-| `CBOR_TYPE_MISMATCH` | `MEDIUM` | Payload shape/type mismatch |
+| `PAYLOAD_DESERIALIZATION_ERROR` | `MEDIUM` | Payload could not be deserialized |
+| `PAYLOAD_TYPE_MISMATCH` | `MEDIUM` | Payload shape/type mismatch |
 | `SIGNATURE_MISSING` | `HIGH` | Required Ed25519 signature missing |
 | `SIGNATURE_MALFORMED` | `HIGH` | Signature header malformed |
 | `SIGNATURE_KEY_UNKNOWN` | `HIGH` | Key ID not found / not trusted |
@@ -1011,7 +1011,7 @@ A release should not be considered complete until all of the following are true.
 
 - signature verification failure on `process-instance`
 - JWT missing on entry command
-- CBOR decode failure with null/unknown source metadata
+- payload deserialization failure with null/unknown source metadata
 - duplicate DLQ emits for same source record
 
 ## 17.2 Incident correlation

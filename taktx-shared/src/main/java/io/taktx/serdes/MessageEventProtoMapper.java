@@ -28,8 +28,8 @@ import io.taktx.proto.MessageEventKeyMessage;
 import io.taktx.proto.ProcessDefinitionKeyMessage;
 import io.taktx.proto.Uuid;
 import io.taktx.proto.VarMap;
-import io.taktx.variables.VariableValueDtoMapper;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.UUID;
 
 /** Shared DTO ↔ protobuf mapper for message-event records. */
@@ -243,12 +243,12 @@ public final class MessageEventProtoMapper {
 
   private static VarMap toProto(VariablesDTO variables) {
     return VarMap.newBuilder()
-        .putAllEntries(VariableValueDtoMapper.toVariableMap(variables))
+        .putAllEntries(variables == null ? Map.of() : variables.getVariables())
         .build();
   }
 
   private static VariablesDTO toVariablesDto(VarMap variables) {
-    return VariableValueDtoMapper.toVariablesDto(variables.getEntriesMap());
+    return VariablesDTO.ofVariableMap(variables.getEntriesMap());
   }
 
   private static Uuid toProto(UUID uuid) {

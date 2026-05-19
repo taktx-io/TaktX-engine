@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.DmnDefinitionKeyJsonDeserializer;
+import io.taktx.client.serdes.DmnDefinitionKeyDeserializer;
 import io.taktx.dto.DmnDecisionDTO;
 import io.taktx.dto.DmnDefinitionKey;
 import io.taktx.serdes.ZippedStringDeserializer;
@@ -158,7 +158,7 @@ public class XmlByDmnDefinitionIdConsumer {
     Properties props =
         taktPropertiesHelper.getKafkaConsumerProperties(
             "xml-by-dmn-definition-id-consumer-" + UUID.randomUUID(),
-            DmnDefinitionKeyJsonDeserializer.class,
+            DmnDefinitionKeyDeserializer.class,
             ZippedStringDeserializer.class,
             "earliest");
     return new KafkaConsumer<>(props);

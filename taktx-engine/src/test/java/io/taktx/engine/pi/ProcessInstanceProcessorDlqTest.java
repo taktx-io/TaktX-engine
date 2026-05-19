@@ -170,7 +170,7 @@ class ProcessInstanceProcessorDlqTest {
     assertThat(dlqEntry.getTrigger()).isNull();
     assertThat(dlqEntry.getData()).containsExactly(payload);
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("CBOR_DECODE_ERROR");
+        .isEqualTo("PAYLOAD_DESERIALIZATION_ERROR");
     assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }

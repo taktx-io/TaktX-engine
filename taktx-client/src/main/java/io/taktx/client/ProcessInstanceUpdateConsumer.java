@@ -8,7 +8,7 @@
 package io.taktx.client;
 
 import io.taktx.Topics;
-import io.taktx.client.serdes.InstanceUpdateJsonDeserializer;
+import io.taktx.client.serdes.InstanceUpdateDeserializer;
 import io.taktx.dto.InstanceUpdateDTO;
 import io.taktx.util.TaktPropertiesHelper;
 import io.taktx.util.TaktUUIDDeserializer;
@@ -194,7 +194,7 @@ public class ProcessInstanceUpdateConsumer {
         taktPropertiesHelper.getKafkaConsumerProperties(
             groupId,
             TaktUUIDDeserializer.class,
-            InstanceUpdateJsonDeserializer.class,
+            InstanceUpdateDeserializer.class,
             autoOffsetReset);
     return new KafkaConsumer<>(props);
   }

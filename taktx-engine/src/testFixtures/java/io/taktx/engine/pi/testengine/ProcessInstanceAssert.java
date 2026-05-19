@@ -10,20 +10,18 @@ package io.taktx.engine.pi.testengine;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ExecutionState;
 import io.taktx.dto.FlowNodeInstanceDTO;
 import io.taktx.dto.ProcessInstanceDTO;
 import io.taktx.dto.VariablesDTO;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 public class ProcessInstanceAssert {
-
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final UUID processInstanceId;
   private final BpmnTestEngine bpmnTestEngine;
@@ -129,24 +127,23 @@ public class ProcessInstanceAssert {
                 + variables)
         .isNotNull();
     Object actualValue = Variables.toJavaObject(variableValue);
-    var actualNode = OBJECT_MAPPER.valueToTree(actualValue);
-    var expectedNode = OBJECT_MAPPER.valueToTree(value1);
-    if (actualNode.isNumber() && expectedNode.isNumber()) {
-      assertThat(actualNode.decimalValue())
+    if (actualValue instanceof Number actualNumber && value1 instanceof Number expectedNumber) {
+      assertThat(new BigDecimal(String.valueOf(actualNumber)))
           .as(
               "variable "
                   + var1
                   + " not found in process instanceToContinue, available variables:"
                   + variables)
-          .isEqualTo(expectedNode.decimalValue());
+          .isEqualTo(new BigDecimal(String.valueOf(expectedNumber)));
     } else {
-      assertThat(actualNode)
+      assertThat(actualValue)
           .as(
               "variable "
                   + var1
                   + " not found in process instanceToContinue, available variables:"
                   + variables)
-          .isEqualTo(expectedNode);
+          .usingRecursiveComparison()
+          .isEqualTo(value1);
     }
     return this;
   }

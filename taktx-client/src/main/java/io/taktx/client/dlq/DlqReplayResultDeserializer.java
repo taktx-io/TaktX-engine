@@ -11,11 +11,8 @@ import io.taktx.dto.DlqReplayResult;
 import io.taktx.serdes.DlqReplayResultDtoDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/**
- * Backward-compatible deserializer for protobuf-backed {@link DlqReplayResult} records read from
- * the {@code dlq.replay-results} topic.
- */
-public class DlqReplayResultCborDeserializer implements Deserializer<DlqReplayResult> {
+/** Deserializes protobuf-backed DLQ replay results. */
+public class DlqReplayResultDeserializer implements Deserializer<DlqReplayResult> {
 
   private final DlqReplayResultDtoDeserializer delegate = new DlqReplayResultDtoDeserializer();
 
@@ -24,3 +21,4 @@ public class DlqReplayResultCborDeserializer implements Deserializer<DlqReplayRe
     return delegate.deserialize(topic, data);
   }
 }
+

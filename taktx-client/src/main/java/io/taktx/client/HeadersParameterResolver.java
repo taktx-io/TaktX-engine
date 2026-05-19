@@ -27,10 +27,6 @@ public class HeadersParameterResolver implements ParameterResolver {
     this.type = type;
   }
 
-  /** Backward-compatible constructor retained for callers still passing a mapper instance. */
-  public HeadersParameterResolver(Object ignoredMapper, Class<?> type) {
-    this(type);
-  }
 
   /**
    * Resolves the parameter by extracting headers.

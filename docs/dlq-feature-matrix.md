@@ -71,7 +71,7 @@ The boundary is designed to be:
 | `taktx-client` DLQ API (`registerDlqEntryConsumer`, `submitReplayCommand`, `registerReplayResultConsumer`) | ✅ | ✅ |
 | `DlqReplayCommandBuilder` fluent API | ✅ | ✅ |
 | **DLQ Explorer** — rich filter UI (reason code, severity, time range, process ID) | ❌ | ✅ |
-| **Payload Inspector** — CBOR decode + JSON display + schema mismatch warnings | ❌ | ✅ |
+| **Payload Inspector** — schema-aware payload decode + JSON display + schema mismatch warnings | ❌ | ✅ |
 | **Correction UI** — JSON/form editor for payload and headers | ❌ | ✅ |
 | **Replay Approval Workflow** — multi-step review, approvals, RBAC | ❌ | ✅ |
 | **Lineage Visualization** — interactive graph (original → DLQ → correction → replay) | ❌ | ✅ |

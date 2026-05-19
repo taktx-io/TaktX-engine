@@ -9,7 +9,6 @@ package io.taktx.client;
 
 import io.taktx.dto.VariablesDTO;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
@@ -28,7 +27,7 @@ final class ClientValueMapper {
     if (source instanceof VariablesDTO variablesDTO) {
       return variablesDTO;
     }
-    return VariableValueDtoMapper.toVariablesDto(toVariableMap(source));
+    return VariablesDTO.ofVariableMap(toVariableMap(source));
   }
 
   static Map<String, VariableValue> toVariableMap(Object source) {
@@ -36,7 +35,7 @@ final class ClientValueMapper {
       return Map.of();
     }
     if (source instanceof VariablesDTO variablesDTO) {
-      return VariableValueDtoMapper.toVariableMap(variablesDTO);
+      return variablesDTO.getVariables();
     }
     if (source instanceof Map<?, ?> map) {
       LinkedHashMap<String, VariableValue> result = new LinkedHashMap<>();
@@ -54,7 +53,7 @@ final class ClientValueMapper {
 
   static Map<String, Object> toPlainJavaMap(VariablesDTO variablesDTO) {
     LinkedHashMap<String, Object> result = new LinkedHashMap<>();
-    VariableValueDtoMapper.toVariableMap(variablesDTO)
+    toVariableMap(variablesDTO)
         .forEach((key, value) -> result.put(key, Variables.toJavaObject(value)));
     return result;
   }

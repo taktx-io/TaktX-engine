@@ -7,7 +7,8 @@
  */
 package io.taktx.client.serdes;
 
-import io.taktx.serdes.TopicMetaDtoDeserializer;
+import io.taktx.serdes.ProcessDefinitionDtoDeserializer;
 
-/** Backward-compatible client deserializer for protobuf-backed topic metadata. */
-public class TopicMetaJsonDeserializer extends TopicMetaDtoDeserializer {}
+/** Client deserializer for protobuf-backed process definitions. */
+public class ProcessDefinitionDeserializer extends ProcessDefinitionDtoDeserializer {}
+

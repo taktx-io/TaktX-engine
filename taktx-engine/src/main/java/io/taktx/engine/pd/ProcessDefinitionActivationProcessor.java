@@ -22,13 +22,13 @@ import io.taktx.dto.ProcessDefinitionKey;
 import io.taktx.dto.ProcessDefinitionStateEnum;
 import io.taktx.dto.SchedulableMessageDTO;
 import io.taktx.dto.StartCommandDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.dto.StartEventDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pi.DefinitionsCache;
 import io.taktx.engine.pi.model.VariableScope;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.time.Clock;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -277,6 +277,6 @@ public class ProcessDefinitionActivationProcessor {
         startEvent.getParentId(),
         null,
         new ProcessDefinitionKey(processDefinitionId),
-        VariableValueDtoMapper.emptyVariables());
+        VariablesDTO.empty());
   }
 }

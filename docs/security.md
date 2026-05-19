@@ -172,7 +172,7 @@ The `tx-sig` header value is a compound string:
 <keyId>.<base64-Ed25519-signature>
 ```
 
-The signature is over the raw serialized record bytes (CBOR). The algorithm is always Ed25519.
+The signature is over the raw serialized record bytes (protobuf on current engine/client topics). The algorithm is always Ed25519.
 
 ---
 
@@ -292,7 +292,7 @@ TaktXClient.publishSigningKey(
 
 ## Signing keys topic
 
-The compacted Kafka topic `<tenantId>.<namespace>.taktx-signing-keys` stores `SigningKeyDTO` records serialized as CBOR.
+The compacted Kafka topic `<tenantId>.<namespace>.taktx-signing-keys` stores `SigningKeyDTO` records serialized with protobuf.
 
 ### Record format
 

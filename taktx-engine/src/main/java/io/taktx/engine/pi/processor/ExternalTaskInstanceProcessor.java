@@ -31,7 +31,6 @@ import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.Scope;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.time.Duration;
@@ -109,7 +108,7 @@ public abstract class ExternalTaskInstanceProcessor<
           scope.getDirectInstanceResult(),
           externalTaskInstance,
           responseResult,
-          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     } else if (ExternalTaskResponseType.TIMEOUT == responseResult.getResponseType()
         || ExternalTaskResponseType.ERROR == responseResult.getResponseType()) {
       handleErrorOrTimeout(
@@ -119,7 +118,7 @@ public abstract class ExternalTaskInstanceProcessor<
           variableScope,
           externalTaskInstance.getFlowNode().getHeaders(),
           responseResult,
-          VariableValueDtoMapper.toVariableMap(trigger.getVariables()));
+          trigger.getVariables() == null ? Map.of() : trigger.getVariables().getVariables());
     }
   }
 

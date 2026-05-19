@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class MessageSigningServiceTest {
 
   private static final String KEY_ID = "test-key-1";
-  private static final byte[] PAYLOAD = "cbor-payload-bytes".getBytes();
+  private static final byte[] PAYLOAD = "proto-payload-bytes".getBytes();
 
   private TaktConfiguration config;
   private GlobalConfigStore globalConfigStore;

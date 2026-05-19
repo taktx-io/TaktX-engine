@@ -35,7 +35,7 @@ Topics use **DELETE** cleanup (time-bounded retention) — see `docs/dlq-retenti
 {
   "sourceTopic":        "process-instance",
   "keyBytes":           null,
-  "valueBytes":         "<base64-encoded raw CBOR payload>",
+  "valueBytes":         "<base64-encoded raw payload bytes>",
   "headers": {
     "tx-sig": "<base64>",
     "Authorization":     "Bearer <jwt>"
@@ -91,7 +91,7 @@ The `dlq` topic is append-only; the engine may produce duplicate entries when Ka
   "operatorId":         "ops-user@example.com",
   "approvedAtMs":       1714550100000,
   "operatorNotes":      "Fixed JWT expiry in Authorization header",
-  "correctedValueBytes": "<base64-encoded corrected CBOR payload>",
+  "correctedValueBytes": "<base64-encoded corrected payload bytes>",
   "correctedKeyBytes":  null,
   "correctedHeaders": {
     "Authorization": "<base64-encoded new JWT Bearer token>"
@@ -417,7 +417,7 @@ client.registerProcessInstanceUpdateConsumer("console-pi-group", update -> {
 ```
 
 `ProcessInstanceUpdateDTO` arrives via the `registerProcessInstanceUpdateConsumer` API, not a separate topic subscription. The `incidentInfoDTO.dlqEntryRef` is populated **only** when:
-- The incident was caused by a CBOR decode failure (`captureStage = DESERIALIZER`)
+- The incident was caused by a payload deserialization failure (`captureStage = DESERIALIZER`)
 - The incident was caused by an unhandled BPMN error event (`captureStage = PROCESSOR`, DLQ entry has empty payload, `dlqEntryRef` hash segment = `?`)
 
 ### 4. Payload correction and replay
@@ -426,7 +426,7 @@ client.registerProcessInstanceUpdateConsumer("console-pi-group", update -> {
 // Step 1 — dry-run to validate before committing
 DlqReplayCommand dryRun = DlqReplayCommandBuilder.from(envelope)
     .operatorId("ops@example.com")
-    .correctedPayload(correctedCborBytes)
+    .correctedPayload(correctedPayloadBytes)
     .correctedHeaders(Map.of("Authorization", base64NewJwt))
     .dryRun()
     .build();
@@ -437,7 +437,7 @@ client.registerReplayResultConsumer("console-results-group", result -> {
     if ("DRY_RUN_PASSED".equals(result.getStatus())) {
         DlqReplayCommand live = DlqReplayCommandBuilder.from(envelope)
             .operatorId("ops@example.com")
-            .correctedPayload(correctedCborBytes)
+            .correctedPayload(correctedPayloadBytes)
             .correctedHeaders(Map.of("Authorization", base64NewJwt))
             .build(); // dryRun defaults to false
         client.submitReplayCommand(live);

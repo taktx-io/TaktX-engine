@@ -54,7 +54,7 @@ public class UserTaskResponseProcessor
       log.warn("⚠ Null decoded payload on usertasks-response, routing to DLQ");
       emitUserTaskResponseDlq(
           userTaskResponseTriggerRecord,
-          "CBOR_DECODE_ERROR",
+          "PAYLOAD_DESERIALIZATION_ERROR",
           "Null decoded payload for usertasks-response record",
           "DESERIALIZER");
       return;

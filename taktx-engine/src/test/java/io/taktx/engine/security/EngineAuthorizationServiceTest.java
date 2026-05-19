@@ -92,13 +92,13 @@ class EngineAuthorizationServiceTest {
     assertThat(service.authorize(new RecordHeaders(), envelope(startCommand("proc", -1)))).isNull();
   }
 
-  // ── null trigger (CBOR decode failed) ─────────────────────────────────────
+  // ── null trigger (payload deserialization failed) ─────────────────────────
 
   @Test
   void nullTrigger_securityDisabled_returnsNullWithoutThrowing() {
-    // When CBOR decoding fails, the envelope carries a null trigger.
+    // When payload deserialization fails, the envelope carries a null trigger.
     // authorize() must return null gracefully so that ProcessInstanceProcessor's
-    // handleUnDecodedTrigger() can emit the CBOR_DECODE_ERROR DLQ entry.
+    // handleUnDecodedTrigger() can emit the PAYLOAD_DESERIALIZATION_ERROR DLQ entry.
     ProcessInstanceTriggerEnvelope nullTriggerEnvelope =
         new ProcessInstanceTriggerEnvelope(new byte[0], null, false, null);
     assertThat(service.authorize(new RecordHeaders(), nullTriggerEnvelope)).isNull();

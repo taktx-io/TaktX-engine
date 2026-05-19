@@ -22,7 +22,7 @@ public final class Ed25519Service {
   /**
    * Signs data with an Ed25519 private key.
    *
-   * @param data the bytes to sign (typically CBOR-serialised payload)
+   * @param data the bytes to sign (typically a serialized protobuf payload)
    * @param privateKeyBase64 base64-encoded PKCS8 private key
    * @return 64-byte Ed25519 signature
    */

@@ -48,6 +48,7 @@ import io.taktx.dto.TerminateEventDefinitionDTO;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.TimerEventSignalDTO;
 import io.taktx.dto.UserTaskDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.pd.model.BaseElement;
 import io.taktx.engine.pd.model.BoundaryEvent;
 import io.taktx.engine.pd.model.BusinessRuleTask;
@@ -88,8 +89,9 @@ import io.taktx.engine.pi.model.EscalationEventSignal;
 import io.taktx.engine.pi.model.MessageEventSignal;
 import io.taktx.engine.pi.model.SignalEventSignal;
 import io.taktx.engine.pi.model.TimerEventSignal;
-import io.taktx.variables.VariableValueDtoMapper;
+import io.taktx.proto.VariableValue;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
 import java.util.Set;
 import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
@@ -98,7 +100,7 @@ import org.mapstruct.ObjectFactory;
 import org.mapstruct.SubclassMapping;
 import org.mapstruct.TargetType;
 
-@Mapper(builder = @Builder(), uses = VariableValueDtoMapper.class)
+@Mapper(builder = @Builder())
 public interface DtoMapper {
   @Mapping(target = "startEvents", ignore = true)
   @Mapping(target = "flowNodes", ignore = true)
@@ -254,13 +256,13 @@ public interface DtoMapper {
 
   @ObjectFactory
   default <T extends EventSignalDTO> T resolveEventSignal(
-      EventSignal source, @TargetType Class<T> type) {
+      EventSignal ignoredSource, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 
   @ObjectFactory
   default <T extends EventSignal> T resolveEventSignalDto(
-      EventSignalDTO source, @TargetType Class<T> type) {
+      EventSignalDTO ignoredSource, @TargetType Class<T> type) {
     return getNewInstance(type);
   }
 
@@ -289,4 +291,12 @@ public interface DtoMapper {
   Set<IoVariableMappingDTO> toDto(Set<IoVariableMapping> ioVariableMappings);
 
   Set<IoVariableMapping> map(Set<IoVariableMappingDTO> ioVariableMappings);
+
+  default Map<String, VariableValue> map(VariablesDTO variables) {
+    return variables == null ? Map.of() : variables.getVariables();
+  }
+
+  default VariablesDTO map(Map<String, VariableValue> variables) {
+    return VariablesDTO.ofVariableMap(variables == null ? Map.of() : variables);
+  }
 }

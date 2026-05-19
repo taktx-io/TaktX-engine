@@ -421,7 +421,7 @@ Retain the `DeserializationResult<T>` wrapper type with `success`, `failure`, an
 - ✅ Wired worker-facing external-task and user-task topics to protobuf DTO serdes in `TopologyProducer`, shared DTO↔proto mappers/serdes, and the client fault-tolerant worker-trigger deserializers.
 - ✅ Updated the raw engine test-fixture external-task consumer to the protobuf DTO deserializer path.
 - ✅ Added focused round-trip coverage in `WorkerTriggerProtoSerdesTest` and client wrapper coverage in `FaultTolerantWorkerTriggerProtoDeserializerTest`.
-- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.FaultTolerantWorkerTriggerProtoDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --tests io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.FaultTolerantWorkerTriggerProtoDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --tests io.taktx.client.serdes.ExternalTaskTriggerDeserializerTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:compileJava :taktx-engine:compileTestFixturesJava :taktx-engine:compileSecurityIntegrationTestJava --console=plain` passes with the new worker-trigger serdes in place.
 - ✅ Cleared the previously unrelated legacy-topic blockers (`definitions` wire format, runtime-configuration/signing-key timestamp parsing, and process-instance/topic-meta compatibility) that were masking worker-trigger verification.
 - ✅ Re-enabled `timerContinuationAfterWorkerResponse_isAttributedToEngine()` in `SecurityIntegrationTest` and aligned it with the current engine trust model (`ENGINE_SIGNED` for engine-authored timer continuations, including in-suite execution).
@@ -490,9 +490,9 @@ Key stores to migrate (based on existing imports):
 **Progress update (2026-05-19)**
 - ✅ Replaced the last `TopologyProducer` `ObjectMapperSerde` registrations with protobuf-backed equivalents for `DefinitionMessageSubscriptions`, `CorrelationMessageSubscriptions`, `DmnDefinitionKey`, `ProcessInstanceDTO`, and the two internal version-by-hash stores.
 - ✅ Added the missing protobuf surface needed to close the gap cleanly: `DmnDefinitionKeyMessage`, `HashVersionMapMessage`, and store-wrapper messages for definition/correlation message subscriptions.
-- ✅ Added shared DTO↔proto mapping/deserialization support for `ProcessInstanceDTO` and `DmnDefinitionKey`, plus client-side backward-compatible DMN key deserialization (current proto format with legacy CBOR fallback).
+- ✅ Added shared DTO↔proto mapping/deserialization support for `ProcessInstanceDTO` and `DmnDefinitionKey`, plus client-side DMN key deserialization for the canonical protobuf format.
 - ✅ Removed the dead `START_COMMAND_SERDE` branch from `TopologyProducer` and verified `grep "ObjectMapperSerde" taktx-engine/src/main/java` now returns zero results.
-- ✅ Verified locally with `./gradlew :taktx-shared:test --tests "*ProcessInstanceProtoMapperTest*" --tests "*ProtoSerdesTest*"`, `./gradlew :taktx-client:test --tests "*DmnDefinitionKeyJsonDeserializerTest*"`, focused engine serde/unit tests, and `./gradlew :taktx-engine:build`.
+- ✅ Verified locally with `./gradlew :taktx-shared:test --tests "*ProcessInstanceProtoMapperTest*" --tests "*ProtoSerdesTest*"`, `./gradlew :taktx-client:test --tests "*DmnDefinitionKeyDeserializerTest*"`, focused engine serde/unit tests, and `./gradlew :taktx-engine:build`.
 
 **Acceptance criteria**
 - [x] `grep "ObjectMapperSerde" taktx-engine/src/main/java` returns zero results.
@@ -518,7 +518,7 @@ Replace `ProcessInstanceTriggerDTO` hierarchy (9 concrete types, currently dispa
 - ✅ Deleted `ProcessInstanceTriggerTypeIdResolver.java` and the now-unused `MessageSchedulerTypeIdResolver.java` after the schedule path stopped referencing them.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.ProcessInstanceTriggerProtoMapperTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.MessageScheduleProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
-- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.ProcessInstanceProducerTest --tests io.taktx.client.serdes.ProcessDefinitionKeyJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.ProcessInstanceProducerTest --tests io.taktx.client.serdes.ProcessDefinitionKeyDeserializerTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.ScheduleCommandDeserializerTest --tests io.taktx.engine.pd.ScheduleProcessorTest --tests io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeDeserializerTest --tests io.taktx.engine.security.ProcessInstanceResponseDedupProcessorTest --tests io.taktx.engine.security.ReplayProtectionProcessorTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.validJwt_commandAccepted_processInstanceStarted --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.workerEd25519SignedResponse_processCompletes --console=plain` passes.
 
@@ -546,10 +546,10 @@ Replace `InstanceUpdateDTO` + `FlowNodeInstanceUpdateDTO` + `ProcessInstanceUpda
 
 **Progress update (2026-05-18)**
 - ✅ Added shared DTO↔proto mapping and DTO deserialization for `FlowNodeInstanceUpdateDTO` and `ProcessInstanceUpdateDTO`, including trust metadata, scope/subscription payloads, variables, business metadata, and the existing `FlowNodeInstanceDTO` bridge payload.
-- ✅ Switched engine `TopologyProducer.INSTANCE_UPDATE_SERDE`, client-facing `InstanceUpdateJsonDeserializer`, and the raw engine test-fixture instance-update consumer to the protobuf-backed serde/deserializer path.
+- ✅ Switched engine `TopologyProducer.INSTANCE_UPDATE_SERDE`, client-facing `InstanceUpdateDeserializer`, and the raw engine test-fixture instance-update consumer to the protobuf-backed serde/deserializer path.
 - ✅ Deleted the now-unused `InstanceUpdateTypeIdResolver.java` and removed the obsolete Jackson array-format annotation from `InstanceUpdateDTO` after all instance-update topic paths stopped depending on Jackson polymorphism.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.InstanceUpdateProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
-- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.SigningRoundTripTest --tests io.taktx.client.serdes.InstanceUpdateJsonDeserializerTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.SigningRoundTripTest --tests io.taktx.client.serdes.InstanceUpdateDeserializerTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-client-quarkus:test --tests '*TaktXClientProvider*' :taktx-engine:securityIntegrationTest --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.validJwt_commandAccepted_processInstanceStarted --tests io.taktx.engine.pi.integration.SecurityIntegrationTest.workerEd25519SignedResponse_processCompletes --console=plain` passes, covering raw instance-update consumption, `tx-sig` verification, and trust-metadata propagation in the observability/client path.
 
 Delete `InstanceUpdateTypeIdResolver.java`.
@@ -601,14 +601,14 @@ Delete `BaseElementTypeIdResolver.java` and `DefinitionsTriggerTypeIdResolver.ja
 - `definitions.proto` now stores concrete `FlowElementsDTO` values and event definitions via `BaseElementEnvelope`, enabling lossless round-trips for the BPMN element hierarchy.
 - Added shared `DefinitionsProtoMapper`, `DefinitionsTriggerDtoDeserializer`, and `ProcessDefinitionDtoDeserializer` in `taktx-shared`.
 - Switched engine `DefinitionsTriggerDTO` and `ProcessDefinitionDTO` Kafka serdes in `taktx-engine/src/main/java/io/taktx/engine/generic/TopologyProducer.java` from CBOR/Jackson to protobuf.
-- Switched client BPMN deployment/consumption serdes (`XmlDefinitionSerializer`, `ProcessDefinitionJsonDeserializer`) to the protobuf path.
+- Switched client BPMN deployment/consumption serdes (`XmlDefinitionSerializer`, `ProcessDefinitionDeserializer`) to the protobuf path.
 - Removed Jackson type-id wiring from `BaseElementDTO` / `DefinitionsTriggerDTO` and deleted `BaseElementTypeIdResolver.java` / `DefinitionsTriggerTypeIdResolver.java`.
 - Hardened `InstanceUpdateProtoMapper` against null output-sequence-flow ids uncovered by the expanded BPMN integration slice.
 - Added `DefinitionsProtoAcceptanceTest` in `taktx-engine/src/integrationTest/java/io/taktx/engine/pi/integration/` to verify end-to-end deployment/execution across representative supported BPMN element families and redeploy/version-bump continuity.
 - Added dedicated versioned BPMN fixtures `proto45-versioned-process-v1.bpmn` / `proto45-versioned-process-v2.bpmn` for the continuity acceptance scenario.
 
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.DefinitionsProtoMapperTest --tests io.taktx.serdes.ProtoSerdesTest --console=plain` passes.
-- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.XmlDefinitionSerializerTest --tests io.taktx.client.serdes.ProcessDefinitionJsonDeserializerTest --tests io.taktx.client.serdes.DefinitionsWireFormatCompatibilityTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.XmlDefinitionSerializerTest --tests io.taktx.client.serdes.ProcessDefinitionDeserializerTest --tests io.taktx.client.serdes.DefinitionsWireFormatCompatibilityTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.TaskTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.GatewayTest --tests io.taktx.engine.pi.integration.BoundaryEventsTest --tests io.taktx.engine.pi.integration.BusinessRuleTaskTest --tests io.taktx.engine.pi.integration.ScriptTaskTest --tests io.taktx.engine.pi.integration.EventSubprocessTest --tests io.taktx.engine.pi.integration.IntermediateEventsTest --tests io.taktx.engine.pi.integration.ErrorsTest --tests io.taktx.engine.pi.integration.EscalationsTest --tests io.taktx.engine.pi.integration.SignalsTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.DefinitionsProtoAcceptanceTest --console=plain` passes.
 
@@ -690,10 +690,10 @@ Replace `UserTaskTriggerDTO`, `UserTaskResponseTriggerDTO`, `UserTaskResponseRes
 - ✅ Switched client worker-response emission (`ProcessInstanceResponder`, `TaktXClient`) from the legacy generic `SigningSerializer` path to `ProtoSigningSerializer<>(ProcessInstanceTriggerProtoMapper::toProto)` so user-task and external-task completions are signed over protobuf bytes.
 - ✅ Removed the remaining direct Jackson object-to-variable conversion from `UserTaskInstanceResponder` / `ExternalTaskInstanceResponder`; they now build `VariablesDTO` via existing shared helpers while preserving the current public API until PROTO-5.1.
 - ✅ Replaced `TopologyProducer.USER_TASK_RESPONSE_SERDE` with a protobuf-backed serde and added shared `UserTaskResponseTriggerProtoDeserializer` so the `usertasks-response` ingress path no longer depends on `ObjectMapperSerde<UserTaskResponseTriggerDTO>`.
-- ✅ Converted the legacy-named client aliases `UserTaskTriggerJsonDeserializer` / `ExternalTaskTriggerJsonDeserializer` into protobuf-backed delegates, keeping class names stable for existing configuration and tests while removing the remaining worker-trigger dependency on the shared Jackson base deserializer.
-- ✅ Added focused protobuf coverage in `UserTaskResponseTriggerProtoDeserializerTest`, `UserTaskTriggerJsonDeserializerTest`, and enhanced `ExternalTaskTriggerJsonDeserializerTest`.
+- ✅ Initially converted the worker-trigger client aliases to protobuf-backed delegates, then removed those compatibility aliases in the breaking-release cleanup and kept the canonical `UserTaskTriggerDeserializer` / `ExternalTaskTriggerDeserializer` classes only.
+- ✅ Added focused protobuf coverage in `UserTaskResponseTriggerProtoDeserializerTest`, `UserTaskTriggerDeserializerTest`, and enhanced `ExternalTaskTriggerDeserializerTest`.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-shared:test --tests io.taktx.serdes.WorkerTriggerProtoSerdesTest --tests io.taktx.serdes.ProcessInstanceTriggerProtoMapperTest --tests io.taktx.serdes.UserTaskResponseTriggerProtoDeserializerTest --console=plain` passes.
-- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.ExternalTaskTriggerJsonDeserializerTest --tests io.taktx.client.serdes.UserTaskTriggerJsonDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --console=plain` passes.
+- ✅ Verified on 2026-05-18: `./gradlew :taktx-client:test --tests io.taktx.client.serdes.ExternalTaskTriggerDeserializerTest --tests io.taktx.client.serdes.UserTaskTriggerDeserializerTest --tests io.taktx.client.serdes.MiscSerdesTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:test --tests io.taktx.engine.pd.UserTaskResponseProcessorDlqTest --tests io.taktx.engine.pi.ProcessInstanceTriggerEnvelopeDeserializerTest --console=plain` passes.
 - ✅ Verified on 2026-05-18: `./gradlew :taktx-engine:quarkusIntTest --tests io.taktx.engine.pi.integration.UserTaskTest --tests io.taktx.engine.pi.integration.ExternalTaskTest --console=plain` passes.
 
@@ -752,7 +752,7 @@ Replace the remaining lower-frequency families:
 - ✅ Audited the remaining PROTO-4.10 surfaces before editing and migrated only the still-live Jackson/CBOR paths: configuration topic consumers, signing-key publication/consumption, topic-meta request serdes, DLQ envelope/replay command/replay result serdes, DMN/XML definition deployment paths, and the remaining `TopologyProducer` value serdes for these families.
 - ✅ Added shared DTO↔proto mappers plus protobuf-backed DTO deserializers for configuration, signing key, topic meta, DLQ, DMN definition/XML DMN definition, and reused the existing `DefinitionsProtoMapper` for process definitions.
 - ✅ Updated the proto contracts where the audit found wire-model gaps: missing enum values and `optional` scalar presence for configuration timestamps, signing-key timestamps, DLQ lineage/source coordinates, replay schema version, and DMN enum coverage.
-- ✅ Preserved public compatibility entry points where practical (`TopicMetaJsonDeserializer`, `XmlDmnDefinitionSerializer`, `DlqEnvelopeCborDeserializer`, `DlqReplayResultCborDeserializer`) while switching their implementations to protobuf.
+- ✅ Initially preserved a few public compatibility entry points while switching their implementations to protobuf; those legacy aliases were removed later in the breaking-release cleanup once canonical deserializer names were in place.
 - ✅ Closed the last live signing-key consumer gap by migrating `SigningKeysStore` from Jackson/CBOR to protobuf after integration logs exposed failed key-table reads.
 - ✅ Hardened the DLQ replay forwarding path so replayed records now preserve corrected Kafka key bytes all the way to the dynamic target topic sink; this was verified with a real malformed-BPMN capture → replay → deploy → start-process cycle.
 - ✅ Verified test commands:
@@ -801,10 +801,10 @@ The current `TaktUUIDSerializer`, `TaktLongListSerializer`, and `TaktCompositeUU
 - ✅ Removed the Jackson `JsonSerializer` inheritance from the util-layer binary key helpers in `taktx-shared` while preserving the existing UUID/long-list byte layouts used by range-scanned stores.
 - ✅ Added explicit binary serializer/deserializer/serde implementations for `FlowNodeInstanceKeyDTO`, `VariableKeyDTO`, `ProcessDefinitionKey`, `SignalInstanceSubscriptionKeyDTO`, and `SignalDefinitionSubscriptionKeyDTO`, each documented with `@implSpec` layout contracts.
 - ✅ Switched the range-scanned engine stores in `TopologyProducer` to the new key Serdes and aligned `SignalProcessor` / `ProcessInstanceProcessor` range-bound logic with the new binary contracts.
-- ✅ Preserved client/test-engine compatibility by teaching `ProcessDefinitionKeyJsonDeserializer` to read the new explicit binary key bytes with legacy CBOR fallback.
+- ✅ Finalized client/test-engine compatibility on the canonical `ProcessDefinitionKeyDeserializer`, which reads the explicit binary key bytes without any legacy CBOR fallback.
 - ✅ Verified on 2026-05-19:
   - `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.
-  - `./gradlew :taktx-shared:test --tests "*RangeKeySerializerTest*" :taktx-client:test --tests "*ProcessDefinitionKeyJsonDeserializerTest*" :taktx-engine:test --tests "*SignalSubscriptionKeySerdeTest" --tests "*ProcessDefinitionActivationProcessorTest" :taktx-engine:quarkusIntTest --tests "*SignalsTest" --tests "*DefinitionsProtoAcceptanceTest" --tests "*ProcessInstanceProcessorTest" --tests "*BusinessRuleTaskTest" --console=plain` passes.
+  - `./gradlew :taktx-shared:test --tests "*RangeKeySerializerTest*" :taktx-client:test --tests "*ProcessDefinitionKeyDeserializerTest*" :taktx-engine:test --tests "*SignalSubscriptionKeySerdeTest" --tests "*ProcessDefinitionActivationProcessorTest" :taktx-engine:quarkusIntTest --tests "*SignalsTest" --tests "*DefinitionsProtoAcceptanceTest" --tests "*ProcessInstanceProcessorTest" --tests "*BusinessRuleTaskTest" --console=plain` passes.
 
 **Acceptance criteria**
 - [x] `grep -r "extends JsonSerializer" taktx-shared/src/main/java/io/taktx/util` returns zero results.

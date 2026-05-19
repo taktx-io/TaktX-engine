@@ -10,6 +10,7 @@ package io.taktx.engine.pi.processor;
 
 import io.taktx.dto.ContinueFlowElementTriggerDTO;
 import io.taktx.dto.ExecutionState;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.EventSignal;
 import io.taktx.engine.pd.model.IntermediateCatchEvent;
@@ -27,7 +28,6 @@ import io.taktx.engine.pi.model.StartFlowNodeInstanceInfo;
 import io.taktx.engine.pi.model.ThrowEventInstance;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 import io.taktx.variables.Variables;
 import java.time.Clock;
 import java.util.Map;
@@ -148,7 +148,7 @@ public abstract class ThrowEventInstanceProcessor<
                             scope.getProcessInstanceId(),
                             catchEventInstance.createKeyPath(),
                             null,
-                            VariableValueDtoMapper.toVariablesDto(childVariableScope.scopeToMap()));
+                            VariablesDTO.ofVariableMap(childVariableScope.scopeToMap()));
                     ContinueFlowNodeInstanceInfo continueFlowNodeInstanceInfo =
                         new ContinueFlowNodeInstanceInfo(
                             catchEventInstance, trigger, childVariableScope);

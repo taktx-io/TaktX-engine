@@ -11,7 +11,6 @@ package io.taktx.engine.pi.processor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.InputOutputMapping;
 import io.taktx.engine.pd.model.IoVariableMapping;
@@ -29,8 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IoMappingProcessorTest {
 
-  @Spy private ObjectMapper objectMapper = new ObjectMapper();
-
   @Mock private FeelExpressionHandler feelExpressionHandler;
   @Mock private WithIoMapping element;
   @Mock private InputOutputMapping ioMapping;
@@ -41,7 +38,7 @@ class IoMappingProcessorTest {
 
   @BeforeEach
   void setUp() {
-    processor = new IoMappingProcessor(feelExpressionHandler, objectMapper);
+    processor = new IoMappingProcessor(feelExpressionHandler);
   }
 
   @Test

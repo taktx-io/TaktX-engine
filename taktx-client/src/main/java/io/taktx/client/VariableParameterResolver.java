@@ -9,7 +9,6 @@ package io.taktx.client;
 
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import io.taktx.proto.VariableValue;
-import io.taktx.variables.VariableValueDtoMapper;
 
 /**
  * A parameter resolver that extracts a variable from the ExternalTaskTriggerDTO's variables map and
@@ -32,17 +31,6 @@ public class VariableParameterResolver implements ParameterResolver {
   }
 
   /**
-   * Backward-compatible constructor retained for callers still passing a mapper instance.
-   *
-   * @param ignoredMapper legacy mapper argument that is ignored
-   * @param type the target type to convert the variable to
-   * @param name the name of the variable to extract
-   */
-  public VariableParameterResolver(Object ignoredMapper, Class<?> type, String name) {
-    this(type, name);
-  }
-
-  /**
    * Resolves the parameter by extracting the variable from the ExternalTaskTriggerDTO and
    * converting it to the specified type.
    *
@@ -52,7 +40,9 @@ public class VariableParameterResolver implements ParameterResolver {
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {
     VariableValue value =
-        VariableValueDtoMapper.toVariableMap(externalTaskTriggerDTO.getVariables()).get(name);
+        externalTaskTriggerDTO.getVariables() == null
+            ? null
+            : externalTaskTriggerDTO.getVariables().get(name);
     if (value != null) {
       return ClientValueMapper.fromVariableValue(value, type);
     }

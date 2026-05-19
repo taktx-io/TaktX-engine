@@ -41,7 +41,7 @@ public class SecurityTestConfigResource implements QuarkusTestResourceLifecycleM
   /** Base64-encoded RSA public key — exposed so tests can publish it to the signing-keys topic. */
   static String rsaPublicKeyBase64;
 
-  /** Base64-encoded engine public key — exposed for the test client's JsonDeserializer. */
+  /** Base64-encoded engine public key — exposed for the test client's deserializer. */
   static String enginePublicKeyBase64;
 
   /** Active engine signing key ID, exposed for assertions. */

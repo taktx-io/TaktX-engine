@@ -36,6 +36,7 @@ import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TimerEventDefinitionDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
 import io.taktx.engine.config.TaktConfiguration;
 import io.taktx.engine.pd.MessageSchedulerFactory;
 import io.taktx.engine.pd.model.NewStartCommand;
@@ -51,7 +52,6 @@ import io.taktx.engine.pi.model.ScheduledExternalTaskTriggerTimeoutInfo;
 import io.taktx.engine.pi.model.TerminateCorrelationSubscriptionMessageEventInfo;
 import io.taktx.engine.pi.model.UserTaskInfo;
 import io.taktx.engine.pi.model.VariableScope;
-import io.taktx.variables.VariableValueDtoMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Clock;
 import java.time.Duration;
@@ -260,7 +260,7 @@ public class Forwarder {
               processInstance.getProcessInstanceId(),
               instancePath,
               externalTaskResponseResult,
-              VariableValueDtoMapper.emptyVariables());
+              VariablesDTO.empty());
       // External task timeouts are autonomous engine actions: do NOT carry the scheduling-time
       // origin. Passing null lets ProcessInstanceProcessor re-assign origin = engine at fire time.
       applyDerivedCommandTrustMetadata(externalTaskResponseResultDTO, null);
@@ -376,7 +376,7 @@ public class Forwarder {
               null,
               pathExtractor.getInstancePath(newStartCommand.instance()),
               new ProcessDefinitionKey(newStartCommand.calledElement()),
-              VariableValueDtoMapper.toVariablesDto(newStartCommand.variables()),
+              VariablesDTO.ofVariableMap(newStartCommand.variables()),
               newStartCommand.propagateAllToParent(),
               outputMappings);
       applyDerivedCommandTrustMetadata(startCommand, originTrustMetadata);
@@ -451,7 +451,7 @@ public class Forwarder {
         externalTaskInfo.externalTaskId(),
         externalTaskInfo.element().getId(),
         pathExtractor.getInstancePath(externalTaskInfo.instance()),
-        VariableValueDtoMapper.toVariablesDto(externalTaskInfo.variables().scopeAndParentsToMap()),
+        VariablesDTO.ofVariableMap(externalTaskInfo.variables().scopeAndParentsToMap()),
         externalTaskInfo.headers());
   }
 
@@ -467,7 +467,7 @@ public class Forwarder {
         userTaskInfo.assignmentDefinition(),
         userTaskInfo.taskSchedule(),
         userTaskInfo.priorityDefinition(),
-        VariableValueDtoMapper.toVariablesDto(userTaskInfo.variables().scopeAndParentsToMap()));
+        VariablesDTO.ofVariableMap(userTaskInfo.variables().scopeAndParentsToMap()));
   }
 
   private void applyDerivedCommandTrustMetadata(

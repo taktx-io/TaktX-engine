@@ -8,7 +8,6 @@
 
 package io.taktx.engine.pi.processor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.engine.feel.FeelExpressionHandler;
 import io.taktx.engine.pd.model.IoVariableMapping;
 import io.taktx.engine.pd.model.WithIoMapping;
@@ -27,8 +26,7 @@ public class IoMappingProcessor {
   private FeelExpressionHandler feelExpressionHandler;
 
   @Inject
-  public IoMappingProcessor(
-      FeelExpressionHandler feelExpressionHandler, ObjectMapper objectMapper) {
+  public IoMappingProcessor(FeelExpressionHandler feelExpressionHandler) {
     this.feelExpressionHandler = feelExpressionHandler;
   }
 

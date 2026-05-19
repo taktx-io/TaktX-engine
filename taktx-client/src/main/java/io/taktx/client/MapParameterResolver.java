@@ -12,12 +12,10 @@ import io.taktx.dto.ExternalTaskTriggerDTO;
 /** A parameter resolver that converts the variables of an ExternalTaskTriggerDTO into a Map. */
 public class MapParameterResolver implements ParameterResolver {
 
-  public MapParameterResolver() {}
-
-  /** Backward-compatible constructor retained for callers still passing a mapper instance. */
-  public MapParameterResolver(Object ignoredMapper) {
-    // Intentionally ignored: mapping is now handled internally.
+  public MapParameterResolver() {
+    // Default constructor used by the resolver factory.
   }
+
 
   @Override
   public Object resolve(ExternalTaskTriggerDTO externalTaskTriggerDTO) {

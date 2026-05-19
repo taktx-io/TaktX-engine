@@ -142,7 +142,7 @@ public class DlqReplayCommandBuilder {
    * Overrides the corrected payload bytes. When omitted, the raw {@code valueBytes} from the
    * original envelope are reused as-is.
    *
-   * @param correctedValueBytes corrected CBOR-encoded payload bytes
+   * @param correctedValueBytes corrected protobuf payload bytes
    * @return this builder
    */
   public DlqReplayCommandBuilder correctedPayload(byte[] correctedValueBytes) {

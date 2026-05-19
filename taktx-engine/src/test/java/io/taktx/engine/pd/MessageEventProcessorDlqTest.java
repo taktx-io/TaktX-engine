@@ -100,7 +100,7 @@ class MessageEventProcessorDlqTest {
     assertThat(dlqEntry.getKey()).isEqualTo(key);
     assertThat(dlqEntry.getHeaders()).containsKey(REASON_HINT);
     assertThat(new String(dlqEntry.getHeaders().get(REASON_HINT), StandardCharsets.UTF_8))
-        .isEqualTo("CBOR_DECODE_ERROR");
+        .isEqualTo("PAYLOAD_DESERIALIZATION_ERROR");
     assertThat(new String(dlqEntry.getHeaders().get(CAPTURE_STAGE), StandardCharsets.UTF_8))
         .isEqualTo("DESERIALIZER");
   }

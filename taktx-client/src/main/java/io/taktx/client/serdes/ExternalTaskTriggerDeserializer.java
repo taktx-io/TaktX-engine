@@ -12,22 +12,12 @@ import io.taktx.serdes.ExternalTaskTriggerProtoDeserializer;
 import java.util.Map;
 import org.apache.kafka.common.serialization.Deserializer;
 
-/**
- * Backward-compatible alias for the protobuf external-task trigger deserializer.
- *
- * <p>The class name is kept for existing client configuration and tests while the wire format is
- * now protobuf.
- */
-public class ExternalTaskTriggerJsonDeserializer implements Deserializer<ExternalTaskTriggerDTO> {
+/** Client deserializer for protobuf-backed external-task triggers. */
+public class ExternalTaskTriggerDeserializer implements Deserializer<ExternalTaskTriggerDTO> {
 
   private final ExternalTaskTriggerProtoDeserializer delegate =
       new ExternalTaskTriggerProtoDeserializer();
 
-  /**
-   * Returns the DTO class produced by this compatibility alias.
-   *
-   * @return {@link ExternalTaskTriggerDTO}.class
-   */
   public Class<ExternalTaskTriggerDTO> getClazz() {
     return ExternalTaskTriggerDTO.class;
   }
@@ -47,3 +37,5 @@ public class ExternalTaskTriggerJsonDeserializer implements Deserializer<Externa
     delegate.close();
   }
 }
+
+
