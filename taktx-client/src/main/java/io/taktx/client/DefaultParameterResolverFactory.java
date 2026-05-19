@@ -7,8 +7,6 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: CBORFactory removed in PROTO-1.2; class is replaced in PROTO-5.1.
 import io.taktx.client.annotation.CustomHeaders;
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
@@ -20,8 +18,6 @@ import java.util.Map;
  * parameter types and annotations.
  */
 public class DefaultParameterResolverFactory implements ParameterResolverFactory {
-
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final ProcessInstanceResponder externalTaskResponder;
 
@@ -44,13 +40,13 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
       Variable variableAnnotation = parameter.getAnnotation(Variable.class);
       String name =
           !variableAnnotation.value().isEmpty() ? variableAnnotation.value() : parameter.getName();
-      return new VariableParameterResolver(OBJECT_MAPPER, parameter.getType(), name);
+      return new VariableParameterResolver(parameter.getType(), name);
     } else if (parameter.getAnnotation(CustomHeaders.class) != null) {
-      return new HeadersParameterResolver(OBJECT_MAPPER, parameter.getType());
+      return new HeadersParameterResolver(parameter.getType());
     } else if (parameter.getType().isAssignableFrom(Map.class)) {
-      return new MapParameterResolver(OBJECT_MAPPER);
+      return new MapParameterResolver();
     } else {
-      return new VariableParameterResolver(OBJECT_MAPPER, parameter.getType(), parameter.getName());
+      return new VariableParameterResolver(parameter.getType(), parameter.getName());
     }
   }
 }

@@ -42,6 +42,7 @@ dependencies {
     compileOnlyApi(libs.jakarta.annotation.api)
     compileOnly(libs.quarkus.arc)
     compileOnly(libs.quarkus.core)
+    compileOnly(libs.kafka.clients)
 
     api(project(":taktx-client"))
 

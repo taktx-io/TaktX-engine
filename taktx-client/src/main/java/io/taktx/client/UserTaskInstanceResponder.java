@@ -7,12 +7,12 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.UserTaskResponseResultDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskResponseType;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.proto.VariableValue;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -71,9 +71,11 @@ public class UserTaskInstanceResponder {
    *
    * @param variablesMap the map of variable names to variable values
    */
-  public void respondSuccess(Map<String, JsonNode> variablesMap) {
+  public void respondSuccess(Map<String, VariableValue> variablesMap) {
     respondSuccess(
-        variablesMap == null ? VariablesDTO.empty() : VariablesDTO.ofJsonMap(variablesMap));
+        variablesMap == null
+            ? VariablesDTO.empty()
+            : ClientValueMapper.toVariablesDto(variablesMap));
   }
 
   private void respondSuccess(VariablesDTO variables) {
@@ -89,12 +91,11 @@ public class UserTaskInstanceResponder {
     sendSigned(processInstanceTrigger);
   }
 
-  @SuppressWarnings("unchecked")
   private static VariablesDTO toVariables(Object variable) {
     if (variable == null) {
       return VariablesDTO.empty();
     }
-    return VariablesDTO.ofObjectMap(VariablesDTO.OBJECT_MAPPER.convertValue(variable, Map.class));
+    return ClientValueMapper.toVariablesDto(variable);
   }
 
   /**
@@ -156,8 +157,8 @@ public class UserTaskInstanceResponder {
 
   private void sendSigned(UserTaskResponseTriggerDTO responseDto) {
     beforeSendHook.run();
-    ProducerRecord<UUID, ProcessInstanceTriggerDTO> record =
+    ProducerRecord<UUID, ProcessInstanceTriggerDTO> producerRecord =
         new ProducerRecord<>(topicName, responseDto.getProcessInstanceId(), responseDto);
-    responseEmitter.send(record);
+    responseEmitter.send(producerRecord);
   }
 }

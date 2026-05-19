@@ -7,8 +7,6 @@
  */
 package io.taktx.client.auth;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -24,13 +22,14 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** OAuth2/OpenID Connect client-credentials token provider backed by the JDK {@link HttpClient}. */
 public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenProvider {
 
   public static final String TOKEN_PROVIDER_ID = "openid-client-credentials";
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(3);
   private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration DEFAULT_REFRESH_SKEW = Duration.ofSeconds(30);
@@ -226,13 +225,12 @@ public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenP
     }
 
     try {
-      JsonNode payload = OBJECT_MAPPER.readTree(response.body());
-      String accessToken = textValue(payload, "access_token");
+      String accessToken = textValue(response.body(), "access_token");
       if (accessToken == null || accessToken.isBlank()) {
         throw new IllegalStateException(
             "OAuth2 token endpoint response did not contain a non-blank access_token");
       }
-      long expiresInSeconds = Math.max(payload.path("expires_in").asLong(300L), 1L);
+      long expiresInSeconds = Math.max(longValue(response.body(), "expires_in", 300L), 1L);
       return new CachedToken(accessToken, now.plusSeconds(expiresInSeconds));
     } catch (RuntimeException e) {
       throw e;
@@ -314,9 +312,61 @@ public class OpenIdClientCredentialsTokenProvider implements AuthorizationTokenP
     return value;
   }
 
-  private static @Nullable String textValue(JsonNode node, String fieldName) {
-    JsonNode child = node.path(fieldName);
-    return child.isMissingNode() || child.isNull() ? null : child.asText();
+  private static @Nullable String textValue(String json, String fieldName) {
+    Matcher matcher = stringFieldPattern(fieldName).matcher(json);
+    if (!matcher.find()) {
+      return null;
+    }
+    return unescapeJsonString(matcher.group(1));
+  }
+
+  private static long longValue(String json, String fieldName, long defaultValue) {
+    Matcher matcher = numberFieldPattern(fieldName).matcher(json);
+    if (!matcher.find()) {
+      return defaultValue;
+    }
+    return Long.parseLong(matcher.group(1));
+  }
+
+  private static Pattern stringFieldPattern(String fieldName) {
+    return Pattern.compile(
+        "\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\\\"])*)\\\"");
+  }
+
+  private static Pattern numberFieldPattern(String fieldName) {
+    return Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(-?\\d+)");
+  }
+
+  private static String unescapeJsonString(String value) {
+    StringBuilder result = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      char current = value.charAt(i);
+      if (current != '\\' || i + 1 >= value.length()) {
+        result.append(current);
+        continue;
+      }
+      char escaped = value.charAt(++i);
+      switch (escaped) {
+        case '"' -> result.append('"');
+        case '\\' -> result.append('\\');
+        case '/' -> result.append('/');
+        case 'b' -> result.append('\b');
+        case 'f' -> result.append('\f');
+        case 'n' -> result.append('\n');
+        case 'r' -> result.append('\r');
+        case 't' -> result.append('\t');
+        case 'u' -> {
+          if (i + 4 >= value.length()) {
+            throw new IllegalArgumentException("Invalid unicode escape in JSON string");
+          }
+          String hex = value.substring(i + 1, i + 5);
+          result.append((char) Integer.parseInt(hex, 16));
+          i += 4;
+        }
+        default -> result.append(escaped);
+      }
+    }
+    return result.toString();
   }
 
   private static String property(Properties properties, String key) {

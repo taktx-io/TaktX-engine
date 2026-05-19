@@ -7,12 +7,12 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
 import io.taktx.dto.ExternalTaskResponseTriggerDTO;
 import io.taktx.dto.ExternalTaskResponseType;
 import io.taktx.dto.ProcessInstanceTriggerDTO;
 import io.taktx.dto.VariablesDTO;
+import io.taktx.proto.VariableValue;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -73,9 +73,11 @@ public class ExternalTaskInstanceResponder {
    *
    * @param variablesMap The map of variable names to their variable values.
    */
-  public void respondSuccess(Map<String, JsonNode> variablesMap) {
+  public void respondSuccess(Map<String, VariableValue> variablesMap) {
     respondSuccess(
-        variablesMap == null ? VariablesDTO.empty() : VariablesDTO.ofJsonMap(variablesMap));
+        variablesMap == null
+            ? VariablesDTO.empty()
+            : ClientValueMapper.toVariablesDto(variablesMap));
   }
 
   private void respondSuccess(VariablesDTO variables) {
@@ -91,12 +93,11 @@ public class ExternalTaskInstanceResponder {
     sendSigned(processInstanceTrigger);
   }
 
-  @SuppressWarnings("unchecked")
   private static VariablesDTO toVariables(Object variable) {
     if (variable == null) {
       return VariablesDTO.empty();
     }
-    return VariablesDTO.ofObjectMap(VariablesDTO.OBJECT_MAPPER.convertValue(variable, Map.class));
+    return ClientValueMapper.toVariablesDto(variable);
   }
 
   /**

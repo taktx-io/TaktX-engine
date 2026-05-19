@@ -20,13 +20,13 @@ import org.apache.kafka.common.serialization.Serializer;
 public class HashVersionMapSerde implements Serde<Map<String, Integer>> {
 
   private final Serializer<Map<String, Integer>> serializer =
-      (topic, data) ->
+      (_, data) ->
           data == null
               ? null
               : HashVersionMapMessage.newBuilder().putAllVersionsByHash(data).build().toByteArray();
 
   private final Deserializer<Map<String, Integer>> deserializer =
-      (topic, data) -> {
+      (_, data) -> {
         if (data == null) {
           return null;
         }

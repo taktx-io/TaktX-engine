@@ -27,7 +27,7 @@ public class CorrelationMessageSubscriptionsSerde
     implements Serde<CorrelationMessageSubscriptions> {
 
   private final Serializer<CorrelationMessageSubscriptions> serializer =
-      (topic, data) -> {
+      (_, data) -> {
         if (data == null) {
           return null;
         }
@@ -45,7 +45,7 @@ public class CorrelationMessageSubscriptionsSerde
       };
 
   private final Deserializer<CorrelationMessageSubscriptions> deserializer =
-      (topic, data) -> {
+      (_, data) -> {
         if (data == null) {
           return null;
         }

@@ -27,7 +27,7 @@ import org.apache.kafka.common.serialization.Serializer;
 public class DefinitionMessageSubscriptionsSerde implements Serde<DefinitionMessageSubscriptions> {
 
   private final Serializer<DefinitionMessageSubscriptions> serializer =
-      (topic, data) -> {
+      (_, data) -> {
         if (data == null) {
           return null;
         }
@@ -48,7 +48,7 @@ public class DefinitionMessageSubscriptionsSerde implements Serde<DefinitionMess
       };
 
   private final Deserializer<DefinitionMessageSubscriptions> deserializer =
-      (topic, data) -> {
+      (_, data) -> {
         if (data == null) {
           return null;
         }

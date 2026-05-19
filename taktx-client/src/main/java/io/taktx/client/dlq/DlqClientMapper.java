@@ -7,27 +7,10 @@
  */
 package io.taktx.client.dlq;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-// NOTE: CBORFactory and JavaTimeModule removed in PROTO-1.2; class is replaced in PROTO-5.1.
-
 /**
- * Shared CBOR {@link ObjectMapper} used by all DLQ client classes.
- *
- * <p>The DLQ topics ({@code dlq}, {@code dlq.replay}, {@code dlq.replay-results}) carry CBOR
- * payloads serialised by the engine via Quarkus's {@code ObjectMapperSerde}, which is backed by the
- * CDI-produced {@code ObjectMapper} configured with {@code CBORFactory}. This mapper must use the
- * same {@code CBORFactory} so that client-side serialisation and deserialisation are
- * wire-compatible with the engine.
- *
- * <p>The DLQ DTOs use field-named CBOR (no {@code @JsonFormat(shape = ARRAY)}), matching the engine
- * serialisation.
+ * Legacy placeholder kept for source compatibility after the DLQ client moved to protobuf serdes.
  */
 final class DlqClientMapper {
-
-  static final ObjectMapper INSTANCE =
-      new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   private DlqClientMapper() {}
 }

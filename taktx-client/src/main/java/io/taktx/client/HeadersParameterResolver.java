@@ -7,7 +7,6 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.dto.ExternalTaskTriggerDTO;
 import java.util.Map;
 
@@ -17,18 +16,20 @@ import java.util.Map;
  */
 public class HeadersParameterResolver implements ParameterResolver {
 
-  private final ObjectMapper objectMapper;
   private final Class<?> type;
 
   /**
    * Constructs a HeadersParameterResolver.
    *
-   * @param objectMapper the ObjectMapper for mapping
    * @param type the target type for the headers
    */
-  public HeadersParameterResolver(ObjectMapper objectMapper, Class<?> type) {
-    this.objectMapper = objectMapper;
+  public HeadersParameterResolver(Class<?> type) {
     this.type = type;
+  }
+
+  /** Backward-compatible constructor retained for callers still passing a mapper instance. */
+  public HeadersParameterResolver(Object ignoredMapper, Class<?> type) {
+    this(type);
   }
 
   /**
@@ -43,6 +44,6 @@ public class HeadersParameterResolver implements ParameterResolver {
     if (type == Map.class) {
       return headers;
     }
-    return objectMapper.convertValue(headers, type);
+    return ClientValueMapper.fromStringMap(headers, type);
   }
 }

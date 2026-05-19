@@ -7,8 +7,6 @@
  */
 package io.taktx.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-// NOTE: JavaTimeModule removed in PROTO-1.2; class is updated in PROTO-5.1.
 import io.taktx.CleanupPolicy;
 import io.taktx.client.annotation.Deployment;
 import io.taktx.client.auth.AuthorizationTokenProvider;
@@ -44,6 +42,7 @@ import io.taktx.security.SigningKeyRegistrar;
 import io.taktx.security.SigningKeysStore;
 import io.taktx.security.SigningKeysStoreHolder;
 import io.taktx.security.SigningServiceHolder;
+import io.taktx.serdes.ConfigurationProtoMapper;
 import io.taktx.serdes.ProcessInstanceTriggerProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
 import io.taktx.topicmanagement.ExternalTaskTopicRequester;
@@ -76,7 +75,6 @@ public class TaktXClient {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(TaktXClient.class);
   private final ProcessDefinitionConsumer processDefinitionConsumer;
   static final String CONFIGURATION_RECORD_KEY = "config";
-  private static final ObjectMapper CONFIG_OBJECT_MAPPER = new ObjectMapper();
   private final ParameterResolverFactory parameterResolverFactory;
   private final ProcessInstanceResponder processInstanceResponder;
   private final ProcessDefinitionDeployer processDefinitionDeployer;
@@ -326,7 +324,7 @@ public class TaktXClient {
             new org.apache.kafka.common.serialization.StringSerializer(),
             new org.apache.kafka.common.serialization.ByteArraySerializer())) {
       byte[] valueBytes =
-          CONFIG_OBJECT_MAPPER.writeValueAsBytes(buildConfigurationEvent(configuration));
+          ConfigurationProtoMapper.toProto(buildConfigurationEvent(configuration)).toByteArray();
       producer.send(
           new org.apache.kafka.clients.producer.ProducerRecord<>(
               topic, CONFIGURATION_RECORD_KEY, valueBytes));

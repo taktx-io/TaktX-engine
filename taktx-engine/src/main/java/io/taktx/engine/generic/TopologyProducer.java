@@ -161,7 +161,7 @@ public class TopologyProducer {
 
   public static final Serde<MessageEventDTO> MESSAGE_EVENT_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
           new MessageEventDtoDeserializer());
   public static final Serde<SignalInstanceSubscriptionKeyDTO>
@@ -170,7 +170,7 @@ public class TopologyProducer {
       SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE = new SignalDefinitionSubscriptionKeySerde();
   public static final Serde<SignalDTO> SIGNAL_SERDE =
       Serdes.serdeFrom(
-          (topic, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
+          (_, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
           new SignalDtoDeserializer());
   public static final Serde<DefinitionMessageSubscriptions> DEFINITION_SUBSCRIPTIONS_SERDE =
       new DefinitionMessageSubscriptionsSerde();
@@ -182,7 +182,7 @@ public class TopologyProducer {
       Serdes.serdeFrom(TopologyProducer::serializeScheduleKey, new ScheduleKeyDtoDeserializer());
   public static final Serde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
           new MessageEventKeyDtoDeserializer());
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
@@ -209,29 +209,29 @@ public class TopologyProducer {
               new ProcessInstanceTriggerEnvelopeDeserializer());
   public static final Serde<DmnDefinitionKey> DMN_DEFINITION_KEY_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : DmnDefinitionKeyProtoMapper.toProto(data).toByteArray(),
           new DmnDefinitionKeyDtoDeserializer());
   public static final Serde<DmnDefinitionDTO> DMN_DEFINITION_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
           new DmnDefinitionDtoDeserializer());
   public static final Serde<XmlDmnDefinitionsDTO> DMN_TRIGGER_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : DmnDefinitionsProtoMapper.toProto(data).toByteArray(),
           new XmlDmnDefinitionsDtoDeserializer());
 
   public static final Serde<ProcessDefinitionDTO> PROCESS_DEFINITION_SERDE =
       Serdes.serdeFrom(
-          (topic, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          (_, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
           new ProcessDefinitionDtoDeserializer());
   public static final Serde<String> ZIPPED_STRING_SERDE = new ZippedStringSerde();
   public static final Serde<VariableValue> VARIABLES_SERDE =
       Serdes.serdeFrom(
-          (topic, data) -> data == null ? null : data.toByteArray(),
-          (topic, data) -> {
+          (_, data) -> data == null ? null : data.toByteArray(),
+          (_, data) -> {
             if (data == null) {
               return null;
             }
@@ -243,11 +243,11 @@ public class TopologyProducer {
           });
   public static final Serde<DefinitionsTriggerDTO> DEFINITIONS_TRIGGER_SERDE =
       Serdes.serdeFrom(
-          (topic, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
+          (_, data) -> data == null ? null : DefinitionsProtoMapper.toProto(data).toByteArray(),
           new DefinitionsTriggerDtoDeserializer());
   public static final Serde<ProcessInstanceDTO> PROCESS_INSTANCE_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : ProcessInstanceProtoMapper.toProto(data).toByteArray(),
           new ProcessInstanceDtoDeserializer());
   public static final Serde<InstanceUpdateDTO> INSTANCE_UPDATE_SERDE =
@@ -256,7 +256,7 @@ public class TopologyProducer {
           new InstanceUpdateDtoDeserializer());
   public static final Serde<FlowNodeInstanceDTO> FLOW_NODE_INSTANCE_SERDE =
       Serdes.serdeFrom(
-          (topic, data) ->
+          (_, data) ->
               data == null ? null : FlowNodeInstanceProtoMapper.toProto(data).toByteArray(),
           new FlowNodeInstanceDtoDeserializer());
   public static final Serde<ExternalTaskTriggerDTO> EXTERNAL_TASK_TRIGGER_SERDE =

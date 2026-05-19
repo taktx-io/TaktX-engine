@@ -862,8 +862,8 @@ The current DTOs each declare `@RegisterForReflection`. Proto-lite generated cla
 Update `taktx-client-quarkus` extension — CDI bean wiring for serializers/deserializers; remove Jackson producer beans that provided `ObjectMapper` for the client.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-client-quarkus:build` succeeds.
-- [ ] Integration test in `taktx-client-quarkus` demonstrates a user task being completed and the engine receiving it correctly.
+- [x] `./gradlew :taktx-client-quarkus:build` succeeds.
+- [x] Integration test in `taktx-client-quarkus` demonstrates a user task being completed and the engine receiving it correctly.
 
 **Dependencies:** PROTO-5.1  
 **Estimate:** 0.5 day
@@ -876,8 +876,8 @@ Update `taktx-client-quarkus` extension — CDI bean wiring for serializers/dese
 Update Spring Boot 3 auto-configuration; replace `ObjectMapper` Kafka config bean with proto Serde wiring; update `InstanceUpdateRecordEventChecker` and `SpringBeanInstanceProvider`.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-client-spring-boot-3:build` succeeds.
-- [ ] Integration test in `taktx-client-spring-boot-3` demonstrates a user task being completed.
+- [x] `./gradlew :taktx-client-spring-boot-3:build` succeeds.
+- [x] Integration test in `taktx-client-spring-boot-3` demonstrates a user task being completed.
 
 **Dependencies:** PROTO-5.1  
 **Estimate:** 0.5 day
@@ -890,8 +890,8 @@ Update Spring Boot 3 auto-configuration; replace `ObjectMapper` Kafka config bea
 Same as PROTO-5.3 for Spring Boot 4 / Spring Framework 7.
 
 **Acceptance criteria**
-- [ ] `./gradlew :taktx-client-spring-boot-4:build` succeeds.
-- [ ] Integration test demonstrates a user task being completed.
+- [x] `./gradlew :taktx-client-spring-boot-4:build` succeeds.
+- [x] Integration test demonstrates a user task being completed.
 
 **Dependencies:** PROTO-5.1  
 **Estimate:** 0.5 day
