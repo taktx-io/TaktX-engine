@@ -50,9 +50,6 @@ dependencies {
     testRuntimeOnly(libs.jjwt.jackson)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.core)
-    // Legacy jsr310 kept for existing tests only — removed in follow-up test cleanup.
-    testImplementation(libs.jackson.datatype.jsr310)
-//    testImplementation(libs.jackson.annotations)
     testImplementation(libs.reflections)
     testImplementation(libs.jaxb.runtime)
 
@@ -90,7 +87,7 @@ tasks.jacocoTestReport {
     // coverage metric:
     //  - dto/**          : pure Lombok data-transfer objects (generated getters/equals/hashCode)
     //  - bpmn/**         : XJC-generated classes from the BPMN XML Schema
-    //  - *TypeIdResolver : Jackson polymorphism configuration wiring (no conditional logic)
+    //  - *TypeIdResolver : legacy resolver wiring kept out of the coverage metric if present
     //  - xml/Generic*    : Generic BPMN element mappers — exercised by engine integration tests
     //  - xml/Zeebe*      : Zeebe-specific BPMN mappers  — exercised by engine integration tests
     //  - xml/BpmnMapper* : Mapper interface + factory wiring

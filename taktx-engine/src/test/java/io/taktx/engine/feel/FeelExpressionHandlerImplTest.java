@@ -10,8 +10,6 @@ package io.taktx.engine.feel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.taktx.engine.pi.model.VariableScope;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
@@ -20,20 +18,17 @@ import org.junit.jupiter.api.Test;
 
 class FeelExpressionHandlerImplTest {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-  private static JsonNode asJsonNode(VariableValue value) {
-    return OBJECT_MAPPER.valueToTree(Variables.toJavaObject(value));
+  private static Object asJavaObject(VariableValue value) {
+    return Variables.toJavaObject(value);
   }
 
   @Test
   void testNoFeel() {
     FeelExpressionHandlerImpl expressionHandler =
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
-    JsonNode jsonNode =
-        asJsonNode(
-            expressionHandler.processFeelExpression("test", VariableScope.empty(null, null)));
-    assertThat(jsonNode.asText()).isEqualTo("test");
+    Object result =
+        asJavaObject(expressionHandler.processFeelExpression("test", VariableScope.empty(null, null)));
+    assertThat(result).isEqualTo("test");
   }
 
   @Test
@@ -80,8 +75,8 @@ class FeelExpressionHandlerImplTest {
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
     VariableScope vars = VariableScope.empty(null, null);
     vars.put("var", Variables.of("test"));
-    JsonNode jsonNode = asJsonNode(expressionHandler.processFeelExpression("=var", vars));
-    assertThat(jsonNode.asText()).isEqualTo("test");
+    Object result = asJavaObject(expressionHandler.processFeelExpression("=var", vars));
+    assertThat(result).isEqualTo("test");
   }
 
   @Test
@@ -90,8 +85,8 @@ class FeelExpressionHandlerImplTest {
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
     VariableScope vars = VariableScope.empty(null, null);
     vars.put("var", Variables.of("test"));
-    JsonNode jsonNode = asJsonNode(expressionHandler.processFeelExpression("=var2", vars));
-    assertThat(jsonNode.asText()).isEqualTo("null");
+    Object result = asJavaObject(expressionHandler.processFeelExpression("=var2", vars));
+    assertThat(result).isNull();
   }
 
   @Test
@@ -100,10 +95,9 @@ class FeelExpressionHandlerImplTest {
         new FeelExpressionHandlerImpl(new FeelEngineProvider());
     VariableScope vars = VariableScope.empty(null, null);
 
-    JsonNode jsonNode =
-        asJsonNode(expressionHandler.processFeelExpression("=for i in 1..100 return i", vars));
-    assertThat(jsonNode.isArray()).isTrue();
-    assertThat(jsonNode.size()).isEqualTo(100);
+    Object result = asJavaObject(expressionHandler.processFeelExpression("=for i in 1..100 return i", vars));
+    assertThat(result).isInstanceOf(List.class);
+    assertThat((List<?>) result).hasSize(100);
   }
 
   @Test
@@ -113,7 +107,7 @@ class FeelExpressionHandlerImplTest {
     VariableScope vars = VariableScope.empty(null, null);
     vars.put("myArray", Variables.of(List.of("test1", "test2", "test3")));
 
-    JsonNode jsonNode = asJsonNode(expressionHandler.processFeelExpression("=myArray[2]", vars));
-    assertThat(jsonNode.asText()).isEqualTo("test2");
+    Object result = asJavaObject(expressionHandler.processFeelExpression("=myArray[2]", vars));
+    assertThat(result).isEqualTo("test2");
   }
 }

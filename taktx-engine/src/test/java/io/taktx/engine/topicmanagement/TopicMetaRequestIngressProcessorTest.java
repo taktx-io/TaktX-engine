@@ -15,7 +15,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.CleanupPolicy;
 import io.taktx.dto.Constants;
 import io.taktx.dto.DlqReasonCode;
@@ -56,9 +55,6 @@ class TopicMetaRequestIngressProcessorTest {
   private static final String OUTPUT_TOPIC = "topic-meta-requested-dlq-output";
   private static final String LOCAL_PREFIX = "acme.prod.";
   private static final String REQUESTED_TOPIC = LOCAL_PREFIX + "topic-meta-requested";
-  private static final ObjectMapperSerde<TopicMetaDlqEntryDTO> TOPIC_META_DLQ_ENTRY_SERDE =
-      new ObjectMapperSerde<>(TopicMetaDlqEntryDTO.class);
-
   @Test
   void authorizedValidRequest_isHandedOffToDynamicTopicManager() {
     EngineAuthorizationService authz = mock(EngineAuthorizationService.class);
@@ -241,7 +237,8 @@ class TopicMetaRequestIngressProcessorTest {
             STORE_NAME)
         .to(
             OUTPUT_TOPIC,
-            Produced.with(TopologyProducer.TOPIC_META_KEY_SERDE, TOPIC_META_DLQ_ENTRY_SERDE));
+            Produced.with(
+                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
 
     Properties props = new Properties();
     props.put(
@@ -259,7 +256,7 @@ class TopicMetaRequestIngressProcessorTest {
         driver.createOutputTopic(
             OUTPUT_TOPIC,
             TopologyProducer.TOPIC_META_KEY_SERDE.deserializer(),
-            TOPIC_META_DLQ_ENTRY_SERDE.deserializer());
+            TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE.deserializer());
     return new TestHarness(driver, inputTopic, outputTopic, nowMs);
   }
 

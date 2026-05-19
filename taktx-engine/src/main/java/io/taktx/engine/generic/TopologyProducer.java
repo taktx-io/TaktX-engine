@@ -40,6 +40,7 @@ import io.taktx.dto.SigningKeyDTO;
 import io.taktx.dto.StartCommandDTO;
 import io.taktx.dto.TimeBucket;
 import io.taktx.dto.TopicMetaDTO;
+import io.taktx.dto.TopicMetaDlqEntryDTO;
 import io.taktx.dto.UserTaskResponseTriggerDTO;
 import io.taktx.dto.UserTaskTriggerDTO;
 import io.taktx.dto.VariableKeyDTO;
@@ -120,6 +121,8 @@ import io.taktx.serdes.SignalProtoMapper;
 import io.taktx.serdes.SigningKeyDtoDeserializer;
 import io.taktx.serdes.SigningKeyProtoMapper;
 import io.taktx.serdes.TopicMetaDtoDeserializer;
+import io.taktx.serdes.TopicMetaDlqEntryDtoDeserializer;
+import io.taktx.serdes.TopicMetaDlqEntrySerializer;
 import io.taktx.serdes.TopicMetaProtoMapper;
 import io.taktx.serdes.UserTaskResponseTriggerProtoDeserializer;
 import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
@@ -276,6 +279,8 @@ public class TopologyProducer {
           new TopicMetaDtoDeserializer());
   public static final Serde<TopicMetaDTO> TOPIC_META_REQUEST_INPUT_SERDE =
       Serdes.serdeFrom(TOPIC_META_SERDE.serializer(), new ExternalTaskMetaDeserializer());
+  public static final Serde<TopicMetaDlqEntryDTO> TOPIC_META_DLQ_ENTRY_SERDE =
+      Serdes.serdeFrom(new TopicMetaDlqEntrySerializer(), new TopicMetaDlqEntryDtoDeserializer());
   public static final Serde<DlqEnvelope> DLQ_ENVELOPE_SERDE =
       Serdes.serdeFrom(
           (topic, data) -> data == null ? null : DlqProtoMapper.toProto(data).toByteArray(),

@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Lightweight reflection-based mapper used by the client module to avoid Jackson dependencies. */
+/** Lightweight reflection-based mapper used by the client module to avoid extra mapper dependencies. */
 final class ClientValueMapper {
 
   private ClientValueMapper() {}

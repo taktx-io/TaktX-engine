@@ -1,6 +1,5 @@
 [versions]
 quarkus = "3.35.3"
-jackson = "2.21.3"
 protobuf = "4.29.3"
 cronutils = "9.2.1"
 lombok = "1.18.46"
@@ -49,15 +48,7 @@ quarkus-arc = { module = "io.quarkus:quarkus-arc", version.ref = "quarkus" }
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler", version.ref = "quarkus" }
 quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi", version.ref = "quarkus" }
 quarkus-swagger-ui = { module = "io.quarkus:quarkus-swagger-ui", version.ref = "quarkus" }
-quarkus-resteasy-jackson = { module = "io.quarkus:quarkus-resteasy-jackson", version.ref = "quarkus" }
 quarkus-smallrye-health = { module = "io.quarkus:quarkus-smallrye-health", version.ref = "quarkus" }
-quarkus-jackson = { module = "io.quarkus:quarkus-jackson", version.ref = "quarkus" }
-
-# Jackson
-#jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
-jackson-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
-jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 
 # Utility libraries
 cronutils = { module = "com.cronutils:cron-utils", version.ref = "cronutils" }

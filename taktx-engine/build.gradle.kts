@@ -38,12 +38,10 @@ dependencies {
     implementation(enforcedPlatform(libs.quarkus.bom.get()))
     implementation(libs.quarkus.kafka.streams)
     implementation(libs.quarkus.jaxb)
-    implementation(libs.jackson.cbor)
     implementation(libs.license3j)
     implementation(libs.quarkus.core)
     implementation(libs.quarkus.scheduler)
     implementation(libs.quarkus.smallrye.health)
-    implementation(libs.quarkus.jackson)
     implementation(libs.quarkus.micrometer)
     implementation(libs.quarkus.micrometer.registry.prometheus)
     implementation(libs.quarkus.kafka.client)
@@ -87,7 +85,6 @@ dependencies {
     testFixturesImplementation(libs.quarkus.junit5)
     testFixturesImplementation(libs.assertj.core)
     testFixturesImplementation(libs.awaitility)
-    testFixturesImplementation(libs.jackson.cbor)
 
     // Re-expose testFixtures to the regular test source set (was implicitly available before).
     testImplementation(testFixtures(project))

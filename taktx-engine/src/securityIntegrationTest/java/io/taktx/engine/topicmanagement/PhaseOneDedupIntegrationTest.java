@@ -16,7 +16,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.taktx.CleanupPolicy;
 import io.taktx.dto.Constants;
 import io.taktx.dto.ExternalTaskResponseResultDTO;
@@ -78,9 +77,6 @@ class PhaseOneDedupIntegrationTest {
   private static final String TENANT = "test-tenant";
   private static final String NAMESPACE = "default";
   private static final String LOCAL_PREFIX = TENANT + "." + NAMESPACE + ".";
-  private static final ObjectMapperSerde<TopicMetaDlqEntryDTO> TOPIC_META_DLQ_ENTRY_SERDE =
-      new ObjectMapperSerde<>(TopicMetaDlqEntryDTO.class);
-
   @Container
   private static final ConfluentKafkaContainer KAFKA =
       new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
@@ -358,7 +354,8 @@ class PhaseOneDedupIntegrationTest {
             storeName)
         .to(
             outputTopic,
-            Produced.with(TopologyProducer.TOPIC_META_KEY_SERDE, TOPIC_META_DLQ_ENTRY_SERDE));
+            Produced.with(
+                TopologyProducer.TOPIC_META_KEY_SERDE, TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE));
 
     return builder.build();
   }
@@ -430,7 +427,9 @@ class PhaseOneDedupIntegrationTest {
     properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     KafkaConsumer<String, TopicMetaDlqEntryDTO> consumer =
         new KafkaConsumer<>(
-            properties, new StringDeserializer(), TOPIC_META_DLQ_ENTRY_SERDE.deserializer());
+            properties,
+            new StringDeserializer(),
+            TopologyProducer.TOPIC_META_DLQ_ENTRY_SERDE.deserializer());
     consumer.subscribe(java.util.List.of(topic));
     return consumer;
   }

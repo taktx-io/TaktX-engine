@@ -3,11 +3,10 @@
 # This file is expected to be part of source control.
 at.yawk.lz4:lz4-java:1.10.1=compileProtoPath,runtimeClasspath,testCompileProtoPath,testRuntimeClasspath
 com.cronutils:cron-utils:9.2.1=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-annotations:2.21=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.21.3=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-annotations:2.21=testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.21.3=testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.21.3=testRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.21.3=testRuntimeClasspath
 com.github.luben:zstd-jni:1.5.6-10=compileProtoPath,runtimeClasspath,testCompileProtoPath,testRuntimeClasspath
 com.google.code.findbugs:jsr305:3.0.2=testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
 com.google.protobuf:protobuf-javalite:4.29.3=compileClasspath,compileProtoPath,runtimeClasspath,testCompileClasspath,testCompileProtoPath,testRuntimeClasspath
