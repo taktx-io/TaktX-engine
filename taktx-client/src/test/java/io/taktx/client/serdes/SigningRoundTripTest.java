@@ -20,6 +20,7 @@ import io.taktx.serdes.InstanceUpdateDtoDeserializer;
 import io.taktx.serdes.InstanceUpdateProtoMapper;
 import io.taktx.serdes.ProtoSigningSerializer;
 import java.security.KeyPair;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import org.apache.kafka.common.header.Headers;
@@ -47,13 +48,12 @@ class SigningRoundTripTest {
   private static final String TOPIC = "default.instance-update";
   private static final String KEY_ID = "engine-key-1";
 
-  private KeyPair keyPair;
   private String privateKeyBase64;
   private String publicKeyBase64;
 
   @BeforeEach
   void setUp() {
-    keyPair = SigningKeyGenerator.generate();
+    KeyPair keyPair = SigningKeyGenerator.generate();
     privateKeyBase64 = SigningKeyGenerator.encodePrivateKey(keyPair.getPrivate());
     publicKeyBase64 = SigningKeyGenerator.encodePublicKey(keyPair.getPublic());
 
@@ -102,23 +102,63 @@ class SigningRoundTripTest {
   }
 
   /**
-   * Verifies that re-serializing the deserialized DTO produces identical bytes. If this fails it
-   * explains the live breakage: any consumer that re-serializes before verifying will get a byte
-   * mismatch.
+   * Re-serializing the DTO must preserve semantics, but protobuf field normalization may still
+   * produce different wire bytes. Signature verification therefore has to run against the original
+   * Kafka payload bytes before deserializing.
    */
   @Test
-  void reSerializedBytes_areIdenticalToOriginal() {
+  void reSerialization_preservesSemantics_evenWhenWireBytesAreNormalized() {
     InstanceUpdateDTO dto = buildSampleUpdate();
     byte[] originalBytes = serializeAndSign(dto);
+    Headers headers = captureHeaders(dto);
 
     try (InstanceUpdateJsonDeserializer deserializer = new InstanceUpdateJsonDeserializer()) {
       InstanceUpdateDTO roundTripped = deserializer.deserialize(TOPIC, originalBytes);
       byte[] reSerializedBytes = InstanceUpdateProtoMapper.toProto(roundTripped).toByteArray();
-      assertThat(reSerializedBytes)
-          .as(
-              "Re-serialized bytes must be identical to originals — if this fails, "
-                  + "any code that re-serializes before verifying will break signature validation")
-          .isEqualTo(originalBytes);
+      InstanceUpdateDTO reparsed = deserializer.deserialize(TOPIC, reSerializedBytes);
+
+      assertThat(roundTripped)
+          .as("Deserializing the signed payload must preserve the logical DTO")
+          .usingRecursiveComparison()
+          .ignoringFields("scope.gatewayInstances", "scope.subscriptions")
+          .isEqualTo(dto);
+      assertThat(reparsed)
+          .as("Re-serializing and parsing again must preserve the logical DTO even if bytes change")
+          .usingRecursiveComparison()
+          .ignoringFields("scope.gatewayInstances", "scope.subscriptions")
+          .isEqualTo(dto);
+
+      assertThat(((ProcessInstanceUpdateDTO) roundTripped).getScope().getGatewayInstances())
+          .as("The mapper may normalize an absent gateway-instance map to an empty map")
+          .isEmpty();
+      assertThat(((ProcessInstanceUpdateDTO) roundTripped).getScope().getSubscriptions())
+          .as("The mapper may normalize absent subscriptions to an empty DTO container")
+          .isNotNull();
+      assertThat(((ProcessInstanceUpdateDTO) reparsed).getScope().getGatewayInstances())
+          .as("The normalization should remain stable after re-serialization")
+          .isEmpty();
+      assertThat(((ProcessInstanceUpdateDTO) reparsed).getScope().getSubscriptions())
+          .as("The empty subscription container should remain stable after re-serialization")
+          .isNotNull();
+
+      String headerValue =
+          new String(
+              headers.lastHeader(io.taktx.dto.Constants.HEADER_ENGINE_SIGNATURE).value(),
+              java.nio.charset.StandardCharsets.UTF_8);
+      byte[] signature =
+          Base64.getDecoder().decode(headerValue.substring(headerValue.indexOf('.') + 1));
+
+      assertThat(Ed25519Service.verify(originalBytes, signature, publicKeyBase64))
+          .as("The original Kafka payload bytes must verify with the recorded signature")
+          .isTrue();
+
+      if (!Arrays.equals(reSerializedBytes, originalBytes)) {
+        assertThat(Ed25519Service.verify(reSerializedBytes, signature, publicKeyBase64))
+            .as(
+                "If protobuf mapping normalizes the payload bytes, re-serialized bytes must not be "
+                    + "used for signature verification")
+            .isFalse();
+      }
     }
   }
 

@@ -15,10 +15,14 @@ import org.camunda.feel.api.FeelEngineBuilder;
 
 @ApplicationScoped
 public class FeelEngineProvider {
-  public static final FeelEngineApi FEEL_ENGINE_API = FeelEngineBuilder.forJava().build();
+  private FeelEngineApi feelEngineApi;
 
   @Produces
-  public FeelEngineApi getFeelEngineApi() {
-    return FEEL_ENGINE_API;
+  @ApplicationScoped
+  public synchronized FeelEngineApi getFeelEngineApi() {
+    if (feelEngineApi == null) {
+      feelEngineApi = FeelEngineBuilder.forJava().build();
+    }
+    return feelEngineApi;
   }
 }

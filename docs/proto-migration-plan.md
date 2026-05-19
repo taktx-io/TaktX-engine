@@ -1,6 +1,6 @@
 # TaktX v1.0 — Full Protobuf Migration Plan
 
-**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅; active: PROTO-4.11  
+**Status:** In Progress — PROTO-1.1 ✅ PROTO-1.2 ✅ PROTO-2.1 ✅ PROTO-2.2 ✅ PROTO-2.3 ✅ PROTO-3.1 ✅ PROTO-3.2 ✅ PROTO-3.3 ✅ PROTO-4.2 ✅ PROTO-4.3 ✅ PROTO-4.4 ✅ PROTO-4.5 ✅ PROTO-4.6 ✅ PROTO-4.7 ✅ PROTO-4.8 ✅ PROTO-4.9 ✅ PROTO-4.10 ✅ PROTO-4.11 ✅; active: PROTO-4.12  
 **Target release:** v1.0.0 (major, beta → stable)  
 **Decision context:** Replace all CBOR+Jackson serialization with `protobuf-java-lite`.  
 Remove Jackson entirely from `taktx-shared` and `taktx-client`.  
@@ -801,9 +801,10 @@ The current DTOs each declare `@RegisterForReflection`. Proto-lite generated cla
 - Verify `Dockerfile.linux-native` build succeeds without reflection errors.
 
 **Acceptance criteria**
-- [ ] Native build (`./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.type=native`) succeeds.
-- [ ] Engine starts and processes a BPMN process in native mode (smoke test via `curl`).
+- [x] Native build (`./gradlew :taktx-engine:quarkusBuild -Dquarkus.package.type=native`) succeeds.
+- [x] Engine starts and processes a BPMN process in native mode (smoke test via the existing `task-single.bpmn` integration path).
 
+**Status:** ✅ Complete  
 **Dependencies:** PROTO-1.3, PROTO-4.10  
 **Estimate:** 0.5 day
 

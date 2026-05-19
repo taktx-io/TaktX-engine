@@ -32,10 +32,14 @@ subprojects {
         }
 
         // Configure the JaCoCo report task
-        tasks.withType<JacocoReport> {
+        tasks.named<JacocoReport>("jacocoTestReport") {
+            val canonicalJacocoReportDir = layout.buildDirectory.dir("reports/jacoco/test")
+
             reports {
                 xml.required.set(true)
+                xml.outputLocation.set(canonicalJacocoReportDir.map { it.file("jacocoTestReport.xml") })
                 html.required.set(true)
+                html.outputLocation.set(canonicalJacocoReportDir.map { it.dir("html") })
             }
 
             // Exclude specified packages from all modules

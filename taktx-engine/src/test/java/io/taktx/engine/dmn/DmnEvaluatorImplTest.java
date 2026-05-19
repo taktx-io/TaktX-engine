@@ -35,12 +35,15 @@ import org.junit.jupiter.api.Test;
 
 class DmnEvaluatorImplTest {
 
+  private static final org.camunda.feel.api.FeelEngineApi FEEL_ENGINE_API =
+      new FeelEngineProvider().getFeelEngineApi();
+
   private DmnEvaluatorImpl evaluator;
   private VariableScope variables;
 
   @BeforeEach
   void setUp() {
-    evaluator = new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API);
+    evaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API);
     variables = VariableScope.empty(null, null);
   }
 
@@ -527,8 +530,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(discountDecision, variables));
@@ -573,8 +575,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(discountDecision, variables));
@@ -613,8 +614,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -650,8 +650,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("discountCandidatesDecision"))
         .thenReturn(Optional.of(candidatesDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -686,8 +685,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("discountCandidatesDecision"))
         .thenReturn(Optional.of(candidatesDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -717,8 +715,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -748,8 +745,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(100L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -780,8 +776,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
 
@@ -813,7 +808,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.WARN);
+        new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver, DmnValidationMode.WARN);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
     JsonNode result = asJson(drgEvaluator.evaluate(downstreamDecision, variables));
@@ -831,7 +826,7 @@ class DmnEvaluatorImplTest {
             List.of(rule(List.of(">= 1000"), List.of("0.2"))));
 
     DmnEvaluatorImpl strictEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
 
     variables.put("loyaltyPoints", Variables.of("not-a-number"));
 
@@ -868,8 +863,7 @@ class DmnEvaluatorImplTest {
         .thenReturn(Optional.of(candidatesDecision));
 
     DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(
-            FeelEngineProvider.FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver, DmnValidationMode.STRICT);
 
     variables.put("loyaltyPoints", Variables.of(1500L));
 
@@ -885,7 +879,7 @@ class DmnEvaluatorImplTest {
             "decision", null, null, new DmnLiteralExpressionDTO(null, "=if then", null), null);
 
     DmnEvaluatorImpl strictEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
+        new DmnEvaluatorImpl(FEEL_ENGINE_API, null, DmnValidationMode.STRICT);
 
     assertThatThrownBy(() -> strictEvaluator.evaluate(decision, variables))
         .isInstanceOf(DmnValidationException.class)
@@ -916,8 +910,7 @@ class DmnEvaluatorImplTest {
     DmnDecisionResolver resolver = mock(DmnDecisionResolver.class);
     when(resolver.resolve("categoryDecision")).thenReturn(Optional.of(categoryDecision));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     variables.put("loyaltyPoints", Variables.of(999L));
     drgEvaluator.evaluate(discountDecision, variables);
@@ -948,8 +941,7 @@ class DmnEvaluatorImplTest {
     when(resolver.resolve("B")).thenReturn(Optional.of(decisionB));
     when(resolver.resolve("A")).thenReturn(Optional.of(decisionA));
 
-    DmnEvaluatorImpl drgEvaluator =
-        new DmnEvaluatorImpl(FeelEngineProvider.FEEL_ENGINE_API, resolver);
+    DmnEvaluatorImpl drgEvaluator = new DmnEvaluatorImpl(FEEL_ENGINE_API, resolver);
 
     assertThatThrownBy(() -> drgEvaluator.evaluate(decisionA, variables))
         .isInstanceOf(IllegalStateException.class)

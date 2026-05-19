@@ -34,10 +34,9 @@ import scala.jdk.CollectionConverters;
 @Slf4j
 public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
-  private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private final FeelEngineProvider feelEngineProvider;
   private final Map<String, ParsedExpression> parsedExpressionCache = new HashMap<>();
+  private BuiltinFunctions builtinFunctions;
 
   public FeelExpressionHandlerImpl(FeelEngineProvider feelEngineProvider) {
     this.feelEngineProvider = feelEngineProvider;
@@ -89,9 +88,17 @@ public class FeelExpressionHandlerImpl implements FeelExpressionHandler {
 
       @Override
       public FunctionProvider functionProvider() {
-        return BUILTIN_FUNCTIONS;
+        return getBuiltinFunctions();
       }
     };
+  }
+
+  private synchronized BuiltinFunctions getBuiltinFunctions() {
+    if (builtinFunctions == null) {
+      builtinFunctions =
+          new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
+    }
+    return builtinFunctions;
   }
 
   private ParsedExpression getParsedExpression(FeelEngineApi feelEngineApi, String expression) {

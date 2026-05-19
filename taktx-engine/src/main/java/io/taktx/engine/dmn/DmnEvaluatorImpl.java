@@ -54,8 +54,6 @@ import scala.jdk.CollectionConverters;
 @Slf4j
 public class DmnEvaluatorImpl implements DmnEvaluator {
 
-  private static final BuiltinFunctions BUILTIN_FUNCTIONS =
-      new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
   private static final Pattern SIMPLE_REFERENCE_PATTERN =
       Pattern.compile(
           "^([A-Za-z_][A-Za-z0-9_]*)(?:\\[(\\d+)\\])?(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$");
@@ -73,6 +71,8 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
   /** Thread-safe cache of parsed FEEL expressions for performance. */
   private final Map<String, ParsedExpression> expressionCache = new ConcurrentHashMap<>();
+
+  private BuiltinFunctions builtinFunctions;
 
   /** CDI constructor used in production. */
   @Inject
@@ -467,9 +467,17 @@ public class DmnEvaluatorImpl implements DmnEvaluator {
 
       @Override
       public FunctionProvider functionProvider() {
-        return BUILTIN_FUNCTIONS;
+        return getBuiltinFunctions();
       }
     };
+  }
+
+  private synchronized BuiltinFunctions getBuiltinFunctions() {
+    if (builtinFunctions == null) {
+      builtinFunctions =
+          new BuiltinFunctions(SystemClock$.MODULE$, ValueMapper.defaultValueMapper());
+    }
+    return builtinFunctions;
   }
 
   private VariableValue flattenSingleOutput(
