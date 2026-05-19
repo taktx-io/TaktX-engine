@@ -904,7 +904,7 @@ public class ProcessInstanceProcessor
     VariableKeyDTO variableStartKey = new VariableKeyDTO(flowNodeInstanceKeyStart, "");
     FlowNodeInstanceKeyDTO flownodeInstanceKeyEnd =
         new FlowNodeInstanceKeyDTO(processInstanceId, List.of(MAX_LONG));
-    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "\uffff");
+    VariableKeyDTO variableEndKey = new VariableKeyDTO(flownodeInstanceKeyEnd, "");
 
     try (KeyValueIterator<VariableKeyDTO, VariableValue> range =
         this.variablesStore.range(variableStartKey, variableEndKey)) {

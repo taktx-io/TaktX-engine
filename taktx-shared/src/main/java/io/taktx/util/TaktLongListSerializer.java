@@ -7,33 +7,38 @@
  */
 package io.taktx.util;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
 
-public class TaktLongListSerializer extends JsonSerializer<List<Long>>
-    implements Serializer<List<Long>> {
+public class TaktLongListSerializer implements Serializer<List<Long>> {
+
+  public static final int COUNT_BYTE_LENGTH = Integer.BYTES;
+  public static final int LONG_BYTE_LENGTH = Long.BYTES;
+
+  /**
+   * @implSpec Encodes the list as {@code [4B element-count big-endian | 8B×n signed long values
+   *     big-endian]}.
+   */
   @Override
-  public void serialize(List<Long> uuid, JsonGenerator gen, SerializerProvider serializers)
-      throws IOException {
-    gen.writeBinary(toByteArray(uuid));
+  public byte[] serialize(String topic, List<Long> longList) {
+    return longList == null ? null : toBytes(longList);
   }
 
-  private static byte[] toByteArray(List<Long> longList) {
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[4 + 8 * longList.size()]);
+  public static byte[] toBytes(List<Long> longList) {
+    if (longList == null) {
+      throw new SerializationException("Long-list serialization failed: key must not be null");
+    }
+    ByteBuffer buffer = ByteBuffer.allocate(COUNT_BYTE_LENGTH + LONG_BYTE_LENGTH * longList.size());
     buffer.putInt(longList.size());
-    for (int i = 0; i < longList.size(); i++) {
-      buffer.putLong(longList.get(i));
+    for (Long value : longList) {
+      if (value == null) {
+        throw new SerializationException(
+            "Long-list serialization failed: key must not contain null elements");
+      }
+      buffer.putLong(value);
     }
     return buffer.array();
-  }
-
-  @Override
-  public byte[] serialize(String s, List<Long> uuid) {
-    return toByteArray(uuid);
   }
 }

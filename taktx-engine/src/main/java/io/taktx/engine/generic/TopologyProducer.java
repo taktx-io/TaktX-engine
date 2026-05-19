@@ -123,7 +123,10 @@ import io.taktx.serdes.UserTaskTriggerProtoDeserializer;
 import io.taktx.serdes.WorkerTriggerProtoMapper;
 import io.taktx.serdes.XmlDmnDefinitionsDtoDeserializer;
 import io.taktx.serdes.ZippedStringSerde;
+import io.taktx.util.FlowNodeInstanceKeySerde;
+import io.taktx.util.ProcessDefinitionKeySerde;
 import io.taktx.util.TaktUUIDSerde;
+import io.taktx.util.VariableKeySerde;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.time.Clock;
@@ -160,11 +163,9 @@ public class TopologyProducer {
               data == null ? null : MessageEventProtoMapper.toProto(data).toByteArray(),
           new MessageEventDtoDeserializer());
   public static final Serde<SignalInstanceSubscriptionKeyDTO>
-      SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE =
-          new ObjectMapperSerde<>(SignalInstanceSubscriptionKeyDTO.class);
+      SIGNAL_INSTANCE_SUBSCRIPTION_KEY_SERDE = new SignalInstanceSubscriptionKeySerde();
   public static final Serde<SignalDefinitionSubscriptionKeyDTO>
-      SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE =
-          new ObjectMapperSerde<>(SignalDefinitionSubscriptionKeyDTO.class);
+      SIGNAL_DEFINITION_SUBSCRIPTION_KEY_SERDE = new SignalDefinitionSubscriptionKeySerde();
   public static final Serde<SignalDTO> SIGNAL_SERDE =
       Serdes.serdeFrom(
           (topic, data) -> data == null ? null : SignalProtoMapper.toProto(data).toByteArray(),
@@ -175,8 +176,8 @@ public class TopologyProducer {
   public static final ObjectMapperSerde<CorrelationMessageSubscriptions>
       CORRELATION_SUBSCRIPTIONS_SERDE =
           new ObjectMapperSerde<>(CorrelationMessageSubscriptions.class);
-  public static final ObjectMapperSerde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
-      new ObjectMapperSerde<>(ProcessDefinitionKey.class);
+  public static final Serde<ProcessDefinitionKey> PROCESS_DEFINITION_KEY_SERDE =
+      new ProcessDefinitionKeySerde();
   public static final Serde<ScheduleKeyDTO> SCHEDULE_KEY_SERDE =
       Serdes.serdeFrom(TopologyProducer::serializeScheduleKey, new ScheduleKeyDtoDeserializer());
   public static final Serde<MessageEventKeyDTO> MESSAGE_EVENT_KEY_SERDE =
@@ -186,7 +187,7 @@ public class TopologyProducer {
           new MessageEventKeyDtoDeserializer());
   public static final Serde<UUID> PROCESS_INSTANCE_KEY_SERDE = new TaktUUIDSerde();
   public static final Serde<FlowNodeInstanceKeyDTO> FLOW_NODE_INSTANCE_KEY_SERDE =
-      new ObjectMapperSerde<>(FlowNodeInstanceKeyDTO.class);
+      new FlowNodeInstanceKeySerde();
   public static final Serde<MessageScheduleDTO> MESSAGE_SCHEDULE_SERDE =
       Serdes.serdeFrom(
           new ProtoSigningSerializer<>(MessageScheduleProtoMapper::toProto),
@@ -266,8 +267,7 @@ public class TopologyProducer {
           new UserTaskResponseTriggerProtoDeserializer());
   public static final ObjectMapperSerde<StartCommandDTO> START_COMMAND_SERDE =
       new ObjectMapperSerde<>(StartCommandDTO.class);
-  private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE =
-      new ObjectMapperSerde<>(VariableKeyDTO.class);
+  private static final Serde<VariableKeyDTO> VARIABLES_KEY_SERDE = new VariableKeySerde();
   public static final Serde<String> TOPIC_META_KEY_SERDE = new StringSerde();
   public static final Serde<TopicMetaDTO> TOPIC_META_SERDE =
       Serdes.serdeFrom(

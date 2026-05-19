@@ -8,13 +8,30 @@
 package io.taktx.client.serdes;
 
 import io.taktx.dto.ProcessDefinitionKey;
-import io.taktx.serdes.JsonDeserializer;
+import io.taktx.jackson.TaktxObjectMappers;
+import java.io.IOException;
+import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.serialization.Deserializer;
 
-/** A JSON deserializer for ProcessDefinitionKey objects. */
-public class ProcessDefinitionKeyJsonDeserializer extends JsonDeserializer<ProcessDefinitionKey> {
+/** Deserializes process-definition keys from the current binary format and legacy CBOR fallback. */
+public class ProcessDefinitionKeyJsonDeserializer implements Deserializer<ProcessDefinitionKey> {
 
-  /** Constructor for ProcessDefinitionKeyJsonDeserializer. */
-  public ProcessDefinitionKeyJsonDeserializer() {
-    super(ProcessDefinitionKey.class, false);
+  @Override
+  public ProcessDefinitionKey deserialize(String topic, byte[] data) {
+    if (data == null) {
+      return null;
+    }
+
+    try {
+      return io.taktx.util.ProcessDefinitionKeyDeserializer.fromBytes(data);
+    } catch (RuntimeException binaryFailure) {
+      try {
+        return TaktxObjectMappers.cbor().readValue(data, ProcessDefinitionKey.class);
+      } catch (IOException legacyFailure) {
+        throw new SerializationException(
+            "Failed to deserialize ProcessDefinitionKey from binary or legacy CBOR key format",
+            legacyFailure);
+      }
+    }
   }
 }

@@ -7,48 +7,33 @@
  */
 package io.taktx.util;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-public class TaktUUIDDeserializer extends JsonDeserializer<UUID> implements Deserializer<UUID> {
-
-  private static final int UUID_BYTE_LENGTH = 16;
+public class TaktUUIDDeserializer implements Deserializer<UUID> {
 
   @Override
-  public UUID deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-      throws IOException {
-    byte[] bytes = jsonParser.getBinaryValue();
-    return getUuid(bytes);
+  public UUID deserialize(String topic, byte[] bytes) {
+    return bytes == null ? null : fromBytes(bytes);
   }
 
-  private static UUID getUuid(byte[] bytes) {
+  public static UUID fromBytes(byte[] bytes) {
     if (bytes == null) {
       throw new SerializationException(
           "UUID deserialization failed: key bytes are null — expected "
-              + UUID_BYTE_LENGTH
+              + TaktUUIDSerializer.UUID_BYTE_LENGTH
               + " bytes");
     }
-    if (bytes.length != UUID_BYTE_LENGTH) {
+    if (bytes.length != TaktUUIDSerializer.UUID_BYTE_LENGTH) {
       throw new SerializationException(
           "UUID deserialization failed: expected "
-              + UUID_BYTE_LENGTH
+              + TaktUUIDSerializer.UUID_BYTE_LENGTH
               + " bytes but got "
               + bytes.length);
     }
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    long mostSigBits = buffer.getLong();
-    long leastSigBits = buffer.getLong();
-    return new UUID(mostSigBits, leastSigBits);
-  }
-
-  @Override
-  public UUID deserialize(String s, byte[] bytes) {
-    return getUuid(bytes);
+    return new UUID(buffer.getLong(), buffer.getLong());
   }
 }

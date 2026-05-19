@@ -7,35 +7,31 @@
  */
 package io.taktx.util;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
 
-public class TaktUUIDSerializer extends JsonSerializer<UUID> implements Serializer<UUID> {
+public class TaktUUIDSerializer implements Serializer<UUID> {
+
+  public static final int UUID_BYTE_LENGTH = 16;
+
+  /**
+   * @implSpec Encodes the UUID as {@code [8B most-significant-bits big-endian | 8B
+   *     least-significant-bits big-endian]}.
+   */
   @Override
-  public void serialize(UUID uuid, JsonGenerator gen, SerializerProvider serializers)
-      throws IOException {
-    gen.writeBinary(toByteArray(uuid));
+  public byte[] serialize(String topic, UUID uuid) {
+    return uuid == null ? null : toBytes(uuid);
   }
 
-  private static byte[] toByteArray(UUID uuid) throws IOException {
-    // Convert UUID to byte[]
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[16]);
+  public static byte[] toBytes(UUID uuid) {
+    if (uuid == null) {
+      throw new SerializationException("UUID serialization failed: key must not be null");
+    }
+    ByteBuffer buffer = ByteBuffer.allocate(UUID_BYTE_LENGTH);
     buffer.putLong(uuid.getMostSignificantBits());
     buffer.putLong(uuid.getLeastSignificantBits());
     return buffer.array();
-  }
-
-  @Override
-  public byte[] serialize(String s, UUID uuid) {
-    try {
-      return toByteArray(uuid);
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
   }
 }
