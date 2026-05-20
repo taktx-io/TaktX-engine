@@ -104,4 +104,4 @@ xjc = { id = "com.github.bjornvester.xjc", version = "1.9.0" }
 protobuf = { id = "com.google.protobuf", version = "0.9.4" }
 
 [metadata]
-projectVersion = "0.5.0-beta"
+projectVersion = "0.8.0-beta"
