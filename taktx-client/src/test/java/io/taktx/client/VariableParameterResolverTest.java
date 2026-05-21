@@ -14,6 +14,7 @@ import io.taktx.dto.VariablesDTO;
 import io.taktx.proto.VariableValue;
 import io.taktx.variables.Variables;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class VariableParameterResolverTest {
@@ -81,6 +82,21 @@ class VariableParameterResolverTest {
 
     assertThat(resolved)
         .isEqualTo(new OrderWorkerInput("INV-1", Instant.parse("2026-05-19T10:15:30Z"), true));
+  }
+
+  @Test
+  void resolvesListVariableFromInboundTrigger() {
+    VariableParameterResolver resolver = new VariableParameterResolver(List.class, "invoiceIds");
+    ExternalTaskTriggerDTO trigger =
+        ExternalTaskTriggerDTO.builder()
+            .variables(
+                VariablesDTO.ofVariableMap(
+                    Variables.map("invoiceIds", List.of("INV-1", "INV-2", "INV-3"))))
+            .build();
+
+    Object resolved = resolver.resolve(trigger);
+
+    assertThat(resolved).isEqualTo(List.of("INV-1", "INV-2", "INV-3"));
   }
 
   record OrderContext(String invoiceId, Instant createdAt) {}

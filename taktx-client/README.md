@@ -181,6 +181,7 @@ Binding rules for annotation-based external-task workers:
 - `VariablesDTO` → the full raw variable scope
 - `@Variable("name") SomeType` → a single named variable, converted to `SomeType`
 - unannotated simple types (`String`, numbers, `boolean`, `UUID`, enums, time types, …) → variable by parameter name
+- unannotated collection-like types (`List`, `Collection`, `Iterable`) → variable by parameter name
 - unannotated complex types (records / beans) → full variable scope mapped into that object
 
 For complex object binding, prefer Java `record`s. Regular Java beans are also supported when they have a no-arg constructor plus setters for the properties you want populated.

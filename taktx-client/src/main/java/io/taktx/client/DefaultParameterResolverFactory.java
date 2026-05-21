@@ -49,7 +49,8 @@ public class DefaultParameterResolverFactory implements ParameterResolverFactory
       return new MapParameterResolver();
     } else if (VariablesDTO.class.isAssignableFrom(parameterType)) {
       return new VariablesObjectParameterResolver(parameterType);
-    } else if (ClientValueMapper.isSimpleValue(parameterType)) {
+    } else if (ClientValueMapper.isSimpleValue(parameterType)
+        || Iterable.class.isAssignableFrom(parameterType)) {
       return new VariableParameterResolver(parameterType, parameter.getName());
     } else {
       return new VariablesObjectParameterResolver(parameterType);
