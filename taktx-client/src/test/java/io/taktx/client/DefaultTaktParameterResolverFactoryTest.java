@@ -12,8 +12,11 @@ import static org.mockito.Mockito.mock;
 
 import io.taktx.client.annotation.Variable;
 import io.taktx.dto.ExternalTaskTriggerDTO;
+import io.taktx.dto.VariablesDTO;
+import io.taktx.variables.Variables;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,6 +101,33 @@ class DefaultTaktParameterResolverFactoryTest {
     assertThat(resolver).isInstanceOf(VariablesObjectParameterResolver.class);
   }
 
+  @Test
+  void shouldCreateVariableParameterResolverForListParameter() throws NoSuchMethodException {
+    Method method = TestService.class.getDeclaredMethod("methodWithList", List.class);
+    Parameter parameter = method.getParameters()[0];
+
+    ParameterResolver resolver = factory.create(parameter);
+
+    assertThat(resolver).isInstanceOf(VariableParameterResolver.class);
+  }
+
+  @Test
+  void shouldResolveListParameterFromVariableWithMatchingName() throws NoSuchMethodException {
+    Method method = TestService.class.getDeclaredMethod("methodWithList", List.class);
+    Parameter parameter = method.getParameters()[0];
+    ParameterResolver resolver = factory.create(parameter);
+    ExternalTaskTriggerDTO trigger =
+        ExternalTaskTriggerDTO.builder()
+            .variables(
+                VariablesDTO.ofVariableMap(
+                    Variables.map(parameter.getName(), List.of("invoice-1", "invoice-2"))))
+            .build();
+
+    Object resolved = resolver.resolve(trigger);
+
+    assertThat(resolved).isEqualTo(List.of("invoice-1", "invoice-2"));
+  }
+
   // Test service with methods that have different parameter types
   @SuppressWarnings("unused")
   static class TestService {
@@ -122,6 +152,10 @@ class DefaultTaktParameterResolverFactoryTest {
     }
 
     void methodWithCustomType(TestDto dto) {
+      // Empty Method for testing purpose
+    }
+
+    void methodWithList(List<String> invoiceIds) {
       // Empty Method for testing purpose
     }
   }
